@@ -18,8 +18,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 | [0001](./0001-promote-unproven-results-in-the-sink.md) | Tag a result the analysis could not prove at the check, and promote it in the sink | accepted | unit tests in `crates/safec/src/diagnostics.rs` (promotion on, promotion off, a proven warning left alone, `error_count` equals a recount) and the `--safety strict` resolution test in `crates/safec/src/cli.rs`; each verified by the mutation that makes it fail |
 | [0002](./0002-severity-runs-from-least-to-most-severe.md) | Declare `Severity` from least to most severe, the same direction as `SafetyLevel` | accepted | `severities_are_ordered_from_least_to_most_serious` and `the_worst_severity_in_a_set_is_its_maximum` in `crates/safec/src/diagnostics.rs`; both fail if the variants are put back in descending order |
 | [0003](./0003-pass-the-source-map-to-each-render-call.md) | Pass the source map to each render call rather than holding it | accepted | `a_renderer_does_not_hold_the_source_map` in `crates/safec/src/diagnostics/render.rs`; the borrow half does not compile against a renderer that holds the map, and sizing the cache once makes the assertion fail |
+| [0004](./0004-resolve-the-strictest-level-where-the-policy-is-built.md) | Resolve the strictest safety level where the policy is built, not only where the options are | accepted | `Policy`'s private field makes the bypass a compile error (E0451); `the_strictest_safety_level_denies_unknown_however_the_policy_is_built` and `the_strictest_safety_level_denies_unknown_even_unresolved` in `crates/safec/src/diagnostics.rs` and `the_strictest_safety_level_denies_unknown_in_the_sink` in `crates/safec/src/driver.rs`, all three of which fail if `Policy::new` keeps `deny_unknown` alone |
 
-**By status**: accepted: 0001, 0002, 0003 · proposed: none · superseded: none
+**By status**: accepted: 0001, 0002, 0003, 0004 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 

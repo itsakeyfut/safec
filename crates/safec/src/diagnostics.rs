@@ -321,20 +321,54 @@ impl Diagnostic {
 /// happens in one function, and a check that never sees the policy cannot
 /// forget to apply it. Missing one would make the compiler exit successfully on
 /// code it never managed to check, which is the worst thing it can do.
+///
+/// The field is private, so [`Policy::new`] is the only way to arrive at one.
+/// A public field would let a caller write the resolved answer itself, which is
+/// how a guard placed here gets bypassed rather than applied. See ADR-0004.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Policy {
     /// Whether a [`Certainty::Unproven`] result is an error rather than a
+    /// warning. The resolved answer: see [`Policy::new`].
+    deny_unknown: bool,
+}
+
+impl Policy {
+    /// The policy a run at `safety`, having asked or not asked for
+    /// `deny_unknown`, is entitled to.
+    ///
+    /// The strictest safety level is defined as leaving nothing `Unknown`, so
+    /// it denies unknown results whether or not the flag was given as well.
+    /// Resolving that here is why this constructor exists: the two arguments
+    /// are the whole question, and a caller holding both is a caller who can
+    /// answer it wrong.
+    ///
+    /// `safety` is read and not kept. A policy says what to do with a result
+    /// that arrives, and which checks ran to produce it is not that.
+    pub fn new(safety: SafetyLevel, deny_unknown: bool) -> Self {
+        Self {
+            deny_unknown: deny_unknown || safety >= SafetyLevel::Strict,
+        }
+    }
+
+    /// Whether a [`Certainty::Unproven`] result is an error rather than a
     /// warning.
-    pub deny_unknown: bool,
+    pub fn deny_unknown(self) -> bool {
+        self.deny_unknown
+    }
 }
 
 impl From<&Options> for Policy {
-    /// The one mapping from the resolved options to what the sink acts on, so
-    /// that a driver cannot invent its own.
+    /// The mapping from the options to what the sink acts on.
+    ///
+    /// `Cli::into_options` resolves the strictest level too, and this resolves
+    /// it again rather than reading `options.deny_unknown` and believing it:
+    /// [`Options`] has public fields and its `deny_unknown` doc claims to be
+    /// the resolved answer, with nothing enforcing that for a caller who builds
+    /// one without the parser, which is what the Clang adapter will do.
+    /// Trusting the field alone means the strictest level reports an unprovable
+    /// result as a warning and the compilation exits successfully. See ADR-0004.
     fn from(options: &Options) -> Self {
-        Self {
-            deny_unknown: options.deny_unknown,
-        }
+        Self::new(options.safety, options.deny_unknown)
     }
 }
 
@@ -606,7 +640,7 @@ mod tests {
     /// so it cannot forget it.
     #[test]
     fn a_sink_that_denies_unknown_raises_an_unproven_warning_to_an_error() {
-        let mut sink = DiagnosticSink::with_policy(Policy { deny_unknown: true });
+        let mut sink = DiagnosticSink::with_policy(Policy::new(SafetyLevel::Off, true));
         sink.report(Diagnostic::unproven("`p` may escape"));
 
         assert_eq!(sink.diagnostics()[0].severity(), Severity::Error);
@@ -619,7 +653,7 @@ mod tests {
     /// `unused variable` into a build failure.
     #[test]
     fn a_sink_that_denies_unknown_leaves_a_proven_warning_alone() {
-        let mut sink = DiagnosticSink::with_policy(Policy { deny_unknown: true });
+        let mut sink = DiagnosticSink::with_policy(Policy::new(SafetyLevel::Off, true));
         sink.report(Diagnostic::warning("unused variable `x`"));
 
         assert_eq!(sink.diagnostics()[0].severity(), Severity::Warning);
@@ -632,7 +666,7 @@ mod tests {
     #[test]
     fn the_error_count_agrees_with_the_diagnostics_under_either_policy() {
         for deny_unknown in [false, true] {
-            let mut sink = DiagnosticSink::with_policy(Policy { deny_unknown });
+            let mut sink = DiagnosticSink::with_policy(Policy::new(SafetyLevel::Off, deny_unknown));
             sink.report(Diagnostic::error("expected `;`"));
             sink.report(Diagnostic::warning("unused variable `x`"));
             sink.report(Diagnostic::unproven("`p` may escape"));
@@ -669,14 +703,51 @@ mod tests {
             deny_unknown: false,
             color: crate::options::ColorMode::Never,
         };
-        assert_eq!(
-            Policy::from(&options),
-            Policy {
-                deny_unknown: false
-            }
-        );
+        assert!(!Policy::from(&options).deny_unknown());
 
         options.deny_unknown = true;
-        assert_eq!(Policy::from(&options), Policy { deny_unknown: true });
+        assert!(Policy::from(&options).deny_unknown());
+    }
+
+    /// The level that is defined as leaving nothing `Unknown` has to deny
+    /// unknown results even when the flag was not also set. `Cli::into_options`
+    /// resolves this too, but `Options` has public fields and nothing enforces
+    /// that its `deny_unknown` was resolved, so a caller that builds one
+    /// without the parser would otherwise get warnings at the strictest level
+    /// and a successful exit.
+    #[test]
+    fn the_strictest_safety_level_denies_unknown_even_unresolved() {
+        let options = Options {
+            inputs: Vec::new(),
+            output: None,
+            safety: SafetyLevel::Strict,
+            emit: crate::options::EmitKind::Executable,
+            deny_unknown: false,
+            color: crate::options::ColorMode::Never,
+        };
+
+        assert!(Policy::from(&options).deny_unknown());
+
+        let mut sink = DiagnosticSink::with_policy(Policy::from(&options));
+        sink.report(Diagnostic::unproven("`p` may escape"));
+        assert_eq!(sink.diagnostics()[0].severity(), Severity::Error);
+        assert!(sink.has_errors());
+    }
+
+    /// The guard is on the constructor rather than on the conversion, so a
+    /// caller that never builds an [`Options`] at all gets it too. That caller
+    /// is the Clang adapter. The other half of this is a compile error rather
+    /// than an assertion: `Policy { deny_unknown: false }` no longer builds,
+    /// here or anywhere else, because the field is private.
+    #[test]
+    fn the_strictest_safety_level_denies_unknown_however_the_policy_is_built() {
+        let policy = Policy::new(SafetyLevel::Strict, false);
+
+        assert!(policy.deny_unknown());
+
+        let mut sink = DiagnosticSink::with_policy(policy);
+        sink.report(Diagnostic::unproven("`p` may escape"));
+        assert_eq!(sink.diagnostics()[0].severity(), Severity::Error);
+        assert!(sink.has_errors());
     }
 }
