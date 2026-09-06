@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same PR/branch; never cancel pushes to main.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Format. Split out so a misformatted PR fails in seconds rather than after
+  # a full build.
+  # --------------------------------------------------------------------------
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # `rust-toolchain.toml` names the channel and the components, and `rustup
+      # show` installs exactly what it names. Every job below does the same, so
+      # the toolchain has a single source of truth in the repository — the one
+      # exception is the MSRV job, which has to disagree on purpose.
+      - name: Install the toolchain named by rust-toolchain.toml
+        run: rustup show
+      - run: cargo fmt --all -- --check
+
+  # --------------------------------------------------------------------------
+  # Clippy. This is also what enforces `[workspace.lints]`: clippy runs the
+  # rustc lint pass, so `missing_docs` and friends fail here rather than only
+  # warning. `-D warnings` is passed to clippy rather than set as a global
+  # RUSTFLAGS, which would apply to dependencies as well and make an upstream
+  # warning break this repository's CI.
+  # --------------------------------------------------------------------------
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the toolchain named by rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # --------------------------------------------------------------------------
+  # Tests. Windows is not optional here: the source map stores paths as the
+  # user spelled them and renders them into diagnostics, and `SourceMap::load`
+  # surfaces raw `io::ErrorKind`s, both of which differ across platforms.
+  # --------------------------------------------------------------------------
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the toolchain named by rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace
+
+  # --------------------------------------------------------------------------
+  # MSRV: the crate still builds on the oldest compiler the workspace manifest
+  # promises. Nothing else checks this, so a dependency bump can raise it
+  # silently. Keep the version in step with `rust-version` in Cargo.toml.
+  # --------------------------------------------------------------------------
+  msrv:
+    name: MSRV (1.85)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # Sets RUSTUP_TOOLCHAIN, which overrides rust-toolchain.toml. That is the
+      # point of this job: it must build on the floor, not on the pin.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.85.0"
+      - uses: Swatinem/rust-cache@v2
+      # `check`, and default targets only. The promise is that a consumer can
+      # build the crate on the floor, not that the test suite runs there.
+      - run: cargo check --workspace
+
+  # --------------------------------------------------------------------------
+  # Docs. The modules lean on intra-doc links to tie the 0-based and 1-based
+  # line APIs together, and a broken link silently drops that guidance.
+  # --------------------------------------------------------------------------
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the toolchain named by rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  # --------------------------------------------------------------------------
+  # Aggregation gate: the single required check for branch protection. Passes
+  # only if every job above succeeded. Referencing just this check keeps branch
+  # protection stable as jobs are added or renamed.
+  # --------------------------------------------------------------------------
+  ci:
+    if: always()
+    needs:
+      - fmt
+      - clippy
+      - test
+      - msrv
+      - docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any dependency failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Success
+        run: exit 0
