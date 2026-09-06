@@ -1,3 +1,9 @@
+//! The `safec` binary.
+//!
+//! A thin wrapper: it parses the arguments, hands the result to the library,
+//! and maps what comes back to a process exit code. The compiler itself lives
+//! in the `safec` library, so that tests can drive it in process.
+
 use std::process::ExitCode;
 
 use clap::Parser;

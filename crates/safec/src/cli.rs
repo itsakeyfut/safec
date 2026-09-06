@@ -68,13 +68,25 @@ impl Cli {
     /// have to be computed, such as an output path derived from the inputs,
     /// will be worked out.
     pub fn into_options(self) -> Options {
+        // Destructured rather than read field by field, so that a field added
+        // to `Cli` and forgotten here is a compile error instead of an argument
+        // that silently does nothing.
+        let Cli {
+            inputs,
+            output,
+            safety,
+            emit,
+            deny_unknown,
+            color,
+        } = self;
+
         Options {
-            inputs: self.inputs,
-            output: self.output,
-            safety: self.safety,
-            emit: self.emit,
-            deny_unknown: self.deny_unknown,
-            color: self.color,
+            inputs,
+            output,
+            safety,
+            emit,
+            deny_unknown,
+            color,
         }
     }
 }
@@ -224,8 +236,11 @@ mod tests {
         assert!(cli.deny_unknown);
     }
 
-    /// Every argument has to survive the trip across the CLI boundary; a field
-    /// added to `Cli` and forgotten in `into_options` fails here.
+    /// Every argument has to survive the trip across the CLI boundary. The two
+    /// halves are guarded by the compiler rather than by this test: a field
+    /// added to `Options` breaks the struct literal below, and one added to
+    /// `Cli` breaks the destructuring in `into_options`. What is left for the
+    /// test is that each argument arrives as the value that was parsed.
     #[test]
     fn every_argument_survives_the_trip_into_options() {
         let options = Cli::try_parse_from([

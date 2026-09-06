@@ -21,3 +21,10 @@ codegen-units = 1
 
 [profile.dev.package."*"]
 opt-level = 2
+
+[workspace.lints.rust]
+# The doc comments are the point of a compiler meant to be read; keep them
+# mandatory from the start rather than backfilling hundreds of items later.
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
