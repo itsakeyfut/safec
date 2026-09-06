@@ -66,36 +66,47 @@ fn clamp(file: &SourceFile, span: Span) -> (Range<usize>, Adjusted) {
     let text = file.contents();
     let mut start = (span.start() as usize).min(text.len());
     let mut end = (span.end() as usize).min(text.len());
-    let past_the_end = start != span.start() as usize || end != span.end() as usize;
-    let mut snapped = false;
+    let mut adjusted = Adjusted {
+        past_the_end: start != span.start() as usize || end != span.end() as usize,
+        start_split: false,
+        end_split: false,
+    };
 
     // `text.len()` is always a boundary, so neither loop can run off the end.
     while !text.is_char_boundary(start) {
         start -= 1;
-        snapped = true;
+        adjusted.start_split = true;
     }
     while !text.is_char_boundary(end) {
         end += 1;
-        snapped = true;
+        adjusted.end_split = true;
     }
 
-    let adjusted = match (past_the_end, snapped) {
-        (true, _) => Adjusted::PastTheEnd,
-        (false, true) => Adjusted::InsideACharacter,
-        (false, false) => Adjusted::No,
-    };
     (start..end.max(start), adjusted)
 }
 
-/// Why a label's span had to be moved before it could be rendered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Adjusted {
-    /// It fits the file as it was given.
-    No,
-    /// It reached past the end of the file.
-    PastTheEnd,
-    /// An endpoint fell inside a character.
-    InsideACharacter,
+/// What had to be done to a label's span before it could be rendered.
+///
+/// Three flags rather than one reason, because the reasons combine: a span can
+/// reach past the end of the file and split a character, and either endpoint
+/// can be the one that split. A single value has to pick one of them to report,
+/// and the note it produces names both offsets, so a reader who counts them
+/// finds the claim is about the other end.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct Adjusted {
+    /// An endpoint reached past the end of the file and was pulled back.
+    past_the_end: bool,
+    /// The start fell inside a character and was moved down to its boundary.
+    start_split: bool,
+    /// The end fell inside a character and was moved up to its boundary.
+    end_split: bool,
+}
+
+impl Adjusted {
+    /// Whether anything had to move at all.
+    fn any(self) -> bool {
+        self.past_the_end || self.start_split || self.end_split
+    }
 }
 
 /// Renders diagnostics against the source they point into.
@@ -294,22 +305,37 @@ fn certainty_note(diagnostic: &Diagnostic) -> Option<String> {
     })
 }
 
+/// Every reason the span moved, not the first one that applied.
+///
+/// The note names the offsets it is talking about, so a reader can check it.
+/// That makes an incomplete reason worse than none: it invites the reader to
+/// count bytes and conclude the compiler is confused about its own diagnostic.
 fn adjustment_note(label: &Label, file: &SourceFile, adjusted: Adjusted) -> Option<String> {
-    let reason = match adjusted {
-        Adjusted::No => return None,
-        Adjusted::PastTheEnd => format!(
+    if !adjusted.any() {
+        return None;
+    }
+
+    let mut reasons = Vec::new();
+    if adjusted.past_the_end {
+        reasons.push(format!(
             "reaches past the end of {} ({} bytes)",
             file.name(),
             file.len()
-        ),
-        Adjusted::InsideACharacter => "ends inside a character".to_owned(),
-    };
+        ));
+    }
+    match (adjusted.start_split, adjusted.end_split) {
+        (true, true) => reasons.push("starts and ends inside a character".to_owned()),
+        (true, false) => reasons.push("starts inside a character".to_owned()),
+        (false, true) => reasons.push("ends inside a character".to_owned()),
+        (false, false) => {}
+    }
+
     Some(format!(
         "the span {}..{} for `{}` {}, and was moved to fit",
         label.span().start(),
         label.span().end(),
         label.message(),
-        reason
+        reasons.join(" and ")
     ))
 }
 
@@ -643,6 +669,59 @@ mod tests {
 
         assert!(rendered.contains("ends inside a character"), "{rendered}");
         assert!(rendered.contains("here"), "{rendered}");
+    }
+
+    /// The note names both offsets, so a reader can check which end it means.
+    /// Blaming the end when the start was the one that split invites them to
+    /// count the bytes and find the compiler wrong about its own diagnostic.
+    /// In `/* 日本 */`, byte 4 splits the first character and byte 9 is the
+    /// space, a real boundary.
+    #[test]
+    fn a_span_that_starts_inside_a_character_says_so_rather_than_blaming_the_end() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "/* 日本 */\n");
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 4, 9), "here")),
+        );
+
+        assert!(rendered.contains("starts inside a character"), "{rendered}");
+        assert!(!rendered.contains("ends inside a character"), "{rendered}");
+    }
+
+    /// Byte 4 splits the first character and byte 7 splits the second, so both
+    /// ends moved and the note has to say both.
+    #[test]
+    fn a_span_split_at_both_ends_says_both() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "/* 日本 */\n");
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 4, 7), "here")),
+        );
+
+        assert!(
+            rendered.contains("starts and ends inside a character"),
+            "{rendered}"
+        );
+    }
+
+    /// The two reasons are independent, so a span can have both. Reporting only
+    /// the one that reached past the end hides that the caret also moved.
+    #[test]
+    fn a_span_that_is_both_past_the_end_and_split_says_both() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "/* 日本 */\n");
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 4, 600), "here")),
+        );
+
+        assert!(rendered.contains("reaches past the end of"), "{rendered}");
+        assert!(rendered.contains("starts inside a character"), "{rendered}");
     }
 
     /// A span built against a different source map. The renderer cannot quote
