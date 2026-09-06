@@ -87,12 +87,17 @@ pub fn compile(options: &Options) -> Compiled {
     let mut seen = HashSet::new();
     for input in &options.inputs {
         // The same path twice is one translation unit, not two: reading it
-        // twice would report everything in it twice. `Path` compares by
-        // component rather than by spelling, so `dir/./a.c` is caught along
-        // with an identical spelling. `a.c` and `./a.c` are still two, and so
-        // are `main.c` and `MAIN.C` on a filesystem that says otherwise.
-        // Deciding when two paths name one file belongs to the source map, and
-        // `#include` is what will make it worth deciding.
+        // twice would report everything in it twice. `cc` answers differently,
+        // compiling the file twice so that the link fails on a duplicate
+        // symbol, which is a divergence taken on purpose: saying everything a
+        // user has to read twice is the worse of the two answers for something
+        // whose output is diagnostics.
+        //
+        // `Path` compares by component rather than by spelling, so `dir/./a.c`
+        // is caught along with an identical spelling. `a.c` and `./a.c` are
+        // still two, and so are `main.c` and `MAIN.C` on a filesystem that says
+        // otherwise. Deciding when two paths name one file belongs to the
+        // source map, and `#include` is what will make it worth deciding.
         if !seen.insert(input.as_path()) {
             continue;
         }
@@ -296,6 +301,43 @@ mod tests {
         let compiled = compile(&options(vec![path.clone(), path]));
 
         assert_eq!(compiled.sources.len(), 1);
+    }
+
+    /// The rule is component equality, which is what `Path` compares, and not
+    /// the spelling. A redundant `.` in the middle of a path names the same
+    /// file and is caught; a leading `./` is a different first component and is
+    /// not. Without both halves the comment above is a claim about behaviour
+    /// that nothing holds to, and a later `canonicalize` would arrive looking
+    /// like a fix rather than like a change.
+    #[test]
+    fn two_spellings_are_one_input_only_when_their_components_match() {
+        let file = TempFile::new(
+            "safec_driver_spelling.c",
+            "int x;
+",
+        );
+        let directory = file.path().parent().expect("the file has a parent");
+        let name = file.path().file_name().expect("the file has a name");
+
+        let matching = compile(&options(vec![
+            directory.join(name),
+            directory.join(".").join(name),
+        ]));
+
+        assert_eq!(matching.sources.len(), 1);
+
+        let differing = compile(&options(vec![
+            PathBuf::from("safec_driver_spelling_relative.c"),
+            PathBuf::from("./safec_driver_spelling_relative.c"),
+        ]));
+        let attempted = differing
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter(|diagnostic| diagnostic.message().contains("cannot read"))
+            .count();
+
+        assert_eq!(attempted, 2, "{:?}", differing.diagnostics.diagnostics());
     }
 
     /// A path that is not there is an ordinary diagnostic. Reaching for
