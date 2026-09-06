@@ -62,6 +62,10 @@ names that go silently wrong.
 * A `proposed` status while the codebase already relies on the decision is itself
   a defect; say so in *Context and Problem Statement*.
 * Keep the status in sync between an ADR's front matter and its row in this index.
+* When code a record names moves or is renamed, update the record's pointers to
+  it. The reasoning is a record of what was thought at the time and is not
+  rewritten, but the pointers are navigation rather than history, and a record
+  whose pointers are dead is a record nobody can check.
 * Prose here uses no em dashes.
 
 ## More Information

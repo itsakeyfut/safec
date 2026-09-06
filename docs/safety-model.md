@@ -130,7 +130,8 @@ A level says **which checks run**, and nothing else. It does not decide how
 loudly a check speaks: a result the analysis proved is an error at every level,
 because there is no safety argument for knowing something is wrong and saying it
 quietly. What varies is the result the analysis could *not* prove, and that is
-governed by `--deny-unknown` rather than by the level. See section 18.2 and
+governed by `--deny-unknown` rather than by the level. See
+[Safe, Unsafe, Unknown](#safe-unsafe-unknown) above and
 [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md).
 
 Level 5 is defined as leaving nothing `Unknown`, so `--safety strict` implies
