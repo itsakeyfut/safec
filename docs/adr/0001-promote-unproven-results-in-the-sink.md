@@ -119,11 +119,12 @@ mutation that makes it fail:
 * Making `Diagnostic::unproven` return `Certainty::Proven` fails the test that it
   is the only constructor producing an unprovable diagnostic.
 
-Honestly: **this record precedes the code by one change.** Until those tests
-land, nothing enforces any of it. And because no driver exists yet, nothing
-constructs a sink from `Options` at run time. The mechanism will be complete and
-tested, but `--deny-unknown` only takes effect end to end once the driver wires
-`Policy::from(&options)`, which is one line.
+Each of those mutations was applied and the named test observed to fail.
+
+Honestly: no driver exists yet, so nothing constructs a sink from `Options` at
+run time. The mechanism is complete and tested, but `--deny-unknown` only takes
+effect end to end once the driver wires `Policy::from(&options)`, which is one
+line.
 
 ### Consequences
 
@@ -139,10 +140,10 @@ tested, but `--deny-unknown` only takes effect end to end once the driver wires
 * Bad, because a check author can still write `Diagnostic::warning(..)` for a
   result they could not prove, and nothing detects it. The constructor names make
   it conspicuous; they do not make it impossible.
-* Bad, because `diagnostics` now depends on `options` for `SafetyLevel`.
-  `SafetyLevel` is a safety-model concept that happens to live in `options.rs`
-  because it is also a CLI value, and it should move when the analysis layer
-  lands.
+* Bad, because `diagnostics` came to depend on `options` for `SafetyLevel`,
+  which is a safety-model concept that happened to live in `options.rs` because
+  it is also a CLI value. It has since moved to `crate::safety`, so a diagnostic
+  can name a level without depending on what the user typed.
 * What would reverse this: an analysis pass that needs to report a result whose
   severity depends on more than certainty, for instance if the safety level turns
   out to belong in the policy after all, would push the decision toward the
