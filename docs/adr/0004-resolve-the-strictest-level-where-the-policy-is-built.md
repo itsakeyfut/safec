@@ -123,6 +123,10 @@ than matching each variant. The two spellings are identical today, `Strict`
 being the last variant, and `==` would fail in the unsafe direction the moment
 one is added after it.
 
+The same argument applies to `Cli::into_options`, which is quoted as `==` at the
+top of this record because that is how it stood. It was changed in the same
+commit, so neither site now depends on `Strict` remaining the last variant.
+
 The duplication with `Cli::into_options` is real and is accepted on purpose. The
 two copies are not one rule stated twice for convenience. `Cli::into_options`
 resolves the field so that `Options::deny_unknown` reads truthfully to anyone

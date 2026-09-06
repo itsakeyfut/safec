@@ -114,17 +114,22 @@ mutation that makes it fail:
   reason.
 * Counting before promoting rather than after fails the test that `error_count()`
   equals a recount over `diagnostics()` in both policies.
-* Dropping the `|| safety == SafetyLevel::Strict` clause fails the `cli.rs` test
+* Dropping the `|| safety >= SafetyLevel::Strict` clause fails the `cli.rs` test
   that `--safety strict` alone resolves `deny_unknown` to true.
 * Making `Diagnostic::unproven` return `Certainty::Proven` fails the test that it
   is the only constructor producing an unprovable diagnostic.
 
 Each of those mutations was applied and the named test observed to fail.
 
-Honestly: no driver exists yet, so nothing constructs a sink from `Options` at
-run time. The mechanism is complete and tested, but `--deny-unknown` only takes
-effect end to end once the driver wires `Policy::from(&options)`, which is one
-line.
+The wiring this record was written ahead of has since landed. `compile` in
+`crates/safec/src/driver.rs` builds the sink from `Policy::from(options)` and is
+the only thing that builds one, so `--deny-unknown` now takes effect end to end.
+`the_sink_is_built_from_the_resolved_options` guards it: replacing the
+conversion with `DiagnosticSink::new` fails it.
+
+[ADR-0004](0004-resolve-the-strictest-level-where-the-policy-is-built.md) later
+closed `Policy` itself, so a sink cannot be given a policy that was not resolved
+at all.
 
 ### Consequences
 

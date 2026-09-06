@@ -15,7 +15,7 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 
 | # | Decision | Status | Confirmed by |
 |---|---|---|---|
-| [0001](./0001-promote-unproven-results-in-the-sink.md) | Tag a result the analysis could not prove at the check, and promote it in the sink | accepted | unit tests in `crates/safec/src/diagnostics.rs` (promotion on, promotion off, a proven warning left alone, `error_count` equals a recount) and the `--safety strict` resolution test in `crates/safec/src/cli.rs`; each verified by the mutation that makes it fail |
+| [0001](./0001-promote-unproven-results-in-the-sink.md) | Tag a result the analysis could not prove at the check, and promote it in the sink | accepted | unit tests in `crates/safec/src/diagnostics.rs` (promotion on, promotion off, a proven warning left alone, `error_count` equals a recount) the `--safety strict` resolution test in `crates/safec/src/cli.rs`, and `the_sink_is_built_from_the_resolved_options` in `crates/safec/src/driver.rs`; each verified by the mutation that makes it fail |
 | [0002](./0002-severity-runs-from-least-to-most-severe.md) | Declare `Severity` from least to most severe, the same direction as `SafetyLevel` | accepted | `severities_are_ordered_from_least_to_most_serious` and `the_worst_severity_in_a_set_is_its_maximum` in `crates/safec/src/diagnostics.rs`; both fail if the variants are put back in descending order |
 | [0003](./0003-pass-the-source-map-to-each-render-call.md) | Pass the source map to each render call rather than holding it | accepted | `a_renderer_does_not_hold_the_source_map` in `crates/safec/src/diagnostics/render.rs`; the borrow half does not compile against a renderer that holds the map, and sizing the cache once makes the assertion fail |
 | [0004](./0004-resolve-the-strictest-level-where-the-policy-is-built.md) | Resolve the strictest safety level where the policy is built, not only where the options are | accepted | `Policy`'s private field makes the bypass a compile error (E0451); `the_strictest_safety_level_denies_unknown_however_the_policy_is_built` and `the_strictest_safety_level_denies_unknown_even_unresolved` in `crates/safec/src/diagnostics.rs` and `the_strictest_safety_level_denies_unknown_in_the_sink` in `crates/safec/src/driver.rs`, all three of which fail if `Policy::new` keeps `deny_unknown` alone |
@@ -114,6 +114,11 @@ is a sign the bar has slipped rather than a sign of progress.
 * A `proposed` status while the codebase already relies on the decision is itself
   a defect; say so in *Context and Problem Statement*.
 * Keep the status in sync between an ADR's front matter and its row in this index.
+* When a record says something is not yet enforced, and it then is, update
+  **Confirmation** in the same change. That section answers what guards the
+  decision now, not what was true when it was written, and a record that
+  understates its own guards sends the next reader to redo finished work. It is
+  the same obligation as the pointers below, in the section that matters most.
 * When code a record names moves or is renamed, update the record's pointers to
   it. The reasoning is a record of what was thought at the time and is not
   rewritten, but the pointers are navigation rather than history, and a record
