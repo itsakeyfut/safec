@@ -138,7 +138,7 @@ and nothing else.
 ## More Information
 
 * `crates/safec/src/diagnostics.rs`: `Severity`.
-* `crates/safec/src/options.rs`: `SafetyLevel`, the other ordinal enum, and the
+* `crates/safec/src/safety.rs`: `SafetyLevel`, the other ordinal enum, and the
   doc comment that states the convention this now matches.
 * `codespan-reporting` 0.13.1, `src/diagnostic.rs`: the ordering doctest.
 * [ADR-0001](0001-promote-unproven-results-in-the-sink.md), which separates what

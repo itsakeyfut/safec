@@ -189,7 +189,8 @@ line.
   uncertainty" is what annotations exist to remove.
 * [`docs/design-principles.md`](../design-principles.md): the principle this
   serves, "separate inference from enforcement".
-* `crates/safec/src/options.rs`: `deny_unknown`, `SafetyLevel`.
+* `crates/safec/src/options.rs`: `deny_unknown`.
+* `crates/safec/src/safety.rs`: `SafetyLevel`.
 * `crates/safec/src/diagnostics.rs`: `Severity`, `Diagnostic`, `DiagnosticSink`.
 * The multi-agent review that found the gap: `DiagnosticSink::report` settles its
   count at push time, so no later pass can promote, and nothing distinguishes an
