@@ -23,7 +23,7 @@ use std::fmt;
 use std::io;
 use std::ops::Range;
 
-use ariadne::{Color, Config, IndexType, Label as AriadneLabel, Report, ReportKind, Source};
+use ariadne::{Color, Config, Fmt, IndexType, Label as AriadneLabel, Report, ReportKind, Source};
 
 use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Severity};
 use crate::options::ColorMode;
@@ -223,7 +223,7 @@ impl Renderer {
             .map(|(_, span)| span.clone());
 
         let Some(anchor) = anchor else {
-            return render_header_only(diagnostic, &notes, out);
+            return render_header_only(diagnostic, &notes, self.color, out);
         };
 
         // `ariadne`'s built-in kinds spell the header `Error:` and collapse a
@@ -322,12 +322,25 @@ fn no_such_file(label: &Label) -> String {
 }
 
 /// The header and the notes, for a diagnostic with nothing to point at.
+///
+/// `ariadne` colours the whole of `error[E0301]:`, colon included, and this
+/// matches it byte for byte rather than merely word for word. The two paths are
+/// one interface: a reader who asked for colour and got it on the diagnostics
+/// that point at source, but not on the ones that do not, would reasonably read
+/// the difference as meaning something.
 fn render_header_only(
     diagnostic: &Diagnostic,
     notes: &[String],
+    color: bool,
     out: &mut impl io::Write,
 ) -> io::Result<()> {
-    writeln!(out, "{}: {}", header(diagnostic), diagnostic.message())?;
+    let head = format!("{}:", header(diagnostic));
+    if color {
+        let head = head.fg(severity_color(diagnostic.severity()));
+        writeln!(out, "{head} {}", diagnostic.message())?;
+    } else {
+        writeln!(out, "{head} {}", diagnostic.message())?;
+    }
     write_notes(notes, out)
 }
 
@@ -833,5 +846,32 @@ mod tests {
         let second = rendered.find("second").expect("second is missing");
         let third = rendered.find("third").expect("third is missing");
         assert!(first < second && second < third, "{rendered}");
+    }
+
+    /// The two paths are one interface, so the header has to match in colour as
+    /// well as in words. `ariadne` colours `error[E0001]:` including the colon,
+    /// and the hand-written path has to put the escapes in the same places.
+    #[test]
+    fn both_rendering_paths_colour_the_header_the_same_way() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x;\n");
+
+        for severity in [
+            Severity::Error,
+            Severity::Warning,
+            Severity::Note,
+            Severity::Help,
+        ] {
+            let bare = Diagnostic::new(severity, "m").with_code(Code::new("E0001"));
+            let anchored = bare
+                .clone()
+                .with_label(Label::primary(Span::new(file, 0, 3), "here"));
+
+            let bare = render_with(&sources, &bare, ColorMode::Always);
+            let anchored = render_with(&sources, &anchored, ColorMode::Always);
+
+            assert!(first_line(&bare).contains('\u{1b}'), "{bare:?}");
+            assert_eq!(first_line(&bare), first_line(&anchored), "{severity:?}");
+        }
     }
 }
