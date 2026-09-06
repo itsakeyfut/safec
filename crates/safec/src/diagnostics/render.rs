@@ -279,9 +279,16 @@ fn safety_level_note(diagnostic: &Diagnostic) -> Option<String> {
 fn certainty_note(diagnostic: &Diagnostic) -> Option<String> {
     (diagnostic.certainty() == Certainty::Unproven).then(|| {
         if diagnostic.severity().is_error() {
-            // The sink has already promoted it.
-            "this could not be proven, and `--deny-unknown` makes it an error".to_owned()
+            // The sink has already promoted it, and which flag asked for that
+            // is not knowable here: `--safety strict` sets the same policy as
+            // `--deny-unknown`, and `Policy` carries the decision rather than
+            // its origin. Naming one of them would be a guess, and the wrong
+            // guess tells the user a flag they never gave is to blame.
+            "this could not be proven, and unproven results are errors in this compilation"
+                .to_owned()
         } else {
+            // Still a warning, so this is advice rather than an explanation,
+            // and the flag that would escalate it can be named.
             "this could not be proven; `--deny-unknown` makes it an error".to_owned()
         }
     })
@@ -445,6 +452,8 @@ impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::Parser as _;
+
     use crate::diagnostics::Code;
 
     fn render(sources: &SourceMap, diagnostic: &Diagnostic) -> String {
@@ -707,24 +716,39 @@ mod tests {
         assert!(!proven.contains("could not be proven"), "{proven}");
     }
 
-    /// After the sink has promoted it, the note has to stop saying that
-    /// `--deny-unknown` *would* make it an error.
+    /// Once the sink has promoted it the note explains why it is an error, and
+    /// it cannot name the flag responsible: `--safety strict` sets the same
+    /// policy as `--deny-unknown`, so naming either one would tell half the
+    /// users that a flag they never gave is to blame.
+    ///
+    /// Driven from the command line rather than from a hand-built `Policy`, so
+    /// that the whole path from an argument to a rendered note is pinned.
     #[test]
-    fn a_promoted_diagnostic_says_the_flag_already_made_it_an_error() {
-        let sources = SourceMap::new();
-        let mut sink =
-            DiagnosticSink::with_policy(crate::diagnostics::Policy { deny_unknown: true });
-        sink.report(Diagnostic::unproven("`p` may escape"));
+    fn a_promoted_diagnostic_does_not_name_a_flag_the_user_may_not_have_given() {
+        for args in [
+            &["safec", "--safety", "strict", "a.c"][..],
+            &["safec", "--deny-unknown", "a.c"][..],
+        ] {
+            let options = crate::cli::Cli::try_parse_from(args)
+                .unwrap()
+                .into_options();
+            let mut sink = DiagnosticSink::with_policy(crate::diagnostics::Policy::from(&options));
+            sink.report(Diagnostic::unproven("`p` may escape"));
 
-        let rendered = render(&sources, &sink.diagnostics()[0]);
+            let rendered = render(&SourceMap::new(), &sink.diagnostics()[0]);
 
-        assert!(rendered.starts_with("error: "), "{rendered}");
-        assert!(
-            rendered.contains(
-                "  = note: this could not be proven, and `--deny-unknown` makes it an error"
-            ),
-            "{rendered}"
-        );
+            assert!(rendered.starts_with("error: "), "{args:?}: {rendered}");
+            assert!(
+                rendered.contains(
+                    "  = note: this could not be proven, and unproven results are errors in this compilation"
+                ),
+                "{args:?}: {rendered}"
+            );
+            assert!(
+                !rendered.contains("--deny-unknown"),
+                "{args:?} blamed a flag: {rendered}"
+            );
+        }
     }
 
     #[test]
