@@ -100,22 +100,28 @@ enum Adjusted {
 
 /// Renders diagnostics against the source they point into.
 ///
-/// Takes `&mut self` to render: the line index `ariadne` needs is built on
-/// first use of a file and kept for the rest of the run.
+/// Holds no borrow of a [`SourceMap`]. The map is passed to each call instead,
+/// so a driver can keep loading files while a renderer is alive, which is what
+/// `#include` will need: a lexer that hits one has to add a file to the map,
+/// and it cannot do that while something holds the map immutably.
+///
+/// The line index `ariadne` insists on building for each file lives for one
+/// call. [`Renderer::render_all`] builds it once for a whole batch, which is
+/// the path a driver should take; [`Renderer::render`] builds it for the single
+/// diagnostic it writes.
 #[derive(Debug)]
-pub struct Renderer<'a> {
-    cache: SourceMapCache<'a>,
+pub struct Renderer {
     config: Config,
     color: bool,
 }
 
-impl<'a> Renderer<'a> {
-    /// A renderer for the files in `sources`.
+impl Renderer {
+    /// A renderer that colours its output as `color` asks.
     ///
     /// `color` is resolved here rather than carried further: `Auto` asks
     /// whether the stream is a terminal, and nothing downstream should have to
     /// ask again.
-    pub fn new(sources: &'a SourceMap, color: ColorMode) -> Self {
+    pub fn new(color: ColorMode) -> Self {
         let color = match color {
             ColorMode::Always => true,
             ColorMode::Never => false,
@@ -123,7 +129,6 @@ impl<'a> Renderer<'a> {
         };
 
         Self {
-            cache: SourceMapCache::new(sources),
             config: Config::default()
                 .with_color(color)
                 // Spans are byte offsets. `ariadne` reads them as character
@@ -142,14 +147,47 @@ impl<'a> Renderer<'a> {
     /// note saying so. A span naming a file this renderer does not have is
     /// reported the same way. Nothing a caller can build makes a label vanish
     /// without a trace in `out`.
-    pub fn render(&mut self, diagnostic: &Diagnostic, out: &mut impl io::Write) -> io::Result<()> {
+    ///
+    /// Rendering a batch by calling this in a loop rebuilds `ariadne`'s line
+    /// index for every diagnostic. [`Renderer::render_all`] builds it once.
+    pub fn render(
+        &self,
+        sources: &SourceMap,
+        diagnostic: &Diagnostic,
+        out: &mut impl io::Write,
+    ) -> io::Result<()> {
+        self.write_one(&mut SourceMapCache::new(sources), diagnostic, out)
+    }
+
+    /// Write every diagnostic in a sink, in the order they were reported.
+    ///
+    /// One line index per file for the whole batch.
+    pub fn render_all(
+        &self,
+        sources: &SourceMap,
+        sink: &DiagnosticSink,
+        out: &mut impl io::Write,
+    ) -> io::Result<()> {
+        let mut cache = SourceMapCache::new(sources);
+        for diagnostic in sink.diagnostics() {
+            self.write_one(&mut cache, diagnostic, out)?;
+        }
+        Ok(())
+    }
+
+    fn write_one(
+        &self,
+        cache: &mut SourceMapCache<'_>,
+        diagnostic: &Diagnostic,
+        out: &mut impl io::Write,
+    ) -> io::Result<()> {
         let mut notes: Vec<String> = diagnostic.notes().to_vec();
         notes.extend(safety_level_note(diagnostic));
         notes.extend(certainty_note(diagnostic));
         let mut labels: Vec<(&Label, AriadneSpan)> = Vec::new();
 
         for label in diagnostic.labels() {
-            match self.file(label.span().file()) {
+            match cache.file(label.span().file()) {
                 Some(file) => {
                     let (range, adjusted) = clamp(file, label.span());
                     if let Some(note) = adjustment_note(label, file, adjusted) {
@@ -217,29 +255,12 @@ impl<'a> Renderer<'a> {
         // which renders them inside it as `Note:`. This keeps one spelling for
         // both paths.
         let mut rendered = Vec::new();
-        report.finish().write(&mut self.cache, &mut rendered)?;
+        report.finish().write(&mut *cache, &mut rendered)?;
         if !self.color {
             strip_header_escapes(&mut rendered);
         }
         out.write_all(&rendered)?;
         write_notes(&notes, out)
-    }
-
-    /// Write every diagnostic in a sink, in the order they were reported.
-    pub fn render_all(
-        &mut self,
-        sink: &DiagnosticSink,
-        out: &mut impl io::Write,
-    ) -> io::Result<()> {
-        for diagnostic in sink.diagnostics() {
-            self.render(diagnostic, out)?;
-        }
-        Ok(())
-    }
-
-    /// The file a span names, or `None` if this renderer does not have it.
-    fn file(&self, id: FileId) -> Option<&SourceFile> {
-        (id.index() < self.cache.cached.len()).then(|| self.cache.sources.file(id))
     }
 }
 
@@ -372,10 +393,29 @@ struct SourceMapCache<'a> {
 }
 
 impl<'a> SourceMapCache<'a> {
+    /// A cache for one rendering call.
+    ///
+    /// Sizing `cached` once is sound because this borrows the map for as long
+    /// as it lives, and it lives for a single call, so no file can be added
+    /// underneath it. A cache that outlived the borrow would need to grow in
+    /// [`SourceMapCache::fetch`] instead, and forgetting that would report
+    /// every file added afterwards as one this renderer does not have.
     fn new(sources: &'a SourceMap) -> Self {
         Self {
             sources,
             cached: (0..sources.len()).map(|_| None).collect(),
+        }
+    }
+
+    /// The file a span names, or `None` if this map does not have it.
+    ///
+    /// The result borrows the map rather than the cache, so a caller can hold
+    /// it while the cache is borrowed mutably to render.
+    fn file(&self, id: FileId) -> Option<&'a SourceFile> {
+        if id.index() < self.cached.len() {
+            Some(self.sources.file(id))
+        } else {
+            None
         }
     }
 }
@@ -413,8 +453,8 @@ mod tests {
 
     fn render_with(sources: &SourceMap, diagnostic: &Diagnostic, color: ColorMode) -> String {
         let mut out = Vec::new();
-        Renderer::new(sources, color)
-            .render(diagnostic, &mut out)
+        Renderer::new(color)
+            .render(sources, diagnostic, &mut out)
             .expect("writing to a vector cannot fail");
         String::from_utf8(out).expect("the renderer writes text")
     }
@@ -694,12 +734,55 @@ mod tests {
         let rendered = render(
             &sources,
             &Diagnostic::unproven("`p` may escape")
-                .with_safety_level(crate::options::SafetyLevel::Lifetime),
+                .with_safety_level(crate::safety::SafetyLevel::Lifetime),
         );
 
         assert!(
             rendered.contains("  = note: this check belongs to safety level 2"),
             "{rendered}"
+        );
+    }
+
+    /// The reason the renderer takes the map per call instead of holding it. A
+    /// lexer that meets an `#include` has to add a file while diagnostics are
+    /// already being reported, and it cannot do that while something borrows
+    /// the map. This does not compile against a renderer that keeps the borrow,
+    /// and a renderer that sized its cache once would report the second file as
+    /// one it does not have.
+    #[test]
+    fn a_renderer_does_not_hold_the_source_map() {
+        let renderer = Renderer::new(ColorMode::Never);
+        let mut sources = SourceMap::new();
+        let main = sources.add_virtual("main.c", "int x;\n");
+
+        let mut out = Vec::new();
+        renderer
+            .render(
+                &sources,
+                &Diagnostic::error("first")
+                    .with_label(Label::primary(Span::new(main, 0, 3), "here")),
+                &mut out,
+            )
+            .unwrap();
+
+        // The renderer is still alive, and the map still grows.
+        let header = sources.add_virtual("header.h", "int y;\n");
+        renderer
+            .render(
+                &sources,
+                &Diagnostic::error("second")
+                    .with_label(Label::primary(Span::new(header, 0, 3), "there")),
+                &mut out,
+            )
+            .unwrap();
+
+        let rendered = String::from_utf8(out).unwrap();
+        assert!(rendered.contains("<main.c>"), "{rendered}");
+        assert!(rendered.contains("<header.h>"), "{rendered}");
+        assert!(rendered.contains("there"), "{rendered}");
+        assert!(
+            !rendered.contains("does not have"),
+            "the second file was not found: {rendered}"
         );
     }
 
@@ -717,8 +800,8 @@ mod tests {
         );
 
         let mut out = Vec::new();
-        Renderer::new(&sources, ColorMode::Never)
-            .render_all(&sink, &mut out)
+        Renderer::new(ColorMode::Never)
+            .render_all(&sources, &sink, &mut out)
             .unwrap();
         let rendered = String::from_utf8(out).unwrap();
 
