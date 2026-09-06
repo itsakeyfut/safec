@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       # `rust-toolchain.toml` names the channel and the components, and `rustup
       # show` installs exactly what it names. Every job below does the same, so
-      # the toolchain has a single source of truth in the repository — the one
+      # the toolchain has a single source of truth in the repository. The one
       # exception is the MSRV job, which has to disagree on purpose.
       - name: Install the toolchain named by rust-toolchain.toml
         run: rustup show

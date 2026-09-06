@@ -30,6 +30,27 @@ impl FileId {
     pub fn index(self) -> usize {
         self.0 as usize
     }
+
+    /// A handle for the file at `index`.
+    ///
+    /// For a caller inside the crate that already knows the position, such as
+    /// a test. Ordinary code receives a handle from
+    /// [`SourceMap::add_virtual`] or [`SourceMap::load`] instead of building
+    /// one.
+    ///
+    /// Deliberately not `pub`. A handle is only meaningful against the map it
+    /// came from, and [`SourceMap::file`] cannot tell a foreign one from its
+    /// own, so letting callers outside the crate mint handles would make it easy
+    /// to resolve a span against the wrong file and report a diagnostic about
+    /// code that is fine.
+    ///
+    /// # Panics
+    ///
+    /// If `index` does not fit in a `u32`.
+    #[cfg(test)]
+    pub(crate) fn from_index(index: usize) -> Self {
+        Self(u32::try_from(index).expect("more than 4 billion source files"))
+    }
 }
 
 /// Where a source file came from.
@@ -65,7 +86,7 @@ impl fmt::Display for FileName {
 ///
 /// Privacy is only half of what that will take. [`Span::new`] and the accessors
 /// below pin the shape just as firmly, so reaching that point means revisiting
-/// them too — it is the callers that are protected, not the design.
+/// them too: it is the callers that are protected, not the design.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     file: FileId,
@@ -474,6 +495,19 @@ mod tests {
 
         assert_eq!(map.snippet(span), "42");
         assert_eq!(map.file(id).line_col(span.start()).column, 9);
+    }
+
+    #[test]
+    fn a_handle_built_from_an_index_refers_to_that_index() {
+        assert_eq!(FileId::from_index(0).index(), 0);
+        assert_eq!(FileId::from_index(3).index(), 3);
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    #[should_panic(expected = "more than 4 billion source files")]
+    fn a_handle_beyond_the_range_of_a_file_id_is_a_bug() {
+        FileId::from_index(usize::MAX);
     }
 
     #[test]

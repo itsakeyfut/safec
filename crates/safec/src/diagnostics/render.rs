@@ -1,0 +1,813 @@
+//! Rendering diagnostics for a terminal.
+//!
+//! The only module that knows a rendering library exists. Everything upstream
+//! builds a [`Diagnostic`] and hands it over, which is what keeps a
+//! `--error-format=json` mode, or a different rendering library, a change
+//! confined to this file.
+//!
+//! Two divergences from [`SourceFile`] are worth
+//! knowing about, because both make a rendered gutter disagree with a
+//! [`LineCol`](crate::source::LineCol).
+//!
+//! `ariadne` breaks lines on seven separators, among them a lone `\r` and a
+//! vertical tab; the source map breaks only on `\n`. And a file ending in `\n`
+//! has a final empty line for the source map, deliberately, so that it is
+//! numbered the way an editor numbers it. `ariadne` has no such line, so an
+//! offset at end of file is numbered differently by the two. That last one is
+//! the ordinary case for `error: unexpected end of file`, not an exotic one.
+//!
+//! Reconciling them would mean either teaching the source map about separators
+//! it does not otherwise care about or giving up `ariadne`'s renderer.
+
+use std::fmt;
+use std::io;
+use std::ops::Range;
+
+use ariadne::{Color, Config, IndexType, Label as AriadneLabel, Report, ReportKind, Source};
+
+use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Severity};
+use crate::options::ColorMode;
+use crate::source::{FileId, SourceFile, SourceMap, Span};
+
+/// How `ariadne` names a region: a file, and a byte range within it.
+///
+/// Not an id. In `ariadne`'s vocabulary this whole pair is the span, and the
+/// [`FileId`] alone is its `SourceId`.
+type AriadneSpan = (FileId, Range<usize>);
+
+/// The word a diagnostic is spelled with, code included.
+///
+/// One function owns this so that both rendering paths agree: `ariadne` writes
+/// its own header, and the header-only path writes one by hand.
+fn header(diagnostic: &Diagnostic) -> String {
+    match diagnostic.code() {
+        Some(code) => format!("{}[{code}]", diagnostic.severity()),
+        None => diagnostic.severity().to_string(),
+    }
+}
+
+fn severity_color(severity: Severity) -> Color {
+    match severity {
+        Severity::Error => Color::Red,
+        Severity::Warning => Color::Yellow,
+        Severity::Note | Severity::Help => Color::Cyan,
+    }
+}
+
+/// A label span, made safe to hand to `ariadne`.
+///
+/// `ariadne` slices the file text with these offsets directly. An end one past
+/// the file, or either end inside a character, panics inside it; an end far
+/// past the file makes it drop the label silently. Neither is acceptable in the
+/// one layer whose job is to report problems, so a span is clamped to the file
+/// and snapped to character boundaries first, and the caller is told whether
+/// that had to happen.
+fn clamp(file: &SourceFile, span: Span) -> (Range<usize>, Adjusted) {
+    let text = file.contents();
+    let mut start = (span.start() as usize).min(text.len());
+    let mut end = (span.end() as usize).min(text.len());
+    let past_the_end = start != span.start() as usize || end != span.end() as usize;
+    let mut snapped = false;
+
+    // `text.len()` is always a boundary, so neither loop can run off the end.
+    while !text.is_char_boundary(start) {
+        start -= 1;
+        snapped = true;
+    }
+    while !text.is_char_boundary(end) {
+        end += 1;
+        snapped = true;
+    }
+
+    let adjusted = match (past_the_end, snapped) {
+        (true, _) => Adjusted::PastTheEnd,
+        (false, true) => Adjusted::InsideACharacter,
+        (false, false) => Adjusted::No,
+    };
+    (start..end.max(start), adjusted)
+}
+
+/// Why a label's span had to be moved before it could be rendered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Adjusted {
+    /// It fits the file as it was given.
+    No,
+    /// It reached past the end of the file.
+    PastTheEnd,
+    /// An endpoint fell inside a character.
+    InsideACharacter,
+}
+
+/// Renders diagnostics against the source they point into.
+///
+/// Holds no borrow of a [`SourceMap`]. The map is passed to each call instead,
+/// so a driver can keep loading files while a renderer is alive, which is what
+/// `#include` will need: a lexer that hits one has to add a file to the map,
+/// and it cannot do that while something holds the map immutably.
+///
+/// The line index `ariadne` insists on building for each file lives for one
+/// call. [`Renderer::render_all`] builds it once for a whole batch, which is
+/// the path a driver should take; [`Renderer::render`] builds it for the single
+/// diagnostic it writes.
+#[derive(Debug)]
+pub struct Renderer {
+    config: Config,
+    color: bool,
+}
+
+impl Renderer {
+    /// A renderer that colours its output as `color` asks.
+    ///
+    /// `color` is resolved here rather than carried further: `Auto` asks
+    /// whether the stream is a terminal, and nothing downstream should have to
+    /// ask again.
+    pub fn new(color: ColorMode) -> Self {
+        let color = match color {
+            ColorMode::Always => true,
+            ColorMode::Never => false,
+            ColorMode::Auto => io::IsTerminal::is_terminal(&io::stderr()),
+        };
+
+        Self {
+            config: Config::default()
+                .with_color(color)
+                // Spans are byte offsets. `ariadne` reads them as character
+                // offsets unless told otherwise. That would misplace every
+                // caret on a line holding non-ASCII text, exactly the case the
+                // source map takes care to get right.
+                .with_index_type(IndexType::Byte),
+            color,
+        }
+    }
+
+    /// Write one diagnostic to `out`.
+    ///
+    /// A span that lies outside its file, or that splits a character, is
+    /// clamped rather than dropped or panicked on, and the diagnostic gains a
+    /// note saying so. A span naming a file this renderer does not have is
+    /// reported the same way. Nothing a caller can build makes a label vanish
+    /// without a trace in `out`.
+    ///
+    /// Rendering a batch by calling this in a loop rebuilds `ariadne`'s line
+    /// index for every diagnostic. [`Renderer::render_all`] builds it once.
+    pub fn render(
+        &self,
+        sources: &SourceMap,
+        diagnostic: &Diagnostic,
+        out: &mut impl io::Write,
+    ) -> io::Result<()> {
+        self.write_one(&mut SourceMapCache::new(sources), diagnostic, out)
+    }
+
+    /// Write every diagnostic in a sink, in the order they were reported.
+    ///
+    /// One line index per file for the whole batch.
+    pub fn render_all(
+        &self,
+        sources: &SourceMap,
+        sink: &DiagnosticSink,
+        out: &mut impl io::Write,
+    ) -> io::Result<()> {
+        let mut cache = SourceMapCache::new(sources);
+        for diagnostic in sink.diagnostics() {
+            self.write_one(&mut cache, diagnostic, out)?;
+        }
+        Ok(())
+    }
+
+    fn write_one(
+        &self,
+        cache: &mut SourceMapCache<'_>,
+        diagnostic: &Diagnostic,
+        out: &mut impl io::Write,
+    ) -> io::Result<()> {
+        let mut notes: Vec<String> = diagnostic.notes().to_vec();
+        notes.extend(safety_level_note(diagnostic));
+        notes.extend(certainty_note(diagnostic));
+        let mut labels: Vec<(&Label, AriadneSpan)> = Vec::new();
+
+        for label in diagnostic.labels() {
+            match cache.file(label.span().file()) {
+                Some(file) => {
+                    let (range, adjusted) = clamp(file, label.span());
+                    if let Some(note) = adjustment_note(label, file, adjusted) {
+                        notes.push(note);
+                    }
+                    labels.push((label, (label.span().file(), range)));
+                }
+                None => notes.push(no_such_file(label)),
+            }
+        }
+
+        // `ariadne` starts a new source block whenever a label sits earlier
+        // than the one before it, and headers every block with the *anchor's*
+        // position. Handing over the attachment order therefore produces a
+        // second block whose header names a line it does not show, purely
+        // because of the order a check happened to call `with_label`. Sorting
+        // by position first makes the rendering independent of that order; the
+        // narrative lives in the label messages, not in their sequence.
+        labels.sort_by(|(_, left), (_, right)| {
+            left.0.cmp(&right.0).then(left.1.start.cmp(&right.1.start))
+        });
+
+        // The anchor decides which position the header names. Prefer the
+        // primary label, and fall back to the earliest usable one.
+        let anchor = diagnostic
+            .primary_label()
+            .and_then(|primary| {
+                labels
+                    .iter()
+                    .find(|(label, _)| std::ptr::eq(*label, primary))
+            })
+            .or_else(|| labels.first())
+            .map(|(_, span)| span.clone());
+
+        let Some(anchor) = anchor else {
+            return render_header_only(diagnostic, &notes, out);
+        };
+
+        // `ariadne`'s built-in kinds spell the header `Error:` and collapse a
+        // note and a help into `Advice:`, and it puts the code in front of the
+        // word. A custom kind puts the spelling back under `Severity`, so both
+        // rendering paths agree and a help stays distinguishable from a note.
+        let header = header(diagnostic);
+        let mut report = Report::build(
+            ReportKind::Custom(&header, severity_color(diagnostic.severity())),
+            anchor,
+        )
+        .with_config(self.config)
+        .with_message(diagnostic.message());
+
+        for (label, span) in &labels {
+            let color = if label.is_primary() {
+                severity_color(diagnostic.severity())
+            } else {
+                Color::Blue
+            };
+            report = report.with_label(
+                AriadneLabel::new(span.clone())
+                    .with_message(label.message())
+                    .with_color(color),
+            );
+        }
+
+        // Notes are written after the block rather than handed to `ariadne`,
+        // which renders them inside it as `Note:`. This keeps one spelling for
+        // both paths.
+        let mut rendered = Vec::new();
+        report.finish().write(&mut *cache, &mut rendered)?;
+        if !self.color {
+            strip_header_escapes(&mut rendered);
+        }
+        out.write_all(&rendered)?;
+        write_notes(&notes, out)
+    }
+}
+
+/// Which check spoke, for a diagnostic that came from a safety analysis.
+fn safety_level_note(diagnostic: &Diagnostic) -> Option<String> {
+    diagnostic
+        .safety_level()
+        .map(|level| format!("this check belongs to safety level {}", level.number()))
+}
+
+/// Says that a diagnostic is one an annotation could remove.
+///
+/// Without it an unprovable result is indistinguishable from an ordinary
+/// warning, and the reader has no way to tell which warnings are the ones the
+/// migration in `docs/safety-model.md` is about.
+fn certainty_note(diagnostic: &Diagnostic) -> Option<String> {
+    (diagnostic.certainty() == Certainty::Unproven).then(|| {
+        if diagnostic.severity().is_error() {
+            // The sink has already promoted it.
+            "this could not be proven, and `--deny-unknown` makes it an error".to_owned()
+        } else {
+            "this could not be proven; `--deny-unknown` makes it an error".to_owned()
+        }
+    })
+}
+
+fn adjustment_note(label: &Label, file: &SourceFile, adjusted: Adjusted) -> Option<String> {
+    let reason = match adjusted {
+        Adjusted::No => return None,
+        Adjusted::PastTheEnd => format!(
+            "reaches past the end of {} ({} bytes)",
+            file.name(),
+            file.len()
+        ),
+        Adjusted::InsideACharacter => "ends inside a character".to_owned(),
+    };
+    Some(format!(
+        "the span {}..{} for `{}` {}, and was moved to fit",
+        label.span().start(),
+        label.span().end(),
+        label.message(),
+        reason
+    ))
+}
+
+fn no_such_file(label: &Label) -> String {
+    format!(
+        "`{}` points into a file this renderer does not have (index {})",
+        label.message(),
+        label.span().file().index()
+    )
+}
+
+/// The header and the notes, for a diagnostic with nothing to point at.
+fn render_header_only(
+    diagnostic: &Diagnostic,
+    notes: &[String],
+    out: &mut impl io::Write,
+) -> io::Result<()> {
+    writeln!(out, "{}: {}", header(diagnostic), diagnostic.message())?;
+    write_notes(notes, out)
+}
+
+fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
+    for note in notes {
+        writeln!(out, "  = note: {note}")?;
+    }
+    Ok(())
+}
+
+/// Remove the colour `ariadne` insists on putting in a custom header.
+///
+/// `Config::with_color(false)` silences its built-in kinds but not a custom
+/// one, which always emits its colour. Only the header line is touched, so a
+/// source line echoed out of the file, which may legitimately contain an
+/// escape, is left exactly as it was written.
+fn strip_header_escapes(rendered: &mut Vec<u8>) {
+    let end = rendered
+        .iter()
+        .position(|&b| b == b'\n')
+        .unwrap_or(rendered.len());
+    let mut header = Vec::with_capacity(end);
+    let mut rest = &rendered[..end];
+    while let Some(start) = rest.iter().position(|&b| b == 0x1b) {
+        header.extend_from_slice(&rest[..start]);
+        match rest[start..].iter().position(|&b| b == b'm') {
+            Some(finish) => rest = &rest[start + finish + 1..],
+            None => {
+                rest = &rest[start..];
+                break;
+            }
+        }
+    }
+    header.extend_from_slice(rest);
+    rendered.splice(..end, header);
+}
+
+/// A span naming a file this renderer has never heard of.
+///
+/// [`Renderer::render`] checks for this before handing anything to `ariadne`,
+/// so this is a backstop rather than the reporting path.
+struct UnknownFile(FileId);
+
+impl fmt::Debug for UnknownFile {
+    /// Written out rather than derived. A derived `Debug` does not count as a
+    /// read of the field, so `dead_code` fires on it, and this says more than
+    /// `UnknownFile(FileId(3))` would.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "no file with index {} in this source map",
+            self.0.index()
+        )
+    }
+}
+
+/// Lets `ariadne` read a [`SourceMap`] by [`FileId`].
+///
+/// The trait hands back a borrowed `Source`, so the cache has to own one per
+/// file. Storing `&str` rather than `String` keeps the file contents from being
+/// copied; what is duplicated is the line index, which
+/// [`SourceFile`] already has and `ariadne` insists
+/// on building for itself. A compilation reports a handful of diagnostics, so
+/// that is not worth designing around.
+#[derive(Debug)]
+struct SourceMapCache<'a> {
+    sources: &'a SourceMap,
+    /// Indexed by [`FileId::index`], filled on first use of each file.
+    cached: Vec<Option<Source<&'a str>>>,
+}
+
+impl<'a> SourceMapCache<'a> {
+    /// A cache for one rendering call.
+    ///
+    /// Sizing `cached` once is sound because this borrows the map for as long
+    /// as it lives, and it lives for a single call, so no file can be added
+    /// underneath it. A cache that outlived the borrow would need to grow in
+    /// [`SourceMapCache::fetch`] instead, and forgetting that would report
+    /// every file added afterwards as one this renderer does not have.
+    fn new(sources: &'a SourceMap) -> Self {
+        Self {
+            sources,
+            cached: (0..sources.len()).map(|_| None).collect(),
+        }
+    }
+
+    /// The file a span names, or `None` if this map does not have it.
+    ///
+    /// The result borrows the map rather than the cache, so a caller can hold
+    /// it while the cache is borrowed mutably to render.
+    fn file(&self, id: FileId) -> Option<&'a SourceFile> {
+        if id.index() < self.cached.len() {
+            Some(self.sources.file(id))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
+    type Storage = &'a str;
+
+    fn fetch(&mut self, id: &FileId) -> Result<&Source<Self::Storage>, impl fmt::Debug> {
+        // Copied out before `cached` is borrowed, so that the closure below
+        // does not hold a second borrow of `self`.
+        let sources = self.sources;
+        let id = *id;
+
+        match self.cached.get_mut(id.index()) {
+            Some(slot) => Ok(slot.get_or_insert_with(|| Source::from(sources.file(id).contents()))),
+            None => Err(UnknownFile(id)),
+        }
+    }
+
+    fn display<'b>(&self, id: &'b FileId) -> Option<impl fmt::Display + 'b> {
+        // Mirrors `fetch`: a handle from another source map is reported as a
+        // file this renderer does not have, rather than panicking inside it.
+        (id.index() < self.cached.len()).then(|| self.sources.file(*id).name().to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::diagnostics::Code;
+
+    fn render(sources: &SourceMap, diagnostic: &Diagnostic) -> String {
+        render_with(sources, diagnostic, ColorMode::Never)
+    }
+
+    fn render_with(sources: &SourceMap, diagnostic: &Diagnostic, color: ColorMode) -> String {
+        let mut out = Vec::new();
+        Renderer::new(color)
+            .render(sources, diagnostic, &mut out)
+            .expect("writing to a vector cannot fail");
+        String::from_utf8(out).expect("the renderer writes text")
+    }
+
+    fn first_line(rendered: &str) -> String {
+        rendered.lines().next().unwrap_or_default().to_owned()
+    }
+
+    fn moved_value() -> (SourceMap, Diagnostic) {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int *p = alloc();\nconsume(p);\n*p = 42;\n");
+        let diagnostic = Diagnostic::error("use of moved value `p`")
+            .with_code(Code::new("E0301"))
+            .with_label(Label::secondary(Span::new(file, 5, 6), "move occurs here"))
+            .with_label(Label::primary(Span::new(file, 30, 32), "value used here"))
+            .with_note("`p` was moved into `consume`");
+        (sources, diagnostic)
+    }
+
+    #[test]
+    fn a_diagnostic_without_a_label_still_reports_its_message() {
+        let sources = SourceMap::new();
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("no input files")
+                .with_code(Code::new("E0001"))
+                .with_note("pass at least one `.c` file"),
+        );
+
+        assert_eq!(
+            rendered,
+            "error[E0001]: no input files\n  = note: pass at least one `.c` file\n"
+        );
+    }
+
+    /// The common shape for a diagnostic about the invocation rather than the
+    /// source.
+    #[test]
+    fn a_diagnostic_without_a_code_says_only_the_severity() {
+        let sources = SourceMap::new();
+
+        assert_eq!(
+            render(&sources, &Diagnostic::error("no input files")),
+            "error: no input files\n"
+        );
+    }
+
+    /// The header is what an editor's problem matcher reads, so the two
+    /// rendering paths have to spell it identically. Left to itself `ariadne`
+    /// writes `Error:` and collapses a note and a help into `Advice:`.
+    #[test]
+    fn both_rendering_paths_spell_the_header_the_same_way() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x;\n");
+
+        for severity in [
+            Severity::Error,
+            Severity::Warning,
+            Severity::Note,
+            Severity::Help,
+        ] {
+            let bare = Diagnostic::new(severity, "m").with_code(Code::new("E0001"));
+            let anchored = bare
+                .clone()
+                .with_label(Label::primary(Span::new(file, 0, 3), "here"));
+
+            let expected = format!("{}[E0001]: m", severity.as_str());
+            assert_eq!(first_line(&render(&sources, &bare)), expected);
+            assert_eq!(first_line(&render(&sources, &anchored)), expected);
+        }
+    }
+
+    /// The check that byte offsets are read as byte offsets. `ariadne` reads a
+    /// span as character offsets by default, so without `IndexType::Byte` the
+    /// span below lands a line or more past where it belongs.
+    #[test]
+    fn a_span_after_non_ascii_text_points_at_the_right_line() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "/* 日本語日本語日本語 */\nint x;\nint y;\n");
+        let start = sources.file(file).contents().find("int x").unwrap() as u32;
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("something about `x`")
+                .with_label(Label::primary(Span::new(file, start, start + 5), "here")),
+        );
+
+        assert!(rendered.contains("int x"), "{rendered}");
+        assert!(!rendered.contains("int y"), "{rendered}");
+    }
+
+    #[test]
+    fn a_rendered_diagnostic_names_its_file_and_says_what_is_wrong() {
+        let (sources, diagnostic) = moved_value();
+        let rendered = render(&sources, &diagnostic);
+
+        assert!(rendered.contains("error[E0301]"), "{rendered}");
+        assert!(rendered.contains("use of moved value `p`"), "{rendered}");
+        assert!(rendered.contains("<main.c>"), "{rendered}");
+        assert!(rendered.contains("move occurs here"), "{rendered}");
+        assert!(rendered.contains("value used here"), "{rendered}");
+        assert!(
+            rendered.contains("  = note: `p` was moved into `consume`"),
+            "{rendered}"
+        );
+    }
+
+    /// `ariadne` opens a second source block whenever a label sits earlier than
+    /// the one before it, and heads every block with the anchor's position, so
+    /// handing over the attachment order produces a block whose header names a
+    /// line it does not show. The order a check happens to attach its labels in
+    /// must not change the picture.
+    #[test]
+    fn rendering_does_not_depend_on_the_order_labels_were_attached() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int *p = alloc();\nconsume(p);\n*p = 42;\n");
+        let moved = Label::secondary(Span::new(file, 5, 6), "move occurs here");
+        let used = Label::primary(Span::new(file, 30, 32), "value used here");
+
+        let source_order = Diagnostic::error("m")
+            .with_label(moved.clone())
+            .with_label(used.clone());
+        let primary_first = Diagnostic::error("m").with_label(used).with_label(moved);
+
+        let rendered = render(&sources, &source_order);
+        assert_eq!(rendered, render(&sources, &primary_first));
+        // One source block, so exactly one header naming the file.
+        assert_eq!(rendered.matches("<main.c>").count(), 1, "{rendered}");
+    }
+
+    /// `ariadne` panics on an end one past the file and drops the label without
+    /// a word on an end far past it. The layer whose job is to report problems
+    /// has to be total, so the span is moved and the move is disclosed.
+    #[test]
+    fn a_span_past_the_end_of_its_file_is_moved_and_noted() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x;\n");
+
+        for end in [8, 600] {
+            let rendered = render(
+                &sources,
+                &Diagnostic::error("boom")
+                    .with_label(Label::primary(Span::new(file, 0, end), "here")),
+            );
+
+            assert!(rendered.contains("int x"), "{rendered}");
+            assert!(rendered.contains("here"), "{rendered}");
+            assert!(
+                rendered.contains("reaches past the end of <main.c> (7 bytes)"),
+                "{rendered}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_span_inside_a_character_is_moved_and_noted() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "/* 日本 */\n");
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 3, 4), "here")),
+        );
+
+        assert!(rendered.contains("ends inside a character"), "{rendered}");
+        assert!(rendered.contains("here"), "{rendered}");
+    }
+
+    /// A span built against a different source map. The renderer cannot quote
+    /// what it does not have, but it must not drop the label in silence.
+    #[test]
+    fn a_label_naming_a_file_this_renderer_does_not_have_is_noted() {
+        let mut sources = SourceMap::new();
+        sources.add_virtual("main.c", "int x;\n");
+        let foreign = FileId::from_index(7);
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("boom").with_label(Label::primary(Span::new(foreign, 0, 3), "here")),
+        );
+
+        assert_eq!(
+            rendered,
+            "error: boom\n  = note: `here` points into a file this renderer does not have (index 7)\n"
+        );
+    }
+
+    #[test]
+    fn colour_is_emitted_only_when_it_was_asked_for() {
+        let (sources, diagnostic) = moved_value();
+
+        let always = render_with(&sources, &diagnostic, ColorMode::Always);
+        let never = render_with(&sources, &diagnostic, ColorMode::Never);
+
+        assert!(!never.contains('\u{1b}'), "{never:?}");
+        assert!(always.contains('\u{1b}'), "{always:?}");
+        // A primary label is coloured by severity and a secondary one is not,
+        // so the two must not come out the same.
+        assert!(always.contains("\u{1b}[31m"), "{always:?}");
+        assert!(always.contains("\u{1b}[34m"), "{always:?}");
+    }
+
+    #[test]
+    fn every_label_and_note_reaches_the_output() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int *p = alloc();\nconsume(p);\n*p = 42;\n");
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::error("m")
+                .with_label(Label::secondary(Span::new(file, 5, 6), "allocated here"))
+                .with_label(Label::secondary(Span::new(file, 18, 25), "moved here"))
+                .with_label(Label::primary(Span::new(file, 30, 32), "used here"))
+                .with_note("first note")
+                .with_note("second note"),
+        );
+
+        for expected in [
+            "allocated here",
+            "moved here",
+            "used here",
+            "  = note: first note",
+            "  = note: second note",
+        ] {
+            assert!(
+                rendered.contains(expected),
+                "{expected:?} missing from {rendered}"
+            );
+        }
+        assert!(
+            rendered.find("first note") < rendered.find("second note"),
+            "{rendered}"
+        );
+    }
+
+    /// An unprovable result has to be distinguishable from an ordinary warning,
+    /// or the reader cannot tell which warnings an annotation would remove.
+    #[test]
+    fn an_unproven_diagnostic_says_that_it_could_not_be_proven() {
+        let sources = SourceMap::new();
+
+        let unproven = render(&sources, &Diagnostic::unproven("`p` may escape"));
+        assert!(
+            unproven
+                .contains("  = note: this could not be proven; `--deny-unknown` makes it an error"),
+            "{unproven}"
+        );
+
+        let proven = render(&sources, &Diagnostic::warning("unused variable `x`"));
+        assert!(!proven.contains("could not be proven"), "{proven}");
+    }
+
+    /// After the sink has promoted it, the note has to stop saying that
+    /// `--deny-unknown` *would* make it an error.
+    #[test]
+    fn a_promoted_diagnostic_says_the_flag_already_made_it_an_error() {
+        let sources = SourceMap::new();
+        let mut sink =
+            DiagnosticSink::with_policy(crate::diagnostics::Policy { deny_unknown: true });
+        sink.report(Diagnostic::unproven("`p` may escape"));
+
+        let rendered = render(&sources, &sink.diagnostics()[0]);
+
+        assert!(rendered.starts_with("error: "), "{rendered}");
+        assert!(
+            rendered.contains(
+                "  = note: this could not be proven, and `--deny-unknown` makes it an error"
+            ),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn a_diagnostic_says_which_safety_check_it_came_from() {
+        let sources = SourceMap::new();
+
+        let rendered = render(
+            &sources,
+            &Diagnostic::unproven("`p` may escape")
+                .with_safety_level(crate::safety::SafetyLevel::Lifetime),
+        );
+
+        assert!(
+            rendered.contains("  = note: this check belongs to safety level 2"),
+            "{rendered}"
+        );
+    }
+
+    /// The reason the renderer takes the map per call instead of holding it. A
+    /// lexer that meets an `#include` has to add a file while diagnostics are
+    /// already being reported, and it cannot do that while something borrows
+    /// the map. This does not compile against a renderer that keeps the borrow,
+    /// and a renderer that sized its cache once would report the second file as
+    /// one it does not have.
+    #[test]
+    fn a_renderer_does_not_hold_the_source_map() {
+        let renderer = Renderer::new(ColorMode::Never);
+        let mut sources = SourceMap::new();
+        let main = sources.add_virtual("main.c", "int x;\n");
+
+        let mut out = Vec::new();
+        renderer
+            .render(
+                &sources,
+                &Diagnostic::error("first")
+                    .with_label(Label::primary(Span::new(main, 0, 3), "here")),
+                &mut out,
+            )
+            .unwrap();
+
+        // The renderer is still alive, and the map still grows.
+        let header = sources.add_virtual("header.h", "int y;\n");
+        renderer
+            .render(
+                &sources,
+                &Diagnostic::error("second")
+                    .with_label(Label::primary(Span::new(header, 0, 3), "there")),
+                &mut out,
+            )
+            .unwrap();
+
+        let rendered = String::from_utf8(out).unwrap();
+        assert!(rendered.contains("<main.c>"), "{rendered}");
+        assert!(rendered.contains("<header.h>"), "{rendered}");
+        assert!(rendered.contains("there"), "{rendered}");
+        assert!(
+            !rendered.contains("does not have"),
+            "the second file was not found: {rendered}"
+        );
+    }
+
+    #[test]
+    fn render_all_writes_every_diagnostic_in_the_order_they_were_reported() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x;\n");
+        let mut sink = DiagnosticSink::new();
+        sink.report(
+            Diagnostic::error("first").with_label(Label::primary(Span::new(file, 0, 3), "a")),
+        );
+        sink.report(Diagnostic::warning("second"));
+        sink.report(
+            Diagnostic::error("third").with_label(Label::primary(Span::new(file, 4, 5), "b")),
+        );
+
+        let mut out = Vec::new();
+        Renderer::new(ColorMode::Never)
+            .render_all(&sources, &sink, &mut out)
+            .unwrap();
+        let rendered = String::from_utf8(out).unwrap();
+
+        let first = rendered.find("first").expect("first is missing");
+        let second = rendered.find("second").expect("second is missing");
+        let third = rendered.find("third").expect("third is missing");
+        assert!(first < second && second < third, "{rendered}");
+    }
+}
