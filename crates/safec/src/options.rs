@@ -120,13 +120,17 @@ pub enum ColorMode {
 mod tests {
     use super::*;
 
+    /// Spelled out rather than looped over `value_variants()`. That iterates in
+    /// declaration order, which is the same order the derived `Ord` compares
+    /// on, so a loop would hold for any declaration order at all and pin
+    /// nothing.
     #[test]
     fn safety_levels_are_ordered_by_strictness() {
-        let levels = SafetyLevel::value_variants();
-        assert!(
-            levels.windows(2).all(|pair| pair[0] < pair[1]),
-            "levels must be declared from least to most strict: {levels:?}"
-        );
+        assert!(SafetyLevel::Off < SafetyLevel::Memory);
+        assert!(SafetyLevel::Memory < SafetyLevel::Lifetime);
+        assert!(SafetyLevel::Lifetime < SafetyLevel::Ownership);
+        assert!(SafetyLevel::Ownership < SafetyLevel::Thread);
+        assert!(SafetyLevel::Thread < SafetyLevel::Strict);
     }
 
     #[test]
