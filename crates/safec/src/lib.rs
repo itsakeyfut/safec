@@ -6,5 +6,6 @@
 //! spawning a subprocess.
 
 pub mod cli;
+pub mod diagnostics;
 pub mod options;
 pub mod source;

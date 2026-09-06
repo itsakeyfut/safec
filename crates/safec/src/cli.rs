@@ -44,6 +44,9 @@ pub struct Cli {
 
     /// Report `Unknown` analysis results as errors rather than warnings.
     ///
+    /// Implied by `--safety strict`, which is defined as leaving nothing
+    /// `Unknown`. [`Cli::into_options`] resolves the two into one value.
+    ///
     /// The forerunner of a lint level system. When `--deny <LINT>` arrives,
     /// `unknown` becomes its first lint and this spelling becomes a hidden
     /// alias rather than a second way of saying the same thing.
@@ -85,7 +88,10 @@ impl Cli {
             output,
             safety,
             emit,
-            deny_unknown,
+            // `--safety strict` is defined as leaving nothing `Unknown`, so it
+            // carries `--deny-unknown` with it. Resolved once here rather than
+            // in every consumer of `Options`, which is what this method is for.
+            deny_unknown: deny_unknown || safety == SafetyLevel::Strict,
             color,
         }
     }
@@ -234,6 +240,29 @@ mod tests {
     fn deny_unknown_is_set_by_its_flag() {
         let cli = Cli::try_parse_from(["safec", "--deny-unknown", "a.c"]).unwrap();
         assert!(cli.deny_unknown);
+    }
+
+    /// The strictest level is defined as leaving nothing `Unknown`, so asking
+    /// for it is asking for `--deny-unknown`. Resolving that here rather than
+    /// in each consumer is what keeps the two flags from disagreeing.
+    #[test]
+    fn the_strictest_safety_level_denies_unknown_on_its_own() {
+        let options = Cli::try_parse_from(["safec", "--safety", "strict", "a.c"])
+            .unwrap()
+            .into_options();
+
+        assert!(options.deny_unknown);
+    }
+
+    #[test]
+    fn a_lower_safety_level_leaves_deny_unknown_to_its_flag() {
+        for level in ["off", "memory", "lifetime", "ownership", "thread"] {
+            let options = Cli::try_parse_from(["safec", "--safety", level, "a.c"])
+                .unwrap()
+                .into_options();
+
+            assert!(!options.deny_unknown, "--safety {level} denied unknown");
+        }
     }
 
     /// Every argument has to survive the trip across the CLI boundary. The two

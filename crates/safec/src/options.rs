@@ -24,6 +24,9 @@ pub struct Options {
     /// The artifact to produce.
     pub emit: EmitKind,
     /// Whether `Unknown` analysis results are errors rather than warnings.
+    ///
+    /// The resolved answer, not the raw flag: `--safety strict` sets it too,
+    /// because that level is defined as leaving nothing `Unknown`.
     pub deny_unknown: bool,
     /// When to colorize diagnostics.
     pub color: ColorMode,
