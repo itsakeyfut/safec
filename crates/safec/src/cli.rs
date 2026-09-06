@@ -92,7 +92,7 @@ impl Cli {
             // `--safety strict` is defined as leaving nothing `Unknown`, so it
             // carries `--deny-unknown` with it. Resolved once here rather than
             // in every consumer of `Options`, which is what this method is for.
-            deny_unknown: deny_unknown || safety == SafetyLevel::Strict,
+            deny_unknown: deny_unknown || safety >= SafetyLevel::Strict,
             color,
         }
     }
@@ -244,8 +244,11 @@ mod tests {
     }
 
     /// The strictest level is defined as leaving nothing `Unknown`, so asking
-    /// for it is asking for `--deny-unknown`. Resolving that here rather than
-    /// in each consumer is what keeps the two flags from disagreeing.
+    /// for it is asking for `--deny-unknown`. Resolved here so that
+    /// `Options::deny_unknown` is the answer it claims to be, and resolved
+    /// again where the sink's policy is built, because `Options` has public
+    /// fields and a caller that is not this parser can leave the two
+    /// disagreeing. See ADR-0004.
     #[test]
     fn the_strictest_safety_level_denies_unknown_on_its_own() {
         let options = Cli::try_parse_from(["safec", "--safety", "strict", "a.c"])

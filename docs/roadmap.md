@@ -79,6 +79,9 @@ Finally begin thread-safety analysis.
 - functions
 - control flow
 - basic LLVM backend
+- per-input diagnostic gating: the first phase that runs per input has to be
+  gated on that input, so that a broken `a.c` does not stop `b.c` from being
+  looked at
 
 ### Phase 2: CFG and Dataflow
 

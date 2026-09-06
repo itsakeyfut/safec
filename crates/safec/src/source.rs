@@ -17,6 +17,7 @@ use std::fs;
 use std::io;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// A handle to a file in a [`SourceMap`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -334,9 +335,17 @@ impl SourceFile {
 ///
 /// Files are added once and never removed, which is what makes a [`FileId`] a
 /// plain index and a [`Span`] cheap to copy.
+///
+/// Each file is behind an [`Arc`] so that one can be read while another is
+/// added. `#include` is that case: a lexer holding the text of `a.c` meets one
+/// and has to call [`SourceMap::load`], which takes `&mut self` and cannot have
+/// it while the text is borrowed. [`SourceMap::file_owned`] hands out a handle
+/// that outlives the borrow. `Arc` rather than `Rc` because the roadmap has
+/// thread safety analysis in it, and the difference costs nothing until
+/// something is actually shared. See ADR-0005.
 #[derive(Debug, Default)]
 pub struct SourceMap {
-    files: Vec<SourceFile>,
+    files: Vec<Arc<SourceFile>>,
 }
 
 impl SourceMap {
@@ -362,7 +371,7 @@ impl SourceMap {
 
     fn add(&mut self, name: FileName, contents: String) -> FileId {
         let id = FileId(self.files.len() as u32);
-        self.files.push(SourceFile::new(name, contents));
+        self.files.push(Arc::new(SourceFile::new(name, contents)));
         id
     }
 
@@ -380,6 +389,24 @@ impl SourceMap {
         &self.files[id.index()]
     }
 
+    /// The file a handle refers to, as a handle of its own.
+    ///
+    /// The same file as [`SourceMap::file`], borrowing nothing from the map, so
+    /// a caller can keep reading it while the map is added to. That is what a
+    /// lexer needs when it meets an `#include`: the text it is scanning has to
+    /// survive the [`SourceMap::load`] the directive causes.
+    ///
+    /// Prefer [`SourceMap::file`] where the borrow is not in the way. It is the
+    /// same file either way; this one costs an atomic increment and says, at
+    /// the call site, that the handle is meant to outlive the borrow.
+    ///
+    /// # Panics
+    ///
+    /// If the index is past the end of this map.
+    pub fn file_owned(&self, id: FileId) -> Arc<SourceFile> {
+        Arc::clone(&self.files[id.index()])
+    }
+
     /// The number of files in the map.
     pub fn len(&self) -> usize {
         self.files.len()
@@ -395,7 +422,7 @@ impl SourceMap {
         self.files
             .iter()
             .enumerate()
-            .map(|(index, file)| (FileId(index as u32), file))
+            .map(|(index, file)| (FileId(index as u32), &**file))
     }
 
     /// The text a span covers.
@@ -609,6 +636,44 @@ mod tests {
         assert_eq!(map.file(id).contents(), "int main(void) { return 0; }");
 
         fs::remove_file(&path).unwrap();
+    }
+
+    /// The shape a lexer needs. `#include` means reading one file and adding
+    /// another at the same time, and a borrow of the map cannot survive the
+    /// `&mut` that adding takes.
+    ///
+    /// The guard is the compiler rather than the assertions: this does not
+    /// build against a map that hands out only borrows, which is what
+    /// [`SourceMap::file`] alone would do. Replacing `file_owned` with `file`
+    /// here is the reversal, and it fails to compile.
+    #[test]
+    fn a_file_can_be_read_while_another_is_added() {
+        let mut sources = SourceMap::new();
+        let first = sources.add_virtual(
+            "a.c",
+            "#include \"a.h\"
+",
+        );
+
+        let held = sources.file_owned(first);
+        let text = held.contents();
+
+        // What a lexer does on reaching the directive, while still scanning.
+        let second = sources.add_virtual(
+            "a.h", "int x;
+",
+        );
+
+        assert_eq!(
+            text,
+            "#include \"a.h\"
+"
+        );
+        assert_eq!(
+            sources.file(second).contents(),
+            "int x;
+"
+        );
     }
 
     #[test]

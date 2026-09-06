@@ -21,7 +21,8 @@ error[E0301]: use of moved value: `p`
    = note: `p` was moved into `consume`
 ```
 
-`ariadne` is a possible implementation library for source-oriented diagnostics.
+`ariadne` renders diagnostics against their source. Its output differs in detail
+from the sketch above, which is drawn in the shape rustc uses.
 
 ## Where this lives now
 
