@@ -1,0 +1,43 @@
+# Key Design Principles
+
+## 1. Safety IR is the central abstraction
+
+Do not make LLVM IR the safety model.
+
+LLVM IR is a code-generation representation. The project needs a higher-level semantic representation capable of expressing:
+
+- ownership
+- lifetime
+- borrowing
+- regions
+- thread relationships
+
+## 2. Separate inference from enforcement
+
+The analyzer distinguishes `Safe`, `Unsafe` and `Unknown` rather than pretending
+that every C program can be proven safe. A check says what it concluded and
+never reads the policy; what each conclusion means for the build is decided in
+one place.
+
+The mapping, and where it is applied, are in
+[the safety model](safety-model.md#safe-unsafe-unknown).
+
+## 3. Gradual adoption
+
+Existing C code should be able to enter the system without requiring an immediate rewrite.
+
+## 4. Small core
+
+Avoid unnecessary language features and framework complexity.
+
+## 5. Hackability over abstraction purity
+
+The architecture should make experiments easy.
+
+## 6. Real C compatibility is a long-term goal
+
+Do not sacrifice the initial learning and experimentation loop by attempting full C compatibility immediately.
+
+## 7. The compiler and analyzer should reinforce each other
+
+New safety semantics should be testable in the experimental compiler and eventually transferable to Clang-based analysis.

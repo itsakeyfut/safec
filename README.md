@@ -42,6 +42,13 @@ Safety IR <-- central boundary
 
 Longer term, a Clang adapter feeds the same Safety IR, so the safety model can be validated against real-world C and C++ code.
 
+## Documentation
+
+[`docs/`](docs/) holds what the project wants to build: the [concept](docs/concept.md),
+the [safety model](docs/safety-model.md), the [architecture](docs/architecture.md),
+and the [roadmap](docs/roadmap.md). [`docs/adr/`](docs/adr/) holds why each
+cross-cutting decision was taken, and what would reverse it.
+
 ## Build
 
 ```sh
