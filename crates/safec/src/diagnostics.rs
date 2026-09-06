@@ -14,7 +14,8 @@ pub mod render;
 
 use std::fmt;
 
-use crate::options::{Options, SafetyLevel};
+use crate::options::Options;
+use crate::safety::SafetyLevel;
 use crate::source::Span;
 
 /// How serious a diagnostic is.

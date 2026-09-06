@@ -10,7 +10,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::options::{ColorMode, EmitKind, Options, SafetyLevel};
+use crate::options::{ColorMode, EmitKind, Options};
+use crate::safety::SafetyLevel;
 
 /// A small, hackable, safety-oriented C compiler.
 #[derive(Debug, Parser)]
