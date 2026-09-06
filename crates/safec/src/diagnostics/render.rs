@@ -19,6 +19,7 @@
 //! Reconciling them would mean either teaching the source map about separators
 //! it does not otherwise care about or giving up `ariadne`'s renderer.
 
+use std::borrow::Cow;
 use std::fmt;
 use std::io;
 use std::ops::Range;
@@ -247,7 +248,7 @@ impl Renderer {
             anchor,
         )
         .with_config(self.config)
-        .with_message(diagnostic.message());
+        .with_message(shown(diagnostic.message()));
 
         for (label, span) in &labels {
             let color = if label.is_primary() {
@@ -257,7 +258,7 @@ impl Renderer {
             };
             report = report.with_label(
                 AriadneLabel::new(span.clone())
-                    .with_message(label.message())
+                    .with_message(shown(label.message()))
                     .with_color(color),
             );
         }
@@ -361,20 +362,54 @@ fn render_header_only(
     out: &mut impl io::Write,
 ) -> io::Result<()> {
     let head = format!("{}:", header(diagnostic));
+    let message = shown(diagnostic.message());
     if color {
         let head = head.fg(severity_color(diagnostic.severity()));
-        writeln!(out, "{head} {}", diagnostic.message())?;
+        writeln!(out, "{head} {message}")?;
     } else {
-        writeln!(out, "{head} {}", diagnostic.message())?;
+        writeln!(out, "{head} {message}")?;
     }
     write_notes(notes, out)
 }
 
 fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
     for note in notes {
-        writeln!(out, "  = note: {note}")?;
+        writeln!(out, "  = note: {}", shown(note))?;
     }
     Ok(())
+}
+
+/// Text the compiler is echoing back, made safe to print.
+///
+/// A file name today, and an identifier or a string literal out of the source
+/// once there is a lexer, is content rather than something this renderer wrote.
+/// A terminal reads an escape sequence in it as an instruction: a colour, a
+/// cursor move, or clearing the line the diagnostic above it is on. Colour is
+/// something the renderer adds and not something content may smuggle in, so a
+/// control character arriving from content is shown rather than obeyed, under
+/// every colour mode rather than only under `--color never`.
+///
+/// Newline and tab are left alone. They are laid out rather than acted on, and
+/// a message that runs to two lines is ordinary.
+fn shown(text: &str) -> Cow<'_, str> {
+    if !text.chars().any(is_obeyed) {
+        return Cow::Borrowed(text);
+    }
+
+    let mut safe = String::with_capacity(text.len());
+    for ch in text.chars() {
+        if is_obeyed(ch) {
+            safe.extend(ch.escape_debug());
+        } else {
+            safe.push(ch);
+        }
+    }
+    Cow::Owned(safe)
+}
+
+/// Whether a terminal would act on this rather than print it.
+fn is_obeyed(ch: char) -> bool {
+    ch.is_control() && ch != '\n' && ch != '\t'
 }
 
 /// Remove the colour `ariadne` insists on putting in a custom header.
@@ -383,6 +418,10 @@ fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
 /// one, which always emits its colour. Only the header line is touched, so a
 /// source line echoed out of the file, which may legitimately contain an
 /// escape, is left exactly as it was written.
+///
+/// The escapes on that line are this renderer's own, because [`shown`] has
+/// already dealt with any that arrived in the message. That is what lets this
+/// take the whole line rather than having to tell the two apart.
 fn strip_header_escapes(rendered: &mut Vec<u8>) {
     let end = rendered
         .iter()
@@ -484,7 +523,8 @@ impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
     fn display<'b>(&self, id: &'b FileId) -> Option<impl fmt::Display + 'b> {
         // Mirrors `fetch`: a handle from another source map is reported as a
         // file this renderer does not have, rather than panicking inside it.
-        (id.index() < self.cached.len()).then(|| self.sources.file(*id).name().to_string())
+        (id.index() < self.cached.len())
+            .then(|| shown(&self.sources.file(*id).name().to_string()).into_owned())
     }
 }
 
@@ -722,6 +762,43 @@ mod tests {
 
         assert!(rendered.contains("reaches past the end of"), "{rendered}");
         assert!(rendered.contains("starts inside a character"), "{rendered}");
+    }
+
+    /// A file name, and later an identifier out of the source, is content. A
+    /// terminal obeys an escape sequence in it, so a name can colour the rest
+    /// of the report or clear the line above it. Neither rendering path may
+    /// pass one through, and the colour mode does not get a say: `--color
+    /// always` means the renderer adds colour, not that content may.
+    #[test]
+    fn content_never_reaches_the_terminal_as_an_instruction() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x;\n");
+
+        let bare = Diagnostic::error("cannot read `evil\u{1b}[31m.c`");
+        let anchored = bare
+            .clone()
+            .with_label(Label::primary(Span::new(file, 0, 3), "here\u{1b}[32m"))
+            .with_note("note\u{1b}[33m");
+
+        for mode in [ColorMode::Never, ColorMode::Always] {
+            for diagnostic in [&bare, &anchored] {
+                let rendered = render_with(&sources, diagnostic, mode);
+
+                assert!(!rendered.contains("evil\u{1b}"), "{mode:?}: {rendered:?}");
+                assert!(rendered.contains("evil\\u{1b}"), "{mode:?}: {rendered:?}");
+            }
+        }
+    }
+
+    /// A newline is laid out rather than acted on, and a message that runs to
+    /// two lines is ordinary, so it is left as it was written.
+    #[test]
+    fn a_newline_in_a_message_is_left_alone() {
+        let sources = SourceMap::new();
+
+        let rendered = render(&sources, &Diagnostic::error("first\nsecond"));
+
+        assert!(rendered.contains("first\nsecond"), "{rendered:?}");
     }
 
     /// A span built against a different source map. The renderer cannot quote
