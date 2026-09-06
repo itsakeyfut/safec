@@ -33,26 +33,76 @@ Records are numbered consecutively from `0001`.
 
 ## When to write one
 
+A record is a cache of reasoning that the code cannot show. The question that
+decides whether to open one is whether someone will later undo this in good
+faith: reading the code, seeing something that looks better, and having no way
+to find out what it costs.
+
 * Two or more implementations are possible and one is chosen, especially when the
   choice shapes an interface that later phases will be written against.
 * A choice affects whether the compiler can be *trusted*: anything that decides
   when a result is reported, suppressed, or promoted. Getting one of these wrong
   makes `safec` claim code is safe that was never proven, which is the worst
   failure this project has.
+* The code was knowingly left in a shape that looks wrong: a duplication kept on
+  purpose, a slower path chosen for a reason, a guard that appears redundant.
+  Without a record these are cleaned up by the next person to read them.
 * An existing decision is reversed: write a new record, mark the old one
   `superseded by ADR-NNNN`, and note what changed.
 * A design knowingly diverges from a document in `docs/`: record why, and update
   that document in the same change.
 * You are about to write "undecided" into a doc comment: open one as `proposed`.
 
-**Not worth an ADR:** formatting, or anything affecting a single call site.
-Naming usually is not worth one either, but it is when the name shapes an API
-that the rest of the crate compares against or matches on, because those are the
-names that go silently wrong.
+## When not to write one
+
+A reason has cheaper places to live, and each of these is a complete answer on
+its own:
+
+1. Nothing. The decision is local and the code already shows it.
+2. A comment where it happens.
+3. A doc comment on the type or function it constrains.
+4. A test whose name states the rule.
+5. A record here.
+
+Take the lowest one that holds. This repository leans hard on 4: a test named
+for the rule it protects is how most decisions here are written down, and the
+mutation that makes it fail is the proof it is a real rule. Open a record only
+when the reasoning does not fit into a name and an assertion, which usually
+means the rejected alternatives are the part worth keeping.
+
+Specifically, do not open one when:
+
+* It affects one call site, or it is formatting.
+* Reversing it would be cheap and local. The record earns its keep by making a
+  reversal informed, so a reversal that costs an afternoon does not need one.
+* A test name already says it, and someone who broke the rule would read that
+  name and understand what they broke.
+* The choice was made for us, by the C standard, by a dependency's interface, or
+  by the platform. Writing that down records a fact rather than a decision.
+* It is a performance choice a benchmark can settle. The benchmark is the
+  record, and it stays true when the numbers change.
+
+Naming is usually below the line too, but it rises above it when the name shapes
+an API that the rest of the crate compares against or matches on, because those
+are the names that go silently wrong.
+
+**Expected rate.** Phase 0 is dense because it is almost entirely interface, and
+that is the phase where records are worth the most. It does not continue. Most
+of what a lexer and a parser decide is decided by the C standard, and most of
+what an analysis decides is settled by measurement. A few records per phase is
+the shape to expect. Weeks with none are the normal case, and several in a week
+is a sign the bar has slipped rather than a sign of progress.
 
 ## Conventions
 
 * Filename `NNNN-short-slug.md`, numbers consecutive.
+* The four digits are there so that sorting the filenames as text puts them in
+  the order they were written. They are not a limit. A number is never reused,
+  never renumbered, and stays with a record that is superseded, because it is
+  what every link, doc comment and commit message refers to. Widening the
+  padding later would break all of those at once, so a log that ever reaches
+  `9999` carries on into five digits and fixes its ordering in the index above.
+  A log that large is a sign the bar in *When not to write one* was too low.
 * MADR statuses: `proposed`, `accepted`, `rejected`, `deprecated`,
   `superseded by ADR-NNNN`.
 * Every record fills in **Confirmation**: which test or guard fails if the
