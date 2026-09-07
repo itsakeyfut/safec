@@ -391,6 +391,10 @@ fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
 ///
 /// Newline and tab are left alone. They are laid out rather than acted on, and
 /// a message that runs to two lines is ordinary.
+///
+/// This is for text this module writes. The text of a file, which `ariadne`
+/// echoes rather than this module, goes through [`echoed`] instead, for a
+/// reason that rules this function out there.
 fn shown(text: &str) -> Cow<'_, str> {
     if !text.chars().any(is_obeyed) {
         return Cow::Borrowed(text);
@@ -407,6 +411,51 @@ fn shown(text: &str) -> Cow<'_, str> {
     Cow::Owned(safe)
 }
 
+/// A file's text, made safe to echo, with every byte offset preserved.
+///
+/// [`shown`] is the wrong tool here. It turns one character into several, and a
+/// label span is a byte offset into this very text, which `ariadne` slices with
+/// to find the line and place the caret. A substitution that changed a length
+/// would move every caret after it. So each byte of a control character becomes
+/// one byte, and the text stays the size the spans were measured against.
+///
+/// `\r` is left alone, unlike in a message. `ariadne` breaks lines on it and
+/// never emits it, so it does not reach a terminal on this path, and replacing
+/// it would stop it separating lines: a file with CRLF endings would render as
+/// one long line.
+///
+/// Borrowed unless there is something to replace, so an ordinary file is still
+/// not copied and ADR-0003's reason for storing borrowed text holds for every
+/// input that is not trying something.
+fn echoed(text: &str) -> Cow<'_, str> {
+    let replaced = |ch: char| is_obeyed(ch) && ch != '\r';
+
+    if !text.chars().any(replaced) {
+        return Cow::Borrowed(text);
+    }
+
+    let mut safe = String::with_capacity(text.len());
+    for ch in text.chars() {
+        if replaced(ch) {
+            // One byte out for each byte in, so every offset after this one is
+            // still the offset the span was built from.
+            for _ in 0..ch.len_utf8() {
+                safe.push(REPLACEMENT);
+            }
+        } else {
+            safe.push(ch);
+        }
+    }
+    Cow::Owned(safe)
+}
+
+/// What a control character in a source file is shown as.
+///
+/// One byte, because [`echoed`] has to hand back text of the same size. That
+/// rules out the characters that would say it better, U+FFFD and the Control
+/// Pictures block among them.
+const REPLACEMENT: char = '?';
+
 /// Whether a terminal would act on this rather than print it.
 fn is_obeyed(ch: char) -> bool {
     ch.is_control() && ch != '\n' && ch != '\t'
@@ -415,13 +464,11 @@ fn is_obeyed(ch: char) -> bool {
 /// Remove the colour `ariadne` insists on putting in a custom header.
 ///
 /// `Config::with_color(false)` silences its built-in kinds but not a custom
-/// one, which always emits its colour. Only the header line is touched, so a
-/// source line echoed out of the file, which may legitimately contain an
-/// escape, is left exactly as it was written.
-///
-/// The escapes on that line are this renderer's own, because [`shown`] has
-/// already dealt with any that arrived in the message. That is what lets this
-/// take the whole line rather than having to tell the two apart.
+/// one, which always emits its colour. Only the header line is touched, which
+/// is enough because the other two sources of an escape are already dealt with:
+/// [`shown`] handles the message on this line, and [`echoed`] handles the
+/// source lines below it. Every escape left here is this renderer's own, which
+/// is what lets this take the whole line rather than tell the two apart.
 fn strip_header_escapes(rendered: &mut Vec<u8>) {
     let end = rendered
         .iter()
@@ -474,7 +521,7 @@ impl fmt::Debug for UnknownFile {
 struct SourceMapCache<'a> {
     sources: &'a SourceMap,
     /// Indexed by [`FileId::index`], filled on first use of each file.
-    cached: Vec<Option<Source<&'a str>>>,
+    cached: Vec<Option<Source<Cow<'a, str>>>>,
 }
 
 impl<'a> SourceMapCache<'a> {
@@ -506,7 +553,7 @@ impl<'a> SourceMapCache<'a> {
 }
 
 impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
-    type Storage = &'a str;
+    type Storage = Cow<'a, str>;
 
     fn fetch(&mut self, id: &FileId) -> Result<&Source<Self::Storage>, impl fmt::Debug> {
         // Copied out before `cached` is borrowed, so that the closure below
@@ -515,7 +562,9 @@ impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
         let id = *id;
 
         match self.cached.get_mut(id.index()) {
-            Some(slot) => Ok(slot.get_or_insert_with(|| Source::from(sources.file(id).contents()))),
+            Some(slot) => {
+                Ok(slot.get_or_insert_with(|| Source::from(echoed(sources.file(id).contents()))))
+            }
             None => Err(UnknownFile(id)),
         }
     }
@@ -788,6 +837,76 @@ mod tests {
                 assert!(rendered.contains("evil\\u{1b}"), "{mode:?}: {rendered:?}");
             }
         }
+    }
+
+    /// The other half of `content_never_reaches_the_terminal_as_an_instruction`,
+    /// and it needs its own test because the text of a file is echoed by
+    /// `ariadne` rather than written by this module. Nothing reached this path
+    /// until a diagnostic had a label to point with, so a `.c` file containing
+    /// `ESC [ 2 J` could clear the terminal of anyone who compiled it.
+    #[test]
+    fn source_text_is_echoed_without_the_control_characters_in_it() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x = 1; /* \u{1b}[2J */\n");
+        let diagnostic =
+            Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 4, 5), "here"));
+
+        for mode in [ColorMode::Never, ColorMode::Always] {
+            let rendered = render_with(&sources, &diagnostic, mode);
+
+            assert!(!rendered.contains("\u{1b}[2J"), "{mode:?}: {rendered:?}");
+        }
+
+        // What replaced it is only contiguous without colour: `ariadne` colours
+        // a source line one character at a time, so an escape of its own sits
+        // between every pair of them.
+        let plain = render_with(&sources, &diagnostic, ColorMode::Never);
+        assert!(plain.contains("?[2J"), "{plain:?}");
+    }
+
+    /// One byte out for each byte in. A label span is a byte offset into the
+    /// text `ariadne` is given, so a replacement of a different length would
+    /// move every caret after it. Rendering against a file that already has the
+    /// replacement at that byte is the same picture.
+    #[test]
+    fn replacing_a_control_character_does_not_move_the_caret() {
+        let mut dirty = SourceMap::new();
+        let dirty_file = dirty.add_virtual("main.c", "/* \u{1b} */ int y;\n");
+        let mut clean = SourceMap::new();
+        let clean_file = clean.add_virtual("main.c", "/* ? */ int y;\n");
+
+        let at = |file| {
+            Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 13, 14), "here"))
+        };
+
+        assert_eq!(
+            render(&dirty, &at(dirty_file)),
+            render(&clean, &at(clean_file))
+        );
+    }
+
+    /// `\r` is a line separator to `ariadne`, which breaks on it and never
+    /// emits it, so it does not reach a terminal and must not be replaced.
+    ///
+    /// Two things would break if it were. A lone `\r` would stop separating,
+    /// putting both statements onto one line, and every file written on Windows
+    /// would carry a stray replacement at the end of every line.
+    #[test]
+    fn a_carriage_return_still_separates_lines() {
+        let mut sources = SourceMap::new();
+        let lone = sources.add_virtual("lone.c", "int a;\rint b;\n");
+        let crlf = sources.add_virtual("crlf.c", "int a;\r\nint b;\r\n");
+
+        let at = |file| {
+            Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 10, 11), "here"))
+        };
+
+        let rendered = render(&sources, &at(lone));
+        assert!(rendered.contains("<lone.c>:2:"), "{rendered:?}");
+        assert!(!rendered.contains(REPLACEMENT), "{rendered:?}");
+
+        let rendered = render(&sources, &at(crlf));
+        assert!(!rendered.contains(REPLACEMENT), "{rendered:?}");
     }
 
     /// A newline is laid out rather than acted on, and a message that runs to
