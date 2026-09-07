@@ -89,6 +89,11 @@ Finally begin thread-safety analysis.
 - basic blocks
 - dataflow framework
 - variable state tracking
+- room in the edge representation for an edge no statement produced. C does not
+  force the issue, which is the danger: an exception is that shape, `longjmp` is
+  that shape, and every analysis written after this phase walks these edges. The
+  cheap version now is to leave room rather than to build unwinding, and to say
+  so where the edge type is defined. See [c-family.md](c-family.md)
 
 ### Phase 3: Memory Safety
 
@@ -137,3 +142,8 @@ Shared Safety Analysis
 ```
 
 Use real-world C/C++ projects as validation targets.
+
+This is where C++ arrives, and it is the permanent answer for C++ rather than a
+step toward a C++ frontend of this project's own. What that costs the design,
+and which parts of it are due before this phase, are in
+[c-family.md](c-family.md).
