@@ -21,7 +21,7 @@ use crate::source::Span;
 pub struct Token {
     /// What kind of token this is.
     pub kind: TokenKind,
-    /// The text is covers.
+    /// The text it covers.
     pub span: Span,
 }
 
@@ -55,14 +55,14 @@ pub enum TokenKind {
     Number,
     /// A string literal, quotes included.
     String,
-    /// A character constant, quptes included.
+    /// A character constant, quotes included.
     Character,
-    /// An operator or a separator
+    /// An operator or a separator.
     Punct(Punct),
     /// A run of characters that can begin no token at all.
     ///
     /// Reported where it is found, and kept, so that the stream still accounts
-    /// for the text is came from.
+    /// for the text it came from.
     Unknown,
     /// The end of the file.
     ///
@@ -71,6 +71,26 @@ pub enum TokenKind {
     /// an unexpected token like any other, rather than a second error path
     /// every caller has to remember.
     Eof,
+}
+
+impl TokenKind {
+    /// What this kind is called where a token is listed rather than spelled.
+    ///
+    /// Not `Display`. This names the kind, and the kind and the spelling are
+    /// different things for everything but a keyword and a punctuator: an
+    /// identifier is called `identifier` and spelled `main`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Keyword(_) => "keyword",
+            Self::Identifier => "identifier",
+            Self::Number => "number",
+            Self::String => "string",
+            Self::Character => "character",
+            Self::Punct(_) => "punct",
+            Self::Unknown => "unknown",
+            Self::Eof => "eof",
+        }
+    }
 }
 
 /// Turn one list of spellings into the enum, the roster and the spelling.
