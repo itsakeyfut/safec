@@ -16,6 +16,7 @@ use std::process::ExitCode;
 
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
+use crate::lexer::lex;
 use crate::options::Options;
 use crate::source::SourceMap;
 
@@ -85,6 +86,7 @@ pub fn compile(options: &Options) -> Compiled {
     }
 
     let mut seen = HashSet::new();
+    let mut loaded = Vec::new();
     for input in &options.inputs {
         // The same path twice is one translation unit, not two: reading it
         // twice would report everything in it twice. `cc` answers differently,
@@ -104,9 +106,25 @@ pub fn compile(options: &Options) -> Compiled {
 
         // Every input is attempted. Reporting the first bad path and stopping
         // would make a user with three of them run the compiler three times.
-        if let Err(error) = sources.load(input) {
-            diagnostics.report(load_failure(input, &error));
+        match sources.load(input) {
+            Ok(file) => loaded.push(file),
+            Err(error) => diagnostics.report(load_failure(input, &error)),
         }
+    }
+
+    // The gate is the input, not the run. `DiagnosticSink::has_errors` answers
+    // for everything reported so far, so consulting it here would let a typo in
+    // `a.c` decide that `b.c` is never looked at, and a user with two broken
+    // files would fix them one run at a time. What genuinely spans the run is
+    // the outcome, and later, linking.
+    for &file in &loaded {
+        // `file_owned` rather than `file`: the scan holds its text for longer
+        // than a statement, and adds to the map while doing so once `#include`
+        // lands. See ADR-0005.
+        let source = sources.file_owned(file);
+        // Nothing consumes the tokens yet; `--emit tokens` is the next change.
+        // What the scan reported is not dropped, and that is why it runs now.
+        let _tokens = lex(file, &source, &mut diagnostics);
     }
 
     // Phase 0 ends here: the files are read, and there is nothing yet to read
@@ -524,5 +542,69 @@ mod tests {
 
         assert!(!plain.contains('\u{1b}'), "{plain:?}");
         assert!(coloured.contains('\u{1b}'), "{coloured:?}");
+    }
+
+    /// Every file that loaded is scanned, whatever happened to the others.
+    /// Gating on the run would make a user fix one file per run.
+    #[test]
+    fn a_bad_input_does_not_stop_the_others_being_scanned() {
+        let scanned = TempFile::new("safec_driver_still_scanned.c", "int x = @;\n");
+        let compiled = compile(&options(vec![
+            missing_path("safec_driver_absent_first.c"),
+            scanned.path().to_path_buf(),
+        ]));
+
+        let messages: Vec<_> = compiled
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .map(Diagnostic::message)
+            .collect();
+
+        assert!(
+            messages.iter().any(|m| m.contains("cannot read")),
+            "{messages:?}"
+        );
+        assert!(
+            messages.iter().any(|m| m.contains("unexpected character")),
+            "{messages:?}"
+        );
+    }
+
+    #[test]
+    fn a_lexical_error_in_one_input_does_not_hide_one_in_another() {
+        let first = TempFile::new("safec_driver_lex_a.c", "int a = @;\n");
+        let second = TempFile::new("safec_driver_lex_b.c", "int b = `;\n");
+
+        let compiled = compile(&options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]));
+
+        let unexpected = compiled
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter(|d| d.message().contains("unexpected character"))
+            .count();
+
+        assert_eq!(unexpected, 2);
+    }
+
+    /// Until now every diagnostic the driver produced was unanchored, so
+    /// `render_all` never reached the source map at all: the driver's tests
+    /// passed against an empty one. The first labelled diagnostic is what
+    /// closes that, and this is the test that keeps it closed.
+    #[test]
+    fn a_diagnostic_from_the_driver_quotes_the_source_it_points_at() {
+        let file = TempFile::new("safec_driver_quotes_source.c", "int x = @;\n");
+        let mut report = Vec::new();
+
+        run_compiler(&options(vec![file.path().to_path_buf()]), &mut report)
+            .expect("writing to a vector cannot fail");
+        let report = String::from_utf8(report).expect("the renderer writes text");
+
+        assert!(report.contains("int x = @;"), "{report}");
+        assert!(report.contains("not part of any token"), "{report}");
     }
 }

@@ -20,8 +20,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 | [0003](./0003-pass-the-source-map-to-each-render-call.md) | Pass the source map to each render call rather than holding it | accepted | `a_renderer_does_not_hold_the_source_map` in `crates/safec/src/diagnostics/render.rs`; the borrow half does not compile against a renderer that holds the map, and sizing the cache once makes the assertion fail |
 | [0004](./0004-resolve-the-strictest-level-where-the-policy-is-built.md) | Resolve the strictest safety level where the policy is built, not only where the options are | accepted | `Policy`'s private field makes the bypass a compile error (E0451); `the_strictest_safety_level_denies_unknown_however_the_policy_is_built` and `the_strictest_safety_level_denies_unknown_even_unresolved` in `crates/safec/src/diagnostics.rs` and `the_strictest_safety_level_denies_unknown_in_the_sink` in `crates/safec/src/driver.rs`, all three of which fail if `Policy::new` keeps `deny_unknown` alone |
 | [0005](./0005-hold-each-source-file-behind-an-arc.md) | Hold each source file behind an `Arc` so one can be read while another is added | accepted | `a_file_can_be_read_while_another_is_added` in `crates/safec/src/source.rs`; writing `file` where it writes `file_owned` is the reversal and fails to compile with E0502 |
+| [0006](./0006-carry-a-position-rather-than-the-text.md) | Carry a position rather than the text it covers | accepted | `const _: () = assert!(mem::size_of::<Token>() == 16);` in `crates/safec/src/token.rs`; a `String` field takes it to 40 and a `Symbol` field to 20, and the crate stops building. The trigger for an interner is a convention this record states and nothing enforces |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005 · proposed: none · superseded: none
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 
