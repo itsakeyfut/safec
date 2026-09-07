@@ -58,6 +58,26 @@ This makes it possible to add:
 
 without coupling safety analysis to a particular code generator.
 
+## What Defines the Safety IR
+
+The IR is defined by what the analyses need, not by what the C frontend
+produces. An IR shaped around the C AST is an IR that a second frontend cannot
+reach, and there is already a second frontend on the roadmap: the
+[Clang adapter](clang-integration.md), which carries C++.
+
+Two consequences are worth stating early, because both are cheap while the IR
+does not exist:
+
+- An IR operation must be able to say it was not written. C++ destroys objects,
+  copies them and destroys temporaries without a statement saying so, and the
+  attribution has to distinguish "written here" from "caused by this, and
+  generated". `Span` already anticipates the coordinate this needs.
+- The control-flow graph must be able to carry an edge no statement produced.
+  This is Phase 2 work rather than Clang-adapter work, because every analysis
+  after it walks that graph.
+
+[c-family.md](c-family.md) has the rest, and the trigger for each.
+
 ## Interpreter
 
 A small interpreter for the Safety IR is strongly recommended.

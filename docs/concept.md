@@ -71,6 +71,10 @@ C
 
 The important goal is not to immediately replace C, but to make it possible to **gradually introduce safety guarantees into existing C code**.
 
+The analogy is about extending a language, not about C++ being a layer that can be added to a C compiler. C++ is not a superset of C, and more to the point the parser is not where the difficulty lies: C++ runs code nobody wrote, branches where no statement branches, and means several things per piece of source. C++ is therefore reached through the [Clang adapter](clang-integration.md) rather than by growing this project's frontend, and what that demands of the design is in [c-family.md](c-family.md).
+
+Starting with C is not starting with the easy case. In C, ownership is written nowhere, so the analysis has to infer what the language never recorded; in C++ much of it is already spelled out by `std::unique_ptr` and friends. The safety model is being built against the harder of the two.
+
 ## Project Positioning
 
 The project should not compete with TinyCC simply by being another small compiler.
