@@ -12,6 +12,12 @@ LLVM IR is a code-generation representation. The project needs a higher-level se
 - regions
 - thread relationships
 
+It is also defined by the analyses rather than by the frontend that feeds it. A
+second frontend is on the roadmap and it carries C++, so an IR shaped around the
+C AST is one that has to be rebuilt to reach it. The testable form of this: an
+analysis should run over IR built by hand in a test, with no frontend present.
+See [c-family.md](c-family.md).
+
 ## 2. Separate inference from enforcement
 
 The analyzer distinguishes `Safe`, `Unsafe` and `Unknown` rather than pretending

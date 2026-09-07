@@ -102,4 +102,15 @@ crates/
 
 Split crates only when boundaries become clear.
 
+One criterion for clear: **the boundary that must not be crossed is the boundary
+worth making a crate.** The dependency arrows of a workspace are enforced by
+cargo, so a safety-IR crate that does not depend on the frontend cannot grow a
+dependency on it by accident, and a reversal is a build failure rather than a
+review comment. That is the same shape as the guards in
+[ADR-0003](adr/0003-pass-the-source-map-to-each-render-call.md) and
+[ADR-0004](adr/0004-resolve-the-strictest-level-where-the-policy-is-built.md),
+which are held by the compiler rather than by remembering to run a test.
+
+Everything else can stay in one crate until it hurts.
+
 This keeps the initial codebase small and easy to navigate.

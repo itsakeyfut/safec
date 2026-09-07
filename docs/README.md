@@ -19,6 +19,7 @@ Written in English, like the code they describe.
 | [frontend.md](frontend.md) | How the lexer and parser are built up, in stages |
 | [diagnostics.md](diagnostics.md) | Why a diagnostic is a first-class value |
 | [clang-integration.md](clang-integration.md) | The second frontend, and the analysis both share |
+| [c-family.md](c-family.md) | How C++ is reached, what that demands of the Safety IR, and when each of those decisions is due |
 | [repository.md](repository.md) | Crate layout and the dependency policy |
 | [roadmap.md](roadmap.md) | What to build first, and in what order |
 | [design-principles.md](design-principles.md) | The short list to return to while implementing |
