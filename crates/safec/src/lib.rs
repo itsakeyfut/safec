@@ -5,11 +5,13 @@
 //! that integration tests can drive the compiler in-process instead of
 //! spawning a subprocess.
 
+pub mod ast;
 pub mod cli;
 pub mod diagnostics;
 pub mod driver;
 pub mod lexer;
 pub mod options;
+pub mod parser;
 pub mod safety;
 pub mod source;
 pub mod token;

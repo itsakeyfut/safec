@@ -85,15 +85,18 @@ fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
     );
 }
 
-/// Everything past the lexer. Asking for it produces nothing on stdout and a
+/// Everything past the parser. Asking for it produces nothing on stdout and a
 /// non-zero exit, rather than an empty artifact and a claim of success.
 ///
 /// Hand written rather than a case, because the claim is about the emit ladder
-/// rather than about any one artifact: five invocations over one source, and a
+/// rather than about any one artifact: four invocations over one source, and a
 /// case is one invocation over one source.
+///
+/// `ast` was in this list until a parser existed to reach it. The list is what
+/// the compiler cannot do yet, so it shrinks as phases land.
 #[test]
 fn asking_for_an_artifact_that_does_not_exist_yet_produces_nothing() {
-    for emit in ["ast", "safety-ir", "llvm-ir", "object", "executable"] {
+    for emit in ["safety-ir", "llvm-ir", "object", "executable"] {
         let output = safec(&[
             "--color",
             "never",

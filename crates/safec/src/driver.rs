@@ -15,11 +15,13 @@ use std::io;
 use std::path::Path;
 use std::process::ExitCode;
 
+use crate::ast::{Ast, Expr, Item, Stmt};
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::lexer::lex;
 use crate::options::{EmitKind, Options};
-use crate::source::{SourceFile, SourceMap};
+use crate::parser::parse;
+use crate::source::{SourceFile, SourceMap, Span};
 use crate::token::Token;
 
 /// Everything one run of the compiler produced.
@@ -138,12 +140,9 @@ pub fn compile(options: &Options) -> Compiled {
     // Exhaustive, so a kind added anywhere is a compile error until somebody
     // says which side of the line it falls on.
     let mut artifact = match options.emit {
-        EmitKind::Tokens => Some(String::new()),
-        EmitKind::Ast
-        | EmitKind::SafetyIr
-        | EmitKind::LlvmIr
-        | EmitKind::Object
-        | EmitKind::Executable => None,
+        EmitKind::Tokens => Some(Emitted::Tokens(String::new())),
+        EmitKind::Ast => Some(Emitted::Ast(String::new())),
+        EmitKind::SafetyIr | EmitKind::LlvmIr | EmitKind::Object | EmitKind::Executable => None,
     };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
@@ -155,8 +154,17 @@ pub fn compile(options: &Options) -> Compiled {
         // Every input appends to one artifact, and every line names its file,
         // so `--emit tokens a.c b.c` reads as one dump rather than needing two
         // destinations.
-        if let Some(artifact) = &mut artifact {
-            dump_tokens(&source, &tokens, artifact);
+        // The parser runs whatever the lexer found in this file. Gating it on
+        // that is the second half of per-input gating and has an issue of its
+        // own; the half that exists is the loop above, which attempts every
+        // input rather than stopping at the first bad one.
+        match &mut artifact {
+            Some(Emitted::Tokens(out)) => dump_tokens(&source, &tokens, out),
+            Some(Emitted::Ast(out)) => {
+                let ast = parse(file, &tokens, &mut diagnostics);
+                dump_ast(&sources, &ast, out);
+            }
+            None => {}
         }
     }
 
@@ -183,16 +191,134 @@ pub fn compile(options: &Options) -> Compiled {
     if artifact.is_none() {
         diagnostics.report(
             Diagnostic::error("the compilation pipeline is not implemented yet")
-                .with_note("safec currently reads its inputs and scans them into tokens")
-                .with_note("`--emit tokens` is what it can produce today"),
+                .with_note("safec currently scans its inputs and parses them into a tree")
+                .with_note("`--emit tokens` and `--emit ast` are what it can produce today"),
         );
     }
 
     Compiled {
         sources,
         diagnostics,
-        artifact,
+        artifact: artifact.map(Emitted::into_text),
     }
+}
+
+/// The artifact being built, and which one it is.
+///
+/// The gate that decides whether to build anything runs once, before the
+/// inputs, and the dump runs once per input, so the two are in different
+/// places. Naming the artifact keeps them one decision rather than two matches
+/// on `EmitKind` that have to agree. RK-003 in the review knowledge bank
+/// records what the two-copy version of this cost: a gate written as two
+/// comparisons left `--emit preprocessed` answered by neither, and the compiler
+/// exited zero having written nothing to either stream.
+enum Emitted {
+    /// What `--emit tokens` asked for.
+    Tokens(String),
+    /// What `--emit ast` asked for.
+    Ast(String),
+}
+
+impl Emitted {
+    fn into_text(self) -> String {
+        match self {
+            Self::Tokens(text) | Self::Ast(text) => text,
+        }
+    }
+}
+
+/// The tree, as a caller redirecting it would see.
+///
+/// One node per line, two spaces of indent per level: the kind, where it is,
+/// and whatever that node alone carries.
+///
+/// **No node identity.** `clang -Xclang -ast-dump` prints one and it is the
+/// node's address, so two runs of the same command on the same file disagree.
+/// A corpus case compares byte for byte, and an artifact nobody can pin is an
+/// interface nobody can hold this compiler to.
+fn dump_ast(sources: &SourceMap, ast: &Ast, out: &mut String) {
+    for item in ast.items() {
+        dump_item(sources, ast, item, 0, out);
+    }
+}
+
+fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mut String) {
+    dump_node(sources, item.name(), item.span(), depth, out);
+    match item {
+        Item::Function(function) => {
+            write!(out, " {:?}", quoted(sources, function.name))
+                .expect("writing to a string cannot fail");
+            out.push('\n');
+            dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
+        }
+        Item::Error { .. } => out.push('\n'),
+    }
+}
+
+fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mut String) {
+    dump_node(sources, stmt.name(), stmt.span(), depth, out);
+    out.push('\n');
+    match stmt {
+        Stmt::Compound { body, .. } => {
+            for &id in body {
+                dump_stmt(sources, ast, ast.stmt(id), depth + 1, out);
+            }
+        }
+        Stmt::Return { value, .. } => {
+            if let Some(id) = value {
+                dump_expr(sources, ast.expr(*id), depth + 1, out);
+            }
+        }
+        Stmt::Error { .. } => {}
+    }
+}
+
+fn dump_expr(sources: &SourceMap, expr: &Expr, depth: usize, out: &mut String) {
+    dump_node(sources, expr.name(), expr.span(), depth, out);
+    match expr {
+        Expr::Number { span } => {
+            write!(out, " {:?}", quoted(sources, *span)).expect("writing to a string cannot fail");
+            out.push('\n');
+        }
+        // Not reachable through `--emit ast` today: an expression that could
+        // not be read sets the parser's `failed`, so the statement holding it
+        // becomes an error node and this one stays in the arena with no parent.
+        // The sibling issue that adds recovery is what brings it into a tree.
+        Expr::Error { .. } => out.push('\n'),
+    }
+}
+
+/// The part every line shares: indent, kind, and where it is.
+///
+/// Source text is written with `{:?}` by the callers that write any, for the
+/// reason RK-002 records: a `.c` file's own bytes reaching a stream are
+/// content, and one holding an escape sequence must not be able to clear the
+/// terminal of whoever compiled it.
+/// The source text a span covers, resolved against the file the span names.
+///
+/// Not against whichever file the driver's loop is on. One tree holds spans
+/// from one file today and will hold several the moment `#include` lands, and a
+/// span resolved against the wrong file prints another file's text at another
+/// file's line, or panics when that file is shorter. `render.rs` looks the file
+/// up per label for this reason, and ADR-0003 is where it is argued.
+fn quoted(sources: &SourceMap, span: Span) -> &str {
+    &sources.file(span.file()).contents()[span.range()]
+}
+
+fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mut String) {
+    let file = sources.file(span.file());
+    let at = file.line_col(span.start());
+    write!(
+        out,
+        "{:indent$}{} {}:{}:{}",
+        "",
+        kind,
+        file.name(),
+        at.line,
+        at.column,
+        indent = depth * 2
+    )
+    .expect("writing to a string cannot fail");
 }
 
 /// One line per token: where it starts, what it is, and the text it covers.
@@ -839,14 +965,16 @@ mod tests {
         }
     }
 
-    /// Everything past the lexer. A run that cannot produce what was asked for
+    /// Everything past the parser. A run that cannot produce what was asked for
     /// has to say so rather than exit successfully having made nothing.
     #[test]
     fn asking_for_an_artifact_the_pipeline_cannot_reach_is_an_error() {
         let file = TempFile::new("safec_driver_emit_beyond.c", "int x;\n");
 
         for emit in [
-            EmitKind::Ast,
+            // `Ast` was here until a parser existed to reach it. What is left
+            // is everything past the parser, and the list shrinks again each
+            // time a phase lands.
             EmitKind::SafetyIr,
             EmitKind::LlvmIr,
             EmitKind::Object,
@@ -919,6 +1047,96 @@ mod tests {
         assert!(artifact.contains("safec_driver_emit_a.c"), "{artifact}");
         assert!(artifact.contains("safec_driver_emit_b.c"), "{artifact}");
         assert_eq!(artifact.lines().count(), 8, "{artifact}");
+    }
+
+    /// The same for the tree, which reaches the artifact by a different path:
+    /// the tokens dump writes what the loop already has, and this one parses
+    /// first, so the two arms cannot vouch for each other.
+    ///
+    /// Mutation: clear the artifact before dumping each input. This fails,
+    /// because the second file's tree is then all there is.
+    ///
+    /// It also pins that each node is placed against the file its own span
+    /// names rather than the file the loop is on, which is the property the
+    /// second name below would lose.
+    #[test]
+    fn every_input_appends_to_one_tree_dump() {
+        let first = TempFile::new(
+            "safec_driver_ast_a.c",
+            "int a(void) { return 0; }
+",
+        );
+        let second = TempFile::new(
+            "safec_driver_ast_b.c",
+            "int b(void) { return 1; }
+",
+        );
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.emit = EmitKind::Ast;
+
+        let (_, artifact, _) = run(&options);
+
+        assert!(artifact.contains("safec_driver_ast_a.c"), "{artifact}");
+        assert!(artifact.contains("safec_driver_ast_b.c"), "{artifact}");
+        assert!(artifact.contains("\"a\""), "{artifact}");
+        assert!(artifact.contains("\"b\""), "{artifact}");
+        assert_eq!(artifact.lines().count(), 8, "{artifact}");
+    }
+
+    /// Each node is placed against the file its own span names.
+    ///
+    /// One tree holds spans from one file today, and will hold several the
+    /// moment `#include` lands. Resolving them all against whichever file the
+    /// driver's loop happens to be on prints one file's text at another file's
+    /// line, and panics outright when the other file is shorter. The renderer
+    /// looks a label's file up per label for the same reason; ADR-0003 argues
+    /// it. The tree here is built by hand because the parser cannot yet produce
+    /// one that spans two files.
+    ///
+    /// Mutation: have `dump_node` and `quoted` take the loop's `SourceFile`
+    /// again. This fails.
+    #[test]
+    fn a_node_is_placed_against_the_file_its_span_names() {
+        use crate::ast::Function;
+
+        let mut sources = SourceMap::new();
+        let first = sources.add_virtual(
+            "first.c",
+            "int outer(void) { return 0; }
+",
+        );
+        let second = sources.add_virtual(
+            "second.c",
+            "
+
+
+      inner
+",
+        );
+
+        let mut ast = Ast::new();
+        let body = ast.push_stmt(Stmt::Compound {
+            body: Vec::new(),
+            span: Span::new(second, 9, 14),
+        });
+        ast.push_item(Item::Function(Function {
+            name: Span::new(first, 4, 9),
+            body,
+            span: Span::new(first, 0, 29),
+        }));
+
+        let mut out = String::new();
+        dump_ast(&sources, &ast, &mut out);
+
+        assert_eq!(
+            out,
+            "Function <first.c>:1:1 \"outer\"
+  Compound <second.c>:4:7
+"
+        );
     }
 
     /// The artifact is what was asked for, so failing to write it is a failed

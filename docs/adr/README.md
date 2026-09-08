@@ -24,7 +24,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 
 | [0007](./0007-list-the-test-cases-rather-than-discovering-them.md) | List the test cases in a literal table rather than discovering them on disk | accepted | `every_file_in_the_corpus_belongs_to_a_case_in_the_table` in `crates/safec/tests/cases.rs`; putting anything in `cases/` that the table does not name, at the top level or in a subdirectory, makes it fail and nothing else |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007 · proposed: none · superseded: none
+| [0008](./0008-hold-the-tree-in-flat-vectors-and-address-a-node-by-index.md) | Hold the tree in flat vectors and address a node by index | accepted | `an_id_still_names_its_node_after_more_are_pushed` in `crates/safec/src/ast.rs`; taking the id from `len()` after the push rather than before makes it fail, and `Ast`'s private vectors make holding a node across a push `error[E0502]` |
+
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 
