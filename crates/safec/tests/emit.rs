@@ -5,9 +5,12 @@
 //! library's: the split between the streams and the exit code exist so that
 //! `safec --emit tokens a.c > a.tok` works, and only a spawned binary can show
 //! that it does.
+//!
+//! What each stream holds is pinned by the corpus in `cases.rs`, one expected
+//! file per stream. What is left here is what a pair of files cannot say.
 
 use std::path::PathBuf;
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 fn safec(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_safec"))
@@ -29,27 +32,57 @@ fn test_file(path: &str) -> PathBuf {
         .join(path)
 }
 
-/// The artifact goes to stdout and the diagnostics to stderr, so a caller can
-/// redirect one without catching the other.
+/// Redirecting the artifact does not take the diagnostics with it.
+///
+/// The corpus pins what each stream held, and it captures both at once through
+/// pipes, so it never has to send one somewhere. This does: stdout goes to a
+/// file the way a shell would send it, and the report has to still arrive on
+/// the terminal. That is the whole reason the two streams are separate, it is
+/// what this module's comment says the file is for, and it is tested nowhere
+/// else.
+///
+/// The comparison is against the corpus's own expected files rather than
+/// against emptiness. Non-emptiness is not the property: swap the two streams
+/// and both are still non-empty, each holding the other's contents, which is
+/// the failure this test is named after and would have passed.
+///
+/// Mutation: swap the two writers at the `run_compiler` call in `main`. This
+/// fails, because the file then holds the report.
 #[test]
-fn the_artifact_and_the_diagnostics_use_different_streams() {
-    let path = test_file("cases/unexpected_character.c")
-        .display()
-        .to_string();
-    let output = safec(&["--color", "never", "--emit", "tokens", &path]);
+fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
+    let expected_artifact = std::fs::read(test_file("cases/unexpected_character.stdout"))
+        .expect("the corpus pins what this program's artifact is");
+    let expected_report = std::fs::read(test_file("cases/unexpected_character.stderr"))
+        .expect("the corpus pins what this program's report is");
+
+    let path = std::env::temp_dir().join(format!("safec_emit_{}.tok", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let file = std::fs::File::create(&path).expect("a temporary file can be created");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "tokens"])
+        // Run from `cases/` with a bare name for the same reason the corpus
+        // does: the compiler echoes the path it was given, and the expected
+        // files were written against the bare one.
+        .current_dir(test_file("cases"))
+        .arg("unexpected_character.c")
+        .stdout(Stdio::from(file))
+        .stderr(Stdio::piped())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let redirected = std::fs::read(&path).expect("the redirected artifact is on disk");
+    let _ = std::fs::remove_file(&path);
 
     assert_eq!(output.status.code(), Some(1), "{output:?}");
-
-    let report = String::from_utf8(output.stderr).expect("the renderer writes text");
-    let tokens = String::from_utf8(output.stdout).expect("the emitter writes text");
-
-    assert!(report.contains("unexpected character"), "{report}");
     assert!(
-        report.contains("int x = @;"),
-        "the source line is quoted: {report}"
+        redirected == expected_artifact,
+        "the file took the artifact, not the report"
     );
-    assert!(tokens.contains("unknown \"@\""), "{tokens}");
-    assert!(!tokens.contains("unexpected character"), "{tokens}");
+    assert!(
+        output.stderr == expected_report,
+        "the report stayed on stderr, and the artifact did not follow it"
+    );
 }
 
 /// Everything past the lexer. Asking for it produces nothing on stdout and a
