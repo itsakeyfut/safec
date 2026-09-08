@@ -34,7 +34,7 @@ IR and the CFG, which is why they matter now: the CFG is Phase 2.
 
 ## C++ arrives through Clang, and that is the destination
 
-[Phase 7](roadmap.md) adds the Clang adapter. It should be read as the permanent
+[Phase 10](roadmap.md) adds the Clang adapter. It should be read as the permanent
 answer for C++ rather than as a stepping stone toward a C++ frontend of this
 project's own.
 
@@ -122,8 +122,9 @@ to serve three cases and not only macros.
 
 ### The CFG must carry edges no statement produced
 
-This is the one that is due soon. [Phase 2](roadmap.md) builds the CFG and the
-dataflow framework, and every analysis after it walks that graph. A CFG whose
+This is the one that is due soon. [Phase 2](roadmap.md) builds the CFG, as part
+of a Safety IR that is block-structured from the start, and every analysis after
+it walks that graph. A CFG whose
 edges come only from `if`, `while`, `return` and `goto` cannot represent an
 exception, and adding a new kind of edge afterwards means revisiting every
 analysis that assumed the old set.

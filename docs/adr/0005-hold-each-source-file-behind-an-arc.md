@@ -48,7 +48,7 @@ That ends with the first lexer, which is Phase 1.
   there are phases written around it.
 * The map's contents are the source being compiled. Copying them to work around
   the borrow is the one thing a compiler should not do to its own input.
-* Phase 6 is thread safety analysis, and the roadmap mentions no parallel
+* Phase 8 is thread safety analysis, and the roadmap mentions no parallel
   front end but does not rule one out. Whatever is chosen should not be the
   thing that makes sharing impossible later.
 * Whatever is done must not disturb the renderer's cache, which borrows file
@@ -91,7 +91,7 @@ borrow, and costs an atomic increment to say it.
 
 `Arc` rather than `Rc`. Nothing is shared across threads today and the
 difference is one atomic operation on a clone that happens once per file, not
-once per token. Phase 6 is thread safety analysis, and an `Rc` in the substrate
+once per token. Phase 8 is thread safety analysis, and an `Rc` in the substrate
 every later phase is built on is the kind of thing that is found late and
 changed everywhere at once.
 
@@ -184,5 +184,5 @@ remembers this record.
   one layer out, and the record that named this one without fixing it.
 * [`docs/frontend.md`](../frontend.md): stage 3 adds the preprocessor, which is
   where `#include` arrives.
-* [`docs/roadmap.md`](../roadmap.md): Phase 1 adds the lexer, Phase 6 the thread
+* [`docs/roadmap.md`](../roadmap.md): Phase 1 adds the lexer, Phase 8 the thread
   safety analysis.

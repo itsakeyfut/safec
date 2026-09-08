@@ -48,6 +48,13 @@ Add preprocessor functionality:
 - `#include`
 - conditional compilation
 
+These stages order the parser's growth, not the project's phases, and the
+preprocessor is where the two diverge. [roadmap.md](roadmap.md) pulls a minimal
+subset of this stage forward into Phase 1: `#include`, object-like `#define`,
+`#ifdef` and `#ifndef`. What that buys is that every later phase can be tested
+against a real header rather than a hand-written prototype. The rest of the
+stage, and all of Stage 2, stay in Phase 9.
+
 ## Stage 4
 
 Work toward broader C compatibility, potentially C11/C17.
