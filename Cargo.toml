@@ -12,6 +12,10 @@ repository = "https://github.com/itsakeyfut/safec"
 
 [workspace.dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
+# Upstream is https://codeberg.org/zesterer/ariadne. The GitHub repository that
+# crates.io links to is archived and says so in its own description, so a reader
+# who followed that link and found it stopped has not found an abandoned crate:
+# 0.6.0 is the newest release, and work has continued on Codeberg since.
 ariadne = "0.6.0"
 thiserror = "2.0.20"
 
