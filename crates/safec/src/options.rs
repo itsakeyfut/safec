@@ -37,16 +37,20 @@ pub struct Options {
 /// An artifact the compiler can produce.
 ///
 /// The variants are declared in pipeline order, from the first stage of the
-/// frontend to the final build product, and `Ord` follows that order so a stage
-/// can ask whether what was requested lies beyond it rather than matching every
-/// variant it cannot produce. Their command line spellings are pinned by a
-/// test. `--emit` is part of the stable interface rather than a
+/// frontend to the final build product, and their command line spellings are
+/// pinned by a test.
+///
+/// Deliberately not `Ord`. Ordering invites a stage to ask "is what was
+/// requested beyond me?", which is half a question: a pipeline grows at both
+/// ends, and a comparison says nothing about a stage declared earlier. The
+/// driver matches on the kind instead, so a variant added anywhere has to be
+/// answered before the crate builds. `--emit` is part of the stable interface rather than a
 /// debug convenience, so a variant is renamed only deliberately.
 ///
 /// The name follows rustc's `--emit`, which takes a *set* of artifacts. Only
 /// one can be asked for today, but the option is expected to widen to a list
 /// rather than to change meaning.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 #[value(rename_all = "kebab-case")]
 pub enum EmitKind {
     /// The token stream produced by the lexer.

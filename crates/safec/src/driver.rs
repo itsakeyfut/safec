@@ -126,7 +126,25 @@ pub fn compile(options: &Options) -> Compiled {
     // `a.c` decide that `b.c` is never looked at, and a user with two broken
     // files would fix them one run at a time. What genuinely spans the run is
     // the outcome, and later, linking.
-    let mut artifact = (options.emit == EmitKind::Tokens).then(String::new);
+    // What the pipeline can produce, decided once, for every kind there is.
+    //
+    // A `match` rather than a comparison on `EmitKind`'s pipeline order. A
+    // comparison answers "beyond the last stage that exists" and never "before
+    // the first one", and a pipeline grows at both ends: C runs the
+    // preprocessor before the lexer, so `--emit preprocessed` belongs above
+    // `Tokens` in that enum, and a `>` gate let such a run exit successfully
+    // having produced nothing and said nothing.
+    //
+    // Exhaustive, so a kind added anywhere is a compile error until somebody
+    // says which side of the line it falls on.
+    let mut artifact = match options.emit {
+        EmitKind::Tokens => Some(String::new()),
+        EmitKind::Ast
+        | EmitKind::SafetyIr
+        | EmitKind::LlvmIr
+        | EmitKind::Object
+        | EmitKind::Executable => None,
+    };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
         // than a statement, and adds to the map while doing so once `#include`
@@ -142,17 +160,27 @@ pub fn compile(options: &Options) -> Compiled {
         }
     }
 
-    // What the pipeline can produce ends at the token stream. `EmitKind` is
-    // declared in pipeline order, so this asks whether what was requested lies
-    // beyond the last stage that exists rather than naming the stages that do
-    // not, and it stops being true one variant at a time as they land.
-    //
-    // Said whenever it applies, including on a run that also failed to read a
-    // file, because a run that compiled nothing has to say so: leaving it out
-    // lets a user with one bad path among several believe the rest were built.
-    // Exiting successfully without producing what was asked for is the one
-    // thing a compiler must never do.
-    if options.emit > EmitKind::Tokens {
+    // Accepted by the parser and acted on by nothing. Saying so is not the
+    // same as implementing it, and it is the half that cannot wait: a run that
+    // was told where to put its output, put it somewhere else, and exited
+    // successfully has lied about the one thing the exit code is for. What `-o`
+    // should mean for several inputs, one artifact and no linker is a decision
+    // for when there is a backend to make it with.
+    if options.output.is_some() {
+        diagnostics.report(
+            Diagnostic::error("`-o` is not supported yet")
+                .with_note("the artifact is written to standard output")
+                .with_note("redirect it instead, until an output path is honoured"),
+        );
+    }
+
+    // The other half of the same decision, and it reads from the same answer
+    // rather than asking again. Said whenever it applies, including on a run
+    // that also failed to read a file, because a run that compiled nothing has
+    // to say so: leaving it out lets a user with one bad path among several
+    // believe the rest were built. Exiting successfully without producing what
+    // was asked for is the one thing a compiler must never do.
+    if artifact.is_none() {
         diagnostics.report(
             Diagnostic::error("the compilation pipeline is not implemented yet")
                 .with_note("safec currently reads its inputs and scans them into tokens")
@@ -266,6 +294,8 @@ pub fn run_compiler(
 mod tests {
     use std::fs;
     use std::path::PathBuf;
+
+    use clap::ValueEnum as _;
 
     use super::*;
     use crate::options::{ColorMode, EmitKind};
@@ -641,6 +671,55 @@ mod tests {
         assert_eq!(outcome, Outcome::Succeeded);
         assert_eq!(report, "", "a clean run says nothing");
         assert!(!artifact.is_empty());
+    }
+
+    /// Accepted and then ignored is the shape of the failure this driver is
+    /// most careful about elsewhere: a run that was told where to put its
+    /// output, put it somewhere else, and exited zero. Reported until it is
+    /// honoured.
+    #[test]
+    fn an_output_path_that_is_not_honoured_is_reported() {
+        let file = TempFile::new(
+            "safec_driver_output_path.c",
+            "int x;
+",
+        );
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+        options.output = Some(PathBuf::from("out.tok"));
+
+        let (report, artifact, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("`-o` is not supported yet"), "{report}");
+        // Still emitted: the tokens are what was asked for, and stdout is
+        // somewhere the caller can reach.
+        assert!(artifact.contains("keyword"), "{artifact}");
+    }
+
+    /// The rule, over every kind there is: a run either produces what was
+    /// asked for or says it cannot. Driven by `EmitKind::value_variants` rather
+    /// than by a list, so a kind added anywhere in the pipeline is covered
+    /// without anyone remembering this test exists.
+    #[test]
+    fn every_emit_kind_is_either_produced_or_reported() {
+        let file = TempFile::new(
+            "safec_driver_emit_every.c",
+            "int x;
+",
+        );
+
+        for &emit in EmitKind::value_variants() {
+            let mut options = options(vec![file.path().to_path_buf()]);
+            options.emit = emit;
+
+            let compiled = compile(&options);
+
+            assert!(
+                compiled.artifact.is_some() || compiled.diagnostics.has_errors(),
+                "{emit:?} produced nothing and said nothing",
+            );
+        }
     }
 
     /// Everything past the lexer. A run that cannot produce what was asked for
