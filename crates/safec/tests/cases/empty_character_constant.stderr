@@ -1,0 +1,8 @@
+error[E0105]: empty character constant
+   ╭─[ empty_character_constant.c:1:10 ]
+   │
+ 1 │ char c = '';
+   │          ─┬  
+   │           ╰── nothing between the quotes
+───╯
+  = note: a character constant has to hold at least one character

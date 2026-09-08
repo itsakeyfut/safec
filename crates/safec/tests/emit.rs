@@ -20,13 +20,9 @@ fn safec(args: &[&str]) -> Output {
 /// user takes is the path under test: reading from disk, scanning, and writing
 /// the result to a stream.
 ///
-/// Not `fixture`: it reaches into both directories, and naming it after one of
-/// them would undo the distinction the rest of this comment draws.
-///
-/// The argument is relative to `tests/`, because there are two directories of
-/// them and they mean different things. `cases/` holds the corpus, where a
-/// program and its whole expected output are a test on their own; `fixtures/`
-/// holds programs that exist for a claim the corpus cannot make.
+/// The argument is relative to `tests/`. There is one directory of them,
+/// `cases/`, and a program there is a corpus case as well as whatever a test
+/// here wants it for.
 fn test_file(path: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
@@ -37,7 +33,9 @@ fn test_file(path: &str) -> PathBuf {
 /// redirect one without catching the other.
 #[test]
 fn the_artifact_and_the_diagnostics_use_different_streams() {
-    let path = test_file("fixtures/unexpected.c").display().to_string();
+    let path = test_file("cases/unexpected_character.c")
+        .display()
+        .to_string();
     let output = safec(&["--color", "never", "--emit", "tokens", &path]);
 
     assert_eq!(output.status.code(), Some(1), "{output:?}");

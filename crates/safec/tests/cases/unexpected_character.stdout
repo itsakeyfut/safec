@@ -1,0 +1,6 @@
+unexpected_character.c:1:1 keyword "int"
+unexpected_character.c:1:5 identifier "x"
+unexpected_character.c:1:7 punct "="
+unexpected_character.c:1:9 unknown "@"
+unexpected_character.c:1:10 punct ";"
+unexpected_character.c:2:1 eof

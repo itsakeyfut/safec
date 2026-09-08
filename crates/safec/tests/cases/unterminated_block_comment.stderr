@@ -1,0 +1,8 @@
+error[E0101]: unterminated block comment
+   ╭─[ unterminated_block_comment.c:1:1 ]
+   │
+ 1 │ /* never closed
+   │ ─┬  
+   │  ╰── unclosed from here
+───╯
+  = note: the comment runs to the end of the file

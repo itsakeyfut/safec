@@ -8,6 +8,11 @@
 //! What is being pinned is an interface. A caller redirects `--emit` output,
 //! greps it and diffs it, so a `contains` check is not an assertion about it:
 //! it goes on passing while the shape somebody depends on changes underneath.
+//!
+//! `ariadne` ends a caret line with spaces, so an expected file does too.
+//! Trailing whitespace in one is content rather than dirt, and an editor or a
+//! hook that strips it breaks a case for a reason with nothing to do with the
+//! compiler.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -35,6 +40,15 @@ macro_rules! cases {
 // See ADR-0007 for why, and for what it rejected.
 cases! {
     add: ["--emit", "tokens"],
+    empty_character_constant: ["--emit", "tokens"],
+    output_path_not_supported: ["-o", "out.tok", "--emit", "tokens"],
+    pipeline_not_implemented: ["--emit", "ast"],
+    unexpected_character: ["--emit", "tokens"],
+    unexpected_characters: ["--emit", "tokens"],
+    unsupported_directive: ["--emit", "tokens"],
+    unterminated_block_comment: ["--emit", "tokens"],
+    unterminated_character_constant: ["--emit", "tokens"],
+    unterminated_string_literal: ["--emit", "tokens"],
 }
 
 /// Everything in `cases/` belongs to a case the table names.
@@ -130,12 +144,14 @@ fn run_case(name: &str, args: &[&str]) {
 /// Text, and empty for zero, so that one rule covers all three streams: absent
 /// means empty, and for this one empty means zero.
 ///
-/// Split out so that the encoding has a guard of its own. Every case in the
-/// corpus exits zero today, so nothing else reaches the other branch, and a
-/// branch nothing reaches is a branch nothing protects.
+/// Split out so that the rule has a guard that states it, rather than leaving
+/// it implicit in what the expected files happen to contain. Nine cases carry a
+/// `.exit` and one does not, so the rule is now demonstrated many times over and
+/// written down once.
 ///
-/// Mutation: return `Vec::new()` whatever the code.
-/// `a_failing_exit_code_is_written_down_and_a_successful_one_is_not` fails.
+/// Mutation: return `Vec::new()` whatever the code. Ten tests fail: the unit
+/// test below, which is the one that says what the rule is, and every case that
+/// exits non-zero.
 fn expected_exit(code: i32) -> Vec<u8> {
     if code == 0 {
         Vec::new()
@@ -174,13 +190,66 @@ fn check(name: &str, ext: &str, actual: &[u8]) {
     assert!(
         actual == expected,
         "case `{name}`: {ext} does not match {}\n\
-         --- expected ---\n{}\n--- actual ---\n{}\n\
+         --- expected ---\n{}\n--- actual ---\n{}\n{}\n\
          Run the suite again with SAFEC_BLESS=1 to write what the compiler \
          produced, then read the diff.",
         path.display(),
         String::from_utf8_lossy(&expected),
         String::from_utf8_lossy(actual),
+        first_difference(&expected, actual),
     );
+}
+
+/// The first line the two disagree on, escaped so that it can be read.
+///
+/// Printed beside the two blocks because some of what a case pins is invisible
+/// on a terminal. `ariadne` ends a caret line with spaces, so the failure this
+/// module's comment warns about, an editor stripping them, produces two blocks
+/// that look identical and differ by two bytes. Told only that they do not
+/// match, the next move is `SAFEC_BLESS=1`, which is the one move that must
+/// never be made without reading the difference first.
+///
+/// Mutation: return `String::new()`. `an_invisible_difference_is_still_shown`
+/// fails.
+fn first_difference(expected: &[u8], actual: &[u8]) -> String {
+    let expected = String::from_utf8_lossy(expected);
+    let actual = String::from_utf8_lossy(actual);
+
+    for (index, (want, got)) in expected.lines().zip(actual.lines()).enumerate() {
+        if want != got {
+            return format!(
+                "first difference, line {}:\n  expected {want:?}\n  actual   {got:?}",
+                index + 1
+            );
+        }
+    }
+
+    format!(
+        "every line they share is equal, so they differ in how many there are: \
+         expected {}, actual {}",
+        expected.lines().count(),
+        actual.lines().count()
+    )
+}
+
+/// A difference nobody can see still has to be spelled out.
+///
+/// Mutation: make `first_difference` return `String::new()`. This fails.
+#[test]
+fn an_invisible_difference_is_still_shown() {
+    let shown = first_difference("a\n   x\nb\n".as_bytes(), "a\n   x  \nb\n".as_bytes());
+
+    assert!(shown.contains("line 2"), "{shown}");
+    assert!(shown.contains("\"   x\""), "{shown}");
+    assert!(shown.contains("\"   x  \""), "{shown}");
+}
+
+/// One being a prefix of the other leaves no line to point at.
+#[test]
+fn a_difference_only_in_length_says_so() {
+    let shown = first_difference("a\nb\n".as_bytes(), "a\n".as_bytes());
+
+    assert!(shown.contains("expected 2, actual 1"), "{shown}");
 }
 
 /// Write an expected file, or remove it when the stream is empty.

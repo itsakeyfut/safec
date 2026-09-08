@@ -1,0 +1,12 @@
+unsupported_directive.c:1:1 directive "#include <stdio.h>"
+unsupported_directive.c:3:1 keyword "int"
+unsupported_directive.c:3:5 identifier "main"
+unsupported_directive.c:3:9 punct "("
+unsupported_directive.c:3:10 keyword "void"
+unsupported_directive.c:3:14 punct ")"
+unsupported_directive.c:3:16 punct "{"
+unsupported_directive.c:3:18 keyword "return"
+unsupported_directive.c:3:25 number "0"
+unsupported_directive.c:3:26 punct ";"
+unsupported_directive.c:3:28 punct "}"
+unsupported_directive.c:4:1 eof

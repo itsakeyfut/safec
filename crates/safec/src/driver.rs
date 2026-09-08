@@ -495,6 +495,17 @@ mod tests {
 
     /// A C file with a Latin-1 comment reads perfectly; only the decoding
     /// fails. Calling that unreadable points the user at permissions.
+    ///
+    /// The message is asserted rather than the whole diagnostic, because the
+    /// message is this compiler's and one of the notes is not: `read_to_string`
+    /// contributes `stream did not contain valid UTF-8`. That is `std`'s
+    /// wording, which is what keeps the diagnostic out of the corpus, where a
+    /// case pins text that is entirely ours.
+    ///
+    /// Unlike `cannot read`, it does not vary by host: it is a constant in
+    /// `std` rather than a message from the operating system, so the reason
+    /// `docs/architecture.md` records for that one does not apply here. What
+    /// this note follows is the Rust version, not the platform.
     #[test]
     fn a_file_that_is_not_utf8_is_not_reported_as_unreadable() {
         let file = TempFile::new(
