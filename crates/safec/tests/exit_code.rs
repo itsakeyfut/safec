@@ -9,7 +9,7 @@
 //! [`Outcome`]: safec::driver::Outcome
 
 use std::path::PathBuf;
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 /// Run the compiler the way a build system would.
 fn safec(args: &[&str]) -> Output {
@@ -82,4 +82,85 @@ fn asking_for_help_or_a_version_exits_zero() {
         assert_eq!(output.status.code(), Some(0), "{args:?} {output:?}");
         assert!(!output.stdout.is_empty(), "{args:?}");
     }
+}
+
+/// A run whose artifact never reached the pipe does not report success.
+///
+/// `driver.rs::an_artifact_that_could_not_be_written_is_an_error` covers the
+/// library half: given a writer that fails, `run_compiler` returns an error.
+/// What nothing covered is the other side of the process boundary, where that
+/// error becomes the number a build system reads.
+///
+/// It does not reach the flush in `main`, and saying it did would be wrong:
+/// `run_compiler` has already failed by then, because `Stdout` is a
+/// `LineWriter` and every line the token dump produces ends in a newline, so
+/// the write reaches the operating system before any buffer holds it.
+/// `main.rs` says of that flush that no test guards it, and that is still
+/// true. Removing the flush entirely fails nothing.
+///
+/// The read end is closed before the compiler writes, which is what a shell
+/// does for `safec ... | head -1`. Rust ignores `SIGPIPE`, so the child sees a
+/// failed write and exits rather than dying of a signal, and an exit code is
+/// what a build system reads. That claim is checked on the other two platforms
+/// by CI running this test rather than by anything here.
+///
+/// Mutation: in `main.rs`, return `ExitCode::SUCCESS` from the arm that handles
+/// a failed flush. This test fails and no other does.
+#[test]
+fn a_run_whose_artifact_could_not_be_written_does_not_report_success() {
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/cases/add.c");
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "tokens"])
+        .arg(&source)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the compiler binary was built for this test");
+
+    // Closing the read end before the compiler writes. Dropping the handle is
+    // the whole of it: there is nothing left to read what it produces.
+    drop(child.stdout.take());
+
+    let status = child.wait().expect("the compiler was waited for");
+
+    assert_eq!(
+        status.code(),
+        Some(1),
+        "a run that could not deliver its artifact reported {status:?}"
+    );
+}
+
+/// `-o` is reported as unsupported, and the path it names is left alone.
+///
+/// `driver.rs`'s `an_output_path_that_is_not_honoured_is_reported` is the other
+/// half and checks the report. Neither it nor anything else looked at the path,
+/// so a compiler that started writing there would have been caught by nothing:
+/// a build system reading that file would get content this compiler never
+/// claimed to have produced, which is the failure `driver.rs` names where it
+/// makes the decision.
+///
+/// Mutation: write anything to `options.output` in `run_compiler`. This test
+/// fails and no other does.
+#[test]
+fn an_output_path_that_is_not_honoured_is_left_alone() {
+    let path = std::env::temp_dir().join(format!("safec_output_{}.tok", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/cases/add.c");
+    let output = safec(&[
+        "--color",
+        "never",
+        "-o",
+        &path.display().to_string(),
+        "--emit",
+        "tokens",
+        &source.display().to_string(),
+    ]);
+
+    let written = path.exists();
+    let _ = std::fs::remove_file(&path);
+
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    assert!(!written, "the compiler wrote to {}", path.display());
 }
