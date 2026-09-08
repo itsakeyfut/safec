@@ -1,0 +1,5 @@
+unterminated_character_constant.c:1:1 keyword "char"
+unterminated_character_constant.c:1:6 identifier "c"
+unterminated_character_constant.c:1:8 punct "="
+unterminated_character_constant.c:1:10 character "'a"
+unterminated_character_constant.c:2:1 eof

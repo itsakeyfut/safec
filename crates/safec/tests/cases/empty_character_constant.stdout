@@ -1,0 +1,6 @@
+empty_character_constant.c:1:1 keyword "char"
+empty_character_constant.c:1:6 identifier "c"
+empty_character_constant.c:1:8 punct "="
+empty_character_constant.c:1:10 character "''"
+empty_character_constant.c:1:12 punct ";"
+empty_character_constant.c:2:1 eof

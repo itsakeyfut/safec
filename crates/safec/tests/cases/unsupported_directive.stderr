@@ -1,0 +1,9 @@
+error[E0104]: preprocessor directives are not supported yet
+   ╭─[ unsupported_directive.c:1:1 ]
+   │
+ 1 │ #include <stdio.h>
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: the preprocessor arrives in stage 3
+  = note: the line is one token and is not compiled

@@ -1,0 +1,6 @@
+unterminated_string_literal.c:1:1 keyword "char"
+unterminated_string_literal.c:1:6 punct "*"
+unterminated_string_literal.c:1:7 identifier "s"
+unterminated_string_literal.c:1:9 punct "="
+unterminated_string_literal.c:1:11 string "\"abc"
+unterminated_string_literal.c:2:1 eof

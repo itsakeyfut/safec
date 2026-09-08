@@ -28,6 +28,14 @@ fn missing(name: &str) -> PathBuf {
 /// Nothing today can reach zero through a compilation, because the pipeline
 /// reports that it does not exist, so this pins the failing half and the two
 /// invocations that answer without compiling anything.
+///
+/// The substring check is deliberate and is the only one left in this
+/// directory. `cannot read` ends in a note that is the operating system's text,
+/// `The system cannot find the file specified.` on Windows and `No such file or
+/// directory` on Linux, and the suite runs on three of them. A corpus case
+/// compares byte for byte, so it would fail on two by construction. Only the
+/// part this compiler wrote is asserted here. See `docs/architecture.md`, which
+/// records the divergence, and issue 17, which closes it.
 #[test]
 fn a_compilation_that_failed_exits_one() {
     let path = missing("safec_exit_code_absent.c");

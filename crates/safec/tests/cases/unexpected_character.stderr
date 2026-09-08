@@ -1,0 +1,7 @@
+error[E0103]: unexpected character
+   ╭─[ unexpected_character.c:1:9 ]
+   │
+ 1 │ int x = @;
+   │         ┬  
+   │         ╰── not part of any token
+───╯
