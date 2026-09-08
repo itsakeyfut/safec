@@ -22,7 +22,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 | [0005](./0005-hold-each-source-file-behind-an-arc.md) | Hold each source file behind an `Arc` so one can be read while another is added | accepted | `a_file_can_be_read_while_another_is_added` in `crates/safec/src/source.rs`; writing `file` where it writes `file_owned` is the reversal and fails to compile with E0502 |
 | [0006](./0006-carry-a-position-rather-than-the-text.md) | Carry a position rather than the text it covers | accepted | `const _: () = assert!(mem::size_of::<Token>() == 16);` in `crates/safec/src/token.rs`; a `String` field takes it to 40 and a `Symbol` field to 20, and the crate stops building. The trigger for an interner is a convention this record states and nothing enforces |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006 · proposed: none · superseded: none
+| [0007](./0007-list-the-test-cases-rather-than-discovering-them.md) | List the test cases in a literal table rather than discovering them on disk | accepted | `every_file_in_the_corpus_belongs_to_a_case_in_the_table` in `crates/safec/tests/cases.rs`; putting anything in `cases/` that the table does not name, at the top level or in a subdirectory, makes it fail and nothing else |
+
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 
