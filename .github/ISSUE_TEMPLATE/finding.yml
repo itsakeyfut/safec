@@ -1,0 +1,73 @@
+name: Finding
+description: Something wrong or worth doing that turned up during other work and is not being fixed now.
+title: "fix: "
+labels: ["T-Bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a defect, a gap, or an observation found while doing something else.
+
+        A finding that can be fixed in ten minutes should be fixed, not filed.
+        This is for the ones that are real, are not this change's business, and
+        would otherwise survive only in a conversation that ends.
+
+        Change `T-Bug` if it is not one, and add `S-Needs-Design` or
+        `S-Ready-For-Implementation` when it becomes work rather than a note.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong
+      description: One or two sentences. What the code does, and what it should do.
+      placeholder: |
+        A diagnostic on a very long line renders the whole line. 200,000 stray
+        characters produce 1.2 MB of stderr, because the source line, the caret
+        line and the label line are each that long.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: >
+        The command and its real output, or the failing test. Not a description
+        of what would happen. A finding nobody demonstrated is a finding nobody
+        can act on, and it will be re-investigated from scratch.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_not_now
+    attributes:
+      label: Why it is not being fixed now
+      description: >
+        The interesting field. Out of scope, needs a decision, needs a phase
+        that does not exist yet, or cheap to leave and expensive to do badly.
+        A deferral without a reason is a deferral nobody can overturn later.
+      placeholder: |
+        Truncating a quoted line means keeping the caret aligned against a
+        shortened one, which is the byte-offset problem the control-character
+        fix solved for a different reason. It is a renderer change, and the
+        change that surfaced it was a lexer change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof
+    attributes:
+      label: What would prove it fixed
+      description: >
+        Which test, and which mutation would make it fail. Writing this now is
+        cheaper than writing it later, because the context is in your head now.
+    validations:
+      required: true
+
+  - type: input
+    id: origin
+    attributes:
+      label: Where it came from
+      description: The review lens, the pull request, or the session that turned it up.
+      placeholder: "review-edge-cases, during the lexer review"

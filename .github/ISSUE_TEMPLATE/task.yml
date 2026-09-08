@@ -1,0 +1,135 @@
+name: Task
+description: A unit of work inside a phase, filed with that phase's batch or discovered while implementing it.
+title: "feat: "
+labels: ["T-Feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are filed a phase at a time, as one coherent batch taken from
+        `docs/roadmap.md`. More get filed as implementing the phase turns up
+        work that was not foreseen. The next phase is not filed until this one
+        is closed out.
+
+        That is what keeps an issue from becoming a second, drifting copy of the
+        roadmap: the batch's lifetime is the phase's. A backlog with no such
+        bound would drift, and this project has been bitten twice by two copies
+        of one thing disagreeing.
+
+        Set the milestone. They are named after subjects rather than numbered
+        after phases, deliberately: `docs/roadmap.md` holds the order, and an
+        issue is free to belong to a later subject than the one being worked
+        on. Each milestone's description carries the condition that closes it,
+        so "is this finished" is a fact GitHub can answer.
+
+        Add one status label when you file this, and it is a judgement you make
+        rather than a default: `S-Needs-Design` if anything about how to build
+        it is still open, `S-Ready-For-Implementation` if it is small and the
+        design is already settled. The first runs `/spec`; the second goes
+        straight to `/impl`. When in doubt it is the first, because `/spec`
+        finding nothing to decide costs a few minutes and `/impl` discovering a
+        decision mid-change costs the decision being made by whoever was
+        typing.
+
+  - type: input
+    id: phase
+    attributes:
+      label: Phase and roadmap line
+      description: Which phase this belongs to, and which line of `docs/roadmap.md` it expands.
+      placeholder: "Phase 1: Mini C, the `parser` and `AST` lines"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: origin
+    attributes:
+      label: Origin
+      description: >
+        Filed with the batch, or turned up while implementing it. Worth
+        recording: how much of a phase was unforeseen is the most useful thing
+        to know when planning the next one.
+      options:
+        - Planned with the phase
+        - Found while implementing the phase
+    validations:
+      required: true
+
+  - type: input
+    id: depends
+    attributes:
+      label: Depends on
+      description: >
+        Issues in this batch that have to land first, if any. A batch is one
+        piece of work split up, so the order inside it is part of the plan.
+      placeholder: "#12, #13"
+
+  - type: textarea
+    id: premise
+    attributes:
+      label: Premise
+      description: >
+        What is true in the code today that makes this needed. State something
+        checkable: implementation reads the code and confirms it first, because
+        a premise the code has already overtaken changes what the work is.
+      placeholder: |
+        `lex` returns a `Vec<Token>` and nothing consumes it beyond `dump_tokens`.
+        There is no AST type and no parser module.
+    validations:
+      required: true
+
+  - type: textarea
+    id: build
+    attributes:
+      label: What to build
+      description: The shape of it. Which files, and which existing pattern to follow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: >
+        A checklist, each item checkable by someone who did not write it. Every
+        one ends the work explicitly met, deferred, or relocated. That
+        reconciliation is why they are written down: silence is how the seventh
+        item goes missing.
+      value: |
+        - [ ] 
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof
+    attributes:
+      label: How it is proven
+      description: >
+        Which test or command, and what its output has to say. A guard here is
+        real only when breaking the code makes a named test fail, so name the
+        mutation if you already know it.
+      placeholder: |
+        `cargo test -p safec parser::`, plus a fixture under `crates/safec/tests/fixtures/`.
+        Removing the precedence climb makes `a + b * c` associate left and fails
+        `multiplication_binds_tighter_than_addition`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: >
+        What this deliberately does not do, including which later issue in the
+        batch picks it up. Scope creep is the standard failure of asking an
+        assistant to improve something, so the boundary is worth writing even
+        when it feels obvious.
+
+  - type: textarea
+    id: decisions
+    attributes:
+      label: Decisions to settle first
+      description: >
+        Anything with two defensible answers, so it is asked before code is
+        written rather than found in review. Leave empty if there are none.
