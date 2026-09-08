@@ -202,8 +202,10 @@ pub fn compile(options: &Options) -> Compiled {
 /// character rather than obeying it, for the same reason the renderer does not
 /// echo one, and it makes a token legible whose text is a space or a newline.
 ///
-/// A position rather than a span. The end of a token is where the next one
-/// starts, and a dump is read down its left edge.
+/// A position rather than a span, because the quoted text says how far the
+/// token reaches and a dump is read down its left edge. Not because the next
+/// token begins where this one ends: trivia sits between them more often than
+/// not.
 fn dump_tokens(file: &SourceFile, tokens: &[Token], out: &mut String) {
     for token in tokens {
         let at = file.line_col(token.span.start());
@@ -656,6 +658,110 @@ mod tests {
         );
     }
 
+    /// The whole line, not a piece of it. `--emit tokens` is an artifact people
+    /// redirect and diff, and `options.rs` calls `--emit` a stable interface
+    /// rather than a debug convenience, so the format is the interface: the
+    /// position, its order, the separators, the quoting and the trailing
+    /// newline. Asserting a substring leaves every one of those free to change.
+    #[test]
+    fn the_token_dump_has_one_exact_line_per_token() {
+        let file = TempFile::new("safec_driver_dump_exact.c", "int x;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let name = file.path().display();
+        assert_eq!(
+            artifact,
+            format!(
+                "{name}:1:1 keyword \"int\"\n\
+                 {name}:1:5 identifier \"x\"\n\
+                 {name}:1:6 punct \";\"\n\
+                 {name}:2:1 eof\n"
+            )
+        );
+    }
+
+    /// A column counts characters, not bytes, so a caret in an editor lands
+    /// where the dump says. A tab counts as one, which is what `LineCol` means
+    /// and what the renderer's gutter agrees with.
+    #[test]
+    fn the_token_dump_counts_columns_in_characters() {
+        let file = TempFile::new("safec_driver_dump_columns.c", "\tint caf\u{e9};\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let columns: Vec<_> = artifact
+            .lines()
+            .map(|line| line.rsplit(':').next().unwrap().split(' ').next().unwrap())
+            .collect();
+        // `int` at 2, `caf` at 6, the non-ASCII character at 9, `;` at 10.
+        // The character is two bytes and advances the column by one, which is
+        // the whole point.
+        assert_eq!(columns, ["2", "6", "9", "10", "1"], "{artifact}");
+    }
+
+    /// The text is quoted rather than written plainly, which is what keeps a
+    /// control character out of a source file from reaching the terminal
+    /// through stdout. The renderer answers the same question for diagnostics
+    /// and has its own tests; this is the other place a file's text is echoed.
+    ///
+    /// It also keeps a line parseable: a `"` inside a string literal has to be
+    /// escaped or the line's own quoting is ambiguous.
+    #[test]
+    fn the_token_dump_escapes_the_text_it_quotes() {
+        let file = TempFile::new(
+            "safec_driver_dump_escape.c",
+            "s = \"a\u{1b}[2Jb\"; c = '\\\"';\n",
+        );
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        assert!(!artifact.contains('\u{1b}'), "{artifact:?}");
+        assert!(
+            artifact.contains(r#"string "\"a\u{1b}[2Jb\"""#),
+            "{artifact:?}"
+        );
+    }
+
+    /// Every kind a scan can produce has a word, and the words are what a
+    /// reader greps for. An exhaustive `match` makes a missing arm a compile
+    /// error; nothing makes a wrong word one.
+    #[test]
+    fn every_token_kind_is_named_in_the_dump() {
+        let file = TempFile::new(
+            "safec_driver_dump_kinds.c",
+            "#define X 1\nint x = 1 + 'c' + @; char *s = \"t\";\n",
+        );
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let named: Vec<_> = artifact
+            .lines()
+            .filter_map(|line| line.split(' ').nth(1))
+            .collect();
+        for kind in [
+            "keyword",
+            "identifier",
+            "number",
+            "string",
+            "character",
+            "punct",
+            "directive",
+            "unknown",
+            "eof",
+        ] {
+            assert!(named.contains(&kind), "no {kind} in {artifact}");
+        }
+    }
+
     /// The first run that can succeed. Until `--emit` reached something the
     /// pipeline produces, every run reported that it had built nothing, so
     /// `Outcome::Succeeded` was unreachable and the branch that returns it was
@@ -881,12 +987,13 @@ mod tests {
         assert_eq!(unexpected, 2);
     }
 
-    /// Until now every diagnostic the driver produced was unanchored, so
-    /// `render_all` never reached the source map at all: the driver's tests
-    /// passed against an empty one. The first labelled diagnostic is what
-    /// closes that, and this is the test that keeps it closed.
+    /// Until now every diagnostic the compiler produced was unanchored, so
+    /// `render_all` never reached the source map at all and the driver's tests
+    /// passed against an empty one. The scan is what raises the first labelled
+    /// diagnostic; what is under test here is the driver's wiring, that the map
+    /// it loaded is the map the renderer is given.
     #[test]
-    fn a_diagnostic_from_the_driver_quotes_the_source_it_points_at() {
+    fn a_labelled_diagnostic_reaches_the_source_map_the_driver_loaded() {
         let file = TempFile::new("safec_driver_quotes_source.c", "int x = @;\n");
         let mut report = Vec::new();
 
