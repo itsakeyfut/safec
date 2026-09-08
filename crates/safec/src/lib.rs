@@ -8,6 +8,8 @@
 pub mod cli;
 pub mod diagnostics;
 pub mod driver;
+pub mod lexer;
 pub mod options;
 pub mod safety;
 pub mod source;
+pub mod token;

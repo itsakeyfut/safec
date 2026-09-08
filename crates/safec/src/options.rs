@@ -38,7 +38,13 @@ pub struct Options {
 ///
 /// The variants are declared in pipeline order, from the first stage of the
 /// frontend to the final build product, and their command line spellings are
-/// pinned by a test. `--emit` is part of the stable interface rather than a
+/// pinned by a test.
+///
+/// Deliberately not `Ord`. Ordering invites a stage to ask "is what was
+/// requested beyond me?", which is half a question: a pipeline grows at both
+/// ends, and a comparison says nothing about a stage declared earlier. The
+/// driver matches on the kind instead, so a variant added anywhere has to be
+/// answered before the crate builds. `--emit` is part of the stable interface rather than a
 /// debug convenience, so a variant is renamed only deliberately.
 ///
 /// The name follows rustc's `--emit`, which takes a *set* of artifacts. Only

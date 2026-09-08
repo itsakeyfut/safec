@@ -10,14 +10,17 @@
 //! half that reports and decides the outcome.
 
 use std::collections::HashSet;
+use std::fmt::Write as _;
 use std::io;
 use std::path::Path;
 use std::process::ExitCode;
 
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
-use crate::options::Options;
-use crate::source::SourceMap;
+use crate::lexer::lex;
+use crate::options::{EmitKind, Options};
+use crate::source::{SourceFile, SourceMap};
+use crate::token::Token;
 
 /// Everything one run of the compiler produced.
 ///
@@ -32,6 +35,13 @@ pub struct Compiled {
     pub sources: SourceMap,
     /// Everything the compiler had to say about them.
     pub diagnostics: DiagnosticSink,
+    /// What `--emit` asked for, if the pipeline reaches that far.
+    ///
+    /// `None` means the run was asked for something it cannot produce yet, and
+    /// the diagnostics say so. It does not mean nothing was written: a run that
+    /// reported a lexical error still emits the tokens, because they are still
+    /// what was asked for and they are still worth reading.
+    pub artifact: Option<String>,
 }
 
 /// What a run amounted to.
@@ -85,6 +95,7 @@ pub fn compile(options: &Options) -> Compiled {
     }
 
     let mut seen = HashSet::new();
+    let mut loaded = Vec::new();
     for input in &options.inputs {
         // The same path twice is one translation unit, not two: reading it
         // twice would report everything in it twice. `cc` answers differently,
@@ -104,26 +115,115 @@ pub fn compile(options: &Options) -> Compiled {
 
         // Every input is attempted. Reporting the first bad path and stopping
         // would make a user with three of them run the compiler three times.
-        if let Err(error) = sources.load(input) {
-            diagnostics.report(load_failure(input, &error));
+        match sources.load(input) {
+            Ok(file) => loaded.push(file),
+            Err(error) => diagnostics.report(load_failure(input, &error)),
         }
     }
 
-    // Phase 0 ends here: the files are read, and there is nothing yet to read
-    // them with. Said on every run rather than only on one that loaded cleanly,
-    // because a run that also failed to read a file has still compiled nothing,
-    // and leaving it out lets a user with one bad path among several believe
-    // the others were checked. Exiting successfully without producing what was
-    // asked for is the one thing a compiler must never do.
-    diagnostics.report(
-        Diagnostic::error("the compilation pipeline is not implemented yet")
-            .with_note("safec currently reads its inputs and reports on them")
-            .with_note("the lexer and parser arrive in phase 1"),
-    );
+    // The gate is the input, not the run. `DiagnosticSink::has_errors` answers
+    // for everything reported so far, so consulting it here would let a typo in
+    // `a.c` decide that `b.c` is never looked at, and a user with two broken
+    // files would fix them one run at a time. What genuinely spans the run is
+    // the outcome, and later, linking.
+    // What the pipeline can produce, decided once, for every kind there is.
+    //
+    // A `match` rather than a comparison on `EmitKind`'s pipeline order. A
+    // comparison answers "beyond the last stage that exists" and never "before
+    // the first one", and a pipeline grows at both ends: C runs the
+    // preprocessor before the lexer, so `--emit preprocessed` belongs above
+    // `Tokens` in that enum, and a `>` gate let such a run exit successfully
+    // having produced nothing and said nothing.
+    //
+    // Exhaustive, so a kind added anywhere is a compile error until somebody
+    // says which side of the line it falls on.
+    let mut artifact = match options.emit {
+        EmitKind::Tokens => Some(String::new()),
+        EmitKind::Ast
+        | EmitKind::SafetyIr
+        | EmitKind::LlvmIr
+        | EmitKind::Object
+        | EmitKind::Executable => None,
+    };
+    for &file in &loaded {
+        // `file_owned` rather than `file`: the scan holds its text for longer
+        // than a statement, and adds to the map while doing so once `#include`
+        // lands. See ADR-0005.
+        let source = sources.file_owned(file);
+        let tokens = lex(file, &source, &mut diagnostics);
+
+        // Every input appends to one artifact, and every line names its file,
+        // so `--emit tokens a.c b.c` reads as one dump rather than needing two
+        // destinations.
+        if let Some(artifact) = &mut artifact {
+            dump_tokens(&source, &tokens, artifact);
+        }
+    }
+
+    // Accepted by the parser and acted on by nothing. Saying so is not the
+    // same as implementing it, and it is the half that cannot wait: a run that
+    // was told where to put its output, put it somewhere else, and exited
+    // successfully has lied about the one thing the exit code is for. What `-o`
+    // should mean for several inputs, one artifact and no linker is a decision
+    // for when there is a backend to make it with.
+    if options.output.is_some() {
+        diagnostics.report(
+            Diagnostic::error("`-o` is not supported yet")
+                .with_note("the artifact is written to standard output")
+                .with_note("redirect it instead, until an output path is honoured"),
+        );
+    }
+
+    // The other half of the same decision, and it reads from the same answer
+    // rather than asking again. Said whenever it applies, including on a run
+    // that also failed to read a file, because a run that compiled nothing has
+    // to say so: leaving it out lets a user with one bad path among several
+    // believe the rest were built. Exiting successfully without producing what
+    // was asked for is the one thing a compiler must never do.
+    if artifact.is_none() {
+        diagnostics.report(
+            Diagnostic::error("the compilation pipeline is not implemented yet")
+                .with_note("safec currently reads its inputs and scans them into tokens")
+                .with_note("`--emit tokens` is what it can produce today"),
+        );
+    }
 
     Compiled {
         sources,
         diagnostics,
+        artifact,
+    }
+}
+
+/// One line per token: where it starts, what it is, and the text it covers.
+///
+/// The text is quoted rather than written plainly. It comes out of the file, so
+/// it is content, and this goes to a terminal: quoting escapes a control
+/// character rather than obeying it, for the same reason the renderer does not
+/// echo one, and it makes a token legible whose text is a space or a newline.
+///
+/// A position rather than a span, because the quoted text says how far the
+/// token reaches and a dump is read down its left edge. Not because the next
+/// token begins where this one ends: trivia sits between them more often than
+/// not.
+fn dump_tokens(file: &SourceFile, tokens: &[Token], out: &mut String) {
+    for token in tokens {
+        let at = file.line_col(token.span.start());
+        write!(
+            out,
+            "{}:{}:{} {}",
+            file.name(),
+            at.line,
+            at.column,
+            token.kind.name()
+        )
+        .expect("writing to a string cannot fail");
+
+        if !token.is_eof() {
+            write!(out, " {:?}", &file.contents()[token.span.range()])
+                .expect("writing to a string cannot fail");
+        }
+        out.push('\n');
     }
 }
 
@@ -160,14 +260,30 @@ fn load_failure(path: &Path, error: &io::Error) -> Diagnostic {
 /// stderr, because that is where the binary sends this; a caller writing
 /// somewhere else should ask for `Never` or `Always` rather than `Auto`.
 ///
+/// `artifact` is the other stream, and it is separate because the two are
+/// different kinds of thing. Diagnostics are what the compiler says; an
+/// artifact is what it was asked to make. A caller reading one must not be
+/// handed the other, which is why the binary sends them to stderr and stdout.
+///
+/// The report goes first. If the artifact is being piped into something that
+/// stops reading, the write fails, and a user who loses the diagnostics as well
+/// learns nothing about why.
+///
 /// # Errors
 ///
 /// If the diagnostics could not be written. There is nothing left to report
 /// that on, so the caller has only the outcome to say it with.
-pub fn run_compiler(options: &Options, report: &mut impl io::Write) -> io::Result<Outcome> {
+pub fn run_compiler(
+    options: &Options,
+    report: &mut impl io::Write,
+    artifact: &mut impl io::Write,
+) -> io::Result<Outcome> {
     let compiled = compile(options);
 
     Renderer::new(options.color).render_all(&compiled.sources, &compiled.diagnostics, report)?;
+    if let Some(emitted) = &compiled.artifact {
+        artifact.write_all(emitted.as_bytes())?;
+    }
 
     Ok(if compiled.diagnostics.has_errors() {
         Outcome::Failed
@@ -180,6 +296,8 @@ pub fn run_compiler(options: &Options, report: &mut impl io::Write) -> io::Resul
 mod tests {
     use std::fs;
     use std::path::PathBuf;
+
+    use clap::ValueEnum as _;
 
     use super::*;
     use crate::options::{ColorMode, EmitKind};
@@ -236,13 +354,22 @@ mod tests {
         }
     }
 
-    fn rendered(options: &Options) -> (String, Outcome) {
-        let mut out = Vec::new();
-        let outcome = run_compiler(options, &mut out).expect("writing to a vector cannot fail");
+    /// Both of a run's streams: what it reported, and what it made.
+    fn run(options: &Options) -> (String, String, Outcome) {
+        let mut report = Vec::new();
+        let mut artifact = Vec::new();
+        let outcome = run_compiler(options, &mut report, &mut artifact)
+            .expect("writing to a vector cannot fail");
         (
-            String::from_utf8(out).expect("the renderer writes text"),
+            String::from_utf8(report).expect("the renderer writes text"),
+            String::from_utf8(artifact).expect("the emitter writes text"),
             outcome,
         )
+    }
+
+    fn rendered(options: &Options) -> (String, Outcome) {
+        let (report, _, outcome) = run(options);
+        (report, outcome)
     }
 
     /// The wiring ADR-0001 is about. Without it `--deny-unknown` parses,
@@ -504,7 +631,294 @@ mod tests {
     fn a_report_that_could_not_be_written_is_an_error() {
         let options = options(vec![missing_path("safec_driver_closed.c")]);
 
-        let error = run_compiler(&options, &mut Closed)
+        let error = run_compiler(&options, &mut Closed, &mut Vec::new())
+            .expect_err("a failed write must not come back as an outcome");
+
+        assert_eq!(error.kind(), io::ErrorKind::BrokenPipe);
+    }
+
+    /// The first artifact the compiler can produce. Each line names where a
+    /// token starts, what it is, and the text it covers, which is read out of
+    /// the source rather than carried by the token. See ADR-0006.
+    #[test]
+    fn asking_for_tokens_produces_them() {
+        let file = TempFile::new("safec_driver_emit_tokens.c", "int x;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let lines: Vec<_> = artifact
+            .lines()
+            .map(|line| line.split_once(' ').unwrap().1)
+            .collect();
+        assert_eq!(
+            lines,
+            ["keyword \"int\"", "identifier \"x\"", "punct \";\"", "eof",]
+        );
+    }
+
+    /// The whole line, not a piece of it. `--emit tokens` is an artifact people
+    /// redirect and diff, and `options.rs` calls `--emit` a stable interface
+    /// rather than a debug convenience, so the format is the interface: the
+    /// position, its order, the separators, the quoting and the trailing
+    /// newline. Asserting a substring leaves every one of those free to change.
+    #[test]
+    fn the_token_dump_has_one_exact_line_per_token() {
+        let file = TempFile::new("safec_driver_dump_exact.c", "int x;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let name = file.path().display();
+        assert_eq!(
+            artifact,
+            format!(
+                "{name}:1:1 keyword \"int\"\n\
+                 {name}:1:5 identifier \"x\"\n\
+                 {name}:1:6 punct \";\"\n\
+                 {name}:2:1 eof\n"
+            )
+        );
+    }
+
+    /// A column counts characters, not bytes, so a caret in an editor lands
+    /// where the dump says. A tab counts as one, which is what `LineCol` means
+    /// and what the renderer's gutter agrees with.
+    #[test]
+    fn the_token_dump_counts_columns_in_characters() {
+        let file = TempFile::new("safec_driver_dump_columns.c", "\tint caf\u{e9};\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let columns: Vec<_> = artifact
+            .lines()
+            .map(|line| line.rsplit(':').next().unwrap().split(' ').next().unwrap())
+            .collect();
+        // `int` at 2, `caf` at 6, the non-ASCII character at 9, `;` at 10.
+        // The character is two bytes and advances the column by one, which is
+        // the whole point.
+        assert_eq!(columns, ["2", "6", "9", "10", "1"], "{artifact}");
+    }
+
+    /// The text is quoted rather than written plainly, which is what keeps a
+    /// control character out of a source file from reaching the terminal
+    /// through stdout. The renderer answers the same question for diagnostics
+    /// and has its own tests; this is the other place a file's text is echoed.
+    ///
+    /// It also keeps a line parseable: a `"` inside a string literal has to be
+    /// escaped or the line's own quoting is ambiguous.
+    #[test]
+    fn the_token_dump_escapes_the_text_it_quotes() {
+        let file = TempFile::new(
+            "safec_driver_dump_escape.c",
+            "s = \"a\u{1b}[2Jb\"; c = '\\\"';\n",
+        );
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        assert!(!artifact.contains('\u{1b}'), "{artifact:?}");
+        assert!(
+            artifact.contains(r#"string "\"a\u{1b}[2Jb\"""#),
+            "{artifact:?}"
+        );
+    }
+
+    /// Every kind a scan can produce has a word, and the words are what a
+    /// reader greps for. An exhaustive `match` makes a missing arm a compile
+    /// error; nothing makes a wrong word one.
+    #[test]
+    fn every_token_kind_is_named_in_the_dump() {
+        let file = TempFile::new(
+            "safec_driver_dump_kinds.c",
+            "#define X 1\nint x = 1 + 'c' + @; char *s = \"t\";\n",
+        );
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        let named: Vec<_> = artifact
+            .lines()
+            .filter_map(|line| line.split(' ').nth(1))
+            .collect();
+        for kind in [
+            "keyword",
+            "identifier",
+            "number",
+            "string",
+            "character",
+            "punct",
+            "directive",
+            "unknown",
+            "eof",
+        ] {
+            assert!(named.contains(&kind), "no {kind} in {artifact}");
+        }
+    }
+
+    /// The first run that can succeed. Until `--emit` reached something the
+    /// pipeline produces, every run reported that it had built nothing, so
+    /// `Outcome::Succeeded` was unreachable and the branch that returns it was
+    /// guarded by nothing.
+    #[test]
+    fn asking_for_tokens_is_a_run_that_can_succeed() {
+        let file = TempFile::new("safec_driver_emit_ok.c", "int x;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (report, artifact, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Succeeded);
+        assert_eq!(report, "", "a clean run says nothing");
+        assert!(!artifact.is_empty());
+    }
+
+    /// Accepted and then ignored is the shape of the failure this driver is
+    /// most careful about elsewhere: a run that was told where to put its
+    /// output, put it somewhere else, and exited zero. Reported until it is
+    /// honoured.
+    #[test]
+    fn an_output_path_that_is_not_honoured_is_reported() {
+        let file = TempFile::new(
+            "safec_driver_output_path.c",
+            "int x;
+",
+        );
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+        options.output = Some(PathBuf::from("out.tok"));
+
+        let (report, artifact, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("`-o` is not supported yet"), "{report}");
+        // Still emitted: the tokens are what was asked for, and stdout is
+        // somewhere the caller can reach.
+        assert!(artifact.contains("keyword"), "{artifact}");
+    }
+
+    /// The rule, over every kind there is: a run either produces what was
+    /// asked for or says it cannot. Driven by `EmitKind::value_variants` rather
+    /// than by a list, so a kind added anywhere in the pipeline is covered
+    /// without anyone remembering this test exists.
+    #[test]
+    fn every_emit_kind_is_either_produced_or_reported() {
+        let file = TempFile::new(
+            "safec_driver_emit_every.c",
+            "int x;
+",
+        );
+
+        for &emit in EmitKind::value_variants() {
+            let mut options = options(vec![file.path().to_path_buf()]);
+            options.emit = emit;
+
+            let compiled = compile(&options);
+
+            assert!(
+                compiled.artifact.is_some() || compiled.diagnostics.has_errors(),
+                "{emit:?} produced nothing and said nothing",
+            );
+        }
+    }
+
+    /// Everything past the lexer. A run that cannot produce what was asked for
+    /// has to say so rather than exit successfully having made nothing.
+    #[test]
+    fn asking_for_an_artifact_the_pipeline_cannot_reach_is_an_error() {
+        let file = TempFile::new("safec_driver_emit_beyond.c", "int x;\n");
+
+        for emit in [
+            EmitKind::Ast,
+            EmitKind::SafetyIr,
+            EmitKind::LlvmIr,
+            EmitKind::Object,
+            EmitKind::Executable,
+        ] {
+            let mut options = options(vec![file.path().to_path_buf()]);
+            options.emit = emit;
+
+            let compiled = compile(&options);
+
+            assert!(compiled.artifact.is_none(), "{emit:?}");
+            assert!(compiled.diagnostics.has_errors(), "{emit:?}");
+            assert!(
+                compiled
+                    .diagnostics
+                    .diagnostics()
+                    .iter()
+                    .any(|diagnostic| diagnostic.message().contains("not implemented")),
+                "{emit:?}"
+            );
+        }
+    }
+
+    /// A reader of one must not be handed the other. The binary sends them to
+    /// stdout and stderr, so `safec --emit tokens a.c > a.tok` captures the
+    /// tokens and leaves the diagnostics on the terminal.
+    #[test]
+    fn the_artifact_and_the_report_go_to_different_streams() {
+        let file = TempFile::new("safec_driver_emit_streams.c", "int x = @;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (report, artifact, _) = run(&options);
+
+        assert!(report.contains("unexpected character"), "{report}");
+        assert!(!report.contains("keyword"), "{report}");
+        assert!(artifact.contains("keyword"), "{artifact}");
+        assert!(!artifact.contains("unexpected character"), "{artifact}");
+    }
+
+    /// The scan keeps going, so it still has tokens to hand over, and they are
+    /// still what was asked for. The run fails on the diagnostics rather than
+    /// by withholding the artifact.
+    #[test]
+    fn a_lexical_error_does_not_withhold_the_tokens() {
+        let file = TempFile::new("safec_driver_emit_broken.c", "int x = @;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(artifact.contains("unknown \"@\""), "{artifact}");
+    }
+
+    /// One dump for the run, not one per input. Every line names its file, so
+    /// the concatenation is unambiguous and there is one thing to redirect.
+    #[test]
+    fn every_input_appends_to_one_artifact() {
+        let first = TempFile::new("safec_driver_emit_a.c", "int a;\n");
+        let second = TempFile::new("safec_driver_emit_b.c", "int b;\n");
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.emit = EmitKind::Tokens;
+
+        let (_, artifact, _) = run(&options);
+
+        assert!(artifact.contains("safec_driver_emit_a.c"), "{artifact}");
+        assert!(artifact.contains("safec_driver_emit_b.c"), "{artifact}");
+        assert_eq!(artifact.lines().count(), 8, "{artifact}");
+    }
+
+    /// The artifact is what was asked for, so failing to write it is a failed
+    /// run even though every diagnostic was delivered.
+    #[test]
+    fn an_artifact_that_could_not_be_written_is_an_error() {
+        let file = TempFile::new("safec_driver_emit_closed.c", "int x;\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+
+        let error = run_compiler(&options, &mut Vec::new(), &mut Closed)
             .expect_err("a failed write must not come back as an outcome");
 
         assert_eq!(error.kind(), io::ErrorKind::BrokenPipe);
@@ -524,5 +938,74 @@ mod tests {
 
         assert!(!plain.contains('\u{1b}'), "{plain:?}");
         assert!(coloured.contains('\u{1b}'), "{coloured:?}");
+    }
+
+    /// Every file that loaded is scanned, whatever happened to the others.
+    /// Gating on the run would make a user fix one file per run.
+    #[test]
+    fn a_bad_input_does_not_stop_the_others_being_scanned() {
+        let scanned = TempFile::new("safec_driver_still_scanned.c", "int x = @;\n");
+        let compiled = compile(&options(vec![
+            missing_path("safec_driver_absent_first.c"),
+            scanned.path().to_path_buf(),
+        ]));
+
+        let messages: Vec<_> = compiled
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .map(Diagnostic::message)
+            .collect();
+
+        assert!(
+            messages.iter().any(|m| m.contains("cannot read")),
+            "{messages:?}"
+        );
+        assert!(
+            messages.iter().any(|m| m.contains("unexpected character")),
+            "{messages:?}"
+        );
+    }
+
+    #[test]
+    fn a_lexical_error_in_one_input_does_not_hide_one_in_another() {
+        let first = TempFile::new("safec_driver_lex_a.c", "int a = @;\n");
+        let second = TempFile::new("safec_driver_lex_b.c", "int b = `;\n");
+
+        let compiled = compile(&options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]));
+
+        let unexpected = compiled
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter(|d| d.message().contains("unexpected character"))
+            .count();
+
+        assert_eq!(unexpected, 2);
+    }
+
+    /// Until now every diagnostic the compiler produced was unanchored, so
+    /// `render_all` never reached the source map at all and the driver's tests
+    /// passed against an empty one. The scan is what raises the first labelled
+    /// diagnostic; what is under test here is the driver's wiring, that the map
+    /// it loaded is the map the renderer is given.
+    #[test]
+    fn a_labelled_diagnostic_reaches_the_source_map_the_driver_loaded() {
+        let file = TempFile::new("safec_driver_quotes_source.c", "int x = @;\n");
+        let mut report = Vec::new();
+
+        run_compiler(
+            &options(vec![file.path().to_path_buf()]),
+            &mut report,
+            &mut Vec::new(),
+        )
+        .expect("writing to a vector cannot fail");
+        let report = String::from_utf8(report).expect("the renderer writes text");
+
+        assert!(report.contains("int x = @;"), "{report}");
+        assert!(report.contains("not part of any token"), "{report}");
     }
 }
