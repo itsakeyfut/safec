@@ -1,0 +1,7 @@
+error[E0201]: expected `;`
+   ╭─[ missing_semicolon.c:1:27 ]
+   │
+ 1 │ int main(void) { return 0 }
+   │                           ┬  
+   │                           ╰── `;` is missing here
+───╯

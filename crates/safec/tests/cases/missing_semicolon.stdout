@@ -1,0 +1,3 @@
+Function missing_semicolon.c:1:1 "main"
+  Compound missing_semicolon.c:1:16
+    Error missing_semicolon.c:1:18

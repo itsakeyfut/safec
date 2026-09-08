@@ -41,8 +41,12 @@ macro_rules! cases {
 cases! {
     add: ["--emit", "tokens"],
     empty_character_constant: ["--emit", "tokens"],
+    missing_semicolon: ["--emit", "ast"],
+    not_a_declaration: ["--emit", "ast"],
     output_path_not_supported: ["-o", "out.tok", "--emit", "tokens"],
-    pipeline_not_implemented: ["--emit", "ast"],
+    parsed_function: ["--emit", "ast"],
+    pipeline_not_implemented: ["--emit", "safety-ir"],
+    several_items_and_statements: ["--emit", "ast"],
     unexpected_character: ["--emit", "tokens"],
     unexpected_characters: ["--emit", "tokens"],
     unsupported_directive: ["--emit", "tokens"],
