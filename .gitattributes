@@ -1,0 +1,10 @@
+# Expected compiler output is compared byte for byte, so git must not rewrite
+# it on the way in or out. `core.autocrlf` is on for this repository, and
+# without this rule a fresh checkout on Windows would hand the harness CRLF
+# while the compiler writes LF, and every case would fail for a reason that has
+# nothing to do with the compiler.
+#
+# `text eol=lf` rather than `-text`: marking them binary would also stop `git
+# diff` rendering them, and a regenerated expectation being a readable diff is
+# the whole reason regenerating them is safe.
+crates/safec/tests/cases/** text eol=lf
