@@ -59,6 +59,14 @@ pub enum TokenKind {
     Character,
     /// An operator or a separator.
     Punct(Punct),
+    /// A preprocessing directive, taken as one token for its whole line.
+    ///
+    /// Not preprocessed, and not broken into the tokens the line is written
+    /// with: a directive is not C, and its pieces make a parser produce an
+    /// avalanche of errors about a line it was never meant to read. Kept rather
+    /// than dropped so that every byte still has a place, and so that stage 3
+    /// has the span when there is a preprocessor to hand it to.
+    Directive,
     /// A run of characters that can begin no token at all.
     ///
     /// Reported where it is found, and kept, so that the stream still accounts
@@ -70,6 +78,11 @@ pub enum TokenKind {
     /// asking for the next token always gets one. Running out of input is then
     /// an unexpected token like any other, rather than a second error path
     /// every caller has to remember.
+    ///
+    /// The promise holds for as long as a reader stops here. It is the last
+    /// element of the stream, not an infinite supply, so a cursor over the
+    /// tokens has to saturate on it rather than step past: indexing beyond it
+    /// panics, and a recovery loop that consumes it without noticing spins.
     Eof,
 }
 
@@ -87,6 +100,7 @@ impl TokenKind {
             Self::String => "string",
             Self::Character => "character",
             Self::Punct(_) => "punct",
+            Self::Directive => "directive",
             Self::Unknown => "unknown",
             Self::Eof => "eof",
         }
@@ -314,6 +328,173 @@ mod tests {
         assert!(Token::new(TokenKind::Eof, span(8, 8)).is_eof());
     }
 
+    /// The table is the language definition, so it is written out here rather
+    /// than walked.
+    ///
+    /// Every other test over `Keyword::ALL` compares the table against itself:
+    /// `from_spelling` is implemented with `as_str`, so a round trip through
+    /// them holds for any spelling whatsoever, and uniqueness and a count hold
+    /// for any set of forty-four distinct words. A typo in one entry changes
+    /// which C this compiler accepts, silently, and nothing above notices.
+    /// `retrun` would make `return` an ordinary identifier.
+    #[test]
+    fn the_keyword_table_is_the_c17_keyword_set() {
+        let spellings: Vec<_> = Keyword::ALL.iter().map(|kw| kw.as_str()).collect();
+
+        assert_eq!(
+            spellings,
+            [
+                "auto",
+                "break",
+                "case",
+                "char",
+                "const",
+                "continue",
+                "default",
+                "do",
+                "double",
+                "else",
+                "enum",
+                "extern",
+                "float",
+                "for",
+                "goto",
+                "if",
+                "inline",
+                "int",
+                "long",
+                "register",
+                "restrict",
+                "return",
+                "short",
+                "signed",
+                "sizeof",
+                "static",
+                "struct",
+                "switch",
+                "typedef",
+                "union",
+                "unsigned",
+                "void",
+                "volatile",
+                "while",
+                "_Alignas",
+                "_Alignof",
+                "_Atomic",
+                "_Bool",
+                "_Complex",
+                "_Generic",
+                "_Imaginary",
+                "_Noreturn",
+                "_Static_assert",
+                "_Thread_local",
+            ]
+        );
+    }
+
+    /// The same, for the punctuators, and it pins three things at once: that
+    /// every one C has is present, that each variant carries the spelling its
+    /// name says, and that the order is the longest-first one `starting`
+    /// depends on.
+    ///
+    /// The order matters as much as the contents. `punctuators_are_declared_longest_first`
+    /// checks the shape of the order and not the order itself, so it holds
+    /// under any permutation within a length group, and a permutation is what
+    /// binds `(` to `RightParen`.
+    ///
+    /// Digraphs are absent on purpose; see the table.
+    #[test]
+    fn the_punctuator_table_is_the_c17_set_in_the_order_the_scan_needs() {
+        let table: Vec<_> = Punct::ALL
+            .iter()
+            .map(|p| (format!("{p:?}"), p.as_str()))
+            .collect();
+        let table: Vec<_> = table
+            .iter()
+            .map(|(name, spelling)| (name.as_str(), *spelling))
+            .collect();
+
+        assert_eq!(
+            table,
+            [
+                ("Ellipsis", "..."),
+                ("LessLessEqual", "<<="),
+                ("GreaterGreaterEqual", ">>="),
+                ("Arrow", "->"),
+                ("PlusPlus", "++"),
+                ("MinusMinus", "--"),
+                ("LessLess", "<<"),
+                ("GreaterGreater", ">>"),
+                ("LessEqual", "<="),
+                ("GreaterEqual", ">="),
+                ("EqualEqual", "=="),
+                ("BangEqual", "!="),
+                ("AmpersandAmpersand", "&&"),
+                ("PipePipe", "||"),
+                ("StarEqual", "*="),
+                ("SlashEqual", "/="),
+                ("PercentEqual", "%="),
+                ("PlusEqual", "+="),
+                ("MinusEqual", "-="),
+                ("AmpersandEqual", "&="),
+                ("CaretEqual", "^="),
+                ("PipeEqual", "|="),
+                ("HashHash", "##"),
+                ("LeftBracket", "["),
+                ("RightBracket", "]"),
+                ("LeftParen", "("),
+                ("RightParen", ")"),
+                ("LeftBrace", "{"),
+                ("RightBrace", "}"),
+                ("Dot", "."),
+                ("Ampersand", "&"),
+                ("Star", "*"),
+                ("Plus", "+"),
+                ("Minus", "-"),
+                ("Tilde", "~"),
+                ("Bang", "!"),
+                ("Slash", "/"),
+                ("Percent", "%"),
+                ("Less", "<"),
+                ("Greater", ">"),
+                ("Caret", "^"),
+                ("Pipe", "|"),
+                ("Question", "?"),
+                ("Colon", ":"),
+                ("Semicolon", ";"),
+                ("Equal", "="),
+                ("Comma", ","),
+                ("Hash", "#"),
+            ]
+        );
+    }
+
+    /// What keeps `Lexer::run`'s loop terminating, stated rather than assumed.
+    ///
+    /// `begins_no_token` asks `can_start_with` to decide where a run of stray
+    /// characters ends, and `scan` falls through to that run only when
+    /// `Punct::starting` found nothing. If a character could begin a punctuator
+    /// without being one, `scan_unknown` would consume nothing, the token would
+    /// be empty, and the scan would spin. The `debug_assert` that says so is
+    /// compiled out of a release build, so this is the guard that is not.
+    ///
+    /// It holds today because every multi-character punctuator's first
+    /// character is a punctuator in its own right. Adding one that is not, a
+    /// digraph among them, breaks it.
+    #[test]
+    fn every_character_that_can_begin_a_punctuator_is_one() {
+        for &punct in Punct::ALL {
+            let lead = punct.as_str().chars().next().expect("no empty spelling");
+
+            assert!(Punct::can_start_with(lead), "{punct:?}");
+            assert!(
+                Punct::starting(&lead.to_string()).is_some(),
+                "{lead:?} begins {punct:?} and is not a punctuator on its own, \
+                 which makes a scan of it consume nothing"
+            );
+        }
+    }
+
     /// Every spelling in the table is the one C uses, and no two variants share
     /// one. A duplicate would make `from_spelling` return whichever came first
     /// and leave the other unreachable.
@@ -372,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn a_scan_takes_the_longest_punctuator_that_fits() {
+    fn the_longest_punctuator_at_a_prefix_wins() {
         assert_eq!(Punct::starting(">>=x"), Some(Punct::GreaterGreaterEqual));
         assert_eq!(Punct::starting(">>x"), Some(Punct::GreaterGreater));
         assert_eq!(Punct::starting(">x"), Some(Punct::Greater));
@@ -382,14 +563,17 @@ mod tests {
 
     /// `a+++b` is `a` `++` `+` `b`, which does not compile, and not
     /// `a` `+` `++` `b`, which would. The rule is about the scan, not about
-    /// what parses.
+    /// what parses. This is the table's half of it; `lexer.rs` scans the whole
+    /// expression.
     #[test]
-    fn the_longest_scan_wins_even_when_a_shorter_one_would_parse() {
+    fn the_table_matches_the_longest_punctuator_even_when_a_shorter_one_would_parse() {
         assert_eq!(Punct::starting("+++b"), Some(Punct::PlusPlus));
     }
 
+    /// Both directions of the same table: what can start a punctuator, and
+    /// what cannot.
     #[test]
-    fn a_character_that_begins_no_punctuator_is_not_one() {
+    fn punctuator_starts_are_exactly_the_characters_in_the_table() {
         for c in ['<', '>', '#', '.', '='] {
             assert!(Punct::can_start_with(c), "{c}");
         }

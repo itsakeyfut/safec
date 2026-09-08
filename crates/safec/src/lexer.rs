@@ -39,6 +39,7 @@ const UNTERMINATED_COMMENT: Code = Code::new("E0101");
 const UNTERMINATED_LITERAL: Code = Code::new("E0102");
 const UNEXPECTED_CHARACTERS: Code = Code::new("E0103");
 const UNSUPPORTED_DIRECTIVE: Code = Code::new("E0104");
+const EMPTY_LITERAL: Code = Code::new("E0105");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
@@ -79,11 +80,17 @@ impl<'a> Lexer<'a> {
             let start = self.offset;
             let Some(c) = self.peek() else { break };
 
-            if self.at_line_start && c == '#' {
-                self.report_directive(diagnostics);
-            }
-
-            let kind = self.scan(c, diagnostics);
+            // A directive is `#` as the first preprocessing *token* on a line,
+            // so this asks what the scan is about to take rather than what the
+            // next character is: `##` is one token and begins no directive.
+            let kind = if self.at_line_start
+                && c == '#'
+                && Punct::starting(self.rest()) == Some(Punct::Hash)
+            {
+                self.scan_directive(diagnostics)
+            } else {
+                self.scan(c, diagnostics)
+            };
             debug_assert!(self.offset > start, "the scan made no progress");
             tokens.push(Token::new(kind, self.span(start)));
             self.at_line_start = false;
@@ -182,7 +189,14 @@ impl<'a> Lexer<'a> {
                 // A literal closes on the line it opens on. Reporting at the
                 // newline rather than running to the end of the file keeps one
                 // missing quote from swallowing the rest of the program.
-                None | Some('\n') => {
+                //
+                // A carriage return ends it too. On Windows the terminator
+                // is two bytes, and stopping only at the second one leaves
+                // a line terminator inside the token: the span of an
+                // unterminated literal, and the text `--emit tokens` prints
+                // for it, would carry a byte that is not part of the line.
+                // `SourceFile::line_text` draws the line in the same place.
+                None | Some('\n' | '\r') => {
                     diagnostics.report(
                         Diagnostic::error(format!("unterminated {what}"))
                             .with_code(UNTERMINATED_LITERAL)
@@ -207,6 +221,30 @@ impl<'a> Lexer<'a> {
                 }
                 Some(c) if c == quote => {
                     self.bump();
+
+                    // `''` matches no character-constant in C's grammar, which
+                    // requires at least one c-char, and `gcc` and `clang` both
+                    // reject it. Unlike `123abc`, which is a well-formed
+                    // preprocessing number left for a stage that knows the
+                    // target's types, there is nothing later that this is
+                    // waiting for: the scan is where it is wrong, so the scan
+                    // says so. The token is kept, as every other one is.
+                    //
+                    // Character constants only. `""` is an ordinary empty
+                    // string, which is why the two cases cannot share one
+                    // emptiness rule even though they share this function.
+                    if kind == TokenKind::Character && self.offset == opening + quote.len_utf8() * 2
+                    {
+                        diagnostics.report(
+                            Diagnostic::error(format!("empty {what}"))
+                                .with_code(EMPTY_LITERAL)
+                                .with_label(Label::primary(
+                                    self.span(opening),
+                                    "nothing between the quotes",
+                                ))
+                                .with_note(format!("a {what} has to hold at least one character")),
+                        );
+                    }
                     return kind;
                 }
                 Some(_) => {
@@ -223,7 +261,7 @@ impl<'a> Lexer<'a> {
     /// under thousands of identical reports.
     fn scan_unknown(&mut self, diagnostics: &mut DiagnosticSink) -> TokenKind {
         let start = self.offset;
-        while self.peek().is_some_and(begins_no_token) {
+        while self.peek().is_some_and(is_stray) {
             self.bump();
         }
 
@@ -246,18 +284,44 @@ impl<'a> Lexer<'a> {
         TokenKind::Unknown
     }
 
-    fn report_directive(&self, diagnostics: &mut DiagnosticSink) {
+    /// A preprocessing directive, taken whole.
+    ///
+    /// One token for the line rather than the tokens the line is made of. A
+    /// directive is not C, and handing its pieces to a parser produces an
+    /// avalanche rather than one error: `#include <stdio.h>` offers `<`,
+    /// `stdio`, `.`, `h`, `>`, and a recovery that scans for the next `;` finds
+    /// none on the directive line, runs into the declaration below it, and
+    /// consumes that instead. One unimplemented feature then costs the
+    /// translation unit.
+    ///
+    /// Kept rather than skipped, because the rule this module is built on is
+    /// that every byte gets a place. This is the same answer [`TokenKind::Unknown`]
+    /// gives for a different reason: name it, report it, and hand it over. Stage
+    /// 3 has the span and can scan inside it when there is something to do with
+    /// it.
+    ///
+    /// Line continuations are not implemented, so "the line" runs to the next
+    /// newline even where C would join two.
+    fn scan_directive(&mut self, diagnostics: &mut DiagnosticSink) -> TokenKind {
+        let opening = self.offset;
+        while self.peek().is_some_and(|c| c != '\n') {
+            self.bump();
+        }
+
         diagnostics.report(
             Diagnostic::error("preprocessor directives are not supported yet")
                 .with_code(UNSUPPORTED_DIRECTIVE)
                 .with_label(Label::primary(
-                    Span::new(self.file, self.offset as u32, self.offset as u32 + 1),
+                    // The `#`, not the line. A caret under a long macro
+                    // definition is a wall, and the line is quoted above it
+                    // anyway.
+                    Span::new(self.file, opening as u32, opening as u32 + 1),
                     "directive begins here",
                 ))
-                .with_note(
-                    "the preprocessor arrives in stage 3; the line is scanned as ordinary tokens",
-                ),
-        )
+                .with_note("the preprocessor arrives in stage 3")
+                .with_note("the line is one token and is not compiled"),
+        );
+        TokenKind::Directive
     }
 
     /// The one place whitespace and comments are passed over.
@@ -275,7 +339,7 @@ impl<'a> Lexer<'a> {
                     self.bump();
                     self.at_line_start = true;
                 }
-                Some(c) if c.is_whitespace() => {
+                Some(c) if is_whitespace(c) => {
                     self.bump();
                 }
                 Some('/') if self.rest().starts_with("//") => {
@@ -338,6 +402,23 @@ impl<'a> Lexer<'a> {
     }
 }
 
+/// Whitespace as C spells it, which is ASCII and nothing else.
+///
+/// Not `char::is_whitespace`, which is the Unicode `White_Space` property and
+/// so includes U+00A0, U+0085, U+2028 and U+3000. A no-break space is the
+/// commonest way non-ASCII reaches a C file, out of a browser or a PDF, and
+/// `gcc` and `clang` both reject it. Skipping it as though it were a space
+/// accepts a file they refuse, and splits an identifier in two without saying
+/// so, which is the same shape of trouble as an escape in a file name: a thing
+/// the reader cannot see changing what the compiler read.
+///
+/// The line between the two properties is not visible at a call site, which is
+/// why this is a named function rather than a method call at the two places
+/// that need it.
+fn is_whitespace(c: char) -> bool {
+    c.is_ascii_whitespace() || c == '\u{b}'
+}
+
 /// ASCII only. C11 allows more through universal character names and C23
 /// through `XID_Start`, and neither is implemented: a non-ASCII identifier is
 /// reported rather than accepted.
@@ -349,9 +430,15 @@ fn is_identifier_continue(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 
-/// Whether no token can begin with `c`.
-fn begins_no_token(c: char) -> bool {
-    !c.is_whitespace()
+/// Whether `c` belongs to a run of characters the scan can make nothing of.
+///
+/// Not "can no token begin here": whitespace and a comment can begin no token
+/// either, and this answers `false` for both, because [`Lexer::skip_trivia`]
+/// has already dealt with them and a run of stray characters has to end when
+/// one turns up. What this decides is where a [`TokenKind::Unknown`] token
+/// stops.
+fn is_stray(c: char) -> bool {
+    !is_whitespace(c)
         && !is_identifier_start(c)
         && !c.is_ascii_digit()
         && c != '"'
@@ -472,11 +559,15 @@ mod tests {
         }
     }
 
-    /// A sign continues a number only after an exponent marker.
+    /// A sign continues a number only after an exponent marker. The negative
+    /// case has to start with a digit to be about `scan_number` at all: `x+5`
+    /// never enters it, so it holds however the sign rule is written.
     #[test]
     fn a_sign_is_part_of_a_number_only_after_an_exponent() {
         assert_eq!(scan("1e+5").texts(), ["1e+5"]);
-        assert_eq!(scan("x+5").texts(), ["x", "+", "5"]);
+        assert_eq!(scan("5+5").texts(), ["5", "+", "5"]);
+        assert_eq!(scan("1.5-2").texts(), ["1.5", "-", "2"]);
+        assert_eq!(scan("0x1p-3").texts(), ["0x1p-3"]);
     }
 
     #[test]
@@ -491,6 +582,51 @@ mod tests {
         assert_eq!(scan("a >>= b").texts(), ["a", ">>=", "b"]);
         assert_eq!(scan("a >> b").texts(), ["a", ">>", "b"]);
         assert_eq!(scan("a+++b").texts(), ["a", "++", "+", "b"]);
+    }
+
+    /// C's whitespace is ASCII. Unicode's is not, and `char::is_whitespace`
+    /// answers the second question: a no-break space, a next line, a line
+    /// separator and an ideographic space are all `White_Space` and none of
+    /// them is C. `gcc` and `clang` reject every one of these.
+    ///
+    /// This is the invisible-character case, so the cost of getting it wrong is
+    /// that a file the real compiler refuses is accepted here without a word.
+    #[test]
+    fn a_unicode_space_that_c_does_not_know_is_not_whitespace() {
+        for c in [
+            '\u{a0}', '\u{85}', '\u{2028}', '\u{2029}', '\u{3000}', '\u{2007}',
+        ] {
+            let scan = scan(&format!("int{c}x;\n"));
+
+            assert_eq!(
+                scan.messages(),
+                ["unexpected character"],
+                "U+{:04X} was skipped as though it were a space",
+                c as u32
+            );
+        }
+    }
+
+    /// The other side of the same line, so that the fix cannot be read as
+    /// "reject anything unusual". These five are C's whitespace, and a vertical
+    /// tab is the one `is_ascii_whitespace` leaves out.
+    #[test]
+    fn the_whitespace_c_does_know_still_separates_tokens() {
+        for c in [' ', '\t', '\n', '\u{b}', '\u{c}', '\r'] {
+            let scan = scan(&format!("int{c}x;\n"));
+
+            assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
+            assert_eq!(scan.texts(), ["int", "x", ";"], "{:?}", c as u32);
+        }
+    }
+
+    /// An identifier split by something nobody can see. The scan has to say so,
+    /// because the two halves read as one word.
+    #[test]
+    fn a_no_break_space_inside_a_word_is_reported_rather_than_splitting_it() {
+        let scan = scan("caf\u{a0}e = 1;\n");
+
+        assert_eq!(scan.messages(), ["unexpected character"]);
     }
 
     #[test]
@@ -510,6 +646,83 @@ mod tests {
             scan.texts(),
             ["c", "=", "'a'", ";", "s", "=", r#""hi\"there""#, ";"]
         );
+    }
+
+    /// A code is the stable handle. A message can be reworded whenever a better
+    /// wording is found, and a `-A`/`-W` flag, a suppression comment and a
+    /// user's notes all key on the code instead, so a code is assigned once and
+    /// never changes. Nothing else in the suite looks at one.
+    #[test]
+    fn each_lexical_diagnostic_keeps_the_code_it_was_assigned() {
+        for (text, code) in [
+            ("/* on and on", "E0101"),
+            ("s = \"oops;\n", "E0102"),
+            ("int x = @;\n", "E0103"),
+            ("#define X 1\n", "E0104"),
+            ("c = '';\n", "E0105"),
+        ] {
+            let scan = scan(text);
+            let reported = scan
+                .diagnostics
+                .diagnostics()
+                .iter()
+                .filter_map(|diagnostic| diagnostic.code())
+                .map(|code| code.to_string())
+                .collect::<Vec<_>>();
+
+            assert_eq!(reported, [code], "{text:?}");
+        }
+    }
+
+    /// A line terminator is two bytes on Windows, and neither of them belongs
+    /// to the token. Stopping only at the `\n` puts the `\r` inside the span,
+    /// so the text `--emit tokens` prints for an unterminated literal carries a
+    /// byte that is not on the line.
+    #[test]
+    fn an_unterminated_literal_stops_before_a_carriage_return() {
+        for (text, literal) in [
+            ("s = \"oops;\r\nint x;\r\n", "\"oops;"),
+            ("c = 'a;\r\nint x;\r\n", "'a;"),
+        ] {
+            let scan = scan(text);
+
+            assert!(scan.texts().contains(&literal), "{:?}", scan.texts());
+            assert!(scan.texts().contains(&"int"), "{:?}", scan.texts());
+        }
+    }
+
+    /// A directive is `#` as the first preprocessing *token* on a line. `##` is
+    /// one token, so a line beginning with it holds no directive, and saying it
+    /// does reports an error about something that is not there and points at
+    /// one character of a two-character token.
+    #[test]
+    fn a_line_beginning_with_a_paste_operator_is_not_a_directive() {
+        let scan = scan("int x = 1;\n## y\n");
+
+        assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
+        assert!(scan.texts().contains(&"##"), "{:?}", scan.texts());
+    }
+
+    /// C's grammar wants at least one c-char between the quotes, and `gcc` and
+    /// `clang` both reject `''`. Nothing downstream is waiting to reject it the
+    /// way something will reject `123abc`, so the scan is where it gets said.
+    #[test]
+    fn an_empty_character_constant_is_reported() {
+        let scan = scan("c = '';\n");
+
+        assert_eq!(scan.messages(), ["empty character constant"]);
+        // Still a token, like everything else the scan reports on.
+        assert_eq!(scan.texts(), ["c", "=", "''", ";"]);
+    }
+
+    /// The negative half. A string may legitimately be empty, and the same
+    /// helper scans both.
+    #[test]
+    fn an_empty_string_literal_is_ordinary() {
+        let scan = scan("s = \"\";\n");
+
+        assert!(scan.diagnostics.is_empty(), "{:?}", scan.messages());
+        assert_eq!(scan.texts(), ["s", "=", "\"\"", ";"]);
     }
 
     /// One missing quote must not swallow the rest of the program, so the
@@ -552,7 +765,7 @@ mod tests {
     }
 
     /// The rule this module is built on. Stopping at the first one is the same
-    /// mistake as stopping at the first unreadable input.
+    /// mistake as stopping at the first unreadable input, one level down.
     #[test]
     fn the_scan_does_not_stop_at_the_first_thing_it_cannot_read() {
         let scan = scan("@ int x; ` y \"unclosed\n");
@@ -562,19 +775,41 @@ mod tests {
         assert!(scan.texts().contains(&"y"));
     }
 
+    /// One token for the line, and one report. Broken into its pieces, a
+    /// directive gives a parser `<`, `stdio`, `.`, `h`, `>` to make sense of,
+    /// and a recovery looking for the next `;` runs past the end of the
+    /// directive into the declaration below it.
     #[test]
-    fn a_directive_is_reported_once_and_its_line_is_still_scanned() {
-        let scan = scan("#include <stdio.h>\nint x;\n");
+    fn a_directive_is_one_token_for_its_whole_line() {
+        let scan = scan(
+            "#include <stdio.h>
+int x;
+",
+        );
 
         assert_eq!(
             scan.messages(),
             ["preprocessor directives are not supported yet"]
         );
+        assert_eq!(scan.kinds()[0], TokenKind::Directive);
         assert_eq!(
             scan.texts(),
-            ["#", "include", "<", "stdio", ".", "h", ">", "int", "x", ";"],
-            "the directive line is ordinary tokens"
+            ["#include <stdio.h>", "int", "x", ";"],
+            "the line after it is ordinary C"
         );
+    }
+
+    /// The line is kept rather than dropped, which is the rule this module is
+    /// built on. The span covers the directive, so stage 3 can scan inside it
+    /// without the scan having had to understand it first.
+    #[test]
+    fn a_directive_keeps_the_text_it_covers() {
+        let scan = scan(
+            "  #define X(a) ((a) + 1)
+",
+        );
+
+        assert_eq!(scan.texts(), ["#define X(a) ((a) + 1)"]);
     }
 
     /// `#` is a punctuator wherever it appears. Only the first token on a line
@@ -587,11 +822,44 @@ mod tests {
         assert_eq!(scan.kinds()[1], TokenKind::Punct(Punct::Hash));
     }
 
+    /// A comment is whitespace by the time directives are found, so a `#` after
+    /// one on the *same* line still opens the line. The block-comment path is
+    /// the one that has to carry `at_line_start` across, because a block
+    /// comment can hold a newline and a line comment cannot.
     #[test]
-    fn a_directive_after_a_comment_still_opens_its_line() {
-        let scan = scan("/* note */\n#define X 1\n");
+    fn a_directive_after_a_comment_on_the_same_line_still_opens_it() {
+        for text in [
+            "/* note */ #define X 1
+",
+            "/* note */
+#define X 1
+",
+            "/* two
+   lines */ #define X 1
+",
+        ] {
+            assert_eq!(scan(text).diagnostics.error_count(), 1, "{text:?}");
+        }
+    }
 
-        assert_eq!(scan.diagnostics.error_count(), 1);
+    /// And a `#` that follows code on its line is not a directive, however much
+    /// whitespace or comment sits between the two.
+    #[test]
+    fn a_directive_after_code_on_the_same_line_is_not_one() {
+        for text in [
+            "a #define X 1
+",
+            "a /* note */ #define X 1
+",
+        ] {
+            let scan = scan(text);
+
+            assert!(
+                scan.diagnostics.is_empty(),
+                "{text:?} {:?}",
+                scan.messages()
+            );
+        }
     }
 
     /// The rule stated as an invariant: the spans are ordered, do not overlap,
