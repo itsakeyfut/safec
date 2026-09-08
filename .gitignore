@@ -15,3 +15,8 @@ a.out
 /.idea
 *.swp
 .DS_Store
+
+# Assistant configuration, kept local rather than shared
+/CLAUDE.md
+/.claude/
+/TODO.md
