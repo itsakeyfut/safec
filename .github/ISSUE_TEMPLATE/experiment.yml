@@ -1,0 +1,78 @@
+name: Experiment
+description: A question that has to be answered by trying it, because design alone could not settle it. Opened when spec finds a task is not yet implementable.
+title: "spike: "
+labels: ["T-Experiment"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Opened when `/spec` decides a task cannot be implemented yet and the
+        reason is something only evidence can settle.
+
+        Work happens on a throwaway branch and results are posted here as
+        comments while they arrive, so that stopping halfway loses nothing. When
+        there is an answer, it goes back to the parent issue as a comment, with
+        the evidence, and that is what unblocks it.
+
+        An experiment is allowed to fail. A failed experiment that is written
+        down is worth more than an unwritten success, because the next person to
+        have the same idea stops sooner.
+
+  - type: input
+    id: parent
+    attributes:
+      label: Blocks
+      description: The issue this exists to unblock.
+      placeholder: "#14"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+      description: >
+        What is not known. One question, stated so that an answer is possible:
+        "can X be done" rather than "investigate X".
+      placeholder: |
+        Can a recursive descent parser recover from a syntax error without a
+        cursor type, or does every recovery site have to hand-roll a progress
+        guarantee?
+    validations:
+      required: true
+
+  - type: textarea
+    id: success
+    attributes:
+      label: What would count as a good result
+      description: >
+        Decided **before** running anything. This is the whole difference
+        between an experiment and a justification: written afterwards, the bar
+        moves to wherever the result landed.
+      placeholder: |
+        A prototype parser that recovers from three malformed inputs without
+        hanging, and whose recovery sites contain no manual index arithmetic.
+        Anything that hangs, or needs a guard written at each site, is a
+        negative result and settles the question the other way.
+    validations:
+      required: true
+
+  - type: textarea
+    id: method
+    attributes:
+      label: How it will be tried
+      description: >
+        A throwaway branch, a prototype, a differential run against another
+        compiler, a measurement. Say what is disposable: nothing here is
+        expected to merge.
+    validations:
+      required: true
+
+  - type: textarea
+    id: giving_up
+    attributes:
+      label: When to stop
+      description: >
+        A bound, so that an open-ended experiment does not become the project.
+        A number of attempts, a scope, or a condition under which the answer is
+        "no" and the parent issue gets that as its evidence.
