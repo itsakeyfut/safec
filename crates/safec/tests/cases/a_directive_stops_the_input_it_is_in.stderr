@@ -1,5 +1,5 @@
 error[SC0104]: preprocessor directives are not supported yet
-   ╭─[ a_skipped_directive_reports_no_names.c:1:1 ]
+   ╭─[ a_directive_stops_the_input_it_is_in.c:1:1 ]
    │
  1 │ #define N 4
    │ ┬  

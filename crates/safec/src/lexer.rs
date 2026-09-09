@@ -52,9 +52,15 @@ const EMPTY_LITERAL: Code = Code::new("SC0105");
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
 /// Always returns a stream, and the stream always ends with [`TokenKind::Eof`].
-/// A caller checks [`DiagnosticSink::has_errors`] to learn whether the scan
-/// found anything wrong; it does not learn that from the return value, because
+/// Whether the scan found anything wrong is not in the return value, because
 /// the tokens are still worth having when it did.
+///
+/// A caller learns it from the sink, and **not from
+/// [`DiagnosticSink::has_errors`]**, which answers for the whole run: a caller
+/// that reads that one lets a typo in `a.c` decide what happens to `b.c`.
+/// `driver.rs::compile` takes [`DiagnosticSink::error_count`] either side of
+/// this call instead, and `a_lexical_error_stops_that_input_and_no_other`
+/// names the `has_errors` version as the mutation it fails on.
 pub fn lex(file: FileId, source: &SourceFile, diagnostics: &mut DiagnosticSink) -> Vec<Token> {
     Lexer {
         file,

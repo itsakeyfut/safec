@@ -47,6 +47,10 @@ pub struct Compiled {
     /// the diagnostics say so. It does not mean nothing was written: a run that
     /// reported a lexical error still emits the tokens, because they are still
     /// what was asked for and they are still worth reading.
+    ///
+    /// `--emit ast` answers differently, and `compile` says why: an input the
+    /// scan reported on is not parsed, so it contributes no tree. A run of one
+    /// such file produces `Some("")`.
     pub artifact: Option<String>,
 }
 
@@ -161,10 +165,6 @@ pub fn compile(options: &Options) -> Compiled {
         // Every input appends to one artifact, and every line names its file,
         // so `--emit tokens a.c b.c` reads as one dump rather than needing two
         // destinations.
-        // The parser runs whatever the lexer found in this file. Gating it on
-        // that is the second half of per-input gating and has an issue of its
-        // own; the half that exists is the loop above, which attempts every
-        // input rather than stopping at the first bad one.
         match &mut artifact {
             Some(Emitted::Tokens(out)) => dump_tokens(&source, &tokens, out),
             Some(Emitted::Ast(out)) => {
