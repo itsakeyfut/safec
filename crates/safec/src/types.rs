@@ -237,7 +237,7 @@ impl Checker<'_> {
             } => {
                 let then = self.types[then.index()]?;
                 let otherwise = self.types[otherwise.index()]?;
-                ast.same_type(then, otherwise).then_some(then)
+                ast.compatible(then, otherwise).then_some(then)
             }
             Expr::Error { .. } => None,
         }
@@ -264,41 +264,17 @@ impl Checker<'_> {
             UnOp::PreInc | UnOp::PreDec | UnOp::PostInc | UnOp::PostDec => operand,
             // 6.5.3.3: the integer promotions of 6.3.1.1 make the result of
             // `+`, `-` and `~` an `int` for every operand this compiler can
-            // write, and p5 makes `!` an `int` outright.
-            UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => Some(self.int),
+            // write, and p5 makes `!` an `int` outright. Still `None` for an
+            // operand nothing typed, because an operand that is not a number
+            // at all makes an expression with no type rather than an `int`,
+            // and `p = -nowhere` reported twice while this said otherwise.
+            UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => operand.map(|_| self.int),
         }
     }
 
-    fn binary(&mut self, ast: &Ast, op: BinOp, lhs: ExprId, rhs: ExprId) -> Option<TypeId> {
-        let lhs = self.types[lhs.index()];
-        let rhs = self.types[rhs.index()];
-
+    fn binary(&mut self, ast: &mut Ast, op: BinOp, lhs: ExprId, rhs: ExprId) -> Option<TypeId> {
         match op {
-            // 6.5.6 p8: a pointer plus an integer is that pointer's type. Not
-            // answering this would type `p + 1` as `int` and make `q = p + 1`
-            // a diagnostic about correct C.
-            BinOp::Add | BinOp::Sub => {
-                let pointer = [lhs, rhs]
-                    .into_iter()
-                    .flatten()
-                    .find(|&ty| matches!(ast.ty(ty), Type::Pointer(_)));
-
-                match pointer {
-                    // 6.5.6 p9 makes a pointer minus a pointer `ptrdiff_t`,
-                    // which this compiler has no name for, so it is not
-                    // answered.
-                    Some(_) if op == BinOp::Sub && lhs.is_some() && rhs.is_some() => {
-                        let both = [lhs, rhs]
-                            .into_iter()
-                            .flatten()
-                            .filter(|&ty| matches!(ast.ty(ty), Type::Pointer(_)))
-                            .count();
-                        if both == 2 { None } else { pointer }
-                    }
-                    Some(pointer) => Some(pointer),
-                    None => Some(self.int),
-                }
-            }
+            BinOp::Add | BinOp::Sub => self.additive(ast, op, lhs, rhs),
             // Everything else this compiler reads is arithmetic on operands
             // the integer promotions make `int`, or a comparison, which
             // 6.5.8 p6 and 6.5.9 p3 make `int`, or `&&` and `||`, which
@@ -319,6 +295,65 @@ impl Checker<'_> {
             | BinOp::BitOr
             | BinOp::LogAnd
             | BinOp::LogOr => Some(self.int),
+        }
+    }
+
+    /// C17 6.5.6, which is the one place an operand's type decides the
+    /// result's.
+    ///
+    /// An operand this stage could not type makes the result one it cannot
+    /// type either. Everything below turns on whether an operand is a
+    /// pointer, and answering `int` for a type nobody knows is how a report
+    /// about a program nobody understood reaches a user: before this said
+    /// `None`, `p = (1 ? p : v) + 1` was rejected on the strength of a guess.
+    fn additive(&mut self, ast: &mut Ast, op: BinOp, lhs: ExprId, rhs: ExprId) -> Option<TypeId> {
+        let lhs = self.types[lhs.index()]?;
+        let rhs = self.types[rhs.index()]?;
+        let lhs = self.decayed(ast, lhs);
+        let rhs = self.decayed(ast, rhs);
+
+        let pointers = (
+            matches!(ast.ty(lhs), Type::Pointer(_)),
+            matches!(ast.ty(rhs), Type::Pointer(_)),
+        );
+
+        match pointers {
+            // p9 makes a pointer minus a pointer `ptrdiff_t`, which this
+            // compiler has no name for, and p2 forbids adding two pointers at
+            // all. Neither has a type to give.
+            (true, true) => None,
+            // p2 and p3 both allow the pointer on the left.
+            (true, false) => Some(lhs),
+            // p3 allows it only there: `i - p` is a constraint violation, and
+            // typing it as a pointer made this compiler report the assignment
+            // around it instead.
+            (false, true) if op == BinOp::Sub => None,
+            // p2 lets an addition be written the other way round.
+            (false, true) => Some(rhs),
+            (false, false) => Some(self.int),
+        }
+    }
+
+    /// The type an operand has after the conversions C17 6.3.2.1 makes.
+    ///
+    /// p3 turns an array into a pointer to its first element and p4 turns a
+    /// function into a pointer to itself, before any operator sees either. A
+    /// stage that skips this reads `a + 1` as arithmetic on something that is
+    /// not a pointer and answers `int`, and `p = a + 1` is then a diagnostic
+    /// about ordinary C. The pointer it makes is a type nobody wrote, so it is
+    /// pushed.
+    ///
+    /// Only [`Checker::additive`] asks. `assignable` deliberately does not:
+    /// an array source there is silence today, and converting it would add a
+    /// check this issue was not asked for rather than remove a false one.
+    fn decayed(&mut self, ast: &mut Ast, ty: TypeId) -> TypeId {
+        match ast.ty(ty) {
+            Type::Array { element, .. } => {
+                let element = *element;
+                ast.push_type(Type::Pointer(element))
+            }
+            Type::Function { .. } => ast.push_type(Type::Pointer(ty)),
+            Type::Int | Type::Char | Type::Void | Type::Pointer(_) => ty,
         }
     }
 
@@ -348,17 +383,17 @@ impl Checker<'_> {
         diagnostics.report(
             Diagnostic::error(format!(
                 "cannot assign `{}` to `{}`",
-                spell_type(self.sources, ast, source),
-                spell_type(self.sources, ast, target)
+                self.spelled(ast, source),
+                self.spelled(ast, target)
             ))
             .with_code(MISMATCH)
             .with_label(Label::primary(
                 ast.expr(value).span(),
-                format!("this is `{}`", spell_type(self.sources, ast, source)),
+                format!("this is `{}`", self.spelled(ast, source)),
             ))
             .with_label(Label::secondary(
                 ast.expr(place).span(),
-                format!("this holds `{}`", spell_type(self.sources, ast, target)),
+                format!("this holds `{}`", self.spelled(ast, target)),
             )),
         );
     }
@@ -385,20 +420,17 @@ impl Checker<'_> {
         diagnostics.report(
             Diagnostic::error(format!(
                 "cannot return `{}` from a function returning `{}`",
-                spell_type(self.sources, ast, source),
-                spell_type(self.sources, ast, returning.ty)
+                self.spelled(ast, source),
+                self.spelled(ast, returning.ty)
             ))
             .with_code(MISMATCH)
             .with_label(Label::primary(
                 ast.expr(value).span(),
-                format!("this is `{}`", spell_type(self.sources, ast, source)),
+                format!("this is `{}`", self.spelled(ast, source)),
             ))
             .with_label(Label::secondary(
                 returning.name,
-                format!(
-                    "declared to return `{}`",
-                    spell_type(self.sources, ast, returning.ty)
-                ),
+                format!("declared to return `{}`", self.spelled(ast, returning.ty)),
             )),
         );
     }
@@ -480,7 +512,7 @@ impl Checker<'_> {
             // p1's pointer case, with the `void *` half of it. Qualifiers are
             // a thing this compiler cannot yet write.
             (Type::Pointer(target_pointee), Type::Pointer(source_pointee)) => Some(
-                ast.same_type(target, source)
+                ast.compatible(target, source)
                     || matches!(ast.ty(*target_pointee), Type::Void)
                     || matches!(ast.ty(*source_pointee), Type::Void),
             ),
@@ -491,6 +523,22 @@ impl Checker<'_> {
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
             | (_, Type::Void | Type::Array { .. } | Type::Function { .. }) => None,
         }
+    }
+
+    /// A type spelled for a message rather than for the artifact.
+    ///
+    /// `spell_type` splices an array length's own source text, so a spelled
+    /// type can carry whatever the file wrote between the brackets, and a
+    /// comment can carry a newline. `render.rs::shown` keeps a newline on
+    /// purpose, because a message that runs to two lines is ordinary, so
+    /// without this a source file could print a line of its own invention
+    /// into this compiler's report. Every run of whitespace becomes one
+    /// space, which leaves `int (*)(int, char)` spelled exactly as it was.
+    fn spelled(&self, ast: &Ast, ty: TypeId) -> String {
+        spell_type(self.sources, ast, ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     /// Whether `value` is a null pointer constant, C17 6.3.2.3 p3.
@@ -609,7 +657,7 @@ mod tests {
     #[test]
     fn every_shape_of_expression_has_the_type_c_gives_it() {
         let checked = checked(
-            "int f(int a) { return a; }\n\nint main(void) {\n    int x;\n    int *p;\n    int q[3];\n    p = &x;\n    q[0] = *p + f(2) + x++;\n    p = p + 1;\n    return 0;\n}\n",
+            "int f(int a) { return a; }\n\nint main(void) {\n    int x;\n    char c;\n    int *p;\n    int *r;\n    int q[3];\n    p = &x;\n    q[0] = *p + f(2) + x++;\n    p = p + 1;\n    p = q + 1;\n    p++;\n    -c;\n    p - r;\n    1 - p;\n    p - 1;\n    return 0;\n}\n",
         );
 
         assert_eq!(checked.messages(), Vec::<&str>::new());
@@ -624,8 +672,25 @@ mod tests {
             ("q[0]", "int"),
             ("f(2)", "int"),
             ("x++", "int"),
+            // An increment keeps its operand's type: 6.5.2.4 p2 makes `p++`
+            // a pointer, and typing it `int` broke nothing before this row.
+            ("p++", "int *"),
+            // 6.3.1.1's promotions make a unary operator's result `int` even
+            // when its operand is a `char`.
+            ("-c", "int"),
             ("p + 1", "int *"),
             ("p = p + 1", "int *"),
+            // 6.3.2.1 p3 converts the array first, so this is pointer
+            // arithmetic rather than arithmetic on something that is not a
+            // pointer. Before that conversion existed, `p = q + 1` was
+            // reported against a program `clang` compiles.
+            ("q + 1", "int *"),
+            ("p - 1", "int *"),
+            // 6.5.6 p9: a pointer minus a pointer is `ptrdiff_t`, which this
+            // compiler cannot name. p3 allows the pointer only on the left,
+            // so `1 - p` is not an expression C gives a type to at all.
+            ("p - r", "?"),
+            ("1 - p", "?"),
         ] {
             assert_eq!(checked.spelling(text), spelling, "{text}");
         }
@@ -661,7 +726,7 @@ mod tests {
     ///
     /// Mutation: drop the `void` half of the pointer arm of `assignable`. The
     /// two `void *` lines start reporting and this fails. Mutation: have
-    /// `Ast::same_type` answer `true` always. The `char *` line stops
+    /// `Ast::compatible` answer `true` always. The `char *` line stops
     /// reporting and this fails, which is the only place in the suite that
     /// holds the comparison against a program rather than against a table.
     #[test]
@@ -715,6 +780,108 @@ int main(void) { return f(1, 2, 3); }
         );
     }
 
+    /// C17 6.5.15's rule for a conditional, as far as this stage answers it.
+    ///
+    /// Two arms of one type make that type; the rest of p5 needs the usual
+    /// arithmetic conversions and is not answered.
+    ///
+    /// Mutation: have the `Expr::Conditional` arm answer `None`. The first two
+    /// rows lose their type and this fails. Before it existed the whole arm
+    /// could be deleted with the suite green: the three corpus cases that
+    /// write `?:` never assign one or return one, so nothing observed its
+    /// type.
+    #[test]
+    fn a_conditional_has_a_type_when_both_its_arms_agree() {
+        let checked = checked(
+            "int main(void) {
+    int *p;
+    void *v;
+    int x;
+    x = 1 ? 2 : 3;
+    p = 1 ? p : p;
+    1 ? p : v;
+    return 0;
+}
+",
+        );
+
+        assert_eq!(checked.messages(), Vec::<&str>::new());
+
+        for (text, spelling) in [
+            ("1 ? 2 : 3", "int"),
+            ("1 ? p : p", "int *"),
+            ("1 ? p : v", "?"),
+        ] {
+            assert_eq!(checked.spelling(text), spelling, "{text}");
+        }
+    }
+
+    /// C17 6.7.6.3 p15 makes a prototype and an empty identifier list
+    /// compatible when the default argument promotions leave every parameter
+    /// alone, so the first assignment is ordinary C and `clang` accepts it.
+    ///
+    /// Mutation: answer `false` for `(Prototype, Unspecified)` in
+    /// `Ast::compatible_parameters`, which is what reading 6.7.6.3 p10 and p14
+    /// alone gives. The first line starts reporting and this fails.
+    #[test]
+    fn a_function_pointer_takes_one_of_a_compatible_type() {
+        let checked = checked(
+            "int main(void) {
+    int (*p)(void);
+    int (*q)();
+    int (*r)(char);
+    p = q;
+    r = q;
+    return 0;
+}
+",
+        );
+
+        assert_eq!(
+            checked.messages(),
+            ["cannot assign `int (*)()` to `int (*)(char)`"]
+        );
+    }
+
+    /// A type in a message is one line, however the file wrote it.
+    ///
+    /// An array's length is spelled with the source's own bytes, so a comment
+    /// inside one can carry a newline, and `render.rs::shown` keeps a newline
+    /// on purpose. Without `Checker::spelled` a file could print a line of its
+    /// own invention into this compiler's report, which is what the input
+    /// below tries to do.
+    ///
+    /// Mutation: spell the types in `assignment` with `spell_type` directly.
+    /// The message and the labels carry the comment's newlines and this fails.
+    #[test]
+    fn a_type_in_a_message_is_one_line_however_it_was_written() {
+        let checked = checked(
+            "int main(void) {
+    int (*r)[1 /*
+error[SC0302]: no problems found
+*/ + 2];
+    int *p;
+    p = r;
+    return 0;
+}
+",
+        );
+
+        let reported = checked.diagnostics.diagnostics();
+        let [reported] = reported else {
+            panic!("{reported:?}");
+        };
+
+        assert!(
+            !reported.message().contains('\n'),
+            "{:?}",
+            reported.message()
+        );
+        for label in reported.labels() {
+            assert!(!label.message().contains('\n'), "{:?}", label.message());
+        }
+    }
+
     /// A compound assignment is C17 6.5.16.2, whose constraints are its own:
     /// `p += 1` is how a pointer is advanced.
     ///
@@ -730,7 +897,7 @@ int main(void) { return f(1, 2, 3); }
     /// Every place a `return` can be written, which is every place a statement
     /// can hold another.
     ///
-    /// Mutation: drop any arm of `Resolver::returns_in` that recurses. The
+    /// Mutation: drop any arm of `Checker::returns_in` that recurses. The
     /// `return` under it stops being checked, the list is short by one, and
     /// this fails.
     #[test]

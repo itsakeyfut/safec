@@ -1,8 +1,9 @@
 //! Which declaration each name refers to.
 //!
-//! The stage `docs/architecture.md` draws between the AST and the typed AST,
-//! or the first slice of it: this says which declaration a name means, and
-//! nothing about what type it has. #58 is where a type joins a binding.
+//! The first half of the stage `docs/architecture.md` draws between the AST
+//! and the typed AST: this says which declaration a name means, and `types.rs`
+//! says what type each expression has. A binding carries the type its
+//! declarator derived, which is what that module reads it for.
 //!
 //! The bindings are this module's own rather than nodes in the tree. A
 //! `Declaration` lives in three places, and one of them, a parameter inside
@@ -124,6 +125,13 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
 
 struct Resolver<'a> {
     sources: &'a SourceMap,
+    /// Shared, and held in a field rather than passed per method.
+    ///
+    /// That is what lets `let ast = self.ast;` free the walk below to borrow
+    /// `self` mutably. It works only while the reference is shared: the day
+    /// this stage has to *create* a type, the field has to become a `&mut Ast`
+    /// parameter on each method and three comments here stop being true.
+    /// `types.rs` is written that way already and says why.
     ast: &'a Ast,
     resolution: Resolution,
     /// Innermost last. Never empty: the file scope is pushed before the walk

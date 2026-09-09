@@ -87,7 +87,7 @@ pub struct TypeId(u32);
 /// Deriving `PartialEq` would make the natural way to ask that question
 /// compile and answer wrongly. Without it, asking is `error[E0369]`, and
 /// whoever writes the comparison writes it knowing what it has to ignore.
-/// [`Ast::same_type`] is that comparison, written.
+/// [`Ast::compatible`] is that comparison, written.
 #[derive(Clone, Debug)]
 pub enum Type {
     /// `int`.
@@ -772,7 +772,17 @@ impl Ast {
         (0..self.exprs.len() as u32).map(ExprId)
     }
 
-    /// Whether `left` and `right` are the same type, C17 6.7.6.3 p15.
+    /// Whether `left` and `right` are compatible types, C17 6.2.7 p1.
+    ///
+    /// Compatible and not identical, which is the relation C actually asks
+    /// about: 6.5.16.1 p1 wants the pointed-to types of an assignment to be
+    /// compatible, and 6.2.7 p1 makes identical types compatible and then adds
+    /// cases that are compatible without being identical. `clang` keeps the
+    /// two apart as `hasSameType` and `typesAreCompatible` for that reason.
+    /// One of the extra cases is reachable in the subset this compiler reads,
+    /// and it is in `compatible_parameters` below; a struct will bring the
+    /// rest, and this is named for the relation so that whoever adds one is
+    /// extending the right thing.
     ///
     /// The comparison [`Type`]'s own comment refuses to derive, written where
     /// the arena is, because a type reaches the rest of itself through ids and
@@ -784,19 +794,21 @@ impl Ast {
     /// constant expressions and their values are equal, and nothing here
     /// evaluates a constant expression: `array_length_is_not_evaluated` in the
     /// corpus is a case that says so by name. So `int[2]` and `int[3]` answer
-    /// "the same", which is a thing this compiler fails to notice rather than
-    /// a thing it says wrongly. C has no assignment of arrays, so nothing that
-    /// asks this today can reach it; #57 is the first that will.
+    /// "compatible", which is a thing this compiler fails to notice rather
+    /// than a thing it says wrongly: `int (*p)[3]; int a[2]; p = &a;` is
+    /// accepted here and rejected by `clang`. `types.rs` reaches this through
+    /// a pointer's pointee, so the missed report is live rather than waiting
+    /// for a later issue.
     ///
     /// Recursion, bounded the way `parser.rs::apply` bounds a declarator's
     /// derivations, so a type is at most `MAX_NESTING` deep. The nesting a
     /// parameter list adds is bounded by the parser's own recursion.
-    pub fn same_type(&self, left: TypeId, right: TypeId) -> bool {
+    pub fn compatible(&self, left: TypeId, right: TypeId) -> bool {
         match (self.ty(left), self.ty(right)) {
             (Type::Int, Type::Int) | (Type::Char, Type::Char) | (Type::Void, Type::Void) => true,
-            (Type::Pointer(left), Type::Pointer(right)) => self.same_type(*left, *right),
+            (Type::Pointer(left), Type::Pointer(right)) => self.compatible(*left, *right),
             (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
-                self.same_type(*left, *right)
+                self.compatible(*left, *right)
             }
             (
                 Type::Function {
@@ -808,8 +820,8 @@ impl Ast {
                     parameters: right_parameters,
                 },
             ) => {
-                self.same_type(*left, *right)
-                    && self.same_parameters(left_parameters, right_parameters)
+                self.compatible(*left, *right)
+                    && self.compatible_parameters(left_parameters, right_parameters)
             }
             // Written out rather than `_ => false`, so that a variant added to
             // `Type` has to be answered for here: `error[E0004]` is what says
@@ -824,24 +836,55 @@ impl Ast {
         }
     }
 
-    /// Whether two parameter lists are the same, C17 6.7.6.3 p15.
+    /// Whether two parameter lists are compatible, C17 6.7.6.3 p15.
     ///
-    /// `()` is not the same as `(void)`: p14 makes the first a list that says
-    /// nothing about the parameters and p10 makes the second a statement that
-    /// there are none, and a stage that treated them alike would be answering
-    /// a question C asks in two different ways.
-    fn same_parameters(&self, left: &Parameters, right: &Parameters) -> bool {
+    /// Two prototypes agree parameter by parameter. A prototype and an empty
+    /// identifier list are the case p15 spells out:
+    ///
+    /// > If one type has a parameter type list and the other type is specified
+    /// > by a function declarator that is not part of a function definition
+    /// > and that contains an empty identifier list, the parameter list shall
+    /// > not have an ellipsis terminator and the type of each parameter shall
+    /// > be compatible with the type that results from the application of the
+    /// > default argument promotions.
+    ///
+    /// So `int (void)` and `int ()` are compatible, and so are `int (int)` and
+    /// `int ()`, while `int (char)` and `int ()` are not. `clang` agrees on
+    /// all three, measured. Answering `false` for every one of them, which is
+    /// what reading p10 and p14 alone gives, rejected `int (*p)(void) = q`
+    /// where `q` is `int (*)()`: a program `clang` compiles.
+    fn compatible_parameters(&self, left: &Parameters, right: &Parameters) -> bool {
         match (left, right) {
             (Parameters::Prototype(left), Parameters::Prototype(right)) => {
                 left.len() == right.len()
                     && left
                         .iter()
                         .zip(right)
-                        .all(|(left, right)| self.same_type(left.ty, right.ty))
+                        .all(|(left, right)| self.compatible(left.ty, right.ty))
             }
             (Parameters::Unspecified, Parameters::Unspecified) => true,
-            (Parameters::Prototype(_), Parameters::Unspecified)
-            | (Parameters::Unspecified, Parameters::Prototype(_)) => false,
+            (Parameters::Prototype(parameters), Parameters::Unspecified)
+            | (Parameters::Unspecified, Parameters::Prototype(parameters)) => parameters
+                .iter()
+                .all(|parameter| !self.is_promoted_by_default(parameter.ty)),
+        }
+    }
+
+    /// Whether the default argument promotions change this type, C17 6.5.2.2
+    /// p6.
+    ///
+    /// They promote a `char` to an `int` and a `float` to a `double`. This
+    /// compiler has no `float`, so `char` is the whole of it, and an arm for
+    /// each of the others rather than a wildcard so that a type added later
+    /// has to say which side it is on.
+    fn is_promoted_by_default(&self, ty: TypeId) -> bool {
+        match self.ty(ty) {
+            Type::Char => true,
+            Type::Int
+            | Type::Void
+            | Type::Pointer(_)
+            | Type::Array { .. }
+            | Type::Function { .. } => false,
         }
     }
 }
@@ -961,7 +1004,7 @@ mod tests {
     use super::*;
     use crate::source::SourceMap;
 
-    /// What C17 6.7.6.3 p15 calls the same type, and what it does not.
+    /// What C17 calls compatible types, and what it does not.
     ///
     /// The pairs are written out rather than derived, for the reason RK-001
     /// gives: a table built the way the code builds one compares the code with
@@ -971,11 +1014,13 @@ mod tests {
     /// different.
     ///
     /// Mutation: have the `Pointer` arm answer `true` without comparing its
-    /// pointee. `int *` and `char *` become the same and this fails. Mutation:
-    /// compare `Parameters` by length alone. `int (int)` and `int (char)`
-    /// become the same and this fails.
+    /// pointee. `int *` and `char *` become compatible and this fails.
+    /// Mutation: compare `Parameters` by length alone. `int (int)` and
+    /// `int (char)` become compatible and this fails. Mutation: have
+    /// `is_promoted_by_default` answer `false` for a `char`. `int (char)` and
+    /// `int ()` become compatible and this fails.
     #[test]
-    fn two_types_are_the_same_when_c_says_they_are() {
+    fn two_types_are_compatible_when_c_says_they_are() {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", "23");
         let mut ast = Ast::new();
@@ -1092,11 +1137,26 @@ mod tests {
                 false,
                 "int (int) against int (int, int)",
             ),
+            // 6.7.6.3 p15's own case: a prototype whose parameters are
+            // unchanged by the default argument promotions is compatible with
+            // an empty identifier list, and a `char` parameter is changed.
             (
                 int_of_void,
                 int_of_nothing_said,
-                false,
+                true,
                 "int (void) against int ()",
+            ),
+            (
+                int_of_int,
+                int_of_nothing_said,
+                true,
+                "int (int) against int ()",
+            ),
+            (
+                int_of_char,
+                int_of_nothing_said,
+                false,
+                "int (char) against int ()",
             ),
             (
                 int_of_nothing_said,
@@ -1105,8 +1165,8 @@ mod tests {
                 "int () against int ()",
             ),
         ] {
-            assert_eq!(ast.same_type(left, right), same, "{what}");
-            assert_eq!(ast.same_type(right, left), same, "{what}, the other way");
+            assert_eq!(ast.compatible(left, right), same, "{what}");
+            assert_eq!(ast.compatible(right, left), same, "{what}, the other way");
         }
     }
 

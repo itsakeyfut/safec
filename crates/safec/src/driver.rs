@@ -183,10 +183,11 @@ pub fn compile(options: &Options) -> Compiled {
                 // is a claim about a program nobody wrote.
                 let mut ast = parse(file, &tokens, &mut diagnostics);
                 if diagnostics.error_count() == read_whole {
-                    // Neither result has a reader yet: #64 is where the two
-                    // become something the phases after this one are handed,
-                    // and Phase 2 lowering is what reads them. What they do
-                    // today is report what they find.
+                    // The resolution's reader is the line under it, which is
+                    // what says what type each name has. Nothing reads what
+                    // either of them returns: #64 is where these become
+                    // something the phases after this one are handed, and
+                    // Phase 2's lowering is what will want both together.
                     let resolution = resolve(&sources, &ast, &mut diagnostics);
                     check(&sources, &mut ast, &resolution, &mut diagnostics);
                 }
