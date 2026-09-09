@@ -512,7 +512,7 @@ fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> 
 /// line, and walking it recursively ended the process at around a thousand with
 /// no diagnostic and an exit code nothing here chose. Every later walk of this
 /// tree owes itself the same answer, and owes it here rather than borrowing
-/// this one: [`Expr::children`] is the half that can be shared, and the stack
+/// this one: [`Expr::extend_children`] is the half that can be shared, and the stack
 /// is the half that cannot.
 ///
 /// A node writes at most one quoted thing after its position: either the file's
@@ -525,8 +525,9 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
     // they were written. What that makes is a pre-order walk, the same one the
     // recursive version made.
     let mut pending = vec![(root, depth)];
-    // Reused across nodes rather than built per node, which is the whole reason
-    // `Expr::children` appends to a buffer instead of returning one.
+    // Cleared per node, because `extend_children` appends: this wants the
+    // children of one node, not of every node so far. Reused rather than built
+    // afresh so that a whole walk allocates once.
     let mut children = Vec::new();
 
     while let Some((id, depth)) = pending.pop() {
@@ -572,7 +573,7 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
         out.push('\n');
 
         children.clear();
-        expr.children(&mut children);
+        expr.extend_children(&mut children);
         for &child in children.iter().rev() {
             pending.push((child, depth + 1));
         }

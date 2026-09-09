@@ -16,10 +16,11 @@
 //! them, so a statement tree is at most `parser::MAX_NESTING` deep. An
 //! expression tree has no such bound: a left-associative chain and a run of
 //! postfix operators are folded by loops, so `a + a + ...` is as deep as it is
-//! long. Anything that walks this owes itself an answer to the second: its own
-//! stack, which `driver.rs`'s `dump_expr` is what one looks like, and the
-//! children of a node, which [`Expr::children`] answers here so that the next
-//! walker does not have to work them out again.
+//! long. Walking an expression tree therefore takes two things, and only one
+//! of them can be shared: a stack of its own, which `driver.rs`'s `dump_expr`
+//! is what one looks like, and the children of a node, which
+//! [`Expr::extend_children`] answers here so that the next walker does not have
+//! to work them out again.
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
@@ -559,20 +560,31 @@ impl Expr {
         }
     }
 
-    /// Every expression this one is built from, in the order they were written.
+    /// Append every expression this one is built from, in the order they were
+    /// written.
     ///
     /// **The shape of the tree, in one place.** An expression tree has no bound
     /// on its depth, for the reason the module comment above gives, so anything
     /// that walks it needs its own stack and needs to know what the children
-    /// are. The first half is each walker's own problem. The second is this,
-    /// here rather than in whichever walker was written first, because
-    /// `docs/c-family.md` puts the Safety IR in a crate that cannot depend on
-    /// the frontend and so cannot read one.
+    /// are. The first is each walker's own problem. The second is this, on the
+    /// tree rather than inside whichever walker was written first: `dump_expr`
+    /// was that walker, it is private to `driver.rs`, and the driver is the top
+    /// of the dependency graph, so nothing below it could read the answer even
+    /// within this crate. `docs/roadmap.md` then moves the Safety IR into a
+    /// crate of its own in Phase 2, which is not this crate and not today.
     ///
-    /// Appended to the caller's buffer rather than returned, so a walk over a
-    /// whole tree allocates once rather than once per node. Not an iterator:
-    /// `Call`'s children are one field and then a `Vec`, and the eight shapes
-    /// have no common one to return.
+    /// **Appends rather than replaces, and the caller owns the buffer.** That
+    /// is the whole of the contract and it is not visible in the signature,
+    /// which is why the name says it. A walk can hand its own worklist straight
+    /// in and needs nothing else; a walk that wants the children of one node
+    /// alone clears first, as `dump_expr` does. Clearing here instead would
+    /// silently cost the first of those every node but its last child, and
+    /// `the_simplest_walk_over_the_tree_reaches_every_node` is what stops that
+    /// being a quiet change.
+    ///
+    /// Not an iterator: `Call`'s children are one field and then a `Vec`, so
+    /// the eight arms below have no one shape to return. Appending also lets a
+    /// whole walk allocate once rather than once per node.
     ///
     /// The order is the order they were written, which is what lets a pre-order
     /// walk push them reversed and get them back in it.
@@ -583,7 +595,7 @@ impl Expr {
     /// answer is held by the corpus instead: `--emit ast` prints what this
     /// returns, so a child dropped from an arm is lines missing from expected
     /// files that are compared byte for byte.
-    pub fn children(&self, out: &mut Vec<ExprId>) {
+    pub fn extend_children(&self, out: &mut Vec<ExprId>) {
         match self {
             Self::Number { .. } | Self::Identifier { .. } | Self::Error { .. } => {}
             Self::Unary { operand, .. } => out.push(*operand),
@@ -744,6 +756,54 @@ mod tests {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("test.c", "x".repeat(64));
         Span::new(file, start, start + 1)
+    }
+
+    /// A walk that hands its own worklist to `extend_children` reaches every
+    /// node.
+    ///
+    /// This is the shortest correct walk of an expression tree, and it is
+    /// correct only because `extend_children` appends. Nothing in the signature
+    /// says which it does, and the corpus cannot tell: `dump_expr` clears its
+    /// buffer before every call, so it reads the same either way. This is the
+    /// only thing that does.
+    ///
+    /// Mutation: put `out.clear()` at the top of `extend_children`. The walk
+    /// then loses everything it had queued each time it asks a node for its
+    /// children, and this fails on the count. It fails quietly in a caller,
+    /// which is the point: a safety analysis that visits a fifth of a function
+    /// and reports nothing is the failure `docs/safety-model.md` exists to
+    /// prevent, and it does not announce itself.
+    #[test]
+    fn the_simplest_walk_over_the_tree_reaches_every_node() {
+        let s = span(0);
+        let mut ast = Ast::default();
+
+        // `a[b] + c`, built by hand rather than parsed: this is about the
+        // arena, and `parser.rs` is not the thing under test.
+        let a = ast.push_expr(Expr::Identifier { span: s });
+        let b = ast.push_expr(Expr::Identifier { span: s });
+        let subscript = ast.push_expr(Expr::Subscript {
+            base: a,
+            index: b,
+            span: s,
+        });
+        let c = ast.push_expr(Expr::Identifier { span: s });
+        let root = ast.push_expr(Expr::Binary {
+            op: BinOp::Add,
+            lhs: subscript,
+            rhs: c,
+            span: s,
+        });
+
+        let mut work = vec![root];
+        let mut visited = 0;
+        while let Some(id) = work.pop() {
+            visited += 1;
+            assert!(visited <= 5, "the walk did not terminate");
+            ast.expr(id).extend_children(&mut work);
+        }
+
+        assert_eq!(visited, 5, "every node in the tree is reached exactly once");
     }
 
     /// Every node kind, and what it is called in the artifact.
