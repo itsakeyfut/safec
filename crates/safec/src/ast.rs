@@ -35,6 +35,18 @@ use crate::source::{SourceMap, Span};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ExprId(u32);
 
+impl ExprId {
+    /// The index this handle refers to.
+    ///
+    /// For a side table with a slot per expression, which is the dense half of
+    /// what ADR-0008 says an id is for. `FileId::index` in
+    /// `crates/safec/src/source.rs` is the same thing one layer up. Not for
+    /// reaching into an [`Ast`]: use [`Ast::expr`].
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
 /// Where a statement is in [`Ast`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StmtId(u32);
@@ -75,6 +87,7 @@ pub struct TypeId(u32);
 /// Deriving `PartialEq` would make the natural way to ask that question
 /// compile and answer wrongly. Without it, asking is `error[E0369]`, and
 /// whoever writes the comparison writes it knowing what it has to ignore.
+/// [`Ast::same_type`] is that comparison, written.
 #[derive(Clone, Debug)]
 pub enum Type {
     /// `int`.
@@ -758,6 +771,79 @@ impl Ast {
     pub fn expr_ids(&self) -> impl Iterator<Item = ExprId> + use<> {
         (0..self.exprs.len() as u32).map(ExprId)
     }
+
+    /// Whether `left` and `right` are the same type, C17 6.7.6.3 p15.
+    ///
+    /// The comparison [`Type`]'s own comment refuses to derive, written where
+    /// the arena is, because a type reaches the rest of itself through ids and
+    /// answering means walking them: `int *p;` and `int *q;` are two `Pointer`
+    /// nodes holding two `Int` nodes, and they are the same type.
+    ///
+    /// **An array's length is not compared, and that is a known divergence.**
+    /// 6.7.6.2 p6 makes two array types compatible only if both lengths are
+    /// constant expressions and their values are equal, and nothing here
+    /// evaluates a constant expression: `array_length_is_not_evaluated` in the
+    /// corpus is a case that says so by name. So `int[2]` and `int[3]` answer
+    /// "the same", which is a thing this compiler fails to notice rather than
+    /// a thing it says wrongly. C has no assignment of arrays, so nothing that
+    /// asks this today can reach it; #57 is the first that will.
+    ///
+    /// Recursion, bounded the way `parser.rs::apply` bounds a declarator's
+    /// derivations, so a type is at most `MAX_NESTING` deep. The nesting a
+    /// parameter list adds is bounded by the parser's own recursion.
+    pub fn same_type(&self, left: TypeId, right: TypeId) -> bool {
+        match (self.ty(left), self.ty(right)) {
+            (Type::Int, Type::Int) | (Type::Char, Type::Char) | (Type::Void, Type::Void) => true,
+            (Type::Pointer(left), Type::Pointer(right)) => self.same_type(*left, *right),
+            (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
+                self.same_type(*left, *right)
+            }
+            (
+                Type::Function {
+                    returns: left,
+                    parameters: left_parameters,
+                },
+                Type::Function {
+                    returns: right,
+                    parameters: right_parameters,
+                },
+            ) => {
+                self.same_type(*left, *right)
+                    && self.same_parameters(left_parameters, right_parameters)
+            }
+            // Written out rather than `_ => false`, so that a variant added to
+            // `Type` has to be answered for here: `error[E0004]` is what says
+            // somebody looked, and a wildcard would call the new type
+            // different from everything including itself.
+            (Type::Int, _)
+            | (Type::Char, _)
+            | (Type::Void, _)
+            | (Type::Pointer(_), _)
+            | (Type::Array { .. }, _)
+            | (Type::Function { .. }, _) => false,
+        }
+    }
+
+    /// Whether two parameter lists are the same, C17 6.7.6.3 p15.
+    ///
+    /// `()` is not the same as `(void)`: p14 makes the first a list that says
+    /// nothing about the parameters and p10 makes the second a statement that
+    /// there are none, and a stage that treated them alike would be answering
+    /// a question C asks in two different ways.
+    fn same_parameters(&self, left: &Parameters, right: &Parameters) -> bool {
+        match (left, right) {
+            (Parameters::Prototype(left), Parameters::Prototype(right)) => {
+                left.len() == right.len()
+                    && left
+                        .iter()
+                        .zip(right)
+                        .all(|(left, right)| self.same_type(left.ty, right.ty))
+            }
+            (Parameters::Unspecified, Parameters::Unspecified) => true,
+            (Parameters::Prototype(_), Parameters::Unspecified)
+            | (Parameters::Unspecified, Parameters::Prototype(_)) => false,
+        }
+    }
 }
 
 /// A type, in the declarator notation C itself writes.
@@ -874,6 +960,155 @@ fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> 
 mod tests {
     use super::*;
     use crate::source::SourceMap;
+
+    /// What C17 6.7.6.3 p15 calls the same type, and what it does not.
+    ///
+    /// The pairs are written out rather than derived, for the reason RK-001
+    /// gives: a table built the way the code builds one compares the code with
+    /// itself. Each row is a declaration a reader can write down, and the two
+    /// sides are separate nodes in the arena, which is the whole point: a
+    /// derived `PartialEq` would call the two halves of every `true` row
+    /// different.
+    ///
+    /// Mutation: have the `Pointer` arm answer `true` without comparing its
+    /// pointee. `int *` and `char *` become the same and this fails. Mutation:
+    /// compare `Parameters` by length alone. `int (int)` and `int (char)`
+    /// become the same and this fails.
+    #[test]
+    fn two_types_are_the_same_when_c_says_they_are() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "23");
+        let mut ast = Ast::new();
+        let two = ast.push_expr(Expr::Number {
+            span: Span::new(file, 0, 1),
+        });
+        let three = ast.push_expr(Expr::Number {
+            span: Span::new(file, 1, 2),
+        });
+
+        let int = ast.push_type(Type::Int);
+        let also_int = ast.push_type(Type::Int);
+        let character = ast.push_type(Type::Char);
+        let pointer_to_int = ast.push_type(Type::Pointer(int));
+        let also_pointer_to_int = ast.push_type(Type::Pointer(also_int));
+        let pointer_to_char = ast.push_type(Type::Pointer(character));
+        let pointer_to_pointer = ast.push_type(Type::Pointer(pointer_to_int));
+        let two_ints = ast.push_type(Type::Array {
+            element: int,
+            length: Some(two),
+        });
+        let three_ints = ast.push_type(Type::Array {
+            element: also_int,
+            length: Some(three),
+        });
+        let two_chars = ast.push_type(Type::Array {
+            element: character,
+            length: Some(two),
+        });
+
+        let unnamed = |ty| Declaration {
+            name: None,
+            ty,
+            span: Span::new(file, 0, 1),
+        };
+        let of = |ast: &mut Ast, returns, parameters| {
+            ast.push_type(Type::Function {
+                returns,
+                parameters,
+            })
+        };
+        let int_of_int = of(&mut ast, int, Parameters::Prototype(vec![unnamed(int)]));
+        let int_of_also_int = of(
+            &mut ast,
+            also_int,
+            Parameters::Prototype(vec![unnamed(also_int)]),
+        );
+        let int_of_char = of(
+            &mut ast,
+            int,
+            Parameters::Prototype(vec![unnamed(character)]),
+        );
+        let char_of_int = of(
+            &mut ast,
+            character,
+            Parameters::Prototype(vec![unnamed(int)]),
+        );
+        let int_of_two_ints = of(
+            &mut ast,
+            int,
+            Parameters::Prototype(vec![unnamed(int), unnamed(int)]),
+        );
+        let int_of_void = of(&mut ast, int, Parameters::Prototype(Vec::new()));
+        let int_of_nothing_said = of(&mut ast, int, Parameters::Unspecified);
+        let also_int_of_nothing_said = of(&mut ast, also_int, Parameters::Unspecified);
+
+        for (left, right, same, what) in [
+            (int, also_int, true, "int against int"),
+            (int, character, false, "int against char"),
+            (
+                pointer_to_int,
+                also_pointer_to_int,
+                true,
+                "int * against int *",
+            ),
+            (
+                pointer_to_int,
+                pointer_to_char,
+                false,
+                "int * against char *",
+            ),
+            (
+                pointer_to_int,
+                pointer_to_pointer,
+                false,
+                "int * against int **",
+            ),
+            (pointer_to_int, int, false, "int * against int"),
+            // 6.7.6.2 p6 says these are different types and this cannot say so:
+            // the lengths are expressions nobody evaluates.
+            (two_ints, three_ints, true, "int[2] against int[3]"),
+            (two_ints, two_chars, false, "int[2] against char[2]"),
+            (
+                int_of_int,
+                int_of_also_int,
+                true,
+                "int (int) against int (int)",
+            ),
+            (
+                int_of_int,
+                int_of_char,
+                false,
+                "int (int) against int (char)",
+            ),
+            (
+                int_of_int,
+                char_of_int,
+                false,
+                "int (int) against char (int)",
+            ),
+            (
+                int_of_int,
+                int_of_two_ints,
+                false,
+                "int (int) against int (int, int)",
+            ),
+            (
+                int_of_void,
+                int_of_nothing_said,
+                false,
+                "int (void) against int ()",
+            ),
+            (
+                int_of_nothing_said,
+                also_int_of_nothing_said,
+                true,
+                "int () against int ()",
+            ),
+        ] {
+            assert_eq!(ast.same_type(left, right), same, "{what}");
+            assert_eq!(ast.same_type(right, left), same, "{what}, the other way");
+        }
+    }
 
     /// Every shape of type, and how C declares one of it.
     ///
