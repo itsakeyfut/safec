@@ -44,6 +44,13 @@ pub struct BindingId(u32);
 pub struct Binding {
     /// The span of the name, which is also how it is compared.
     pub name: Span,
+    /// The type the declarator derived for it.
+    ///
+    /// Carried here rather than looked up again, because the three places a
+    /// declaration lives reach their type three different ways and one of
+    /// them, a parameter, has no id to look anything up by. `types.rs` is what
+    /// reads this.
+    pub ty: TypeId,
 }
 
 /// What each use of a name refers to.
@@ -134,7 +141,7 @@ impl Resolver<'_> {
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
                 // name at the end of its declarator, which is before the body.
-                self.declare(function.name);
+                self.declare(function.name, function.ty);
 
                 self.scopes.push(Vec::new());
                 self.parameters(function.ty, diagnostics);
@@ -172,7 +179,7 @@ impl Resolver<'_> {
         self.scopes.pop();
 
         if let Some(name) = declaration.name {
-            self.declare(name);
+            self.declare(name, declaration.ty);
         }
     }
 
@@ -203,7 +210,7 @@ impl Resolver<'_> {
 
         for parameter in parameters {
             if let Some(name) = parameter.name {
-                self.declare(name);
+                self.declare(name, parameter.ty);
             }
         }
 
@@ -348,9 +355,9 @@ impl Resolver<'_> {
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
-    fn declare(&mut self, name: Span) {
+    fn declare(&mut self, name: Span, ty: TypeId) {
         let id = BindingId(self.resolution.bindings.len() as u32);
-        self.resolution.bindings.push(Binding { name });
+        self.resolution.bindings.push(Binding { name, ty });
         self.scopes
             .last_mut()
             .expect("the file scope is never popped")
