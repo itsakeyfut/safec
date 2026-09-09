@@ -52,8 +52,25 @@ impl Severity {
     }
 
     /// Whether a diagnostic at this severity means compilation has failed.
+    ///
+    /// A `match` rather than the comparison this type's ordering would allow,
+    /// so that a variant added anywhere is `error[E0004]` until somebody says
+    /// which side of the line it falls on. `self >= Self::Error` would answer
+    /// for a variant above `Error` correctly and answer silently, and a
+    /// severity that has to stop a compilation is not something to arrive with
+    /// nobody deciding what the exit code and the artifact owe it. It is also
+    /// unprovable: across these four variants it cannot be told from `==`.
+    ///
+    /// The ordering is still the definition and this is an implementation of
+    /// it, which is what `a_severity_at_or_above_error_fails_the_compilation`
+    /// holds these arms to. `EmitKind` in `driver.rs` answers the same question
+    /// the same way; RK-003 in the review knowledge bank records what it cost
+    /// to learn.
     pub fn is_error(self) -> bool {
-        matches!(self, Self::Error)
+        match self {
+            Self::Help | Self::Note | Self::Warning => false,
+            Self::Error => true,
+        }
     }
 }
 
@@ -478,12 +495,39 @@ mod tests {
         assert_eq!(warning_or_worse, [&Severity::Warning, &Severity::Error]);
     }
 
+    /// Named for the rule rather than for today's variants: "only an error"
+    /// would stop being true the day the enum gains the more serious variant
+    /// its own doc comment invites, which is the day this has to keep holding.
+    ///
+    /// The roster is written out rather than derived, which is RK-001's rule: a
+    /// test that walks a table and checks it against itself holds for whatever
+    /// the table happens to contain.
+    ///
+    /// The second assertion is not that trap. `is_error` and `Ord` are two
+    /// independent statements of which severities fail a build, and this says
+    /// they have to agree. It is there for one specific way of getting this
+    /// wrong: `error[E0004]` makes somebody write an arm for a new variant, and
+    /// the obvious next move is to add a row here that agrees with the arm they
+    /// wrote. `Fatal => false` and `(Fatal, false)` pass the first assertion
+    /// together and fail this one, because `Fatal >= Error`.
+    ///
+    /// Mutation: flip any arm of `is_error`, `Self::Warning => true` say. The
+    /// row for that severity fails, and so does the agreement.
     #[test]
-    fn only_an_error_fails_the_compilation() {
-        assert!(Severity::Error.is_error());
-        assert!(!Severity::Warning.is_error());
-        assert!(!Severity::Note.is_error());
-        assert!(!Severity::Help.is_error());
+    fn a_severity_at_or_above_error_fails_the_compilation() {
+        for (severity, fails_the_build) in [
+            (Severity::Help, false),
+            (Severity::Note, false),
+            (Severity::Warning, false),
+            (Severity::Error, true),
+        ] {
+            assert_eq!(severity.is_error(), fails_the_build, "{severity}");
+            assert_eq!(
+                severity.is_error(),
+                severity >= Severity::Error,
+                "{severity} answers differently from the order it is declared in"
+            );
+        }
     }
 
     /// These words appear in every diagnostic header, so editors and test
