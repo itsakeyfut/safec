@@ -89,9 +89,12 @@ where the lexer stopped, and this section exists so that stopping there is
 visible rather than inferred from a diagnostic.
 
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
-on purpose: it is what the scan does not do, so it also holds literal prefixes,
-which are a token's spelling rather than a program this compiler refuses. The
-overlap is the three above, and neither list is a copy of the other.
+on purpose rather than a copy of this one: it is what the *scan* does not do, so
+it also holds literal prefixes and non-ASCII identifiers, which are a token's
+spelling rather than a program this compiler refuses. Two of the three above are
+on it. `$` is not, and that is the distinction the paragraph before this one
+draws: declining to fill a blank C offers is not something the scan fails to
+do.
 
 ## Stage 4
 

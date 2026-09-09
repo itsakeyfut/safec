@@ -5,5 +5,5 @@ error[E0104]: preprocessor directives are not supported yet
    │ ┬  
    │ ╰── directive begins here
 ───╯
-  = note: `#include`, `#define`, `#ifdef` and `#ifndef` are the first that will be
+  = note: `#include`, `#define`, `#ifdef` and `#ifndef` come first
   = note: the line is one token and is not compiled

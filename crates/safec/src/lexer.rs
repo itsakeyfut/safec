@@ -332,9 +332,7 @@ impl<'a> Lexer<'a> {
                 // is both a number the reader does not have and one that stopped
                 // being the whole answer. These four are what `roadmap.md`
                 // promises first.
-                .with_note(
-                    "`#include`, `#define`, `#ifdef` and `#ifndef` are the first that will be",
-                )
+                .with_note("`#include`, `#define`, `#ifdef` and `#ifndef` come first")
                 .with_note("the line is one token and is not compiled"),
         );
         TokenKind::Directive
