@@ -96,6 +96,51 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
+## One problem, one diagnostic
+
+**An input the scan reported anything about is not parsed**, and one the parser
+gave up on has its names and types left alone. So one problem produces one
+diagnostic here where `clang` produces several:
+
+| Written | This compiler | `clang` |
+|---|---|---|
+| `int main(void) { int x = @; return x }` | `error[SC0103]` at the `@` | two syntax errors, and no lexical one |
+| `#define N 4` and a use of `N` | `error[SC0104]` at the directive | compiles it |
+
+Both were measured against the built compiler and against
+`clang 20.1.6 -std=c17 --target=x86_64-unknown-linux-gnu`. The first row is a
+whole program on purpose: the same statements at file scope are three errors
+rather than two, because `return` outside a function is a different mistake.
+
+`clang` has no lexical diagnostic for `@` at all. `-Xclang -dump-tokens` shows
+it handing the parser `unknown '@'` and letting the grammar refuse it, which is
+why both of its errors are syntax errors. This compiler reports the character
+where the scan met it, and stops.
+
+**The rule is "reported anything", not "could not read it whole",** and the
+difference is worth stating because the second is what a reader would guess.
+`char c = '';` is a complete token: nothing is lost, `SC0105` is reported, and
+the missing `;` after it is not. All five lexical codes are under the rule,
+`SC0101` to `SC0105`. The lexer knows which of its diagnostics dropped input
+and the driver does not, and nothing carries that distinction today; until
+something does, the wider rule is the one that cannot be wrong in the direction
+that matters.
+
+**What it costs is the rest of the file.** A stray character on line 500 means
+the syntax errors on lines 1 to 499 are not reported either, and a user fixes
+them one run at a time. `clang` recovers instead and says everything it can in
+one pass, which is the better answer for somebody working through a large file.
+
+**What it buys is that no stage speaks about a program an earlier one did not
+finish reading.** The parser's report on a token stream with a hole in it is a
+second diagnostic about the first one's problem, which is the first row above.
+Names and types were already held back for the same reason and by the same
+count, one stage later; what the parser's gate adds is that second diagnostic
+and the tree, which is why the second row prints nothing at all.
+
+The gate is per input, so `a.c` failing does not stop `b.c` being read.
+`driver.rs::compile` is the one place that decision lives.
+
 ## Stage 4
 
 Work toward broader C compatibility, potentially C11/C17.

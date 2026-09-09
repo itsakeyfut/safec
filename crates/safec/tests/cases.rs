@@ -44,7 +44,7 @@ cases! {
     a_dangling_else: ["--emit", "ast"],
     a_declaration_is_not_a_body: ["--emit", "ast"],
     a_failed_parse_reports_no_names: ["--emit", "ast"],
-    a_skipped_directive_reports_no_names: ["--emit", "ast"],
+    a_directive_stops_the_input_it_is_in: ["--emit", "ast"],
     a_tree_deeper_than_the_indent_shows: ["--emit", "ast"],
     abstract_function_parameter: ["--emit", "ast"],
     abstract_function_type_parameter: ["--emit", "ast"],
