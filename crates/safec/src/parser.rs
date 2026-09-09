@@ -1766,6 +1766,38 @@ int main(void) { return 0; }
         }
     }
 
+    /// A code is the stable handle, so each syntax code is pinned by its string
+    /// rather than by the constant that holds it. `docs/diagnostics.md` says
+    /// which range they come from and why a code outlives the wording beside
+    /// it. `lexer.rs` holds the same test over the lexical five.
+    ///
+    /// Mutation: change either `EXPECTED` or `TOO_DEEP`. This fails. Before it
+    /// existed, `TOO_DEEP` could be renumbered with the whole suite still
+    /// green: no corpus case nests deep enough to reach it, so the six that
+    /// carry `SC0201` were guarding one of the parser's two codes and nothing
+    /// was guarding the other.
+    #[test]
+    fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
+        let too_deep = format!(
+            "int main(void) {}{}\n",
+            "{".repeat(MAX_NESTING + 1),
+            "}".repeat(MAX_NESTING + 1)
+        );
+
+        for (source, code) in [("int x\n", "SC0201"), (too_deep.as_str(), "SC0202")] {
+            let parsed = parsed(source);
+            let reported = parsed
+                .diagnostics
+                .diagnostics()
+                .iter()
+                .filter_map(|diagnostic| diagnostic.code())
+                .map(|code| code.to_string())
+                .collect::<Vec<_>>();
+
+            assert_eq!(reported, [code], "{source:?}");
+        }
+    }
+
     /// A nested block is one node in the arena, not two.
     ///
     /// `compound` pushes the node and hands back its id, and `statement` passes

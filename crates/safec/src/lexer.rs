@@ -665,7 +665,10 @@ mod tests {
     /// A code is the stable handle. A message can be reworded whenever a better
     /// wording is found, and a `-A`/`-W` flag, a suppression comment and a
     /// user's notes all key on the code instead, so a code is assigned once and
-    /// never changes. Nothing else in the suite looks at one.
+    /// never changes. `docs/diagnostics.md` says which range each one comes
+    /// from. The corpus holds these five as well, inside the rendered line it
+    /// compares byte for byte; this is the only place that asserts the code by
+    /// itself.
     #[test]
     fn each_lexical_diagnostic_keeps_the_code_it_was_assigned() {
         for (text, code) in [
