@@ -1,0 +1,18 @@
+Function for_statement.c:1:1 "main" "int (void)"
+  Compound for_statement.c:1:16
+    Declaration for_statement.c:2:5 "i" "int"
+    For for_statement.c:3:5 init condition step
+      Assign for_statement.c:3:10 "="
+        Identifier for_statement.c:3:10 "i"
+        Number for_statement.c:3:14 "0"
+      Identifier for_statement.c:3:17 "i"
+      Assign for_statement.c:3:20 "="
+        Identifier for_statement.c:3:20 "i"
+        Binary for_statement.c:3:24 "+"
+          Identifier for_statement.c:3:24 "i"
+          Number for_statement.c:3:28 "1"
+      Compound for_statement.c:3:31
+        Expression for_statement.c:3:33
+          Identifier for_statement.c:3:33 "i"
+    Return for_statement.c:4:5
+      Number for_statement.c:4:12 "0"

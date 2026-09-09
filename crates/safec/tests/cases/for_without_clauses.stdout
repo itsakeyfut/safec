@@ -1,0 +1,6 @@
+Function for_without_clauses.c:1:1 "main" "int (void)"
+  Compound for_without_clauses.c:1:16
+    For for_without_clauses.c:2:5
+      Expression for_without_clauses.c:2:14
+    Return for_without_clauses.c:3:5
+      Number for_without_clauses.c:3:12 "0"

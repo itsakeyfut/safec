@@ -1,0 +1,10 @@
+Function for_with_only_an_initialiser.c:1:1 "main" "int (void)"
+  Compound for_with_only_an_initialiser.c:1:16
+    Declaration for_with_only_an_initialiser.c:2:5 "i" "int"
+    For for_with_only_an_initialiser.c:3:5 init
+      Assign for_with_only_an_initialiser.c:3:10 "="
+        Identifier for_with_only_an_initialiser.c:3:10 "i"
+        Number for_with_only_an_initialiser.c:3:14 "0"
+      Expression for_with_only_an_initialiser.c:3:19
+    Return for_with_only_an_initialiser.c:4:5
+      Number for_with_only_an_initialiser.c:4:12 "0"

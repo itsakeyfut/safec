@@ -1,0 +1,7 @@
+error[E0201]: expected an expression
+   ╭─[ a_declaration_is_not_a_body.c:2:12 ]
+   │
+ 2 │     if (1) int i;
+   │            ─┬─  
+   │             ╰─── this cannot begin one
+───╯

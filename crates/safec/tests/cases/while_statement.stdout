@@ -1,0 +1,17 @@
+Function while_statement.c:1:1 "main" "int (void)"
+  Compound while_statement.c:1:16
+    Declaration while_statement.c:2:5 "i" "int"
+    While while_statement.c:3:5
+      Identifier while_statement.c:3:12 "i"
+      Expression while_statement.c:3:15
+    While while_statement.c:4:5
+      Identifier while_statement.c:4:12 "i"
+      Compound while_statement.c:4:15
+        Expression while_statement.c:4:17
+          Assign while_statement.c:4:17 "="
+            Identifier while_statement.c:4:17 "i"
+            Binary while_statement.c:4:21 "-"
+              Identifier while_statement.c:4:21 "i"
+              Number while_statement.c:4:25 "1"
+    Return while_statement.c:5:5
+      Number while_statement.c:5:12 "0"
