@@ -1,0 +1,6 @@
+Function block_function_declaration.c:1:1 "main" "int (void)"
+  Compound block_function_declaration.c:1:16
+    Declaration block_function_declaration.c:1:18 "g" "int (int)"
+      Parameter block_function_declaration.c:1:24 "b" "int"
+    Return block_function_declaration.c:1:32
+      Number block_function_declaration.c:1:39 "0"

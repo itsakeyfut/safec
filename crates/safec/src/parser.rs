@@ -70,9 +70,11 @@ const TOO_DEEP: Code = Code::new("E0202");
 /// C17 5.2.4.1 asks an implementation to manage "127 nesting levels of blocks",
 /// "63 nesting levels of parenthesized expressions within a full expression"
 /// and "63 nesting levels of parenthesized declarators within a full
-/// declarator". This clears all three. It sets no minimum for a chain of unary
-/// or assignment operators, or for the number of declarator derivations, which
-/// is the room this takes; 6.7.6 p7 says the second of those may be limited.
+/// declarator" and "12 pointer, array, and function declarators (in any
+/// combinations) modifying an arithmetic, structure, union, or void type in a
+/// declaration". This clears all four. What it sets no minimum for is a chain
+/// of unary or assignment operators, which is the only room this takes beyond
+/// them.
 ///
 /// **This bounds the parser, not the tree.** A left-associative chain and a run
 /// of postfix operators are folded by a loop, so `a + a + ...` and `a++++` are
@@ -111,10 +113,12 @@ enum Derivation {
 
 /// The type a declaration specifier names, if this token is one.
 ///
-/// One place, asked twice: `compound` asks without consuming, to tell C17
-/// 6.8.2's two kinds of block-item apart, and `specifiers` asks and consumes.
-/// Two copies of the answer would let a keyword begin a declaration in one
-/// place and not the other, which is the shape RK-003 records the cost of.
+/// One place, asked from three. `specifiers` asks and consumes;
+/// `parenthesised_declarator` asks without consuming, to tell a parenthesised
+/// declarator from a parameter list; `compound` asks without consuming, to tell
+/// C17 6.8.2's two kinds of block-item apart. All three have to agree about
+/// what begins a declaration, and a second copy of the answer is what would let
+/// them stop agreeing, which is the shape RK-003 records the cost of.
 ///
 /// `docs/frontend.md` gives Stage 1 `int`, `char` and `void`. C's other
 /// specifiers, its qualifiers and its storage classes are later stages, and
@@ -396,11 +400,23 @@ impl Parser<'_> {
     /// The specifiers and one declarator, which is how a declaration and a
     /// definition both begin.
     fn declared(&mut self, diagnostics: &mut DiagnosticSink) -> Option<(Span, TypeId)> {
+        let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
         let (name, derivations) = self.declarator(true, diagnostics)?;
-        let ty = self.apply(base, derivations, diagnostics)?;
+        let ty = self.apply(start, base, derivations, diagnostics)?;
 
-        Some((name?, ty))
+        let Some(name) = name else {
+            // `declarator` was asked for a name and reports before it returns
+            // without one, so nothing reaches here today. It reports rather
+            // than falling silent because of what falling silent would cost: a
+            // `None` nobody spoke for leaves `failed` clear, so the run carries
+            // on and can reach the end of the file having put an error node in
+            // the artifact and exited zero.
+            self.report("expected a name", "a name is missing here", diagnostics);
+            return None;
+        };
+
+        Some((name, ty))
     }
 
     /// The declaration specifiers, of which this stage reads one.
@@ -561,7 +577,7 @@ impl Parser<'_> {
             let start = self.peek().span;
             let base = self.specifiers(diagnostics)?;
             let (name, derivations) = self.declarator(false, diagnostics)?;
-            let ty = self.apply(base, derivations, diagnostics)?;
+            let ty = self.apply(start, base, derivations, diagnostics)?;
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
             parameters.push(Declaration { name, ty, span });
@@ -578,7 +594,7 @@ impl Parser<'_> {
         // gives a different meaning, is answered above.
         if parameters.len() == 1
             && parameters[0].name.is_none()
-            && *self.ast.ty(parameters[0].ty) == Type::Void
+            && matches!(self.ast.ty(parameters[0].ty), Type::Void)
         {
             return Some(Parameters::Prototype(Vec::new()));
         }
@@ -607,12 +623,18 @@ impl Parser<'_> {
     /// within a full declarator".
     fn apply(
         &mut self,
+        start: Span,
         base: TypeId,
         derivations: Vec<Derivation>,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<TypeId> {
         if derivations.len() > MAX_NESTING {
-            self.report_as(
+            // At the declarator, not at whatever follows it. The count is only
+            // known once the whole declarator has been read, so reporting where
+            // the parser is standing would put the caret on the `;` after it,
+            // which is a byte with nothing wrong with it.
+            self.report_at(
+                start,
                 TOO_DEEP,
                 "nesting is too deep",
                 format!("this declarator derives more than {MAX_NESTING} types"),
@@ -1132,8 +1154,24 @@ impl Parser<'_> {
         label: impl Into<String>,
         diagnostics: &mut DiagnosticSink,
     ) -> Span {
-        let span = self.peek().span;
+        self.report_at(self.peek().span, code, message, label, diagnostics)
+    }
 
+    /// The same, at a span the caller names rather than at the token that is
+    /// there.
+    ///
+    /// For a report whose reason is only known once the thing it is about has
+    /// been read past. The parser is standing somewhere else by then, and a
+    /// caret on the token it happens to be standing on is a caret on innocent
+    /// code.
+    fn report_at(
+        &mut self,
+        span: Span,
+        code: Code,
+        message: impl Into<String>,
+        label: impl Into<String>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
         if !self.failed {
             self.failed = true;
             diagnostics.report(
@@ -1391,6 +1429,22 @@ int main(void) { return 0; }
             let reported = beyond.diagnostics.diagnostics();
             assert_eq!(reported.len(), 1, "{reported:?}");
             assert_eq!(reported[0].message(), "nesting is too deep");
+
+            // Inside the thing that is too deep, never after it. `deeper`
+            // reports where it stands, which is the token that opened the
+            // level; `apply` only knows the count once the whole declarator has
+            // been read, so it has to be handed where that declarator began.
+            // Reporting where the parser is standing by then puts the caret on
+            // the `;`, which is a byte with nothing wrong with it.
+            let [label] = reported[0].labels() else {
+                panic!("{:?}", reported[0].labels());
+            };
+            let source = beyond.sources.file(label.span().file());
+            assert!(
+                (label.span().end() as usize) < source.contents().trim_end().len(),
+                "the caret is on the last token of {:?}",
+                source.contents()
+            );
         }
     }
 

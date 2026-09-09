@@ -44,12 +44,20 @@ pub struct TypeId(u32);
 /// declarator: the two declarators differ only in where the parentheses are,
 /// while the types they derive are different in shape.
 ///
-/// What a type *means* is not here. Whether the length of an array is a
-/// constant expression, whether a parameter declared as an array is adjusted
-/// to a pointer (6.7.6.3 p7), and whether two declarations of one name agree
-/// (6.7.6.3 p15) are all semantic rules, and this stage records what was
-/// written.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// What a type *means* is not here. Whether the length of an array has an
+/// integer type (6.7.6.2 p1), whether a parameter declared as an array is
+/// adjusted to a pointer (6.7.6.3 p7), and whether two declarations of one
+/// name agree (6.7.6.3 p15) are all semantic rules, and this stage records
+/// what was written.
+///
+/// **Not comparable, on purpose.** Whether two types are the same is 6.7.6.3
+/// p15's question and it is not this one: a `Type` holds where its parameters
+/// were written and reaches the rest of itself through arena indices, so
+/// `int *p;` and `int *q;` would compare unequal while being the same type.
+/// Deriving `PartialEq` would make the natural way to ask that question
+/// compile and answer wrongly. Without it, asking is `error[E0369]`, and
+/// whoever writes the comparison writes it knowing what it has to ignore.
+#[derive(Clone, Debug)]
 pub enum Type {
     /// `int`.
     Int,
@@ -64,8 +72,9 @@ pub enum Type {
         /// What the array is of.
         element: TypeId,
         /// How many, or `None` for `[]`, which 6.7.6.2 p4 makes an incomplete
-        /// type. Not evaluated: whether it is a constant expression is a
-        /// constraint on it, per 6.7.6.2 p1, and constraints are checked later.
+        /// type. Not evaluated. 6.7.6.2 p1 asks that it have an integer type,
+        /// and that its value be greater than zero if it is a constant
+        /// expression at all; both are constraints and are checked later.
         length: Option<ExprId>,
     },
     /// C17 6.7.6.3 p5 derives "function returning T" from `D ( ... )`.
@@ -119,7 +128,9 @@ pub struct Declaration {
     pub name: Option<Span>,
     /// The type the declarator derived.
     pub ty: TypeId,
-    /// The specifiers through the declarator.
+    /// The specifiers through the declarator, and through the `;` as well for
+    /// a declaration that carries one. A parameter has no `;` and stops at its
+    /// declarator.
     pub span: Span,
 }
 
@@ -524,7 +535,7 @@ impl Item {
 /// because pushing needs `&mut self` and the borrow checker says so. That is
 /// `error[E0502]` rather than a rule somebody has to remember, and it is the
 /// half of ADR-0008 the compiler holds.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default)]
 pub struct Ast {
     exprs: Vec<Expr>,
     stmts: Vec<Stmt>,

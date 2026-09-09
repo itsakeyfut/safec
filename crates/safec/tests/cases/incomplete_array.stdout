@@ -1,0 +1,3 @@
+Declaration incomplete_array.c:1:1 "a" "int[]"
+Declaration incomplete_array.c:2:1 "f" "int (int[])"
+  Parameter incomplete_array.c:2:7 "b" "int[]"

@@ -316,7 +316,10 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
                 dump_expr(sources, ast, *id, depth + 1, out);
             }
         }
-        Stmt::Declaration(declaration) => dump_declaration(sources, ast, declaration, out),
+        Stmt::Declaration(declaration) => {
+            dump_declaration(sources, ast, declaration, out);
+            dump_parameters(sources, ast, declaration.ty, depth + 1, out);
+        }
         Stmt::Error { .. } => out.push('\n'),
     }
 }
@@ -345,12 +348,7 @@ fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             Type::Char => "char",
             Type::Void => "void",
             Type::Pointer(pointee) => {
-                // An array or a function derivation binds tighter than a
-                // pointer, so the `*` is parenthesised to say that this pointer
-                // is the outer one. That rule alone is what makes
-                // `int (*)(int)` and `int *(int)` different strings, and
-                // C17 6.7.6 p6 is where the binding it reflects is stated.
-                inner = if matches!(ast.ty(*pointee), Type::Array { .. } | Type::Function { .. }) {
+                inner = if binds_tighter_than_a_pointer(ast.ty(*pointee)) {
                     format!("(*{inner})")
                 } else {
                     format!("*{inner}")
@@ -361,8 +359,8 @@ fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             Type::Array { element, length } => {
                 // The length is the source's own bytes and is not evaluated, so
                 // `int a[1 + 2]` spells `int[1 + 2]` where `clang`, which does
-                // evaluate it, spells `int[3]`. Whether it is a constant
-                // expression is 6.7.6.2 p1's constraint and is checked later.
+                // evaluate it, spells `int[3]`. What 6.7.6.2 p1 asks of it is a
+                // constraint, and constraints are checked later.
                 let length = match length {
                     Some(length) => quoted(sources, ast.expr(*length).span()),
                     None => "",
@@ -389,6 +387,25 @@ fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
         } else {
             format!("{base} {inner}")
         };
+    }
+}
+
+/// Whether a derivation binds its operand more tightly than a pointer does.
+///
+/// An array and a function do, so a pointer to either is written with the `*`
+/// in parentheses to say that the pointer is the outer one. That rule alone is
+/// what makes `int (*)(int)` and `int *(int)` two different strings, and C17
+/// 6.7.6 p6 is where the binding it reflects is stated.
+///
+/// An exhaustive `match` and not a `matches!`, for the reason the emit gate
+/// above gives: a `matches!` answers `false` for a variant nobody has thought
+/// about, and the answer here is the one thing that tells two types apart in
+/// the artifact. `[*]`, which `parser.rs` already lists as a shape it does not
+/// read yet, is a variant this will have to answer for.
+fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
+    match ty {
+        Type::Array { .. } | Type::Function { .. } => true,
+        Type::Int | Type::Char | Type::Void | Type::Pointer(_) => false,
     }
 }
 
@@ -1312,8 +1329,6 @@ mod tests {
         assert_eq!(artifact.lines().count(), 8, "{artifact}");
     }
 
-    /// Each node is placed against the file its own span names.
-    ///
     /// Every shape of type, and how C declares one of it.
     ///
     /// The expected strings are written out rather than derived from the types,
@@ -1397,6 +1412,8 @@ mod tests {
         }
     }
 
+    /// Each node is placed against the file its own span names.
+    ///
     /// One tree holds spans from one file today, and will hold several the
     /// moment `#include` lands. Resolving them all against whichever file the
     /// driver's loop happens to be on prints one file's text at another file's

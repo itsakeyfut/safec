@@ -39,12 +39,15 @@ macro_rules! cases {
 // The table is written out rather than discovered by walking `cases/`.
 // See ADR-0007 for why, and for what it rejected.
 cases! {
-    add: ["--emit", "tokens"],
     abstract_function_parameter: ["--emit", "ast"],
+    abstract_function_type_parameter: ["--emit", "ast"],
+    add: ["--emit", "tokens"],
+    an_array_length_stops_at_a_comma: ["--emit", "ast"],
     array_declaration: ["--emit", "ast"],
     array_length_is_not_evaluated: ["--emit", "ast"],
     block_declaration: ["--emit", "ast"],
     block_declaration_without_a_semicolon: ["--emit", "ast"],
+    block_function_declaration: ["--emit", "ast"],
     call: ["--emit", "ast"],
     compound_assignment: ["--emit", "ast"],
     conditional: ["--emit", "ast"],
@@ -52,6 +55,7 @@ cases! {
     empty_parameter_list: ["--emit", "ast"],
     every_declarator_rule: ["--emit", "ast"],
     function_returning_pointer: ["--emit", "ast"],
+    incomplete_array: ["--emit", "ast"],
     increment: ["--emit", "ast"],
     missing_semicolon: ["--emit", "ast"],
     mvp_program: ["--emit", "ast"],
