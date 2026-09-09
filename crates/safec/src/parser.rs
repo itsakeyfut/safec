@@ -758,8 +758,196 @@ impl Parser<'_> {
             return self.ast.push_stmt(Stmt::Return { value, span });
         }
 
-        let span = self.report("expected a statement", "this cannot begin one", diagnostics);
-        self.ast.push_stmt(Stmt::Error { span })
+        if self.check(TokenKind::Keyword(Keyword::If)) {
+            return self.if_statement(start, diagnostics);
+        }
+
+        if self.check(TokenKind::Keyword(Keyword::While)) {
+            return self.while_statement(start, diagnostics);
+        }
+
+        if self.check(TokenKind::Keyword(Keyword::For)) {
+            return self.for_statement(start, diagnostics);
+        }
+
+        // What is left is C17 6.8.3's `expression_opt ;`, which is also where a
+        // token that begins nothing at all ends up. There is no test here for
+        // whether an expression can begin: asking would be a second copy of
+        // what `primary` already knows, and `primary` reports for itself.
+        // `clang` reaches the same place and says the same thing.
+        self.expression_statement(start, diagnostics)
+    }
+
+    /// `expression_opt ;`, C17 6.8.3 p1.
+    ///
+    /// The null statement is this with nothing in it. p3 calls it "a null
+    /// statement (consisting of just a semicolon)" and gives it no production,
+    /// so it gets no node of its own either.
+    fn expression_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let value = if self.check(TokenKind::Punct(Punct::Semicolon)) {
+            None
+        } else {
+            Some(self.expression(diagnostics))
+        };
+
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+
+        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        self.ast.push_stmt(Stmt::Expression { value, span })
+    }
+
+    /// `if ( expression ) statement`, with or without `else`. C17 6.8.4 p1.
+    ///
+    /// **The `else` binds inward, and that is not an accident.** 6.8.4.1 p3
+    /// says "an else is associated with the lexically nearest preceding if that
+    /// is allowed by the syntax", and taking the `else` here, in the innermost
+    /// `if` still being read, is what makes it so. A recursive descent gets the
+    /// rule for free; breaking it would take a flag telling the inner `if` to
+    /// leave the `else` alone.
+    fn if_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let Some(condition) = self.controlling(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        // Both substatements nest inside this one, so this takes a level. A
+        // chain of `else if` is a chain of these, because `else if` is not a
+        // construct in C: it is `else` followed by an `if` statement, so it
+        // takes one level per link and writes no bracket at all. See
+        // `MAX_NESTING`.
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let then = parser.statement(diagnostics);
+
+                let otherwise = if parser.eat(TokenKind::Keyword(Keyword::Else)) {
+                    Some(parser.statement(diagnostics))
+                } else {
+                    None
+                };
+
+                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                parser.ast.push_stmt(Stmt::If {
+                    condition,
+                    then,
+                    otherwise,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// `while ( expression ) statement`. C17 6.8.5 p1.
+    fn while_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let Some(condition) = self.controlling(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let body = parser.statement(diagnostics);
+                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                parser.ast.push_stmt(Stmt::While {
+                    condition,
+                    body,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// `for ( expression_opt ; expression_opt ; expression_opt ) statement`.
+    /// C17 6.8.5 p1.
+    ///
+    /// The other form the same paragraph gives, `for ( declaration
+    /// expression_opt ; expression_opt )`, needs an initializer and so needs
+    /// the issue that reads one. Until then `for (int i = 0; ...)` is refused.
+    fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let failed = |parser: &mut Self| parser.ast.push_stmt(Stmt::Error { span: start });
+
+        if self
+            .expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)
+            .is_none()
+        {
+            return failed(self);
+        }
+
+        let Some(initialiser) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics) else {
+            return failed(self);
+        };
+        let Some(condition) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics) else {
+            return failed(self);
+        };
+        let Some(step) = self.clause(TokenKind::Punct(Punct::RightParen), diagnostics) else {
+            return failed(self);
+        };
+
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let body = parser.statement(diagnostics);
+                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                parser.ast.push_stmt(Stmt::For {
+                    initialiser,
+                    condition,
+                    step,
+                    body,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// One of `for`'s three clauses, and the token that ends it.
+    ///
+    /// `Some(None)` is a clause that was left out, which 6.8.5 p1 allows for
+    /// all three. `None` is the closing token missing.
+    fn clause(
+        &mut self,
+        end: TokenKind,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Option<ExprId>> {
+        let clause = if self.check(end) {
+            None
+        } else {
+            Some(self.expression(diagnostics))
+        };
+
+        let what = if end == TokenKind::Punct(Punct::Semicolon) {
+            "`;`"
+        } else {
+            "`)`"
+        };
+        self.expect(end, what, diagnostics)?;
+
+        Some(clause)
+    }
+
+    /// The parenthesised expression `if` and `while` are controlled by.
+    ///
+    /// 6.8.4 p1 and 6.8.5 p1 both spell it `expression` and not
+    /// `assignment-expression`, so the comma operator is in it: `while (a, b)`
+    /// reads both and is controlled by the second.
+    fn controlling(&mut self, diagnostics: &mut DiagnosticSink) -> Option<ExprId> {
+        self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
+        let condition = self.expression(diagnostics);
+        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+
+        Some(condition)
     }
 
     /// The whole of C17 6.5, comma operator included.
@@ -1266,18 +1454,98 @@ mod tests {
         ));
     }
 
+    /// An `else` belongs to the nearest `if` it is allowed to belong to.
+    ///
+    /// C17 6.8.4.1 p3: "An else is associated with the lexically nearest
+    /// preceding if that is allowed by the syntax." So `if (a) if (b) x; else
+    /// y;` runs `y;` when `a` holds and `b` does not, and runs nothing at all
+    /// when `a` does not.
+    ///
+    /// Mutation, and it is not a typo: a recursive descent already binds
+    /// inward, so breaking this takes adding something. Give `if_statement` a
+    /// flag saying an enclosing `if` wants the `else`, pass it to the inner
+    /// `statement`, and have the inner `if` leave the `else` alone. This test
+    /// then finds the `else` on the outer one and fails.
+    #[test]
+    fn a_dangling_else_binds_to_the_nearest_if() {
+        let parsed = parsed("int main(void) { if (a) if (b) x; else y; }\n");
+
+        assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!()
+        };
+
+        // The outer `if` has no `else`, and the inner one has it.
+        let Stmt::If {
+            then,
+            otherwise: None,
+            ..
+        } = parsed.ast.stmt(body[0])
+        else {
+            panic!("{:?}", parsed.ast.stmt(body[0]));
+        };
+        assert!(matches!(
+            parsed.ast.stmt(*then),
+            Stmt::If {
+                otherwise: Some(_),
+                ..
+            }
+        ));
+    }
+
+    /// A null statement is an expression statement with no expression.
+    ///
+    /// C17 6.8.3 p1 gives one production, `expression_opt ;`, and p3 describes
+    /// the null statement as "consisting of just a semicolon" without giving it
+    /// one of its own. `clang` splits the two into `NullStmt` and `Stmt`; this
+    /// follows the grammar instead.
+    ///
+    /// Mutation: give the null statement a variant of its own, or read `;` as
+    /// an expression statement whose value is an `Expr::Error`. Either way the
+    /// first of these two stops matching `value: None`.
+    #[test]
+    fn a_null_statement_is_an_expression_statement_with_nothing_in_it() {
+        let parsed = parsed("int main(void) { ; i; }\n");
+
+        assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!()
+        };
+
+        assert!(matches!(
+            parsed.ast.stmt(body[0]),
+            Stmt::Expression { value: None, .. }
+        ));
+        assert!(matches!(
+            parsed.ast.stmt(body[1]),
+            Stmt::Expression { value: Some(_), .. }
+        ));
+    }
+
     /// One syntax error per file, however many the file has.
     ///
     /// Reporting the second would mean believing a position the parser has no
     /// reason to believe in, because nothing has recovered yet. The sibling
     /// issue that adds recovery is what makes a second report worth reading.
     ///
-    /// The input matters, and its first version did not. `0;` is not a
-    /// statement, and the brace after it is then not where the compound
+    /// The input matters, and its first version did not. `)` begins no
+    /// expression, and the brace after it is then not where the compound
     /// expects one, so two places reach for the right to report. A file that
     /// fails at its very first token passes this whichever way `report`
     /// behaves, because the loop in `run` has ended before anything else can
     /// speak: it guards the loop and calls it the report.
+    ///
+    /// It was `{ 0; }` until statements arrived, which is the shape to keep in
+    /// mind when picking a replacement: an input chosen because the parser
+    /// rejects it stops testing anything the day the parser accepts it.
     ///
     /// Two mutations, and each fails this on its own. Take the `failed` check
     /// out of `report` and the closing brace speaks as well as the statement.
@@ -1285,7 +1553,7 @@ mod tests {
     /// token until the budget runs out.
     #[test]
     fn only_the_first_syntax_error_is_reported() {
-        let parsed = parsed("int main(void) { 0; }\n");
+        let parsed = parsed("int main(void) { ) }\n");
 
         assert_eq!(
             parsed.diagnostics.diagnostics().len(),
@@ -1401,6 +1669,22 @@ int main(void) { return 0; }
         let prefixes =
             |levels: usize| format!("int main(void) {{ return {}0; }}\n", "!".repeat(levels));
 
+        // The three statements that hold a statement, nested through their
+        // bodies. One level each, on top of the function body's, and none of
+        // them writes a bracket per level: `else if` in particular is `else`
+        // followed by an `if` statement rather than a construct of its own, so
+        // a chain of them is a chain of nested `if`s.
+        let else_ifs = |levels: usize| {
+            format!(
+                "int main(void) {{ {}; }}\n",
+                "if (a) ; else ".repeat(levels)
+            )
+        };
+        let whiles =
+            |levels: usize| format!("int main(void) {{ {}; }}\n", "while (a) ".repeat(levels));
+        let fors =
+            |levels: usize| format!("int main(void) {{ {}; }}\n", "for (;;) ".repeat(levels));
+
         // A declarator at file scope, so nothing above it has taken a level.
         // The first of these two is bounded by `apply`, which counts the
         // derivations a declarator folds; the second by `deeper`, which counts
@@ -1414,6 +1698,9 @@ int main(void) { return 0; }
             (&parens, MAX_NESTING - 2),
             (&assignments, MAX_NESTING - 2),
             (&prefixes, MAX_NESTING - 2),
+            (&else_ifs, MAX_NESTING - 1),
+            (&whiles, MAX_NESTING - 1),
+            (&fors, MAX_NESTING - 1),
             (&derivations, MAX_NESTING),
             (&parenthesised, MAX_NESTING),
         ] {
@@ -1866,7 +2153,14 @@ int main(void) { return 0; }
             ("int main(void) { return 0 }\n", "expected `;`"),
             ("int main(void) { return; \n", "expected `}`"),
             ("int main(void) { return + ; }\n", "expected an expression"),
-            ("int main(void) { 0; }\n", "expected a statement"),
+            ("int main(void) { 0 }\n", "expected `;`"),
+            ("int main(void) { if x) ; }\n", "expected `(`"),
+            ("int main(void) { if (x ; }\n", "expected `)`"),
+            ("int main(void) { while x) ; }\n", "expected `(`"),
+            ("int main(void) { while (x ; }\n", "expected `)`"),
+            ("int main(void) { for ;;) ; }\n", "expected `(`"),
+            ("int main(void) { for (x x; ) ; }\n", "expected `;`"),
+            ("int main(void) { for (;; x ; }\n", "expected `)`"),
             ("int main(void) { return (a; }\n", "expected `)`"),
             ("int main(void) { return f(a; }\n", "expected `)`"),
             ("int main(void) { return a[i; }\n", "expected `]`"),
