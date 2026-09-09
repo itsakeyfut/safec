@@ -24,7 +24,7 @@
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 /// Where an expression is in [`Ast`].
 ///
@@ -760,10 +760,203 @@ impl Ast {
     }
 }
 
+/// A type, in the declarator notation C itself writes.
+///
+/// Here rather than in `driver.rs`, which is where it was written for
+/// `--emit ast`, because a diagnostic has to spell a type too and two spellers
+/// are two things to drift. The corpus pins what this prints, byte for byte,
+/// so moving it is guarded by tests that already exist.
+///
+/// `int *`, `int[10]`, `int (*)(int)`: the same spelling `clang` prints, so the
+/// two dumps can be diffed rather than read against one another. It diverges in
+/// one place, and deliberately: `clang` shows a parameter after the adjustments
+/// C17 6.7.6.3 p7 and p8 make, so it spells `int f(int [10])` as `int (int *)`,
+/// where this spells it `int (int[10])`. Those adjustments are semantic rules,
+/// and this stage records what was written.
+///
+/// The walk down the spine is a loop and not a recursion, so a type of ten
+/// thousand pointers costs no stack. Only a parameter list recurses, and how
+/// deeply one can nest is bounded by the parser. `Parser::apply` bounds the
+/// spine too, which is what every other walk of a type will rely on; the loop
+/// here means this one does not have to.
+pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
+    let mut id = id;
+    let mut inner = String::new();
+
+    loop {
+        let base = match ast.ty(id) {
+            Type::Int => "int",
+            Type::Char => "char",
+            Type::Void => "void",
+            Type::Pointer(pointee) => {
+                inner = if binds_tighter_than_a_pointer(ast.ty(*pointee)) {
+                    format!("(*{inner})")
+                } else {
+                    format!("*{inner}")
+                };
+                id = *pointee;
+                continue;
+            }
+            Type::Array { element, length } => {
+                // The length is the source's own bytes and is not evaluated, so
+                // `int a[1 + 2]` spells `int[1 + 2]` where `clang`, which does
+                // evaluate it, spells `int[3]`. What 6.7.6.2 p1 asks of it is a
+                // constraint, and constraints are checked later.
+                let length = match length {
+                    Some(length) => sources.snippet(ast.expr(*length).span()),
+                    None => "",
+                };
+                inner = format!("{inner}[{length}]");
+                id = *element;
+                continue;
+            }
+            Type::Function {
+                returns,
+                parameters,
+            } => {
+                inner = format!("{inner}({})", spell_parameters(sources, ast, parameters));
+                id = *returns;
+                continue;
+            }
+        };
+
+        // A space between the base and what follows, unless there is nothing
+        // to follow or it begins with `[`. That is the spacing `clang` prints:
+        // `int *`, `int (*)(int)`, and `int[10]` with no space at all.
+        return if inner.is_empty() || inner.starts_with('[') {
+            format!("{base}{inner}")
+        } else {
+            format!("{base} {inner}")
+        };
+    }
+}
+
+/// Whether a derivation binds its operand more tightly than a pointer does.
+///
+/// An array and a function do, so a pointer to either is written with the `*`
+/// in parentheses to say that the pointer is the outer one. That rule alone is
+/// what makes `int (*)(int)` and `int *(int)` two different strings, and C17
+/// 6.7.6 p6 is where the binding it reflects is stated.
+///
+/// An exhaustive `match` and not a `matches!`, for the reason the emit gate
+/// above gives: a `matches!` answers `false` for a variant nobody has thought
+/// about, and the answer here is the one thing that tells two types apart in
+/// the artifact. `[*]`, which `parser.rs` already lists as a shape it does not
+/// read yet, is a variant this will have to answer for.
+fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
+    match ty {
+        Type::Array { .. } | Type::Function { .. } => true,
+        Type::Int | Type::Char | Type::Void | Type::Pointer(_) => false,
+    }
+}
+
+/// What goes between a function type's parentheses.
+///
+/// `(void)` for a prototype that declared no parameters and `()` for an empty
+/// identifier list, because C17 6.7.6.3 gives the two spellings two meanings.
+fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> String {
+    let Parameters::Prototype(parameters) = parameters else {
+        return String::new();
+    };
+
+    if parameters.is_empty() {
+        return "void".to_owned();
+    }
+
+    parameters
+        .iter()
+        .map(|parameter| spell_type(sources, ast, parameter.ty))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::source::SourceMap;
+
+    /// Every shape of type, and how C declares one of it.
+    ///
+    /// The expected strings are written out rather than derived from the types,
+    /// for the reason RK-001 gives: a test that builds its expectation the way
+    /// the code does is comparing the code with itself. These were taken from
+    /// `clang -Xclang -ast-dump` on the same declarations, so they are what
+    /// another compiler prints and not what this one happens to.
+    ///
+    /// Mutation: drop the parentheses from the pointer arm of `spell_type`, or
+    /// change where the space goes. This fails.
+    #[test]
+    fn every_type_is_spelled_the_way_c_declares_it() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "10");
+        let mut ast = Ast::new();
+        let ten = ast.push_expr(Expr::Number {
+            span: Span::new(file, 0, 2),
+        });
+
+        let int = ast.push_type(Type::Int);
+        let void = ast.push_type(Type::Void);
+        let character = ast.push_type(Type::Char);
+        let pointer_to_int = ast.push_type(Type::Pointer(int));
+        let pointer_to_pointer = ast.push_type(Type::Pointer(pointer_to_int));
+        let pointer_to_char = ast.push_type(Type::Pointer(character));
+        let pointer_to_void = ast.push_type(Type::Pointer(void));
+        let array_of_int = ast.push_type(Type::Array {
+            element: int,
+            length: Some(ten),
+        });
+        let incomplete = ast.push_type(Type::Array {
+            element: int,
+            length: None,
+        });
+        let array_of_pointer = ast.push_type(Type::Array {
+            element: pointer_to_int,
+            length: Some(ten),
+        });
+        let pointer_to_array = ast.push_type(Type::Pointer(array_of_int));
+
+        let unnamed = |ty| Declaration {
+            name: None,
+            ty,
+            span: Span::new(file, 0, 2),
+        };
+        let takes_int = |returns| Type::Function {
+            returns,
+            parameters: Parameters::Prototype(vec![unnamed(int)]),
+        };
+        let returns_int = ast.push_type(takes_int(int));
+        let returns_pointer = ast.push_type(takes_int(pointer_to_int));
+        let pointer_to_function = ast.push_type(Type::Pointer(returns_int));
+        let takes_nothing = ast.push_type(Type::Function {
+            returns: int,
+            parameters: Parameters::Prototype(Vec::new()),
+        });
+        let unspecified = ast.push_type(Type::Function {
+            returns: int,
+            parameters: Parameters::Unspecified,
+        });
+
+        for (ty, spelling) in [
+            (int, "int"),
+            (character, "char"),
+            (void, "void"),
+            (pointer_to_int, "int *"),
+            (pointer_to_pointer, "int **"),
+            (pointer_to_void, "void *"),
+            (pointer_to_char, "char *"),
+            (array_of_int, "int[10]"),
+            (incomplete, "int[]"),
+            (array_of_pointer, "int *[10]"),
+            (pointer_to_array, "int (*)[10]"),
+            (returns_int, "int (int)"),
+            (returns_pointer, "int *(int)"),
+            (pointer_to_function, "int (*)(int)"),
+            (takes_nothing, "int (void)"),
+            (unspecified, "int ()"),
+        ] {
+            assert_eq!(spell_type(&sources, &ast, ty), spelling, "{ty:?}");
+        }
+    }
 
     /// A span in a file that exists, because `Span` cannot be built without a
     /// `FileId` and a `FileId` cannot be built without a file. What these tests
