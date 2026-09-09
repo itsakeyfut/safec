@@ -24,9 +24,17 @@
 //!
 //! # Not here yet
 //!
-//! Line splicing (a `\` before a newline), literal prefixes (`L"..."`, `u8'x'`)
-//! and non-ASCII identifiers. Each currently scans as something else and is
-//! reported or mis-grouped rather than silently accepted.
+//! Line splicing (a `\` before a newline), a universal character name in an
+//! identifier (`\u00e9`, which is ASCII and which 6.4.2.1 puts in
+//! `identifier-nondigit`), literal prefixes (`L"..."`, `u8'x'`), and non-ASCII
+//! identifiers. Each currently scans as something else and is reported or
+//! mis-grouped rather than silently accepted.
+//!
+//! `$` in an identifier is not on that list, because it is not something C
+//! requires: the same production ends in `other implementation-defined
+//! characters`, so admitting it is a blank an implementation may fill and
+//! `is_identifier_continue` leaves empty. `docs/frontend.md` says what that
+//! costs against `clang`, which fills it.
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::source::{FileId, SourceFile, Span};
@@ -318,7 +326,15 @@ impl<'a> Lexer<'a> {
                     Span::new(self.file, opening as u32, opening as u32 + 1),
                     "directive begins here",
                 ))
-                .with_note("the preprocessor arrives in stage 3")
+                // Which directives, rather than which stage. `docs/frontend.md`
+                // puts the preprocessor in its Stage 3 and `docs/roadmap.md`
+                // pulls four of them forward, so a stage number in a diagnostic
+                // is both a number the reader does not have and one that stopped
+                // being the whole answer. These four are what `roadmap.md`
+                // promises first.
+                .with_note(
+                    "`#include`, `#define`, `#ifdef` and `#ifndef` are the first that will be",
+                )
                 .with_note("the line is one token and is not compiled"),
         );
         TokenKind::Directive
