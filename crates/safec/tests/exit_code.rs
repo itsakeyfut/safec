@@ -224,6 +224,103 @@ fn the_deepest_nest_of_statements_does_not_end_the_process() {
     }
 }
 
+/// A tree far deeper than a format width is printed, rather than ending the
+/// process.
+///
+/// `dump_node` passed `depth * 2` to `write!` as a width, and a format width in
+/// Rust is a `u16`. Nothing bounds `depth`: a run of postfix operators is folded
+/// by a loop in the parser, so its tree is as deep as the run is long. At 32768
+/// the width overflowed and `write!` panicked, which `expect` never saw, for
+/// exit 101 with nothing on either stream and not one byte of the artifact that
+/// was asked for. `clang 20.1.6` parses the same file and reports an ordinary
+/// error, measured with `--target=x86_64-unknown-linux-gnu`, because its default
+/// target here is MSVC and RK-011 records why that matters.
+///
+/// Mutation: pass `depth * 2` as the format width again. The run exits 101 and
+/// this fails by name. `a_long_flat_expression_does_not_end_the_process` below
+/// cannot see it, which is why this is a second test rather than another row in
+/// that one: a thousand terms is three and a half orders of magnitude short of
+/// where a `u16` runs out.
+#[test]
+fn a_tree_deeper_than_a_format_width_does_not_end_the_process() {
+    let path = std::env::temp_dir().join("safec_exit_code_deep_subscript.c");
+    std::fs::write(
+        &path,
+        format!(
+            "int f(void) {{ int i; i = i{}; return 0; }}
+",
+            "[i]".repeat(40_000)
+        ),
+    )
+    .expect("the temporary directory is writable");
+
+    let output = safec(&[
+        "--color",
+        "never",
+        "--emit",
+        "ast",
+        &path.display().to_string(),
+    ]);
+    let _ = std::fs::remove_file(&path);
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{:?}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// The artifact grows with the source rather than with its square.
+///
+/// Two runs, the second's input twice the first's, so what is asserted is the
+/// growth rather than a size. That is the claim worth holding: a bound on one
+/// input is a number somebody tunes, and a ratio says which shape the cost has.
+/// Indenting every node by its own depth is `n` squared bytes, and 20 KB of
+/// generated C printed 51 MB of them before [`DEEPEST_INDENT`] existed.
+///
+/// The margin is wide on purpose. Doubling the input a little more than doubles
+/// the artifact, because a line number and a column gain digits as the file
+/// grows, so the honest bound is above two and nowhere near four.
+///
+/// Mutation: remove the cap, leaving the indent to grow with `depth`. The ratio
+/// goes to about four and this fails by name.
+#[test]
+fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
+    let dump = |terms: usize, name: &str| -> usize {
+        let path = std::env::temp_dir().join(name);
+        std::fs::write(
+            &path,
+            format!(
+                "int main(void) {{ if (a{}) return 1; return 0; }}
+",
+                " + a".repeat(terms)
+            ),
+        )
+        .expect("the temporary directory is writable");
+
+        let output = safec(&[
+            "--color",
+            "never",
+            "--emit",
+            "ast",
+            &path.display().to_string(),
+        ]);
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        output.stdout.len()
+    };
+
+    let small = dump(2_500, "safec_exit_code_growth_small.c");
+    let large = dump(5_000, "safec_exit_code_growth_large.c");
+
+    assert!(
+        large < small * 3,
+        "twice the source gave {large} bytes against {small}, which is not linear"
+    );
+}
+
 /// A long flat expression is read and printed, rather than ending the process.
 ///
 /// Not a corpus case, because the point is the exit code rather than the

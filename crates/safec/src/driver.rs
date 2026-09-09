@@ -230,7 +230,9 @@ impl Emitted {
 /// The tree, as a caller redirecting it would see.
 ///
 /// One node per line, two spaces of indent per level: the kind, where it is,
-/// and whatever that node alone carries.
+/// and whatever that node alone carries. Past [`DEEPEST_INDENT`] levels the
+/// indent stops growing and the line says how many it is short by, which is
+/// where the depth of a tree nothing bounds stops being a number of spaces.
 ///
 /// **No node identity.** `clang -Xclang -ast-dump` prints one and it is the
 /// node's address, so two runs of the same command on the same file disagree.
@@ -602,12 +604,6 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
     }
 }
 
-/// The part every line shares: indent, kind, and where it is.
-///
-/// Source text is written with `{:?}` by the callers that write any, for the
-/// reason RK-002 records: a `.c` file's own bytes reaching a stream are
-/// content, and one holding an escape sequence must not be able to clear the
-/// terminal of whoever compiled it.
 /// The source text a span covers, resolved against the file the span names.
 ///
 /// Not against whichever file the driver's loop is on. One tree holds spans
@@ -619,20 +615,50 @@ fn quoted(sources: &SourceMap, span: Span) -> &str {
     &sources.file(span.file()).contents()[span.range()]
 }
 
+/// How deep the artifact indents before it starts counting instead.
+///
+/// Past this a line carries `+N`, the levels the indent no longer shows, so a
+/// reader keeps the depth where the shape has run out. Two things make that
+/// the right answer rather than a compromise. A dump is read down its left
+/// edge, and nothing is read down a left edge a hundred levels out. And the
+/// indent is what made this artifact quadratic: `n` nodes each indented by `n`
+/// is `n` squared bytes, so 20 KB of the generated C that
+/// `a_long_flat_expression_does_not_end_the_process` describes printed 51 MB.
+///
+/// A cap on a display rather than a measurement. 32 levels of two spaces each
+/// is 64 columns, already more indentation than a dump is read at, and that is
+/// what picks the number; nothing about the language or the tree does. The two
+/// spaces are in `dump_node` below, so the two move together.
+const DEEPEST_INDENT: usize = 32;
+
+/// The part every line shares: indent, kind, and where it is.
+///
+/// Source text is written with `{:?}` by the callers that write any, for the
+/// reason RK-002 records: a `.c` file's own bytes reaching a stream are
+/// content, and one holding an escape sequence must not be able to clear the
+/// terminal of whoever compiled it.
+///
+/// **The indent is written rather than passed to `write!` as a width.** Rust's
+/// format width is a `u16` and `depth` is bounded by nothing: [`dump_expr`]
+/// says why, and the cost of not knowing it was that a tree 32768 levels deep
+/// panicked inside `write!`, before `expect` could see a `Result`, for exit 101
+/// with nothing on either stream. 32768 is where it starts: two spaces a level
+/// is a width of 65536, and 65535 is the largest a `u16` holds. The smallest
+/// `.c` file reaching it is 96 KB of `i[i][i]...`, 32764 subscripts, which
+/// `clang` parses.
 fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mut String) {
     let file = sources.file(span.file());
     let at = file.line_col(span.start());
-    write!(
-        out,
-        "{:indent$}{} {}:{}:{}",
-        "",
-        kind,
-        file.name(),
-        at.line,
-        at.column,
-        indent = depth * 2
-    )
-    .expect("writing to a string cannot fail");
+
+    for _ in 0..depth.min(DEEPEST_INDENT) {
+        out.push_str("  ");
+    }
+    if depth > DEEPEST_INDENT {
+        write!(out, "+{} ", depth - DEEPEST_INDENT).expect("writing to a string cannot fail");
+    }
+
+    write!(out, "{} {}:{}:{}", kind, file.name(), at.line, at.column)
+        .expect("writing to a string cannot fail");
 }
 
 /// One line per token: where it starts, what it is, and the text it covers.
