@@ -15,7 +15,7 @@ use std::io;
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::ast::{Ast, Expr, Item, Stmt};
+use crate::ast::{Ast, Expr, ExprId, Item, Stmt};
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::lexer::lex;
@@ -266,25 +266,112 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
         }
         Stmt::Return { value, .. } => {
             if let Some(id) = value {
-                dump_expr(sources, ast.expr(*id), depth + 1, out);
+                dump_expr(sources, ast, *id, depth + 1, out);
             }
         }
         Stmt::Error { .. } => {}
     }
 }
 
-fn dump_expr(sources: &SourceMap, expr: &Expr, depth: usize, out: &mut String) {
-    dump_node(sources, expr.name(), expr.span(), depth, out);
-    match expr {
-        Expr::Number { span } => {
-            write!(out, " {:?}", quoted(sources, *span)).expect("writing to a string cannot fail");
-            out.push('\n');
+/// One expression and everything under it.
+///
+/// **An explicit stack and not recursion.** The tree can be deeper than the
+/// parser ever went: `MAX_NESTING` bounds the parser's own recursion, and a
+/// left-associative chain (`a + a + ...`) and a run of postfix operators
+/// (`a++++`) are folded by a loop, so each adds a level to the tree without the
+/// parser calling itself once. A thousand of either is an ordinary generated
+/// line, and walking it recursively ended the process at around a thousand with
+/// no diagnostic and an exit code nothing here chose. Every later walk of this
+/// tree owes itself the same answer.
+///
+/// A node writes at most one quoted thing after its position: either the file's
+/// own text, or the operator this compiler spells. The two are not the same
+/// kind of thing. `Number` and `Identifier` echo the source, which is why
+/// RK-002 asks for the quoting; an operator comes from `BinOp::as_str` and is
+/// this compiler's own word, so `a  +  b` still prints `"+"`.
+fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &mut String) {
+    // Children are pushed in reverse, so that they come back off in the order
+    // they were written. What that makes is a pre-order walk, the same one the
+    // recursive version made.
+    let mut pending = vec![(root, depth)];
+
+    while let Some((id, depth)) = pending.pop() {
+        let expr = ast.expr(id);
+        dump_node(sources, expr.name(), expr.span(), depth, out);
+
+        match expr {
+            Expr::Number { span } | Expr::Identifier { span } => {
+                write!(out, " {:?}", quoted(sources, *span))
+                    .expect("writing to a string cannot fail");
+                out.push('\n');
+            }
+            Expr::Unary { op, operand, .. } => {
+                // `++` and `--` are the only operators C writes on either side,
+                // so they are the only ones that need saying which side this
+                // was.
+                if let Some(fixity) = op.fixity() {
+                    write!(out, " {fixity}").expect("writing to a string cannot fail");
+                }
+                write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
+                out.push('\n');
+                pending.push((*operand, depth + 1));
+            }
+            Expr::Binary { op, lhs, rhs, .. } => {
+                write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
+                out.push('\n');
+                pending.push((*rhs, depth + 1));
+                pending.push((*lhs, depth + 1));
+            }
+            Expr::Assign {
+                op, place, value, ..
+            } => {
+                // `+=` is `+` and `=`, built rather than tabulated: eleven more
+                // spellings in a second table is a second table to disagree
+                // with the first, which is what RK-003 records the cost of.
+                let spelling = match op {
+                    Some(op) => format!("{}=", op.as_str()),
+                    None => "=".to_owned(),
+                };
+                write!(out, " {spelling:?}").expect("writing to a string cannot fail");
+                out.push('\n');
+                pending.push((*value, depth + 1));
+                pending.push((*place, depth + 1));
+            }
+            Expr::Conditional {
+                condition,
+                then,
+                otherwise,
+                ..
+            } => {
+                out.push('\n');
+                pending.push((*otherwise, depth + 1));
+                pending.push((*then, depth + 1));
+                pending.push((*condition, depth + 1));
+            }
+            Expr::Call {
+                callee, arguments, ..
+            } => {
+                out.push('\n');
+                // The callee first, then the arguments. Nothing separates them,
+                // because a call always has exactly one callee and it is first.
+                for &argument in arguments.iter().rev() {
+                    pending.push((argument, depth + 1));
+                }
+                pending.push((*callee, depth + 1));
+            }
+            Expr::Subscript { base, index, .. } => {
+                out.push('\n');
+                pending.push((*index, depth + 1));
+                pending.push((*base, depth + 1));
+            }
+            Expr::Comma { lhs, rhs, .. } => {
+                write!(out, " {:?}", ",").expect("writing to a string cannot fail");
+                out.push('\n');
+                pending.push((*rhs, depth + 1));
+                pending.push((*lhs, depth + 1));
+            }
+            Expr::Error { .. } => out.push('\n'),
         }
-        // Not reachable through `--emit ast` today: an expression that could
-        // not be read sets the parser's `failed`, so the statement holding it
-        // becomes an error node and this one stays in the arena with no parent.
-        // The sibling issue that adds recovery is what brings it into a tree.
-        Expr::Error { .. } => out.push('\n'),
     }
 }
 

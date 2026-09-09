@@ -1,0 +1,9 @@
+Function precedence_assignment.c:1:1 "main"
+  Compound precedence_assignment.c:1:16
+    Return precedence_assignment.c:1:18
+      Assign precedence_assignment.c:1:25 "="
+        Conditional precedence_assignment.c:1:25
+          Identifier precedence_assignment.c:1:25 "a"
+          Identifier precedence_assignment.c:1:29 "b"
+          Identifier precedence_assignment.c:1:33 "c"
+        Identifier precedence_assignment.c:1:37 "d"

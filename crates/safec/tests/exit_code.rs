@@ -164,3 +164,49 @@ fn an_output_path_that_is_not_honoured_is_left_alone() {
     assert_eq!(output.status.code(), Some(1), "{output:?}");
     assert!(!written, "the compiler wrote to {}", path.display());
 }
+
+/// A long flat expression is read and printed, rather than ending the process.
+///
+/// Not a corpus case, because the point is the exit code rather than the
+/// artifact: the failure this guards is a stack overflow, which is not a panic
+/// anything can catch and gives a code nothing in `driver.rs` chose. The corpus
+/// harness turns that into "the compiler was killed by a signal", and the
+/// expected file would be a megabyte of indentation.
+///
+/// The shape matters and is not adversarial. `MAX_NESTING` bounds the parser's
+/// recursion, and neither of these two shapes recurses in the parser at all:
+/// the precedence climb folds a left-associative chain in a loop, and postfix
+/// operators are read in a loop, so each adds a level to the *tree* without
+/// adding one to the parser. `clang` compiles both. A thousand terms is what a
+/// generated `.c` file looks like.
+///
+/// Mutation: make `dump_expr` in `driver.rs` recurse into its children instead
+/// of pushing them onto its own stack. This fails, with exit 101 on the
+/// harness's own `unwrap` because the process was killed.
+#[test]
+fn a_long_flat_expression_does_not_end_the_process() {
+    for (name, tail) in [
+        ("safec_exit_code_chain.c", " + a".repeat(1000)),
+        ("safec_exit_code_postfix.c", "++".repeat(1000)),
+    ] {
+        let path = std::env::temp_dir().join(name);
+        std::fs::write(&path, format!("int main(void) {{ return a{tail}; }}\n"))
+            .expect("the temporary directory is writable");
+
+        let output = safec(&[
+            "--color",
+            "never",
+            "--emit",
+            "ast",
+            &path.display().to_string(),
+        ]);
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{name}: {:?}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

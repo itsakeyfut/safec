@@ -1,0 +1,8 @@
+Function increment.c:1:1 "main"
+  Compound increment.c:1:16
+    Return increment.c:1:18
+      Binary increment.c:1:25 "+"
+        Unary increment.c:1:25 prefix "++"
+          Identifier increment.c:1:27 "a"
+        Unary increment.c:1:31 postfix "--"
+          Identifier increment.c:1:31 "b"

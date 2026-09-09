@@ -3,11 +3,11 @@
 //! Nodes live in flat vectors and a child is an index rather than a pointer.
 //! See ADR-0008 for why, and for what it rejected.
 //!
-//! What is here is the subset [`docs/frontend.md`] calls Stage 1 minus almost
-//! all of it: a function with no parameters, a compound statement, `return`,
-//! and a numeric constant. The siblings of the issue that added it fill in
-//! expressions, control flow, declarators and structs, and each of them adds
-//! variants here rather than changing the shape.
+//! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: a
+//! function with no parameters, a compound statement, `return`, and the
+//! expressions of C17 6.5. The siblings of the issues that added those fill in
+//! control flow, declarators and structs, and each of them adds variants here
+//! rather than changing the shape.
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
@@ -25,6 +25,144 @@ pub struct StmtId(u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ItemId(u32);
 
+/// An operator with an operand on each side.
+///
+/// Its own type rather than the lexer's [`Punct`], which holds `;` and `{` as
+/// well: reusing that would make `Binary { op: Punct::Semicolon }` a value this
+/// type permits, and every phase after the parser would owe it an unreachable
+/// arm.
+///
+/// [`Punct`]: crate::token::Punct
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinOp {
+    /// `*`
+    Mul,
+    /// `/`
+    Div,
+    /// `%`
+    Rem,
+    /// `+`
+    Add,
+    /// `-`
+    Sub,
+    /// `<<`
+    Shl,
+    /// `>>`
+    Shr,
+    /// `<`
+    Lt,
+    /// `>`
+    Gt,
+    /// `<=`
+    Le,
+    /// `>=`
+    Ge,
+    /// `==`
+    Eq,
+    /// `!=`
+    Ne,
+    /// `&`
+    BitAnd,
+    /// `^`
+    BitXor,
+    /// `|`
+    BitOr,
+    /// `&&`
+    LogAnd,
+    /// `||`
+    LogOr,
+}
+
+/// An operator with one operand, on one side or the other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UnOp {
+    /// `+x`
+    Plus,
+    /// `-x`
+    Minus,
+    /// `!x`
+    Not,
+    /// `~x`
+    BitNot,
+    /// `*x`
+    Deref,
+    /// `&x`
+    AddrOf,
+    /// `++x`
+    PreInc,
+    /// `--x`
+    PreDec,
+    /// `x++`
+    PostInc,
+    /// `x--`
+    PostDec,
+}
+
+impl BinOp {
+    /// How C spells this operator.
+    ///
+    /// The same shape as `TokenKind::name` and [`Expr::name`], and for the same
+    /// reason: the artifact is an interface, so a spelling is decided in one
+    /// place rather than at each site that prints one.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Mul => "*",
+            Self::Div => "/",
+            Self::Rem => "%",
+            Self::Add => "+",
+            Self::Sub => "-",
+            Self::Shl => "<<",
+            Self::Shr => ">>",
+            Self::Lt => "<",
+            Self::Gt => ">",
+            Self::Le => "<=",
+            Self::Ge => ">=",
+            Self::Eq => "==",
+            Self::Ne => "!=",
+            Self::BitAnd => "&",
+            Self::BitXor => "^",
+            Self::BitOr => "|",
+            Self::LogAnd => "&&",
+            Self::LogOr => "||",
+        }
+    }
+}
+
+impl UnOp {
+    /// How C spells this operator.
+    ///
+    /// `++` and `--` each answer for two variants, because C spells the prefix
+    /// and the postfix form the same way. [`UnOp::fixity`] is what tells them
+    /// apart.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Plus => "+",
+            Self::Minus => "-",
+            Self::Not => "!",
+            Self::BitNot => "~",
+            Self::Deref => "*",
+            Self::AddrOf => "&",
+            Self::PreInc | Self::PostInc => "++",
+            Self::PreDec | Self::PostDec => "--",
+        }
+    }
+
+    /// The word that tells `++x` from `x++`, where there is one.
+    ///
+    /// `None` for every operator C writes on one side only, because a word that
+    /// never varies distinguishes nothing and would sit on every unary line.
+    /// `clang` writes the same two words for the same two operators.
+    pub fn fixity(self) -> Option<&'static str> {
+        match self {
+            Self::PreInc | Self::PreDec => Some("prefix"),
+            Self::PostInc | Self::PostDec => Some("postfix"),
+            Self::Plus | Self::Minus | Self::Not | Self::BitNot | Self::Deref | Self::AddrOf => {
+                None
+            }
+        }
+    }
+}
+
 /// An expression.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
@@ -35,6 +173,99 @@ pub enum Expr {
     /// is not that stage.
     Number {
         /// Where the constant is written.
+        span: Span,
+    },
+    /// An identifier standing for something. C17 6.5.1.
+    ///
+    /// `Identifier` and not `Name`, because `--emit tokens` already calls this
+    /// span an identifier and the two artifacts are read side by side. It is
+    /// also the word C17 6.5.1 and ADR-0006 both use for it.
+    ///
+    /// A span and not text, like [`Function::name`]: resolving one is the
+    /// printer's job and comparing two is the semantic analysis's.
+    Identifier {
+        /// Where the name is written.
+        span: Span,
+    },
+    /// One operand with an operator on one side of it. C17 6.5.3 and 6.5.2.
+    Unary {
+        /// Which operator, and which side it was written on.
+        op: UnOp,
+        /// What it applies to.
+        operand: ExprId,
+        /// The operator and the operand together.
+        span: Span,
+    },
+    /// Two operands with an operator between them. C17 6.5.5 to 6.5.14.
+    Binary {
+        /// Which operator.
+        op: BinOp,
+        /// The operand on the left.
+        lhs: ExprId,
+        /// The operand on the right.
+        rhs: ExprId,
+        /// Both operands and the operator.
+        span: Span,
+    },
+    /// An assignment. C17 6.5.16.
+    ///
+    /// Not a [`BinOp`]. C gives assignment a production of its own, and an
+    /// assignment writes to a place rather than making a value out of two.
+    /// `docs/roadmap.md` gives the Safety IR "values, places, operations" to
+    /// hold, so that is a distinction the lowering will have to make; how it
+    /// makes one is Phase 2's to decide and is not decided here. Folding this
+    /// into [`Expr::Binary`] is the reversal, and what it costs is the semantic
+    /// analysis and the lowering each taking it apart again.
+    Assign {
+        /// The operation folded in, or `None` for a plain `=`.
+        op: Option<BinOp>,
+        /// What is written to.
+        place: ExprId,
+        /// What is written.
+        value: ExprId,
+        /// The whole assignment.
+        span: Span,
+    },
+    /// `condition ? then : otherwise`. C17 6.5.15.
+    Conditional {
+        /// What is asked.
+        condition: ExprId,
+        /// What it is when that holds.
+        then: ExprId,
+        /// What it is when it does not.
+        otherwise: ExprId,
+        /// The whole conditional.
+        span: Span,
+    },
+    /// A call. C17 6.5.2.
+    Call {
+        /// What is called.
+        callee: ExprId,
+        /// What it is called with, in order.
+        arguments: Vec<ExprId>,
+        /// The callee through the closing parenthesis.
+        span: Span,
+    },
+    /// `base[index]`. C17 6.5.2.
+    Subscript {
+        /// What is indexed.
+        base: ExprId,
+        /// What indexes it.
+        index: ExprId,
+        /// The base through the closing bracket.
+        span: Span,
+    },
+    /// The comma operator. C17 6.5.17.
+    ///
+    /// Not what separates the arguments of a call: an argument is an
+    /// assignment-expression, so C's own grammar keeps the two apart and the
+    /// tree does not have to.
+    Comma {
+        /// What is evaluated and discarded.
+        lhs: ExprId,
+        /// What the whole expression is.
+        rhs: ExprId,
+        /// Both sides and the comma.
         span: Span,
     },
     /// An expression the parser could not read.
@@ -104,6 +335,14 @@ impl Expr {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Number { .. } => "Number",
+            Self::Identifier { .. } => "Identifier",
+            Self::Unary { .. } => "Unary",
+            Self::Binary { .. } => "Binary",
+            Self::Assign { .. } => "Assign",
+            Self::Conditional { .. } => "Conditional",
+            Self::Call { .. } => "Call",
+            Self::Subscript { .. } => "Subscript",
+            Self::Comma { .. } => "Comma",
             Self::Error { .. } => "Error",
         }
     }
@@ -111,7 +350,16 @@ impl Expr {
     /// Where this node is.
     pub fn span(&self) -> Span {
         match self {
-            Self::Number { span } | Self::Error { span } => *span,
+            Self::Number { span, .. }
+            | Self::Identifier { span, .. }
+            | Self::Unary { span, .. }
+            | Self::Binary { span, .. }
+            | Self::Assign { span, .. }
+            | Self::Conditional { span, .. }
+            | Self::Call { span, .. }
+            | Self::Subscript { span, .. }
+            | Self::Comma { span, .. }
+            | Self::Error { span, .. } => *span,
         }
     }
 }
@@ -240,8 +488,76 @@ mod tests {
     #[test]
     fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
         let s = span(0);
+        let e = ExprId(0);
 
         assert_eq!(Expr::Number { span: s }.name(), "Number");
+        assert_eq!(Expr::Identifier { span: s }.name(), "Identifier");
+        assert_eq!(
+            Expr::Unary {
+                op: UnOp::Not,
+                operand: e,
+                span: s
+            }
+            .name(),
+            "Unary"
+        );
+        assert_eq!(
+            Expr::Binary {
+                op: BinOp::Add,
+                lhs: e,
+                rhs: e,
+                span: s
+            }
+            .name(),
+            "Binary"
+        );
+        assert_eq!(
+            Expr::Assign {
+                op: None,
+                place: e,
+                value: e,
+                span: s
+            }
+            .name(),
+            "Assign"
+        );
+        assert_eq!(
+            Expr::Conditional {
+                condition: e,
+                then: e,
+                otherwise: e,
+                span: s
+            }
+            .name(),
+            "Conditional"
+        );
+        assert_eq!(
+            Expr::Call {
+                callee: e,
+                arguments: Vec::new(),
+                span: s
+            }
+            .name(),
+            "Call"
+        );
+        assert_eq!(
+            Expr::Subscript {
+                base: e,
+                index: e,
+                span: s
+            }
+            .name(),
+            "Subscript"
+        );
+        assert_eq!(
+            Expr::Comma {
+                lhs: e,
+                rhs: e,
+                span: s
+            }
+            .name(),
+            "Comma"
+        );
         assert_eq!(Expr::Error { span: s }.name(), "Error");
 
         assert_eq!(
@@ -272,6 +588,55 @@ mod tests {
             "Function"
         );
         assert_eq!(Item::Error { span: s }.name(), "Error");
+    }
+
+    /// Every operator, and how C spells it.
+    ///
+    /// Written out for the reason the test above is: a table checked against
+    /// itself proves nothing, and this one is read straight into an artifact a
+    /// corpus case compares byte for byte.
+    ///
+    /// Mutation: change any spelling. This fails.
+    #[test]
+    fn every_operator_is_spelled_the_way_c_spells_it() {
+        for (op, spelling) in [
+            (BinOp::Mul, "*"),
+            (BinOp::Div, "/"),
+            (BinOp::Rem, "%"),
+            (BinOp::Add, "+"),
+            (BinOp::Sub, "-"),
+            (BinOp::Shl, "<<"),
+            (BinOp::Shr, ">>"),
+            (BinOp::Lt, "<"),
+            (BinOp::Gt, ">"),
+            (BinOp::Le, "<="),
+            (BinOp::Ge, ">="),
+            (BinOp::Eq, "=="),
+            (BinOp::Ne, "!="),
+            (BinOp::BitAnd, "&"),
+            (BinOp::BitXor, "^"),
+            (BinOp::BitOr, "|"),
+            (BinOp::LogAnd, "&&"),
+            (BinOp::LogOr, "||"),
+        ] {
+            assert_eq!(op.as_str(), spelling, "{op:?}");
+        }
+
+        for (op, spelling, fixity) in [
+            (UnOp::Plus, "+", None),
+            (UnOp::Minus, "-", None),
+            (UnOp::Not, "!", None),
+            (UnOp::BitNot, "~", None),
+            (UnOp::Deref, "*", None),
+            (UnOp::AddrOf, "&", None),
+            (UnOp::PreInc, "++", Some("prefix")),
+            (UnOp::PreDec, "--", Some("prefix")),
+            (UnOp::PostInc, "++", Some("postfix")),
+            (UnOp::PostDec, "--", Some("postfix")),
+        ] {
+            assert_eq!(op.as_str(), spelling, "{op:?}");
+            assert_eq!(op.fixity(), fixity, "{op:?}");
+        }
     }
 
     /// An id still names its node after more nodes are added.

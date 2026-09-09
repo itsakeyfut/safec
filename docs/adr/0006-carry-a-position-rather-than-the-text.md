@@ -93,6 +93,13 @@ sake.
   `&SourceMap` is the signal to add an interner.** Not a measurement and not a
   size; the parser reaching for text is the point at which the derived form is
   being asked for often enough to be worth materialising.
+* Neutral, and worth stating because the tree has since arrived: the table this
+  record calls "parallel to the tokens" is keyed by span, not by token index.
+  `Expr::Identifier` in `crates/safec/src/ast.rs` carries a `Span`, and name
+  resolution walks the tree rather than the token stream, so an index into the
+  scan is not something it holds. `Span` derives `Hash` for that reason. The
+  shape the record fixes is unchanged; only what the key is was left open, and
+  the tree has answered it.
 
   The shape it takes then is decided here too, because it is what makes "later"
   cheap: interning is a pass *after* the scan, over `(&SourceMap, &[Token])`,

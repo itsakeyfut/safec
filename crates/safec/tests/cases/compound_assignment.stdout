@@ -1,0 +1,8 @@
+Function compound_assignment.c:1:1 "main"
+  Compound compound_assignment.c:1:16
+    Return compound_assignment.c:1:18
+      Assign compound_assignment.c:1:25 "+="
+        Identifier compound_assignment.c:1:25 "a"
+        Assign compound_assignment.c:1:30 "<<="
+          Identifier compound_assignment.c:1:30 "b"
+          Identifier compound_assignment.c:1:36 "c"

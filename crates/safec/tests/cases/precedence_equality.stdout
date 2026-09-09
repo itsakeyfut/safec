@@ -1,0 +1,8 @@
+Function precedence_equality.c:1:1 "main"
+  Compound precedence_equality.c:1:16
+    Return precedence_equality.c:1:18
+      Binary precedence_equality.c:1:25 "=="
+        Identifier precedence_equality.c:1:25 "a"
+        Binary precedence_equality.c:1:30 "<"
+          Identifier precedence_equality.c:1:30 "b"
+          Identifier precedence_equality.c:1:34 "c"

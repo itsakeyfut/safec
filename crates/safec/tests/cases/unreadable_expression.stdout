@@ -1,0 +1,6 @@
+Function unreadable_expression.c:1:1 "main"
+  Compound unreadable_expression.c:1:16
+    Return unreadable_expression.c:1:18
+      Binary unreadable_expression.c:1:25 "+"
+        Identifier unreadable_expression.c:1:25 "a"
+        Error unreadable_expression.c:1:29
