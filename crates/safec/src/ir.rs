@@ -396,7 +396,9 @@ pub struct Function {
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
     parameters: usize,
-    blocks: Vec<Block>,
+    /// In the order their ids were handed out. `None` is a block whose id
+    /// exists and whose contents do not yet.
+    blocks: Vec<Option<Block>>,
 }
 
 impl Function {
@@ -442,9 +444,35 @@ impl Function {
     /// the mistake ADR-0008 records for the tree's arenas and the same one
     /// here.
     pub fn push_block(&mut self, block: Block) -> BlockId {
-        let id = BlockId(self.blocks.len() as u32);
-        self.blocks.push(block);
+        let id = self.reserve_block();
+        self.fill_block(id, block);
         id
+    }
+
+    /// Hand back an id for a block that has not been built yet.
+    ///
+    /// A terminator names the block control goes to, so a graph with a cycle
+    /// cannot be built out of finished blocks alone: a `while` body names the
+    /// header it jumps back to, the header names the body, and one of the two
+    /// ids has to exist before its block does. The arms of an `if` need the
+    /// same thing for the block they join at.
+    pub fn reserve_block(&mut self) -> BlockId {
+        let id = BlockId(self.blocks.len() as u32);
+        self.blocks.push(None);
+        id
+    }
+
+    /// Put a block where a reserved id said one would go.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`Function`], or if `id` has already been
+    /// filled. Filling twice would drop a block that other blocks still name,
+    /// which is a graph that looks whole and is not.
+    pub fn fill_block(&mut self, id: BlockId, block: Block) {
+        let slot = &mut self.blocks[id.index()];
+        assert!(slot.is_none(), "block {} is already filled", id.index());
+        *slot = Some(block);
     }
 
     /// The type of the local `id` names.
@@ -465,14 +493,27 @@ impl Function {
     ///
     /// # Panics
     ///
-    /// If `id` came from a different [`Function`].
+    /// If `id` came from a different [`Function`], or if `id` was reserved and
+    /// never filled.
     pub fn block(&self, id: BlockId) -> &Block {
-        &self.blocks[id.index()]
+        self.blocks[id.index()]
+            .as_ref()
+            .unwrap_or_else(|| panic!("block {} was reserved and never filled", id.index()))
     }
 
-    /// Every block, in the order they were pushed.
-    pub fn blocks(&self) -> &[Block] {
-        &self.blocks
+    /// Every block, in the order their ids were handed out.
+    ///
+    /// # Panics
+    ///
+    /// If a block was reserved and never filled. A walk over a graph with a
+    /// hole in it would answer questions about a function nobody finished
+    /// building.
+    pub fn blocks(&self) -> impl ExactSizeIterator<Item = &Block> {
+        self.blocks.iter().enumerate().map(|(index, block)| {
+            block
+                .as_ref()
+                .unwrap_or_else(|| panic!("block {index} was reserved and never filled"))
+        })
     }
 }
 
@@ -619,8 +660,8 @@ mod tests {
         assert_eq!(add.local(LocalId(1)), int);
         assert_eq!(add.local(LocalId(2)), character);
 
-        let [block] = add.blocks() else {
-            panic!("{:?}", add.blocks());
+        let [block] = add.blocks().collect::<Vec<_>>()[..] else {
+            panic!("one block");
         };
         assert_eq!(block.terminator, Terminator::Return);
         assert_eq!(
@@ -893,5 +934,66 @@ mod tests {
         assert_ne!(element, Place::local(array));
         assert_eq!(taken.value, Rvalue::Address(element));
         assert_ne!(taken.value, negated.value);
+    }
+
+    /// A loop, which is a graph a finished block cannot be pushed into.
+    ///
+    /// The header names the body and the body names the header, so one of the
+    /// two ids exists before its block does. That is what `reserve_block` is
+    /// for, and without it the module could hold every straight-line function
+    /// and no `while` at all.
+    ///
+    /// Mutation: delete `reserve_block` and `fill_block`. This stops compiling,
+    /// and no ordering of the pushes brings it back. Mutation: have
+    /// `fill_block` push rather than write into the slot the id names. The back
+    /// edge lands on the wrong block and this fails.
+    #[test]
+    fn a_loop_is_built_by_reserving_the_block_it_jumps_back_to() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let counter = function.push_local(int);
+
+        let header = function.reserve_block();
+        let exit = function.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let body = function.push_block(Block {
+            operations: vec![Operation {
+                place: Place::local(counter),
+                value: Rvalue::Binary {
+                    op: BinOp::Sub,
+                    lhs: Operand::Copy(Place::local(counter)),
+                    rhs: Operand::Constant(1),
+                },
+                origin: Origin::Written(at),
+            }],
+            terminator: Terminator::Goto(header),
+        });
+        function.fill_block(
+            header,
+            Block {
+                operations: Vec::new(),
+                terminator: Terminator::Branch {
+                    condition: Operand::Copy(Place::local(counter)),
+                    then: body,
+                    otherwise: exit,
+                },
+            },
+        );
+
+        let mut successors = Vec::new();
+        function
+            .block(header)
+            .terminator
+            .successors(&mut successors);
+        assert_eq!(successors, [body, exit]);
+
+        successors.clear();
+        function.block(body).terminator.successors(&mut successors);
+        assert_eq!(successors, [header]);
+        assert_eq!(function.blocks().len(), 3);
     }
 }
