@@ -11,6 +11,8 @@
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
+use safec::parser::MAX_NESTING;
+
 /// Run the compiler the way a build system would.
 fn safec(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_safec"))
@@ -163,6 +165,63 @@ fn an_output_path_that_is_not_honoured_is_left_alone() {
 
     assert_eq!(output.status.code(), Some(1), "{output:?}");
     assert!(!written, "the compiler wrote to {}", path.display());
+}
+
+/// The deepest nest of statements the parser accepts is printed, rather than
+/// ending the process.
+///
+/// `dump_stmt` recurses where `dump_expr` deliberately does not, and the reason
+/// it is allowed to is a bound: every statement nesting is a parser recursion
+/// through `Parser::deeper`, so a tree that reaches the printer is at most
+/// `MAX_NESTING` statements deep. That is an argument about a number, and this
+/// is the number being run.
+///
+/// The depth is read from `MAX_NESTING` rather than written out, which is the
+/// difference between running the number and running a number that used to be
+/// it. A copy here would go on passing at 255 while the constant moved, and the
+/// claim this test makes is about the constant.
+///
+/// The two shapes are the ones that write no bracket per level: an `else if`
+/// chain is `else` followed by an `if` statement rather than a construct of its
+/// own, and a `while` whose body is another `while` reads as one line.
+///
+/// Mutation: raise `MAX_NESTING` in `parser.rs` far enough that the recursion
+/// outruns the stack, 200000 being ample. This fails, with the exit code of a
+/// process nothing in `driver.rs` chose. Which recursion dies first, the
+/// parser's or the printer's, is not the claim; that neither may be given more
+/// levels than it can hold is.
+#[test]
+fn the_deepest_nest_of_statements_does_not_end_the_process() {
+    for (name, body) in [
+        (
+            "safec_exit_code_whiles.c",
+            "while (a) ".repeat(MAX_NESTING - 1),
+        ),
+        (
+            "safec_exit_code_else_ifs.c",
+            "if (a) ; else ".repeat(MAX_NESTING - 1),
+        ),
+    ] {
+        let path = std::env::temp_dir().join(name);
+        std::fs::write(&path, format!("int main(void) {{ {body}; }}\n"))
+            .expect("the temporary directory is writable");
+
+        let output = safec(&[
+            "--color",
+            "never",
+            "--emit",
+            "ast",
+            &path.display().to_string(),
+        ]);
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{name}: {:?}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
 
 /// A long flat expression is read and printed, rather than ending the process.

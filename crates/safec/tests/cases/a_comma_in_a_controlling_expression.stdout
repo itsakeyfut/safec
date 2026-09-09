@@ -1,0 +1,34 @@
+Function a_comma_in_a_controlling_expression.c:1:1 "main" "int (void)"
+  Compound a_comma_in_a_controlling_expression.c:1:16
+    Declaration a_comma_in_a_controlling_expression.c:2:5 "i" "int"
+    Declaration a_comma_in_a_controlling_expression.c:3:5 "j" "int"
+    While a_comma_in_a_controlling_expression.c:4:5
+      Comma a_comma_in_a_controlling_expression.c:4:12 ","
+        Identifier a_comma_in_a_controlling_expression.c:4:12 "i"
+        Identifier a_comma_in_a_controlling_expression.c:4:15 "j"
+      Expression a_comma_in_a_controlling_expression.c:4:18
+    For a_comma_in_a_controlling_expression.c:5:5 init condition step
+      Comma a_comma_in_a_controlling_expression.c:5:10 ","
+        Assign a_comma_in_a_controlling_expression.c:5:10 "="
+          Identifier a_comma_in_a_controlling_expression.c:5:10 "i"
+          Number a_comma_in_a_controlling_expression.c:5:14 "0"
+        Assign a_comma_in_a_controlling_expression.c:5:17 "="
+          Identifier a_comma_in_a_controlling_expression.c:5:17 "j"
+          Number a_comma_in_a_controlling_expression.c:5:21 "0"
+      Comma a_comma_in_a_controlling_expression.c:5:24 ","
+        Identifier a_comma_in_a_controlling_expression.c:5:24 "i"
+        Identifier a_comma_in_a_controlling_expression.c:5:27 "j"
+      Comma a_comma_in_a_controlling_expression.c:5:30 ","
+        Assign a_comma_in_a_controlling_expression.c:5:30 "="
+          Identifier a_comma_in_a_controlling_expression.c:5:30 "i"
+          Binary a_comma_in_a_controlling_expression.c:5:34 "+"
+            Identifier a_comma_in_a_controlling_expression.c:5:34 "i"
+            Number a_comma_in_a_controlling_expression.c:5:38 "1"
+        Assign a_comma_in_a_controlling_expression.c:5:41 "="
+          Identifier a_comma_in_a_controlling_expression.c:5:41 "j"
+          Binary a_comma_in_a_controlling_expression.c:5:45 "+"
+            Identifier a_comma_in_a_controlling_expression.c:5:45 "j"
+            Number a_comma_in_a_controlling_expression.c:5:49 "1"
+      Expression a_comma_in_a_controlling_expression.c:5:52
+    Return a_comma_in_a_controlling_expression.c:6:5
+      Number a_comma_in_a_controlling_expression.c:6:12 "0"

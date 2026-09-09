@@ -1,0 +1,13 @@
+Function a_dangling_else.c:1:1 "main" "int (void)"
+  Compound a_dangling_else.c:1:16
+    Declaration a_dangling_else.c:2:5 "i" "int"
+    If a_dangling_else.c:3:5
+      Identifier a_dangling_else.c:3:9 "i"
+      If a_dangling_else.c:3:12 else
+        Identifier a_dangling_else.c:3:16 "i"
+        Return a_dangling_else.c:3:19
+          Number a_dangling_else.c:3:26 "1"
+        Return a_dangling_else.c:3:34
+          Number a_dangling_else.c:3:41 "2"
+    Return a_dangling_else.c:4:5
+      Number a_dangling_else.c:4:12 "0"

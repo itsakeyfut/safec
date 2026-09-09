@@ -1,0 +1,23 @@
+Function expression_statement.c:1:1 "main" "int (void)"
+  Compound expression_statement.c:1:16
+    Declaration expression_statement.c:2:5 "i" "int"
+    Declaration expression_statement.c:3:5 "j" "int"
+    Expression expression_statement.c:4:5
+      Identifier expression_statement.c:4:5 "i"
+    Expression expression_statement.c:5:5
+    Expression expression_statement.c:6:5
+      Assign expression_statement.c:6:5 "="
+        Identifier expression_statement.c:6:5 "i"
+        Binary expression_statement.c:6:9 "+"
+          Identifier expression_statement.c:6:9 "i"
+          Number expression_statement.c:6:13 "1"
+    Expression expression_statement.c:7:5
+      Comma expression_statement.c:7:5 ","
+        Assign expression_statement.c:7:5 "="
+          Identifier expression_statement.c:7:5 "i"
+          Number expression_statement.c:7:9 "0"
+        Assign expression_statement.c:7:12 "="
+          Identifier expression_statement.c:7:12 "j"
+          Number expression_statement.c:7:16 "0"
+    Return expression_statement.c:8:5
+      Number expression_statement.c:8:12 "0"

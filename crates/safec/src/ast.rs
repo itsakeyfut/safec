@@ -5,9 +5,19 @@
 //!
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
-//! expressions of 6.5, a compound statement and `return`. The siblings of the
-//! issues that added those fill in control flow and structs, and each of them
-//! adds variants here rather than changing the shape.
+//! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
+//! here is `switch`, `do`, `goto`, a labelled statement, `break`, `continue`, a
+//! declaration in a `for` initialiser, and structs. The siblings of the issues
+//! that added the rest fill those in, and each of them adds variants here
+//! rather than changing the shape.
+//!
+//! **A statement tree is bounded and an expression tree is not.** Every place a
+//! statement nests inside another is a recursion in the parser, which counts
+//! them, so a statement tree is at most `parser::MAX_NESTING` deep. An
+//! expression tree has no such bound: a left-associative chain and a run of
+//! postfix operators are folded by loops, so `a + a + ...` is as deep as it is
+//! long. Anything that walks this owes itself an answer to the second, and
+//! `driver.rs`'s `dump_expr` is what one looks like.
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
@@ -407,6 +417,66 @@ pub enum Stmt {
     /// the two share a list. `clang` does the same, wrapping one in a
     /// `DeclStmt`.
     Declaration(Declaration),
+    /// An expression evaluated for its effect. C17 6.8.3 p1: `expression_opt ;`.
+    ///
+    /// A null statement is this with nothing in it. C gives it no production of
+    /// its own: 6.8.3 p3 describes it as "consisting of just a semicolon", and
+    /// the `_opt` in the one production above is where it comes from. `clang`
+    /// splits the two into a `NullStmt` and an expression; the tree here
+    /// follows the grammar instead.
+    Expression {
+        /// What is evaluated, or `None` for a null statement.
+        value: Option<ExprId>,
+        /// The expression through the semicolon, or just the semicolon.
+        span: Span,
+    },
+    /// `if`, with or without an `else`. C17 6.8.4 p1.
+    ///
+    /// A substatement that failed without consuming anything can carry a span
+    /// outside this one: `if (1) }` ends here at the `)`, while the `Error` in
+    /// `then` points at the brace that broke it. So a walker may not assume a
+    /// child sits inside its parent, and a diagnostic underlining a whole
+    /// statement has to say which of the two it means. The same holds of
+    /// `While` and `For`.
+    If {
+        /// What is asked. 6.8.4.1 p1 makes it a constraint that this has scalar
+        /// type, which is a constraint and so a later phase's.
+        condition: ExprId,
+        /// What runs when it holds.
+        then: StmtId,
+        /// What runs when it does not, if anything was written.
+        otherwise: Option<StmtId>,
+        /// The keyword through the last substatement.
+        span: Span,
+    },
+    /// `while`. C17 6.8.5 p1.
+    While {
+        /// What is asked before each turn.
+        condition: ExprId,
+        /// What runs while it holds.
+        body: StmtId,
+        /// The keyword through the body.
+        span: Span,
+    },
+    /// `for`, in the form whose three clauses are expressions. C17 6.8.5 p1.
+    ///
+    /// The other form, `for ( declaration expression_opt ; expression_opt )`,
+    /// needs an initializer and so needs #43. These are three separate
+    /// `Option`s rather than something that could also hold a declaration,
+    /// because an interface with no caller is invented rather than designed and
+    /// widening this one later is additive.
+    For {
+        /// What runs once before the first turn.
+        initialiser: Option<ExprId>,
+        /// What is asked before each turn. Absent means it always holds.
+        condition: Option<ExprId>,
+        /// What runs after each turn.
+        step: Option<ExprId>,
+        /// What runs each turn.
+        body: StmtId,
+        /// The keyword through the body.
+        span: Span,
+    },
     /// A statement the parser could not read.
     Error {
         /// What it gave up on.
@@ -495,6 +565,10 @@ impl Stmt {
             Self::Compound { .. } => "Compound",
             Self::Return { .. } => "Return",
             Self::Declaration(_) => "Declaration",
+            Self::Expression { .. } => "Expression",
+            Self::If { .. } => "If",
+            Self::While { .. } => "While",
+            Self::For { .. } => "For",
             Self::Error { .. } => "Error",
         }
     }
@@ -502,7 +576,13 @@ impl Stmt {
     /// Where this node is.
     pub fn span(&self) -> Span {
         match self {
-            Self::Compound { span, .. } | Self::Return { span, .. } | Self::Error { span } => *span,
+            Self::Compound { span, .. }
+            | Self::Return { span, .. }
+            | Self::Expression { span, .. }
+            | Self::If { span, .. }
+            | Self::While { span, .. }
+            | Self::For { span, .. }
+            | Self::Error { span } => *span,
             Self::Declaration(declaration) => declaration.span,
         }
     }
@@ -630,6 +710,7 @@ mod tests {
     fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
         let s = span(0);
         let e = ExprId(0);
+        let t = StmtId(0);
 
         assert_eq!(Expr::Number { span: s }.name(), "Number");
         assert_eq!(Expr::Identifier { span: s }.name(), "Identifier");
@@ -716,6 +797,44 @@ mod tests {
             }
             .name(),
             "Return"
+        );
+        assert_eq!(
+            Stmt::Expression {
+                value: None,
+                span: s
+            }
+            .name(),
+            "Expression"
+        );
+        assert_eq!(
+            Stmt::If {
+                condition: e,
+                then: t,
+                otherwise: None,
+                span: s
+            }
+            .name(),
+            "If"
+        );
+        assert_eq!(
+            Stmt::While {
+                condition: e,
+                body: t,
+                span: s
+            }
+            .name(),
+            "While"
+        );
+        assert_eq!(
+            Stmt::For {
+                initialiser: None,
+                condition: None,
+                step: None,
+                body: t,
+                span: s
+            }
+            .name(),
+            "For"
         );
         assert_eq!(Stmt::Error { span: s }.name(), "Error");
 

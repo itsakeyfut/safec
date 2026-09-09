@@ -39,6 +39,9 @@ macro_rules! cases {
 // The table is written out rather than discovered by walking `cases/`.
 // See ADR-0007 for why, and for what it rejected.
 cases! {
+    a_comma_in_a_controlling_expression: ["--emit", "ast"],
+    a_dangling_else: ["--emit", "ast"],
+    a_declaration_is_not_a_body: ["--emit", "ast"],
     abstract_function_parameter: ["--emit", "ast"],
     abstract_function_type_parameter: ["--emit", "ast"],
     add: ["--emit", "tokens"],
@@ -54,7 +57,14 @@ cases! {
     empty_character_constant: ["--emit", "tokens"],
     empty_parameter_list: ["--emit", "ast"],
     every_declarator_rule: ["--emit", "ast"],
+    expression_statement: ["--emit", "ast"],
+    for_statement: ["--emit", "ast"],
+    for_with_only_a_condition: ["--emit", "ast"],
+    for_with_only_a_step: ["--emit", "ast"],
+    for_with_only_an_initialiser: ["--emit", "ast"],
+    for_without_clauses: ["--emit", "ast"],
     function_returning_pointer: ["--emit", "ast"],
+    if_statement: ["--emit", "ast"],
     incomplete_array: ["--emit", "ast"],
     increment: ["--emit", "ast"],
     missing_semicolon: ["--emit", "ast"],
@@ -89,6 +99,7 @@ cases! {
     unterminated_character_constant: ["--emit", "tokens"],
     unterminated_string_literal: ["--emit", "tokens"],
     void_is_not_the_only_parameter: ["--emit", "ast"],
+    while_statement: ["--emit", "ast"],
 }
 
 /// Everything in `cases/` belongs to a case the table names.

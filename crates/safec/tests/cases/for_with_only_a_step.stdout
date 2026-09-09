@@ -1,0 +1,12 @@
+Function for_with_only_a_step.c:1:1 "main" "int (void)"
+  Compound for_with_only_a_step.c:1:16
+    Declaration for_with_only_a_step.c:2:5 "i" "int"
+    For for_with_only_a_step.c:3:5 step
+      Assign for_with_only_a_step.c:3:13 "="
+        Identifier for_with_only_a_step.c:3:13 "i"
+        Binary for_with_only_a_step.c:3:17 "+"
+          Identifier for_with_only_a_step.c:3:17 "i"
+          Number for_with_only_a_step.c:3:21 "1"
+      Expression for_with_only_a_step.c:3:24
+    Return for_with_only_a_step.c:4:5
+      Number for_with_only_a_step.c:4:12 "0"

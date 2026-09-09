@@ -2,8 +2,11 @@
 //!
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
-//! operator, a compound statement and `return`. What it does not read yet is
-//! control flow, structs, member access, casts, `sizeof`, the type qualifiers,
+//! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
+//! `return`, an expression statement, `if`, `while` and the `for` whose clauses
+//! are expressions. What it does not read yet is `switch`, `do`, `goto`, a
+//! labelled statement, `break`, `continue`, a declaration in a `for`
+//! initialiser, structs, member access, casts, `sizeof`, the type qualifiers,
 //! the storage classes, `typedef`, a variadic function's ellipsis, `[static N]`
 //! and `[*]`, and the two primary expressions the lexer already hands it: a
 //! character constant and a string literal. Each arrives in a sibling of the
@@ -64,7 +67,7 @@ const TOO_DEEP: Code = Code::new("E0202");
 /// and so does `a = b = c`, because assignment is right-associative and its
 /// right side is read by re-entering the climb. Neither writes a bracket, and
 /// `clang` bounds neither. So every recursion in this file goes through
-/// [`Parser::deeper`], which is the one place this is counted, and the limit is
+/// `Parser::deeper`, which is the one place this is counted, and the limit is
 /// tighter than `clang`'s for shapes `clang` does not count at all.
 ///
 /// C17 5.2.4.1 asks an implementation to manage "127 nesting levels of blocks",
@@ -72,16 +75,31 @@ const TOO_DEEP: Code = Code::new("E0202");
 /// and "63 nesting levels of parenthesized declarators within a full
 /// declarator" and "12 pointer, array, and function declarators (in any
 /// combinations) modifying an arithmetic, structure, union, or void type in a
-/// declaration". This clears all four. What it sets no minimum for is a chain
-/// of unary or assignment operators, which is the only room this takes beyond
-/// them.
+/// declaration". One program holding all four at once is accepted: 127 nested
+/// blocks with 63 nested parentheses inside the innermost, which is what p1
+/// asks for when it says an implementation must translate "at least one
+/// program" containing an instance of every limit.
+///
+/// A selection or iteration statement takes a level too, and by C's own
+/// reckoning that is what a block count is. 6.8.4 p3: "A selection statement is
+/// a block whose scope is a strict subset of the scope of its enclosing block.
+/// Each associated substatement is also a block." 6.8.5 p5 says the same of an
+/// iteration statement and its body. So `for (;;) if (x) { }` is three blocks
+/// per level and this refuses it at 86, which is 258 blocks rather than 86 of
+/// anything. The counter and C agree; the shapes just do not look alike.
+///
+/// What 5.2.4.1 sets no minimum for is a chain of unary or assignment
+/// operators, which is the only room this takes beyond them.
 ///
 /// **This bounds the parser, not the tree.** A left-associative chain and a run
 /// of postfix operators are folded by a loop, so `a + a + ...` and `a++++` are
 /// as deep in the tree as they are long while `depth` never rises. Anything
 /// that walks the tree owes itself an answer to that; `dump_expr` in
 /// `driver.rs` uses an explicit stack, and says so.
-const MAX_NESTING: usize = 256;
+/// A test outside this crate reads it, because a process-level test of the
+/// deepest tree the printer can be handed is only honest if the depth it builds
+/// follows this number rather than restating it.
+pub const MAX_NESTING: usize = 256;
 
 /// The loosest binding there is: the comma operator, C17 6.5.17.
 ///
@@ -758,8 +776,203 @@ impl Parser<'_> {
             return self.ast.push_stmt(Stmt::Return { value, span });
         }
 
-        let span = self.report("expected a statement", "this cannot begin one", diagnostics);
-        self.ast.push_stmt(Stmt::Error { span })
+        if self.check(TokenKind::Keyword(Keyword::If)) {
+            return self.if_statement(start, diagnostics);
+        }
+
+        if self.check(TokenKind::Keyword(Keyword::While)) {
+            return self.while_statement(start, diagnostics);
+        }
+
+        if self.check(TokenKind::Keyword(Keyword::For)) {
+            return self.for_statement(start, diagnostics);
+        }
+
+        // What is left is C17 6.8.3's `expression_opt ;`, which is also where a
+        // token that begins nothing at all ends up. There is no test here for
+        // whether an expression can begin: asking would be a second copy of
+        // what `primary` already knows, and `primary` reports for itself.
+        // `clang` reaches the same place and says the same thing.
+        self.expression_statement(start, diagnostics)
+    }
+
+    /// `expression_opt ;`, C17 6.8.3 p1.
+    ///
+    /// The null statement is this with nothing in it. p3 calls it "a null
+    /// statement (consisting of just a semicolon)" and gives it no production,
+    /// so it gets no node of its own either.
+    ///
+    /// `expression` and not `assignment`, because 6.8.3 p1 spells it
+    /// `expression`, so `i = 0, j = 0;` is one statement. The same decision is
+    /// made in `controlling` and in `clause`, and all three are pinned: the
+    /// comma in `expression_statement.c` is what fails when this one is
+    /// narrowed, and `a_comma_in_a_controlling_expression.c` is what fails when
+    /// either of the others is.
+    fn expression_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let value = if self.check(TokenKind::Punct(Punct::Semicolon)) {
+            None
+        } else {
+            Some(self.expression(diagnostics))
+        };
+
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+
+        let span = start.to(self.previous().span);
+        self.ast.push_stmt(Stmt::Expression { value, span })
+    }
+
+    /// `if ( expression ) statement`, with or without `else`. C17 6.8.4 p1.
+    ///
+    /// **The `else` binds inward, and that is not an accident.** 6.8.4.1 p3
+    /// says "an else is associated with the lexically nearest preceding if that
+    /// is allowed by the syntax", and taking the `else` here, in the innermost
+    /// `if` still being read, is what makes it so. A recursive descent gets the
+    /// rule for free; breaking it would take a flag telling the inner `if` to
+    /// leave the `else` alone.
+    fn if_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let Some(condition) = self.controlling(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        // Both substatements nest inside this one, so this takes a level. A
+        // chain of `else if` is a chain of these, because `else if` is not a
+        // construct in C: it is `else` followed by an `if` statement, so it
+        // takes one level per link and writes no bracket at all. See
+        // `MAX_NESTING`.
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let then = parser.statement(diagnostics);
+
+                let otherwise = if parser.eat(TokenKind::Keyword(Keyword::Else)) {
+                    Some(parser.statement(diagnostics))
+                } else {
+                    None
+                };
+
+                let span = start.to(parser.previous().span);
+                parser.ast.push_stmt(Stmt::If {
+                    condition,
+                    then,
+                    otherwise,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// `while ( expression ) statement`. C17 6.8.5 p1.
+    fn while_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let Some(condition) = self.controlling(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let body = parser.statement(diagnostics);
+                let span = start.to(parser.previous().span);
+                parser.ast.push_stmt(Stmt::While {
+                    condition,
+                    body,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// `for ( expression_opt ; expression_opt ; expression_opt ) statement`.
+    /// C17 6.8.5 p1.
+    ///
+    /// The other form the same paragraph gives, `for ( declaration
+    /// expression_opt ; expression_opt )`, needs an initializer and so needs
+    /// #43. Until then `for (int i = 0; ...)` is refused, at the `int`.
+    fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
+        self.advance();
+
+        let failed = |parser: &mut Self| parser.ast.push_stmt(Stmt::Error { span: start });
+
+        if self
+            .expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)
+            .is_none()
+        {
+            return failed(self);
+        }
+
+        let Some(initialiser) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics) else {
+            return failed(self);
+        };
+        let Some(condition) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics) else {
+            return failed(self);
+        };
+        let Some(step) = self.clause(TokenKind::Punct(Punct::RightParen), diagnostics) else {
+            return failed(self);
+        };
+
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let body = parser.statement(diagnostics);
+                let span = start.to(parser.previous().span);
+                parser.ast.push_stmt(Stmt::For {
+                    initialiser,
+                    condition,
+                    step,
+                    body,
+                    span,
+                })
+            },
+            |parser, span| parser.ast.push_stmt(Stmt::Error { span }),
+        )
+    }
+
+    /// One of `for`'s three clauses, and the token that ends it.
+    ///
+    /// `Some(None)` is a clause that was left out, which 6.8.5 p1 allows for
+    /// all three. `None` is the closing token missing.
+    fn clause(
+        &mut self,
+        end: TokenKind,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Option<ExprId>> {
+        let clause = if self.check(end) {
+            None
+        } else {
+            Some(self.expression(diagnostics))
+        };
+
+        let what = if end == TokenKind::Punct(Punct::Semicolon) {
+            "`;`"
+        } else {
+            "`)`"
+        };
+        self.expect(end, what, diagnostics)?;
+
+        Some(clause)
+    }
+
+    /// The parenthesised expression `if` and `while` are controlled by.
+    ///
+    /// 6.8.4 p1 and 6.8.5 p1 both spell it `expression` and not
+    /// `assignment-expression`, so the comma operator is in it: `while (a, b)`
+    /// reads both and is controlled by the second.
+    fn controlling(&mut self, diagnostics: &mut DiagnosticSink) -> Option<ExprId> {
+        self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
+        let condition = self.expression(diagnostics);
+        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+
+        Some(condition)
     }
 
     /// The whole of C17 6.5, comma operator included.
@@ -1266,18 +1479,98 @@ mod tests {
         ));
     }
 
+    /// An `else` belongs to the nearest `if` it is allowed to belong to.
+    ///
+    /// C17 6.8.4.1 p3: "An else is associated with the lexically nearest
+    /// preceding if that is allowed by the syntax." So `if (a) if (b) x; else
+    /// y;` runs `y;` when `a` holds and `b` does not, and runs nothing at all
+    /// when `a` does not.
+    ///
+    /// Mutation, and it is not a typo: a recursive descent already binds
+    /// inward, so breaking this takes adding something. Give `if_statement` a
+    /// flag saying an enclosing `if` wants the `else`, pass it to the inner
+    /// `statement`, and have the inner `if` leave the `else` alone. This test
+    /// then finds the `else` on the outer one and fails.
+    #[test]
+    fn a_dangling_else_binds_to_the_nearest_if() {
+        let parsed = parsed("int main(void) { if (a) if (b) x; else y; }\n");
+
+        assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!()
+        };
+
+        // The outer `if` has no `else`, and the inner one has it.
+        let Stmt::If {
+            then,
+            otherwise: None,
+            ..
+        } = parsed.ast.stmt(body[0])
+        else {
+            panic!("{:?}", parsed.ast.stmt(body[0]));
+        };
+        assert!(matches!(
+            parsed.ast.stmt(*then),
+            Stmt::If {
+                otherwise: Some(_),
+                ..
+            }
+        ));
+    }
+
+    /// A null statement is an expression statement with no expression.
+    ///
+    /// C17 6.8.3 p1 gives one production, `expression_opt ;`, and p3 describes
+    /// the null statement as "consisting of just a semicolon" without giving it
+    /// one of its own. `Stmt::Expression`'s own comment says what `clang` does
+    /// with the same question and why this answers differently.
+    ///
+    /// Mutation: give the null statement a variant of its own, or read `;` as
+    /// an expression statement whose value is an `Expr::Error`. Either way the
+    /// first of these two stops matching `value: None`.
+    #[test]
+    fn a_null_statement_is_an_expression_statement_with_nothing_in_it() {
+        let parsed = parsed("int main(void) { ; i; }\n");
+
+        assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!()
+        };
+
+        assert!(matches!(
+            parsed.ast.stmt(body[0]),
+            Stmt::Expression { value: None, .. }
+        ));
+        assert!(matches!(
+            parsed.ast.stmt(body[1]),
+            Stmt::Expression { value: Some(_), .. }
+        ));
+    }
+
     /// One syntax error per file, however many the file has.
     ///
     /// Reporting the second would mean believing a position the parser has no
     /// reason to believe in, because nothing has recovered yet. The sibling
     /// issue that adds recovery is what makes a second report worth reading.
     ///
-    /// The input matters, and its first version did not. `0;` is not a
-    /// statement, and the brace after it is then not where the compound
+    /// The input matters, and its first version did not. `)` begins no
+    /// expression, and the brace after it is then not where the compound
     /// expects one, so two places reach for the right to report. A file that
     /// fails at its very first token passes this whichever way `report`
     /// behaves, because the loop in `run` has ended before anything else can
     /// speak: it guards the loop and calls it the report.
+    ///
+    /// It was `{ 0; }` until statements arrived, which is the shape to keep in
+    /// mind when picking a replacement: an input chosen because the parser
+    /// rejects it stops testing anything the day the parser accepts it.
     ///
     /// Two mutations, and each fails this on its own. Take the `failed` check
     /// out of `report` and the closing brace speaks as well as the statement.
@@ -1285,7 +1578,7 @@ mod tests {
     /// token until the budget runs out.
     #[test]
     fn only_the_first_syntax_error_is_reported() {
-        let parsed = parsed("int main(void) { 0; }\n");
+        let parsed = parsed("int main(void) { ) }\n");
 
         assert_eq!(
             parsed.diagnostics.diagnostics().len(),
@@ -1357,16 +1650,23 @@ int main(void) { return 0; }
 
     /// Nesting is bounded, and the bound is reported rather than met.
     ///
-    /// Four shapes, because four recursions can reach it and a bracket is only
-    /// one of them: nested blocks, nested parentheses, a chain of a
-    /// right-associative operator, which re-enters the climb once per operator,
-    /// and a chain of a prefix operator, which re-enters `unary`. The last two
-    /// write no bracket at all.
+    /// One shape per recursion that can reach the bound, because a bracket is
+    /// only one of them: nested blocks; nested parentheses; a chain of a
+    /// right-associative operator, which re-enters the climb once per operator;
+    /// a chain of a prefix operator, which re-enters `unary`; a chain of `else
+    /// if`, a nest of `while` and a nest of `for`, each of which recurses into
+    /// its substatement; and the two declarator shapes, one bounded by `apply`
+    /// and one by `deeper`. Only three of the nine write a bracket, which is
+    /// why the list is longer than it looks like it should be.
+    ///
+    /// The list is held to that: a recursion added without a row here is a
+    /// level nothing says is taken. Adding one is the whole of what `deeper`
+    /// asks of a new rule.
     ///
     /// Mutation: remove the `MAX_NESTING` check from `deeper`. This fails,
     /// because nothing is reported for the input past the limit. Taking the
-    /// `deeper` call out of `compound`, `infix_from` or `unary` fails it for
-    /// one shape each.
+    /// `deeper` call out of `compound`, `infix_from`, `unary`, `if_statement`,
+    /// `while_statement` or `for_statement` fails it for one shape each.
     ///
     /// That is not the failure the bound exists to prevent, and no test here
     /// can be. Without a bound the recursion runs to the end of the native
@@ -1401,6 +1701,22 @@ int main(void) { return 0; }
         let prefixes =
             |levels: usize| format!("int main(void) {{ return {}0; }}\n", "!".repeat(levels));
 
+        // The three statements that hold a statement, nested through their
+        // bodies. One level each, on top of the function body's, and none of
+        // them writes a bracket per level: `else if` in particular is `else`
+        // followed by an `if` statement rather than a construct of its own, so
+        // a chain of them is a chain of nested `if`s.
+        let else_ifs = |levels: usize| {
+            format!(
+                "int main(void) {{ {}; }}\n",
+                "if (a) ; else ".repeat(levels)
+            )
+        };
+        let whiles =
+            |levels: usize| format!("int main(void) {{ {}; }}\n", "while (a) ".repeat(levels));
+        let fors =
+            |levels: usize| format!("int main(void) {{ {}; }}\n", "for (;;) ".repeat(levels));
+
         // A declarator at file scope, so nothing above it has taken a level.
         // The first of these two is bounded by `apply`, which counts the
         // derivations a declarator folds; the second by `deeper`, which counts
@@ -1414,6 +1730,9 @@ int main(void) { return 0; }
             (&parens, MAX_NESTING - 2),
             (&assignments, MAX_NESTING - 2),
             (&prefixes, MAX_NESTING - 2),
+            (&else_ifs, MAX_NESTING - 1),
+            (&whiles, MAX_NESTING - 1),
+            (&fors, MAX_NESTING - 1),
             (&derivations, MAX_NESTING),
             (&parenthesised, MAX_NESTING),
         ] {
@@ -1500,6 +1819,38 @@ int main(void) { return 0; }
         };
         assert_eq!(&text[span.range()], "{ return 0; }");
         assert_eq!(&text[parsed.ast.stmt(body[0]).span().range()], "return 0;");
+    }
+
+    /// A statement that holds a statement reaches the end of the one it holds.
+    ///
+    /// The same claim as above, made separately because these four end
+    /// somewhere the one above cannot reach: not at a `;` this rule read for
+    /// itself, but wherever the substatement happened to stop. An `if` with an
+    /// `else` ends at the end of the `else`, and a `while` whose body is a
+    /// block ends at the block's brace.
+    ///
+    /// Mutation: end any of these four spans at `start` rather than at
+    /// `parser.previous().span.end()`. This fails, and nothing else in the
+    /// repository does: the artifact prints a start position only.
+    #[test]
+    fn a_statement_that_holds_a_statement_reaches_the_end_of_the_one_it_holds() {
+        let text = "int main(void) { if (a) b; else c; while (a) { b; } for (;;) b; d; }\n";
+        let parsed = parsed(text);
+
+        assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!("{:?}", parsed.ast.stmt(function.body));
+        };
+
+        let covers = |id| &text[parsed.ast.stmt(id).span().range()];
+        assert_eq!(covers(body[0]), "if (a) b; else c;");
+        assert_eq!(covers(body[1]), "while (a) { b; }");
+        assert_eq!(covers(body[2]), "for (;;) b;");
+        assert_eq!(covers(body[3]), "d;");
     }
 
     /// So does an expression built out of other expressions.
@@ -1866,7 +2217,14 @@ int main(void) { return 0; }
             ("int main(void) { return 0 }\n", "expected `;`"),
             ("int main(void) { return; \n", "expected `}`"),
             ("int main(void) { return + ; }\n", "expected an expression"),
-            ("int main(void) { 0; }\n", "expected a statement"),
+            ("int main(void) { 0 }\n", "expected `;`"),
+            ("int main(void) { if x) ; }\n", "expected `(`"),
+            ("int main(void) { if (x ; }\n", "expected `)`"),
+            ("int main(void) { while x) ; }\n", "expected `(`"),
+            ("int main(void) { while (x ; }\n", "expected `)`"),
+            ("int main(void) { for ;;) ; }\n", "expected `(`"),
+            ("int main(void) { for (x x; ) ; }\n", "expected `;`"),
+            ("int main(void) { for (;; x ; }\n", "expected `)`"),
             ("int main(void) { return (a; }\n", "expected `)`"),
             ("int main(void) { return f(a; }\n", "expected `)`"),
             ("int main(void) { return a[i; }\n", "expected `]`"),

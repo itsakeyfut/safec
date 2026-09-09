@@ -15,7 +15,7 @@ use std::io;
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::ast::{Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, Type, TypeId};
+use crate::ast::{Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId};
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::lexer::lex;
@@ -301,13 +301,30 @@ fn dump_parameters(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out
     }
 }
 
+/// One statement and everything under it.
+///
+/// A recursion, unlike `dump_expr`, and it can be one because every place a
+/// statement nests inside another is a recursion in the parser too, and
+/// `MAX_NESTING` bounds those. `dump_expr` needs its own stack because an
+/// expression tree does not have that property: two of its rules fold with a
+/// loop.
+///
+/// Which optional parts were written goes on the node's own line rather than
+/// into a child, because a child would be a line for something the source does
+/// not contain, and every line in this artifact carries a position. `clang`
+/// says `has_else` for the same reason. Without it `for (i;;) ;` and
+/// `for (;;i) ;` would be the same two lines.
 fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mut String) {
     dump_node(sources, stmt.name(), stmt.span(), depth, out);
+
+    let child =
+        |id: StmtId, out: &mut String| dump_stmt(sources, ast, ast.stmt(id), depth + 1, out);
+
     match stmt {
         Stmt::Compound { body, .. } => {
             out.push('\n');
             for &id in body {
-                dump_stmt(sources, ast, ast.stmt(id), depth + 1, out);
+                child(id, out);
             }
         }
         Stmt::Return { value, .. } => {
@@ -319,6 +336,60 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
         Stmt::Declaration(declaration) => {
             dump_declaration(sources, ast, declaration, out);
             dump_parameters(sources, ast, declaration.ty, depth + 1, out);
+        }
+        Stmt::Expression { value, .. } => {
+            out.push('\n');
+            if let Some(id) = value {
+                dump_expr(sources, ast, *id, depth + 1, out);
+            }
+        }
+        Stmt::If {
+            condition,
+            then,
+            otherwise,
+            ..
+        } => {
+            // Redundant here, where two children mean no `else` and three mean
+            // one, and not redundant on a `for`. One rule for both is worth
+            // more than the line it saves.
+            if otherwise.is_some() {
+                out.push_str(" else");
+            }
+            out.push('\n');
+            dump_expr(sources, ast, *condition, depth + 1, out);
+            child(*then, out);
+            if let Some(otherwise) = otherwise {
+                child(*otherwise, out);
+            }
+        }
+        Stmt::While {
+            condition, body, ..
+        } => {
+            out.push('\n');
+            dump_expr(sources, ast, *condition, depth + 1, out);
+            child(*body, out);
+        }
+        Stmt::For {
+            initialiser,
+            condition,
+            step,
+            body,
+            ..
+        } => {
+            for (clause, name) in [
+                (initialiser, "init"),
+                (condition, "condition"),
+                (step, "step"),
+            ] {
+                if clause.is_some() {
+                    write!(out, " {name}").expect("writing to a string cannot fail");
+                }
+            }
+            out.push('\n');
+            for clause in [initialiser, condition, step].into_iter().flatten() {
+                dump_expr(sources, ast, *clause, depth + 1, out);
+            }
+            child(*body, out);
         }
         Stmt::Error { .. } => out.push('\n'),
     }
