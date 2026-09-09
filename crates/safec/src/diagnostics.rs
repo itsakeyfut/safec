@@ -53,23 +53,35 @@ impl Severity {
 
     /// Whether a diagnostic at this severity means compilation has failed.
     ///
-    /// A `match` rather than the comparison this type's ordering would allow,
-    /// so that a variant added anywhere is `error[E0004]` until somebody says
-    /// which side of the line it falls on. `self >= Self::Error` would answer
-    /// for a variant above `Error` correctly and answer silently, and a
-    /// severity that has to stop a compilation is not something to arrive with
-    /// nobody deciding what the exit code and the artifact owe it. It is also
-    /// unprovable: across these four variants it cannot be told from `==`.
+    /// **The `match` is there to be read, and the comparison is the answer.**
+    /// Neither half works alone, and the two failures they prevent are
+    /// different ones.
     ///
-    /// The ordering is still the definition and this is an implementation of
-    /// it, which is what `a_severity_at_or_above_error_fails_the_compilation`
-    /// holds these arms to. `EmitKind` in `driver.rs` answers the same question
-    /// the same way; RK-003 in the review knowledge bank records what it cost
-    /// to learn.
+    /// Without the `match`, `self >= Self::Error` is right and silent. A
+    /// severity that stops a compilation where an error would let it continue
+    /// is not something to arrive with nobody deciding what the exit code owes
+    /// it, or whether the artifact should still be written. The `match` has no
+    /// wildcard, so adding a variant is `error[E0004]` here until somebody
+    /// looks. `EmitKind` in `driver.rs` is bounded the same way and for the
+    /// same reason; RK-003 in the review knowledge bank records what the
+    /// version spelled as a comparison alone cost.
+    ///
+    /// The obvious way to silence `E0004` is a wildcard, and that one is shut
+    /// too: with the arms replaced by `_` this is a match over a single
+    /// binding, `clippy::match_single_binding` fires, and the gate runs clippy
+    /// with `-D warnings`.
+    ///
+    /// Without the comparison, looking is not enough. `matches!(self,
+    /// Self::Error)` was what stood here, and an arm list would have replaced
+    /// one silence with another: `Self::Fatal => false` compiles, and nothing
+    /// downstream disagrees, because the tests walk a written-out roster and
+    /// nothing makes anybody add a row to it. That was measured rather than
+    /// imagined, on a branch where all 285 tests passed while `-o` printed a
+    /// fatal diagnostic, wrote nothing, and exited zero. Answering by the
+    /// ordering the variants are declared in leaves nothing to get wrong.
     pub fn is_error(self) -> bool {
         match self {
-            Self::Help | Self::Note | Self::Warning => false,
-            Self::Error => true,
+            Self::Help | Self::Note | Self::Warning | Self::Error => self >= Self::Error,
         }
     }
 }
@@ -499,20 +511,22 @@ mod tests {
     /// would stop being true the day the enum gains the more serious variant
     /// its own doc comment invites, which is the day this has to keep holding.
     ///
-    /// The roster is written out rather than derived, which is RK-001's rule: a
-    /// test that walks a table and checks it against itself holds for whatever
-    /// the table happens to contain.
+    /// The expected column is written out rather than computed, which is
+    /// RK-001's rule and matters more here than usual: `is_error` answers by
+    /// comparing against `Self::Error`, so a column that did the same would be
+    /// the function checked against itself and would hold whatever the function
+    /// said. These four answers are what the compiler is supposed to do, stated
+    /// independently of how it works it out.
     ///
-    /// The second assertion is not that trap. `is_error` and `Ord` are two
-    /// independent statements of which severities fail a build, and this says
-    /// they have to agree. It is there for one specific way of getting this
-    /// wrong: `error[E0004]` makes somebody write an arm for a new variant, and
-    /// the obvious next move is to add a row here that agrees with the arm they
-    /// wrote. `Fatal => false` and `(Fatal, false)` pass the first assertion
-    /// together and fail this one, because `Fatal >= Error`.
+    /// What this cannot do is cover a variant that does not exist yet. Nothing
+    /// makes anybody add a row, and `error[E0004]` points at `is_error` and at
+    /// `render.rs`, never here. That is why the answer in `is_error` is the
+    /// ordering rather than an arm: the row a new variant never gets is a row
+    /// nothing needed, because there is no arm to write wrongly.
     ///
-    /// Mutation: flip any arm of `is_error`, `Self::Warning => true` say. The
-    /// row for that severity fails, and so does the agreement.
+    /// Mutation: change `self >= Self::Error` to `self > Self::Error`, or to
+    /// `>= Self::Warning`. The row for `Error` fails on the first and the row
+    /// for `Warning` on the second, by name.
     #[test]
     fn a_severity_at_or_above_error_fails_the_compilation() {
         for (severity, fails_the_build) in [
@@ -522,11 +536,6 @@ mod tests {
             (Severity::Error, true),
         ] {
             assert_eq!(severity.is_error(), fails_the_build, "{severity}");
-            assert_eq!(
-                severity.is_error(),
-                severity >= Severity::Error,
-                "{severity} answers differently from the order it is declared in"
-            );
         }
     }
 
