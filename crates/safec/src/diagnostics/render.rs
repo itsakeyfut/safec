@@ -350,7 +350,7 @@ fn no_such_file(label: &Label) -> String {
 
 /// The header and the notes, for a diagnostic with nothing to point at.
 ///
-/// `ariadne` colours the whole of `error[E0301]:`, colon included, and this
+/// `ariadne` colours the whole of `error[SC0601]:`, colon included, and this
 /// matches it byte for byte rather than merely word for word. The two paths are
 /// one interface: a reader who asked for colour and got it on the diagnostics
 /// that point at source, but not on the ones that do not, would reasonably read
@@ -604,7 +604,7 @@ mod tests {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("main.c", "int *p = alloc();\nconsume(p);\n*p = 42;\n");
         let diagnostic = Diagnostic::error("use of moved value `p`")
-            .with_code(Code::new("E0301"))
+            .with_code(Code::new("SC0601"))
             .with_label(Label::secondary(Span::new(file, 5, 6), "move occurs here"))
             .with_label(Label::primary(Span::new(file, 30, 32), "value used here"))
             .with_note("`p` was moved into `consume`");
@@ -617,13 +617,13 @@ mod tests {
         let rendered = render(
             &sources,
             &Diagnostic::error("no input files")
-                .with_code(Code::new("E0001"))
+                .with_code(Code::new("SC0001"))
                 .with_note("pass at least one `.c` file"),
         );
 
         assert_eq!(
             rendered,
-            "error[E0001]: no input files\n  = note: pass at least one `.c` file\n"
+            "error[SC0001]: no input files\n  = note: pass at least one `.c` file\n"
         );
     }
 
@@ -653,12 +653,12 @@ mod tests {
             Severity::Note,
             Severity::Help,
         ] {
-            let bare = Diagnostic::new(severity, "m").with_code(Code::new("E0001"));
+            let bare = Diagnostic::new(severity, "m").with_code(Code::new("SC0001"));
             let anchored = bare
                 .clone()
                 .with_label(Label::primary(Span::new(file, 0, 3), "here"));
 
-            let expected = format!("{}[E0001]: m", severity.as_str());
+            let expected = format!("{}[SC0001]: m", severity.as_str());
             assert_eq!(first_line(&render(&sources, &bare)), expected);
             assert_eq!(first_line(&render(&sources, &anchored)), expected);
         }
@@ -688,7 +688,7 @@ mod tests {
         let (sources, diagnostic) = moved_value();
         let rendered = render(&sources, &diagnostic);
 
-        assert!(rendered.contains("error[E0301]"), "{rendered}");
+        assert!(rendered.contains("error[SC0601]"), "{rendered}");
         assert!(rendered.contains("use of moved value `p`"), "{rendered}");
         assert!(rendered.contains("<main.c>"), "{rendered}");
         assert!(rendered.contains("move occurs here"), "{rendered}");
@@ -1124,7 +1124,7 @@ mod tests {
     }
 
     /// The two paths are one interface, so the header has to match in colour as
-    /// well as in words. `ariadne` colours `error[E0001]:` including the colon,
+    /// well as in words. `ariadne` colours `error[SC0001]:` including the colon,
     /// and the hand-written path has to put the escapes in the same places.
     #[test]
     fn both_rendering_paths_colour_the_header_the_same_way() {
@@ -1137,7 +1137,7 @@ mod tests {
             Severity::Note,
             Severity::Help,
         ] {
-            let bare = Diagnostic::new(severity, "m").with_code(Code::new("E0001"));
+            let bare = Diagnostic::new(severity, "m").with_code(Code::new("SC0001"));
             let anchored = bare
                 .clone()
                 .with_label(Label::primary(Span::new(file, 0, 3), "here"));

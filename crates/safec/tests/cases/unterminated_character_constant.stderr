@@ -1,4 +1,4 @@
-error[E0102]: unterminated character constant
+error[SC0102]: unterminated character constant
    ╭─[ unterminated_character_constant.c:1:10 ]
    │
  1 │ char c = 'a

@@ -1,4 +1,4 @@
-error[E0105]: empty character constant
+error[SC0105]: empty character constant
    ╭─[ empty_character_constant.c:1:10 ]
    │
  1 │ char c = '';

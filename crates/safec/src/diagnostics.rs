@@ -114,7 +114,7 @@ pub enum Certainty {
     Unproven,
 }
 
-/// A stable identifier for a class of diagnostic, such as `E0301`.
+/// A stable identifier for a class of diagnostic, such as `SC0601`.
 ///
 /// Codes are how a user looks a diagnostic up and how a build script silences
 /// one, so they are part of the interface. A code is assigned once and never
@@ -126,8 +126,34 @@ impl Code {
     /// A diagnostic code.
     ///
     /// `const` so that a check can declare its codes as constants and have
-    /// them cost nothing at runtime.
+    /// them cost nothing at runtime, and so that the shape `docs/diagnostics.md`
+    /// allocates is held by the compiler rather than by whoever reviews the next
+    /// one. Every code in this crate is declared as a `const`, and a `const`
+    /// whose spelling is not `SC` and four digits stops the build with
+    /// `error[E0080]` at its own declaration.
+    ///
+    /// The check cannot say which range a code belongs in, because only a human
+    /// knows what a new diagnostic is about. It says that a code was not left
+    /// spelled the way another compiler spells one, which is the half of
+    /// [ADR-0009](https://github.com/itsakeyfut/safec/blob/main/docs/adr/0009-name-a-diagnostic-code-after-the-compiler-and-the-topic.md)
+    /// a machine can hold.
     pub const fn new(code: &'static str) -> Self {
+        let spelling = code.as_bytes();
+
+        assert!(
+            spelling.len() == 6 && spelling[0] == b'S' && spelling[1] == b'C',
+            "a diagnostic code is `SC` and four digits"
+        );
+
+        let mut digit = 2;
+        while digit < spelling.len() {
+            assert!(
+                spelling[digit].is_ascii_digit(),
+                "a diagnostic code is `SC` and four digits"
+            );
+            digit += 1;
+        }
+
         Self(code)
     }
 
@@ -202,7 +228,7 @@ impl Label {
 /// # let mut map = SourceMap::new();
 /// # let file = map.add_virtual("main.c", "int *p = 0;");
 /// let diagnostic = Diagnostic::error("use of freed value `p`")
-///     .with_code(Code::new("E0301"))
+///     .with_code(Code::new("SC0601"))
 ///     .with_label(Label::primary(Span::new(file, 5, 6), "used here"))
 ///     .with_note("`p` was freed above");
 /// ```
@@ -260,7 +286,7 @@ impl Diagnostic {
         }
     }
 
-    /// Attach a stable code, such as `E0301`.
+    /// Attach a stable code, such as `SC0601`.
     pub fn with_code(mut self, code: Code) -> Self {
         self.code = Some(code);
         self
@@ -549,16 +575,39 @@ mod tests {
         assert_eq!(Severity::Help.to_string(), "help");
     }
 
+    /// The shape `docs/diagnostics.md` allocates, held where a code is made.
+    ///
+    /// Every code in the crate is a `const`, so this fires during compilation
+    /// and the build stops at the declaration: `const C: Code =
+    /// Code::new("E0301");` is `error[E0080]`, which is the whole reason the
+    /// check is inside a `const fn`. That is what a test cannot demonstrate, so
+    /// this one reaches the same assertion the other way, through a call the
+    /// compiler cannot fold.
+    ///
+    /// Mutation: delete either `assert!`. The matching case below stops
+    /// panicking and the test fails.
+    #[test]
+    fn a_code_is_sc_and_four_digits_or_it_is_not_a_code() {
+        for refused in ["E0301", "SC030", "SC03011", "SC030a", "sc0301", "", "SC"] {
+            assert!(
+                std::panic::catch_unwind(|| Code::new(refused)).is_err(),
+                "{refused:?} was accepted"
+            );
+        }
+
+        assert_eq!(Code::new("SC0301").as_str(), "SC0301");
+    }
+
     #[test]
     fn a_diagnostic_carries_what_it_was_built_with() {
         let diagnostic = Diagnostic::error("use of freed value `p`")
-            .with_code(Code::new("E0301"))
+            .with_code(Code::new("SC0601"))
             .with_label(Label::secondary(span(0, 4), "freed here"))
             .with_label(Label::primary(span(10, 12), "used here"))
             .with_note("`p` was moved into `consume`");
 
         assert_eq!(diagnostic.severity(), Severity::Error);
-        assert_eq!(diagnostic.code().unwrap().as_str(), "E0301");
+        assert_eq!(diagnostic.code().unwrap().as_str(), "SC0601");
         assert_eq!(diagnostic.message(), "use of freed value `p`");
         assert_eq!(diagnostic.labels().len(), 2);
         assert_eq!(diagnostic.notes(), ["`p` was moved into `consume`"]);

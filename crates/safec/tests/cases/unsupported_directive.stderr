@@ -1,4 +1,4 @@
-error[E0104]: preprocessor directives are not supported yet
+error[SC0104]: preprocessor directives are not supported yet
    ╭─[ unsupported_directive.c:1:1 ]
    │
  1 │ #include <stdio.h>

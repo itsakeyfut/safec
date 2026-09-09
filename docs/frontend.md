@@ -66,9 +66,9 @@ Every line was measured against the built compiler and against
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
-| `int \u00e9 = 1;` | `error[E0103]` at the backslash | accepts | accepts |
-| `ma\` newline `in(void)` | `error[E0103]` at the backslash | accepts | accepts |
-| `int a$b = 1;` | `error[E0103]` at the `$` | accepts | `error: '$' in identifier` |
+| `int \u00e9 = 1;` | `error[SC0103]` at the backslash | accepts | accepts |
+| `ma\` newline `in(void)` | `error[SC0103]` at the backslash | accepts | accepts |
+| `int a$b = 1;` | `error[SC0103]` at the `$` | accepts | `error: '$' in identifier` |
 
 **The first two are C and are not implemented.** 6.4.2.1 puts
 `universal-character-name` in `identifier-nondigit`, so `\u00e9` is an

@@ -1,4 +1,4 @@
-error[E0201]: expected `;`
+error[SC0201]: expected `;`
    ╭─[ block_declaration_without_a_semicolon.c:1:24 ]
    │
  1 │ int main(void) { int x }

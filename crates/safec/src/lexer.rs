@@ -40,14 +40,14 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::source::{FileId, SourceFile, Span};
 use crate::token::{Keyword, Punct, Token, TokenKind};
 
-// Lexical diagnostics take `E01xx`. A code is assigned once and never reused,
-// so the ranges are set aside now rather than renumbered when the next stage
-// starts reporting.
-const UNTERMINATED_COMMENT: Code = Code::new("E0101");
-const UNTERMINATED_LITERAL: Code = Code::new("E0102");
-const UNEXPECTED_CHARACTERS: Code = Code::new("E0103");
-const UNSUPPORTED_DIRECTIVE: Code = Code::new("E0104");
-const EMPTY_LITERAL: Code = Code::new("E0105");
+// Lexical diagnostics take `SC01xx`, which `docs/diagnostics.md` allocates. A
+// code is assigned once and never reused, so a wording can be improved without
+// moving the handle a reader kept.
+const UNTERMINATED_COMMENT: Code = Code::new("SC0101");
+const UNTERMINATED_LITERAL: Code = Code::new("SC0102");
+const UNEXPECTED_CHARACTERS: Code = Code::new("SC0103");
+const UNSUPPORTED_DIRECTIVE: Code = Code::new("SC0104");
+const EMPTY_LITERAL: Code = Code::new("SC0105");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
@@ -663,17 +663,20 @@ mod tests {
     }
 
     /// A code is the stable handle. A message can be reworded whenever a better
-    /// wording is found, and a `-A`/`-W` flag, a suppression comment and a
+    /// wording is found, and a suppression flag, a suppression comment and a
     /// user's notes all key on the code instead, so a code is assigned once and
-    /// never changes. Nothing else in the suite looks at one.
+    /// never changes. `docs/diagnostics.md` says which range each one comes
+    /// from. The corpus holds these five as well, inside the rendered line it
+    /// compares byte for byte; this is the only place that asserts the code by
+    /// itself.
     #[test]
     fn each_lexical_diagnostic_keeps_the_code_it_was_assigned() {
         for (text, code) in [
-            ("/* on and on", "E0101"),
-            ("s = \"oops;\n", "E0102"),
-            ("int x = @;\n", "E0103"),
-            ("#define X 1\n", "E0104"),
-            ("c = '';\n", "E0105"),
+            ("/* on and on", "SC0101"),
+            ("s = \"oops;\n", "SC0102"),
+            ("int x = @;\n", "SC0103"),
+            ("#define X 1\n", "SC0104"),
+            ("c = '';\n", "SC0105"),
         ] {
             let scan = scan(text);
             let reported = scan
