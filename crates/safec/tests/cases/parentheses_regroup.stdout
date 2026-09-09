@@ -1,8 +1,11 @@
 Function parentheses_regroup.c:1:1 "main" "int (void)"
   Compound parentheses_regroup.c:1:16
-    Return parentheses_regroup.c:1:18
-      Binary parentheses_regroup.c:1:26 "*"
-        Binary parentheses_regroup.c:1:26 "+"
-          Identifier parentheses_regroup.c:1:26 "a"
-          Identifier parentheses_regroup.c:1:30 "b"
-        Identifier parentheses_regroup.c:1:35 "c"
+    Declaration parentheses_regroup.c:1:18 "a" "int"
+    Declaration parentheses_regroup.c:1:25 "b" "int"
+    Declaration parentheses_regroup.c:1:32 "c" "int"
+    Return parentheses_regroup.c:1:39
+      Binary parentheses_regroup.c:1:47 "*"
+        Binary parentheses_regroup.c:1:47 "+"
+          Identifier parentheses_regroup.c:1:47 "a"
+          Identifier parentheses_regroup.c:1:51 "b"
+        Identifier parentheses_regroup.c:1:56 "c"

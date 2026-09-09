@@ -13,5 +13,6 @@ pub mod lexer;
 pub mod options;
 pub mod parser;
 pub mod safety;
+pub mod sema;
 pub mod source;
 pub mod token;

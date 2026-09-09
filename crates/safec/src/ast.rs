@@ -27,7 +27,12 @@
 use crate::source::Span;
 
 /// Where an expression is in [`Ast`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// `Hash` because a side table keyed by id is what ADR-0008 exists to make
+/// possible, and `sema.rs` is the first caller: it records which declaration
+/// each identifier expression refers to. The other three ids have no such
+/// caller yet and do not derive it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ExprId(u32);
 
 /// Where a statement is in [`Ast`].
@@ -741,6 +746,17 @@ impl Ast {
     /// Every top-level item, in the order they were written.
     pub fn items(&self) -> &[Item] {
         &self.items
+    }
+
+    /// Every expression id, in the order the nodes were pushed.
+    ///
+    /// The half of ADR-0008 that was left for its first caller: a pass that
+    /// wants to say something about every expression needs to be able to name
+    /// them all, and until now nothing did. Reaching a node from the roots
+    /// finds the same ones, since nothing pushes a node it does not attach,
+    /// but only if the walker knows every place a child can hang.
+    pub fn expr_ids(&self) -> impl Iterator<Item = ExprId> + use<> {
+        (0..self.exprs.len() as u32).map(ExprId)
     }
 }
 

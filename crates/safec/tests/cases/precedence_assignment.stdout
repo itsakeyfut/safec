@@ -1,9 +1,13 @@
 Function precedence_assignment.c:1:1 "main" "int (void)"
   Compound precedence_assignment.c:1:16
-    Return precedence_assignment.c:1:18
-      Assign precedence_assignment.c:1:25 "="
-        Conditional precedence_assignment.c:1:25
-          Identifier precedence_assignment.c:1:25 "a"
-          Identifier precedence_assignment.c:1:29 "b"
-          Identifier precedence_assignment.c:1:33 "c"
-        Identifier precedence_assignment.c:1:37 "d"
+    Declaration precedence_assignment.c:1:18 "a" "int"
+    Declaration precedence_assignment.c:1:25 "b" "int"
+    Declaration precedence_assignment.c:1:32 "c" "int"
+    Declaration precedence_assignment.c:1:39 "d" "int"
+    Return precedence_assignment.c:1:46
+      Assign precedence_assignment.c:1:53 "="
+        Conditional precedence_assignment.c:1:53
+          Identifier precedence_assignment.c:1:53 "a"
+          Identifier precedence_assignment.c:1:57 "b"
+          Identifier precedence_assignment.c:1:61 "c"
+        Identifier precedence_assignment.c:1:65 "d"

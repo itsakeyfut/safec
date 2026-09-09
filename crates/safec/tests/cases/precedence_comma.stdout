@@ -1,8 +1,11 @@
 Function precedence_comma.c:1:1 "main" "int (void)"
   Compound precedence_comma.c:1:16
-    Return precedence_comma.c:1:18
-      Comma precedence_comma.c:1:25 ","
-        Identifier precedence_comma.c:1:25 "a"
-        Assign precedence_comma.c:1:28 "="
-          Identifier precedence_comma.c:1:28 "b"
-          Identifier precedence_comma.c:1:32 "c"
+    Declaration precedence_comma.c:1:18 "a" "int"
+    Declaration precedence_comma.c:1:25 "b" "int"
+    Declaration precedence_comma.c:1:32 "c" "int"
+    Return precedence_comma.c:1:39
+      Comma precedence_comma.c:1:46 ","
+        Identifier precedence_comma.c:1:46 "a"
+        Assign precedence_comma.c:1:49 "="
+          Identifier precedence_comma.c:1:49 "b"
+          Identifier precedence_comma.c:1:53 "c"

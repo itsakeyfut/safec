@@ -68,11 +68,17 @@ because nothing can break it and still build.
 
 * Good, because a node can be named, so semantic analysis puts types in a side
   table keyed by id rather than rebuilding the tree. What such a table needs
-  from an id, an `index()` or a `Hash`, and a length per arena, is not here yet
-  and is deliberately not invented before its first caller. `FileId::index` in
-  `crates/safec/src/source.rs` is the same pattern one layer up and is the shape
-  to copy. Adding them breaks nothing, which is the point: the choice being made
-  here is the one that cannot be added later.
+  from an id, an `index()` or a `Hash`, and a length per arena, was not here
+  when this was written and was deliberately not invented before its first
+  caller. `FileId::index` in `crates/safec/src/source.rs` is the same pattern
+  one layer up and is the shape to copy. Adding them breaks nothing, which is
+  the point: the choice being made here is the one that cannot be added later.
+
+  The caller arrived with `crates/safec/src/sema.rs`, which keys a table by
+  `ExprId`, so that id derives `Hash` and `Ast::expr_ids` gives the length. The
+  other three ids still have no caller and still derive neither, which is the
+  same rule applied rather than an oversight. `index()` has no caller either:
+  the table that wants it is #58's.
 * Good, because an id is `Copy` and carries no lifetime, so a phase can hold one
   for as long as it likes.
 * Bad, because reading a child is `ast.stmt(id)` rather than following a field,

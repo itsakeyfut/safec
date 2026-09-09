@@ -1,0 +1,7 @@
+error[SC0201]: expected an expression
+   ╭─[ a_failed_parse_reports_no_names.c:1:30 ]
+   │
+ 1 │ int main(void) { return yy + ; }
+   │                              ┬  
+   │                              ╰── this cannot begin one
+───╯

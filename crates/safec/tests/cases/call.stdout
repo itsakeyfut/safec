@@ -1,7 +1,10 @@
-Function call.c:1:1 "main" "int (void)"
-  Compound call.c:1:16
-    Return call.c:1:18
-      Call call.c:1:25
-        Identifier call.c:1:25 "add"
-        Number call.c:1:29 "1"
-        Number call.c:1:32 "2"
+Declaration call.c:1:1 "add" "int (int, int)"
+  Parameter call.c:1:9 "a" "int"
+  Parameter call.c:1:16 "b" "int"
+Function call.c:3:1 "main" "int (void)"
+  Compound call.c:3:16
+    Return call.c:3:18
+      Call call.c:3:25
+        Identifier call.c:3:25 "add"
+        Number call.c:3:29 "1"
+        Number call.c:3:32 "2"

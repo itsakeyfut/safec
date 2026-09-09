@@ -101,6 +101,15 @@ sake.
   shape the record fixes is unchanged; only what the key is was left open, and
   the tree has answered it.
 
+  What that paragraph is *not* about is the table name resolution builds, which
+  arrived later still and is keyed by `ExprId` rather than by a span. The
+  reason is the one this record could not see: a macro body is one piece of
+  text, so two uses expanded from one `#define` carry one span and can refer to
+  two declarations, while ADR-0008's ids are unique by construction.
+  `crates/safec/src/sema.rs` says so where it declares the table, and calls its
+  own type `Binding` rather than `Symbol` so that the name this record spends
+  below is still free.
+
   The shape it takes then is decided here too, because it is what makes "later"
   cheap: interning is a pass *after* the scan, over `(&SourceMap, &[Token])`,
   producing a `Vec<Symbol>` parallel to the tokens or resolving lazily. `Token`

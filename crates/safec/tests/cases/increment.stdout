@@ -1,8 +1,10 @@
 Function increment.c:1:1 "main" "int (void)"
   Compound increment.c:1:16
-    Return increment.c:1:18
-      Binary increment.c:1:25 "+"
-        Unary increment.c:1:25 prefix "++"
-          Identifier increment.c:1:27 "a"
-        Unary increment.c:1:31 postfix "--"
-          Identifier increment.c:1:31 "b"
+    Declaration increment.c:1:18 "a" "int"
+    Declaration increment.c:1:25 "b" "int"
+    Return increment.c:1:32
+      Binary increment.c:1:39 "+"
+        Unary increment.c:1:39 prefix "++"
+          Identifier increment.c:1:41 "a"
+        Unary increment.c:1:45 postfix "--"
+          Identifier increment.c:1:45 "b"

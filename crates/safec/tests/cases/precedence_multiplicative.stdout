@@ -1,7 +1,9 @@
 Function precedence_multiplicative.c:1:1 "main" "int (void)"
   Compound precedence_multiplicative.c:1:16
-    Return precedence_multiplicative.c:1:18
-      Binary precedence_multiplicative.c:1:25 "*"
-        Identifier precedence_multiplicative.c:1:25 "a"
-        Unary precedence_multiplicative.c:1:29 "-"
-          Identifier precedence_multiplicative.c:1:30 "b"
+    Declaration precedence_multiplicative.c:1:18 "a" "int"
+    Declaration precedence_multiplicative.c:1:25 "b" "int"
+    Return precedence_multiplicative.c:1:32
+      Binary precedence_multiplicative.c:1:39 "*"
+        Identifier precedence_multiplicative.c:1:39 "a"
+        Unary precedence_multiplicative.c:1:43 "-"
+          Identifier precedence_multiplicative.c:1:44 "b"

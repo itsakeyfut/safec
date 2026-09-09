@@ -21,6 +21,7 @@ use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::lexer::lex;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
+use crate::sema::resolve;
 use crate::source::{SourceFile, SourceMap, Span};
 use crate::token::Token;
 
@@ -149,6 +150,15 @@ pub fn compile(options: &Options) -> Compiled {
         // than a statement, and adds to the map while doing so once `#include`
         // lands. See ADR-0005.
         let source = sources.file_owned(file);
+
+        // Taken before the scan rather than before the parse, so that it
+        // answers "was this input read whole" rather than "did it parse". A
+        // directive is the case that separates the two: the lexer reports it,
+        // says in its own note that the line is not compiled, and hands the
+        // parser a token it skips without complaint, so a gate placed after
+        // the scan is open on a file whose declarations were dropped. Every
+        // macro name in it is then a name nothing declares.
+        let read_whole = diagnostics.error_count();
         let tokens = lex(file, &source, &mut diagnostics);
 
         // Every input appends to one artifact, and every line names its file,
@@ -161,7 +171,20 @@ pub fn compile(options: &Options) -> Compiled {
         match &mut artifact {
             Some(Emitted::Tokens(out)) => dump_tokens(&source, &tokens, out),
             Some(Emitted::Ast(out)) => {
+                // The gate is this input, read the way the loop above reads its
+                // own: `has_errors` answers for the whole run, so a count taken
+                // either side of the work on one file is what says whether that
+                // file came through it. Nothing that reads this input reported
+                // anything, or the tree is a record of a program this compiler
+                // did not finish reading, and a name diagnostic drawn from it
+                // is a claim about a program nobody wrote.
                 let ast = parse(file, &tokens, &mut diagnostics);
+                if diagnostics.error_count() == read_whole {
+                    // The resolution itself has no reader yet: #57 and #58 are
+                    // the two that take it. What it does today is report the
+                    // names nothing declares.
+                    resolve(&sources, &ast, &mut diagnostics);
+                }
                 dump_ast(&sources, &ast, out);
             }
             None => {}
