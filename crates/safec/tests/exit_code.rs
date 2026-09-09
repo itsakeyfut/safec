@@ -229,7 +229,7 @@ fn the_deepest_nest_of_statements_does_not_end_the_process() {
 ///
 /// `dump_node` passed `depth * 2` to `write!` as a width, and a format width in
 /// Rust is a `u16`. Nothing bounds `depth`: a run of postfix operators is folded
-/// by a loop in the parser, so its tree is as deep as the run is long. At 32764
+/// by a loop in the parser, so its tree is as deep as the run is long. At 32768
 /// the width overflowed and `write!` panicked, which `expect` never saw, for
 /// exit 101 with nothing on either stream and not one byte of the artifact that
 /// was asked for. `clang 20.1.6` parses the same file and reports an ordinary

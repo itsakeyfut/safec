@@ -625,9 +625,10 @@ fn quoted(sources: &SourceMap, span: Span) -> &str {
 /// is `n` squared bytes, so 20 KB of the generated C that
 /// `a_long_flat_expression_does_not_end_the_process` describes printed 51 MB.
 ///
-/// A cap on a display rather than a measurement. 64 columns is already more
-/// indentation than a dump is read at, which is what picks the number; nothing
-/// about the language or the tree does.
+/// A cap on a display rather than a measurement. 32 levels of two spaces each
+/// is 64 columns, already more indentation than a dump is read at, and that is
+/// what picks the number; nothing about the language or the tree does. The two
+/// spaces are in `dump_node` below, so the two move together.
 const DEEPEST_INDENT: usize = 32;
 
 /// The part every line shares: indent, kind, and where it is.
@@ -639,10 +640,12 @@ const DEEPEST_INDENT: usize = 32;
 ///
 /// **The indent is written rather than passed to `write!` as a width.** Rust's
 /// format width is a `u16` and `depth` is bounded by nothing: [`dump_expr`]
-/// says why, and the cost of not knowing it was that a tree 32764 levels deep
+/// says why, and the cost of not knowing it was that a tree 32768 levels deep
 /// panicked inside `write!`, before `expect` could see a `Result`, for exit 101
-/// with nothing on either stream. That is a `.c` file of 120 KB, which `clang`
-/// parses.
+/// with nothing on either stream. 32768 is where it starts: two spaces a level
+/// is a width of 65536, and 65535 is the largest a `u16` holds. The smallest
+/// `.c` file reaching it is 96 KB of `i[i][i]...`, 32764 subscripts, which
+/// `clang` parses.
 fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mut String) {
     let file = sources.file(span.file());
     let at = file.line_col(span.start());
