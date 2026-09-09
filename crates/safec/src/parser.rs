@@ -1789,6 +1789,38 @@ int main(void) { return 0; }
         assert_eq!(&text[parsed.ast.stmt(body[0]).span().range()], "return 0;");
     }
 
+    /// A statement that holds a statement reaches the end of the one it holds.
+    ///
+    /// The same claim as above, made separately because these four end
+    /// somewhere the one above cannot reach: not at a `;` this rule read for
+    /// itself, but wherever the substatement happened to stop. An `if` with an
+    /// `else` ends at the end of the `else`, and a `while` whose body is a
+    /// block ends at the block's brace.
+    ///
+    /// Mutation: end any of these four spans at `start` rather than at
+    /// `parser.previous().span.end()`. This fails, and nothing else in the
+    /// repository does: the artifact prints a start position only.
+    #[test]
+    fn a_statement_that_holds_a_statement_reaches_the_end_of_the_one_it_holds() {
+        let text = "int main(void) { if (a) b; else c; while (a) { b; } for (;;) b; d; }\n";
+        let parsed = parsed(text);
+
+        assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!("{:?}", parsed.ast.stmt(function.body));
+        };
+
+        let covers = |id| &text[parsed.ast.stmt(id).span().range()];
+        assert_eq!(covers(body[0]), "if (a) b; else c;");
+        assert_eq!(covers(body[1]), "while (a) { b; }");
+        assert_eq!(covers(body[2]), "for (;;) b;");
+        assert_eq!(covers(body[3]), "d;");
+    }
+
     /// So does an expression built out of other expressions.
     ///
     /// Held separately from the statement above because nothing else can see

@@ -693,6 +693,7 @@ mod tests {
     fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
         let s = span(0);
         let e = ExprId(0);
+        let t = StmtId(0);
 
         assert_eq!(Expr::Number { span: s }.name(), "Number");
         assert_eq!(Expr::Identifier { span: s }.name(), "Identifier");
@@ -779,6 +780,44 @@ mod tests {
             }
             .name(),
             "Return"
+        );
+        assert_eq!(
+            Stmt::Expression {
+                value: None,
+                span: s
+            }
+            .name(),
+            "Expression"
+        );
+        assert_eq!(
+            Stmt::If {
+                condition: e,
+                then: t,
+                otherwise: None,
+                span: s
+            }
+            .name(),
+            "If"
+        );
+        assert_eq!(
+            Stmt::While {
+                condition: e,
+                body: t,
+                span: s
+            }
+            .name(),
+            "While"
+        );
+        assert_eq!(
+            Stmt::For {
+                initialiser: None,
+                condition: None,
+                step: None,
+                body: t,
+                span: s
+            }
+            .name(),
+            "For"
         );
         assert_eq!(Stmt::Error { span: s }.name(), "Error");
 
