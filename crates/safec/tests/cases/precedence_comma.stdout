@@ -1,0 +1,8 @@
+Function precedence_comma.c:1:1 "main"
+  Compound precedence_comma.c:1:16
+    Return precedence_comma.c:1:18
+      Comma precedence_comma.c:1:25 ","
+        Identifier precedence_comma.c:1:25 "a"
+        Assign precedence_comma.c:1:28 "="
+          Identifier precedence_comma.c:1:28 "b"
+          Identifier precedence_comma.c:1:32 "c"

@@ -1,0 +1,8 @@
+Function parentheses_regroup.c:1:1 "main"
+  Compound parentheses_regroup.c:1:16
+    Return parentheses_regroup.c:1:18
+      Binary parentheses_regroup.c:1:26 "*"
+        Binary parentheses_regroup.c:1:26 "+"
+          Identifier parentheses_regroup.c:1:26 "a"
+          Identifier parentheses_regroup.c:1:30 "b"
+        Identifier parentheses_regroup.c:1:35 "c"

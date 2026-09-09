@@ -1,0 +1,7 @@
+Function call.c:1:1 "main"
+  Compound call.c:1:16
+    Return call.c:1:18
+      Call call.c:1:25
+        Identifier call.c:1:25 "add"
+        Number call.c:1:29 "1"
+        Number call.c:1:32 "2"

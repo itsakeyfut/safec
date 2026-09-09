@@ -1,0 +1,9 @@
+Function precedence_conditional.c:1:1 "main"
+  Compound precedence_conditional.c:1:16
+    Return precedence_conditional.c:1:18
+      Conditional precedence_conditional.c:1:25
+        Binary precedence_conditional.c:1:25 "||"
+          Identifier precedence_conditional.c:1:25 "a"
+          Identifier precedence_conditional.c:1:30 "b"
+        Identifier precedence_conditional.c:1:34 "c"
+        Identifier precedence_conditional.c:1:38 "d"

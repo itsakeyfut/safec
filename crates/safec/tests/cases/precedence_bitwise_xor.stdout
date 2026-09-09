@@ -1,0 +1,8 @@
+Function precedence_bitwise_xor.c:1:1 "main"
+  Compound precedence_bitwise_xor.c:1:16
+    Return precedence_bitwise_xor.c:1:18
+      Binary precedence_bitwise_xor.c:1:25 "^"
+        Identifier precedence_bitwise_xor.c:1:25 "a"
+        Binary precedence_bitwise_xor.c:1:29 "&"
+          Identifier precedence_bitwise_xor.c:1:29 "b"
+          Identifier precedence_bitwise_xor.c:1:33 "c"
