@@ -96,6 +96,37 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
+## One problem, one diagnostic
+
+A file the scan could not read whole is not parsed, and a file the parser gave
+up on has its names and types left alone. So one problem produces one
+diagnostic here where `clang` produces several:
+
+| Written | This compiler | `clang` |
+|---|---|---|
+| `int x = @; return x }` | `error[SC0103]` at the `@` | two syntax errors, and no lexical one |
+| `#define N 4` and a use of `N` | `error[SC0104]` at the directive | compiles it |
+
+**What it costs is the rest of the file.** A stray character on line 500 means
+the syntax errors on lines 1 to 499 are not reported either, and a user fixes
+them one run at a time. `clang` recovers instead and says everything it can in
+one pass, which is the better answer for somebody working through a large file.
+
+`clang` has no lexical diagnostic for `@` at all: it hands the parser a token
+and lets the grammar refuse it, which is why its two are both syntax errors.
+This compiler reports the character where the scan met it, and then stops.
+
+**What it buys is that no stage speaks about a program an earlier one did not
+finish reading.** The parser's report on a token stream with a hole in it is a
+second diagnostic about the first one's problem, and the resolver's report on a
+file whose `#define` was dropped is a list of names that are declared in the
+source and not in the tree. Both were measured before the gate existed. That
+this compiler exists to say true things about C programs is what decides it:
+saying less is the failure it can afford.
+
+The gate is per input, so `a.c` failing does not stop `b.c` being read, and
+`driver.rs::compile` says why in the one place the decision lives.
+
 ## Stage 4
 
 Work toward broader C compatibility, potentially C11/C17.
