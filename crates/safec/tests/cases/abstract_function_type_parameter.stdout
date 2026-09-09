@@ -1,0 +1,2 @@
+Declaration abstract_function_type_parameter.c:1:1 "f" "int (int (int))"
+  Parameter abstract_function_type_parameter.c:1:7 "int (int)"

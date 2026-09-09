@@ -1,4 +1,4 @@
-Function precedence_shift.c:1:1 "main"
+Function precedence_shift.c:1:1 "main" "int (void)"
   Compound precedence_shift.c:1:16
     Return precedence_shift.c:1:18
       Binary precedence_shift.c:1:25 "<<"

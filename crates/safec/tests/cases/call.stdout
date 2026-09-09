@@ -1,4 +1,4 @@
-Function call.c:1:1 "main"
+Function call.c:1:1 "main" "int (void)"
   Compound call.c:1:16
     Return call.c:1:18
       Call call.c:1:25

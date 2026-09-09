@@ -1,0 +1,3 @@
+Function block_declaration_without_a_semicolon.c:1:1 "main" "int (void)"
+  Compound block_declaration_without_a_semicolon.c:1:16
+    Error block_declaration_without_a_semicolon.c:1:18

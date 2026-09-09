@@ -39,18 +39,33 @@ macro_rules! cases {
 // The table is written out rather than discovered by walking `cases/`.
 // See ADR-0007 for why, and for what it rejected.
 cases! {
+    abstract_function_parameter: ["--emit", "ast"],
+    abstract_function_type_parameter: ["--emit", "ast"],
     add: ["--emit", "tokens"],
+    an_array_length_stops_at_a_comma: ["--emit", "ast"],
+    array_declaration: ["--emit", "ast"],
+    array_length_is_not_evaluated: ["--emit", "ast"],
+    block_declaration: ["--emit", "ast"],
+    block_declaration_without_a_semicolon: ["--emit", "ast"],
+    block_function_declaration: ["--emit", "ast"],
     call: ["--emit", "ast"],
     compound_assignment: ["--emit", "ast"],
     conditional: ["--emit", "ast"],
     empty_character_constant: ["--emit", "tokens"],
+    empty_parameter_list: ["--emit", "ast"],
+    every_declarator_rule: ["--emit", "ast"],
+    function_returning_pointer: ["--emit", "ast"],
+    incomplete_array: ["--emit", "ast"],
     increment: ["--emit", "ast"],
     missing_semicolon: ["--emit", "ast"],
+    mvp_program: ["--emit", "ast"],
     not_a_declaration: ["--emit", "ast"],
     output_path_not_supported: ["-o", "out.tok", "--emit", "tokens"],
     parentheses_regroup: ["--emit", "ast"],
     parsed_function: ["--emit", "ast"],
     pipeline_not_implemented: ["--emit", "safety-ir"],
+    pointer_declaration: ["--emit", "ast"],
+    pointer_to_function: ["--emit", "ast"],
     precedence_additive: ["--emit", "ast"],
     precedence_assignment: ["--emit", "ast"],
     precedence_bitwise_and: ["--emit", "ast"],
@@ -73,6 +88,7 @@ cases! {
     unterminated_block_comment: ["--emit", "tokens"],
     unterminated_character_constant: ["--emit", "tokens"],
     unterminated_string_literal: ["--emit", "tokens"],
+    void_is_not_the_only_parameter: ["--emit", "ast"],
 }
 
 /// Everything in `cases/` belongs to a case the table names.

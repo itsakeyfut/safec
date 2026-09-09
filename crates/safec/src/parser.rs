@@ -1,12 +1,14 @@
 //! Tokens to a tree, by recursive descent.
 //!
-//! What it reads is a function of no parameters returning `int`, a compound
-//! statement, `return`, and the operators of C17 6.5 from an integer constant
-//! or an identifier up to the comma operator. What it does not read yet is
-//! control flow, declarators, structs, member access, casts, `sizeof`, and the
-//! two primary expressions the lexer already hands it: a character constant and
-//! a string literal. Each arrives in a sibling of the issues that built this,
-//! and each adds to [`crate::ast`] rather than reshaping it.
+//! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
+//! operators of 6.5 from an integer constant or an identifier up to the comma
+//! operator, a compound statement and `return`. What it does not read yet is
+//! control flow, structs, member access, casts, `sizeof`, the type qualifiers,
+//! the storage classes, `typedef`, a variadic function's ellipsis, `[static N]`
+//! and `[*]`, and the two primary expressions the lexer already hands it: a
+//! character constant and a string literal. Each arrives in a sibling of the
+//! issues that built this, and each adds to [`crate::ast`] rather than
+//! reshaping it.
 //!
 //! It is handed tokens and not the source. ADR-0006 reserved a trigger, that
 //! the parser asking for a `&SourceMap` is the moment an interner is worth
@@ -16,7 +18,10 @@
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
-use crate::ast::{Ast, BinOp, Expr, ExprId, Function, Item, Stmt, StmtId, UnOp};
+use crate::ast::{
+    Ast, BinOp, Declaration, Expr, ExprId, Function, Item, Parameters, Stmt, StmtId, Type, TypeId,
+    UnOp,
+};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::source::{FileId, Span};
 use crate::token::{Keyword, Punct, Token, TokenKind};
@@ -62,9 +67,14 @@ const TOO_DEEP: Code = Code::new("E0202");
 /// [`Parser::deeper`], which is the one place this is counted, and the limit is
 /// tighter than `clang`'s for shapes `clang` does not count at all.
 ///
-/// C17 5.2.4.1 sets minimums an implementation must manage for nested blocks
-/// and for nested parenthesised expressions, both below this. It sets none for
-/// a chain of unary or assignment operators, which is the room this takes.
+/// C17 5.2.4.1 asks an implementation to manage "127 nesting levels of blocks",
+/// "63 nesting levels of parenthesized expressions within a full expression"
+/// and "63 nesting levels of parenthesized declarators within a full
+/// declarator" and "12 pointer, array, and function declarators (in any
+/// combinations) modifying an arithmetic, structure, union, or void type in a
+/// declaration". This clears all four. What it sets no minimum for is a chain
+/// of unary or assignment operators, which is the only room this takes beyond
+/// them.
 ///
 /// **This bounds the parser, not the tree.** A left-associative chain and a run
 /// of postfix operators are folded by a loop, so `a + a + ...` and `a++++` are
@@ -84,6 +94,43 @@ const COMMA: u8 = 1;
 /// Named because an argument in a call is read at this power and so stops at a
 /// comma. That is the whole of what tells `f(a, b)` from `f((a, b))`.
 const ASSIGNMENT: u8 = 2;
+
+/// One step a declarator derives, in the order it wraps the base type.
+///
+/// Collected rather than applied while reading. In `T (D)(params)` the inner
+/// `D`'s base is `T` modified by the suffixes that follow the closing
+/// parenthesis, and those have not been read when `D` is. Collecting lets the
+/// fold happen once, at the end, in the order C17 6.7.6 p4 to p6 derive.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Derivation {
+    /// C17 6.7.6.1.
+    Pointer,
+    /// C17 6.7.6.2.
+    Array(Option<ExprId>),
+    /// C17 6.7.6.3.
+    Function(Parameters),
+}
+
+/// The type a declaration specifier names, if this token is one.
+///
+/// One place, asked from three. `specifiers` asks and consumes;
+/// `parenthesised_declarator` asks without consuming, to tell a parenthesised
+/// declarator from a parameter list; `compound` asks without consuming, to tell
+/// C17 6.8.2's two kinds of block-item apart. All three have to agree about
+/// what begins a declaration, and a second copy of the answer is what would let
+/// them stop agreeing, which is the shape RK-003 records the cost of.
+///
+/// `docs/frontend.md` gives Stage 1 `int`, `char` and `void`. C's other
+/// specifiers, its qualifiers and its storage classes are later stages, and
+/// the module comment lists them among what is not read yet.
+fn specifier(kind: TokenKind) -> Option<Type> {
+    match kind {
+        TokenKind::Keyword(Keyword::Int) => Some(Type::Int),
+        TokenKind::Keyword(Keyword::Char) => Some(Type::Char),
+        TokenKind::Keyword(Keyword::Void) => Some(Type::Void),
+        _ => None,
+    }
+}
 
 /// Which of two operators of equal power takes its operand first.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -306,40 +353,312 @@ impl Parser<'_> {
         read
     }
 
-    /// A function definition, which is the only item there is yet.
+    /// A declaration or a function definition, which C17 6.9 makes the two
+    /// things a translation unit is a sequence of.
+    ///
+    /// The two are read the same way until the declarator ends. A `{` after it
+    /// is a definition and a `;` is a declaration, which is the only thing that
+    /// tells them apart and the only thing this decides. Whether the declarator
+    /// of a definition derived a function type is 6.9.1 p2's constraint, and a
+    /// constraint is checked later.
     fn item(&mut self, diagnostics: &mut DiagnosticSink) -> Item {
         let start = self.peek().span;
 
-        if !self.eat(TokenKind::Keyword(Keyword::Int)) {
-            return Item::Error {
-                span: self.report(
-                    "expected a declaration",
-                    "this cannot begin one",
-                    diagnostics,
-                ),
-            };
-        }
-
-        let Some(name) = self.expect(TokenKind::Identifier, "a name", diagnostics) else {
+        let Some((name, ty)) = self.declared(diagnostics) else {
             return Item::Error { span: start };
         };
 
-        for (kind, what) in [
-            (TokenKind::Punct(Punct::LeftParen), "`(`"),
-            (TokenKind::Keyword(Keyword::Void), "`void`"),
-            (TokenKind::Punct(Punct::RightParen), "`)`"),
-        ] {
-            if self.expect(kind, what, diagnostics).is_none() {
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            let Some(body) = self.compound(diagnostics) else {
                 return Item::Error { span: start };
+            };
+
+            let span = Span::new(self.file, start.start(), self.previous().span.end());
+            return Item::Function(Function {
+                ty,
+                name,
+                body,
+                span,
+            });
+        }
+
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return Item::Error { span: start };
+        }
+
+        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        Item::Declaration(Declaration {
+            name: Some(name),
+            ty,
+            span,
+        })
+    }
+
+    /// The specifiers and one declarator, which is how a declaration and a
+    /// definition both begin.
+    fn declared(&mut self, diagnostics: &mut DiagnosticSink) -> Option<(Span, TypeId)> {
+        let start = self.peek().span;
+        let base = self.specifiers(diagnostics)?;
+        let (name, derivations) = self.declarator(true, diagnostics)?;
+        let ty = self.apply(start, base, derivations, diagnostics)?;
+
+        let Some(name) = name else {
+            // `declarator` was asked for a name and reports before it returns
+            // without one, so nothing reaches here today. It reports rather
+            // than falling silent because of what falling silent would cost: a
+            // `None` nobody spoke for leaves `failed` clear, so the run carries
+            // on and can reach the end of the file having put an error node in
+            // the artifact and exited zero.
+            self.report("expected a name", "a name is missing here", diagnostics);
+            return None;
+        };
+
+        Some((name, ty))
+    }
+
+    /// The declaration specifiers, of which this stage reads one.
+    fn specifiers(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+        let Some(ty) = specifier(self.peek().kind) else {
+            self.report(
+                "expected a declaration",
+                "this cannot begin one",
+                diagnostics,
+            );
+            return None;
+        };
+
+        self.advance();
+        Some(self.ast.push_type(ty))
+    }
+
+    /// A declarator, and the derivations it applies to the base type.
+    ///
+    /// C17 6.7.6 p4 sets up the notation this follows: in a declaration `T D1`,
+    /// `T` is the base and `D1` derives the identifier's type from it. p5 makes
+    /// a bare identifier the base itself; 6.7.6.1 p1, 6.7.6.2 p3 and 6.7.6.3 p5
+    /// each say that a derivation wraps the base and hands the result to the
+    /// declarator *inside* it. So the derivations are collected outermost-first
+    /// and folded onto the base in that order.
+    ///
+    /// `named` is the difference between 6.7.6's `declarator`, which has an
+    /// identifier, and 6.7.7's `abstract-declarator`, which has none. A
+    /// parameter may write either.
+    fn declarator(
+        &mut self,
+        named: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<(Option<Span>, Vec<Derivation>)> {
+        let mut derivations = Vec::new();
+
+        while self.check(TokenKind::Punct(Punct::Star)) {
+            self.spend();
+            self.advance();
+            derivations.push(Derivation::Pointer);
+        }
+
+        let (name, inner) = self.core(named, diagnostics)?;
+
+        // The suffix written last is the first to wrap the base, because
+        // 6.7.6.2 p3 reads `D [ ... ]` by handing "array of T" to `D`. That is
+        // what makes `int a[3][5]` three arrays of five and not five of three.
+        let mut suffixes = self.suffixes(diagnostics)?;
+        suffixes.reverse();
+        derivations.append(&mut suffixes);
+
+        derivations.extend(inner);
+        Some((name, derivations))
+    }
+
+    /// A direct-declarator's core: an identifier, a parenthesised declarator,
+    /// or nothing where 6.7.7 allows nothing.
+    fn core(
+        &mut self,
+        named: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<(Option<Span>, Vec<Derivation>)> {
+        if self.check(TokenKind::Identifier) {
+            return Some((Some(self.advance().span), Vec::new()));
+        }
+
+        if self.check(TokenKind::Punct(Punct::LeftParen)) && self.parenthesised_declarator() {
+            self.advance();
+
+            let inner = self.deeper(
+                diagnostics,
+                |parser, diagnostics| parser.declarator(named, diagnostics),
+                |_, _| None,
+            )?;
+
+            self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+            return Some(inner);
+        }
+
+        if named {
+            self.report("expected a name", "a name is missing here", diagnostics);
+            return None;
+        }
+
+        Some((None, Vec::new()))
+    }
+
+    /// Whether the `(` that is there opens a parenthesised declarator rather
+    /// than a parameter list.
+    ///
+    /// Both are written `(` in the same position: C17 6.7.6's
+    /// `direct-declarator` has `( declarator )`, and 6.7.7's
+    /// `direct-abstract-declarator` has `( parameter-type-list_opt )` with
+    /// nothing before it. What follows tells them apart, because a parameter
+    /// list either ends at once or begins with a declaration specifier, and a
+    /// declarator begins with `*`, `(` or a name. `typedef` is what makes this
+    /// genuinely ambiguous in full C, and `typedef` is a later stage.
+    fn parenthesised_declarator(&self) -> bool {
+        let after = self.peek_at(1).kind;
+        specifier(after).is_none() && after != TokenKind::Punct(Punct::RightParen)
+    }
+
+    /// The `[...]` and `(...)` that follow a direct-declarator, in source order.
+    fn suffixes(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Vec<Derivation>> {
+        let mut suffixes = Vec::new();
+
+        loop {
+            if self.check(TokenKind::Punct(Punct::LeftBracket)) {
+                self.spend();
+                self.advance();
+
+                // 6.7.6 spells what goes here `assignment-expression` and not
+                // `expression`, so a comma ends the subscript rather than being
+                // an operator inside it.
+                let length = if self.check(TokenKind::Punct(Punct::RightBracket)) {
+                    None
+                } else {
+                    Some(self.assignment(diagnostics))
+                };
+
+                self.expect(TokenKind::Punct(Punct::RightBracket), "`]`", diagnostics)?;
+                suffixes.push(Derivation::Array(length));
+            } else if self.check(TokenKind::Punct(Punct::LeftParen)) {
+                self.spend();
+                self.advance();
+
+                let parameters = self.parameters(diagnostics)?;
+
+                self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+                suffixes.push(Derivation::Function(parameters));
+            } else {
+                break;
             }
         }
 
-        let Some(body) = self.compound(diagnostics) else {
-            return Item::Error { span: start };
-        };
+        Some(suffixes)
+    }
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
-        Item::Function(Function { name, body, span })
+    /// What a function declarator wrote between its parentheses.
+    fn parameters(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
+        if self.check(TokenKind::Punct(Punct::RightParen)) {
+            return Some(Parameters::Unspecified);
+        }
+
+        // A parameter's own type nests inside this one's, so the list takes a
+        // level. See `MAX_NESTING`.
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| parser.parameter_list(diagnostics),
+            |_, _| None,
+        )
+    }
+
+    fn parameter_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
+        let mut parameters = Vec::new();
+
+        loop {
+            let start = self.peek().span;
+            let base = self.specifiers(diagnostics)?;
+            let (name, derivations) = self.declarator(false, diagnostics)?;
+            let ty = self.apply(start, base, derivations, diagnostics)?;
+
+            let span = Span::new(self.file, start.start(), self.previous().span.end());
+            parameters.push(Declaration { name, ty, span });
+
+            if !self.eat(TokenKind::Punct(Punct::Comma)) {
+                break;
+            }
+            self.spend();
+        }
+
+        // 6.7.6.3 p10: "The special case of an unnamed parameter of type void
+        // as the only item in the list specifies that the function has no
+        // parameters." So `(void)` is the empty prototype, and `()`, which p14
+        // gives a different meaning, is answered above.
+        if parameters.len() == 1
+            && parameters[0].name.is_none()
+            && matches!(self.ast.ty(parameters[0].ty), Type::Void)
+        {
+            return Some(Parameters::Prototype(Vec::new()));
+        }
+
+        Some(Parameters::Prototype(parameters))
+    }
+
+    /// Fold the derivations a declarator collected onto the base type.
+    ///
+    /// The one place a type's depth is decided, so the one place it is bounded.
+    /// C17 6.7.6 p7 permits that:
+    ///
+    /// > As discussed in 5.2.4.1, an implementation may limit the number of
+    /// > pointer, array, and function declarators that modify an arithmetic,
+    /// > structure, union, or void type, either directly or via one or more
+    /// > `typedef`s.
+    ///
+    /// It is load-bearing for every phase that walks a type, not for the
+    /// printer alone. The pointer loop and the suffix loop fold without
+    /// recursing, so a declarator can build a type far deeper than the parser
+    /// ever went, which is exactly the shape that killed the expression printer
+    /// once already. Bounding it here means no walker has to ask.
+    ///
+    /// 5.2.4.1's own limits sit far below [`MAX_NESTING`]: it asks an
+    /// implementation to manage "63 nesting levels of parenthesized declarators
+    /// within a full declarator".
+    fn apply(
+        &mut self,
+        start: Span,
+        base: TypeId,
+        derivations: Vec<Derivation>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        if derivations.len() > MAX_NESTING {
+            // At the declarator, not at whatever follows it. The count is only
+            // known once the whole declarator has been read, so reporting where
+            // the parser is standing would put the caret on the `;` after it,
+            // which is a byte with nothing wrong with it.
+            self.report_at(
+                start,
+                TOO_DEEP,
+                "nesting is too deep",
+                format!("this declarator derives more than {MAX_NESTING} types"),
+                diagnostics,
+            );
+            return None;
+        }
+
+        let mut ty = base;
+        for derivation in derivations {
+            ty = self.ast.push_type(match derivation {
+                Derivation::Pointer => Type::Pointer(ty),
+                Derivation::Array(length) => Type::Array {
+                    element: ty,
+                    length,
+                },
+                Derivation::Function(parameters) => Type::Function {
+                    returns: ty,
+                    parameters,
+                },
+            });
+        }
+
+        Some(ty)
     }
 
     /// A braced sequence of statements.
@@ -358,7 +677,17 @@ impl Parser<'_> {
                     && !parser.check(TokenKind::Punct(Punct::RightBrace))
                 {
                     parser.spend();
-                    body.push(parser.statement(diagnostics));
+
+                    // C17 6.8.2 makes a block-item a declaration or a
+                    // statement, and a declaration is not a statement in C.
+                    // Which of the two is here is decided by the same
+                    // `specifier` the declaration reads with.
+                    let item = if specifier(parser.peek().kind).is_some() {
+                        parser.declaration_statement(diagnostics)
+                    } else {
+                        parser.statement(diagnostics)
+                    };
+                    body.push(item);
                 }
                 Some(body)
             },
@@ -369,6 +698,29 @@ impl Parser<'_> {
 
         let span = Span::new(self.file, start.start(), self.previous().span.end());
         Some(self.ast.push_stmt(Stmt::Compound { body, span }))
+    }
+
+    /// A declaration where C17 6.8.2 allows one instead of a statement.
+    fn declaration_statement(&mut self, diagnostics: &mut DiagnosticSink) -> StmtId {
+        let start = self.peek().span;
+
+        let Some((name, ty)) = self.declared(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        if self
+            .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        }
+
+        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        self.ast.push_stmt(Stmt::Declaration(Declaration {
+            name: Some(name),
+            ty,
+            span,
+        }))
     }
 
     /// One statement, and where it went in the tree.
@@ -723,6 +1075,11 @@ impl Parser<'_> {
         self.tokens[self.at.min(self.tokens.len() - 1)]
     }
 
+    /// The token `ahead` places past the one that is there.
+    fn peek_at(&self, ahead: usize) -> Token {
+        self.tokens[(self.at + ahead).min(self.tokens.len() - 1)]
+    }
+
     /// The token last consumed, for the end of a span.
     fn previous(&self) -> Token {
         self.tokens[self.at.saturating_sub(1).min(self.tokens.len() - 1)]
@@ -797,8 +1154,24 @@ impl Parser<'_> {
         label: impl Into<String>,
         diagnostics: &mut DiagnosticSink,
     ) -> Span {
-        let span = self.peek().span;
+        self.report_at(self.peek().span, code, message, label, diagnostics)
+    }
 
+    /// The same, at a span the caller names rather than at the token that is
+    /// there.
+    ///
+    /// For a report whose reason is only known once the thing it is about has
+    /// been read past. The parser is standing somewhere else by then, and a
+    /// caret on the token it happens to be standing on is a caret on innocent
+    /// code.
+    fn report_at(
+        &mut self,
+        span: Span,
+        code: Code,
+        message: impl Into<String>,
+        label: impl Into<String>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
         if !self.failed {
             self.failed = true;
             diagnostics.report(
@@ -821,6 +1194,7 @@ mod tests {
     struct Parsed {
         ast: Ast,
         diagnostics: DiagnosticSink,
+        sources: SourceMap,
     }
 
     /// Scan and parse, the way the driver does.
@@ -831,7 +1205,11 @@ mod tests {
         let tokens = lex(file, sources.file(file), &mut diagnostics);
         let ast = parse(file, &tokens, &mut diagnostics);
 
-        Parsed { ast, diagnostics }
+        Parsed {
+            ast,
+            diagnostics,
+            sources,
+        }
     }
 
     /// The smallest whole translation unit, and the shape it makes.
@@ -1023,11 +1401,21 @@ int main(void) { return 0; }
         let prefixes =
             |levels: usize| format!("int main(void) {{ return {}0; }}\n", "!".repeat(levels));
 
+        // A declarator at file scope, so nothing above it has taken a level.
+        // The first of these two is bounded by `apply`, which counts the
+        // derivations a declarator folds; the second by `deeper`, which counts
+        // the parenthesised declarators it recurses through.
+        let derivations = |levels: usize| format!("int {}p;\n", "*".repeat(levels));
+        let parenthesised =
+            |levels: usize| format!("int {}*p{};\n", "(".repeat(levels), ")".repeat(levels));
+
         for (shape, at_the_limit) in [
             (&blocks as &dyn Fn(usize) -> String, MAX_NESTING),
             (&parens, MAX_NESTING - 2),
             (&assignments, MAX_NESTING - 2),
             (&prefixes, MAX_NESTING - 2),
+            (&derivations, MAX_NESTING),
+            (&parenthesised, MAX_NESTING),
         ] {
             let inside = parsed(&shape(at_the_limit));
             assert_eq!(
@@ -1041,6 +1429,22 @@ int main(void) { return 0; }
             let reported = beyond.diagnostics.diagnostics();
             assert_eq!(reported.len(), 1, "{reported:?}");
             assert_eq!(reported[0].message(), "nesting is too deep");
+
+            // Inside the thing that is too deep, never after it. `deeper`
+            // reports where it stands, which is the token that opened the
+            // level; `apply` only knows the count once the whole declarator has
+            // been read, so it has to be handed where that declarator began.
+            // Reporting where the parser is standing by then puts the caret on
+            // the `;`, which is a byte with nothing wrong with it.
+            let [label] = reported[0].labels() else {
+                panic!("{:?}", reported[0].labels());
+            };
+            let source = beyond.sources.file(label.span().file());
+            assert!(
+                (label.span().end() as usize) < source.contents().trim_end().len(),
+                "the caret is on the last token of {:?}",
+                source.contents()
+            );
         }
     }
 
@@ -1157,6 +1561,84 @@ int main(void) { return 0; }
             };
             assert_eq!(*op, expected, "{text:?}");
         }
+    }
+
+    /// Parentheses change what a declarator derives, which is the whole reason
+    /// the tree holds a type and not a declarator.
+    ///
+    /// C17 6.7.6 p6: "a declarator in parentheses is identical to the
+    /// unparenthesized declarator, but the binding of complicated declarators
+    /// may be altered by parentheses." `int *f(int)` is a function returning a
+    /// pointer; `int (*f)(int)` is a pointer to a function. The two differ only
+    /// in where the parentheses are.
+    ///
+    /// Mutation: stop treating `(` as opening a parenthesised declarator in
+    /// `core`, or apply the suffixes before the pointers in `declarator`. Both
+    /// make the two derive the same thing, and this fails.
+    #[test]
+    fn parentheses_change_what_a_declarator_derives() {
+        let function_returning_pointer = parsed("int *f(int);\n");
+        let [Item::Declaration(declaration)] = function_returning_pointer.ast.items() else {
+            panic!("{:?}", function_returning_pointer.ast.items());
+        };
+        let Type::Function { returns, .. } = function_returning_pointer.ast.ty(declaration.ty)
+        else {
+            panic!("{:?}", function_returning_pointer.ast.ty(declaration.ty));
+        };
+        assert!(matches!(
+            function_returning_pointer.ast.ty(*returns),
+            Type::Pointer(_)
+        ));
+
+        let pointer_to_function = parsed("int (*f)(int);\n");
+        let [Item::Declaration(declaration)] = pointer_to_function.ast.items() else {
+            panic!("{:?}", pointer_to_function.ast.items());
+        };
+        let Type::Pointer(pointee) = pointer_to_function.ast.ty(declaration.ty) else {
+            panic!("{:?}", pointer_to_function.ast.ty(declaration.ty));
+        };
+        assert!(matches!(
+            pointer_to_function.ast.ty(*pointee),
+            Type::Function { .. }
+        ));
+    }
+
+    /// The suffix written last is the first to wrap the base.
+    ///
+    /// C17 6.7.6.2 p3 reads `D [ ... ]` by handing "array of T" to `D`, so
+    /// `int a[3][5]` is three arrays of five and not five of three. Nothing
+    /// else in the artifact can tell the two apart, because both spell
+    /// `int[3][5]`.
+    ///
+    /// Mutation: drop the `reverse` in `declarator`. This fails on the length.
+    #[test]
+    fn the_last_suffix_written_wraps_the_base_first() {
+        let parsed = parsed("int a[3][5];\n");
+
+        let [Item::Declaration(declaration)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Type::Array {
+            element,
+            length: Some(outer),
+        } = parsed.ast.ty(declaration.ty)
+        else {
+            panic!("{:?}", parsed.ast.ty(declaration.ty));
+        };
+        let Type::Array {
+            length: Some(inner),
+            ..
+        } = parsed.ast.ty(*element)
+        else {
+            panic!("{:?}", parsed.ast.ty(*element));
+        };
+
+        let text = |id| {
+            let span = parsed.ast.expr(id).span();
+            parsed.sources.file(span.file()).contents()[span.range()].to_owned()
+        };
+        assert_eq!(text(*outer), "3");
+        assert_eq!(text(*inner), "5");
     }
 
     /// A call with no arguments is a call, not a parse error.
@@ -1373,10 +1855,14 @@ int main(void) { return 0; }
     fn what_was_expected_is_named_in_the_message() {
         for (text, expected) in [
             ("int (void) { }\n", "expected a name"),
-            ("int main void) { }\n", "expected `(`"),
-            ("int main() { }\n", "expected `void`"),
+            ("int (*)(void) { }\n", "expected a name"),
+            ("int main void) { }\n", "expected `;`"),
             ("int main(void { }\n", "expected `)`"),
-            ("int main(void) return 0; }\n", "expected `{`"),
+            ("int main(void) return 0; }\n", "expected `;`"),
+            ("int (*p;\n", "expected `)`"),
+            ("int a[10;\n", "expected `]`"),
+            ("int f(int;\n", "expected `)`"),
+            ("int f(int a, );\n", "expected a declaration"),
             ("int main(void) { return 0 }\n", "expected `;`"),
             ("int main(void) { return; \n", "expected `}`"),
             ("int main(void) { return + ; }\n", "expected an expression"),

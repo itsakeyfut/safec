@@ -1,0 +1,6 @@
+Function block_declaration.c:1:1 "main" "int (void)"
+  Compound block_declaration.c:1:16
+    Declaration block_declaration.c:1:18 "x" "int"
+    Declaration block_declaration.c:1:25 "s" "char *"
+    Return block_declaration.c:1:34
+      Number block_declaration.c:1:41 "0"

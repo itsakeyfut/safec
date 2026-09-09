@@ -1,4 +1,4 @@
-Function conditional.c:1:1 "main"
+Function conditional.c:1:1 "main" "int (void)"
   Compound conditional.c:1:16
     Return conditional.c:1:18
       Conditional conditional.c:1:25

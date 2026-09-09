@@ -1,4 +1,4 @@
-Function precedence_conditional.c:1:1 "main"
+Function precedence_conditional.c:1:1 "main" "int (void)"
   Compound precedence_conditional.c:1:16
     Return precedence_conditional.c:1:18
       Conditional precedence_conditional.c:1:25

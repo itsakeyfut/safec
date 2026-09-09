@@ -1,0 +1,1 @@
+Declaration array_length_is_not_evaluated.c:1:1 "a" "int[1 + 2]"
