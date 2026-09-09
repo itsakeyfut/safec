@@ -78,14 +78,13 @@ impl From<Outcome> for ExitCode {
 /// Split from [`run_compiler`] so that a test can inspect what was reported
 /// instead of reading it back out of a stream.
 ///
-/// Phase 0 has one phase, so nothing here is gated on what an earlier one
-/// found. That changes with the lexer: the moment `compile` does per-input work
-/// beyond loading it, the gate for that work goes on the input and not on the
-/// run. [`DiagnosticSink::has_errors`] answers whether anything in the whole run
-/// failed, so gating the lexer on it would let a typo in `a.c` decide that `b.c`
+/// **The gate for per-input work is on the input, not on the run.**
+/// [`DiagnosticSink::has_errors`] answers whether anything in the whole run
+/// failed, so gating a phase on it would let a typo in `a.c` decide that `b.c`
 /// is never looked at, and a user with two broken files would fix them one run
-/// at a time. The run-level answer is for what genuinely spans the run: the
-/// outcome, and later, linking.
+/// at a time. The loop below takes an error count either side of each input's
+/// own work instead, and the run-level answer is left for what genuinely spans
+/// the run: the outcome, and later, linking.
 pub fn compile(options: &Options) -> Compiled {
     // The one place a sink is built from the options, so that no part of the
     // compiler can invent its own policy. See ADR-0001.
@@ -127,11 +126,6 @@ pub fn compile(options: &Options) -> Compiled {
         }
     }
 
-    // The gate is the input, not the run. `DiagnosticSink::has_errors` answers
-    // for everything reported so far, so consulting it here would let a typo in
-    // `a.c` decide that `b.c` is never looked at, and a user with two broken
-    // files would fix them one run at a time. What genuinely spans the run is
-    // the outcome, and later, linking.
     // What the pipeline can produce, decided once, for every kind there is.
     //
     // A `match` rather than a comparison on `EmitKind`'s pipeline order. A
@@ -179,9 +173,27 @@ pub fn compile(options: &Options) -> Compiled {
                 // either side of the work on one file is what says whether that
                 // file came through it. Nothing that reads this input reported
                 // anything, or the tree is a record of a program this compiler
-                // did not finish reading, and a name diagnostic drawn from it
-                // is a claim about a program nobody wrote.
+                // did not finish reading, and a diagnostic drawn from it is a
+                // claim about a program nobody wrote.
+                //
+                // The parser reads what the lexer made of this input, so it
+                // runs only where the lexer read it whole. A scan that stopped
+                // early hands over a token stream with a hole in it, and what
+                // the parser says about that is a second diagnostic about the
+                // first one's problem: `int x = @; return x }` reported an
+                // unexpected character and then a missing `;`.
+                //
+                // Written here rather than as a guard on this arm, because
+                // `match &mut artifact` is exhaustive on purpose and a guard
+                // makes it `error[E0004]` at the `match` instead, which gives
+                // up the check the comment above it relies on.
+                if diagnostics.error_count() != read_whole {
+                    continue;
+                }
+
                 let mut ast = parse(file, &tokens, &mut diagnostics);
+
+                // The same gate one step later, for the same reason.
                 if diagnostics.error_count() == read_whole {
                     // The resolution's reader is the line under it, which is
                     // what says what type each name has. Nothing reads what
@@ -1435,6 +1447,57 @@ mod tests {
         assert!(
             messages.iter().any(|m| m.contains("unexpected character")),
             "{messages:?}"
+        );
+    }
+
+    /// A lexical error stops the input it is in, and stops nothing else.
+    ///
+    /// Two things at once, because they are two halves of one rule. The file
+    /// the lexer could not read whole is not parsed, so its one problem
+    /// produces one diagnostic rather than a syntax error behind it. And the
+    /// other file is read all the way through, because the gate is on the
+    /// input rather than on the run.
+    ///
+    /// Mutation: gate on `diagnostics.has_errors()` rather than on the count
+    /// taken either side of this input's own work. The second file stops being
+    /// parsed because the first one failed, its tree leaves the artifact, and
+    /// this fails. Mutation: take the `continue` out of the `Emitted::Ast`
+    /// arm. The broken file is parsed after all, a second diagnostic arrives,
+    /// and this fails from the other side.
+    #[test]
+    fn a_lexical_error_stops_that_input_and_no_other() {
+        let broken = TempFile::new("safec_driver_gate_broken.c", "int a(void) { return @; }\n");
+        let whole = TempFile::new("safec_driver_gate_whole.c", "int b(void) { return 1; }\n");
+
+        let mut options = options(vec![
+            broken.path().to_path_buf(),
+            whole.path().to_path_buf(),
+        ]);
+        options.emit = EmitKind::Ast;
+
+        let compiled = compile(&options);
+
+        // The code rather than the message, because a message is what gets
+        // reworded and a code is what does not.
+        let codes: Vec<_> = compiled
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect();
+        assert_eq!(
+            codes,
+            ["SC0103"],
+            "{:?}",
+            compiled.diagnostics.diagnostics()
+        );
+
+        let artifact = compiled.artifact.expect("`--emit ast` produces one");
+        assert!(artifact.contains("safec_driver_gate_whole.c"), "{artifact}");
+        assert!(
+            !artifact.contains("safec_driver_gate_broken.c"),
+            "{artifact}"
         );
     }
 
