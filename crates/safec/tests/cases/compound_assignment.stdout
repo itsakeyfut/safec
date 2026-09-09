@@ -1,8 +1,11 @@
 Function compound_assignment.c:1:1 "main" "int (void)"
   Compound compound_assignment.c:1:16
-    Return compound_assignment.c:1:18
-      Assign compound_assignment.c:1:25 "+="
-        Identifier compound_assignment.c:1:25 "a"
-        Assign compound_assignment.c:1:30 "<<="
-          Identifier compound_assignment.c:1:30 "b"
-          Identifier compound_assignment.c:1:36 "c"
+    Declaration compound_assignment.c:1:18 "a" "int"
+    Declaration compound_assignment.c:1:25 "b" "int"
+    Declaration compound_assignment.c:1:32 "c" "int"
+    Return compound_assignment.c:1:39
+      Assign compound_assignment.c:1:46 "+="
+        Identifier compound_assignment.c:1:46 "a"
+        Assign compound_assignment.c:1:51 "<<="
+          Identifier compound_assignment.c:1:51 "b"
+          Identifier compound_assignment.c:1:57 "c"

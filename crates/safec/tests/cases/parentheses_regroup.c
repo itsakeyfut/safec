@@ -1,1 +1,1 @@
-int main(void) { return (a + b) * c; }
+int main(void) { int a; int b; int c; return (a + b) * c; }

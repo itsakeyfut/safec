@@ -1,1 +1,1 @@
-int main(void) { return ++a + b--; }
+int main(void) { int a; int b; return ++a + b--; }

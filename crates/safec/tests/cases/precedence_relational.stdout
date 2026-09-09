@@ -1,8 +1,11 @@
 Function precedence_relational.c:1:1 "main" "int (void)"
   Compound precedence_relational.c:1:16
-    Return precedence_relational.c:1:18
-      Binary precedence_relational.c:1:25 "<"
-        Identifier precedence_relational.c:1:25 "a"
-        Binary precedence_relational.c:1:29 "<<"
-          Identifier precedence_relational.c:1:29 "b"
-          Identifier precedence_relational.c:1:34 "c"
+    Declaration precedence_relational.c:1:18 "a" "int"
+    Declaration precedence_relational.c:1:25 "b" "int"
+    Declaration precedence_relational.c:1:32 "c" "int"
+    Return precedence_relational.c:1:39
+      Binary precedence_relational.c:1:46 "<"
+        Identifier precedence_relational.c:1:46 "a"
+        Binary precedence_relational.c:1:50 "<<"
+          Identifier precedence_relational.c:1:50 "b"
+          Identifier precedence_relational.c:1:55 "c"

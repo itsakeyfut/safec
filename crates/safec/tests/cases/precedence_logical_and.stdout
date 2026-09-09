@@ -1,8 +1,11 @@
 Function precedence_logical_and.c:1:1 "main" "int (void)"
   Compound precedence_logical_and.c:1:16
-    Return precedence_logical_and.c:1:18
-      Binary precedence_logical_and.c:1:25 "&&"
-        Identifier precedence_logical_and.c:1:25 "a"
-        Binary precedence_logical_and.c:1:30 "|"
-          Identifier precedence_logical_and.c:1:30 "b"
-          Identifier precedence_logical_and.c:1:34 "c"
+    Declaration precedence_logical_and.c:1:18 "a" "int"
+    Declaration precedence_logical_and.c:1:25 "b" "int"
+    Declaration precedence_logical_and.c:1:32 "c" "int"
+    Return precedence_logical_and.c:1:39
+      Binary precedence_logical_and.c:1:46 "&&"
+        Identifier precedence_logical_and.c:1:46 "a"
+        Binary precedence_logical_and.c:1:51 "|"
+          Identifier precedence_logical_and.c:1:51 "b"
+          Identifier precedence_logical_and.c:1:55 "c"

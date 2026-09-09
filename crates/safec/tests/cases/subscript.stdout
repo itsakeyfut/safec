@@ -1,8 +1,10 @@
 Function subscript.c:1:1 "main" "int (void)"
   Compound subscript.c:1:16
-    Return subscript.c:1:18
-      Subscript subscript.c:1:25
-        Identifier subscript.c:1:25 "a"
-        Binary subscript.c:1:27 "+"
-          Identifier subscript.c:1:27 "i"
-          Number subscript.c:1:31 "1"
+    Declaration subscript.c:1:18 "a" "int[2]"
+    Declaration subscript.c:1:28 "i" "int"
+    Return subscript.c:1:35
+      Subscript subscript.c:1:42
+        Identifier subscript.c:1:42 "a"
+        Binary subscript.c:1:44 "+"
+          Identifier subscript.c:1:44 "i"
+          Number subscript.c:1:48 "1"

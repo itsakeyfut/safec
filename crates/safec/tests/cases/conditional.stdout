@@ -1,9 +1,13 @@
 Function conditional.c:1:1 "main" "int (void)"
   Compound conditional.c:1:16
-    Return conditional.c:1:18
-      Conditional conditional.c:1:25
-        Identifier conditional.c:1:25 "a"
-        Comma conditional.c:1:29 ","
-          Identifier conditional.c:1:29 "b"
-          Identifier conditional.c:1:32 "c"
-        Identifier conditional.c:1:36 "d"
+    Declaration conditional.c:1:18 "a" "int"
+    Declaration conditional.c:1:25 "b" "int"
+    Declaration conditional.c:1:32 "c" "int"
+    Declaration conditional.c:1:39 "d" "int"
+    Return conditional.c:1:46
+      Conditional conditional.c:1:53
+        Identifier conditional.c:1:53 "a"
+        Comma conditional.c:1:57 ","
+          Identifier conditional.c:1:57 "b"
+          Identifier conditional.c:1:60 "c"
+        Identifier conditional.c:1:64 "d"

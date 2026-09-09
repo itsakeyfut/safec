@@ -275,7 +275,10 @@ fn the_deepest_nest_of_statements_does_not_end_the_process() {
         ),
     ] {
         let path = std::env::temp_dir().join(name);
-        std::fs::write(&path, format!("int main(void) {{ {body}; }}\n"))
+        // `a` is declared because the compiler resolves names now, and an
+        // undeclared one is an error. This test asks about the exit code, so
+        // an input that fails for a second reason would stop asking it.
+        std::fs::write(&path, format!("int main(void) {{ int a; {body}; }}\n"))
             .expect("the temporary directory is writable");
 
         let output = safec(&[
@@ -364,8 +367,7 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
         std::fs::write(
             &path,
             format!(
-                "int main(void) {{ if (a{}) return 1; return 0; }}
-",
+                "int main(void) {{ int a; if (a{}) return 1; return 0; }}\n",
                 " + a".repeat(terms)
             ),
         )
@@ -418,8 +420,11 @@ fn a_long_flat_expression_does_not_end_the_process() {
         ("safec_exit_code_postfix.c", "++".repeat(1000)),
     ] {
         let path = std::env::temp_dir().join(name);
-        std::fs::write(&path, format!("int main(void) {{ return a{tail}; }}\n"))
-            .expect("the temporary directory is writable");
+        std::fs::write(
+            &path,
+            format!("int main(void) {{ int a; return a{tail}; }}\n"),
+        )
+        .expect("the temporary directory is writable");
 
         let output = safec(&[
             "--color",
