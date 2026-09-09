@@ -405,10 +405,14 @@ mod tests {
     /// acceptance criterion about a parameter, and `add` from the function
     /// after it.
     ///
-    /// Mutation: have `Resolver::item` declare a function's name after walking
-    /// its body rather than before. `add` stops resolving and this fails.
-    /// Mutation: leave the scope pushed for the parameters out. The two
-    /// parameters stop resolving and this fails as well.
+    /// Mutation: stop declaring a parameter in `Resolver::parameters`. The two
+    /// parameters stop resolving and this fails.
+    ///
+    /// What it does *not* hold is the order `item` declares a function in:
+    /// `add` is written above `main`, so declaring a function's name after its
+    /// body rather than before still resolves this program. That is what
+    /// `a_function_can_call_itself` is for, and it was measured rather than
+    /// assumed, because this comment said otherwise first.
     #[test]
     fn the_mvp_program_resolves_every_name_it_uses() {
         let resolved = resolved(
@@ -430,6 +434,26 @@ mod tests {
         assert_eq!(
             resolved.declaration_of("add", 1),
             Some(resolved.occurrence("add", 0))
+        );
+    }
+
+    /// A function's own name is in scope inside its body.
+    ///
+    /// The only thing that turns on `item` declaring the name before it walks
+    /// the body rather than after: every other program here calls a function
+    /// written above it, which resolves either way.
+    ///
+    /// Mutation: move the `declare` in `Resolver::item` below the
+    /// `self.stmt(function.body, ...)` call. `f` stops resolving inside itself
+    /// and this fails. Nothing else in the suite notices.
+    #[test]
+    fn a_function_can_call_itself() {
+        let resolved = resolved("int f(int n) {\n    return f(n);\n}\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_eq!(
+            resolved.declaration_of("f", 1),
+            Some(resolved.occurrence("f", 0))
         );
     }
 
