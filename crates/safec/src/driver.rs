@@ -511,7 +511,9 @@ fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> 
 /// parser calling itself once. A thousand of either is an ordinary generated
 /// line, and walking it recursively ended the process at around a thousand with
 /// no diagnostic and an exit code nothing here chose. Every later walk of this
-/// tree owes itself the same answer.
+/// tree owes itself the same answer, and owes it here rather than borrowing
+/// this one: [`Expr::children`] is the half that can be shared, and the stack
+/// is the half that cannot.
 ///
 /// A node writes at most one quoted thing after its position: either the file's
 /// own text, or the operator this compiler spells. The two are not the same
@@ -523,18 +525,21 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
     // they were written. What that makes is a pre-order walk, the same one the
     // recursive version made.
     let mut pending = vec![(root, depth)];
+    // Reused across nodes rather than built per node, which is the whole reason
+    // `Expr::children` appends to a buffer instead of returning one.
+    let mut children = Vec::new();
 
     while let Some((id, depth)) = pending.pop() {
         let expr = ast.expr(id);
         dump_node(sources, expr.name(), expr.span(), depth, out);
 
+        // What this node says about itself, and nothing about what is under it.
         match expr {
             Expr::Number { span } | Expr::Identifier { span } => {
                 write!(out, " {:?}", quoted(sources, *span))
                     .expect("writing to a string cannot fail");
-                out.push('\n');
             }
-            Expr::Unary { op, operand, .. } => {
+            Expr::Unary { op, .. } => {
                 // `++` and `--` are the only operators C writes on either side,
                 // so they are the only ones that need saying which side this
                 // was.
@@ -542,18 +547,11 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
                     write!(out, " {fixity}").expect("writing to a string cannot fail");
                 }
                 write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
-                out.push('\n');
-                pending.push((*operand, depth + 1));
             }
-            Expr::Binary { op, lhs, rhs, .. } => {
+            Expr::Binary { op, .. } => {
                 write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
-                out.push('\n');
-                pending.push((*rhs, depth + 1));
-                pending.push((*lhs, depth + 1));
             }
-            Expr::Assign {
-                op, place, value, ..
-            } => {
+            Expr::Assign { op, .. } => {
                 // `+=` is `+` and `=`, built rather than tabulated: eleven more
                 // spellings in a second table is a second table to disagree
                 // with the first, which is what RK-003 records the cost of.
@@ -562,44 +560,21 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
                     None => "=".to_owned(),
                 };
                 write!(out, " {spelling:?}").expect("writing to a string cannot fail");
-                out.push('\n');
-                pending.push((*value, depth + 1));
-                pending.push((*place, depth + 1));
             }
-            Expr::Conditional {
-                condition,
-                then,
-                otherwise,
-                ..
-            } => {
-                out.push('\n');
-                pending.push((*otherwise, depth + 1));
-                pending.push((*then, depth + 1));
-                pending.push((*condition, depth + 1));
-            }
-            Expr::Call {
-                callee, arguments, ..
-            } => {
-                out.push('\n');
-                // The callee first, then the arguments. Nothing separates them,
-                // because a call always has exactly one callee and it is first.
-                for &argument in arguments.iter().rev() {
-                    pending.push((argument, depth + 1));
-                }
-                pending.push((*callee, depth + 1));
-            }
-            Expr::Subscript { base, index, .. } => {
-                out.push('\n');
-                pending.push((*index, depth + 1));
-                pending.push((*base, depth + 1));
-            }
-            Expr::Comma { lhs, rhs, .. } => {
+            Expr::Comma { .. } => {
                 write!(out, " {:?}", ",").expect("writing to a string cannot fail");
-                out.push('\n');
-                pending.push((*rhs, depth + 1));
-                pending.push((*lhs, depth + 1));
             }
-            Expr::Error { .. } => out.push('\n'),
+            Expr::Conditional { .. }
+            | Expr::Call { .. }
+            | Expr::Subscript { .. }
+            | Expr::Error { .. } => {}
+        }
+        out.push('\n');
+
+        children.clear();
+        expr.children(&mut children);
+        for &child in children.iter().rev() {
+            pending.push((child, depth + 1));
         }
     }
 }

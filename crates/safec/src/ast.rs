@@ -16,8 +16,10 @@
 //! them, so a statement tree is at most `parser::MAX_NESTING` deep. An
 //! expression tree has no such bound: a left-associative chain and a run of
 //! postfix operators are folded by loops, so `a + a + ...` is as deep as it is
-//! long. Anything that walks this owes itself an answer to the second, and
-//! `driver.rs`'s `dump_expr` is what one looks like.
+//! long. Anything that walks this owes itself an answer to the second: its own
+//! stack, which `driver.rs`'s `dump_expr` is what one looks like, and the
+//! children of a node, which [`Expr::children`] answers here so that the next
+//! walker does not have to work them out again.
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
@@ -554,6 +556,53 @@ impl Expr {
             | Self::Subscript { span, .. }
             | Self::Comma { span, .. }
             | Self::Error { span, .. } => *span,
+        }
+    }
+
+    /// Every expression this one is built from, in the order they were written.
+    ///
+    /// **The shape of the tree, in one place.** An expression tree has no bound
+    /// on its depth, for the reason the module comment above gives, so anything
+    /// that walks it needs its own stack and needs to know what the children
+    /// are. The first half is each walker's own problem. The second is this,
+    /// here rather than in whichever walker was written first, because
+    /// `docs/c-family.md` puts the Safety IR in a crate that cannot depend on
+    /// the frontend and so cannot read one.
+    ///
+    /// Appended to the caller's buffer rather than returned, so a walk over a
+    /// whole tree allocates once rather than once per node. Not an iterator:
+    /// `Call`'s children are one field and then a `Vec`, and the eight shapes
+    /// have no common one to return.
+    ///
+    /// The order is the order they were written, which is what lets a pre-order
+    /// walk push them reversed and get them back in it.
+    ///
+    /// Forgetting one is not a compile error, and `error[E0004]` here says only
+    /// that a new variant has to be looked at rather than that it was answered
+    /// correctly, which is what RK-015 in the review knowledge bank records. The
+    /// answer is held by the corpus instead: `--emit ast` prints what this
+    /// returns, so a child dropped from an arm is lines missing from expected
+    /// files that are compared byte for byte.
+    pub fn children(&self, out: &mut Vec<ExprId>) {
+        match self {
+            Self::Number { .. } | Self::Identifier { .. } | Self::Error { .. } => {}
+            Self::Unary { operand, .. } => out.push(*operand),
+            Self::Binary { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
+            Self::Assign { place, value, .. } => out.extend([*place, *value]),
+            Self::Comma { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
+            Self::Subscript { base, index, .. } => out.extend([*base, *index]),
+            Self::Conditional {
+                condition,
+                then,
+                otherwise,
+                ..
+            } => out.extend([*condition, *then, *otherwise]),
+            Self::Call {
+                callee, arguments, ..
+            } => {
+                out.push(*callee);
+                out.extend(arguments.iter().copied());
+            }
         }
     }
 }
