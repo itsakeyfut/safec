@@ -42,6 +42,7 @@ cases! {
     a_comma_in_a_controlling_expression: ["--emit", "ast"],
     a_dangling_else: ["--emit", "ast"],
     a_declaration_is_not_a_body: ["--emit", "ast"],
+    a_tree_deeper_than_the_indent_shows: ["--emit", "ast"],
     abstract_function_parameter: ["--emit", "ast"],
     abstract_function_type_parameter: ["--emit", "ast"],
     add: ["--emit", "tokens"],
