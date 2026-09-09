@@ -16,3 +16,4 @@ pub mod safety;
 pub mod sema;
 pub mod source;
 pub mod token;
+pub mod types;

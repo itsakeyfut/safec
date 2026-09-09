@@ -24,7 +24,7 @@
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
-use crate::source::Span;
+use crate::source::{SourceMap, Span};
 
 /// Where an expression is in [`Ast`].
 ///
@@ -34,6 +34,18 @@ use crate::source::Span;
 /// caller yet and do not derive it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ExprId(u32);
+
+impl ExprId {
+    /// The index this handle refers to.
+    ///
+    /// For a side table with a slot per expression, which is the dense half of
+    /// what ADR-0008 says an id is for. `FileId::index` in
+    /// `crates/safec/src/source.rs` is the same thing one layer up. Not for
+    /// reaching into an [`Ast`]: use [`Ast::expr`].
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
 
 /// Where a statement is in [`Ast`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,6 +87,7 @@ pub struct TypeId(u32);
 /// Deriving `PartialEq` would make the natural way to ask that question
 /// compile and answer wrongly. Without it, asking is `error[E0369]`, and
 /// whoever writes the comparison writes it knowing what it has to ignore.
+/// [`Ast::compatible`] is that comparison, written.
 #[derive(Clone, Debug)]
 pub enum Type {
     /// `int`.
@@ -758,12 +771,487 @@ impl Ast {
     pub fn expr_ids(&self) -> impl Iterator<Item = ExprId> + use<> {
         (0..self.exprs.len() as u32).map(ExprId)
     }
+
+    /// Whether `left` and `right` are compatible types, C17 6.2.7 p1.
+    ///
+    /// Compatible and not identical, which is the relation C actually asks
+    /// about: 6.5.16.1 p1 wants the pointed-to types of an assignment to be
+    /// compatible, and 6.2.7 p1 makes identical types compatible and then adds
+    /// cases that are compatible without being identical. `clang` keeps the
+    /// two apart as `hasSameType` and `typesAreCompatible` for that reason.
+    /// One of the extra cases is reachable in the subset this compiler reads,
+    /// and it is in `compatible_parameters` below; a struct will bring the
+    /// rest, and this is named for the relation so that whoever adds one is
+    /// extending the right thing.
+    ///
+    /// The comparison [`Type`]'s own comment refuses to derive, written where
+    /// the arena is, because a type reaches the rest of itself through ids and
+    /// answering means walking them: `int *p;` and `int *q;` are two `Pointer`
+    /// nodes holding two `Int` nodes, and they are the same type.
+    ///
+    /// **An array's length is not compared, and that is a known divergence.**
+    /// 6.7.6.2 p6 makes two array types compatible only if both lengths are
+    /// constant expressions and their values are equal, and nothing here
+    /// evaluates a constant expression: `array_length_is_not_evaluated` in the
+    /// corpus is a case that says so by name. So `int[2]` and `int[3]` answer
+    /// "compatible", which is a thing this compiler fails to notice rather
+    /// than a thing it says wrongly: `int (*p)[3]; int a[2]; p = &a;` is
+    /// accepted here and rejected by `clang`. `types.rs` reaches this through
+    /// a pointer's pointee, so the missed report is live rather than waiting
+    /// for a later issue.
+    ///
+    /// Recursion, bounded the way `parser.rs::apply` bounds a declarator's
+    /// derivations, so a type is at most `MAX_NESTING` deep. The nesting a
+    /// parameter list adds is bounded by the parser's own recursion.
+    pub fn compatible(&self, left: TypeId, right: TypeId) -> bool {
+        match (self.ty(left), self.ty(right)) {
+            (Type::Int, Type::Int) | (Type::Char, Type::Char) | (Type::Void, Type::Void) => true,
+            (Type::Pointer(left), Type::Pointer(right)) => self.compatible(*left, *right),
+            (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
+                self.compatible(*left, *right)
+            }
+            (
+                Type::Function {
+                    returns: left,
+                    parameters: left_parameters,
+                },
+                Type::Function {
+                    returns: right,
+                    parameters: right_parameters,
+                },
+            ) => {
+                self.compatible(*left, *right)
+                    && self.compatible_parameters(left_parameters, right_parameters)
+            }
+            // Written out rather than `_ => false`, so that a variant added to
+            // `Type` has to be answered for here: `error[E0004]` is what says
+            // somebody looked, and a wildcard would call the new type
+            // different from everything including itself.
+            (Type::Int, _)
+            | (Type::Char, _)
+            | (Type::Void, _)
+            | (Type::Pointer(_), _)
+            | (Type::Array { .. }, _)
+            | (Type::Function { .. }, _) => false,
+        }
+    }
+
+    /// Whether two parameter lists are compatible, C17 6.7.6.3 p15.
+    ///
+    /// Two prototypes agree parameter by parameter. A prototype and an empty
+    /// identifier list are the case p15 spells out:
+    ///
+    /// > If one type has a parameter type list and the other type is specified
+    /// > by a function declarator that is not part of a function definition
+    /// > and that contains an empty identifier list, the parameter list shall
+    /// > not have an ellipsis terminator and the type of each parameter shall
+    /// > be compatible with the type that results from the application of the
+    /// > default argument promotions.
+    ///
+    /// So `int (void)` and `int ()` are compatible, and so are `int (int)` and
+    /// `int ()`, while `int (char)` and `int ()` are not. `clang` agrees on
+    /// all three, measured. Answering `false` for every one of them, which is
+    /// what reading p10 and p14 alone gives, rejected `int (*p)(void) = q`
+    /// where `q` is `int (*)()`: a program `clang` compiles.
+    fn compatible_parameters(&self, left: &Parameters, right: &Parameters) -> bool {
+        match (left, right) {
+            (Parameters::Prototype(left), Parameters::Prototype(right)) => {
+                left.len() == right.len()
+                    && left
+                        .iter()
+                        .zip(right)
+                        .all(|(left, right)| self.compatible(left.ty, right.ty))
+            }
+            (Parameters::Unspecified, Parameters::Unspecified) => true,
+            (Parameters::Prototype(parameters), Parameters::Unspecified)
+            | (Parameters::Unspecified, Parameters::Prototype(parameters)) => parameters
+                .iter()
+                .all(|parameter| !self.is_promoted_by_default(parameter.ty)),
+        }
+    }
+
+    /// Whether the default argument promotions change this type, C17 6.5.2.2
+    /// p6.
+    ///
+    /// They promote a `char` to an `int` and a `float` to a `double`. This
+    /// compiler has no `float`, so `char` is the whole of it, and an arm for
+    /// each of the others rather than a wildcard so that a type added later
+    /// has to say which side it is on.
+    fn is_promoted_by_default(&self, ty: TypeId) -> bool {
+        match self.ty(ty) {
+            Type::Char => true,
+            Type::Int
+            | Type::Void
+            | Type::Pointer(_)
+            | Type::Array { .. }
+            | Type::Function { .. } => false,
+        }
+    }
+}
+
+/// A type, in the declarator notation C itself writes.
+///
+/// Here rather than in `driver.rs`, which is where it was written for
+/// `--emit ast`, because a diagnostic has to spell a type too and two spellers
+/// are two things to drift. The corpus pins what this prints, byte for byte,
+/// so moving it is guarded by tests that already exist.
+///
+/// `int *`, `int[10]`, `int (*)(int)`: the same spelling `clang` prints, so the
+/// two dumps can be diffed rather than read against one another. It diverges in
+/// one place, and deliberately: `clang` shows a parameter after the adjustments
+/// C17 6.7.6.3 p7 and p8 make, so it spells `int f(int [10])` as `int (int *)`,
+/// where this spells it `int (int[10])`. Those adjustments are semantic rules,
+/// and this stage records what was written.
+///
+/// The walk down the spine is a loop and not a recursion, so a type of ten
+/// thousand pointers costs no stack. Only a parameter list recurses, and how
+/// deeply one can nest is bounded by the parser. `Parser::apply` bounds the
+/// spine too, which is what every other walk of a type will rely on; the loop
+/// here means this one does not have to.
+pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
+    let mut id = id;
+    let mut inner = String::new();
+
+    loop {
+        let base = match ast.ty(id) {
+            Type::Int => "int",
+            Type::Char => "char",
+            Type::Void => "void",
+            Type::Pointer(pointee) => {
+                inner = if binds_tighter_than_a_pointer(ast.ty(*pointee)) {
+                    format!("(*{inner})")
+                } else {
+                    format!("*{inner}")
+                };
+                id = *pointee;
+                continue;
+            }
+            Type::Array { element, length } => {
+                // The length is the source's own bytes and is not evaluated, so
+                // `int a[1 + 2]` spells `int[1 + 2]` where `clang`, which does
+                // evaluate it, spells `int[3]`. What 6.7.6.2 p1 asks of it is a
+                // constraint, and constraints are checked later.
+                let length = match length {
+                    Some(length) => sources.snippet(ast.expr(*length).span()),
+                    None => "",
+                };
+                inner = format!("{inner}[{length}]");
+                id = *element;
+                continue;
+            }
+            Type::Function {
+                returns,
+                parameters,
+            } => {
+                inner = format!("{inner}({})", spell_parameters(sources, ast, parameters));
+                id = *returns;
+                continue;
+            }
+        };
+
+        // A space between the base and what follows, unless there is nothing
+        // to follow or it begins with `[`. That is the spacing `clang` prints:
+        // `int *`, `int (*)(int)`, and `int[10]` with no space at all.
+        return if inner.is_empty() || inner.starts_with('[') {
+            format!("{base}{inner}")
+        } else {
+            format!("{base} {inner}")
+        };
+    }
+}
+
+/// Whether a derivation binds its operand more tightly than a pointer does.
+///
+/// An array and a function do, so a pointer to either is written with the `*`
+/// in parentheses to say that the pointer is the outer one. That rule alone is
+/// what makes `int (*)(int)` and `int *(int)` two different strings, and C17
+/// 6.7.6 p6 is where the binding it reflects is stated.
+///
+/// An exhaustive `match` and not a `matches!`, for the reason the emit gate
+/// above gives: a `matches!` answers `false` for a variant nobody has thought
+/// about, and the answer here is the one thing that tells two types apart in
+/// the artifact. `[*]`, which `parser.rs` already lists as a shape it does not
+/// read yet, is a variant this will have to answer for.
+fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
+    match ty {
+        Type::Array { .. } | Type::Function { .. } => true,
+        Type::Int | Type::Char | Type::Void | Type::Pointer(_) => false,
+    }
+}
+
+/// What goes between a function type's parentheses.
+///
+/// `(void)` for a prototype that declared no parameters and `()` for an empty
+/// identifier list, because C17 6.7.6.3 gives the two spellings two meanings.
+fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> String {
+    let Parameters::Prototype(parameters) = parameters else {
+        return String::new();
+    };
+
+    if parameters.is_empty() {
+        return "void".to_owned();
+    }
+
+    parameters
+        .iter()
+        .map(|parameter| spell_type(sources, ast, parameter.ty))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::source::SourceMap;
+
+    /// What C17 calls compatible types, and what it does not.
+    ///
+    /// The pairs are written out rather than derived, for the reason RK-001
+    /// gives: a table built the way the code builds one compares the code with
+    /// itself. Each row is a declaration a reader can write down, and the two
+    /// sides are separate nodes in the arena, which is the whole point: a
+    /// derived `PartialEq` would call the two halves of every `true` row
+    /// different.
+    ///
+    /// Mutation: have the `Pointer` arm answer `true` without comparing its
+    /// pointee. `int *` and `char *` become compatible and this fails.
+    /// Mutation: compare `Parameters` by length alone. `int (int)` and
+    /// `int (char)` become compatible and this fails. Mutation: have
+    /// `is_promoted_by_default` answer `false` for a `char`. `int (char)` and
+    /// `int ()` become compatible and this fails.
+    #[test]
+    fn two_types_are_compatible_when_c_says_they_are() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "23");
+        let mut ast = Ast::new();
+        let two = ast.push_expr(Expr::Number {
+            span: Span::new(file, 0, 1),
+        });
+        let three = ast.push_expr(Expr::Number {
+            span: Span::new(file, 1, 2),
+        });
+
+        let int = ast.push_type(Type::Int);
+        let also_int = ast.push_type(Type::Int);
+        let character = ast.push_type(Type::Char);
+        let pointer_to_int = ast.push_type(Type::Pointer(int));
+        let also_pointer_to_int = ast.push_type(Type::Pointer(also_int));
+        let pointer_to_char = ast.push_type(Type::Pointer(character));
+        let pointer_to_pointer = ast.push_type(Type::Pointer(pointer_to_int));
+        let two_ints = ast.push_type(Type::Array {
+            element: int,
+            length: Some(two),
+        });
+        let three_ints = ast.push_type(Type::Array {
+            element: also_int,
+            length: Some(three),
+        });
+        let two_chars = ast.push_type(Type::Array {
+            element: character,
+            length: Some(two),
+        });
+
+        let unnamed = |ty| Declaration {
+            name: None,
+            ty,
+            span: Span::new(file, 0, 1),
+        };
+        let of = |ast: &mut Ast, returns, parameters| {
+            ast.push_type(Type::Function {
+                returns,
+                parameters,
+            })
+        };
+        let int_of_int = of(&mut ast, int, Parameters::Prototype(vec![unnamed(int)]));
+        let int_of_also_int = of(
+            &mut ast,
+            also_int,
+            Parameters::Prototype(vec![unnamed(also_int)]),
+        );
+        let int_of_char = of(
+            &mut ast,
+            int,
+            Parameters::Prototype(vec![unnamed(character)]),
+        );
+        let char_of_int = of(
+            &mut ast,
+            character,
+            Parameters::Prototype(vec![unnamed(int)]),
+        );
+        let int_of_two_ints = of(
+            &mut ast,
+            int,
+            Parameters::Prototype(vec![unnamed(int), unnamed(int)]),
+        );
+        let int_of_void = of(&mut ast, int, Parameters::Prototype(Vec::new()));
+        let int_of_nothing_said = of(&mut ast, int, Parameters::Unspecified);
+        let also_int_of_nothing_said = of(&mut ast, also_int, Parameters::Unspecified);
+
+        for (left, right, same, what) in [
+            (int, also_int, true, "int against int"),
+            (int, character, false, "int against char"),
+            (
+                pointer_to_int,
+                also_pointer_to_int,
+                true,
+                "int * against int *",
+            ),
+            (
+                pointer_to_int,
+                pointer_to_char,
+                false,
+                "int * against char *",
+            ),
+            (
+                pointer_to_int,
+                pointer_to_pointer,
+                false,
+                "int * against int **",
+            ),
+            (pointer_to_int, int, false, "int * against int"),
+            // 6.7.6.2 p6 says these are different types and this cannot say so:
+            // the lengths are expressions nobody evaluates.
+            (two_ints, three_ints, true, "int[2] against int[3]"),
+            (two_ints, two_chars, false, "int[2] against char[2]"),
+            (
+                int_of_int,
+                int_of_also_int,
+                true,
+                "int (int) against int (int)",
+            ),
+            (
+                int_of_int,
+                int_of_char,
+                false,
+                "int (int) against int (char)",
+            ),
+            (
+                int_of_int,
+                char_of_int,
+                false,
+                "int (int) against char (int)",
+            ),
+            (
+                int_of_int,
+                int_of_two_ints,
+                false,
+                "int (int) against int (int, int)",
+            ),
+            // 6.7.6.3 p15's own case: a prototype whose parameters are
+            // unchanged by the default argument promotions is compatible with
+            // an empty identifier list, and a `char` parameter is changed.
+            (
+                int_of_void,
+                int_of_nothing_said,
+                true,
+                "int (void) against int ()",
+            ),
+            (
+                int_of_int,
+                int_of_nothing_said,
+                true,
+                "int (int) against int ()",
+            ),
+            (
+                int_of_char,
+                int_of_nothing_said,
+                false,
+                "int (char) against int ()",
+            ),
+            (
+                int_of_nothing_said,
+                also_int_of_nothing_said,
+                true,
+                "int () against int ()",
+            ),
+        ] {
+            assert_eq!(ast.compatible(left, right), same, "{what}");
+            assert_eq!(ast.compatible(right, left), same, "{what}, the other way");
+        }
+    }
+
+    /// Every shape of type, and how C declares one of it.
+    ///
+    /// The expected strings are written out rather than derived from the types,
+    /// for the reason RK-001 gives: a test that builds its expectation the way
+    /// the code does is comparing the code with itself. These were taken from
+    /// `clang -Xclang -ast-dump` on the same declarations, so they are what
+    /// another compiler prints and not what this one happens to.
+    ///
+    /// Mutation: drop the parentheses from the pointer arm of `spell_type`, or
+    /// change where the space goes. This fails.
+    #[test]
+    fn every_type_is_spelled_the_way_c_declares_it() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "10");
+        let mut ast = Ast::new();
+        let ten = ast.push_expr(Expr::Number {
+            span: Span::new(file, 0, 2),
+        });
+
+        let int = ast.push_type(Type::Int);
+        let void = ast.push_type(Type::Void);
+        let character = ast.push_type(Type::Char);
+        let pointer_to_int = ast.push_type(Type::Pointer(int));
+        let pointer_to_pointer = ast.push_type(Type::Pointer(pointer_to_int));
+        let pointer_to_char = ast.push_type(Type::Pointer(character));
+        let pointer_to_void = ast.push_type(Type::Pointer(void));
+        let array_of_int = ast.push_type(Type::Array {
+            element: int,
+            length: Some(ten),
+        });
+        let incomplete = ast.push_type(Type::Array {
+            element: int,
+            length: None,
+        });
+        let array_of_pointer = ast.push_type(Type::Array {
+            element: pointer_to_int,
+            length: Some(ten),
+        });
+        let pointer_to_array = ast.push_type(Type::Pointer(array_of_int));
+
+        let unnamed = |ty| Declaration {
+            name: None,
+            ty,
+            span: Span::new(file, 0, 2),
+        };
+        let takes_int = |returns| Type::Function {
+            returns,
+            parameters: Parameters::Prototype(vec![unnamed(int)]),
+        };
+        let returns_int = ast.push_type(takes_int(int));
+        let returns_pointer = ast.push_type(takes_int(pointer_to_int));
+        let pointer_to_function = ast.push_type(Type::Pointer(returns_int));
+        let takes_nothing = ast.push_type(Type::Function {
+            returns: int,
+            parameters: Parameters::Prototype(Vec::new()),
+        });
+        let unspecified = ast.push_type(Type::Function {
+            returns: int,
+            parameters: Parameters::Unspecified,
+        });
+
+        for (ty, spelling) in [
+            (int, "int"),
+            (character, "char"),
+            (void, "void"),
+            (pointer_to_int, "int *"),
+            (pointer_to_pointer, "int **"),
+            (pointer_to_void, "void *"),
+            (pointer_to_char, "char *"),
+            (array_of_int, "int[10]"),
+            (incomplete, "int[]"),
+            (array_of_pointer, "int *[10]"),
+            (pointer_to_array, "int (*)[10]"),
+            (returns_int, "int (int)"),
+            (returns_pointer, "int *(int)"),
+            (pointer_to_function, "int (*)(int)"),
+            (takes_nothing, "int (void)"),
+            (unspecified, "int ()"),
+        ] {
+            assert_eq!(spell_type(&sources, &ast, ty), spelling, "{ty:?}");
+        }
+    }
 
     /// A span in a file that exists, because `Span` cannot be built without a
     /// `FileId` and a `FileId` cannot be built without a file. What these tests

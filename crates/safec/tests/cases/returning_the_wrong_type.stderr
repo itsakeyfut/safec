@@ -1,0 +1,9 @@
+error[SC0302]: cannot return `int *` from a function returning `int`
+   ╭─[ returning_the_wrong_type.c:1:33 ]
+   │
+ 1 │ int main(void) { int *p; return p; }
+   │     ──┬─                        ┬  
+   │       ╰──────────────────────────── declared to return `int`
+   │                                 │  
+   │                                 ╰── this is `int *`
+───╯

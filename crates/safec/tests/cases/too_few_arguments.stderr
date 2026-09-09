@@ -1,0 +1,11 @@
+error[SC0303]: too few arguments: expected 2, found 1
+   ╭─[ too_few_arguments.c:3:25 ]
+   │
+ 1 │ int add(int a, int b) { return a + b; }
+   │     ─┬─  
+   │      ╰─── declared with 2 parameters here
+   │ 
+ 3 │ int main(void) { return add(1); }
+   │                         ───┬──  
+   │                            ╰──── this call
+───╯

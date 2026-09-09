@@ -75,10 +75,11 @@ because nothing can break it and still build.
   the point: the choice being made here is the one that cannot be added later.
 
   The caller arrived with `crates/safec/src/sema.rs`, which keys a table by
-  `ExprId`, so that id derives `Hash` and `Ast::expr_ids` gives the length. The
-  other three ids still have no caller and still derive neither, which is the
-  same rule applied rather than an oversight. `index()` has no caller either:
-  the table that wants it is #58's.
+  `ExprId`, so that id derives `Hash` and `Ast::expr_ids` gives the length.
+  `crates/safec/src/types.rs` brought the other half: a slot per expression,
+  which is what `ExprId::index` is for. The other three ids still have no
+  caller and still have neither, which is the same rule applied rather than an
+  oversight.
 * Good, because an id is `Copy` and carries no lifetime, so a phase can hold one
   for as long as it likes.
 * Bad, because reading a child is `ast.stmt(id)` rather than following a field,

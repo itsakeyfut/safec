@@ -1,8 +1,9 @@
 //! Which declaration each name refers to.
 //!
-//! The stage `docs/architecture.md` draws between the AST and the typed AST,
-//! or the first slice of it: this says which declaration a name means, and
-//! nothing about what type it has. #58 is where a type joins a binding.
+//! The first half of the stage `docs/architecture.md` draws between the AST
+//! and the typed AST: this says which declaration a name means, and `types.rs`
+//! says what type each expression has. A binding carries the type its
+//! declarator derived, which is what that module reads it for.
 //!
 //! The bindings are this module's own rather than nodes in the tree. A
 //! `Declaration` lives in three places, and one of them, a parameter inside
@@ -44,6 +45,13 @@ pub struct BindingId(u32);
 pub struct Binding {
     /// The span of the name, which is also how it is compared.
     pub name: Span,
+    /// The type the declarator derived for it.
+    ///
+    /// Carried here rather than looked up again, because the three places a
+    /// declaration lives reach their type three different ways and one of
+    /// them, a parameter, has no id to look anything up by. `types.rs` is what
+    /// reads this.
+    pub ty: TypeId,
 }
 
 /// What each use of a name refers to.
@@ -117,6 +125,13 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
 
 struct Resolver<'a> {
     sources: &'a SourceMap,
+    /// Shared, and held in a field rather than passed per method.
+    ///
+    /// That is what lets `let ast = self.ast;` free the walk below to borrow
+    /// `self` mutably. It works only while the reference is shared: the day
+    /// this stage has to *create* a type, the field has to become a `&mut Ast`
+    /// parameter on each method and three comments here stop being true.
+    /// `types.rs` is written that way already and says why.
     ast: &'a Ast,
     resolution: Resolution,
     /// Innermost last. Never empty: the file scope is pushed before the walk
@@ -134,7 +149,7 @@ impl Resolver<'_> {
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
                 // name at the end of its declarator, which is before the body.
-                self.declare(function.name);
+                self.declare(function.name, function.ty);
 
                 self.scopes.push(Vec::new());
                 self.parameters(function.ty, diagnostics);
@@ -172,7 +187,7 @@ impl Resolver<'_> {
         self.scopes.pop();
 
         if let Some(name) = declaration.name {
-            self.declare(name);
+            self.declare(name, declaration.ty);
         }
     }
 
@@ -203,7 +218,7 @@ impl Resolver<'_> {
 
         for parameter in parameters {
             if let Some(name) = parameter.name {
-                self.declare(name);
+                self.declare(name, parameter.ty);
             }
         }
 
@@ -348,9 +363,9 @@ impl Resolver<'_> {
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
-    fn declare(&mut self, name: Span) {
+    fn declare(&mut self, name: Span, ty: TypeId) {
         let id = BindingId(self.resolution.bindings.len() as u32);
-        self.resolution.bindings.push(Binding { name });
+        self.resolution.bindings.push(Binding { name, ty });
         self.scopes
             .last_mut()
             .expect("the file scope is never popped")
