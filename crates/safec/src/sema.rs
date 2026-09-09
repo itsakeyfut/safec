@@ -2,12 +2,12 @@
 //!
 //! The stage `docs/architecture.md` draws between the AST and the typed AST,
 //! or the first slice of it: this says which declaration a name means, and
-//! nothing about what type it has. #58 is where a type joins a symbol.
+//! nothing about what type it has. #58 is where a type joins a binding.
 //!
-//! The symbols are this module's own rather than nodes in the tree. A
+//! The bindings are this module's own rather than nodes in the tree. A
 //! `Declaration` lives in three places, and one of them, a parameter inside
 //! `Type::Function`, has no id at all, so a resolution addressed by tree id
-//! could not name it. Owning the symbols means every declared name is
+//! could not name it. Owning the bindings means every declared name is
 //! addressable here whatever the tree does with it.
 //!
 //! Names are compared as source text. ADR-0006 says an interner is worth
@@ -30,22 +30,32 @@ use crate::source::{SourceMap, Span};
 /// toolchain should not have to learn a second phrasing for the same thing.
 const UNDECLARED: Code = Code::new("SC0301");
 
-/// One declared name, addressed by [`SymbolId`].
+/// One declared name, addressed by [`BindingId`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SymbolId(u32);
+pub struct BindingId(u32);
 
 /// A name the program declared, and where.
+///
+/// Not `Symbol`, which ADR-0006 has already spent on the interned identifier
+/// it says to add when the parser asks for a `&SourceMap`. That is a different
+/// thing: an interned name is one string however many times it is written, and
+/// this is one declaration of it. `rustc` uses `Symbol` in ADR-0006's sense.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Symbol {
+pub struct Binding {
     /// The span of the name, which is also how it is compared.
     pub name: Span,
 }
 
 /// What each use of a name refers to.
 ///
-/// Keyed by the span of the *use*, per ADR-0006's addendum: an identifier
-/// carries a `Span` and name resolution walks the tree, so a span is what it
-/// has to key on.
+/// Keyed by the id of the identifier expression, which ADR-0008 makes unique
+/// by construction. A span is not: a macro body is one piece of text, so two
+/// uses expanded from one `#define` carry one span and can refer to two
+/// different declarations. A table keyed on that keeps the later answer and
+/// says `Some` for both, which is the shape of wrong answer this compiler
+/// exists to not give. ADR-0006's addendum ruled out an index into the token
+/// stream, which the tree does not hold; the tree's own id is a third thing
+/// and is what this uses.
 ///
 /// One of these belongs to one translation unit, which is what C means by a
 /// scope for a file-scope name. `resolve` builds a fresh one per input and
@@ -53,26 +63,26 @@ pub struct Symbol {
 /// declare `x` declare two different things.
 #[derive(Clone, Debug)]
 pub struct Resolution {
-    symbols: Vec<Symbol>,
-    resolved: HashMap<Span, SymbolId>,
+    bindings: Vec<Binding>,
+    resolved: HashMap<ExprId, BindingId>,
 }
 
 impl Resolution {
-    /// The symbol `id` names.
+    /// The binding `id` names.
     ///
     /// # Panics
     ///
     /// If `id` came from a different [`Resolution`].
-    pub fn symbol(&self, id: SymbolId) -> &Symbol {
-        &self.symbols[id.0 as usize]
+    pub fn binding(&self, id: BindingId) -> &Binding {
+        &self.bindings[id.0 as usize]
     }
 
-    /// What the name written at `use_site` refers to, if anything did.
+    /// What the name at `use_site` refers to, if anything did.
     ///
-    /// `None` is either a name that was reported as undeclared or a span that
-    /// is not a use at all. The two are told apart by the diagnostics, not
-    /// here.
-    pub fn resolved(&self, use_site: Span) -> Option<SymbolId> {
+    /// `None` is either a name that was reported as undeclared or an id that
+    /// is not an identifier at all. The two are told apart by the diagnostics,
+    /// not here.
+    pub fn resolved(&self, use_site: ExprId) -> Option<BindingId> {
         self.resolved.get(&use_site).copied()
     }
 }
@@ -90,7 +100,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         sources,
         ast,
         resolution: Resolution {
-            symbols: Vec::new(),
+            bindings: Vec::new(),
             resolved: HashMap::new(),
         },
         // The file scope, which is never popped.
@@ -111,7 +121,7 @@ struct Resolver<'a> {
     resolution: Resolution,
     /// Innermost last. Never empty: the file scope is pushed before the walk
     /// and popped by nobody.
-    scopes: Vec<Vec<SymbolId>>,
+    scopes: Vec<Vec<BindingId>>,
     /// Reused across every expression walk, so that a run allocates once.
     children: Vec<ExprId>,
 }
@@ -306,8 +316,8 @@ impl Resolver<'_> {
 
             if let Expr::Identifier { span } = *expr {
                 match self.lookup(span) {
-                    Some(symbol) => {
-                        self.resolution.resolved.insert(span, symbol);
+                    Some(binding) => {
+                        self.resolution.resolved.insert(id, binding);
                     }
                     None => diagnostics.report(undeclared(self.sources.snippet(span), span)),
                 }
@@ -323,14 +333,14 @@ impl Resolver<'_> {
     }
 
     /// The innermost declaration of the name written at `use_site`.
-    fn lookup(&self, use_site: Span) -> Option<SymbolId> {
+    fn lookup(&self, use_site: Span) -> Option<BindingId> {
         let name = self.sources.snippet(use_site);
 
         self.scopes
             .iter()
             .rev()
             .flat_map(|scope| scope.iter().rev())
-            .find(|&&symbol| self.sources.snippet(self.resolution.symbol(symbol).name) == name)
+            .find(|&&binding| self.sources.snippet(self.resolution.binding(binding).name) == name)
             .copied()
     }
 
@@ -339,8 +349,8 @@ impl Resolver<'_> {
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
     fn declare(&mut self, name: Span) {
-        let id = SymbolId(self.resolution.symbols.len() as u32);
-        self.resolution.symbols.push(Symbol { name });
+        let id = BindingId(self.resolution.bindings.len() as u32);
+        self.resolution.bindings.push(Binding { name });
         self.scopes
             .last_mut()
             .expect("the file scope is never popped")
@@ -373,6 +383,7 @@ mod tests {
     use crate::source::FileId;
 
     struct Resolved {
+        ast: Ast,
         resolution: Resolution,
         diagnostics: DiagnosticSink,
         sources: SourceMap,
@@ -394,6 +405,7 @@ mod tests {
         let resolution = resolve(&sources, &ast, &mut diagnostics);
 
         Resolved {
+            ast,
             resolution,
             diagnostics,
             sources,
@@ -427,10 +439,26 @@ mod tests {
             Span::new(self.file, start, start + name.len() as u32)
         }
 
+        /// The identifier expression written at `span`.
+        ///
+        /// A test says where a name is by pointing at the text, and the table
+        /// is keyed by the tree's id, so something has to cross between them.
+        /// `Ast::expr_ids` is what makes that possible from outside the module
+        /// that owns the arena.
+        fn used_at(&self, span: Span) -> ExprId {
+            self.ast
+                .expr_ids()
+                .find(
+                    |&id| matches!(self.ast.expr(id), Expr::Identifier { span: at } if *at == span),
+                )
+                .unwrap_or_else(|| panic!("no identifier is written at {span:?}"))
+        }
+
         /// Where the name used at the `nth` occurrence of `text` was declared.
         fn declaration_of(&self, text: &str, nth: usize) -> Option<Span> {
-            let symbol = self.resolution.resolved(self.occurrence(text, nth))?;
-            Some(self.resolution.symbol(symbol).name)
+            let use_site = self.used_at(self.occurrence(text, nth));
+            let binding = self.resolution.resolved(use_site)?;
+            Some(self.resolution.binding(binding).name)
         }
 
         fn messages(&self) -> Vec<&str> {
@@ -539,7 +567,7 @@ mod tests {
     /// Mutation: drop the `rev` over `self.scopes` in `Resolver::lookup`. The
     /// outer `x` answers instead and this fails.
     ///
-    /// The other `rev`, over the symbols within one scope, is held by nothing
+    /// The other `rev`, over the bindings within one scope, is held by nothing
     /// and cannot be until #57: it decides which of two declarations of one
     /// name in one scope answers, and C makes that either an error, inside a
     /// block, or two spellings of one object, at file scope. There is no
