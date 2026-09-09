@@ -751,4 +751,71 @@ mod tests {
         assert_ne!(int, pointer);
         assert_eq!(unit.ty(pointer), Ty::Pointer(int));
     }
+
+    /// An operation can say nobody wrote it, and still point somewhere.
+    ///
+    /// `docs/c-family.md` asks for exactly this: a destructor at the end of a
+    /// scope has "a location to blame and no source text". The two kinds carry
+    /// the same span here, because what differs is not where to point but what
+    /// a diagnostic may say about it.
+    ///
+    /// Mutation: delete `Origin::Generated` and the arm of `span` that reads
+    /// it. This stops compiling. Mutation: have `Origin::Generated` mean the
+    /// same as `Written`, by making the two operations below compare equal.
+    /// The `assert_ne!` fails.
+    #[test]
+    fn an_operation_can_say_nobody_wrote_it() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let temporary = function.push_local(int);
+
+        let write = |origin| Operation {
+            place: Place::local(temporary),
+            value: Rvalue::Use(Operand::Constant(0)),
+            origin,
+        };
+        let written = write(Origin::Written(at));
+        let generated = write(Origin::Generated(at));
+
+        assert_eq!(written.origin.span(), at);
+        assert_eq!(generated.origin.span(), at);
+        assert_ne!(written, generated);
+    }
+
+    /// Two functions with one name are two functions.
+    ///
+    /// C says so already: two `static` functions in different translation
+    /// units share a name, and `docs/c-family.md` asks that identity in the IR
+    /// be an id rather than a string for that reason. The name here is one
+    /// span, which is the strongest version of the case: even the same text at
+    /// the same place does not merge them.
+    ///
+    /// Mutation: have `push_function` hand back `FuncId(0)` rather than the
+    /// length before the push. This fails, on the ids and on the second
+    /// function's locals.
+    ///
+    /// Mutation: have `push_local` take its id from `len() - 1`. The local it
+    /// hands back names the one before it and this fails.
+    #[test]
+    fn two_functions_with_one_name_have_two_ids() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let character = unit.push_type(Ty::Char);
+
+        let first = Function::new(at, int, []);
+        let mut second = Function::new(at, int, []);
+        let scratch = second.push_local(character);
+
+        let first = unit.push_function(first);
+        let second = unit.push_function(second);
+
+        assert_ne!(first, second);
+        assert_eq!(unit.function(first).name, unit.function(second).name);
+        assert_eq!(unit.function(first).locals(), 1);
+        assert_eq!(unit.function(second).locals(), 2);
+        assert_eq!(unit.function(second).local(scratch), character);
+    }
 }
