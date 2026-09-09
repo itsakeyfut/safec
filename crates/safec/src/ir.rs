@@ -607,6 +607,8 @@ mod tests {
         let id = unit.push_function(add);
         let add = unit.function(id);
 
+        assert_eq!(add.name, at);
+        assert_eq!(unit.functions().len(), 1);
         assert_eq!(add.return_place(), LocalId(0));
         assert_eq!(
             add.parameters().collect::<Vec<_>>(),
@@ -845,5 +847,51 @@ mod tests {
         assert_eq!(unit.function(first).locals(), 1);
         assert_eq!(unit.function(second).locals(), 2);
         assert_eq!(unit.function(second).local(scratch), character);
+    }
+
+    /// `&a[i]`: the two shapes the lifetime analysis is written against.
+    ///
+    /// `Rvalue::Address` is the only operation that turns a place into a
+    /// value, and `Projection::Index` is how a place reaches an element, so an
+    /// escape through an element goes through both at once. Nothing had built
+    /// either, and a variant nothing builds is one that can be deleted in
+    /// silence.
+    ///
+    /// Mutation: delete `Rvalue::Address`, or `Projection::Index`, or
+    /// `UnOp::Neg`. Each stops this compiling. Mutation: have `Place::local`
+    /// hand back a place with a `Deref` on it. The `assert_ne!` fails.
+    #[test]
+    fn an_address_can_be_taken_of_an_element() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+
+        let mut function = Function::new(at, pointer, []);
+        let array = function.push_local(int);
+        let index = function.push_local(int);
+        let p = function.push_local(pointer);
+
+        let element = Place {
+            local: array,
+            projection: vec![Projection::Index(Operand::Copy(Place::local(index)))],
+        };
+        let taken = Operation {
+            place: Place::local(p),
+            value: Rvalue::Address(element.clone()),
+            origin: Origin::Written(at),
+        };
+        let negated = Operation {
+            place: Place::local(index),
+            value: Rvalue::Unary {
+                op: UnOp::Neg,
+                operand: Operand::Copy(Place::local(index)),
+            },
+            origin: Origin::Written(at),
+        };
+
+        assert_ne!(element, Place::local(array));
+        assert_eq!(taken.value, Rvalue::Address(element));
+        assert_ne!(taken.value, negated.value);
     }
 }
