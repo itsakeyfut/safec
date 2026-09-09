@@ -26,7 +26,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 
 | [0008](./0008-hold-the-tree-in-flat-vectors-and-address-a-node-by-index.md) | Hold the tree in flat vectors and address a node by index | accepted | `an_id_still_names_its_node_after_more_are_pushed` in `crates/safec/src/ast.rs`; taking the id from `len()` after the push rather than before makes it fail, and `Ast`'s private vectors make holding a node across a push `error[E0502]` |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008 · proposed: none · superseded: none
+| [0009](./0009-name-a-diagnostic-code-after-the-compiler-and-the-topic.md) | Name a diagnostic code after this compiler and the topic, not after the severity | accepted | `each_lexical_diagnostic_keeps_the_code_it_was_assigned` in `crates/safec/src/lexer.rs` and thirteen `.stderr` files under `crates/safec/tests/cases/`; changing any code in either half fails them by name. The shape itself, that a prefix is `SC` and that a range belongs to a topic, is a convention this record states and nothing enforces |
+
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 
