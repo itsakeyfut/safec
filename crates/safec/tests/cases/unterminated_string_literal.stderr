@@ -1,4 +1,4 @@
-error[E0102]: unterminated string literal
+error[SC0102]: unterminated string literal
    ╭─[ unterminated_string_literal.c:1:11 ]
    │
  1 │ char *s = "abc

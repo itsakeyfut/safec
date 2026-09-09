@@ -1,4 +1,4 @@
-error[E0201]: expected an expression
+error[SC0201]: expected an expression
    ╭─[ unreadable_expression.c:1:29 ]
    │
  1 │ int main(void) { return a + ; }

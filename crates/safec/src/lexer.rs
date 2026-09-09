@@ -40,14 +40,14 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::source::{FileId, SourceFile, Span};
 use crate::token::{Keyword, Punct, Token, TokenKind};
 
-// Lexical diagnostics take `E01xx`. A code is assigned once and never reused,
-// so the ranges are set aside now rather than renumbered when the next stage
-// starts reporting.
-const UNTERMINATED_COMMENT: Code = Code::new("E0101");
-const UNTERMINATED_LITERAL: Code = Code::new("E0102");
-const UNEXPECTED_CHARACTERS: Code = Code::new("E0103");
-const UNSUPPORTED_DIRECTIVE: Code = Code::new("E0104");
-const EMPTY_LITERAL: Code = Code::new("E0105");
+// Lexical diagnostics take `SC01xx`, which `docs/diagnostics.md` allocates. A
+// code is assigned once and never reused, so a wording can be improved without
+// moving the handle a reader kept.
+const UNTERMINATED_COMMENT: Code = Code::new("SC0101");
+const UNTERMINATED_LITERAL: Code = Code::new("SC0102");
+const UNEXPECTED_CHARACTERS: Code = Code::new("SC0103");
+const UNSUPPORTED_DIRECTIVE: Code = Code::new("SC0104");
+const EMPTY_LITERAL: Code = Code::new("SC0105");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
@@ -669,11 +669,11 @@ mod tests {
     #[test]
     fn each_lexical_diagnostic_keeps_the_code_it_was_assigned() {
         for (text, code) in [
-            ("/* on and on", "E0101"),
-            ("s = \"oops;\n", "E0102"),
-            ("int x = @;\n", "E0103"),
-            ("#define X 1\n", "E0104"),
-            ("c = '';\n", "E0105"),
+            ("/* on and on", "SC0101"),
+            ("s = \"oops;\n", "SC0102"),
+            ("int x = @;\n", "SC0103"),
+            ("#define X 1\n", "SC0104"),
+            ("c = '';\n", "SC0105"),
         ] {
             let scan = scan(text);
             let reported = scan

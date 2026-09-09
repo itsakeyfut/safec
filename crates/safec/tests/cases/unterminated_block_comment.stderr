@@ -1,4 +1,4 @@
-error[E0101]: unterminated block comment
+error[SC0101]: unterminated block comment
    ╭─[ unterminated_block_comment.c:1:1 ]
    │
  1 │ /* never closed

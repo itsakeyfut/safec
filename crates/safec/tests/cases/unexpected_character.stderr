@@ -1,4 +1,4 @@
-error[E0103]: unexpected character
+error[SC0103]: unexpected character
    ╭─[ unexpected_character.c:1:9 ]
    │
  1 │ int x = @;

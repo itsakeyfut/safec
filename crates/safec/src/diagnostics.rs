@@ -114,7 +114,7 @@ pub enum Certainty {
     Unproven,
 }
 
-/// A stable identifier for a class of diagnostic, such as `E0301`.
+/// A stable identifier for a class of diagnostic, such as `SC0601`.
 ///
 /// Codes are how a user looks a diagnostic up and how a build script silences
 /// one, so they are part of the interface. A code is assigned once and never
@@ -202,7 +202,7 @@ impl Label {
 /// # let mut map = SourceMap::new();
 /// # let file = map.add_virtual("main.c", "int *p = 0;");
 /// let diagnostic = Diagnostic::error("use of freed value `p`")
-///     .with_code(Code::new("E0301"))
+///     .with_code(Code::new("SC0601"))
 ///     .with_label(Label::primary(Span::new(file, 5, 6), "used here"))
 ///     .with_note("`p` was freed above");
 /// ```
@@ -260,7 +260,7 @@ impl Diagnostic {
         }
     }
 
-    /// Attach a stable code, such as `E0301`.
+    /// Attach a stable code, such as `SC0601`.
     pub fn with_code(mut self, code: Code) -> Self {
         self.code = Some(code);
         self
@@ -552,13 +552,13 @@ mod tests {
     #[test]
     fn a_diagnostic_carries_what_it_was_built_with() {
         let diagnostic = Diagnostic::error("use of freed value `p`")
-            .with_code(Code::new("E0301"))
+            .with_code(Code::new("SC0601"))
             .with_label(Label::secondary(span(0, 4), "freed here"))
             .with_label(Label::primary(span(10, 12), "used here"))
             .with_note("`p` was moved into `consume`");
 
         assert_eq!(diagnostic.severity(), Severity::Error);
-        assert_eq!(diagnostic.code().unwrap().as_str(), "E0301");
+        assert_eq!(diagnostic.code().unwrap().as_str(), "SC0601");
         assert_eq!(diagnostic.message(), "use of freed value `p`");
         assert_eq!(diagnostic.labels().len(), 2);
         assert_eq!(diagnostic.notes(), ["`p` was moved into `consume`"]);

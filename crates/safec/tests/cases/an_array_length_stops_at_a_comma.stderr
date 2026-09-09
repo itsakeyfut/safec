@@ -1,4 +1,4 @@
-error[E0201]: expected `]`
+error[SC0201]: expected `]`
    ╭─[ an_array_length_stops_at_a_comma.c:1:8 ]
    │
  1 │ int a[1, 2];

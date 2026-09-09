@@ -31,19 +31,18 @@ use crate::token::{Keyword, Punct, Token, TokenKind};
 
 /// Something was expected and something else was there.
 ///
-/// `E01xx` is the lexer's range and `E03xx` is where the safety analysis's
-/// example already sits, so the parser takes `E02xx`. One code covers every
-/// shape of this because what differs between them is the message, and a code
-/// exists so that a reader can search for a class of error rather than a
-/// sentence.
-const EXPECTED: Code = Code::new("E0201");
+/// `SC02xx` is syntax's range, which `docs/diagnostics.md` allocates rather
+/// than this comment. One code covers every shape of this because what differs
+/// between them is the message, and a code exists so that a reader can search
+/// for a class of error rather than a sentence.
+const EXPECTED: Code = Code::new("SC0201");
 
 /// A program nested deeper than this parser will go.
 ///
 /// Its own code rather than [`EXPECTED`], because nothing was expected: the
 /// program is well formed and this compiler is declining to read it, which is a
 /// different thing to tell a reader and a different thing to search for.
-const TOO_DEEP: Code = Code::new("E0202");
+const TOO_DEEP: Code = Code::new("SC0202");
 
 /// How deep this parser will go before it declines.
 ///
