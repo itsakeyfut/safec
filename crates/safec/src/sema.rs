@@ -505,6 +505,49 @@ mod tests {
         assert_eq!(undeclared.messages(), ["use of undeclared identifier `n`"]);
     }
 
+    /// Every place a name can be written, and the order they come back in.
+    ///
+    /// One undeclared name per position, so the list below says which of them
+    /// the walk reached: a missing entry is a place a use goes unchecked, and
+    /// this compiler being silent about a name it never looked at is worse
+    /// than being wrong about one it did.
+    ///
+    /// The order is the order they are written, and it is asserted because it
+    /// is what a reader sees.
+    ///
+    /// `p` is the control: it is a parameter, it is used, and it is absent
+    /// from the list.
+    ///
+    /// Mutation: delete any one of the `self.expr` or `self.stmt` calls in
+    /// `Resolver::stmt`, or the `walk_type` call in `Resolver::declaration`.
+    /// One name leaves the list and this fails. Before it existed, taking the
+    /// condition out of `Stmt::If` broke nothing in the whole suite.
+    #[test]
+    fn every_place_a_name_can_be_written_is_looked_at() {
+        let resolved = resolved(
+            "int outer[ol];\n\nint main(int p) {\n    int inner[il];\n    if (c1) e1; else e2;\n    while (c2) e3;\n    for (i1; c3; s1) e4;\n    p;\n    return r1 + r2;\n}\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            [
+                "use of undeclared identifier `ol`",
+                "use of undeclared identifier `il`",
+                "use of undeclared identifier `c1`",
+                "use of undeclared identifier `e1`",
+                "use of undeclared identifier `e2`",
+                "use of undeclared identifier `c2`",
+                "use of undeclared identifier `e3`",
+                "use of undeclared identifier `i1`",
+                "use of undeclared identifier `c3`",
+                "use of undeclared identifier `s1`",
+                "use of undeclared identifier `e4`",
+                "use of undeclared identifier `r1`",
+                "use of undeclared identifier `r2`",
+            ]
+        );
+    }
+
     /// C17 6.7.6.2 lets a parameter's length name another parameter, and this
     /// stage builds no scope in which that name could be found. Reporting it
     /// would be a false positive about valid C, so nothing is reported.
