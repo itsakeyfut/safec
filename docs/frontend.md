@@ -25,6 +25,7 @@ Support a practical subset:
 - functions
 - `if`
 - `while`
+- `for`
 - `return`
 - pointers
 - arrays

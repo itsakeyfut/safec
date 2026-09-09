@@ -5,9 +5,19 @@
 //!
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
-//! expressions of 6.5, a compound statement and `return`. The siblings of the
-//! issues that added those fill in control flow and structs, and each of them
-//! adds variants here rather than changing the shape.
+//! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
+//! here is `switch`, `do`, `goto`, a labelled statement, `break`, `continue`, a
+//! declaration in a `for` initialiser, and structs. The siblings of the issues
+//! that added the rest fill those in, and each of them adds variants here
+//! rather than changing the shape.
+//!
+//! **A statement tree is bounded and an expression tree is not.** Every place a
+//! statement nests inside another is a recursion in the parser, which counts
+//! them, so a statement tree is at most `parser::MAX_NESTING` deep. An
+//! expression tree has no such bound: a left-associative chain and a run of
+//! postfix operators are folded by loops, so `a + a + ...` is as deep as it is
+//! long. Anything that walks this owes itself an answer to the second, and
+//! `driver.rs`'s `dump_expr` is what one looks like.
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
@@ -421,6 +431,13 @@ pub enum Stmt {
         span: Span,
     },
     /// `if`, with or without an `else`. C17 6.8.4 p1.
+    ///
+    /// A substatement that failed without consuming anything can carry a span
+    /// outside this one: `if (1) }` ends here at the `)`, while the `Error` in
+    /// `then` points at the brace that broke it. So a walker may not assume a
+    /// child sits inside its parent, and a diagnostic underlining a whole
+    /// statement has to say which of the two it means. The same holds of
+    /// `While` and `For`.
     If {
         /// What is asked. 6.8.4.1 p1 makes it a constraint that this has scalar
         /// type, which is a constraint and so a later phase's.

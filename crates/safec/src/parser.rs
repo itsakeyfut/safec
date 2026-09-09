@@ -2,8 +2,11 @@
 //!
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
-//! operator, a compound statement and `return`. What it does not read yet is
-//! control flow, structs, member access, casts, `sizeof`, the type qualifiers,
+//! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
+//! `return`, an expression statement, `if`, `while` and the `for` whose clauses
+//! are expressions. What it does not read yet is `switch`, `do`, `goto`, a
+//! labelled statement, `break`, `continue`, a declaration in a `for`
+//! initialiser, structs, member access, casts, `sizeof`, the type qualifiers,
 //! the storage classes, `typedef`, a variadic function's ellipsis, `[static N]`
 //! and `[*]`, and the two primary expressions the lexer already hands it: a
 //! character constant and a string literal. Each arrives in a sibling of the
@@ -64,7 +67,7 @@ const TOO_DEEP: Code = Code::new("E0202");
 /// and so does `a = b = c`, because assignment is right-associative and its
 /// right side is read by re-entering the climb. Neither writes a bracket, and
 /// `clang` bounds neither. So every recursion in this file goes through
-/// [`Parser::deeper`], which is the one place this is counted, and the limit is
+/// `Parser::deeper`, which is the one place this is counted, and the limit is
 /// tighter than `clang`'s for shapes `clang` does not count at all.
 ///
 /// C17 5.2.4.1 asks an implementation to manage "127 nesting levels of blocks",
@@ -72,16 +75,31 @@ const TOO_DEEP: Code = Code::new("E0202");
 /// and "63 nesting levels of parenthesized declarators within a full
 /// declarator" and "12 pointer, array, and function declarators (in any
 /// combinations) modifying an arithmetic, structure, union, or void type in a
-/// declaration". This clears all four. What it sets no minimum for is a chain
-/// of unary or assignment operators, which is the only room this takes beyond
-/// them.
+/// declaration". One program holding all four at once is accepted: 127 nested
+/// blocks with 63 nested parentheses inside the innermost, which is what p1
+/// asks for when it says an implementation must translate "at least one
+/// program" containing an instance of every limit.
+///
+/// A selection or iteration statement takes a level too, and by C's own
+/// reckoning that is what a block count is. 6.8.4 p3: "A selection statement is
+/// a block whose scope is a strict subset of the scope of its enclosing block.
+/// Each associated substatement is also a block." 6.8.5 p5 says the same of an
+/// iteration statement and its body. So `for (;;) if (x) { }` is three blocks
+/// per level and this refuses it at 86, which is 258 blocks rather than 86 of
+/// anything. The counter and C agree; the shapes just do not look alike.
+///
+/// What 5.2.4.1 sets no minimum for is a chain of unary or assignment
+/// operators, which is the only room this takes beyond them.
 ///
 /// **This bounds the parser, not the tree.** A left-associative chain and a run
 /// of postfix operators are folded by a loop, so `a + a + ...` and `a++++` are
 /// as deep in the tree as they are long while `depth` never rises. Anything
 /// that walks the tree owes itself an answer to that; `dump_expr` in
 /// `driver.rs` uses an explicit stack, and says so.
-const MAX_NESTING: usize = 256;
+/// A test outside this crate reads it, because a process-level test of the
+/// deepest tree the printer can be handed is only honest if the depth it builds
+/// follows this number rather than restating it.
+pub const MAX_NESTING: usize = 256;
 
 /// The loosest binding there is: the comma operator, C17 6.5.17.
 ///
@@ -783,6 +801,13 @@ impl Parser<'_> {
     /// The null statement is this with nothing in it. p3 calls it "a null
     /// statement (consisting of just a semicolon)" and gives it no production,
     /// so it gets no node of its own either.
+    ///
+    /// `expression` and not `assignment`, because 6.8.3 p1 spells it
+    /// `expression`, so `i = 0, j = 0;` is one statement. The same decision is
+    /// made in `controlling` and in `clause`, and all three are pinned: the
+    /// comma in `expression_statement.c` is what fails when this one is
+    /// narrowed, and `a_comma_in_a_controlling_expression.c` is what fails when
+    /// either of the others is.
     fn expression_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         let value = if self.check(TokenKind::Punct(Punct::Semicolon)) {
             None
@@ -797,7 +822,7 @@ impl Parser<'_> {
             return self.ast.push_stmt(Stmt::Error { span: start });
         }
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        let span = start.to(self.previous().span);
         self.ast.push_stmt(Stmt::Expression { value, span })
     }
 
@@ -832,7 +857,7 @@ impl Parser<'_> {
                     None
                 };
 
-                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                let span = start.to(parser.previous().span);
                 parser.ast.push_stmt(Stmt::If {
                     condition,
                     then,
@@ -856,7 +881,7 @@ impl Parser<'_> {
             diagnostics,
             |parser, diagnostics| {
                 let body = parser.statement(diagnostics);
-                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                let span = start.to(parser.previous().span);
                 parser.ast.push_stmt(Stmt::While {
                     condition,
                     body,
@@ -872,7 +897,7 @@ impl Parser<'_> {
     ///
     /// The other form the same paragraph gives, `for ( declaration
     /// expression_opt ; expression_opt )`, needs an initializer and so needs
-    /// the issue that reads one. Until then `for (int i = 0; ...)` is refused.
+    /// #43. Until then `for (int i = 0; ...)` is refused, at the `int`.
     fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         self.advance();
 
@@ -899,7 +924,7 @@ impl Parser<'_> {
             diagnostics,
             |parser, diagnostics| {
                 let body = parser.statement(diagnostics);
-                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                let span = start.to(parser.previous().span);
                 parser.ast.push_stmt(Stmt::For {
                     initialiser,
                     condition,
@@ -1501,8 +1526,8 @@ mod tests {
     ///
     /// C17 6.8.3 p1 gives one production, `expression_opt ;`, and p3 describes
     /// the null statement as "consisting of just a semicolon" without giving it
-    /// one of its own. `clang` splits the two into `NullStmt` and `Stmt`; this
-    /// follows the grammar instead.
+    /// one of its own. `Stmt::Expression`'s own comment says what `clang` does
+    /// with the same question and why this answers differently.
     ///
     /// Mutation: give the null statement a variant of its own, or read `;` as
     /// an expression statement whose value is an `Expr::Error`. Either way the
@@ -1625,16 +1650,23 @@ int main(void) { return 0; }
 
     /// Nesting is bounded, and the bound is reported rather than met.
     ///
-    /// Four shapes, because four recursions can reach it and a bracket is only
-    /// one of them: nested blocks, nested parentheses, a chain of a
-    /// right-associative operator, which re-enters the climb once per operator,
-    /// and a chain of a prefix operator, which re-enters `unary`. The last two
-    /// write no bracket at all.
+    /// One shape per recursion that can reach the bound, because a bracket is
+    /// only one of them: nested blocks; nested parentheses; a chain of a
+    /// right-associative operator, which re-enters the climb once per operator;
+    /// a chain of a prefix operator, which re-enters `unary`; a chain of `else
+    /// if`, a nest of `while` and a nest of `for`, each of which recurses into
+    /// its substatement; and the two declarator shapes, one bounded by `apply`
+    /// and one by `deeper`. Only three of the nine write a bracket, which is
+    /// why the list is longer than it looks like it should be.
+    ///
+    /// The list is held to that: a recursion added without a row here is a
+    /// level nothing says is taken. Adding one is the whole of what `deeper`
+    /// asks of a new rule.
     ///
     /// Mutation: remove the `MAX_NESTING` check from `deeper`. This fails,
     /// because nothing is reported for the input past the limit. Taking the
-    /// `deeper` call out of `compound`, `infix_from` or `unary` fails it for
-    /// one shape each.
+    /// `deeper` call out of `compound`, `infix_from`, `unary`, `if_statement`,
+    /// `while_statement` or `for_statement` fails it for one shape each.
     ///
     /// That is not the failure the bound exists to prevent, and no test here
     /// can be. Without a bound the recursion runs to the end of the native
