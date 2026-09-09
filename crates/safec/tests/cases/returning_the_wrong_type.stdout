@@ -1,0 +1,5 @@
+Function returning_the_wrong_type.c:1:1 "main" "int (void)"
+  Compound returning_the_wrong_type.c:1:16
+    Declaration returning_the_wrong_type.c:1:18 "p" "int *"
+    Return returning_the_wrong_type.c:1:26
+      Identifier returning_the_wrong_type.c:1:33 "p"

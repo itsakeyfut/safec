@@ -1,0 +1,9 @@
+Function assigning_the_wrong_type.c:1:1 "main" "int (void)"
+  Compound assigning_the_wrong_type.c:1:16
+    Declaration assigning_the_wrong_type.c:1:18 "p" "int *"
+    Expression assigning_the_wrong_type.c:1:26
+      Assign assigning_the_wrong_type.c:1:26 "="
+        Identifier assigning_the_wrong_type.c:1:26 "p"
+        Number assigning_the_wrong_type.c:1:30 "1"
+    Return assigning_the_wrong_type.c:1:33
+      Number assigning_the_wrong_type.c:1:40 "0"

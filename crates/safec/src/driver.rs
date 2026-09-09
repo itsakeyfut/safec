@@ -26,6 +26,7 @@ use crate::parser::parse;
 use crate::sema::resolve;
 use crate::source::{SourceFile, SourceMap, Span};
 use crate::token::Token;
+use crate::types::check;
 
 /// Everything one run of the compiler produced.
 ///
@@ -180,12 +181,14 @@ pub fn compile(options: &Options) -> Compiled {
                 // anything, or the tree is a record of a program this compiler
                 // did not finish reading, and a name diagnostic drawn from it
                 // is a claim about a program nobody wrote.
-                let ast = parse(file, &tokens, &mut diagnostics);
+                let mut ast = parse(file, &tokens, &mut diagnostics);
                 if diagnostics.error_count() == read_whole {
-                    // The resolution itself has no reader yet: #57 and #58 are
-                    // the two that take it. What it does today is report the
-                    // names nothing declares.
-                    resolve(&sources, &ast, &mut diagnostics);
+                    // Neither result has a reader yet: #64 is where the two
+                    // become something the phases after this one are handed,
+                    // and Phase 2 lowering is what reads them. What they do
+                    // today is report what they find.
+                    let resolution = resolve(&sources, &ast, &mut diagnostics);
+                    check(&sources, &mut ast, &resolution, &mut diagnostics);
                 }
                 dump_ast(&sources, &ast, out);
             }

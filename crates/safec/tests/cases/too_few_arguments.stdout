@@ -1,0 +1,14 @@
+Function too_few_arguments.c:1:1 "add" "int (int, int)"
+  Parameter too_few_arguments.c:1:9 "a" "int"
+  Parameter too_few_arguments.c:1:16 "b" "int"
+  Compound too_few_arguments.c:1:23
+    Return too_few_arguments.c:1:25
+      Binary too_few_arguments.c:1:32 "+"
+        Identifier too_few_arguments.c:1:32 "a"
+        Identifier too_few_arguments.c:1:36 "b"
+Function too_few_arguments.c:3:1 "main" "int (void)"
+  Compound too_few_arguments.c:3:16
+    Return too_few_arguments.c:3:18
+      Call too_few_arguments.c:3:25
+        Identifier too_few_arguments.c:3:25 "add"
+        Number too_few_arguments.c:3:29 "1"
