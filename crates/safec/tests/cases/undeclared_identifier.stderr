@@ -1,0 +1,7 @@
+error[SC0301]: use of undeclared identifier `undeclared`
+   ╭─[ undeclared_identifier.c:1:25 ]
+   │
+ 1 │ int main(void) { return undeclared; }
+   │                         ─────┬────  
+   │                              ╰────── no declaration for this name is in scope
+───╯

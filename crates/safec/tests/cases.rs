@@ -39,9 +39,11 @@ macro_rules! cases {
 // The table is written out rather than discovered by walking `cases/`.
 // See ADR-0007 for why, and for what it rejected.
 cases! {
+    a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_comma_in_a_controlling_expression: ["--emit", "ast"],
     a_dangling_else: ["--emit", "ast"],
     a_declaration_is_not_a_body: ["--emit", "ast"],
+    a_failed_parse_reports_no_names: ["--emit", "ast"],
     a_tree_deeper_than_the_indent_shows: ["--emit", "ast"],
     abstract_function_parameter: ["--emit", "ast"],
     abstract_function_type_parameter: ["--emit", "ast"],
@@ -92,6 +94,7 @@ cases! {
     precedence_shift: ["--emit", "ast"],
     several_items_and_statements: ["--emit", "ast"],
     subscript: ["--emit", "ast"],
+    undeclared_identifier: ["--emit", "ast"],
     unexpected_character: ["--emit", "tokens"],
     unexpected_characters: ["--emit", "tokens"],
     unreadable_expression: ["--emit", "ast"],

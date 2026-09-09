@@ -21,6 +21,7 @@ use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::lexer::lex;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
+use crate::sema::resolve;
 use crate::source::{SourceFile, SourceMap, Span};
 use crate::token::Token;
 
@@ -161,7 +162,21 @@ pub fn compile(options: &Options) -> Compiled {
         match &mut artifact {
             Some(Emitted::Tokens(out)) => dump_tokens(&source, &tokens, out),
             Some(Emitted::Ast(out)) => {
+                // The gate is this input's parse, read the way the loop above
+                // reads its own: `has_errors` answers for the whole run, so a
+                // count taken either side of this call is what says whether
+                // *this* file parsed. The parser stops at the first thing it
+                // cannot read and drops the rest of the tokens, so resolving
+                // what survives would let this compiler say a name is
+                // undeclared in a program it did not finish reading.
+                let before = diagnostics.error_count();
                 let ast = parse(file, &tokens, &mut diagnostics);
+                if diagnostics.error_count() == before {
+                    // The resolution itself has no reader yet: #57 and #58 are
+                    // the two that take it. What it does today is report the
+                    // names nothing declares.
+                    resolve(&sources, &ast, &mut diagnostics);
+                }
                 dump_ast(&sources, &ast, out);
             }
             None => {}

@@ -1,0 +1,6 @@
+Function a_failed_parse_reports_no_names.c:1:1 "main" "int (void)"
+  Compound a_failed_parse_reports_no_names.c:1:16
+    Return a_failed_parse_reports_no_names.c:1:18
+      Binary a_failed_parse_reports_no_names.c:1:25 "+"
+        Identifier a_failed_parse_reports_no_names.c:1:25 "yy"
+        Error a_failed_parse_reports_no_names.c:1:30

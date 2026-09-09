@@ -1,0 +1,7 @@
+error[SC0301]: use of undeclared identifier `i`
+   ╭─[ a_block_declaration_does_not_leave_its_block.c:1:36 ]
+   │
+ 1 │ int main(void) { { int i; } return i; }
+   │                                    ┬  
+   │                                    ╰── no declaration for this name is in scope
+───╯
