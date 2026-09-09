@@ -1,0 +1,2 @@
+Declaration function_returning_pointer.c:1:1 "f" "int *(int)"
+  Parameter function_returning_pointer.c:1:8 "int"

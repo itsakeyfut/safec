@@ -1,0 +1,15 @@
+Function mvp_program.c:1:1 "add" "int (int, int)"
+  Parameter mvp_program.c:1:9 "a" "int"
+  Parameter mvp_program.c:1:16 "b" "int"
+  Compound mvp_program.c:1:23
+    Return mvp_program.c:2:5
+      Binary mvp_program.c:2:12 "+"
+        Identifier mvp_program.c:2:12 "a"
+        Identifier mvp_program.c:2:16 "b"
+Function mvp_program.c:5:1 "main" "int ()"
+  Compound mvp_program.c:5:12
+    Return mvp_program.c:6:5
+      Call mvp_program.c:6:12
+        Identifier mvp_program.c:6:12 "add"
+        Number mvp_program.c:6:16 "1"
+        Number mvp_program.c:6:19 "2"
