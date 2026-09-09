@@ -21,6 +21,14 @@
 //! edge no statement produced has to be the thing that ends a block. See
 //! [ADR-0010].
 //!
+//! **Every place is rooted at a local, and no statement says a local's storage
+//! ended.** So an object with static storage duration cannot be named at all,
+//! and a scope closing leaves nothing behind: `{ int x; p = &x; }` and the same
+//! program without the braces are one IR. An analysis on this can say where a
+//! pointer came from and not what it outlived. Both are additions that change
+//! what a [`Place`] is rooted at and what a [`Block`] holds, rather than
+//! variants beside the ones here, and #74 is where that is decided.
+//!
 //! Nothing here builds an IR or reads one. The lowering is #70, the printer is
 //! #71 and the interpreter is #72; what this module owes them is a shape they
 //! do not have to agree about first.

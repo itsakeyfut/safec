@@ -71,6 +71,11 @@ but it cannot be absent.
 `E0004`. `Terminator::successors` in `crates/safec/src/ir.rs` matches every
 kind and is written out rather than wildcarded, so a kind added later stops it
 and every other walk from compiling until somebody says what it means there.
+The fields are written out too, because the edge set is what this record is
+about and a second edge on a kind that already exists would grow it just as
+much: an unwinding call keeps `then` and gains somewhere else to go. Spelled
+without `..`, that field is `error[E0027]` at every walk; spelled with it, the
+edge would have been dropped from the set with everything still compiling.
 `an_edge_no_statement_produced_can_be_built` in the same file constructs one,
 so deleting the variant stops that test compiling.
 
