@@ -653,6 +653,68 @@ mod tests {
         assert_eq!(checked.messages(), ["cannot assign `int` to `int *`"]);
     }
 
+    /// Which assignments between pointers C17 6.5.16.1 p1 allows.
+    ///
+    /// One program with all four, so that the three silences are asserted
+    /// against a run that does report something and cannot pass by checking
+    /// nothing.
+    ///
+    /// Mutation: drop the `void` half of the pointer arm of `assignable`. The
+    /// two `void *` lines start reporting and this fails. Mutation: have
+    /// `Ast::same_type` answer `true` always. The `char *` line stops
+    /// reporting and this fails, which is the only place in the suite that
+    /// holds the comparison against a program rather than against a table.
+    #[test]
+    fn a_pointer_takes_the_same_pointer_or_a_void_one() {
+        let checked = checked(
+            "int main(void) {
+    int *p;
+    char *c;
+    void *v;
+    p = p;
+    p = v;
+    v = p;
+    p = c;
+    return 0;
+}
+",
+        );
+
+        assert_eq!(checked.messages(), ["cannot assign `char *` to `int *`"]);
+    }
+
+    /// C17 6.5.2.2 p2 makes the argument count a constraint only where the
+    /// callee's type includes a prototype, and 6.7.6.3 p14 makes `()` an empty
+    /// identifier list rather than one.
+    ///
+    /// Both halves in one test, because the silence alone passes against a
+    /// compiler that counts nothing.
+    ///
+    /// Mutation: treat `Parameters::Unspecified` as a list of no parameters.
+    /// The first program starts reporting three arguments too many, against a
+    /// program `clang` compiles, and this fails.
+    #[test]
+    fn an_empty_parameter_list_says_nothing_about_the_count() {
+        let nothing_said = checked(
+            "int f();
+
+int main(void) { return f(1, 2, 3); }
+",
+        );
+        assert_eq!(nothing_said.messages(), Vec::<&str>::new());
+
+        let a_prototype = checked(
+            "int f(void);
+
+int main(void) { return f(1, 2, 3); }
+",
+        );
+        assert_eq!(
+            a_prototype.messages(),
+            ["too many arguments: expected 0, found 3"]
+        );
+    }
+
     /// A compound assignment is C17 6.5.16.2, whose constraints are its own:
     /// `p += 1` is how a pointer is advanced.
     ///
