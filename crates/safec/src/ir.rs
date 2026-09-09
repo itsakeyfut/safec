@@ -36,9 +36,11 @@ use crate::source::Span;
 /// An opaque id and not a name, which `docs/c-family.md` asks for and gives the
 /// reason: two `static` functions in different translation units share a name
 /// and are different functions, and a C++ mangled name is an ABI detail. It is
-/// also the whole of what "the unit of analysis is the instantiation" needs,
-/// because two functions from one source range are two ids carrying one
-/// [`Function::name`].
+/// also what "the unit of analysis is the instantiation" asks not to be
+/// blocked by, because two functions from one source range are two ids
+/// carrying one [`Function::name`]. `docs/c-family.md` says that one can wait
+/// and costs nothing to accommodate later, which is a weaker claim than
+/// having it: what is here is the keying, not the instantiation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FuncId(u32);
 
@@ -259,8 +261,10 @@ pub enum Rvalue {
 ///
 /// Both carry a span, because both have somewhere to point. What differs is
 /// what a diagnostic may say: text that a user wrote can be quoted back, and a
-/// destructor at the end of a scope has a scope to blame and no text of its
-/// own. `docs/roadmap.md` asks for the distinction in those words.
+/// destructor at the end of a scope has, in `docs/roadmap.md`'s words, "a
+/// location to blame and no source text". The variant names are that
+/// document's too: it asks attribution to distinguish "written here" from
+/// "generated, caused by this".
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Origin {
     /// The source wrote this, here.
@@ -349,13 +353,27 @@ impl Terminator {
     /// The `match` is exhaustive and written out, so a terminator added later
     /// is `error[E0004]` here and in every other walk. That is ADR-0010's
     /// confirmation.
+    ///
+    /// The fields are written out too, and `..` is deliberately not used. A
+    /// second edge on a kind that already exists is the likelier growth than a
+    /// new kind: an unwinding call keeps `then` and gains somewhere to go when
+    /// the callee does not return normally. Spelled this way that field is
+    /// `error[E0027]` here, and spelled `..` it would be silently dropped from
+    /// the edge set while every walk kept compiling.
     pub fn successors(&self, out: &mut Vec<BlockId>) {
         match self {
             Self::Goto(to) | Self::Abnormal { to } => out.push(*to),
             Self::Branch {
-                then, otherwise, ..
+                condition: _,
+                then,
+                otherwise,
             } => out.extend([*then, *otherwise]),
-            Self::Call { then, .. } => out.push(*then),
+            Self::Call {
+                callee: _,
+                arguments: _,
+                destination: _,
+                then,
+            } => out.push(*then),
             Self::Return => {}
         }
     }
@@ -540,27 +558,35 @@ mod tests {
     /// nothing here reads the text back.
     fn spans() -> (SourceMap, Span) {
         let mut sources = SourceMap::new();
-        let file = sources.add_virtual("t.c", "int add(int a, int b) { return a + b; }\n");
+        let file = sources.add_virtual("t.c", "int add(int a, char b) { return a + b; }\n");
         let span = Span::new(file, 31, 36);
         (sources, span)
     }
 
-    /// `int add(int a, int b) { return a + b; }`, built by hand and read back.
+    /// `int add(int a, char b) { return a + b; }`, built by hand and read back.
     ///
     /// This is the phase's third Done-when clause arriving before the first:
     /// there is no frontend in this test, and #73 is what will make that
     /// mechanical rather than true by accident.
     ///
     /// Mutation: have `Function::new` push its parameters before the return
-    /// type. Local 0 stops being the return place, the parameters stop being
-    /// 1 and 2, and this fails.
+    /// type. Local 0 stops being the return place and this fails, on the type
+    /// of local 1.
+    ///
+    /// The second parameter is a `char` for that mutation's sake alone. With
+    /// `int add(int, int)` every local holds one type, the reordering is
+    /// invisible to every assertion here, and the mutation above passes: the
+    /// ids `return_place` and `parameters` hand back are computed from a count
+    /// rather than read from where the types went.
     #[test]
     fn a_function_is_built_and_read_back() {
         let (_sources, at) = spans();
         let mut unit = TranslationUnit::new();
         let int = unit.push_type(Ty::Int);
 
-        let mut add = Function::new(at, int, [int, int]);
+        let character = unit.push_type(Ty::Char);
+
+        let mut add = Function::new(at, int, [int, character]);
         let [a, b] = add.parameters().collect::<Vec<_>>()[..] else {
             panic!("two parameters");
         };
@@ -588,6 +614,8 @@ mod tests {
         );
         assert_eq!(add.locals(), 3);
         assert_eq!(add.local(add.return_place()), int);
+        assert_eq!(add.local(LocalId(1)), int);
+        assert_eq!(add.local(LocalId(2)), character);
 
         let [block] = add.blocks() else {
             panic!("{:?}", add.blocks());
@@ -754,7 +782,7 @@ mod tests {
 
     /// An operation can say nobody wrote it, and still point somewhere.
     ///
-    /// `docs/c-family.md` asks for exactly this: a destructor at the end of a
+    /// `docs/roadmap.md` asks for exactly this: a destructor at the end of a
     /// scope has "a location to blame and no source text". The two kinds carry
     /// the same span here, because what differs is not where to point but what
     /// a diagnostic may say about it.
