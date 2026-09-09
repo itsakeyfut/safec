@@ -44,10 +44,13 @@ look for it; what is below is the half of it that a table cannot hold.
   for `E05` returned both meanings. `E0201` is live in `rustc` as well, verified
   with `rustc --explain E0201`.
 * **Grouping is what creates an allocation problem.** `rustc` groups nothing:
-  its index is 517 pages from `E0001` to `E0805` in numeric order, verified on
-  disk in this toolchain's `share/doc/rust/html/error_codes`. It never has to
-  decide which range the borrow checker gets. Any grouping buys meaning and owes
-  a record of who holds what.
+  its index is one flat run in numeric order, 518 pages from `E0001` to `E0806`
+  on the toolchain `rust-toolchain.toml` resolves to here, counted on disk under
+  `share/doc/rust/html/error_codes`. The count moves with the release and the
+  shape does not, which is the point: `rustc` never has to decide which range
+  the borrow checker gets, and 288 of the numbers below its highest are unused
+  or retired without that costing anything. Any grouping buys meaning and owes a
+  record of who holds what.
 
 ## Considered Options
 
@@ -77,16 +80,29 @@ code already in use" is honoured in the part that matters, which is the number.
 
 ### Confirmation
 
-`each_lexical_diagnostic_keeps_the_code_it_was_assigned` in
-`crates/safec/src/lexer.rs` pins all five lexical codes by string, and thirteen
-expected files under `crates/safec/tests/cases/` hold a rendered code byte for
-byte. Changing any code, in either half, fails them by name.
+The spelling is held by the compiler. `Code::new` in
+`crates/safec/src/diagnostics.rs` asserts `SC` and four digits, and every code
+in the crate is declared as a `const`, so `Code::new("E0301")` is
+`error[E0080]` at its own declaration rather than a diagnostic somebody has to
+notice in review. `a_code_is_sc_and_four_digits_or_it_is_not_a_code` reaches
+the same assertion through a runtime call, and fails if either half of it is
+deleted.
 
-What that does **not** confirm is the shape: nothing fails if a later stage
-picks a code outside its topic's range, or spells one `E`. The rule lives in
-`docs/diagnostics.md` and in this record, and it is enforced by whoever reviews
-the change that adds the next code. Saying so is the point, because a rule that
-looks enforced and is not is worse than one that is honestly unenforced.
+Which code goes where is held by tests.
+`each_lexical_diagnostic_keeps_the_code_it_was_assigned` in
+`crates/safec/src/lexer.rs` pins the five lexical codes by string,
+`each_syntax_diagnostic_keeps_the_code_it_was_assigned` in
+`crates/safec/src/parser.rs` pins the two syntax codes, and thirteen expected
+files under `crates/safec/tests/cases/` hold a rendered code byte for byte.
+Changing any of the seven fails a test by name. The two are not redundant:
+`SC0202` is reported only past the nesting limit, which no corpus case reaches,
+so the parser test is the only thing holding it.
+
+What none of that confirms is the **allocation**: nothing fails if a later stage
+takes a well-spelled code from the wrong topic's range. Only a person knows what
+a new diagnostic is about, so that half is enforced by whoever reviews the change
+that adds it. Saying so is the point, because a rule that looks enforced and is
+not is worse than one that is honestly unenforced.
 
 ### Consequences
 
@@ -104,9 +120,11 @@ looks enforced and is not is worse than one that is honestly unenforced.
   appear in a C compiler's output, so nothing here has to tell the two apart.
   The `rustc` collision was different because both spellings already sit in
   these files.
-* Bad, because a topic range is a guess about how many codes a topic needs, and
-  a topic that overflows a hundred has nowhere obvious to go. Nothing in
-  `docs/roadmap.md` suggests one will.
+* Bad, because a topic range is a guess about how many codes a topic needs.
+  `docs/diagnostics.md` answers the overflow by handing the topic a second
+  hundred from the free end, which costs a topic its contiguous range rather
+  than costing anybody a renumbering. Nothing in `docs/roadmap.md` suggests one
+  will get there.
 * What would reverse this: a decision to follow `clang` and make the stable
   handle a name rather than a number. That is a better fit for
   `docs/concept.md`'s claim that a diagnostic exists so a developer can
@@ -152,8 +170,8 @@ looks enforced and is not is worse than one that is honestly unenforced.
 ### A flat sequence, as `rustc` does
 
 * Good, because there is no allocation to record and no range to overflow.
-  `rustc` has 517 codes with 288 numbers retired or unused between `E0001` and
-  `E0805`, and never had to decide who owns a range.
+  `rustc` hands out one flat sequence and has never had to decide who owns a
+  range, which is why 288 unused numbers below its highest cost it nothing.
 * Bad, because a number then carries no information at all, and this project has
   already spent two ranges saying something with them.
 

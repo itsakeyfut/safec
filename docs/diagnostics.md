@@ -46,7 +46,7 @@ records why the prefix is this one and what was rejected.
 | Range | Topic | In use |
 |---|---|---|
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
-| `SC01xx` | lexical, what a character or a token is | `SC0101` to `SC0105` |
+| `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202` |
 | `SC03xx` | names and types | none yet |
 | `SC04xx` | memory | none yet |
@@ -78,6 +78,13 @@ that carry that code are illustrations of one.
 * A new topic takes the lowest free hundred, and **the table above is updated in
   the change that first emits from it**, not afterwards. A topic that runs past
   `99` takes a second hundred from the free end and is recorded the same way.
+
+Half of this is held by the compiler and half is not, which is worth knowing
+before relying on either. `Code::new` asserts the spelling, and every code is a
+`const`, so a code spelled any other way stops the build at its declaration.
+Which range a code belongs in is a question only a person can answer, since it
+turns on what the new diagnostic is about, so that half is held by the reviewer
+of the change that adds it.
 
 ### What carries no code
 

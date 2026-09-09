@@ -663,7 +663,7 @@ mod tests {
     }
 
     /// A code is the stable handle. A message can be reworded whenever a better
-    /// wording is found, and a `-A`/`-W` flag, a suppression comment and a
+    /// wording is found, and a suppression flag, a suppression comment and a
     /// user's notes all key on the code instead, so a code is assigned once and
     /// never changes. `docs/diagnostics.md` says which range each one comes
     /// from. The corpus holds these five as well, inside the rendered line it
