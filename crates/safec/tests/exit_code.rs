@@ -86,6 +86,15 @@ fn asking_for_help_or_a_version_exits_zero() {
     }
 }
 
+/// The largest pipe buffer the artifact below has to be too big for.
+///
+/// Linux gives a pipe 64 KiB by default and `/proc/sys/fs/pipe-max-size` lets
+/// it be raised as far as 1 MiB; macOS and Windows are smaller. This sits at
+/// the top of that range because the number is not being tuned. It is the
+/// bound an artifact is held against, and the cost of being generous is a
+/// larger temporary file.
+const LARGEST_PIPE_BUFFER: usize = 1 << 20;
+
 /// A run whose artifact never reached the pipe does not report success.
 ///
 /// `driver.rs::an_artifact_that_could_not_be_written_is_an_error` covers the
@@ -93,30 +102,81 @@ fn asking_for_help_or_a_version_exits_zero() {
 /// What nothing covered is the other side of the process boundary, where that
 /// error becomes the number a build system reads.
 ///
+/// **The artifact has to be larger than the pipe can hold, and that is the
+/// whole of why this is not a race.** `run_compiler` builds the artifact in
+/// full and hands it to one `write_all`, so below the buffer there are three
+/// orderings and one of them passes for the wrong reason: the child writes
+/// everything into the pipe and exits zero before the parent closes the read
+/// end at all. This test was written that way, against the 1534-byte token
+/// dump of `add.c`, and CI lost that race. Above the buffer there are two
+/// orderings and both fail, because the child cannot finish without a reader:
+/// either the read end is already gone when the first `write` runs, or the
+/// child fills the pipe, blocks, and the close wakes it with a broken pipe.
+///
+/// The size is asserted rather than assumed, and it is not a number that can
+/// be written down here. Every line of a token dump carries the file's name, so
+/// the artifact scales with the length of the temporary directory's path: the
+/// same twenty thousand terms measured 3.4 MB from a 63-character path on one
+/// host and 5.2 MB from a 108-character one. A short enough path narrows the
+/// margin without anybody touching this file, and shrinking the input closes it
+/// from the other side. Neither can happen quietly while the run below is
+/// measured first.
+///
 /// It does not reach the flush in `main`, and saying it did would be wrong:
 /// `run_compiler` has already failed by then, because `Stdout` is a
 /// `LineWriter` and every line the token dump produces ends in a newline, so
 /// the write reaches the operating system before any buffer holds it.
-/// `main.rs` says of that flush that no test guards it, and that is still
-/// true. Removing the flush entirely fails nothing.
+/// `main.rs` says of that flush that no test guards it, and that is still true
+/// at megabytes rather than at fifteen hundred bytes: removing the flush
+/// entirely fails nothing. Growing the artifact did not move where the failure
+/// happens, which is worth saying because the size is the thing that changed.
 ///
 /// The read end is closed before the compiler writes, which is what a shell
 /// does for `safec ... | head -1`. Rust ignores `SIGPIPE`, so the child sees a
 /// failed write and exits rather than dying of a signal, and an exit code is
 /// what a build system reads. That claim is checked on the other two platforms
-/// by CI running this test rather than by anything here.
+/// by CI running this test rather than by anything here, and so is the race
+/// this replaces: it is a Linux one in practice, and running the old test and
+/// the new one forty times each on a Windows host cannot tell them apart.
 ///
-/// Mutation: in `main.rs`, return `ExitCode::SUCCESS` from the arm that handles
-/// a failed flush. This test fails and no other does.
+/// **Taking the close out hangs rather than fails.** Nothing reads this pipe,
+/// so a child that is allowed to keep its reader blocks once the buffer is
+/// full and `wait` never returns. That is the price of the size this test
+/// needs, and it is worth knowing before rearranging the four lines below: the
+/// small version failed in that case, and this one stops.
+///
+/// Mutation: in `main.rs`, return `ExitCode::SUCCESS` from the `Err` arm, which
+/// is where a failed write and a failed flush both land. This test fails and no
+/// other does. The write is the one it reaches.
 #[test]
 fn a_run_whose_artifact_could_not_be_written_does_not_report_success() {
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/cases/add.c");
+    let source = std::env::temp_dir().join("safec_exit_code_closed_pipe.c");
+    std::fs::write(
+        &source,
+        format!("int main(void) {{ return a{}; }}\n", " + a".repeat(20_000)),
+    )
+    .expect("the temporary directory is writable");
+
+    // What the artifact is when nothing stops it, so that the run below is
+    // known to be asking the question this test's name asks.
+    let delivered = safec(&[
+        "--color",
+        "never",
+        "--emit",
+        "tokens",
+        &source.display().to_string(),
+    ]);
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_safec"))
         .args(["--color", "never", "--emit", "tokens"])
         .arg(&source)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        // Discarded rather than piped. Nothing here reads stderr, and a pipe
+        // nobody reads is a place to block: this input is one line of 80 KB, so
+        // any diagnostic at all makes `ariadne` echo more of it than a pipe
+        // holds, and the child would stop with `wait` below stopped behind it.
+        // The test asserts nothing about stderr, so it does not need one.
+        .stderr(Stdio::null())
         .spawn()
         .expect("the compiler binary was built for this test");
 
@@ -125,7 +185,19 @@ fn a_run_whose_artifact_could_not_be_written_does_not_report_success() {
     drop(child.stdout.take());
 
     let status = child.wait().expect("the compiler was waited for");
+    let _ = std::fs::remove_file(&source);
 
+    assert_eq!(
+        delivered.status.code(),
+        Some(0),
+        "the run that measures the artifact reported {:?} rather than success",
+        delivered.status
+    );
+    assert!(
+        delivered.stdout.len() > LARGEST_PIPE_BUFFER,
+        "the artifact is {} bytes, which a pipe can hold, so the run below decides nothing",
+        delivered.stdout.len()
+    );
     assert_eq!(
         status.code(),
         Some(1),
