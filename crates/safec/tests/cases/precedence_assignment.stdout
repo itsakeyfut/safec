@@ -1,4 +1,4 @@
-Function precedence_assignment.c:1:1 "main"
+Function precedence_assignment.c:1:1 "main" "int (void)"
   Compound precedence_assignment.c:1:16
     Return precedence_assignment.c:1:18
       Assign precedence_assignment.c:1:25 "="

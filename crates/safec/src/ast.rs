@@ -3,11 +3,11 @@
 //! Nodes live in flat vectors and a child is an index rather than a pointer.
 //! See ADR-0008 for why, and for what it rejected.
 //!
-//! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: a
-//! function with no parameters, a compound statement, `return`, and the
-//! expressions of C17 6.5. The siblings of the issues that added those fill in
-//! control flow, declarators and structs, and each of them adds variants here
-//! rather than changing the shape.
+//! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
+//! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
+//! expressions of 6.5, a compound statement and `return`. The siblings of the
+//! issues that added those fill in control flow and structs, and each of them
+//! adds variants here rather than changing the shape.
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
@@ -24,6 +24,104 @@ pub struct StmtId(u32);
 /// Where a top-level item is in [`Ast`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ItemId(u32);
+
+/// Where a type is in [`Ast`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TypeId(u32);
+
+/// A type, as C17 6.7.6 derives one from a declarator.
+///
+/// The standard describes the derivation inductively, and this is the result
+/// of it rather than the declarator that produced it. 6.7.6 p6:
+///
+/// > If, in the declaration `"T D1"`, `D1` has the form `(D)` then `ident` has
+/// > the type specified by the declaration `"T D"`. Thus, a declarator in
+/// > parentheses is identical to the unparenthesized declarator, but the
+/// > binding of complicated declarators may be altered by parentheses.
+///
+/// That sentence is the whole of what tells `int *f(int)` from
+/// `int (*f)(int)`, and it is why the tree holds the type and not the
+/// declarator: the two declarators differ only in where the parentheses are,
+/// while the types they derive are different in shape.
+///
+/// What a type *means* is not here. Whether the length of an array is a
+/// constant expression, whether a parameter declared as an array is adjusted
+/// to a pointer (6.7.6.3 p7), and whether two declarations of one name agree
+/// (6.7.6.3 p15) are all semantic rules, and this stage records what was
+/// written.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Type {
+    /// `int`.
+    Int,
+    /// `char`.
+    Char,
+    /// `void`.
+    Void,
+    /// C17 6.7.6.1 p1 derives "pointer to T" from `* D`.
+    Pointer(TypeId),
+    /// C17 6.7.6.2 p3 derives "array of T" from `D [ ... ]`.
+    Array {
+        /// What the array is of.
+        element: TypeId,
+        /// How many, or `None` for `[]`, which 6.7.6.2 p4 makes an incomplete
+        /// type. Not evaluated: whether it is a constant expression is a
+        /// constraint on it, per 6.7.6.2 p1, and constraints are checked later.
+        length: Option<ExprId>,
+    },
+    /// C17 6.7.6.3 p5 derives "function returning T" from `D ( ... )`.
+    Function {
+        /// What it returns.
+        returns: TypeId,
+        /// What it was written to take.
+        parameters: Parameters,
+    },
+}
+
+/// What a function declarator wrote between its parentheses.
+///
+/// Two spellings that C17 6.7.6.3 gives two different meanings, in two
+/// different paragraphs, so they are two values here rather than one.
+///
+/// p10, on `(void)`:
+///
+/// > The special case of an unnamed parameter of type void as the only item in
+/// > the list specifies that the function has no parameters.
+///
+/// p14, on `()`:
+///
+/// > An empty list in a function declarator that is part of a definition of
+/// > that function specifies that the function has no parameters. The empty
+/// > list in a function declarator that is not part of a definition of that
+/// > function specifies that no information about the number or types of the
+/// > parameters is supplied.
+///
+/// So `()` means one thing in a definition and another in a declaration, and
+/// which of the two applies is not something this stage knows. It records the
+/// spelling and leaves the reading to the phase that can tell a definition
+/// from a declaration.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Parameters {
+    /// A parameter-type-list. Empty is `(void)`, per p10.
+    Prototype(Vec<Declaration>),
+    /// An empty identifier list, `()`, per p14.
+    Unspecified,
+}
+
+/// One declared name and the type C derives for it.
+///
+/// The same shape at file scope, inside a block, and as a parameter, because
+/// C17 6.7.6's `parameter-declaration` is a declaration. The name is optional
+/// for the same reason: 6.7.7's abstract-declarator has no identifier, and a
+/// parameter may be written with one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Declaration {
+    /// The span of the name, or `None` for an abstract declarator.
+    pub name: Option<Span>,
+    /// The type the declarator derived.
+    pub ty: TypeId,
+    /// The specifiers through the declarator.
+    pub span: Span,
+}
 
 /// An operator with an operand on each side.
 ///
@@ -292,6 +390,12 @@ pub enum Stmt {
         /// The keyword through the semicolon.
         span: Span,
     },
+    /// A declaration where a statement could have been.
+    ///
+    /// C17 6.8.2 makes a block-item either a declaration or a statement, and
+    /// the two share a list. `clang` does the same, wrapping one in a
+    /// `DeclStmt`.
+    Declaration(Declaration),
     /// A statement the parser could not read.
     Error {
         /// What it gave up on.
@@ -302,6 +406,10 @@ pub enum Stmt {
 /// A function definition.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Function {
+    /// The type the declarator derived, which C17 6.9.1 requires to be a
+    /// function type. Requiring it is a constraint and so a later phase's; what
+    /// is here is what was written.
+    pub ty: TypeId,
     /// The span of the name, not the name.
     ///
     /// Resolving it to text is the printer's job, and comparing one name with
@@ -317,8 +425,13 @@ pub struct Function {
 /// Something at the top level of a translation unit.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Item {
-    /// A function definition.
+    /// A function definition: a declarator with a body after it.
     Function(Function),
+    /// A declaration with no body, of an object or of a function.
+    ///
+    /// Which of the two it is follows from the type, and reading that is the
+    /// semantic analysis's. What this says is only that no body was written.
+    Declaration(Declaration),
     /// An item the parser could not read.
     Error {
         /// What it gave up on.
@@ -370,6 +483,7 @@ impl Stmt {
         match self {
             Self::Compound { .. } => "Compound",
             Self::Return { .. } => "Return",
+            Self::Declaration(_) => "Declaration",
             Self::Error { .. } => "Error",
         }
     }
@@ -378,6 +492,7 @@ impl Stmt {
     pub fn span(&self) -> Span {
         match self {
             Self::Compound { span, .. } | Self::Return { span, .. } | Self::Error { span } => *span,
+            Self::Declaration(declaration) => declaration.span,
         }
     }
 }
@@ -387,6 +502,7 @@ impl Item {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Function(_) => "Function",
+            Self::Declaration(_) => "Declaration",
             Self::Error { .. } => "Error",
         }
     }
@@ -395,6 +511,7 @@ impl Item {
     pub fn span(&self) -> Span {
         match self {
             Self::Function(function) => function.span,
+            Self::Declaration(declaration) => declaration.span,
             Self::Error { span } => *span,
         }
     }
@@ -412,6 +529,7 @@ pub struct Ast {
     exprs: Vec<Expr>,
     stmts: Vec<Stmt>,
     items: Vec<Item>,
+    types: Vec<Type>,
 }
 
 impl Ast {
@@ -441,6 +559,13 @@ impl Ast {
         id
     }
 
+    /// Add a type and return where it went.
+    pub fn push_type(&mut self, ty: Type) -> TypeId {
+        let id = TypeId(self.types.len() as u32);
+        self.types.push(ty);
+        id
+    }
+
     /// The expression an id names.
     pub fn expr(&self, id: ExprId) -> &Expr {
         &self.exprs[id.0 as usize]
@@ -454,6 +579,11 @@ impl Ast {
     /// The item an id names.
     pub fn item(&self, id: ItemId) -> &Item {
         &self.items[id.0 as usize]
+    }
+
+    /// The type an id names.
+    pub fn ty(&self, id: TypeId) -> &Type {
+        &self.types[id.0 as usize]
     }
 
     /// Every top-level item, in the order they were written.
@@ -580,6 +710,7 @@ mod tests {
 
         assert_eq!(
             Item::Function(Function {
+                ty: TypeId(0),
                 name: s,
                 body: StmtId(0),
                 span: s

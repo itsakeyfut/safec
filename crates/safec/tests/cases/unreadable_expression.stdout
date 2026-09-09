@@ -1,4 +1,4 @@
-Function unreadable_expression.c:1:1 "main"
+Function unreadable_expression.c:1:1 "main" "int (void)"
   Compound unreadable_expression.c:1:16
     Return unreadable_expression.c:1:18
       Binary unreadable_expression.c:1:25 "+"

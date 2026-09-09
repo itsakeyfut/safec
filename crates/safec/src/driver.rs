@@ -15,7 +15,7 @@ use std::io;
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::ast::{Ast, Expr, ExprId, Item, Stmt};
+use crate::ast::{Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, Type, TypeId};
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::lexer::lex;
@@ -246,31 +246,170 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
     dump_node(sources, item.name(), item.span(), depth, out);
     match item {
         Item::Function(function) => {
-            write!(out, " {:?}", quoted(sources, function.name))
-                .expect("writing to a string cannot fail");
+            write!(
+                out,
+                " {:?} {:?}",
+                quoted(sources, function.name),
+                spell_type(sources, ast, function.ty)
+            )
+            .expect("writing to a string cannot fail");
             out.push('\n');
+            dump_parameters(sources, ast, function.ty, depth + 1, out);
             dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
+        }
+        Item::Declaration(declaration) => {
+            dump_declaration(sources, ast, declaration, out);
+            dump_parameters(sources, ast, declaration.ty, depth + 1, out);
         }
         Item::Error { .. } => out.push('\n'),
     }
 }
 
+/// The tail of a line that declares something: the name, then the type.
+///
+/// A name is the file's own bytes and is quoted for the reason RK-002 gives. A
+/// type is this compiler's spelling of what the declarator derived, quoted
+/// beside it so that the two read alike; the only file text inside one is the
+/// length of an array, which [`spell_type`] answers for.
+fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, out: &mut String) {
+    if let Some(name) = declaration.name {
+        write!(out, " {:?}", quoted(sources, name)).expect("writing to a string cannot fail");
+    }
+    write!(out, " {:?}", spell_type(sources, ast, declaration.ty))
+        .expect("writing to a string cannot fail");
+    out.push('\n');
+}
+
+/// The parameters a declarator named, where the type is directly a function.
+///
+/// Only directly. A parameter of `int (*g)(int x)` is inside a pointer, and
+/// what it is called is not something anything can refer to, so the type string
+/// is where it stays. What a definition writes is reachable, and #27 resolves
+/// it, so it gets a line of its own.
+fn dump_parameters(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &mut String) {
+    let Type::Function {
+        parameters: Parameters::Prototype(parameters),
+        ..
+    } = ast.ty(ty)
+    else {
+        return;
+    };
+
+    for parameter in parameters {
+        dump_node(sources, "Parameter", parameter.span, depth, out);
+        dump_declaration(sources, ast, parameter, out);
+    }
+}
+
 fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mut String) {
     dump_node(sources, stmt.name(), stmt.span(), depth, out);
-    out.push('\n');
     match stmt {
         Stmt::Compound { body, .. } => {
+            out.push('\n');
             for &id in body {
                 dump_stmt(sources, ast, ast.stmt(id), depth + 1, out);
             }
         }
         Stmt::Return { value, .. } => {
+            out.push('\n');
             if let Some(id) = value {
                 dump_expr(sources, ast, *id, depth + 1, out);
             }
         }
-        Stmt::Error { .. } => {}
+        Stmt::Declaration(declaration) => dump_declaration(sources, ast, declaration, out),
+        Stmt::Error { .. } => out.push('\n'),
     }
+}
+
+/// A type, in the declarator notation C itself writes.
+///
+/// `int *`, `int[10]`, `int (*)(int)`: the same spelling `clang` prints, so the
+/// two dumps can be diffed rather than read against one another. It diverges in
+/// one place, and deliberately: `clang` shows a parameter after the adjustments
+/// C17 6.7.6.3 p7 and p8 make, so it spells `int f(int [10])` as `int (int *)`,
+/// where this spells it `int (int[10])`. Those adjustments are semantic rules,
+/// and this stage records what was written.
+///
+/// The walk down the spine is a loop and not a recursion, so a type of ten
+/// thousand pointers costs no stack. Only a parameter list recurses, and how
+/// deeply one can nest is bounded by the parser. `Parser::apply` bounds the
+/// spine too, which is what every other walk of a type will rely on; the loop
+/// here means this one does not have to.
+fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
+    let mut id = id;
+    let mut inner = String::new();
+
+    loop {
+        let base = match ast.ty(id) {
+            Type::Int => "int",
+            Type::Char => "char",
+            Type::Void => "void",
+            Type::Pointer(pointee) => {
+                // An array or a function derivation binds tighter than a
+                // pointer, so the `*` is parenthesised to say that this pointer
+                // is the outer one. That rule alone is what makes
+                // `int (*)(int)` and `int *(int)` different strings, and
+                // C17 6.7.6 p6 is where the binding it reflects is stated.
+                inner = if matches!(ast.ty(*pointee), Type::Array { .. } | Type::Function { .. }) {
+                    format!("(*{inner})")
+                } else {
+                    format!("*{inner}")
+                };
+                id = *pointee;
+                continue;
+            }
+            Type::Array { element, length } => {
+                // The length is the source's own bytes and is not evaluated, so
+                // `int a[1 + 2]` spells `int[1 + 2]` where `clang`, which does
+                // evaluate it, spells `int[3]`. Whether it is a constant
+                // expression is 6.7.6.2 p1's constraint and is checked later.
+                let length = match length {
+                    Some(length) => quoted(sources, ast.expr(*length).span()),
+                    None => "",
+                };
+                inner = format!("{inner}[{length}]");
+                id = *element;
+                continue;
+            }
+            Type::Function {
+                returns,
+                parameters,
+            } => {
+                inner = format!("{inner}({})", spell_parameters(sources, ast, parameters));
+                id = *returns;
+                continue;
+            }
+        };
+
+        // A space between the base and what follows, unless there is nothing
+        // to follow or it begins with `[`. That is the spacing `clang` prints:
+        // `int *`, `int (*)(int)`, and `int[10]` with no space at all.
+        return if inner.is_empty() || inner.starts_with('[') {
+            format!("{base}{inner}")
+        } else {
+            format!("{base} {inner}")
+        };
+    }
+}
+
+/// What goes between a function type's parentheses.
+///
+/// `(void)` for a prototype that declared no parameters and `()` for an empty
+/// identifier list, because C17 6.7.6.3 gives the two spellings two meanings.
+fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> String {
+    let Parameters::Prototype(parameters) = parameters else {
+        return String::new();
+    };
+
+    if parameters.is_empty() {
+        return "void".to_owned();
+    }
+
+    parameters
+        .iter()
+        .map(|parameter| spell_type(sources, ast, parameter.ty))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// One expression and everything under it.
@@ -1175,6 +1314,89 @@ mod tests {
 
     /// Each node is placed against the file its own span names.
     ///
+    /// Every shape of type, and how C declares one of it.
+    ///
+    /// The expected strings are written out rather than derived from the types,
+    /// for the reason RK-001 gives: a test that builds its expectation the way
+    /// the code does is comparing the code with itself. These were taken from
+    /// `clang -Xclang -ast-dump` on the same declarations, so they are what
+    /// another compiler prints and not what this one happens to.
+    ///
+    /// Mutation: drop the parentheses from the pointer arm of `spell_type`, or
+    /// change where the space goes. This fails.
+    #[test]
+    fn every_type_is_spelled_the_way_c_declares_it() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "10");
+        let mut ast = Ast::new();
+        let ten = ast.push_expr(Expr::Number {
+            span: Span::new(file, 0, 2),
+        });
+
+        let int = ast.push_type(Type::Int);
+        let void = ast.push_type(Type::Void);
+        let character = ast.push_type(Type::Char);
+        let pointer_to_int = ast.push_type(Type::Pointer(int));
+        let pointer_to_pointer = ast.push_type(Type::Pointer(pointer_to_int));
+        let pointer_to_char = ast.push_type(Type::Pointer(character));
+        let pointer_to_void = ast.push_type(Type::Pointer(void));
+        let array_of_int = ast.push_type(Type::Array {
+            element: int,
+            length: Some(ten),
+        });
+        let incomplete = ast.push_type(Type::Array {
+            element: int,
+            length: None,
+        });
+        let array_of_pointer = ast.push_type(Type::Array {
+            element: pointer_to_int,
+            length: Some(ten),
+        });
+        let pointer_to_array = ast.push_type(Type::Pointer(array_of_int));
+
+        let unnamed = |ty| Declaration {
+            name: None,
+            ty,
+            span: Span::new(file, 0, 2),
+        };
+        let takes_int = |returns| Type::Function {
+            returns,
+            parameters: Parameters::Prototype(vec![unnamed(int)]),
+        };
+        let returns_int = ast.push_type(takes_int(int));
+        let returns_pointer = ast.push_type(takes_int(pointer_to_int));
+        let pointer_to_function = ast.push_type(Type::Pointer(returns_int));
+        let takes_nothing = ast.push_type(Type::Function {
+            returns: int,
+            parameters: Parameters::Prototype(Vec::new()),
+        });
+        let unspecified = ast.push_type(Type::Function {
+            returns: int,
+            parameters: Parameters::Unspecified,
+        });
+
+        for (ty, spelling) in [
+            (int, "int"),
+            (character, "char"),
+            (void, "void"),
+            (pointer_to_int, "int *"),
+            (pointer_to_pointer, "int **"),
+            (pointer_to_void, "void *"),
+            (pointer_to_char, "char *"),
+            (array_of_int, "int[10]"),
+            (incomplete, "int[]"),
+            (array_of_pointer, "int *[10]"),
+            (pointer_to_array, "int (*)[10]"),
+            (returns_int, "int (int)"),
+            (returns_pointer, "int *(int)"),
+            (pointer_to_function, "int (*)(int)"),
+            (takes_nothing, "int (void)"),
+            (unspecified, "int ()"),
+        ] {
+            assert_eq!(spell_type(&sources, &ast, ty), spelling, "{ty:?}");
+        }
+    }
+
     /// One tree holds spans from one file today, and will hold several the
     /// moment `#include` lands. Resolving them all against whichever file the
     /// driver's loop happens to be on prints one file's text at another file's
@@ -1209,7 +1431,9 @@ mod tests {
             body: Vec::new(),
             span: Span::new(second, 9, 14),
         });
+        let ty = ast.push_type(Type::Int);
         ast.push_item(Item::Function(Function {
+            ty,
             name: Span::new(first, 4, 9),
             body,
             span: Span::new(first, 0, 29),
@@ -1220,7 +1444,7 @@ mod tests {
 
         assert_eq!(
             out,
-            "Function <first.c>:1:1 \"outer\"
+            "Function <first.c>:1:1 \"outer\" \"int\"
   Compound <second.c>:4:7
 "
         );

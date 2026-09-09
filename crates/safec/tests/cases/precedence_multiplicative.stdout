@@ -1,4 +1,4 @@
-Function precedence_multiplicative.c:1:1 "main"
+Function precedence_multiplicative.c:1:1 "main" "int (void)"
   Compound precedence_multiplicative.c:1:16
     Return precedence_multiplicative.c:1:18
       Binary precedence_multiplicative.c:1:25 "*"

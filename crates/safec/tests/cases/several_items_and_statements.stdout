@@ -1,11 +1,11 @@
-Function several_items_and_statements.c:1:1 "main"
+Function several_items_and_statements.c:1:1 "main" "int (void)"
   Compound several_items_and_statements.c:1:16
     Compound several_items_and_statements.c:1:18
       Return several_items_and_statements.c:1:20
         Number several_items_and_statements.c:1:27 "0"
     Return several_items_and_statements.c:1:32
       Number several_items_and_statements.c:1:39 "1"
-Function several_items_and_statements.c:2:1 "second"
+Function several_items_and_statements.c:2:1 "second" "int (void)"
   Compound several_items_and_statements.c:2:18
     Return several_items_and_statements.c:2:20
       Number several_items_and_statements.c:2:27 "2"

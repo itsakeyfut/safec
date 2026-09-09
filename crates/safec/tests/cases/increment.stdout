@@ -1,4 +1,4 @@
-Function increment.c:1:1 "main"
+Function increment.c:1:1 "main" "int (void)"
   Compound increment.c:1:16
     Return increment.c:1:18
       Binary increment.c:1:25 "+"

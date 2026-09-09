@@ -1,4 +1,4 @@
-Function parentheses_regroup.c:1:1 "main"
+Function parentheses_regroup.c:1:1 "main" "int (void)"
   Compound parentheses_regroup.c:1:16
     Return parentheses_regroup.c:1:18
       Binary parentheses_regroup.c:1:26 "*"

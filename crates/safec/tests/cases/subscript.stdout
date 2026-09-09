@@ -1,4 +1,4 @@
-Function subscript.c:1:1 "main"
+Function subscript.c:1:1 "main" "int (void)"
   Compound subscript.c:1:16
     Return subscript.c:1:18
       Subscript subscript.c:1:25
