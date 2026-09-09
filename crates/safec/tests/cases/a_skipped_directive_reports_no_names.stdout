@@ -1,0 +1,4 @@
+Function a_skipped_directive_reports_no_names.c:3:1 "main" "int (void)"
+  Compound a_skipped_directive_reports_no_names.c:3:16
+    Return a_skipped_directive_reports_no_names.c:3:18
+      Identifier a_skipped_directive_reports_no_names.c:3:25 "N"

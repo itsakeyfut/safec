@@ -45,8 +45,12 @@ pub struct Symbol {
 ///
 /// Keyed by the span of the *use*, per ADR-0006's addendum: an identifier
 /// carries a `Span` and name resolution walks the tree, so a span is what it
-/// has to key on. Two uses of one name are two spans, and a span names its own
-/// file, so one table can hold a whole run if it is ever asked to.
+/// has to key on.
+///
+/// One of these belongs to one translation unit, which is what C means by a
+/// scope for a file-scope name. `resolve` builds a fresh one per input and
+/// there is no way to add to it from outside, deliberately: two files that
+/// declare `x` declare two different things.
 #[derive(Clone, Debug)]
 pub struct Resolution {
     symbols: Vec<Symbol>,
@@ -76,10 +80,11 @@ impl Resolution {
 /// Resolve every name in `ast`, reporting the ones nothing declares.
 ///
 /// The caller decides whether this runs. `driver.rs` does not call it for an
-/// input whose parse reported an error: that parser stops at the first thing it
-/// cannot read and drops the rest, so a name diagnostic drawn from what
-/// survives would be a claim about a program this compiler did not finish
-/// reading.
+/// input that anything reported on, the scan included: the lexer drops a
+/// preprocessor directive and the parser drops everything after the first
+/// thing it cannot read, and in both cases the tree is a record of a program
+/// this compiler did not finish reading. A name diagnostic drawn from one of
+/// those is a claim about a program nobody wrote.
 pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink) -> Resolution {
     let mut resolver = Resolver {
         sources,
@@ -122,7 +127,7 @@ impl Resolver<'_> {
                 self.declare(function.name);
 
                 self.scopes.push(Vec::new());
-                self.parameters(function.ty);
+                self.parameters(function.ty, diagnostics);
                 // The body is a compound statement and pushes a scope of its
                 // own, so a parameter sits one scope outside the block rather
                 // than in it, where C17 6.2.1 p4 puts it. The difference is
@@ -143,24 +148,45 @@ impl Resolver<'_> {
     /// is an expression and C17 6.2.1 p7 starts a name's scope at the end of
     /// its declarator: in `int n[n];` the length is the outer `n`, if there is
     /// one, and not the array being declared.
+    ///
+    /// The parameters get a scope that opens and closes here, which is what
+    /// C17 6.2.1 p4 gives a declarator that is not part of a definition: their
+    /// names are visible to each other and to nothing else. A definition's
+    /// parameters are the same names in a scope [`Resolver::item`] keeps open
+    /// for the body instead.
     fn declaration(&mut self, declaration: &Declaration, diagnostics: &mut DiagnosticSink) {
         self.walk_type(declaration.ty, diagnostics);
+
+        self.scopes.push(Vec::new());
+        self.parameters(declaration.ty, diagnostics);
+        self.scopes.pop();
+
         if let Some(name) = declaration.name {
             self.declare(name);
         }
     }
 
-    /// The names a function declarator wrote between its parentheses.
+    /// The names a function declarator wrote between its parentheses, and the
+    /// expressions inside their types, in the scope the caller has open.
+    ///
+    /// Every name goes in before any length is walked. C17 6.7.6.2 lets a
+    /// parameter's array length name another parameter, `int f(int n, int
+    /// a[n])`, which `clang` accepts and which the parser here reads, so a
+    /// length looked up before its siblings are declared would be reported as
+    /// undeclared: a false positive about valid C. Declaring first is looser
+    /// than C, which starts each name at the end of its own declarator, and
+    /// the direction to be loose in is the one that stays quiet.
     ///
     /// Only the outermost type, which is what `driver.rs::dump_parameters`
     /// does as well: a definition whose declarator derives something other than
     /// a function is a constraint violation, and reporting it is #57's rather
     /// than this walk's to invent an answer for.
-    fn parameters(&mut self, ty: TypeId) {
+    fn parameters(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
+        let ast = self.ast;
         let Type::Function {
             parameters: Parameters::Prototype(parameters),
             ..
-        } = self.ast.ty(ty)
+        } = ast.ty(ty)
         else {
             return;
         };
@@ -170,6 +196,10 @@ impl Resolver<'_> {
                 self.declare(name);
             }
         }
+
+        for parameter in parameters {
+            self.walk_type(parameter.ty, diagnostics);
+        }
     }
 
     /// The expressions inside a type, which is its array lengths.
@@ -177,13 +207,11 @@ impl Resolver<'_> {
     /// A recursion, bounded the way `parser.rs::apply` bounds a declarator's
     /// derivations, so a type is at most `MAX_NESTING` deep.
     ///
-    /// A function's parameters are deliberately not walked. `int f(int n, int
-    /// a[n])` parses today, and C17 6.7.6.2 lets a parameter's length name
-    /// another parameter, whose scope is the prototype rather than anything
-    /// this stage builds. Walking it in the enclosing scope would report `n`
-    /// as undeclared, which is a false positive about valid C; leaving it
-    /// unwalked is silence about a name nobody has yet asked us to check, and
-    /// silence is the right way round for this compiler to be wrong.
+    /// A function's parameters are not walked here, because they need a scope
+    /// of their own and this has none to give: [`Resolver::parameters`] is
+    /// where they are declared and their lengths looked up. Doing it here
+    /// instead reports `n` in `int f(int n, int a[n])` as undeclared, which is
+    /// a false positive about valid C.
     fn walk_type(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
         match self.ast.ty(ty) {
             Type::Int | Type::Char | Type::Void => {}
@@ -320,6 +348,14 @@ impl Resolver<'_> {
     }
 }
 
+/// `name` is source text, and it reaches a terminal through this message.
+///
+/// Interpolated raw rather than through `{:?}`, which is safe because the
+/// lexer's `is_identifier_continue` admits only `is_ascii_alphanumeric` and
+/// `_`, so an identifier cannot carry a control character. That is a property
+/// of the lexer rather than of this function, and `lexer.rs` lists non-ASCII
+/// identifiers as a gap it may close, so this is the line to revisit when it
+/// does.
 fn undeclared(name: &str, span: Span) -> Diagnostic {
     Diagnostic::error(format!("use of undeclared identifier `{name}`"))
         .with_code(UNDECLARED)
@@ -500,8 +536,15 @@ mod tests {
 
     /// The innermost declaration wins, and each use is answered on its own.
     ///
-    /// Mutation: drop either `rev` in `Resolver::lookup`. The outer `x`, or the
-    /// first declaration in a scope, answers instead, and this fails.
+    /// Mutation: drop the `rev` over `self.scopes` in `Resolver::lookup`. The
+    /// outer `x` answers instead and this fails.
+    ///
+    /// The other `rev`, over the symbols within one scope, is held by nothing
+    /// and cannot be until #57: it decides which of two declarations of one
+    /// name in one scope answers, and C makes that either an error, inside a
+    /// block, or two spellings of one object, at file scope. There is no
+    /// program whose meaning this compiler can state today that tells the two
+    /// orders apart.
     #[test]
     fn a_name_finds_the_innermost_declaration_of_it() {
         let resolved = resolved("int main(void) { int x; { int x; return x; } return x; }\n");
@@ -580,17 +623,49 @@ mod tests {
         );
     }
 
-    /// C17 6.7.6.2 lets a parameter's length name another parameter, and this
-    /// stage builds no scope in which that name could be found. Reporting it
-    /// would be a false positive about valid C, so nothing is reported.
+    /// C17 6.7.6.2 lets a parameter's array length name another parameter, and
+    /// `clang` accepts it, so it is not a name to report. A length that names
+    /// nothing at all is, in a definition and in a declaration alike: `clang`
+    /// rejects both, verified with `--target=x86_64-unknown-linux-gnu`.
     ///
-    /// Mutation: walk `Parameters::Prototype` in `Resolver::walk_type`. The
-    /// `n` in `a[n]` is looked up in the file scope, is not there, and this
-    /// fails with one diagnostic.
+    /// The two halves are one test because the first version of this code had
+    /// only the first half of the rule and skipped every parameter's type to
+    /// get it, which made the second half silent. A test for either alone
+    /// passes against that.
+    ///
+    /// Mutation: walk the parameters' types before declaring their names in
+    /// `Resolver::parameters`. The sibling case starts reporting `n` and this
+    /// fails. Mutation: skip the second loop there. The two undeclared cases
+    /// stop reporting and this fails from the other side.
     #[test]
-    fn a_parameter_may_size_an_array_with_another_parameter() {
-        let resolved = resolved("int f(int n, int a[n]) { return 0; }\n");
+    fn a_parameter_may_size_an_array_with_another_parameter_and_nothing_else() {
+        let sibling = resolved("int f(int n, int a[n]) { return 0; }\n");
+        assert_eq!(sibling.messages(), Vec::<&str>::new());
 
-        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        let definition = resolved("int f(int a[nowhere]) { return 0; }\n");
+        assert_eq!(
+            definition.messages(),
+            ["use of undeclared identifier `nowhere`"]
+        );
+
+        let declaration = resolved("int f(int a[nowhere]);\n");
+        assert_eq!(
+            declaration.messages(),
+            ["use of undeclared identifier `nowhere`"]
+        );
+    }
+
+    /// A parameter is gone when the function it belongs to is.
+    ///
+    /// Mutation: remove the `self.scopes.pop()` that closes the parameter
+    /// scope in `Resolver::item`. `a` is still in scope inside `g`, nothing is
+    /// reported, and this fails. Before it existed, that `pop` was held by
+    /// nothing in the suite: every other program declares one function.
+    #[test]
+    fn a_parameter_does_not_reach_the_function_after_it() {
+        let resolved =
+            resolved("int f(int a) {\n    return a;\n}\n\nint g(void) {\n    return a;\n}\n");
+
+        assert_eq!(resolved.messages(), ["use of undeclared identifier `a`"]);
     }
 }
