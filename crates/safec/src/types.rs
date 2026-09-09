@@ -707,7 +707,7 @@ mod tests {
     /// `true` always. The second stops and this fails.
     #[test]
     fn a_pointer_takes_a_zero_and_not_a_one() {
-        for zero in ["0", "0x0", "00"] {
+        for zero in ["0", "0x0", "0X0", "00", "0u", "0L", "0UL"] {
             let checked = checked(&format!(
                 "int main(void) {{ int *p; p = {zero}; return 0; }}\n"
             ));
@@ -917,14 +917,22 @@ error[SC0302]: no problems found
     ///
     /// Mutation: report when either side of an assignment is `None`. The
     /// undeclared name gains a second diagnostic about a type nobody knows and
-    /// this fails.
+    /// this fails. Mutation: have `additive` or `unary` answer `int` for an
+    /// operand nothing typed. The rows with an operator in them gain the same
+    /// second diagnostic, which is what they are here for: the bare name alone
+    /// passed against a compiler that guessed.
     #[test]
     fn a_name_that_resolved_to_nothing_is_reported_once() {
-        let checked = checked("int main(void) { int *p; p = nowhere; return 0; }\n");
+        for value in ["nowhere", "nowhere + 1", "1 + nowhere", "-nowhere"] {
+            let checked = checked(&format!(
+                "int main(void) {{ int *p; p = {value}; return 0; }}\n"
+            ));
 
-        assert_eq!(
-            checked.messages(),
-            ["use of undeclared identifier `nowhere`"]
-        );
+            assert_eq!(
+                checked.messages(),
+                ["use of undeclared identifier `nowhere`"],
+                "{value}"
+            );
+        }
     }
 }
