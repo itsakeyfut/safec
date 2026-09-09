@@ -261,6 +261,14 @@ impl Resolver<'_> {
     /// An explicit stack rather than a recursion, because an expression tree
     /// has no bound on its depth: two of the parser's rules fold with a loop,
     /// which is why `driver.rs::dump_expr` carries its own stack as well.
+    ///
+    /// Mutation: walk the children by calling this on each of them instead.
+    /// `the_artifact_grows_with_the_source_rather_than_with_its_square` and
+    /// `a_tree_deeper_than_a_format_width_does_not_end_the_process` in
+    /// `tests/exit_code.rs` both fail, because the process is killed rather
+    /// than reporting anything. A thousand terms is not enough to do it and
+    /// the twenty five hundred one of those tests writes is, which is why the
+    /// bound is worth having rather than arguing about.
     fn expr(&mut self, root: ExprId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let mut pending = vec![root];

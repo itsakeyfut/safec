@@ -316,6 +316,11 @@ fn the_deepest_nest_of_statements_does_not_end_the_process() {
 /// cannot see it, which is why this is a second test rather than another row in
 /// that one: a thousand terms is three and a half orders of magnitude short of
 /// where a `u16` runs out.
+///
+/// It holds a second walk over the same tree. Mutation: have `Resolver::expr`
+/// in `sema.rs` recurse into its children rather than push them. This fails as
+/// well, and for the reason the input was chosen: the depth is the tree's, and
+/// every walk over it has to answer for that.
 #[test]
 fn a_tree_deeper_than_a_format_width_does_not_end_the_process() {
     let path = std::env::temp_dir().join("safec_exit_code_deep_subscript.c");
@@ -360,6 +365,11 @@ fn a_tree_deeper_than_a_format_width_does_not_end_the_process() {
 ///
 /// Mutation: remove the cap, leaving the indent to grow with `depth`. The ratio
 /// goes to about four and this fails by name.
+///
+/// Its inputs are the deepest trees the suite builds, so it holds every walk
+/// over one. Mutation: have `Resolver::expr` in `sema.rs` recurse into its
+/// children rather than push them. The process is killed and this fails on the
+/// exit code it asserts before it gets to measure anything.
 #[test]
 fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
     let dump = |terms: usize, name: &str| -> usize {
