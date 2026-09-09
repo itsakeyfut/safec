@@ -165,6 +165,51 @@ fn an_output_path_that_is_not_honoured_is_left_alone() {
     assert!(!written, "the compiler wrote to {}", path.display());
 }
 
+/// The deepest nest of statements the parser accepts is printed, rather than
+/// ending the process.
+///
+/// `dump_stmt` recurses where `dump_expr` deliberately does not, and the reason
+/// it is allowed to is a bound: every statement nesting is a parser recursion
+/// through `Parser::deeper`, so a tree that reaches the printer is at most
+/// `MAX_NESTING` statements deep. That is an argument about a number, and this
+/// is the number being run. Raising `MAX_NESTING` past what the printer's stack
+/// can hold is what this fails on.
+///
+/// The two shapes are the ones that write no bracket per level: an `else if`
+/// chain is `else` followed by an `if` statement rather than a construct of its
+/// own, and a `while` whose body is another `while` reads as one line.
+///
+/// Mutation: raise `MAX_NESTING` in `parser.rs` far enough that the printer's
+/// recursion outruns the stack. This fails, with the exit code of a process
+/// nothing in `driver.rs` chose.
+#[test]
+fn the_deepest_nest_of_statements_does_not_end_the_process() {
+    for (name, body) in [
+        ("safec_exit_code_whiles.c", "while (a) ".repeat(255)),
+        ("safec_exit_code_else_ifs.c", "if (a) ; else ".repeat(255)),
+    ] {
+        let path = std::env::temp_dir().join(name);
+        std::fs::write(&path, format!("int main(void) {{ {body}; }}\n"))
+            .expect("the temporary directory is writable");
+
+        let output = safec(&[
+            "--color",
+            "never",
+            "--emit",
+            "ast",
+            &path.display().to_string(),
+        ]);
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{name}: {:?}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
 /// A long flat expression is read and printed, rather than ending the process.
 ///
 /// Not a corpus case, because the point is the exit code rather than the
