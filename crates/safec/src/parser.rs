@@ -1,10 +1,12 @@
 //! Tokens to a tree, by recursive descent.
 //!
-//! What it reads is the smallest whole translation unit: a function of no
-//! parameters returning `int`, a compound statement, `return`, and a numeric
-//! constant. Everything else in [`docs/frontend.md`]'s Stage 1 arrives in the
-//! sibling issues of the one that added this, and each of them adds to
-//! [`crate::ast`] rather than reshaping it.
+//! What it reads is a function of no parameters returning `int`, a compound
+//! statement, `return`, and the operators of C17 6.5 from an integer constant
+//! or an identifier up to the comma operator. What it does not read yet is
+//! control flow, declarators, structs, member access, casts, `sizeof`, and the
+//! two primary expressions the lexer already hands it: a character constant and
+//! a string literal. Each arrives in a sibling of the issues that built this,
+//! and each adds to [`crate::ast`] rather than reshaping it.
 //!
 //! It is handed tokens and not the source. ADR-0006 reserved a trigger, that
 //! the parser asking for a `&SourceMap` is the moment an interner is worth
@@ -14,7 +16,7 @@
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
-use crate::ast::{Ast, Expr, Function, Item, Stmt, StmtId};
+use crate::ast::{Ast, BinOp, Expr, ExprId, Function, Item, Stmt, StmtId, UnOp};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::source::{FileId, Span};
 use crate::token::{Keyword, Punct, Token, TokenKind};
@@ -35,19 +37,146 @@ const EXPECTED: Code = Code::new("E0201");
 /// different thing to tell a reader and a different thing to search for.
 const TOO_DEEP: Code = Code::new("E0202");
 
-/// How many compound statements may be open at once.
+/// How deep this parser will go before it declines.
 ///
-/// C17 5.2.4.1 asks an implementation to manage 127 levels of nested blocks, so
-/// this is above the line a conforming one has to reach. It is a limit all the
-/// same, and the reason to have one is that the alternative is not "no limit":
-/// it is the native stack, which this parser recurses on and which ends a run
-/// at around 1200 levels by killing the process, with no diagnostic and an exit
-/// code the driver never chose. A limit that is reported is the same refusal
-/// made legible. `clang` draws its own at 256 (`-fbracket-depth`).
+/// One number for every kind of nesting, because there is one thing being
+/// protected. The alternative to a limit is not "no limit": it is the native
+/// stack, which this parser recurses on and which ends a run by killing the
+/// process, with no diagnostic and an exit code the driver never chose. A
+/// stack overflow is not a panic anything can catch, so the limit has to be
+/// here rather than in a test. A limit that is reported is the same refusal
+/// made legible.
 ///
-/// The dump in `driver.rs` recurses over the same shape, so it is this that
-/// keeps that recursion bounded too.
+/// What counts is a recursion and not a bracket. Blocks and brackets are the
+/// obvious sources, and `clang` bounds those with `-fbracket-depth`, whose
+/// default is the same 256. It counts each kind separately, not together: 200
+/// nested `[` and 200 nested `(` in one expression is 400 open at once and
+/// `clang 20.1.6` accepts it, while 300 of either alone is `fatal error:
+/// bracket nesting level exceeded maximum of 256`. One counter here rather
+/// than three, because what is being protected is one stack.
+///
+/// Brackets are also not the only source. `!!!!x` recurses once per operator,
+/// and so does `a = b = c`, because assignment is right-associative and its
+/// right side is read by re-entering the climb. Neither writes a bracket, and
+/// `clang` bounds neither. So every recursion in this file goes through
+/// [`Parser::deeper`], which is the one place this is counted, and the limit is
+/// tighter than `clang`'s for shapes `clang` does not count at all.
+///
+/// C17 5.2.4.1 sets minimums an implementation must manage for nested blocks
+/// and for nested parenthesised expressions, both below this. It sets none for
+/// a chain of unary or assignment operators, which is the room this takes.
+///
+/// **This bounds the parser, not the tree.** A left-associative chain and a run
+/// of postfix operators are folded by a loop, so `a + a + ...` and `a++++` are
+/// as deep in the tree as they are long while `depth` never rises. Anything
+/// that walks the tree owes itself an answer to that; `dump_expr` in
+/// `driver.rs` uses an explicit stack, and says so.
 const MAX_NESTING: usize = 256;
+
+/// The loosest binding there is: the comma operator, C17 6.5.17.
+///
+/// Named because the climb also starts from it, and the same number written in
+/// two places is a second thing to keep in agreement.
+const COMMA: u8 = 1;
+
+/// One step tighter: assignment, C17 6.5.16.
+///
+/// Named because an argument in a call is read at this power and so stops at a
+/// comma. That is the whole of what tells `f(a, b)` from `f((a, b))`.
+const ASSIGNMENT: u8 = 2;
+
+/// Which of two operators of equal power takes its operand first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Assoc {
+    /// `a - b - c` is `(a - b) - c`.
+    Left,
+    /// `a = b = c` is `a = (b = c)`.
+    Right,
+}
+
+/// What reading an infix operator makes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum InfixKind {
+    /// Two operands and the operator between them.
+    Binary(BinOp),
+    /// An assignment, with the operation folded in or `None` for a plain `=`.
+    Assign(Option<BinOp>),
+    /// `?`, which reads a whole expression and then insists on `:`.
+    Conditional,
+    /// The comma operator.
+    Comma,
+}
+
+/// How tightly an infix operator binds, which way it groups, and what it makes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Infix {
+    /// Higher binds tighter. [`COMMA`] is the loosest.
+    power: u8,
+    /// What to do about two of the same power in a row.
+    assoc: Assoc,
+    /// Which node comes out of it.
+    kind: InfixKind,
+}
+
+/// The table C17 6.5 gives, from the loosest binding to the tightest.
+///
+/// One table and not two. A binding power in one place and a node kind in
+/// another have to agree, and nothing would notice `a - b` arriving at
+/// `BinOp::Add` with the right precedence. RK-003 in the review knowledge bank
+/// is what a second copy of one decision has already cost here.
+///
+/// `?` is in it, because the conditional binds like an infix operator even
+/// though it reads a whole expression before its `:`. `:` is not, and neither
+/// are `++` and `--`: those are read where the operand they attach to is.
+fn infix(punct: Punct) -> Option<Infix> {
+    use Assoc::{Left, Right};
+    use InfixKind::{Assign, Binary, Comma, Conditional};
+
+    let (power, assoc, kind) = match punct {
+        // 6.5.17
+        Punct::Comma => (COMMA, Left, Comma),
+
+        // 6.5.16
+        Punct::Equal => (ASSIGNMENT, Right, Assign(None)),
+        Punct::StarEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Mul))),
+        Punct::SlashEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Div))),
+        Punct::PercentEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Rem))),
+        Punct::PlusEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Add))),
+        Punct::MinusEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Sub))),
+        Punct::LessLessEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Shl))),
+        Punct::GreaterGreaterEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::Shr))),
+        Punct::AmpersandEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::BitAnd))),
+        Punct::CaretEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::BitXor))),
+        Punct::PipeEqual => (ASSIGNMENT, Right, Assign(Some(BinOp::BitOr))),
+
+        // 6.5.15
+        Punct::Question => (3, Right, Conditional),
+
+        // 6.5.14 down to 6.5.5
+        Punct::PipePipe => (4, Left, Binary(BinOp::LogOr)),
+        Punct::AmpersandAmpersand => (5, Left, Binary(BinOp::LogAnd)),
+        Punct::Pipe => (6, Left, Binary(BinOp::BitOr)),
+        Punct::Caret => (7, Left, Binary(BinOp::BitXor)),
+        Punct::Ampersand => (8, Left, Binary(BinOp::BitAnd)),
+        Punct::EqualEqual => (9, Left, Binary(BinOp::Eq)),
+        Punct::BangEqual => (9, Left, Binary(BinOp::Ne)),
+        Punct::Less => (10, Left, Binary(BinOp::Lt)),
+        Punct::Greater => (10, Left, Binary(BinOp::Gt)),
+        Punct::LessEqual => (10, Left, Binary(BinOp::Le)),
+        Punct::GreaterEqual => (10, Left, Binary(BinOp::Ge)),
+        Punct::LessLess => (11, Left, Binary(BinOp::Shl)),
+        Punct::GreaterGreater => (11, Left, Binary(BinOp::Shr)),
+        Punct::Plus => (12, Left, Binary(BinOp::Add)),
+        Punct::Minus => (12, Left, Binary(BinOp::Sub)),
+        Punct::Star => (13, Left, Binary(BinOp::Mul)),
+        Punct::Slash => (13, Left, Binary(BinOp::Div)),
+        Punct::Percent => (13, Left, Binary(BinOp::Rem)),
+
+        _ => return None,
+    };
+
+    Some(Infix { power, assoc, kind })
+}
 
 /// Read a translation unit.
 ///
@@ -102,10 +231,11 @@ struct Parser<'a> {
     /// hang, and a hanging suite reports nothing at all and takes the whole of
     /// CI with it. Running out is a panic that names itself.
     budget: usize,
-    /// How many compound statements are open right now.
+    /// How many recursive reads are in progress right now.
     ///
-    /// Bounded by [`MAX_NESTING`], which is what stops the recursion between
-    /// `statement` and `compound` reaching the end of the native stack.
+    /// Bounded by [`MAX_NESTING`] and changed only by [`Parser::deeper`], which
+    /// is what stops any of this file's recursions reaching the end of the
+    /// native stack.
     depth: usize,
 }
 
@@ -144,6 +274,38 @@ impl Parser<'_> {
         });
     }
 
+    /// Read something one level deeper, or say there is no room for it.
+    ///
+    /// Every recursion in this file goes through here. [`MAX_NESTING`] says why
+    /// the count is one number rather than one per kind of nesting, and why a
+    /// bracket is not what it counts.
+    ///
+    /// A pair of closures rather than an `enter` and a `leave`, so that a level
+    /// cannot be taken and not given back. A rule that has to be remembered at
+    /// each of several sites, some of which return early, is a rule with an
+    /// exception waiting in it.
+    fn deeper<T>(
+        &mut self,
+        diagnostics: &mut DiagnosticSink,
+        read: impl FnOnce(&mut Self, &mut DiagnosticSink) -> T,
+        too_deep: impl FnOnce(&mut Self, Span) -> T,
+    ) -> T {
+        if self.depth == MAX_NESTING {
+            let span = self.report_as(
+                TOO_DEEP,
+                "nesting is too deep",
+                format!("{MAX_NESTING} levels are already open here"),
+                diagnostics,
+            );
+            return too_deep(self, span);
+        }
+
+        self.depth += 1;
+        let read = read(self, diagnostics);
+        self.depth -= 1;
+        read
+    }
+
     /// A function definition, which is the only item there is yet.
     fn item(&mut self, diagnostics: &mut DiagnosticSink) -> Item {
         let start = self.peek().span;
@@ -172,14 +334,7 @@ impl Parser<'_> {
             }
         }
 
-        // Counted here as well as in `statement`, so that `depth` is the
-        // number of blocks open rather than the number of nested ones, and
-        // `MAX_NESTING` means what it says.
-        self.depth += 1;
-        let body = self.compound(diagnostics);
-        self.depth -= 1;
-
-        let Some(body) = body else {
+        let Some(body) = self.compound(diagnostics) else {
             return Item::Error { span: start };
         };
 
@@ -192,11 +347,23 @@ impl Parser<'_> {
         let start = self.peek().span;
         self.expect(TokenKind::Punct(Punct::LeftBrace), "`{`", diagnostics)?;
 
-        let mut body = Vec::new();
-        while !self.at_end() && !self.failed && !self.check(TokenKind::Punct(Punct::RightBrace)) {
-            self.spend();
-            body.push(self.statement(diagnostics));
-        }
+        // The one place a block is counted, so the body of a function and a
+        // block inside it are the same thing to `depth`.
+        let body = self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let mut body = Vec::new();
+                while !parser.at_end()
+                    && !parser.failed
+                    && !parser.check(TokenKind::Punct(Punct::RightBrace))
+                {
+                    parser.spend();
+                    body.push(parser.statement(diagnostics));
+                }
+                Some(body)
+            },
+            |_, _| None,
+        )?;
 
         self.expect(TokenKind::Punct(Punct::RightBrace), "`}`", diagnostics)?;
 
@@ -215,23 +382,7 @@ impl Parser<'_> {
         let start = self.peek().span;
 
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
-            // The only recursion in this file, so counting the depth here
-            // bounds all of it. See `MAX_NESTING`.
-            if self.depth == MAX_NESTING {
-                let span = self.report_as(
-                    TOO_DEEP,
-                    "blocks are nested too deeply",
-                    format!("{MAX_NESTING} blocks are already open here"),
-                    diagnostics,
-                );
-                return self.ast.push_stmt(Stmt::Error { span });
-            }
-
-            self.depth += 1;
-            let nested = self.compound(diagnostics);
-            self.depth -= 1;
-
-            return match nested {
+            return match self.compound(diagnostics) {
                 Some(id) => id,
                 None => self.ast.push_stmt(Stmt::Error { span: start }),
             };
@@ -241,8 +392,7 @@ impl Parser<'_> {
             let value = if self.check(TokenKind::Punct(Punct::Semicolon)) {
                 None
             } else {
-                let expr = self.expression(diagnostics);
-                Some(self.ast.push_expr(expr))
+                Some(self.expression(diagnostics))
             };
 
             if self
@@ -260,20 +410,309 @@ impl Parser<'_> {
         self.ast.push_stmt(Stmt::Error { span })
     }
 
-    fn expression(&mut self, diagnostics: &mut DiagnosticSink) -> Expr {
+    /// The whole of C17 6.5, comma operator included.
+    fn expression(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        self.infix_from(COMMA, diagnostics)
+    }
+
+    /// An expression up to but not including the comma operator.
+    ///
+    /// What an argument in a call is, per C17 6.5.2's `argument-expression-list`.
+    fn assignment(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        self.infix_from(ASSIGNMENT, diagnostics)
+    }
+
+    /// Read an expression, taking only operators that bind at least as tightly
+    /// as `min`.
+    ///
+    /// Precedence climbing over [`infix`], which is the shape `clang` uses
+    /// (`ParseRHSOfBinaryExpression` over `getBinOpPrec`). A function per level
+    /// would read closer to C's own grammar and would spend a stack frame per
+    /// level on every expression, however shallow; this spends one per operator
+    /// that actually nests.
+    ///
+    /// This is a recursion, so it takes a level. What nests here is not only
+    /// `( )`: a right-associative operator reads its right side by re-entering,
+    /// so `a = b = c` goes one deeper per `=` with no bracket written.
+    fn infix_from(&mut self, min: u8, diagnostics: &mut DiagnosticSink) -> ExprId {
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| parser.climb(min, diagnostics),
+            |parser, span| parser.ast.push_expr(Expr::Error { span }),
+        )
+    }
+
+    fn climb(&mut self, min: u8, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let mut lhs = self.unary(diagnostics);
+
+        while !self.failed {
+            let TokenKind::Punct(punct) = self.peek().kind else {
+                break;
+            };
+            let Some(operator) = infix(punct) else { break };
+            if operator.power < min {
+                break;
+            }
+
+            // Spent here rather than at the top of the loop, because this is
+            // the point past which the operator is certainly consumed. A loop
+            // that spends on the round it breaks out of would run the budget
+            // down without the parser having moved.
+            self.spend();
+            self.advance();
+
+            // Left-associative means the right side stops at the next operator
+            // of the same power, so that it joins the left side instead.
+            let next = match operator.assoc {
+                Assoc::Left => operator.power + 1,
+                Assoc::Right => operator.power,
+            };
+
+            lhs = match operator.kind {
+                InfixKind::Binary(op) => {
+                    let rhs = self.infix_from(next, diagnostics);
+                    let span = self.joined(lhs, rhs);
+                    self.ast.push_expr(Expr::Binary { op, lhs, rhs, span })
+                }
+                InfixKind::Assign(op) => {
+                    let value = self.infix_from(next, diagnostics);
+                    let span = self.joined(lhs, value);
+                    self.ast.push_expr(Expr::Assign {
+                        op,
+                        place: lhs,
+                        value,
+                        span,
+                    })
+                }
+                InfixKind::Comma => {
+                    let rhs = self.infix_from(next, diagnostics);
+                    let span = self.joined(lhs, rhs);
+                    self.ast.push_expr(Expr::Comma { lhs, rhs, span })
+                }
+                InfixKind::Conditional => {
+                    // C17 6.5.15 puts a whole expression between `?` and `:`,
+                    // the comma operator included, because the `:` is what ends
+                    // it. Only the third operand is read at this power.
+                    let then = self.expression(diagnostics);
+
+                    if self
+                        .expect(TokenKind::Punct(Punct::Colon), "`:`", diagnostics)
+                        .is_none()
+                    {
+                        let span = self.ast.expr(then).span();
+                        self.ast.push_expr(Expr::Error { span })
+                    } else {
+                        let otherwise = self.infix_from(next, diagnostics);
+                        let span = self.joined(lhs, otherwise);
+                        self.ast.push_expr(Expr::Conditional {
+                            condition: lhs,
+                            then,
+                            otherwise,
+                            span,
+                        })
+                    }
+                }
+            };
+        }
+
+        lhs
+    }
+
+    /// A prefix operator and its operand, or a postfix expression. C17 6.5.3.
+    fn unary(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let op = match self.peek().kind {
+            TokenKind::Punct(Punct::Plus) => UnOp::Plus,
+            TokenKind::Punct(Punct::Minus) => UnOp::Minus,
+            TokenKind::Punct(Punct::Bang) => UnOp::Not,
+            TokenKind::Punct(Punct::Tilde) => UnOp::BitNot,
+            TokenKind::Punct(Punct::Star) => UnOp::Deref,
+            TokenKind::Punct(Punct::Ampersand) => UnOp::AddrOf,
+            TokenKind::Punct(Punct::PlusPlus) => UnOp::PreInc,
+            TokenKind::Punct(Punct::MinusMinus) => UnOp::PreDec,
+            _ => return self.postfix(diagnostics),
+        };
+
+        let start = self.advance().span;
+
+        // 6.5.3 makes the operand a unary-expression, so `- -x` is read here
+        // and not by the climb. Nothing brackets it, which is why it takes a
+        // level of its own.
+        self.deeper(
+            diagnostics,
+            |parser, diagnostics| {
+                let operand = parser.unary(diagnostics);
+                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                parser.ast.push_expr(Expr::Unary { op, operand, span })
+            },
+            |parser, span| parser.ast.push_expr(Expr::Error { span }),
+        )
+    }
+
+    /// A primary expression with whatever follows it. C17 6.5.2.
+    ///
+    /// Member access is not here yet, and neither are casts or `sizeof`.
+    fn postfix(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let mut base = self.primary(diagnostics);
+
+        while !self.failed {
+            let TokenKind::Punct(punct) = self.peek().kind else {
+                break;
+            };
+
+            // Every arm consumes the punctuator it matched, so the budget is
+            // spent only where the loop moves.
+            base = match punct {
+                Punct::LeftParen => {
+                    self.spend();
+                    self.call(base, diagnostics)
+                }
+                Punct::LeftBracket => {
+                    self.spend();
+                    self.subscript(base, diagnostics)
+                }
+                Punct::PlusPlus | Punct::MinusMinus => {
+                    self.spend();
+                    let op = if punct == Punct::PlusPlus {
+                        UnOp::PostInc
+                    } else {
+                        UnOp::PostDec
+                    };
+                    let end = self.advance().span;
+                    let span = Span::new(self.file, self.ast.expr(base).span().start(), end.end());
+                    self.ast.push_expr(Expr::Unary {
+                        op,
+                        operand: base,
+                        span,
+                    })
+                }
+                _ => break,
+            };
+        }
+
+        base
+    }
+
+    /// The arguments of a call, from the `(` that is there to the `)`.
+    ///
+    /// Each argument is an assignment-expression, which is the whole of what
+    /// keeps a separator from being the comma operator: `f(a, b)` is two
+    /// arguments and `f((a, b))` is one.
+    fn call(&mut self, callee: ExprId, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let start = self.ast.expr(callee).span();
+        self.advance();
+
+        let mut arguments = Vec::new();
+        if !self.check(TokenKind::Punct(Punct::RightParen)) {
+            arguments.push(self.assignment(diagnostics));
+            while !self.failed && self.eat(TokenKind::Punct(Punct::Comma)) {
+                self.spend();
+                arguments.push(self.assignment(diagnostics));
+            }
+        }
+
+        if self
+            .expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_expr(Expr::Error { span: start });
+        }
+
+        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        self.ast.push_expr(Expr::Call {
+            callee,
+            arguments,
+            span,
+        })
+    }
+
+    /// `base[index]`, from the `[` that is there to the `]`.
+    fn subscript(&mut self, base: ExprId, diagnostics: &mut DiagnosticSink) -> ExprId {
+        let start = self.ast.expr(base).span();
+        self.advance();
+
+        let index = self.expression(diagnostics);
+
+        if self
+            .expect(TokenKind::Punct(Punct::RightBracket), "`]`", diagnostics)
+            .is_none()
+        {
+            return self.ast.push_expr(Expr::Error { span: start });
+        }
+
+        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        self.ast.push_expr(Expr::Subscript { base, index, span })
+    }
+
+    /// Part of C17 6.5.1: an integer constant, an identifier, or a
+    /// parenthesised expression.
+    ///
+    /// Not all of it. A character constant is a constant by 6.4.4 and a string
+    /// literal is a primary expression by 6.5.1, the lexer already gives both
+    /// their own token, and neither is read here. Both are refused with
+    /// `expected an expression`, which is the wording #36 exists to fix.
+    fn primary(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let span = self.peek().span;
 
         if self.eat(TokenKind::Number) {
-            return Expr::Number { span };
+            return self.ast.push_expr(Expr::Number { span });
         }
 
-        Expr::Error {
-            span: self.report(
-                "expected an expression",
-                "this cannot begin one",
-                diagnostics,
-            ),
+        if self.eat(TokenKind::Identifier) {
+            return self.ast.push_expr(Expr::Identifier { span });
         }
+
+        if self.eat(TokenKind::Punct(Punct::LeftParen)) {
+            // Parentheses make no node. The grouping is already the shape of
+            // the tree, and a node for them is one every later phase would have
+            // to see through.
+            //
+            // What that gives up is visible in the artifact: the expression
+            // that comes back keeps its own span, so `(a + b) * c` has its
+            // multiplication starting at the `a` and not at the `(`. Widening
+            // the inner node's span instead would make a node's span stop
+            // meaning "this operator and its operands", which is the one thing
+            // every span here does mean. Writing the source back out and
+            // saying that a pair of parentheses is redundant are the other two
+            // things given up, and none of the three is asked for.
+            let inner = self.expression(diagnostics);
+
+            if self
+                .expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)
+                .is_none()
+            {
+                return self.ast.push_expr(Expr::Error { span });
+            }
+
+            return inner;
+        }
+
+        let span = self.report(
+            "expected an expression",
+            "this cannot begin one",
+            diagnostics,
+        );
+        self.ast.push_expr(Expr::Error { span })
+    }
+
+    /// The smallest span covering two nodes.
+    ///
+    /// Through [`Span::to`] rather than by building one from the two offsets,
+    /// because that is where the assertion lives that the two spans are in the
+    /// same file. Reaching for `Span::new` with this parser's own `FileId`
+    /// resolves a cross-file join to one side instead of refusing it, and
+    /// `Span::to`'s own comment calls that a bug. Nothing can produce one until
+    /// `#include` lands, which is this same phase.
+    fn joined(&self, from: ExprId, to: ExprId) -> Span {
+        self.ast.expr(from).span().to(self.ast.expr(to).span())
+    }
+
+    /// Consume whatever token is there, and give it back.
+    ///
+    /// For a caller that has already decided from `peek` what it is holding.
+    fn advance(&mut self) -> Token {
+        let token = self.peek();
+        self.at += 1;
+        token
     }
 
     fn at_end(&self) -> bool {
@@ -540,39 +979,69 @@ int main(void) { return 0; }
 
     /// Nesting is bounded, and the bound is reported rather than met.
     ///
-    /// Mutation: remove the `MAX_NESTING` check in `statement`. This fails,
-    /// because nothing is reported for the file past the limit.
+    /// Four shapes, because four recursions can reach it and a bracket is only
+    /// one of them: nested blocks, nested parentheses, a chain of a
+    /// right-associative operator, which re-enters the climb once per operator,
+    /// and a chain of a prefix operator, which re-enters `unary`. The last two
+    /// write no bracket at all.
+    ///
+    /// Mutation: remove the `MAX_NESTING` check from `deeper`. This fails,
+    /// because nothing is reported for the input past the limit. Taking the
+    /// `deeper` call out of `compound`, `infix_from` or `unary` fails it for
+    /// one shape each.
     ///
     /// That is not the failure the bound exists to prevent, and no test here
-    /// can be. Without a bound the recursion between `statement` and `compound`
-    /// runs to the end of the native stack: 4000 blocks killed this compiler
-    /// outright on this host, with no diagnostic and an exit code the driver
-    /// never chose, and a test that reproduced it would take the suite with it
-    /// rather than fail. So the input below stops one block past the limit, and
-    /// what it holds is that the limit is enforced at all.
+    /// can be. Without a bound the recursion runs to the end of the native
+    /// stack: 4000 blocks killed this compiler outright on this host, with no
+    /// diagnostic and an exit code the driver never chose, and a test that
+    /// reproduced it would take the suite down rather than fail. So each input
+    /// below stops one level past the limit, and what they hold is that the
+    /// limit is enforced at all.
     #[test]
     fn nesting_is_bounded_and_the_bound_is_reported() {
-        let source = |blocks: usize| {
+        // A function's body is a level like any other, so `n` braces is `n`
+        // deep. The two expression shapes are two levels deeper for the same
+        // count: the body is one, and reading the statement's expression at all
+        // is the second, before any of the nesting being counted here.
+        let blocks = |levels: usize| {
             format!(
-                "int main(void) {}{}
-",
-                "{".repeat(blocks),
-                "}".repeat(blocks)
+                "int main(void) {}{}\n",
+                "{".repeat(levels),
+                "}".repeat(levels)
             )
         };
+        let parens = |levels: usize| {
+            format!(
+                "int main(void) {{ return {}0{}; }}\n",
+                "(".repeat(levels),
+                ")".repeat(levels)
+            )
+        };
+        let assignments =
+            |levels: usize| format!("int main(void) {{ return {}0; }}\n", "a = ".repeat(levels));
 
-        let at_the_limit = parsed(&source(MAX_NESTING));
-        assert_eq!(
-            at_the_limit.diagnostics.diagnostics().len(),
-            0,
-            "{:?}",
-            at_the_limit.diagnostics.diagnostics()
-        );
+        let prefixes =
+            |levels: usize| format!("int main(void) {{ return {}0; }}\n", "!".repeat(levels));
 
-        let beyond = parsed(&source(MAX_NESTING + 1));
-        let reported = beyond.diagnostics.diagnostics();
-        assert_eq!(reported.len(), 1, "{reported:?}");
-        assert_eq!(reported[0].message(), "blocks are nested too deeply");
+        for (shape, at_the_limit) in [
+            (&blocks as &dyn Fn(usize) -> String, MAX_NESTING),
+            (&parens, MAX_NESTING - 2),
+            (&assignments, MAX_NESTING - 2),
+            (&prefixes, MAX_NESTING - 2),
+        ] {
+            let inside = parsed(&shape(at_the_limit));
+            assert_eq!(
+                inside.diagnostics.diagnostics().len(),
+                0,
+                "{:?}",
+                inside.diagnostics.diagnostics()
+            );
+
+            let beyond = parsed(&shape(at_the_limit + 1));
+            let reported = beyond.diagnostics.diagnostics();
+            assert_eq!(reported.len(), 1, "{reported:?}");
+            assert_eq!(reported[0].message(), "nesting is too deep");
+        }
     }
 
     /// A nested block is one node in the arena, not two.
@@ -629,6 +1098,273 @@ int main(void) { return 0; }
         assert_eq!(&text[parsed.ast.stmt(body[0]).span().range()], "return 0;");
     }
 
+    /// So does an expression built out of other expressions.
+    ///
+    /// Held separately from the statement above because nothing else can see
+    /// it: the artifact prints a start position only, and every other test
+    /// matches on shape. What the extent is for is a later diagnostic
+    /// underlining a whole subexpression, which is the point at which being
+    /// wrong is expensive and quiet.
+    ///
+    /// Mutation: have `joined` end at `from` rather than at `to`, or drop the
+    /// closing token from any of the three spans below. This fails.
+    #[test]
+    fn a_composite_expression_reaches_the_end_of_its_last_operand() {
+        let text = "int main(void) { return f(a, b) + c[d]; }\n";
+        let parsed = parsed(text);
+
+        let sum = parsed.ast.expr(returned(&parsed));
+        assert_eq!(&text[sum.span().range()], "f(a, b) + c[d]");
+
+        let Expr::Binary { lhs, rhs, .. } = sum else {
+            panic!("{sum:?}");
+        };
+        assert_eq!(&text[parsed.ast.expr(*lhs).span().range()], "f(a, b)");
+        assert_eq!(&text[parsed.ast.expr(*rhs).span().range()], "c[d]");
+    }
+
+    /// Every prefix operator reaches the variant that spells it.
+    ///
+    /// The spellings themselves are checked in `ast.rs`; what is checked here
+    /// is the other half, which punctuator the parser routes to which variant.
+    /// Without it `!x` could be read as `~x`, or `*p` as `&p`, and both dumps
+    /// and both suites would agree with themselves.
+    ///
+    /// Mutation: swap any two arms of the match in `unary`. This fails.
+    #[test]
+    fn every_prefix_operator_reaches_the_variant_that_spells_it() {
+        for (text, expected) in [
+            ("+a", UnOp::Plus),
+            ("-a", UnOp::Minus),
+            ("!a", UnOp::Not),
+            ("~a", UnOp::BitNot),
+            ("*a", UnOp::Deref),
+            ("&a", UnOp::AddrOf),
+            ("++a", UnOp::PreInc),
+            ("--a", UnOp::PreDec),
+        ] {
+            let parsed = parsed(&format!("int main(void) {{ return {text}; }}\n"));
+            let Expr::Unary { op, .. } = parsed.ast.expr(returned(&parsed)) else {
+                panic!("{text:?} gave {:?}", parsed.ast.expr(returned(&parsed)));
+            };
+            assert_eq!(*op, expected, "{text:?}");
+        }
+
+        for (text, expected) in [("a++", UnOp::PostInc), ("a--", UnOp::PostDec)] {
+            let parsed = parsed(&format!("int main(void) {{ return {text}; }}\n"));
+            let Expr::Unary { op, .. } = parsed.ast.expr(returned(&parsed)) else {
+                panic!("{text:?} gave {:?}", parsed.ast.expr(returned(&parsed)));
+            };
+            assert_eq!(*op, expected, "{text:?}");
+        }
+    }
+
+    /// A call with no arguments is a call, not a parse error.
+    ///
+    /// C17 6.5.2's `argument-expression-list` is optional, and `f()` is the
+    /// ordinary way to write a call to a function of no parameters.
+    ///
+    /// Mutation: read an argument unconditionally in `call` rather than only
+    /// when the next token is not `)`. This fails.
+    #[test]
+    fn a_call_can_have_no_arguments() {
+        let parsed = parsed("int main(void) { return f(); }\n");
+
+        assert_eq!(
+            parsed.diagnostics.diagnostics().len(),
+            0,
+            "{:?}",
+            parsed.diagnostics.diagnostics()
+        );
+
+        let Expr::Call { arguments, .. } = parsed.ast.expr(returned(&parsed)) else {
+            panic!("{:?}", parsed.ast.expr(returned(&parsed)));
+        };
+        assert!(arguments.is_empty(), "{arguments:?}");
+    }
+
+    /// The expression a lone `return` in a lone function reads.
+    fn returned(parsed: &Parsed) -> ExprId {
+        let [Item::Function(function)] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+            panic!("{:?}", parsed.ast.stmt(function.body));
+        };
+        let Stmt::Return {
+            value: Some(value), ..
+        } = parsed.ast.stmt(body[0])
+        else {
+            panic!("{:?}", parsed.ast.stmt(body[0]));
+        };
+
+        *value
+    }
+
+    /// The table C17 6.5 gives, written out rather than walked.
+    ///
+    /// RK-001 in the review knowledge bank is why it is written out: a test
+    /// that walks a table is comparing the table with itself, and this
+    /// repository has already shipped one, on the C keyword list, where
+    /// `return` spelled `retrun` passed the entire suite.
+    ///
+    /// Mutation: swap two rows, or change one operator's power, associativity
+    /// or node kind. This fails.
+    #[test]
+    fn the_precedence_table_is_the_one_c17_gives() {
+        use Assoc::{Left, Right};
+        use InfixKind::{Assign, Binary, Comma, Conditional};
+
+        for (punct, power, assoc, kind) in [
+            (Punct::Comma, 1, Left, Comma),
+            (Punct::Equal, 2, Right, Assign(None)),
+            (Punct::StarEqual, 2, Right, Assign(Some(BinOp::Mul))),
+            (Punct::SlashEqual, 2, Right, Assign(Some(BinOp::Div))),
+            (Punct::PercentEqual, 2, Right, Assign(Some(BinOp::Rem))),
+            (Punct::PlusEqual, 2, Right, Assign(Some(BinOp::Add))),
+            (Punct::MinusEqual, 2, Right, Assign(Some(BinOp::Sub))),
+            (Punct::LessLessEqual, 2, Right, Assign(Some(BinOp::Shl))),
+            (
+                Punct::GreaterGreaterEqual,
+                2,
+                Right,
+                Assign(Some(BinOp::Shr)),
+            ),
+            (Punct::AmpersandEqual, 2, Right, Assign(Some(BinOp::BitAnd))),
+            (Punct::CaretEqual, 2, Right, Assign(Some(BinOp::BitXor))),
+            (Punct::PipeEqual, 2, Right, Assign(Some(BinOp::BitOr))),
+            (Punct::Question, 3, Right, Conditional),
+            (Punct::PipePipe, 4, Left, Binary(BinOp::LogOr)),
+            (Punct::AmpersandAmpersand, 5, Left, Binary(BinOp::LogAnd)),
+            (Punct::Pipe, 6, Left, Binary(BinOp::BitOr)),
+            (Punct::Caret, 7, Left, Binary(BinOp::BitXor)),
+            (Punct::Ampersand, 8, Left, Binary(BinOp::BitAnd)),
+            (Punct::EqualEqual, 9, Left, Binary(BinOp::Eq)),
+            (Punct::BangEqual, 9, Left, Binary(BinOp::Ne)),
+            (Punct::Less, 10, Left, Binary(BinOp::Lt)),
+            (Punct::Greater, 10, Left, Binary(BinOp::Gt)),
+            (Punct::LessEqual, 10, Left, Binary(BinOp::Le)),
+            (Punct::GreaterEqual, 10, Left, Binary(BinOp::Ge)),
+            (Punct::LessLess, 11, Left, Binary(BinOp::Shl)),
+            (Punct::GreaterGreater, 11, Left, Binary(BinOp::Shr)),
+            (Punct::Plus, 12, Left, Binary(BinOp::Add)),
+            (Punct::Minus, 12, Left, Binary(BinOp::Sub)),
+            (Punct::Star, 13, Left, Binary(BinOp::Mul)),
+            (Punct::Slash, 13, Left, Binary(BinOp::Div)),
+            (Punct::Percent, 13, Left, Binary(BinOp::Rem)),
+        ] {
+            assert_eq!(
+                infix(punct),
+                Some(Infix { power, assoc, kind }),
+                "{punct:?}"
+            );
+        }
+
+        // Punctuators that look like they belong and do not. `:` and the
+        // increments are read where the expression they belong to is read, and
+        // answering here would take them out from under it.
+        for punct in [
+            Punct::Colon,
+            Punct::PlusPlus,
+            Punct::MinusMinus,
+            Punct::Dot,
+            Punct::Arrow,
+            Punct::Bang,
+            Punct::Tilde,
+            Punct::LeftParen,
+            Punct::LeftBracket,
+            Punct::Semicolon,
+            Punct::RightBrace,
+        ] {
+            assert_eq!(infix(punct), None, "{punct:?}");
+        }
+    }
+
+    /// Two operators of the same power group to the left.
+    ///
+    /// `a - b - c` is `(a - b) - c` and not `a - (b - c)`, which is a different
+    /// number.
+    ///
+    /// Mutation: in `climb`, give `Assoc::Left` the same next power as
+    /// `Assoc::Right`. This fails.
+    #[test]
+    fn left_associative_operators_group_to_the_left() {
+        let parsed = parsed("int main(void) { return a - b - c; }\n");
+
+        let Expr::Binary { lhs, rhs, .. } = parsed.ast.expr(returned(&parsed)) else {
+            panic!("{:?}", parsed.ast.expr(returned(&parsed)));
+        };
+
+        assert!(matches!(parsed.ast.expr(*lhs), Expr::Binary { .. }));
+        assert!(matches!(parsed.ast.expr(*rhs), Expr::Identifier { .. }));
+    }
+
+    /// Assignment groups to the right. C17 6.5.16.
+    ///
+    /// `a = b = c` is `a = (b = c)`. The other grouping assigns to the result
+    /// of an assignment, which is not even a place.
+    ///
+    /// Mutation: give assignment `Assoc::Left` in the table. This fails.
+    #[test]
+    fn assignment_groups_to_the_right() {
+        let parsed = parsed("int main(void) { return a = b = c; }\n");
+
+        let Expr::Assign { place, value, .. } = parsed.ast.expr(returned(&parsed)) else {
+            panic!("{:?}", parsed.ast.expr(returned(&parsed)));
+        };
+
+        assert!(matches!(parsed.ast.expr(*place), Expr::Identifier { .. }));
+        assert!(matches!(parsed.ast.expr(*value), Expr::Assign { .. }));
+    }
+
+    /// A comma between arguments separates them; one inside parentheses is the
+    /// operator.
+    ///
+    /// C17 6.5.2 makes an argument an assignment-expression, which is the whole
+    /// of what tells the two apart. Nothing in the tree has to.
+    ///
+    /// Mutation: read an argument with `expression` rather than `assignment`.
+    /// `f(a, b)` becomes one argument, and this fails.
+    #[test]
+    fn a_comma_in_a_call_separates_arguments() {
+        let separated = parsed("int main(void) { return f(a, b); }\n");
+        let Expr::Call { arguments, .. } = separated.ast.expr(returned(&separated)) else {
+            panic!("{:?}", separated.ast.expr(returned(&separated)));
+        };
+        assert_eq!(arguments.len(), 2, "{arguments:?}");
+
+        let grouped = parsed("int main(void) { return f((a, b)); }\n");
+        let Expr::Call { arguments, .. } = grouped.ast.expr(returned(&grouped)) else {
+            panic!("{:?}", grouped.ast.expr(returned(&grouped)));
+        };
+        assert_eq!(arguments.len(), 1, "{arguments:?}");
+        assert!(matches!(grouped.ast.expr(arguments[0]), Expr::Comma { .. }));
+    }
+
+    /// C17 6.5.15 puts a whole expression between `?` and `:`, the comma
+    /// operator included, because the `:` is what ends it.
+    ///
+    /// Only the third operand is read at the conditional's own power.
+    ///
+    /// Mutation: read the middle with `assignment` rather than `expression`.
+    /// The comma then ends it, ``expected `:``` is reported, and this fails.
+    #[test]
+    fn the_middle_of_a_conditional_is_a_full_expression() {
+        let parsed = parsed("int main(void) { return a ? b, c : d; }\n");
+
+        assert_eq!(
+            parsed.diagnostics.diagnostics().len(),
+            0,
+            "{:?}",
+            parsed.diagnostics.diagnostics()
+        );
+
+        let Expr::Conditional { then, .. } = parsed.ast.expr(returned(&parsed)) else {
+            panic!("{:?}", parsed.ast.expr(returned(&parsed)));
+        };
+        assert!(matches!(parsed.ast.expr(*then), Expr::Comma { .. }));
+    }
+
     /// Each thing the parser insists on says which one was missing.
     ///
     /// Mutation: give every `expect` the same `what`. This fails, because the
@@ -645,6 +1381,10 @@ int main(void) { return 0; }
             ("int main(void) { return; \n", "expected `}`"),
             ("int main(void) { return + ; }\n", "expected an expression"),
             ("int main(void) { 0; }\n", "expected a statement"),
+            ("int main(void) { return (a; }\n", "expected `)`"),
+            ("int main(void) { return f(a; }\n", "expected `)`"),
+            ("int main(void) { return a[i; }\n", "expected `]`"),
+            ("int main(void) { return a ? b c; }\n", "expected `:`"),
         ] {
             let parsed = parsed(text);
             let reported = parsed.diagnostics.diagnostics();
