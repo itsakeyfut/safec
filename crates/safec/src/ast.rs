@@ -407,6 +407,59 @@ pub enum Stmt {
     /// the two share a list. `clang` does the same, wrapping one in a
     /// `DeclStmt`.
     Declaration(Declaration),
+    /// An expression evaluated for its effect. C17 6.8.3 p1: `expression_opt ;`.
+    ///
+    /// A null statement is this with nothing in it. C gives it no production of
+    /// its own: 6.8.3 p3 describes it as "consisting of just a semicolon", and
+    /// the `_opt` in the one production above is where it comes from. `clang`
+    /// splits the two into a `NullStmt` and an expression; the tree here
+    /// follows the grammar instead.
+    Expression {
+        /// What is evaluated, or `None` for a null statement.
+        value: Option<ExprId>,
+        /// The expression through the semicolon, or just the semicolon.
+        span: Span,
+    },
+    /// `if`, with or without an `else`. C17 6.8.4 p1.
+    If {
+        /// What is asked. 6.8.4.1 p1 makes it a constraint that this has scalar
+        /// type, which is a constraint and so a later phase's.
+        condition: ExprId,
+        /// What runs when it holds.
+        then: StmtId,
+        /// What runs when it does not, if anything was written.
+        otherwise: Option<StmtId>,
+        /// The keyword through the last substatement.
+        span: Span,
+    },
+    /// `while`. C17 6.8.5 p1.
+    While {
+        /// What is asked before each turn.
+        condition: ExprId,
+        /// What runs while it holds.
+        body: StmtId,
+        /// The keyword through the body.
+        span: Span,
+    },
+    /// `for`, in the form whose three clauses are expressions. C17 6.8.5 p1.
+    ///
+    /// The other form, `for ( declaration expression_opt ; expression_opt )`,
+    /// needs an initializer and so needs #43. These are three separate
+    /// `Option`s rather than something that could also hold a declaration,
+    /// because an interface with no caller is invented rather than designed and
+    /// widening this one later is additive.
+    For {
+        /// What runs once before the first turn.
+        initialiser: Option<ExprId>,
+        /// What is asked before each turn. Absent means it always holds.
+        condition: Option<ExprId>,
+        /// What runs after each turn.
+        step: Option<ExprId>,
+        /// What runs each turn.
+        body: StmtId,
+        /// The keyword through the body.
+        span: Span,
+    },
     /// A statement the parser could not read.
     Error {
         /// What it gave up on.
@@ -495,6 +548,10 @@ impl Stmt {
             Self::Compound { .. } => "Compound",
             Self::Return { .. } => "Return",
             Self::Declaration(_) => "Declaration",
+            Self::Expression { .. } => "Expression",
+            Self::If { .. } => "If",
+            Self::While { .. } => "While",
+            Self::For { .. } => "For",
             Self::Error { .. } => "Error",
         }
     }
@@ -502,7 +559,13 @@ impl Stmt {
     /// Where this node is.
     pub fn span(&self) -> Span {
         match self {
-            Self::Compound { span, .. } | Self::Return { span, .. } | Self::Error { span } => *span,
+            Self::Compound { span, .. }
+            | Self::Return { span, .. }
+            | Self::Expression { span, .. }
+            | Self::If { span, .. }
+            | Self::While { span, .. }
+            | Self::For { span, .. }
+            | Self::Error { span } => *span,
             Self::Declaration(declaration) => declaration.span,
         }
     }
