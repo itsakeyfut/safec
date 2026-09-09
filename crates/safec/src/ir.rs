@@ -66,6 +66,17 @@ pub struct BlockId(u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct LocalId(u32);
 
+impl FuncId {
+    /// The index this handle refers to.
+    ///
+    /// For a side table with a slot per function, which is what an analysis
+    /// keeps when it summarises one: whether a parameter is borrowed or taken
+    /// is a fact about a function that its callers read.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
 impl LocalId {
     /// The index this handle refers to.
     ///
@@ -118,7 +129,7 @@ pub enum Ty {
 ///
 /// [`Deref`]: Projection::Deref
 /// [`Index`]: Projection::Index
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Projection {
     /// What the pointer points at.
     Deref,
@@ -136,7 +147,10 @@ pub enum Projection {
 /// A place with a projection is not the place it starts from: `p` and `*p` are
 /// two places, and an analysis that treated them as one would say a pointer is
 /// live when what it points at is not.
-#[derive(Clone, Debug, PartialEq)]
+/// [`Eq`] and [`Hash`] because a dataflow analysis keys its lattice on a place
+/// rather than on a local: `p` and `*p` have separate states and a side table
+/// indexed by [`LocalId`] has one slot for both.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Place {
     /// Where it starts.
     pub local: LocalId,
@@ -155,7 +169,7 @@ impl Place {
 }
 
 /// What an operation reads.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Operand {
     /// The value held in a place.
     ///
@@ -323,10 +337,23 @@ pub enum Terminator {
         callee: FuncId,
         /// What it is passed.
         arguments: Vec<Operand>,
-        /// Where its result is written.
-        destination: Place,
+        /// Where its result is written, or nothing where the value is
+        /// discarded.
+        ///
+        /// `free(p);` writes nowhere, and a mandatory destination would make
+        /// the lowering invent a local to throw the result into. An analysis
+        /// that reads a write as an initialisation would then see one the
+        /// source never asked for.
+        destination: Option<Place>,
         /// Where control goes when it returns normally.
         then: BlockId,
+        /// Where this call is, so that a diagnostic can point at it.
+        ///
+        /// The only terminator that carries one, because it is the only one a
+        /// diagnostic has had to name so far: `docs/safety-model.md` asks for
+        /// "p freed here", and a free is a call. [`Operation`] carries the same
+        /// field for the same reason, and a call is not an operation.
+        origin: Origin,
     },
     /// Leave the function. The value is in local 0, which
     /// [`Function::return_place`] names.
@@ -373,6 +400,7 @@ impl Terminator {
                 arguments: _,
                 destination: _,
                 then,
+                origin: _,
             } => out.push(*then),
             Self::Return => {}
         }
@@ -388,6 +416,22 @@ pub struct Block {
     pub terminator: Terminator,
 }
 
+/// What a function has of a body.
+///
+/// A declaration and a definition nobody has finished lowering would both be an
+/// empty list of blocks, and they are not the same thing. The difference is
+/// what an analysis may assume at a call: a body it can see says what the call
+/// does, and a body that is not here says nothing at all.
+#[derive(Clone, Debug)]
+enum Body {
+    /// The definition is not in this translation unit.
+    Declared,
+    /// Blocks, in the order their ids were handed out.
+    ///
+    /// `None` is a block whose id exists and whose contents do not yet.
+    Defined(Vec<Option<Block>>),
+}
+
 /// One function's IR.
 #[derive(Clone, Debug)]
 pub struct Function {
@@ -396,9 +440,7 @@ pub struct Function {
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
     parameters: usize,
-    /// In the order their ids were handed out. `None` is a block whose id
-    /// exists and whose contents do not yet.
-    blocks: Vec<Option<Block>>,
+    body: Body,
 }
 
 impl Function {
@@ -417,7 +459,50 @@ impl Function {
             name,
             locals,
             parameters,
-            blocks: Vec::new(),
+            body: Body::Defined(Vec::new()),
+        }
+    }
+
+    /// A function this translation unit calls and does not contain.
+    ///
+    /// Its locals are its return place and its parameters, because that is what
+    /// a call is checked against. It has no blocks and cannot be given any.
+    pub fn declaration(
+        name: Span,
+        returns: TyId,
+        parameters: impl IntoIterator<Item = TyId>,
+    ) -> Self {
+        let mut declared = Self::new(name, returns, parameters);
+        declared.body = Body::Declared;
+        declared
+    }
+
+    /// Whether the body is here.
+    pub fn is_defined(&self) -> bool {
+        matches!(self.body, Body::Defined(_))
+    }
+
+    /// The blocks.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration.
+    fn defined(&self) -> &[Option<Block>] {
+        match &self.body {
+            Body::Defined(blocks) => blocks,
+            Body::Declared => panic!("a declaration has no blocks"),
+        }
+    }
+
+    /// The blocks, to add to.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration.
+    fn defined_mut(&mut self) -> &mut Vec<Option<Block>> {
+        match &mut self.body {
+            Body::Defined(blocks) => blocks,
+            Body::Declared => panic!("a declaration has no blocks"),
         }
     }
 
@@ -443,6 +528,10 @@ impl Function {
     /// The id is taken before the push and not from `len()` after it, which is
     /// the mistake ADR-0008 records for the tree's arenas and the same one
     /// here.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration.
     pub fn push_block(&mut self, block: Block) -> BlockId {
         let id = self.reserve_block();
         self.fill_block(id, block);
@@ -456,9 +545,14 @@ impl Function {
     /// header it jumps back to, the header names the body, and one of the two
     /// ids has to exist before its block does. The arms of an `if` need the
     /// same thing for the block they join at.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration.
     pub fn reserve_block(&mut self) -> BlockId {
-        let id = BlockId(self.blocks.len() as u32);
-        self.blocks.push(None);
+        let blocks = self.defined_mut();
+        let id = BlockId(blocks.len() as u32);
+        blocks.push(None);
         id
     }
 
@@ -466,11 +560,11 @@ impl Function {
     ///
     /// # Panics
     ///
-    /// If `id` came from a different [`Function`], or if `id` has already been
-    /// filled. Filling twice would drop a block that other blocks still name,
-    /// which is a graph that looks whole and is not.
+    /// If this is a declaration, if `id` came from a different [`Function`], or
+    /// if `id` has already been filled. Filling twice would drop a block that
+    /// other blocks still name, which is a graph that looks whole and is not.
     pub fn fill_block(&mut self, id: BlockId, block: Block) {
-        let slot = &mut self.blocks[id.index()];
+        let slot = &mut self.defined_mut()[id.index()];
         assert!(slot.is_none(), "block {} is already filled", id.index());
         *slot = Some(block);
     }
@@ -493,10 +587,10 @@ impl Function {
     ///
     /// # Panics
     ///
-    /// If `id` came from a different [`Function`], or if `id` was reserved and
-    /// never filled.
+    /// If this is a declaration, if `id` came from a different [`Function`], or
+    /// if `id` was reserved and never filled.
     pub fn block(&self, id: BlockId) -> &Block {
-        self.blocks[id.index()]
+        self.defined()[id.index()]
             .as_ref()
             .unwrap_or_else(|| panic!("block {} was reserved and never filled", id.index()))
     }
@@ -505,11 +599,11 @@ impl Function {
     ///
     /// # Panics
     ///
-    /// If a block was reserved and never filled. A walk over a graph with a
-    /// hole in it would answer questions about a function nobody finished
-    /// building.
+    /// If this is a declaration, or if a block was reserved and never filled. A
+    /// walk over a graph with a hole in it would answer questions about a
+    /// function nobody finished building.
     pub fn blocks(&self) -> impl ExactSizeIterator<Item = &Block> {
-        self.blocks.iter().enumerate().map(|(index, block)| {
+        self.defined().iter().enumerate().map(|(index, block)| {
             block
                 .as_ref()
                 .unwrap_or_else(|| panic!("block {index} was reserved and never filled"))
@@ -718,6 +812,7 @@ mod tests {
     /// only `then`. This fails.
     #[test]
     fn every_terminator_says_where_control_can_go() {
+        let (_sources, at) = spans();
         let one = BlockId(1);
         let two = BlockId(2);
 
@@ -735,8 +830,9 @@ mod tests {
                 Terminator::Call {
                     callee: FuncId(0),
                     arguments: Vec::new(),
-                    destination: Place::local(LocalId(0)),
+                    destination: Some(Place::local(LocalId(0))),
                     then: two,
+                    origin: Origin::Written(at),
                 },
                 vec![two],
             ),
@@ -944,7 +1040,7 @@ mod tests {
     /// and no `while` at all.
     ///
     /// Mutation: delete `reserve_block` and `fill_block`. This stops compiling,
-    /// and no ordering of the pushes brings it back. Mutation: have
+    /// and no way of ordering the pushes brings it back. Mutation: have
     /// `fill_block` push rather than write into the slot the id names. The back
     /// edge lands on the wrong block and this fails.
     #[test]
@@ -995,5 +1091,99 @@ mod tests {
         function.block(body).terminator.successors(&mut successors);
         assert_eq!(successors, [header]);
         assert_eq!(function.blocks().len(), 3);
+    }
+
+    /// A call says where it was written, and may write its result nowhere.
+    ///
+    /// `free(p);` is both at once: `docs/safety-model.md` wants to say "p freed
+    /// here", and there is no place the result goes.
+    ///
+    /// Mutation: delete `Terminator::Call`'s `origin`, or make `destination` a
+    /// `Place` again. Each stops this compiling, and the first takes the span
+    /// the memory analysis points at with it.
+    #[test]
+    fn a_call_says_where_it_is_and_may_write_nowhere() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let void = unit.push_type(Ty::Void);
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+
+        let free = unit.push_function(Function::declaration(at, void, [pointer]));
+        let mut caller = Function::new(at, void, []);
+        let p = caller.push_local(pointer);
+        let after = caller.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let call = caller.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Call {
+                callee: free,
+                arguments: vec![Operand::Copy(Place::local(p))],
+                destination: None,
+                then: after,
+                origin: Origin::Written(at),
+            },
+        });
+
+        let Terminator::Call {
+            destination,
+            origin,
+            callee,
+            ..
+        } = &caller.block(call).terminator
+        else {
+            panic!("a call");
+        };
+        assert_eq!(*destination, None);
+        assert_eq!(origin.span(), at);
+        assert_eq!(callee.index(), 0);
+    }
+
+    /// A function whose body is elsewhere is not a function with no blocks.
+    ///
+    /// What an analysis may assume at a call turns on which of the two it is,
+    /// and the unsound reading of an empty list is that the callee does
+    /// nothing.
+    ///
+    /// Mutation: have `Function::declaration` return what `Function::new`
+    /// returns. `is_defined` starts answering true and this fails.
+    #[test]
+    fn a_declaration_is_not_a_definition_with_no_blocks() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let void = unit.push_type(Ty::Void);
+        let int = unit.push_type(Ty::Int);
+
+        let declared = Function::declaration(at, void, [int]);
+        let defined = Function::new(at, void, [int]);
+
+        assert!(!declared.is_defined());
+        assert!(defined.is_defined());
+        assert_eq!(declared.locals(), defined.locals());
+        assert_eq!(defined.blocks().len(), 0);
+    }
+
+    /// A place is what a dataflow lattice is keyed on.
+    ///
+    /// `p` and `*p` carry separate states, so a table indexed by [`LocalId`] is
+    /// the wrong table and the key has to be the place itself.
+    ///
+    /// Mutation: take `Eq` or `Hash` off `Place`. This stops compiling.
+    #[test]
+    fn a_place_is_a_key() {
+        let mut states = HashMap::new();
+        let p = Place::local(LocalId(1));
+        let pointee = Place {
+            local: LocalId(1),
+            projection: vec![Projection::Deref],
+        };
+
+        states.insert(p.clone(), "live");
+        states.insert(pointee.clone(), "freed");
+
+        assert_eq!(states.get(&p), Some(&"live"));
+        assert_eq!(states.get(&pointee), Some(&"freed"));
     }
 }
