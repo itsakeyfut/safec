@@ -206,13 +206,14 @@ there is adapter output.
 | The Safety IR gains a function table | Whether identity is an opaque id or a name | `FuncId`'s doc comment in the IR, where it was recorded when the table landed |
 | `Span` grows its third coordinate | What it has to serve: macros, instantiations, and generated operations | An ADR; `Span`'s doc already says the shape is pinned by more than privacy |
 | The safety IR is extracted from the `safec` crate | Which crates may depend on which | [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md), written when the trigger fired |
+| The first safety check is written | Where `Diagnostic` lives, and therefore which crate an analysis can be written in | An ADR. [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) says why this is the trigger and why waiting costs nothing |
 | The first C++ lifetime bug is analyzed | Whether the C annotation and the C++ type reached the same IR concept | Wherever it shows that one of them was wrong |
 | The crate is published | The name | Not an ADR. A decision, taken once |
 
 Three of those triggers have since fired, and their rows say where each answer
 went. Nothing is opened for the rest. By the bar in
 [adr/README.md](adr/README.md), a record answers what guards a decision now, and
-none of the remaining three guards anything yet: `Span` has two coordinates,
-there is no adapter, and nothing is published. The triggers are what turns each
+none of the remaining four guards anything yet: `Span` has two coordinates,
+there is no check, there is no adapter, and nothing is published. The triggers are what turns each
 one into a record, and this document is the thing that has to be reread when one
 of them fires.

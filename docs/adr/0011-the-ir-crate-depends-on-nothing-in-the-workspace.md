@@ -67,9 +67,29 @@ shared line helpers from `safec-ir` rather than the other way round.
 
 Diagnostics stay in `safec`. `docs/c-family.md` says a record is opened when a
 decision guards something now, and nothing in `safec-ir` reports: the
-interpreter answers a `Trap` and the printer answers text. When an analysis
-lands in the IR crate it will have to report, and that is the trigger to decide
-where `Diagnostic` lives, not this change.
+interpreter answers a `Trap` and the printer answers text.
+
+**The trigger for deciding where `Diagnostic` lives is the first safety check
+being written, wherever it is written.** Not an analysis arriving in this crate,
+which is what this record first said and is a trigger that would never fire.
+`Diagnostic`, `Label`, `DiagnosticSink` and `SafetyLevel` are all in `safec`, so
+a crate that depends only on `safec-ir` cannot report anything, while `safec`
+already has a `safety.rs` and every type a check needs. The path of no
+resistance puts the analyses beside the C lexer, which is the arrangement
+`docs/clang-integration.md` rules out in a sentence: two frontends are supposed
+to feed one safety-analysis infrastructure, and one that lives inside the C
+frontend cannot be fed by the other. The arrow this record draws would then be
+enforced around the IR and around nothing anybody cared about.
+
+Moving `Diagnostic` down later costs the same as moving it now, which is why
+this stays a trigger rather than becoming work. It was measured: `diagnostics`
+and `safety` move to `safec-ir` behind a twelve-line `pub use` shim, no call
+site in `safec` changes, the orphan rule still allows `impl From<&Options> for
+Policy` to stay on the frontend side, and ADR-0004's private-field guard
+survives the crate boundary. The one real cost is that `SafetyLevel`'s
+`ValueEnum` derive would bring `clap` into a crate that has no dependencies
+today, and `safety.rs` already says that derive is what to replace if the safety
+model ever has to build without an argument parser.
 
 ### Confirmation
 
