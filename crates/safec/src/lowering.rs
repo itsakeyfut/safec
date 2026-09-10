@@ -414,12 +414,12 @@ impl Lowering<'_> {
                 Type::Array { .. } | Type::Function { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
-                            "`{}` cannot be lowered to the Safety IR yet",
+                            "cannot compile something of type `{}` yet",
                             spell_type(self.sources, self.ast, id)
                         ))
                         .with_code(LOWERING)
-                        .with_label(Label::primary(at, "this is the declaration"))
-                        .with_note("the IR holds `int`, `char`, `void` and pointers to them"),
+                        .with_label(Label::primary(at, "declared here"))
+                        .with_note("`int`, `char`, `void` and pointers to them are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -1312,10 +1312,13 @@ impl Lowering<'_> {
 
         if named.is_none() && !self.refused.contains(self.sources.snippet(span)) {
             diagnostics.report(
-                Diagnostic::error("this call cannot be lowered to the Safety IR")
+                Diagnostic::error("cannot compile this call yet")
                     .with_code(LOWERING)
-                    .with_label(Label::primary(span, "this is not a function this stage found"))
-                    .with_note("a call names a function by an id, and a call through a pointer has no id to name"),
+                    .with_label(Label::primary(
+                        span,
+                        "this is not a function this compiler found",
+                    ))
+                    .with_note("a call through a function pointer is not supported so far"),
             );
         }
 
@@ -1350,13 +1353,13 @@ impl Lowering<'_> {
         }
 
         diagnostics.report(
-            Diagnostic::error("this constant cannot be lowered to the Safety IR yet")
+            Diagnostic::error("cannot compile this constant yet")
                 .with_code(LOWERING)
                 .with_label(Label::primary(span, "this is not a plain decimal constant"))
                 .with_note(
                     "a hexadecimal or octal spelling, a suffix, a floating constant and a value \
-                     too large to hold are all read wrong rather than read, so none of them is \
-                     read at all",
+                     too large to hold would each be read as a different number, so none of them \
+                     is read at all",
                 ),
         );
         None
