@@ -339,7 +339,8 @@ fn analysed(
 /// name rather than by its [`FuncId`], which is an index into a table this
 /// artifact does not show.
 fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
-    for function in unit.functions() {
+    for id in unit.functions() {
+        let function = unit.function(id);
         dump_node(sources, "Function", function.name, 0, out);
         write!(out, " {:?}", quoted(sources, function.name))
             .expect("writing to a string cannot fail");
