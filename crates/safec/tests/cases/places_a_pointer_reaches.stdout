@@ -1,0 +1,28 @@
+Function places_a_pointer_reaches.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int"
+  Local "_4" "int *"
+  Block "bb0"
+    Operation places_a_pointer_reaches.c:2:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+    Operation places_a_pointer_reaches.c:2:5 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Operation places_a_pointer_reaches.c:3:12 written
+      Destination "_4"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation places_a_pointer_reaches.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Return
