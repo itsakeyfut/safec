@@ -243,6 +243,28 @@ impl Lowering<'_> {
                 parameters,
             } = self.ast.ty(ty)
             else {
+                // A declaration of an object is the ordinary case here and is
+                // answered where it is used. A *definition* of one is not: C17
+                // 6.9.1 p2 requires the identifier in a function definition to
+                // have a function type, `int (*f)(int) { ... }` does not, and
+                // nothing before this stage checks it. Dropping it in silence
+                // would leave a translation unit missing a function that the
+                // file plainly contains, and the artifact saying `declared`
+                // about a body it can see.
+                if matches!(item, Item::Function(_)) {
+                    diagnostics.report(
+                        Diagnostic::error("this defines something that is not a function")
+                            .with_code(LOWERING)
+                            .with_label(Label::primary(
+                                name,
+                                format!("this declares `{}`", spell_type(self.sources, self.ast, ty)),
+                            ))
+                            .with_note(
+                                "C17 6.9.1 p2 requires the identifier in a function definition to have a function type",
+                            ),
+                    );
+                    self.refused.insert(self.sources.snippet(name).to_owned());
+                }
                 continue;
             };
             let (returns, parameters) = (*returns, parameters.clone());
@@ -1357,9 +1379,9 @@ impl Lowering<'_> {
                 .with_code(LOWERING)
                 .with_label(Label::primary(span, "this is not a plain decimal constant"))
                 .with_note(
-                    "a hexadecimal or octal spelling, a suffix, a floating constant and a value \
-                     too large to hold would each be read as a different number, so none of them \
-                     is read at all",
+                    "a leading zero makes a constant octal, so `010` read as a decimal would be \
+                     ten where C says eight, and a hexadecimal spelling, a suffix, a floating \
+                     constant or a value too large to hold would not be read as a number at all",
                 ),
         );
         None
