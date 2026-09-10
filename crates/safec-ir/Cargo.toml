@@ -1,6 +1,6 @@
 [package]
 name = "safec-ir"
-description = "The Safety IR: its shape, its printer and its interpreter"
+description = "The Safety IR: its shape, its printer, its interpreter, and the source map a span is an offset into"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

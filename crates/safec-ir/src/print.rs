@@ -82,6 +82,15 @@ pub fn is_obeyed(ch: char) -> bool {
 /// span resolved against the wrong file prints another file's text at another
 /// file's line, or panics when that file is shorter. `render.rs` looks the file
 /// up per label for this reason, and ADR-0003 is where it is argued.
+///
+/// **Quoted as in quoted from, not as in quote marks: this hands back the
+/// file's own bytes and escapes nothing.** Write it with `{:?}` and never with
+/// `{}`. The text is content, and a `.c` file whose identifier held an escape
+/// sequence would otherwise clear the terminal of whoever compiled it, which is
+/// RK-002 in the review knowledge bank and has happened here once. Every caller
+/// writes `{:?}` today; this says so where a new one is looking, rather than in
+/// [`dump_node`], where the same rule was written when there was one file of
+/// callers to keep to it.
 pub fn quoted(sources: &SourceMap, span: Span) -> &str {
     &sources.file(span.file()).contents()[span.range()]
 }
