@@ -1845,14 +1845,24 @@ mod tests {
 
     /// Every operation says where in the source it came from.
     ///
-    /// Mutation: give an operation `Origin::Generated` instead. The assertion
-    /// that the source wrote it fails, and with it the promise that a
+    /// The program touches every place an operation is made: an assignment, a
+    /// binary operator, a unary one, an address, an increment, a short circuit,
+    /// a conditional, a call and a return. A shorter one would leave most of
+    /// those unwatched, which is what this test did before somebody mutated the
+    /// arm it was not watching and nothing failed.
+    ///
+    /// Mutation: give any one of them `Origin::Generated` instead. The
+    /// assertion that the source wrote it fails, and with it the promise that a
     /// diagnostic about this operation can quote what the user typed.
     #[test]
     fn every_operation_says_the_source_wrote_it() {
-        let lowered = lowered("int f(int n) {\n    n = n + 1;\n    return n;\n}\n");
-        let f = function(&lowered, "f");
+        let lowered = lowered(
+            "int g(int *q);\n\nint f(int n) {\n    int *p;\n    p = &n;\n    n = -n;\n    n++;\n    n = n && 1;\n    n = n ? 2 : 3;\n    n = n + g(p);\n    return n;\n}\n",
+        );
+        assert_eq!(codes(&lowered), Vec::<String>::new());
 
+        let f = function(&lowered, "f");
+        let mut seen = 0;
         for block in f.blocks() {
             for operation in &block.operations {
                 assert!(
@@ -1861,8 +1871,18 @@ mod tests {
                     operation.origin
                 );
                 assert!(!lowered.sources.snippet(operation.origin.span()).is_empty());
+                seen += 1;
+            }
+
+            // A call is a terminator and carries the same field, so it answers
+            // the same question the operations do.
+            if let Terminator::Call { origin, .. } = &block.terminator {
+                assert!(matches!(origin, Origin::Written(_)), "{origin:?}");
+                seen += 1;
             }
         }
+
+        assert!(seen > 15, "the program makes more than fifteen of them");
     }
 
     /// The one operation a function's only block ends up holding before it
