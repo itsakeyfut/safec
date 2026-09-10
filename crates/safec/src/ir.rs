@@ -155,6 +155,7 @@ pub enum Projection {
 /// A place with a projection is not the place it starts from: `p` and `*p` are
 /// two places, and an analysis that treated them as one would say a pointer is
 /// live when what it points at is not.
+///
 /// [`Eq`] and [`Hash`] because a dataflow analysis keys its lattice on a place
 /// rather than on a local: `p` and `*p` have separate states and a side table
 /// indexed by [`LocalId`] has one slot for both.
@@ -164,6 +165,30 @@ pub struct Place {
     pub local: LocalId,
     /// How to get from there to what is meant. Empty is the local itself.
     pub projection: Vec<Projection>,
+}
+
+impl Projection {
+    /// What this kind of step is called, for `--emit safety-ir`.
+    ///
+    /// The same shape as `ast::Expr::name` and for the same reason: the
+    /// artifact is an interface, so a spelling is decided in one place rather
+    /// than written out wherever something is printed.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Deref => "Deref",
+            Self::Index(_) => "Index",
+        }
+    }
+}
+
+impl Operand {
+    /// What this kind of operand is called, for `--emit safety-ir`.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Copy(_) => "Copy",
+            Self::Constant(_) => "Constant",
+        }
+    }
 }
 
 impl Place {
@@ -208,6 +233,22 @@ pub enum UnOp {
     BitNot,
 }
 
+impl UnOp {
+    /// What this operator is called, for `--emit safety-ir`.
+    ///
+    /// The IR's name for it rather than C's spelling. `--emit ast` prints what
+    /// the source wrote, because that is what a tree is; this artifact is the
+    /// IR's own, and an operator here means what the IR says it means whatever
+    /// language reached it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Neg => "Neg",
+            Self::Not => "Not",
+            Self::BitNot => "BitNot",
+        }
+    }
+}
+
 /// An operator with two operands.
 ///
 /// `&&` and `||` are not here, and their absence is the point: C17 6.5.13 p4
@@ -250,6 +291,33 @@ pub enum BinOp {
     BitOr,
 }
 
+impl BinOp {
+    /// What this operator is called, for `--emit safety-ir`.
+    ///
+    /// See [`UnOp::name`] for why these are the IR's names rather than C's
+    /// spellings.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Mul => "Mul",
+            Self::Div => "Div",
+            Self::Rem => "Rem",
+            Self::Add => "Add",
+            Self::Sub => "Sub",
+            Self::Shl => "Shl",
+            Self::Shr => "Shr",
+            Self::Lt => "Lt",
+            Self::Gt => "Gt",
+            Self::Le => "Le",
+            Self::Ge => "Ge",
+            Self::Eq => "Eq",
+            Self::Ne => "Ne",
+            Self::BitAnd => "BitAnd",
+            Self::BitXor => "BitXor",
+            Self::BitOr => "BitOr",
+        }
+    }
+}
+
 /// What an operation computes.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Rvalue {
@@ -279,7 +347,25 @@ pub enum Rvalue {
     Address(Place),
 }
 
+impl Rvalue {
+    /// What this kind of value is called, for `--emit safety-ir`.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Use(_) => "Use",
+            Self::Unary { .. } => "Unary",
+            Self::Binary { .. } => "Binary",
+            Self::Address(_) => "Address",
+        }
+    }
+}
+
 /// Whether the source wrote an operation, or something else caused it.
+///
+/// `docs/c-family.md` calls this attribution, and `Span`'s own doc comment says
+/// it expects a third coordinate for where code came from, which implicit
+/// operations are named as one consumer of. If that coordinate arrives and
+/// wants this name, this is the type that gives way: what it distinguishes is
+/// narrower, and a span's origin is the more obvious reading of the word.
 ///
 /// Both carry a span, because both have somewhere to point. What differs is
 /// what a diagnostic may say: text that a user wrote can be quoted back, and a
@@ -296,6 +382,18 @@ pub enum Origin {
 }
 
 impl Origin {
+    /// What this kind of origin is called, for `--emit safety-ir`.
+    ///
+    /// Lower case, because it is a word about the operation on the same line
+    /// rather than the name of a thing: `Operation t.c:2:5 generated` reads as
+    /// a sentence and `Operation t.c:2:5 Generated` reads as two nouns.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Written(_) => "written",
+            Self::Generated(_) => "generated",
+        }
+    }
+
     /// Where to point, whichever kind it is.
     pub fn span(self) -> Span {
         match self {
@@ -379,6 +477,17 @@ pub enum Terminator {
 }
 
 impl Terminator {
+    /// What this kind of ending is called, for `--emit safety-ir`.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Goto(_) => "Goto",
+            Self::Branch { .. } => "Branch",
+            Self::Call { .. } => "Call",
+            Self::Return => "Return",
+            Self::Abnormal { .. } => "Abnormal",
+        }
+    }
+
     /// Every block this one can reach, appended to `out`.
     ///
     /// The graph's edges, in one place, so that the next walker does not work
@@ -586,9 +695,14 @@ impl Function {
         self.locals[id.index()]
     }
 
-    /// How many locals there are, the return place included.
-    pub fn locals(&self) -> usize {
-        self.locals.len()
+    /// Every local, in the order their ids were handed out.
+    ///
+    /// The return place first, then the parameters, then whatever a body
+    /// needed. A count is `locals().len()`, which is why this hands back the
+    /// ids rather than the number: a walk over them is what a printer and a
+    /// dataflow analysis each want, and neither can build a [`LocalId`].
+    pub fn locals(&self) -> impl ExactSizeIterator<Item = LocalId> + use<> {
+        (0..self.locals.len() as u32).map(LocalId)
     }
 
     /// The block `id` names.
@@ -601,6 +715,28 @@ impl Function {
         self.defined()[id.index()]
             .as_ref()
             .unwrap_or_else(|| panic!("block {} was reserved and never filled", id.index()))
+    }
+
+    /// Where control enters, which is the block whose id was handed out first.
+    ///
+    /// Nothing outside this module can build a [`BlockId`], and a walk over a
+    /// control-flow graph has to start somewhere, so without this an
+    /// interpreter or an analysis could not take its first step. `blocks()`
+    /// hands back blocks rather than ids for the same reason `locals()` used to
+    /// hand back a count: it answers a different question.
+    ///
+    /// The first block is the entry because that is what a builder does, and
+    /// saying so here is what makes it a property of the IR rather than of
+    /// whoever built one.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration, or if it has no blocks. A definition always
+    /// has one, because a body ends with a terminator and a terminator ends a
+    /// block.
+    pub fn entry(&self) -> BlockId {
+        assert!(!self.defined().is_empty(), "a definition has a first block");
+        BlockId(0)
     }
 
     /// Every block, in the order their ids were handed out.
@@ -782,7 +918,7 @@ mod tests {
             add.parameters().collect::<Vec<_>>(),
             [LocalId(1), LocalId(2)]
         );
-        assert_eq!(add.locals(), 3);
+        assert_eq!(add.locals().len(), 3);
         assert_eq!(add.local(add.return_place()), int);
         assert_eq!(add.local(LocalId(1)), int);
         assert_eq!(add.local(LocalId(2)), character);
@@ -1014,8 +1150,8 @@ mod tests {
 
         assert_ne!(first, second);
         assert_eq!(unit.function(first).name, unit.function(second).name);
-        assert_eq!(unit.function(first).locals(), 1);
-        assert_eq!(unit.function(second).locals(), 2);
+        assert_eq!(unit.function(first).locals().len(), 1);
+        assert_eq!(unit.function(second).locals().len(), 2);
         assert_eq!(unit.function(second).local(scratch), character);
     }
 
@@ -1194,7 +1330,7 @@ mod tests {
 
         assert!(!declared.is_defined());
         assert!(defined.is_defined());
-        assert_eq!(declared.locals(), defined.locals());
+        assert_eq!(declared.locals().len(), defined.locals().len());
         assert_eq!(defined.blocks().len(), 0);
     }
 

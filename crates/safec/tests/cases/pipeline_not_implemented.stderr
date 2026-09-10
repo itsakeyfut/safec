@@ -1,3 +1,3 @@
 error: the compilation pipeline is not implemented yet
-  = note: safec currently scans its inputs and parses them into a tree
-  = note: `--emit tokens` and `--emit ast` are what it can produce today
+  = note: safec currently reads its inputs and builds a Safety IR from them
+  = note: `--emit tokens`, `--emit ast` and `--emit safety-ir` are what it can make

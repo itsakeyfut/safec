@@ -243,6 +243,28 @@ impl Lowering<'_> {
                 parameters,
             } = self.ast.ty(ty)
             else {
+                // A declaration of an object is the ordinary case here and is
+                // answered where it is used. A *definition* of one is not: C17
+                // 6.9.1 p2 requires the identifier in a function definition to
+                // have a function type, `int (*f)(int) { ... }` does not, and
+                // nothing before this stage checks it. Dropping it in silence
+                // would leave a translation unit missing a function that the
+                // file plainly contains, and the artifact saying `declared`
+                // about a body it can see.
+                if matches!(item, Item::Function(_)) {
+                    diagnostics.report(
+                        Diagnostic::error("this defines something that is not a function")
+                            .with_code(LOWERING)
+                            .with_label(Label::primary(
+                                name,
+                                format!("this declares `{}`", spell_type(self.sources, self.ast, ty)),
+                            ))
+                            .with_note(
+                                "C17 6.9.1 p2 requires the identifier in a function definition to have a function type",
+                            ),
+                    );
+                    self.refused.insert(self.sources.snippet(name).to_owned());
+                }
                 continue;
             };
             let (returns, parameters) = (*returns, parameters.clone());
@@ -414,12 +436,12 @@ impl Lowering<'_> {
                 Type::Array { .. } | Type::Function { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
-                            "`{}` cannot be lowered to the Safety IR yet",
+                            "cannot compile something of type `{}` yet",
                             spell_type(self.sources, self.ast, id)
                         ))
                         .with_code(LOWERING)
-                        .with_label(Label::primary(at, "this is the declaration"))
-                        .with_note("the IR holds `int`, `char`, `void` and pointers to them"),
+                        .with_label(Label::primary(at, "declared here"))
+                        .with_note("`int`, `char`, `void` and pointers to them are all this compiler holds so far"),
                     );
                     return None;
                 }
@@ -1312,10 +1334,13 @@ impl Lowering<'_> {
 
         if named.is_none() && !self.refused.contains(self.sources.snippet(span)) {
             diagnostics.report(
-                Diagnostic::error("this call cannot be lowered to the Safety IR")
+                Diagnostic::error("cannot compile this call yet")
                     .with_code(LOWERING)
-                    .with_label(Label::primary(span, "this is not a function this stage found"))
-                    .with_note("a call names a function by an id, and a call through a pointer has no id to name"),
+                    .with_label(Label::primary(
+                        span,
+                        "this is not a function this compiler found",
+                    ))
+                    .with_note("a call through a function pointer is not supported so far"),
             );
         }
 
@@ -1350,13 +1375,13 @@ impl Lowering<'_> {
         }
 
         diagnostics.report(
-            Diagnostic::error("this constant cannot be lowered to the Safety IR yet")
+            Diagnostic::error("cannot compile this constant yet")
                 .with_code(LOWERING)
                 .with_label(Label::primary(span, "this is not a plain decimal constant"))
                 .with_note(
-                    "a hexadecimal or octal spelling, a suffix, a floating constant and a value \
-                     too large to hold are all read wrong rather than read, so none of them is \
-                     read at all",
+                    "a leading zero makes a constant octal, so `010` read as a decimal would be \
+                     ten where C says eight, and a hexadecimal spelling, a suffix, a floating \
+                     constant or a value too large to hold would not be read as a number at all",
                 ),
         );
         None

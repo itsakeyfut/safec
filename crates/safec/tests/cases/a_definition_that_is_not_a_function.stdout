@@ -1,0 +1,8 @@
+Function a_definition_that_is_not_a_function.c:1:5 "good"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation a_definition_that_is_not_a_function.c:2:5 written
+      Destination "_0"
+      Use
+        Constant 1
+    Return

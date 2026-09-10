@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile something of type `int[3]` yet
+   ╭─[ a_function_the_ir_cannot_hold.c:1:11 ]
+   │
+ 1 │ int g(int a[3]);
+   │           ┬  
+   │           ╰── declared here
+───╯
+  = note: `int`, `char`, `void` and pointers to them are all this compiler holds so far

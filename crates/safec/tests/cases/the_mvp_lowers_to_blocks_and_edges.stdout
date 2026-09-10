@@ -1,0 +1,30 @@
+Function the_mvp_lowers_to_blocks_and_edges.c:1:5 "add"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation the_mvp_lowers_to_blocks_and_edges.c:2:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation the_mvp_lowers_to_blocks_and_edges.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Return
+Function the_mvp_lowers_to_blocks_and_edges.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Block "bb0" entry
+    Call the_mvp_lowers_to_blocks_and_edges.c:6:12 "add" "bb1"
+      Destination "_1"
+      Constant 1
+      Constant 2
+  Block "bb1"
+    Operation the_mvp_lowers_to_blocks_and_edges.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Return

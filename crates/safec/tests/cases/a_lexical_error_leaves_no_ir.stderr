@@ -1,0 +1,7 @@
+error[SC0103]: unexpected character
+   ╭─[ a_lexical_error_leaves_no_ir.c:2:13 ]
+   │
+ 2 │     int x = @;
+   │             ┬  
+   │             ╰── not part of any token
+───╯

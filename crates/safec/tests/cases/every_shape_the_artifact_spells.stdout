@@ -1,0 +1,347 @@
+Function every_shape_the_artifact_spells.c:1:6 "nothing"
+  Local "_0" "void" return
+  Block "bb0" entry
+    Return
+Function every_shape_the_artifact_spells.c:4:5 "every"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int" parameter
+  Local "_3" "char" parameter
+  Local "_4" "int **" parameter
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "int"
+  Local "_20" "int"
+  Local "_21" "int"
+  Local "_22" "int"
+  Local "_23" "int"
+  Local "_24" "int"
+  Local "_25" "int"
+  Local "_26" "int"
+  Local "_27" "int"
+  Local "_28" "int"
+  Local "_29" "int"
+  Local "_30" "int"
+  Local "_31" "int"
+  Local "_32" "int"
+  Local "_33" "int"
+  Local "_34" "int"
+  Local "_35" "int"
+  Local "_36" "int"
+  Local "_37" "int"
+  Local "_38" "int"
+  Local "_39" "int"
+  Local "_40" "int"
+  Local "_41" "int"
+  Local "_42" "int"
+  Local "_43" "int"
+  Local "_44" "int"
+  Local "_45" "int"
+  Local "_46" "int *"
+  Local "_47" "int *"
+  Local "_48" "int"
+  Local "_49" "char"
+  Block "bb0" entry
+    Operation every_shape_the_artifact_spells.c:8:9 written
+      Destination "_7"
+      Binary "Mul"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:8:5 written
+      Destination "_5"
+      Use
+        Copy "_7"
+    Operation every_shape_the_artifact_spells.c:8:5 written
+      Destination "_8"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:9:9 written
+      Destination "_9"
+      Binary "Div"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:9:5 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation every_shape_the_artifact_spells.c:9:5 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:10:9 written
+      Destination "_11"
+      Binary "Rem"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:10:5 written
+      Destination "_5"
+      Use
+        Copy "_11"
+    Operation every_shape_the_artifact_spells.c:10:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:11:9 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:11:5 written
+      Destination "_5"
+      Use
+        Copy "_13"
+    Operation every_shape_the_artifact_spells.c:11:5 written
+      Destination "_14"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:12:9 written
+      Destination "_15"
+      Binary "Sub"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:12:5 written
+      Destination "_5"
+      Use
+        Copy "_15"
+    Operation every_shape_the_artifact_spells.c:12:5 written
+      Destination "_16"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:13:9 written
+      Destination "_17"
+      Binary "Shl"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:13:5 written
+      Destination "_5"
+      Use
+        Copy "_17"
+    Operation every_shape_the_artifact_spells.c:13:5 written
+      Destination "_18"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:14:9 written
+      Destination "_19"
+      Binary "Shr"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:14:5 written
+      Destination "_5"
+      Use
+        Copy "_19"
+    Operation every_shape_the_artifact_spells.c:14:5 written
+      Destination "_20"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:15:9 written
+      Destination "_21"
+      Binary "Lt"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:15:5 written
+      Destination "_5"
+      Use
+        Copy "_21"
+    Operation every_shape_the_artifact_spells.c:15:5 written
+      Destination "_22"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:16:9 written
+      Destination "_23"
+      Binary "Gt"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:16:5 written
+      Destination "_5"
+      Use
+        Copy "_23"
+    Operation every_shape_the_artifact_spells.c:16:5 written
+      Destination "_24"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:17:9 written
+      Destination "_25"
+      Binary "Le"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:17:5 written
+      Destination "_5"
+      Use
+        Copy "_25"
+    Operation every_shape_the_artifact_spells.c:17:5 written
+      Destination "_26"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:18:9 written
+      Destination "_27"
+      Binary "Ge"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:18:5 written
+      Destination "_5"
+      Use
+        Copy "_27"
+    Operation every_shape_the_artifact_spells.c:18:5 written
+      Destination "_28"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:19:9 written
+      Destination "_29"
+      Binary "Eq"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:19:5 written
+      Destination "_5"
+      Use
+        Copy "_29"
+    Operation every_shape_the_artifact_spells.c:19:5 written
+      Destination "_30"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:20:9 written
+      Destination "_31"
+      Binary "Ne"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:20:5 written
+      Destination "_5"
+      Use
+        Copy "_31"
+    Operation every_shape_the_artifact_spells.c:20:5 written
+      Destination "_32"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:21:9 written
+      Destination "_33"
+      Binary "BitAnd"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:21:5 written
+      Destination "_5"
+      Use
+        Copy "_33"
+    Operation every_shape_the_artifact_spells.c:21:5 written
+      Destination "_34"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:22:9 written
+      Destination "_35"
+      Binary "BitXor"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:22:5 written
+      Destination "_5"
+      Use
+        Copy "_35"
+    Operation every_shape_the_artifact_spells.c:22:5 written
+      Destination "_36"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:23:9 written
+      Destination "_37"
+      Binary "BitOr"
+        Copy "_1"
+        Copy "_2"
+    Operation every_shape_the_artifact_spells.c:23:5 written
+      Destination "_5"
+      Use
+        Copy "_37"
+    Operation every_shape_the_artifact_spells.c:23:5 written
+      Destination "_38"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:24:9 written
+      Destination "_39"
+      Unary "Neg"
+        Copy "_1"
+    Operation every_shape_the_artifact_spells.c:24:5 written
+      Destination "_5"
+      Use
+        Copy "_39"
+    Operation every_shape_the_artifact_spells.c:24:5 written
+      Destination "_40"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:25:9 written
+      Destination "_41"
+      Unary "Not"
+        Copy "_1"
+    Operation every_shape_the_artifact_spells.c:25:5 written
+      Destination "_5"
+      Use
+        Copy "_41"
+    Operation every_shape_the_artifact_spells.c:25:5 written
+      Destination "_42"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:26:9 written
+      Destination "_43"
+      Unary "BitNot"
+        Copy "_1"
+    Operation every_shape_the_artifact_spells.c:26:5 written
+      Destination "_5"
+      Use
+        Copy "_43"
+    Operation every_shape_the_artifact_spells.c:26:5 written
+      Destination "_44"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:27:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Operation every_shape_the_artifact_spells.c:27:5 written
+      Destination "_45"
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:28:9 written
+      Destination "_46"
+      Address
+        Place "_5"
+    Operation every_shape_the_artifact_spells.c:28:5 written
+      Destination "_6"
+      Use
+        Copy "_46"
+    Operation every_shape_the_artifact_spells.c:28:5 written
+      Destination "_47"
+      Use
+        Copy "_6"
+    Operation every_shape_the_artifact_spells.c:29:5 written
+      Destination "_4"
+        Deref
+          Deref
+      Use
+        Copy "_5"
+    Operation every_shape_the_artifact_spells.c:29:5 written
+      Destination "_48"
+      Use
+        Copy "_4"
+          Deref
+            Deref
+    Operation every_shape_the_artifact_spells.c:30:5 written
+      Destination "_3"
+      Use
+        Copy "_3"
+    Operation every_shape_the_artifact_spells.c:30:5 written
+      Destination "_49"
+      Use
+        Copy "_3"
+    Operation every_shape_the_artifact_spells.c:31:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+            Deref
+    Return

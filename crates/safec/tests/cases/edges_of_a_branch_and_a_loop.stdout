@@ -1,0 +1,59 @@
+Function edges_of_a_branch_and_a_loop.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation edges_of_a_branch_and_a_loop.c:2:9 written
+      Destination "_2"
+      Binary "Gt"
+        Copy "_1"
+        Constant 0
+    Branch "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Operation edges_of_a_branch_and_a_loop.c:3:13 written
+      Destination "_3"
+      Binary "Sub"
+        Copy "_1"
+        Constant 1
+    Operation edges_of_a_branch_and_a_loop.c:3:9 written
+      Destination "_1"
+      Use
+        Copy "_3"
+    Operation edges_of_a_branch_and_a_loop.c:3:9 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Goto "bb3"
+  Block "bb2"
+    Goto "bb3"
+  Block "bb3"
+    Goto "bb4"
+  Block "bb4"
+    Branch "bb5" "bb6"
+      Copy "_1"
+  Block "bb5"
+    Operation edges_of_a_branch_and_a_loop.c:7:13 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation edges_of_a_branch_and_a_loop.c:7:9 written
+      Destination "_1"
+      Use
+        Copy "_5"
+    Operation edges_of_a_branch_and_a_loop.c:7:9 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Goto "bb4"
+  Block "bb6"
+    Operation edges_of_a_branch_and_a_loop.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Return
