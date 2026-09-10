@@ -621,7 +621,10 @@ impl Lowering<'_> {
         self.typed(id, diagnostics)?;
 
         match self.ast.expr(id) {
-            Expr::Number { span } => values.push(Operand::Constant(self.constant(*span))),
+            Expr::Number { span } => {
+                let span = *span;
+                values.push(Operand::Constant(self.constant(span, diagnostics)?));
+            }
             Expr::Identifier { .. } | Expr::Subscript { .. } => {
                 tasks.push(Task::Finish(id));
                 tasks.push(Task::Place(id));
@@ -1114,11 +1117,42 @@ impl Lowering<'_> {
 
     /// What an integer constant is worth.
     ///
-    /// The text as written, read as a decimal. Suffixes, other bases and the
-    /// rules of 6.4.4.1 for which type a constant has are the frontend's and
-    /// have not arrived; what is here reads what the lexer accepted.
-    fn constant(&self, span: Span) -> i128 {
-        self.sources.snippet(span).trim().parse().unwrap_or(0)
+    /// A decimal constant with no suffix, and a report for everything else.
+    /// The lexer takes a number to be a digit followed by whatever looks like
+    /// it belongs to one, so `0x10`, `1u`, `1.5` and a value too large for an
+    /// `i128` all arrive here as text, and reading them as decimals gives four
+    /// wrong answers with nothing said. `010` is the one that hides: C17
+    /// 6.4.4.1 p2 makes a leading `0` an octal constant, so it is eight, and a
+    /// decimal reading makes it ten. A plausible wrong number is worse than a
+    /// refusal, and worse again than a number nobody can produce.
+    ///
+    /// Working the value and the type out properly belongs to the frontend,
+    /// where 6.4.4.1's table decides which type a constant has. #76 is that
+    /// work; until it lands this stage reads what it can read and says so about
+    /// the rest.
+    fn constant(&mut self, span: Span, diagnostics: &mut DiagnosticSink) -> Option<i128> {
+        let text = self.sources.snippet(span);
+        // 6.4.4.1 p1: a decimal constant is a nonzero digit and more digits.
+        // `0` on its own is an octal constant and is zero read either way.
+        let decimal = text == "0"
+            || (text.starts_with(|c: char| c.is_ascii_digit() && c != '0')
+                && text.bytes().all(|byte| byte.is_ascii_digit()));
+
+        if let Some(value) = text.parse::<i128>().ok().filter(|_| decimal) {
+            return Some(value);
+        }
+
+        diagnostics.report(
+            Diagnostic::error("this constant cannot be lowered to the Safety IR yet")
+                .with_code(LOWERING)
+                .with_label(Label::primary(span, "this is not a plain decimal constant"))
+                .with_note(
+                    "a hexadecimal or octal spelling, a suffix, a floating constant and a value \
+                     too large to hold are all read wrong rather than read, so none of them is \
+                     read at all",
+                ),
+        );
+        None
     }
 }
 
@@ -1440,6 +1474,47 @@ mod tests {
         let lowered = lowered("int f(void) {\n    int x;\n    return x[0];\n}\n");
         assert_eq!(codes(&lowered), ["SC0304"]);
         assert!(!function(&lowered, "f").is_defined());
+    }
+
+    /// A constant is worth what C says it is worth, or it is not lowered.
+    ///
+    /// The lexer takes a number to be a digit and whatever follows that looks
+    /// like part of one, so every spelling below reaches this stage as text.
+    /// Read as decimals they give: sixteen as zero, one as zero, eight as ten,
+    /// and a constant too large as zero. The third is the dangerous one,
+    /// because ten is a number the program could have meant.
+    ///
+    /// Mutation: read every constant with `parse().unwrap_or(0)`. `010` lowers
+    /// to ten with nothing reported and this fails.
+    #[test]
+    fn a_constant_this_stage_cannot_read_is_not_guessed_at() {
+        for spelling in [
+            "0x10",
+            "1u",
+            "010",
+            "1.5",
+            "9999999999999999999999999999999999999999",
+        ] {
+            let lowered = lowered(&format!("int f(void) {{\n    return {spelling};\n}}\n"));
+            assert_eq!(codes(&lowered), ["SC0304"], "{spelling}");
+            assert!(!function(&lowered, "f").is_defined(), "{spelling}");
+        }
+
+        // What it can read, it reads: a plain decimal, and the zero that is an
+        // octal constant with the same value either way.
+        for (spelling, value) in [("42", 42), ("0", 0)] {
+            let lowered = lowered(&format!("int f(void) {{\n    return {spelling};\n}}\n"));
+            assert_eq!(codes(&lowered), Vec::<String>::new(), "{spelling}");
+
+            let f = function(&lowered, "f");
+            let [block] = f.blocks().collect::<Vec<_>>()[..] else {
+                panic!("one block");
+            };
+            let [returned] = &block.operations[..] else {
+                panic!("{:?}", block.operations);
+            };
+            assert_eq!(returned.value, Rvalue::Use(Operand::Constant(value)));
+        }
     }
 
     /// A type the IR cannot hold is reported at the declaration that wrote it.
