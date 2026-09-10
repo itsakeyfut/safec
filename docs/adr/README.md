@@ -30,7 +30,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 
 | [0010](./0010-give-the-graph-an-edge-no-statement-produced.md) | Give the control-flow graph an edge no statement produced | accepted | `E0004`: `Terminator::successors` in `crates/safec/src/ir.rs` matches every kind written out, so a kind added later stops every walk from compiling, and `an_edge_no_statement_produced_can_be_built` stops compiling if the variant goes |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010 · proposed: none · superseded: none
+| [0011](./0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) | The IR crate depends on nothing in the workspace, and the frontend depends on it | accepted | cargo, before anything compiles: adding `safec = { path = "../safec" }` to `crates/safec-ir/Cargo.toml` is `error: cyclic package dependency`, and a `use safec::` without it is `error[E0433]`. The hand-built interpreter tests in `crates/safec-ir/src/interp.rs` are the other half: `a_function_built_by_hand_runs` and five others run the IR with no frontend in the graph |
+
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010, 0011 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 
