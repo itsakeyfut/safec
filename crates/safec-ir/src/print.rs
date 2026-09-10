@@ -406,16 +406,6 @@ mod tests {
     use super::*;
     use crate::ir::{Block, Function, Operation, Origin};
 
-    /// Each node is placed against the file its own span names.
-    ///
-    /// One tree holds spans from one file today, and will hold several the
-    /// moment `#include` lands. Resolving them all against whichever file the
-    /// driver's loop happens to be on prints one file's text at another file's
-    /// line, and panics outright when the other file is shorter. The renderer
-    /// looks a label's file up per label for the same reason; ADR-0003 argues
-    /// it. The tree here is built by hand because the parser cannot yet produce
-    /// one that spans two files.
-    ///
     /// A file's name is content, and every artifact line begins with one.
     ///
     /// A name is not something this compiler wrote: it comes from a command

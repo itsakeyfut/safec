@@ -1336,6 +1336,16 @@ mod tests {
         assert_eq!(artifact.lines().count(), 8, "{artifact}");
     }
 
+    /// Each node is placed against the file its own span names.
+    ///
+    /// One tree holds spans from one file today, and will hold several the
+    /// moment `#include` lands. Resolving them all against whichever file the
+    /// driver's loop happens to be on prints one file's text at another file's
+    /// line, and panics outright when the other file is shorter. The renderer
+    /// looks a label's file up per label for the same reason; ADR-0003 argues
+    /// it. The tree here is built by hand because the parser cannot yet produce
+    /// one that spans two files.
+    ///
     /// Mutation: have `dump_node` and `quoted` take the loop's `SourceFile`
     /// again. This fails.
     #[test]
