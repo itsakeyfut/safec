@@ -84,8 +84,12 @@ package `safec v0.1.0 (...)`
 ```
 
 The manifest is the guard because the manifest is where the reversal would be
-written. A `use safec::` with no such line is `error[E0433]: cannot find module
-or crate safec`, which catches the same reversal one step later.
+written. A `use safec::` with no such line does not resolve either, which
+catches the same reversal one step later. Which code that is depends on how far
+the path gets: `use safec::driver;` is `error[E0432]: unresolved import safec`
+and `use safec::lexer::lex;` is `error[E0433]: cannot find module or crate
+safec`. Both were measured; neither is worth relying on, which is why the
+manifest is the guard this record names.
 
 The testable half is `a_function_built_by_hand_runs` and the five other
 hand-built interpreter tests, which live in `crates/safec-ir/src/interp.rs` and
