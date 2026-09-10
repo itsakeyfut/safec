@@ -1091,6 +1091,38 @@ mod tests {
         assert_eq!(columns, ["2", "6", "9", "10", "1"], "{artifact}");
     }
 
+    /// A file's name reaches the terminal on every line of the token dump.
+    ///
+    /// `dump_tokens` writes it directly rather than through `dump_node`, so
+    /// `print.rs`'s `a_file_name_is_escaped_wherever_an_artifact_prints_one`
+    /// answers for `--emit ast` and `--emit safety-ir` and not for this one.
+    /// A name is content: it comes from a command line today and from a
+    /// `#include` later, and RK-002 records what a `.c` file did to somebody's
+    /// terminal when its bytes were echoed verbatim.
+    ///
+    /// Written against `dump_tokens` rather than through `run`, because a file
+    /// whose name holds an escape is not a file this platform will create.
+    ///
+    /// Mutation: write the name with `{}` rather than through `shown`. The
+    /// escape reaches the artifact and this fails. Until it was written the
+    /// only thing that caught it was `unused import: shown`, which is not a
+    /// claim about escaping and stops holding the day a second caller of
+    /// `shown` appears in this file.
+    #[test]
+    fn a_file_name_is_escaped_on_every_line_of_the_token_dump() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("evil\u{1b}[31m.c", "int x;\n");
+
+        let mut diagnostics = DiagnosticSink::new();
+        let tokens = lex(file, sources.file(file), &mut diagnostics);
+
+        let mut out = String::new();
+        dump_tokens(sources.file(file), &tokens, &mut out);
+
+        assert!(out.contains("evil\\u{1b}"), "{out:?}");
+        assert!(!out.contains('\u{1b}'), "{out:?}");
+    }
+
     /// The text is quoted rather than written plainly, which is what keeps a
     /// control character out of a source file from reaching the terminal
     /// through stdout. The renderer answers the same question for diagnostics

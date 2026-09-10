@@ -803,6 +803,38 @@ mod tests {
         }
     }
 
+    /// A file's name reaches the terminal on the header line too.
+    ///
+    /// `content_never_reaches_the_terminal_as_an_instruction` puts the escape
+    /// in a message, a label and a note, which are the three things this module
+    /// writes. It never gives the source map a hostile *name*, so it never
+    /// exercises the fourth: `ariadne` asks the cache what to call a file and
+    /// prints the answer in `╭─[ name:line:col ]`, the first structural line of
+    /// every anchored report.
+    ///
+    /// A name is not this compiler's text. It comes from a command line today
+    /// and from a `#include` later, and RK-002 records what a `.c` file did to
+    /// somebody's terminal when its bytes were echoed verbatim.
+    ///
+    /// Mutation: drop the `shown` from `SourceMapCache::display`. The escape
+    /// reaches the header under every colour mode and this fails; before it was
+    /// written, nothing in either crate did.
+    #[test]
+    fn a_file_name_is_escaped_on_the_line_that_locates_a_diagnostic() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("evil\u{1b}[31m.c", "int x;\n");
+
+        let anchored =
+            Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 0, 3), "here"));
+
+        for mode in [ColorMode::Never, ColorMode::Always] {
+            let rendered = render_with(&sources, &anchored, mode);
+
+            assert!(rendered.contains("evil\\u{1b}"), "{mode:?}: {rendered:?}");
+            assert!(!rendered.contains("evil\u{1b}"), "{mode:?}: {rendered:?}");
+        }
+    }
+
     /// The other half of `content_never_reaches_the_terminal_as_an_instruction`,
     /// and it needs its own test because the text of a file is echoed by
     /// `ariadne` rather than written by this module. Nothing reached this path
