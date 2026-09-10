@@ -78,7 +78,7 @@ cases! {
     output_path_not_supported: ["-o", "out.tok", "--emit", "tokens"],
     parentheses_regroup: ["--emit", "ast"],
     parsed_function: ["--emit", "ast"],
-    pipeline_not_implemented: ["--emit", "safety-ir"],
+    pipeline_not_implemented: ["--emit", "llvm-ir"],
     pointer_declaration: ["--emit", "ast"],
     pointer_to_function: ["--emit", "ast"],
     precedence_additive: ["--emit", "ast"],

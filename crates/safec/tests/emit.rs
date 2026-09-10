@@ -92,11 +92,12 @@ fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
 /// rather than about any one artifact: four invocations over one source, and a
 /// case is one invocation over one source.
 ///
-/// `ast` was in this list until a parser existed to reach it. The list is what
-/// the compiler cannot do yet, so it shrinks as phases land.
+/// `ast` was in this list until a parser existed to reach it, and `safety-ir`
+/// until a lowering and a printer did. The list is what the compiler cannot do
+/// yet, so it shrinks as phases land.
 #[test]
 fn asking_for_an_artifact_that_does_not_exist_yet_produces_nothing() {
-    for emit in ["safety-ir", "llvm-ir", "object", "executable"] {
+    for emit in ["llvm-ir", "object", "executable"] {
         let output = safec(&[
             "--color",
             "never",

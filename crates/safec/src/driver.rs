@@ -20,13 +20,17 @@ use crate::ast::{
 };
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
+use crate::ir::{
+    LocalId, Operand, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+};
 use crate::lexer::lex;
+use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
-use crate::sema::resolve;
-use crate::source::{SourceFile, SourceMap, Span};
+use crate::sema::{Resolution, resolve};
+use crate::source::{FileId, SourceFile, SourceMap, Span};
 use crate::token::Token;
-use crate::types::check;
+use crate::types::{Types, check};
 
 /// Everything one run of the compiler produced.
 ///
@@ -144,7 +148,8 @@ pub fn compile(options: &Options) -> Compiled {
     let mut artifact = match options.emit {
         EmitKind::Tokens => Some(Emitted::Tokens(String::new())),
         EmitKind::Ast => Some(Emitted::Ast(String::new())),
-        EmitKind::SafetyIr | EmitKind::LlvmIr | EmitKind::Object | EmitKind::Executable => None,
+        EmitKind::SafetyIr => Some(Emitted::SafetyIr(String::new())),
+        EmitKind::LlvmIr | EmitKind::Object | EmitKind::Executable => None,
     };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
@@ -168,42 +173,29 @@ pub fn compile(options: &Options) -> Compiled {
         match &mut artifact {
             Some(Emitted::Tokens(out)) => dump_tokens(&source, &tokens, out),
             Some(Emitted::Ast(out)) => {
-                // The gate is this input, read the way the loop above reads its
-                // own: `has_errors` answers for the whole run, so a count taken
-                // either side of the work on one file is what says whether that
-                // file came through it. Nothing that reads this input reported
-                // anything, or the tree is a record of a program this compiler
-                // did not finish reading, and a diagnostic drawn from it is a
-                // claim about a program nobody wrote.
-                //
-                // The parser reads what the lexer made of this input, so it
-                // runs only where the lexer read it whole. A scan that stopped
-                // early hands over a token stream with a hole in it, and what
-                // the parser says about that is a second diagnostic about the
-                // first one's problem: `int x = @; return x }` reported an
-                // unexpected character and then a missing `;`.
-                //
-                // Written here rather than as a guard on this arm, because
-                // `match &mut artifact` is exhaustive on purpose and a guard
-                // makes it `error[E0004]` at the `match` instead, which gives
-                // up the check the comment above it relies on.
-                if diagnostics.error_count() != read_whole {
+                let Some(analysed) =
+                    analysed(&sources, file, &tokens, read_whole, &mut diagnostics)
+                else {
                     continue;
-                }
+                };
+                dump_ast(&sources, &analysed.ast, out);
+            }
+            Some(Emitted::SafetyIr(out)) => {
+                let Some(analysed) =
+                    analysed(&sources, file, &tokens, read_whole, &mut diagnostics)
+                else {
+                    continue;
+                };
+                // Nothing to lower from a tree whose names and types are not
+                // known: the IR would be built out of what the frontend could
+                // not work out, and the lowering says so about each piece
+                // rather than saying it once here.
+                let Some((resolution, types)) = &analysed.typed else {
+                    continue;
+                };
 
-                let mut ast = parse(file, &tokens, &mut diagnostics);
-
-                // The same gate one step later, for the same reason.
-                if diagnostics.error_count() == read_whole {
-                    // The resolution's reader is the line under it, which is
-                    // what says what type each name has. Nothing reads what
-                    // either of them returns: #64 is where these become
-                    // something the phases after this one are handed, and
-                    // Phase 2's lowering is what will want both together.
-                    let resolution = resolve(&sources, &ast, &mut diagnostics);
-                    check(&sources, &mut ast, &resolution, &mut diagnostics);
-                }
-                dump_ast(&sources, &ast, out);
+                let unit = lower(&sources, &analysed.ast, resolution, types, &mut diagnostics);
+                dump_ir(&sources, &unit, out);
             }
             None => {}
         }
@@ -232,8 +224,10 @@ pub fn compile(options: &Options) -> Compiled {
     if artifact.is_none() {
         diagnostics.report(
             Diagnostic::error("the compilation pipeline is not implemented yet")
-                .with_note("safec currently scans its inputs and parses them into a tree")
-                .with_note("`--emit tokens` and `--emit ast` are what it can produce today"),
+                .with_note("safec currently reads its inputs and builds a Safety IR from them")
+                .with_note(
+                    "`--emit tokens`, `--emit ast` and `--emit safety-ir` are what it can make",
+                ),
         );
     }
 
@@ -258,12 +252,304 @@ enum Emitted {
     Tokens(String),
     /// What `--emit ast` asked for.
     Ast(String),
+    /// What `--emit safety-ir` asked for.
+    SafetyIr(String),
 }
 
 impl Emitted {
     fn into_text(self) -> String {
         match self {
-            Self::Tokens(text) | Self::Ast(text) => text,
+            Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) => text,
+        }
+    }
+}
+
+/// One input's tree, and what the stages after the parser could say about it.
+struct Analysed {
+    ast: Ast,
+    /// Absent where the parse reported something, since a resolution drawn
+    /// from a tree the parser gave up on is a claim about a program nobody
+    /// wrote.
+    typed: Option<(Resolution, Types)>,
+}
+
+/// Read one input as far as the frontend goes, or nothing where the scan
+/// reported about it.
+///
+/// The two gates live here rather than in each `--emit` arm, because they are
+/// one decision about one input and a second copy of a gate is what RK-003 in
+/// the review knowledge bank records the cost of: a gate spelled twice left a
+/// case answered by neither.
+///
+/// The first gate is this input read whole. `has_errors` answers for the whole
+/// run, so a count taken either side of the work on one file is what says
+/// whether that file came through it. A directive is the case that separates
+/// "read whole" from "parsed": the lexer reports it, says in its own note that
+/// the line is not compiled, and hands the parser a token it skips without
+/// complaint, so a gate placed after the scan is open on a file whose
+/// declarations were dropped.
+///
+/// The second is the parse. What the parser says about a token stream with a
+/// hole in it is a second diagnostic about the first one's problem, and the
+/// resolution and the types are what would draw one.
+fn analysed(
+    sources: &SourceMap,
+    file: FileId,
+    tokens: &[Token],
+    read_whole: usize,
+    diagnostics: &mut DiagnosticSink,
+) -> Option<Analysed> {
+    if diagnostics.error_count() != read_whole {
+        return None;
+    }
+
+    let mut ast = parse(file, tokens, diagnostics);
+    if diagnostics.error_count() != read_whole {
+        return Some(Analysed { ast, typed: None });
+    }
+
+    let resolution = resolve(sources, &ast, diagnostics);
+    let types = check(sources, &mut ast, &resolution, diagnostics);
+
+    Some(Analysed {
+        ast,
+        typed: Some((resolution, types)),
+    })
+}
+
+/// The IR, as a caller redirecting it would see.
+///
+/// The same line shape as [`dump_ast`]: a kind, where it is, and whatever that
+/// line alone carries, two spaces of indent per level. What differs is that a
+/// line carries a location only where the IR holds one. A span reaches this
+/// printer in three places, a function's name, an operation's origin and a
+/// call's, and a local, a block and every other terminator have none. Giving
+/// one the span of the function it sits in would be a claim that it is written
+/// there, and `--emit ast`'s whole discipline is that a line says where a thing
+/// actually is.
+///
+/// **No ids.** A local is `_0`, a block is `bb0`, and a callee is named by its
+/// name rather than by its [`FuncId`], which is an index into a table this
+/// artifact does not show.
+fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
+    for function in unit.functions() {
+        dump_node(sources, "Function", function.name, 0, out);
+        write!(out, " {:?}", quoted(sources, function.name))
+            .expect("writing to a string cannot fail");
+        // A declaration and a definition with no blocks would read alike, and
+        // one of them is a function whose body this compiler never saw.
+        if !function.is_defined() {
+            out.push_str(" declared");
+        }
+        out.push('\n');
+
+        for local in function.locals() {
+            dump_line("Local", 1, out);
+            write!(
+                out,
+                " {:?} {:?}",
+                name_of(local),
+                spell_ty(unit, function.local(local))
+            )
+            .expect("writing to a string cannot fail");
+            if local == function.return_place() {
+                out.push_str(" return");
+            } else if function.parameters().any(|parameter| parameter == local) {
+                out.push_str(" parameter");
+            }
+            out.push('\n');
+        }
+
+        if !function.is_defined() {
+            continue;
+        }
+
+        for (index, block) in function.blocks().enumerate() {
+            dump_line("Block", 1, out);
+            write!(out, " {:?}", block_name(index)).expect("writing to a string cannot fail");
+            out.push('\n');
+
+            for operation in &block.operations {
+                dump_node(sources, "Operation", operation.origin.span(), 2, out);
+                write!(out, " {}", operation.origin.name())
+                    .expect("writing to a string cannot fail");
+                out.push('\n');
+
+                dump_place(sources, "Destination", &operation.place, 3, out);
+                dump_rvalue(sources, &operation.value, 3, out);
+            }
+
+            dump_terminator(sources, unit, &block.terminator, 2, out);
+        }
+    }
+}
+
+/// A local's name in the artifact.
+fn name_of(local: LocalId) -> String {
+    format!("_{}", local.index())
+}
+
+/// A block's name in the artifact.
+fn block_name(index: usize) -> String {
+    format!("bb{index}")
+}
+
+/// A type, spelled the way `ast::spell_type` spells the same one.
+///
+/// Two spellings of one type is a second thing to keep in agreement, and a
+/// reader moving between `--emit ast` and `--emit safety-ir` reads both.
+fn spell_ty(unit: &TranslationUnit, ty: TyId) -> String {
+    let mut pointers = 0usize;
+    let mut current = ty;
+
+    let base = loop {
+        match unit.ty(current) {
+            Ty::Int => break "int",
+            Ty::Char => break "char",
+            Ty::Void => break "void",
+            Ty::Pointer(pointee) => {
+                pointers += 1;
+                current = pointee;
+            }
+        }
+    };
+
+    if pointers == 0 {
+        base.to_owned()
+    } else {
+        format!("{base} {}", "*".repeat(pointers))
+    }
+}
+
+/// A place: the local it starts at, and one line per step away from it.
+///
+/// A line per projection rather than a spelling like `(*_1)[_2]`, because the
+/// artifact is read by kind: somebody looking for every dereference in a
+/// program greps `Deref`.
+fn dump_place(sources: &SourceMap, kind: &str, place: &Place, depth: usize, out: &mut String) {
+    dump_line(kind, depth, out);
+    write!(out, " {:?}", name_of(place.local)).expect("writing to a string cannot fail");
+    out.push('\n');
+
+    for (step, projection) in place.projection.iter().enumerate() {
+        dump_line(projection.name(), depth + 1 + step, out);
+        out.push('\n');
+
+        if let Projection::Index(index) = projection {
+            dump_operand(sources, index, depth + 2 + step, out);
+        }
+    }
+}
+
+/// An operand: what it is, and the place it reads where it reads one.
+fn dump_operand(sources: &SourceMap, operand: &Operand, depth: usize, out: &mut String) {
+    match operand {
+        Operand::Copy(place) => dump_place(sources, operand.name(), place, depth, out),
+        Operand::Constant(value) => {
+            dump_line(operand.name(), depth, out);
+            write!(out, " {value}").expect("writing to a string cannot fail");
+            out.push('\n');
+        }
+    }
+}
+
+/// What an operation computes, and what it reads to compute it.
+fn dump_rvalue(sources: &SourceMap, value: &Rvalue, depth: usize, out: &mut String) {
+    dump_line(value.name(), depth, out);
+
+    match value {
+        Rvalue::Use(operand) => {
+            out.push('\n');
+            dump_operand(sources, operand, depth + 1, out);
+        }
+        Rvalue::Unary { op, operand } => {
+            write!(out, " {:?}", op.name()).expect("writing to a string cannot fail");
+            out.push('\n');
+            dump_operand(sources, operand, depth + 1, out);
+        }
+        Rvalue::Binary { op, lhs, rhs } => {
+            write!(out, " {:?}", op.name()).expect("writing to a string cannot fail");
+            out.push('\n');
+            dump_operand(sources, lhs, depth + 1, out);
+            dump_operand(sources, rhs, depth + 1, out);
+        }
+        Rvalue::Address(place) => {
+            out.push('\n');
+            dump_place(sources, "Place", place, depth + 1, out);
+        }
+    }
+}
+
+/// How a block ends, and where control goes from it.
+///
+/// The blocks it can reach are on the kind's own line, because they are the
+/// edges of the graph and a reader following one should not have to descend to
+/// find where it goes.
+fn dump_terminator(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    terminator: &Terminator,
+    depth: usize,
+    out: &mut String,
+) {
+    match terminator {
+        Terminator::Call { origin, .. } => {
+            dump_node(sources, terminator.name(), origin.span(), depth, out);
+        }
+        Terminator::Goto(_)
+        | Terminator::Branch { .. }
+        | Terminator::Return
+        | Terminator::Abnormal { .. } => dump_line(terminator.name(), depth, out),
+    }
+
+    match terminator {
+        Terminator::Goto(to) => {
+            write!(out, " {:?}", block_name(to.index())).expect("writing to a string cannot fail");
+            out.push('\n');
+        }
+        Terminator::Branch {
+            condition,
+            then,
+            otherwise,
+        } => {
+            write!(
+                out,
+                " {:?} {:?}",
+                block_name(then.index()),
+                block_name(otherwise.index())
+            )
+            .expect("writing to a string cannot fail");
+            out.push('\n');
+            dump_operand(sources, condition, depth + 1, out);
+        }
+        Terminator::Call {
+            callee,
+            arguments,
+            destination,
+            then,
+            origin: _,
+        } => {
+            write!(
+                out,
+                " {:?} {:?}",
+                quoted(sources, unit.function(*callee).name),
+                block_name(then.index())
+            )
+            .expect("writing to a string cannot fail");
+            out.push('\n');
+
+            if let Some(destination) = destination {
+                dump_place(sources, "Destination", destination, depth + 1, out);
+            }
+            // Whatever else is under a call is what it passes, in order.
+            for argument in arguments {
+                dump_operand(sources, argument, depth + 1, out);
+            }
+        }
+        Terminator::Return => out.push('\n'),
+        Terminator::Abnormal { to } => {
+            write!(out, " {:?}", block_name(to.index())).expect("writing to a string cannot fail");
+            out.push('\n');
         }
     }
 }
@@ -562,6 +848,18 @@ fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mu
     let file = sources.file(span.file());
     let at = file.line_col(span.start());
 
+    dump_line(kind, depth, out);
+    write!(out, " {}:{}:{}", file.name(), at.line, at.column)
+        .expect("writing to a string cannot fail");
+}
+
+/// A line that names a kind and nothing about where it is.
+///
+/// For the parts of the Safety IR that have no span of their own: a local, a
+/// block, and every terminator but a call. The indent lives here rather than in
+/// each caller, so that the two line shapes cannot disagree about what a level
+/// looks like or about what happens past [`DEEPEST_INDENT`].
+fn dump_line(kind: &str, depth: usize, out: &mut String) {
     for _ in 0..depth.min(DEEPEST_INDENT) {
         out.push_str("  ");
     }
@@ -569,8 +867,7 @@ fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mu
         write!(out, "+{} ", depth - DEEPEST_INDENT).expect("writing to a string cannot fail");
     }
 
-    write!(out, "{} {}:{}:{}", kind, file.name(), at.line, at.column)
-        .expect("writing to a string cannot fail");
+    out.push_str(kind);
 }
 
 /// One line per token: where it starts, what it is, and the text it covers.
@@ -678,6 +975,7 @@ mod tests {
     use clap::ValueEnum as _;
 
     use super::*;
+    use crate::ir::{Block, Function, Operation, Origin};
     use crate::options::{ColorMode, EmitKind};
     use crate::safety::SafetyLevel;
 
@@ -1224,10 +1522,10 @@ mod tests {
         let file = TempFile::new("safec_driver_emit_beyond.c", "int x;\n");
 
         for emit in [
-            // `Ast` was here until a parser existed to reach it. What is left
-            // is everything past the parser, and the list shrinks again each
-            // time a phase lands.
-            EmitKind::SafetyIr,
+            // `Ast` was here until a parser existed to reach it, and `SafetyIr`
+            // until a lowering and a printer did. What is left is everything
+            // past this compiler's own IR, and the list shrinks again each time
+            // a phase lands.
             EmitKind::LlvmIr,
             EmitKind::Object,
             EmitKind::Executable,
@@ -1348,6 +1646,193 @@ mod tests {
     /// it. The tree here is built by hand because the parser cannot yet produce
     /// one that spans two files.
     ///
+    /// An operation nobody wrote says so, and one somebody wrote says that.
+    ///
+    /// The IR can tell them apart and the tree cannot, which is the whole
+    /// reason `Origin` exists; `docs/roadmap.md` asks for "a location to blame
+    /// and no source text". Built by hand because nothing in the lowering
+    /// produces a generated operation yet: the first producer will be whatever
+    /// ends a scope, which is #74's territory.
+    ///
+    /// Mutation: print `written` whatever the origin. This fails on the second
+    /// line, and with it goes the only thing the artifact says that `--emit
+    /// ast` could not.
+    #[test]
+    fn an_operation_that_nobody_wrote_says_so() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int f(void) { int x; }\n");
+        let at = Span::new(file, 14, 20);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let local = function.push_local(int);
+        function.push_block(Block {
+            operations: vec![
+                Operation {
+                    place: Place::local(local),
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(at),
+                },
+                Operation {
+                    place: Place::local(local),
+                    value: Rvalue::Use(Operand::Constant(0)),
+                    origin: Origin::Generated(at),
+                },
+            ],
+            terminator: Terminator::Return,
+        });
+        unit.push_function(function);
+
+        let mut out = String::new();
+        dump_ir(&sources, &unit, &mut out);
+
+        let origins: Vec<&str> = out
+            .lines()
+            .filter_map(|line| line.trim_start().strip_prefix("Operation "))
+            .filter_map(|line| line.split_whitespace().nth(1))
+            .collect();
+        assert_eq!(origins, ["written", "generated"], "{out}");
+    }
+
+    /// The shapes the printer has to answer for and no C program makes.
+    ///
+    /// An edge no statement produced is one, which ADR-0010 put in the IR
+    /// before anything built one. A call that writes its result nowhere is the
+    /// other, and `free(p);` will be the first of those the day a program can
+    /// declare `free`.
+    ///
+    /// Mutation: drop the `Abnormal` arm from `dump_terminator`. It stops
+    /// compiling, because the match over a terminator is written out. Mutation:
+    /// print a `Destination` line whether or not there is one. This fails on
+    /// the call's children.
+    #[test]
+    fn an_abnormal_edge_and_a_call_that_writes_nowhere_are_printed() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "void f(void) { g(); }\n");
+        let at = Span::new(file, 15, 18);
+
+        let mut unit = TranslationUnit::new();
+        let void = unit.push_type(Ty::Void);
+        let callee = unit.push_function(Function::declaration(at, void, []));
+
+        let mut function = Function::new(at, void, []);
+        let handler = function.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let after = function.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Abnormal { to: handler },
+        });
+        function.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Call {
+                callee,
+                arguments: Vec::new(),
+                destination: None,
+                then: after,
+                origin: Origin::Written(at),
+            },
+        });
+        unit.push_function(function);
+
+        let mut out = String::new();
+        dump_ir(&sources, &unit, &mut out);
+        let lines: Vec<&str> = out.lines().map(str::trim_start).collect();
+
+        assert!(
+            lines.contains(&"Abnormal \"bb0\""),
+            "an abnormal edge names where it goes: {out}"
+        );
+        assert!(lines.iter().any(|line| line.starts_with("Call ")), "{out}");
+        assert!(
+            !lines.iter().any(|line| line.starts_with("Destination")),
+            "a call with nowhere to write says nothing about a destination: {out}"
+        );
+    }
+
+    /// A declaration is a function with no body, and the artifact says which.
+    ///
+    /// A definition always has a block, so a `Function` line with no `Block`
+    /// under it is either a declaration or an artifact that lost one.
+    ///
+    /// Mutation: print `declared` for every function, or for none. This fails.
+    #[test]
+    fn a_declaration_is_marked_and_a_definition_is_not() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int g(void);\nint f(void) { return 0; }\n");
+        let there = Span::new(file, 4, 5);
+        let here = Span::new(file, 17, 18);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        unit.push_function(Function::declaration(there, int, []));
+
+        let mut defined = Function::new(here, int, []);
+        defined.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        unit.push_function(defined);
+
+        let mut out = String::new();
+        dump_ir(&sources, &unit, &mut out);
+
+        let functions: Vec<&str> = out
+            .lines()
+            .filter(|line| line.starts_with("Function "))
+            .collect();
+        assert_eq!(functions.len(), 2, "{out}");
+        assert!(functions[0].ends_with("\"g\" declared"), "{out}");
+        assert!(functions[1].ends_with("\"f\""), "{out}");
+    }
+
+    /// A place is its local and one line per step away from it.
+    ///
+    /// `p` and `*p` are two places and an analysis reading this artifact has to
+    /// see which one an operation touched, so a projection is a line rather
+    /// than punctuation inside one.
+    ///
+    /// Mutation: print a place's projections on its own line, or drop them.
+    /// This fails.
+    #[test]
+    fn a_projection_is_a_line_of_its_own() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int f(int *p) { return p[0]; }\n");
+        let at = Span::new(file, 23, 27);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+
+        let mut function = Function::new(at, int, [pointer]);
+        let p = function.parameters().next().expect("one parameter");
+        function.push_block(Block {
+            operations: vec![Operation {
+                place: Place::local(function.return_place()),
+                value: Rvalue::Use(Operand::Copy(Place {
+                    local: p,
+                    projection: vec![Projection::Index(Operand::Constant(0))],
+                })),
+                origin: Origin::Written(at),
+            }],
+            terminator: Terminator::Return,
+        });
+        unit.push_function(function);
+
+        let mut out = String::new();
+        dump_ir(&sources, &unit, &mut out);
+        let lines: Vec<&str> = out.lines().map(str::trim_start).collect();
+
+        let index = lines
+            .iter()
+            .position(|line| *line == "Index")
+            .unwrap_or_else(|| panic!("{out}"));
+        assert_eq!(lines[index - 1], "Copy \"_1\"", "{out}");
+        assert_eq!(lines[index + 1], "Constant 0", "{out}");
+    }
+
     /// Mutation: have `dump_node` and `quoted` take the loop's `SourceFile`
     /// again. This fails.
     #[test]
