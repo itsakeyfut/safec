@@ -96,6 +96,27 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
+### What the lowering refuses
+
+The frontend accepts these and `crates/safec/src/lowering.rs` cannot build IR
+for them, so they are reported as `SC0304` and the function they are in is left
+a declaration. They are gaps rather than decisions, and each one is a program
+`clang 20.1.6` compiles.
+
+| Written | Why it stops here |
+|---|---|
+| `int a[3];`, or any array or function type | the IR holds `int`, `char`, `void` and pointers to them |
+| `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
+| `0x10`, `010`, `1u`, `1.5`, a constant too large to hold | the value is worked out here and only a plain decimal is read, which #76 moves into the frontend where the type of a constant is decided too |
+| `1 = 2` | C17 6.5.16 p2 wants a modifiable lvalue and nothing checks that yet, so the first thing to notice is a stage that needs somewhere to write |
+| a second definition of one name | C17 6.9 p5 allows one, and nothing before this stage counts them |
+
+The reason a refusal is reported rather than lowered around is that the IR has
+no way to say a function has a hole in it: a body with a piece missing and a
+body that is complete are the same shape, and an analysis reading the first
+would answer about code that was never there. A declaration says the one true
+thing, which is that the body is not here.
+
 ## One problem, one diagnostic
 
 **An input the scan reported anything about is not parsed**, and one the parser

@@ -29,9 +29,9 @@
 //! what a [`Place`] is rooted at and what a [`Block`] holds, rather than
 //! variants beside the ones here, and #74 is where that is decided.
 //!
-//! Nothing here builds an IR or reads one. The lowering is #70, the printer is
-//! #71 and the interpreter is #72; what this module owes them is a shape they
-//! do not have to agree about first.
+//! Nothing here reads an IR. `crates/safec/src/lowering.rs` builds one from
+//! the typed AST; the printer is #71 and the interpreter is #72, and what this
+//! module owes them is a shape they do not have to agree about first.
 //!
 //! [ADR-0010]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0010-give-the-graph-an-edge-no-statement-produced.md
 
@@ -660,10 +660,35 @@ impl TranslationUnit {
     }
 
     /// Add a function, and hand back the id that names it.
+    ///
+    /// A caller with a body still to build pushes [`Function::declaration`]
+    /// here and hands the definition to [`Self::fill_function`] later. That is
+    /// what a call to a function whose body does not exist yet needs, and it is
+    /// not an unusual case: `int f(void) { return f(); }` is one, and so is
+    /// either half of a mutually recursive pair.
     pub fn push_function(&mut self, function: Function) -> FuncId {
         let id = FuncId(self.functions.len() as u32);
         self.functions.push(function);
         id
+    }
+
+    /// Give a function that was pushed as a declaration its body.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`TranslationUnit`], or if it already
+    /// names a definition. Replacing a definition would leave the calls that
+    /// were checked against the first one pointing at the second, which is a
+    /// unit that looks whole and is not, and it is the same reason
+    /// [`Function::fill_block`] refuses to fill a block twice.
+    pub fn fill_function(&mut self, id: FuncId, function: Function) {
+        let slot = &mut self.functions[id.index()];
+        assert!(
+            !slot.is_defined(),
+            "function {} is already defined",
+            id.index()
+        );
+        *slot = function;
     }
 
     /// The type `id` names.
@@ -1193,5 +1218,43 @@ mod tests {
 
         assert_eq!(states.get(&p), Some(&"live"));
         assert_eq!(states.get(&pointee), Some(&"freed"));
+    }
+
+    /// A declaration becomes the definition it was standing in for.
+    ///
+    /// Mutation: have `fill_function` write to the first function rather than
+    /// to the id it was given. The second keeps its declaration and this fails.
+    #[test]
+    fn a_declared_function_can_be_given_its_body() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+
+        let first = unit.push_function(Function::declaration(at, int, []));
+        let second = unit.push_function(Function::declaration(at, int, []));
+        unit.fill_function(second, Function::new(at, int, []));
+
+        assert!(!unit.function(first).is_defined());
+        assert!(unit.function(second).is_defined());
+    }
+
+    /// A function is given a body once.
+    ///
+    /// A second one would leave every call that was checked against the first
+    /// definition pointing at another, which is the defect `fill_block` refuses
+    /// for a block.
+    ///
+    /// Mutation: drop the assertion in `fill_function`. Nothing panics and this
+    /// fails.
+    #[test]
+    #[should_panic(expected = "already defined")]
+    fn a_function_is_not_given_a_body_twice() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+
+        let id = unit.push_function(Function::declaration(at, int, []));
+        unit.fill_function(id, Function::new(at, int, []));
+        unit.fill_function(id, Function::new(at, int, []));
     }
 }
