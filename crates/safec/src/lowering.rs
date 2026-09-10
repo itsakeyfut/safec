@@ -660,7 +660,7 @@ impl Lowering<'_> {
                     self.finish_value(builder, id, &mut values, &mut places, diagnostics)?;
                 }
                 Task::FinishPlace(id) => {
-                    self.finish_place(id, &mut values, &mut places, diagnostics)?;
+                    self.finish_place(builder, id, &mut values, &mut places, diagnostics)?;
                 }
                 Task::Split(id) => {
                     self.split(builder, id, &mut tasks, &mut values, diagnostics)?;
@@ -1014,6 +1014,7 @@ impl Lowering<'_> {
     /// Build a node's place from what its children left.
     fn finish_place(
         &mut self,
+        builder: &mut Builder,
         id: ExprId,
         values: &mut Vec<Operand>,
         places: &mut Vec<Place>,
@@ -1026,12 +1027,36 @@ impl Lowering<'_> {
                 place.projection.push(Projection::Deref);
                 places.push(place);
             }
-            Expr::Subscript { .. } => {
-                let index = values.pop().expect("an index");
-                let base = values.pop().expect("a base");
-                let mut place = self.pointed_at(id, base, diagnostics)?;
-                place.projection.push(Projection::Index(index));
-                places.push(place);
+            // C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, and this
+            // builds exactly that: one C expression is one shape in the IR, so
+            // an analysis asking what an access reaches has one thing to read
+            // rather than two spellings of it.
+            //
+            // `Projection::Index` is what an array wants and nothing builds one
+            // yet, because an array is a type this stage refuses. Whoever gives
+            // the IR arrays decides whether a subscript on one is an `Index`.
+            Expr::Subscript { base, span, .. } => {
+                let (base, span) = (*base, *span);
+                let offset = values.pop().expect("an index");
+                let pointer = values.pop().expect("a base");
+                // Of the base's type rather than the subscript's: what is
+                // worked out here is the address, and the subscript is what
+                // that address reaches.
+                let addressed = self.temporary(builder, base, diagnostics)?;
+
+                builder.push(Operation {
+                    place: Place::local(addressed),
+                    value: Rvalue::Binary {
+                        op: BinOp::Add,
+                        lhs: pointer,
+                        rhs: offset,
+                    },
+                    origin: Origin::Written(span),
+                });
+                places.push(Place {
+                    local: addressed,
+                    projection: vec![Projection::Deref],
+                });
             }
             // Nothing else schedules a `FinishPlace`, and the kinds are written
             // out rather than wildcarded because the cost of being wrong is
@@ -2077,20 +2102,21 @@ mod tests {
         assert_eq!(taken.value, Rvalue::Address(Place::local(n)));
     }
 
-    /// A subscript is a place with an index on it, and `*(p + i)` is a place
-    /// reached through what the addition worked out.
+    /// A subscript and the arithmetic it is defined as are one shape.
     ///
-    /// C17 6.5.2.1 p2 defines one in terms of the other; the IR spells them
-    /// differently, and `ir::Projection`'s doc comment is where that is said.
-    /// What matters here is that both are places rather than values, since the
-    /// second form is the one a lowering that asked for the operand's place
-    /// would refuse.
+    /// C17 6.5.2.1 p2 makes `E1[E2]` mean `(*((E1)+(E2)))`, so both spellings
+    /// work the address out into a local and reach through it. An analysis
+    /// asking what an access touches then has one thing to read rather than
+    /// two spellings of it.
     ///
     /// Mutation: have `begin_value` ask for the operand's place under a `*`.
     /// `*(p + i)` stops lowering, `SC0304` is reported, and this fails.
     ///
-    /// Mutation: swap the base and the index in `finish_place`. The place is
-    /// rooted at the index and this fails.
+    /// Mutation: swap the base and the index in `finish_place`. The address is
+    /// worked out from the wrong operand and this fails.
+    ///
+    /// Mutation: give the subscript a `Projection::Index` on the base's place
+    /// instead. The two spellings stop agreeing and this fails.
     #[test]
     fn an_element_is_reached_by_a_subscript_and_by_arithmetic() {
         let lowered = lowered(
@@ -2102,37 +2128,51 @@ mod tests {
         let [p, i] = f.parameters().collect::<Vec<_>>()[..] else {
             panic!("two parameters");
         };
-        let element = Place {
-            local: p,
-            projection: vec![Projection::Index(Operand::Copy(Place::local(i)))],
+        let address = Rvalue::Binary {
+            op: BinOp::Add,
+            lhs: Operand::Copy(Place::local(p)),
+            rhs: Operand::Copy(Place::local(i)),
         };
         let operations: Vec<_> = f
             .blocks()
             .flat_map(|block| block.operations.clone())
             .collect();
 
-        assert_eq!(operations[0].place, element);
-        assert_eq!(operations[0].value, Rvalue::Use(Operand::Constant(1)));
+        // Both spellings work the address out first and reach through it, and
+        // neither leaves a projection rooted at the pointer itself.
+        let addressed: Vec<_> = operations
+            .iter()
+            .filter(|operation| operation.value == address)
+            .map(|operation| operation.place.local)
+            .collect();
+        let reached: Vec<_> = operations
+            .iter()
+            .filter(|operation| operation.place.projection == vec![Projection::Deref])
+            .map(|operation| operation.place.local)
+            .collect();
 
-        // The arithmetic form works the address out into a temporary first, so
-        // its place is rooted there with a `Deref` on it rather than at `p`.
-        assert_eq!(
-            operations[2].value,
-            Rvalue::Binary {
-                op: BinOp::Add,
-                lhs: Operand::Copy(Place::local(p)),
-                rhs: Operand::Copy(Place::local(i)),
-            }
+        assert_eq!(addressed.len(), 3, "one per subscript and one per `p + i`");
+        assert_eq!(reached, addressed[..2], "the two writes reach through it");
+        assert!(
+            operations.iter().all(
+                |operation| operation.place.local != p || operation.place.projection.is_empty()
+            ),
+            "nothing is a projection of the pointer itself"
         );
-        let through = &operations[3].place;
-        assert_eq!(through.local, operations[2].place.local);
-        assert_eq!(through.projection, vec![Projection::Deref]);
-        assert_ne!(through.local, p);
 
-        // Reading it back is the subscript again, and it is the same place as
-        // the write.
-        assert_eq!(operations[5].place, Place::local(f.return_place()));
-        assert_eq!(operations[5].value, Rvalue::Use(Operand::Copy(element)));
+        // The last one is the read, and it reaches through an address of its
+        // own rather than through either write's.
+        let [returned] = &operations[operations.len() - 1..] else {
+            panic!("a return");
+        };
+        assert_eq!(returned.place, Place::local(f.return_place()));
+        assert_eq!(
+            returned.value,
+            Rvalue::Use(Operand::Copy(Place {
+                local: addressed[2],
+                projection: vec![Projection::Deref],
+            }))
+        );
     }
 
     /// A comma evaluates its left operand and answers its right.
