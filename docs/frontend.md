@@ -142,6 +142,11 @@ None of the three is a decision. They are what a machine with one integer width
 answers, and the phase that gives the IR widths is where they stop being true:
 `docs/architecture.md` puts that in the lowering to LLVM.
 
+A run is bounded twice: by how deep the calls go and by how many blocks it
+enters. A program that would answer after more steps than the second bound
+allows is stopped instead, which is the trade a test instrument makes so that a
+suite fails rather than hangs.
+
 Two more, which are decisions rather than gaps. A local's storage lasts as long
 as its function, because the IR has no statement that says a scope ended, so a
 pointer to a block-scoped object still reads after the block. And a pointer is a

@@ -53,6 +53,25 @@ use crate::source::Span;
 /// to run ordinary C.
 pub const MAX_FRAMES: usize = 1 << 16;
 
+/// How many blocks a run may enter before it is stopped.
+///
+/// `while (1) { }` never calls anything, so [`MAX_FRAMES`] never looks at it,
+/// and a run of one is a run that does not end. Whether a program terminates is
+/// not a question anything can answer, so this answers a different one: whether
+/// it terminated within a bound written down here.
+///
+/// The cost is that a program which would have answered after more steps than
+/// this is stopped instead. That is the trade a test instrument should make,
+/// because the alternative is a suite that hangs rather than fails, and a
+/// hanging test says nothing at all.
+///
+/// The number is chosen from both ends. A loop of a hundred thousand turns is
+/// a few hundred thousand blocks, so an ordinary test program is nowhere near
+/// it; and a test that does hit it pays for every step, measured here at about
+/// two and a half million a second, so a bound sixteen times this one turned a
+/// suite that ran in a tenth of a second into one that took seven.
+pub const MAX_STEPS: usize = 1 << 20;
+
 /// What a local holds while a program runs.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
@@ -156,8 +175,16 @@ struct Frame {
 pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result<Value, Trap> {
     let mut generation = 0;
     let mut frames = vec![enter(unit, entry, arguments, generation)?];
+    let mut steps = 0;
 
     loop {
+        steps += 1;
+        if steps > MAX_STEPS {
+            return Err(Trap::new(format!(
+                "a run that entered more than {MAX_STEPS} blocks without ending"
+            )));
+        }
+
         // A loop over a stack of frames rather than a recursive call per C
         // call: a recursion here dies of a stack overflow that nothing can
         // catch, on a program whose depth the program itself chooses. RK-008 in
@@ -1146,6 +1173,25 @@ mod tests {
         let id = unit.push_function(caller);
 
         assert_eq!(run(&unit, id, &[]), Ok(Value::Int(7)));
+    }
+
+    /// A run that does not end is stopped rather than left running.
+    ///
+    /// `MAX_FRAMES` never looks at a loop, because a loop calls nothing. A test
+    /// instrument that hangs says nothing at all, and a suite that hangs says
+    /// less than one that fails.
+    ///
+    /// Mutation: remove the step bound. This test runs until somebody kills it,
+    /// which is what the bound is written down to prevent.
+    #[test]
+    fn a_run_that_does_not_end_is_stopped() {
+        let forever = ran(
+            "int main(void) {\n    int n;\n    n = 1;\n    while (n) {\n        n = 1;\n    }\n    return n;\n}\n",
+        );
+        let Err(trap) = forever else {
+            panic!("{forever:?}");
+        };
+        assert!(trap.why.contains("without ending"), "{trap:?}");
     }
 
     /// A projection this cannot follow stops the run.
