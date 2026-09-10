@@ -117,6 +117,37 @@ body that is complete are the same shape, and an analysis reading the first
 would answer about code that was never there. A declaration says the one true
 thing, which is that the body is not here.
 
+### What the interpreter answers differently
+
+`crates/safec/src/interp.rs` runs the IR so that a program can be tested without
+a backend, and it computes in `i128` because `ir::Ty` holds no widths. That is
+the source of all of these. Each was measured against the interpreter and
+against `clang 20.1.6 --target=x86_64-pc-windows-msvc`, where `int` is 32 bits
+and `char` is signed.
+
+| Written | This interpreter | `clang` |
+|---|---|---|
+| `int x = 2147483647; return x + 1;` | `2147483648` | `-2147483648` |
+| `int x = 1; return x << 31;` | `2147483648` | `-2147483648` |
+| `char c = 300; return c;` | `300` | `44` |
+
+**The first two are undefined and the third is not.** C17 6.5 p5 leaves a signed
+overflow undefined and 6.5.7 p3 leaves that shift undefined, so no answer to
+those is wrong; what is worth recording is that this answers a number rather
+than stopping, which is the opposite of what it does for a division by zero.
+6.3.1.3 p3 makes the conversion in the third implementation-defined, and this
+implementation answers a value no implementation with an 8-bit `char` can.
+
+None of the three is a decision. They are what a machine with one integer width
+answers, and the phase that gives the IR widths is where they stop being true:
+`docs/architecture.md` puts that in the lowering to LLVM.
+
+Two more, which are decisions rather than gaps. A local's storage lasts as long
+as its function, because the IR has no statement that says a scope ended, so a
+pointer to a block-scoped object still reads after the block. And a pointer is a
+place, so there is no null: a comparison of a pointer with a zero constant is
+answered as unequal rather than by a value that could be either.
+
 ## One problem, one diagnostic
 
 **An input the scan reported anything about is not parsed**, and one the parser

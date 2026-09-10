@@ -12,29 +12,45 @@
 //! for the first would make this compiler the one that decided what `1 / 0`
 //! means; skipping the second would make a wrong answer look like a right one.
 //!
-//! **A pointer is a place in a frame.** Every place in this IR is rooted at a
-//! local, so there is nothing else for a pointer to point at until #74, and no
-//! heap and no addresses-as-numbers are needed to run one. Carrying the frame
-//! is what lets a read through a pointer into a function that has returned be
-//! reported rather than answered, which is the defect `docs/roadmap.md`'s
-//! Phase 6 exists to catch, caught here by running.
+//! **A pointer is a local in a frame, resolved where the address was taken.**
+//! Every place in this IR is rooted at a local, so there is nothing else for a
+//! pointer to point at until #74, and no heap and no addresses-as-numbers are
+//! needed to run one. Resolving at `&` rather than at each use is what makes
+//! `int *r = &*p; p = &b;` leave `r` pointing where it pointed, which is what C
+//! says and what an aliasing analysis will be checked against.
+//!
+//! **A frame that returns is gone, and a pointer into it says so.** The stack
+//! is a stack: frames are popped, so the depth is what it costs and a run of
+//! ten million calls costs one frame. What tells a stale pointer from a live
+//! one is the generation stamped on the slot it names, which is why a returned
+//! frame does not have to be kept to be recognised. That catches the defect
+//! `docs/roadmap.md`'s Phase 6 exists to catch, caught here by running.
+//!
+//! What it cannot catch is a scope: the IR has no statement that says a local's
+//! storage ended, so `{ int x; p = &x; }` leaves `x` alive until the function
+//! returns and a read through `p` answers. #74 is the issue for that, and until
+//! it lands this interpreter is honest about a frame and silent about a block.
 //!
 //! Nothing but tests calls this. `docs/roadmap.md` asks for no flag, and a
 //! `--run` would be a second way to execute a program that Phase 3's backend
 //! makes redundant.
 
 use crate::ir::{
-    BinOp, BlockId, FuncId, Operand, Place, Projection, Rvalue, Terminator, TranslationUnit, UnOp,
+    BinOp, BlockId, FuncId, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    TranslationUnit, Ty, UnOp,
 };
 use crate::source::Span;
 
 /// How deep a call stack may go before the run is stopped.
 ///
-/// `int f(void) { return f(); }` lowers, and running it grows the frame stack
-/// until the machine gives out. A number is what makes that a report rather
-/// than a crash, and `parser::MAX_NESTING` is the same shape one phase up: a
-/// bound that exists to turn a resource nobody chose into a diagnostic somebody
-/// wrote.
+/// `int f(void) { return f(); }` lowers, and running it grows the stack until
+/// the machine gives out. A number is what makes that a report rather than a
+/// crash, and `parser::MAX_NESTING` is the same shape one phase up: a bound
+/// that turns a resource nobody chose into a sentence somebody wrote.
+///
+/// A depth and not a count of calls. A loop that calls a function a million
+/// times is a program with an answer, and refusing it would be this refusing
+/// to run ordinary C.
 pub const MAX_FRAMES: usize = 1 << 16;
 
 /// What a local holds while a program runs.
@@ -44,16 +60,36 @@ pub enum Value {
     ///
     /// No narrowing to a target's width: `ir::Ty` says it holds none, and
     /// `docs/architecture.md` puts widths in the phase that lowers to LLVM.
-    /// What that costs is that this cannot answer what a program does when a
-    /// result stops fitting in an `int`, and [`Trap`] is where it says so.
+    ///
+    /// So a program whose answer depends on a width gets this machine's answer
+    /// rather than the target's, and gets it without being told: `INT_MAX + 1`
+    /// is 2147483648 here and -2147483648 under a compiler that knows `int` is
+    /// 32 bits. C17 6.5 p5 leaves that undefined, so no answer is wrong, but
+    /// this one is a different program's answer and `docs/frontend.md` records
+    /// it beside the rest. What [`Trap`] catches is only what an `i128` cannot
+    /// hold, which is a bound of this machine rather than a rule of C.
     Int(i128),
-    /// A pointer: which place, in which frame.
-    Pointer {
-        /// The frame the place belongs to, as an index into the call stack.
-        frame: usize,
-        /// The place itself, in that frame's function.
-        place: Place,
-    },
+    /// A pointer to a local of a frame.
+    ///
+    /// A resolved place rather than the expression that named one: `&*p` is
+    /// where `p` pointed when the address was taken, and C17 6.5.3.2 p1 makes
+    /// that the object, not the way it was reached.
+    Pointer(Location),
+}
+
+/// Which local, in which frame, and of which call.
+///
+/// The generation is what makes a pointer into a frame that has returned
+/// recognisable after the slot has been taken by another call: the depth is
+/// reused, the number is not.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Location {
+    /// How deep in the stack the frame sits.
+    depth: usize,
+    /// Which call filled that depth.
+    generation: u64,
+    /// Which local of it.
+    local: LocalId,
 }
 
 /// Why a run stopped.
@@ -63,9 +99,8 @@ pub struct Trap {
     pub why: String,
     /// Where the operation was, where the operation had a span.
     ///
-    /// A terminator other than a call carries none, and neither does the read
-    /// of a local, so this is `None` more often than a diagnostic would like.
-    /// What the IR knows is in `ir.rs`, and #74 is the issue for the rest.
+    /// A terminator other than a call carries none, so this is `None` more
+    /// often than a diagnostic would like. What the IR knows is in `ir.rs`.
     pub at: Option<Span>,
 }
 
@@ -91,6 +126,11 @@ impl Trap {
 struct Frame {
     /// Which function this is running.
     function: FuncId,
+    /// Which call this is, counted over the whole run.
+    ///
+    /// Two calls at one depth are two generations, so a pointer taken in the
+    /// first and read in the second is caught rather than answered.
+    generation: u64,
     /// One slot per local, empty until something writes it. Reading an empty
     /// one is what C leaves indeterminate, and this stops there.
     locals: Vec<Option<Value>>,
@@ -100,12 +140,6 @@ struct Frame {
     destination: Option<Place>,
     /// Which block this frame resumes at when its callee returns.
     resume: Option<BlockId>,
-    /// Whether this frame has returned.
-    ///
-    /// A frame is kept after it returns rather than dropped, so that a pointer
-    /// into it can be told apart from a pointer into whatever would have taken
-    /// its place.
-    live: bool,
 }
 
 /// Run `entry`, and answer what it returned.
@@ -113,26 +147,33 @@ struct Frame {
 /// The arguments are bound to the entry function's parameters in order; a
 /// program's `main` takes none. What comes back is the value in the return
 /// place, or the reason the run stopped.
+///
+/// # Panics
+///
+/// If the IR names a local or a block that its function does not have, which
+/// only a hand-built [`TranslationUnit`] can do: the ids are the IR's own and
+/// `ir.rs` documents the same class of panic on the accessors this uses.
 pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result<Value, Trap> {
-    let mut frames = vec![enter(unit, entry, arguments)?];
-    let mut current = 0;
+    let mut generation = 0;
+    let mut frames = vec![enter(unit, entry, arguments, generation)?];
 
     loop {
         // A loop over a stack of frames rather than a recursive call per C
         // call: a recursion here dies of a stack overflow that nothing can
         // catch, on a program whose depth the program itself chooses. RK-008 in
         // the review knowledge bank is the entry, one layer down.
+        let current = frames.len() - 1;
         let function = unit.function(frames[current].function);
         let block = function.block(frames[current].block);
         let operations = block.operations.clone();
         let terminator = block.terminator.clone();
 
         for operation in &operations {
-            let value = rvalue(&frames, current, &operation.value)
+            let value = rvalue(&frames, &operation.value)
                 .map_err(|trap| trap.at(operation.origin.span()))?;
-            let (frame, local) = resolve(&frames, current, &operation.place)
+            let at = resolve(&frames, current, &operation.place)
                 .map_err(|trap| trap.at(operation.origin.span()))?;
-            frames[frame].locals[local] = Some(value);
+            store(&mut frames, at, value);
         }
 
         match terminator {
@@ -143,13 +184,12 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 otherwise,
             } => {
                 // C17 6.8.4.1 p2: the substatement runs if the expression
-                // compares unequal to zero.
+                // compares unequal to zero. A pointer here is a place, and a
+                // place is an object, so it is never the null pointer 6.3.2.3
+                // p3 makes a zero constant into: `if (p)` holds.
                 let taken = match operand(&frames, current, &condition)? {
                     Value::Int(0) => otherwise,
-                    Value::Int(_) => then,
-                    Value::Pointer { .. } => {
-                        return Err(Trap::new("a branch on a pointer, which needs a width"));
-                    }
+                    Value::Int(_) | Value::Pointer(_) => then,
                 };
                 frames[current].block = taken;
             }
@@ -178,32 +218,51 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     );
                 }
 
-                frames.push(enter(unit, callee, &passed).map_err(|trap| trap.at(origin.span()))?);
-                current = frames.len() - 1;
+                generation += 1;
+                frames.push(
+                    enter(unit, callee, &passed, generation)
+                        .map_err(|trap| trap.at(origin.span()))?,
+                );
             }
             Terminator::Return => {
                 let answer = frames[current].locals[0].clone();
-                frames[current].live = false;
+                // The frame is gone, and a pointer into it is stale from here
+                // on: the generation on the slot is what says so once another
+                // call takes the same depth.
+                let returning = frames.pop().expect("the running frame");
 
-                let Some(below) = current.checked_sub(1) else {
-                    return answer.ok_or_else(|| {
-                        Trap::new("a function returned without writing its return place")
-                    });
+                let Some(below) = frames.len().checked_sub(1) else {
+                    // C17 5.1.2.2.3 p1: reaching the `}` that terminates `main`
+                    // returns zero. The entry is what the caller is running as
+                    // a program, so that is the function the rule is about, and
+                    // a `main` with no `return` in it is ordinary C rather than
+                    // a program with no answer.
+                    return Ok(answer.unwrap_or(Value::Int(0)));
                 };
 
-                // A call whose value is discarded writes nowhere, so a callee
-                // that returned nothing is only a problem where somebody asked
-                // for the answer.
                 if let Some(destination) = frames[below].destination.clone() {
-                    let answer = answer.ok_or_else(|| {
-                        Trap::new("a function returned without writing its return place")
-                    })?;
-                    let (frame, local) = resolve(&frames, below, &destination)?;
-                    frames[frame].locals[local] = Some(answer);
+                    // A `void` function answers nothing, and the lowering gives
+                    // its call a destination all the same, so the answer is
+                    // only owed where the callee had one to give.
+                    let returns = unit.function(returning.function);
+                    let returns_something =
+                        unit.ty(returns.local(returns.return_place())) != Ty::Void;
+
+                    match answer {
+                        Some(answer) => {
+                            let at = resolve(&frames, below, &destination)?;
+                            store(&mut frames, at, answer);
+                        }
+                        None if returns_something => {
+                            return Err(Trap::new(
+                                "a function returned without writing its return place",
+                            ));
+                        }
+                        None => {}
+                    }
                 }
 
                 frames[below].block = frames[below].resume.expect("a caller resumes somewhere");
-                current = below;
             }
             // ADR-0010 put this in the IR before anything produced one, and
             // nothing does. An interpreter that guessed what it means would be
@@ -218,7 +277,12 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
 }
 
 /// A frame for a call, with the arguments bound to the parameters.
-fn enter(unit: &TranslationUnit, id: FuncId, arguments: &[Value]) -> Result<Frame, Trap> {
+fn enter(
+    unit: &TranslationUnit,
+    id: FuncId,
+    arguments: &[Value],
+    generation: u64,
+) -> Result<Frame, Trap> {
     let function = unit.function(id);
     if !function.is_defined() {
         return Err(Trap::new(
@@ -233,24 +297,30 @@ fn enter(unit: &TranslationUnit, id: FuncId, arguments: &[Value]) -> Result<Fram
 
     Ok(Frame {
         function: id,
+        generation,
         locals,
         block: function.entry(),
         destination: None,
         resume: None,
-        live: true,
     })
 }
 
 /// What an operation computes.
-fn rvalue(frames: &[Frame], current: usize, value: &Rvalue) -> Result<Value, Trap> {
+fn rvalue(frames: &[Frame], value: &Rvalue) -> Result<Value, Trap> {
+    let current = frames.len() - 1;
+
     Ok(match value {
         Rvalue::Use(from) => operand(frames, current, from)?,
-        // The one operation that turns a place into a value, and here that is
-        // literal: the value is the place, and the frame it belongs to.
-        Rvalue::Address(place) => Value::Pointer {
-            frame: current,
-            place: place.clone(),
-        },
+        // The one operation that turns a place into a value, and the place is
+        // resolved here rather than remembered: what `&p[i]` names is the
+        // object it reached, and reaching it again later could reach another.
+        Rvalue::Address(place) => Value::Pointer(resolve(frames, current, place)?),
+        // C17 6.5.3.3 p5 makes `!E` mean `(0 == E)`, which is defined for a
+        // pointer and needs no width: a place is an object, so `!p` is zero.
+        Rvalue::Unary {
+            op: UnOp::Not,
+            operand: from,
+        } if matches!(operand(frames, current, from)?, Value::Pointer(_)) => Value::Int(0),
         Rvalue::Unary { op, operand: from } => {
             let value = integer(operand(frames, current, from)?)?;
             Value::Int(match op {
@@ -263,9 +333,19 @@ fn rvalue(frames: &[Frame], current: usize, value: &Rvalue) -> Result<Value, Tra
             })
         }
         Rvalue::Binary { op, lhs, rhs } => {
-            let lhs = integer(operand(frames, current, lhs)?)?;
-            let rhs = integer(operand(frames, current, rhs)?)?;
-            Value::Int(binary(*op, lhs, rhs)?)
+            let lhs = operand(frames, current, lhs)?;
+            let rhs = operand(frames, current, rhs)?;
+
+            // Whether two pointers name one object is defined, and so is
+            // whether a pointer is null. Neither counts elements, so neither
+            // needs the width that pointer arithmetic does.
+            match (op, &lhs, &rhs) {
+                (BinOp::Eq | BinOp::Ne, Value::Pointer(_), _)
+                | (BinOp::Eq | BinOp::Ne, _, Value::Pointer(_)) => {
+                    Value::Int(compared(*op, &lhs, &rhs)?)
+                }
+                _ => Value::Int(binary(*op, integer(lhs)?, integer(rhs)?)?),
+            }
         }
     })
 }
@@ -277,10 +357,35 @@ fn rvalue(frames: &[Frame], current: usize, value: &Rvalue) -> Result<Value, Tra
 fn integer(value: Value) -> Result<i128, Trap> {
     match value {
         Value::Int(value) => Ok(value),
-        Value::Pointer { .. } => Err(Trap::new(
+        Value::Pointer(_) => Err(Trap::new(
             "arithmetic on a pointer, which counts elements and so needs a width",
         )),
     }
+}
+
+/// Whether two values name the same thing, where one of them is a pointer.
+///
+/// C17 6.5.9 p6: two pointers compare equal where they point at the same
+/// object. There is no null in this model, because a pointer is a place and a
+/// place is an object, so a pointer compared with a zero constant is unequal,
+/// which is what 6.3.2.3 p3 makes that constant mean. Comparing a pointer with
+/// any other integer is a constraint 6.5.9 p2 does not allow, and nothing
+/// before this stage checks it, so this stops.
+fn compared(op: BinOp, lhs: &Value, rhs: &Value) -> Result<i128, Trap> {
+    let same = match (lhs, rhs) {
+        (Value::Pointer(lhs), Value::Pointer(rhs)) => lhs == rhs,
+        (Value::Pointer(_), Value::Int(0)) | (Value::Int(0), Value::Pointer(_)) => false,
+        _ => {
+            return Err(Trap::new(
+                "a comparison of a pointer with a number that is not zero",
+            ));
+        }
+    };
+
+    Ok(i128::from(match op {
+        BinOp::Eq => same,
+        _ => !same,
+    }))
 }
 
 /// What an operator does to two numbers.
@@ -328,54 +433,40 @@ fn operand(frames: &[Frame], current: usize, operand: &Operand) -> Result<Value,
     match operand {
         Operand::Constant(value) => Ok(Value::Int(*value)),
         Operand::Copy(place) => {
-            let (frame, local) = resolve(frames, current, place)?;
-            frames[frame].locals[local]
-                .clone()
-                .ok_or_else(|| Trap::new("a read of a local nothing has written"))
+            let at = resolve(frames, current, place)?;
+            load(frames, at)
         }
     }
 }
 
-/// Which frame and which local a place ends up naming.
+/// Which local, in which frame, a place ends up naming.
 ///
 /// A place is a local and a walk away from it, and every step of that walk goes
-/// through a pointer, which is itself a place in a frame. So following one is
-/// following a chain that can cross frames, and this is where a pointer into a
-/// frame that has returned is caught.
+/// through a pointer, which is itself a location. So following one is following
+/// a chain that can cross frames, and this is where a pointer into a frame that
+/// has returned is caught.
 ///
-/// The recursion is bounded by the length of a place's projection list, which
-/// the parser bounds when it builds the declarator the place came from. It is
-/// not bounded by anything the program chooses at run time, which is what makes
-/// a recursion safe here and not in `run`.
-fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<(usize, usize), Trap> {
-    let mut frame = current;
-    let mut local = place.local.index();
+/// The loop is bounded by the length of a place's projection list, which the
+/// parser bounds when it reads the declarator the place came from. It is not
+/// bounded by anything the program chooses while it runs, which is what makes a
+/// walk safe here and not in [`run`].
+fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, Trap> {
+    let mut at = Location {
+        depth: current,
+        generation: frames[current].generation,
+        local: place.local,
+    };
 
     for projection in &place.projection {
         match projection {
-            Projection::Deref => {
-                let value = frames[frame].locals[local]
-                    .clone()
-                    .ok_or_else(|| Trap::new("a read of a local nothing has written"))?;
-                let Value::Pointer {
-                    frame: at,
-                    place: pointee,
-                } = value
-                else {
+            Projection::Deref => match load(frames, at)? {
+                Value::Pointer(pointee) => at = pointee,
+                Value::Int(_) => {
                     return Err(Trap::new(
                         "a dereference of something that is not a pointer",
                     ));
-                };
-                if !frames[at].live {
-                    return Err(Trap::new(
-                        "a read through a pointer into a function that has returned",
-                    ));
                 }
-
-                let (at, inner) = resolve(frames, at, &pointee)?;
-                frame = at;
-                local = inner;
-            }
+            },
             // Nothing builds one: an array is a type the lowering refuses, and
             // a subscript is lowered as the arithmetic C17 6.5.2.1 p2 defines
             // it as. Whoever gives the IR arrays gives this an answer.
@@ -385,7 +476,41 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<(usize, us
         }
     }
 
-    Ok((frame, local))
+    Ok(at)
+}
+
+/// What a location holds, or a stop saying why it holds nothing.
+///
+/// The frame is checked before the slot, so a pointer into a call that has
+/// returned is reported as that rather than as an uninitialised read: a slot
+/// another call is using now holds somebody else's value, and answering it
+/// would be the worst kind of right-looking answer.
+fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
+    let frame = live(frames, at)?;
+    frames[frame].locals[at.local.index()]
+        .clone()
+        .ok_or_else(|| Trap::new("a read of a local nothing has written"))
+}
+
+/// Write a value where a location says.
+///
+/// A location that has been resolved has already been checked, which is why
+/// this cannot fail: [`resolve`] is the only way to make one, and the frame it
+/// names cannot return between the two without the run passing through a
+/// terminator.
+fn store(frames: &mut [Frame], at: Location, value: Value) {
+    frames[at.depth].locals[at.local.index()] = Some(value);
+}
+
+/// Which frame a location names, or a stop saying it names none.
+fn live(frames: &[Frame], at: Location) -> Result<usize, Trap> {
+    match frames.get(at.depth) {
+        Some(frame) if frame.generation == at.generation => Ok(at.depth),
+        // The depth is either past the top of the stack or holds another call
+        // now. Both are the same thing to the program that kept the pointer:
+        // the function it pointed into has returned.
+        _ => Err(Trap::new("a pointer into a function that has returned")),
+    }
 }
 
 #[cfg(test)]
@@ -646,6 +771,122 @@ mod tests {
         let id = unit.push_function(twice);
 
         assert_eq!(run(&unit, id, &[Value::Int(7)]), Ok(Value::Int(14)));
+    }
+
+    /// Two calls at one depth are two calls.
+    ///
+    /// A frame stack that never popped made the caller of a returning frame
+    /// the frame below it in the arena, which is the previous callee once one
+    /// has returned. `p = malloc(...); free(p);` is this shape, and so is every
+    /// loop that calls anything.
+    ///
+    /// Mutation: keep frames after they return and find the caller by
+    /// subtracting one from the running frame. The second call resumes a frame
+    /// that has returned, and this fails.
+    #[test]
+    fn two_calls_at_one_depth_both_return() {
+        let sequential = ran(
+            "int inc(int x) {\n    return x + 1;\n}\n\nint main(void) {\n    int a;\n    int b;\n    a = inc(1);\n    b = inc(2);\n    return a + b;\n}\n",
+        );
+        assert_eq!(sequential, Ok(Value::Int(5)));
+
+        // A thousand calls at depth one, which a bound on the number of calls
+        // ever made would refuse and a bound on the depth does not.
+        let looped = ran(
+            "int one(void) {\n    return 1;\n}\n\nint main(void) {\n    int n;\n    int total;\n    n = 0;\n    total = 0;\n    while (n < 1000) {\n        total = total + one();\n        n = n + 1;\n    }\n    return total;\n}\n",
+        );
+        assert_eq!(looped, Ok(Value::Int(1000)));
+    }
+
+    /// A pointer is where it pointed, not the expression that made it.
+    ///
+    /// C17 6.5.3.2 p1 makes `&*p` the object `p` points at, so changing `p`
+    /// afterwards does not move it. An interpreter that kept the expression
+    /// answers `b` here, which is the aliasing axis of `docs/safety-model.md`
+    /// answered wrongly and in silence.
+    ///
+    /// Mutation: have `Rvalue::Address` keep the place rather than resolve it.
+    /// This answers 2 and fails.
+    #[test]
+    fn a_pointer_holds_where_it_pointed() {
+        let answer = ran(
+            "int main(void) {\n    int a;\n    int b;\n    int *p;\n    int *r;\n    a = 1;\n    b = 2;\n    p = &a;\n    r = &*p;\n    p = &b;\n    return *r;\n}\n",
+        );
+        assert_eq!(answer, Ok(Value::Int(1)));
+
+        // The same shape with nothing behind it: `&*p` before `p` holds
+        // anything is a read of a local nothing wrote, and used to be a walk
+        // that followed itself until the stack gave out.
+        let circular = ran("int main(void) {\n    int *p;\n    p = &*p;\n    return *p;\n}\n");
+        let Err(trap) = circular else {
+            panic!("{circular:?}");
+        };
+        assert!(trap.why.contains("nothing has written"), "{trap:?}");
+    }
+
+    /// A function that returns nothing is called for what it does.
+    ///
+    /// The lowering gives every call a destination, so a `void` callee never
+    /// writes one and a run that demanded an answer refused `free(p);` before
+    /// Phase 5 could ask for it.
+    ///
+    /// Mutation: demand an answer whatever the callee returns. This fails.
+    #[test]
+    fn a_call_to_a_void_function_is_not_owed_an_answer() {
+        let answer = ran(
+            "void set(int *q) {\n    *q = 5;\n}\n\nint main(void) {\n    int x;\n    x = 1;\n    set(&x);\n    return x;\n}\n",
+        );
+        assert_eq!(answer, Ok(Value::Int(5)));
+    }
+
+    /// What C defines about a pointer without needing a width.
+    ///
+    /// A branch on one, C17 6.8.4.1 p2 with 6.3.2.3 p3; `!p`, 6.5.3.3 p5; and
+    /// whether two of them name one object, 6.5.9 p6. None of these counts
+    /// elements, so refusing them for want of a width was refusing programs
+    /// this can answer.
+    ///
+    /// Mutation: send a pointer down the arithmetic path again. Each of these
+    /// stops instead of answering and this fails.
+    #[test]
+    fn what_c_defines_about_a_pointer_is_answered() {
+        let branched = ran(
+            "int main(void) {\n    int x;\n    int *p;\n    x = 1;\n    p = &x;\n    if (p) {\n        return 1;\n    }\n    return 0;\n}\n",
+        );
+        assert_eq!(branched, Ok(Value::Int(1)));
+
+        let negated = ran(
+            "int main(void) {\n    int x;\n    int *p;\n    x = 1;\n    p = &x;\n    return !p;\n}\n",
+        );
+        assert_eq!(negated, Ok(Value::Int(0)));
+
+        let same = ran(
+            "int main(void) {\n    int x;\n    int *p;\n    int *q;\n    x = 1;\n    p = &x;\n    q = &x;\n    return p == q;\n}\n",
+        );
+        assert_eq!(same, Ok(Value::Int(1)));
+
+        let other = ran(
+            "int main(void) {\n    int x;\n    int y;\n    int *p;\n    int *q;\n    x = 1;\n    y = 2;\n    p = &x;\n    q = &y;\n    return p != q;\n}\n",
+        );
+        assert_eq!(other, Ok(Value::Int(1)));
+
+        // A place is an object, so a pointer to one is never the null a zero
+        // constant means.
+        let null = ran(
+            "int main(void) {\n    int x;\n    int *p;\n    x = 1;\n    p = &x;\n    return p == 0;\n}\n",
+        );
+        assert_eq!(null, Ok(Value::Int(0)));
+    }
+
+    /// Reaching the end of `main` is a value C names.
+    ///
+    /// C17 5.1.2.2.3 p1 says zero, which makes `int main(void) { }` an ordinary
+    /// program rather than one with no answer.
+    ///
+    /// Mutation: demand an answer from the entry frame. This fails.
+    #[test]
+    fn a_main_that_falls_off_the_end_answers_zero() {
+        assert_eq!(ran("int main(void) {\n}\n"), Ok(Value::Int(0)));
     }
 
     /// A projection this cannot follow stops the run.
