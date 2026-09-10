@@ -1303,12 +1303,16 @@ mod tests {
     /// the header. The back edge goes and this fails.
     ///
     /// Mutation: evaluate the condition before the header rather than in it.
-    /// The header's operations are empty, the condition is asked once, and the
-    /// assertion on where the comparison sits fails.
+    /// The comparison moves into the block before the loop, the condition is
+    /// asked once however many turns the loop takes, and this fails.
     #[test]
     fn a_while_loop_comes_back_to_its_condition() {
+        // `n > 0` rather than `n`, because the comparison is an operation and
+        // which block holds it is the whole point: a condition evaluated once,
+        // before the loop, is a different program that the shape of the edges
+        // alone cannot tell apart.
         let lowered = lowered(
-            "int f(int n) {\n    while (n) {\n        n = n - 1;\n    }\n    return n;\n}\n",
+            "int f(int n) {\n    while (n > 0) {\n        n = n - 1;\n    }\n    return n;\n}\n",
         );
         assert_eq!(codes(&lowered), Vec::<String>::new());
 
@@ -1327,15 +1331,15 @@ mod tests {
         blocks[0].terminator.successors(&mut header);
         assert_eq!(blocks[2].terminator, Terminator::Goto(header[0]));
 
-        // The condition is asked in the header, which is what the back edge
-        // arrives above.
-        assert_eq!(blocks[1].operations.len(), 0);
+        // The condition is asked in the header, which is where the back edge
+        // arrives, so the comparison is written there and not before the loop.
+        assert!(blocks[0].operations.is_empty());
+        let [compared] = &blocks[1].operations[..] else {
+            panic!("{:?}", blocks[1].operations);
+        };
         assert!(matches!(
-            blocks[1].terminator,
-            Terminator::Branch {
-                condition: Operand::Copy(_),
-                ..
-            }
+            compared.value,
+            Rvalue::Binary { op: BinOp::Gt, .. }
         ));
     }
 

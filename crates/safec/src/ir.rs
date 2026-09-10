@@ -1219,4 +1219,42 @@ mod tests {
         assert_eq!(states.get(&p), Some(&"live"));
         assert_eq!(states.get(&pointee), Some(&"freed"));
     }
+
+    /// A declaration becomes the definition it was standing in for.
+    ///
+    /// Mutation: have `fill_function` write to the first function rather than
+    /// to the id it was given. The second keeps its declaration and this fails.
+    #[test]
+    fn a_declared_function_can_be_given_its_body() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+
+        let first = unit.push_function(Function::declaration(at, int, []));
+        let second = unit.push_function(Function::declaration(at, int, []));
+        unit.fill_function(second, Function::new(at, int, []));
+
+        assert!(!unit.function(first).is_defined());
+        assert!(unit.function(second).is_defined());
+    }
+
+    /// A function is given a body once.
+    ///
+    /// A second one would leave every call that was checked against the first
+    /// definition pointing at another, which is the defect `fill_block` refuses
+    /// for a block.
+    ///
+    /// Mutation: drop the assertion in `fill_function`. Nothing panics and this
+    /// fails.
+    #[test]
+    #[should_panic(expected = "already defined")]
+    fn a_function_is_not_given_a_body_twice() {
+        let (_sources, at) = spans();
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+
+        let id = unit.push_function(Function::declaration(at, int, []));
+        unit.fill_function(id, Function::new(at, int, []));
+        unit.fill_function(id, Function::new(at, int, []));
+    }
 }
