@@ -29,9 +29,9 @@
 //! what a [`Place`] is rooted at and what a [`Block`] holds, rather than
 //! variants beside the ones here, and #74 is where that is decided.
 //!
-//! Nothing here builds an IR or reads one. The lowering is #70, the printer is
-//! #71 and the interpreter is #72; what this module owes them is a shape they
-//! do not have to agree about first.
+//! Nothing here reads an IR. `crates/safec/src/lowering.rs` builds one from
+//! the typed AST; the printer is #71 and the interpreter is #72, and what this
+//! module owes them is a shape they do not have to agree about first.
 //!
 //! [ADR-0010]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0010-give-the-graph-an-edge-no-statement-produced.md
 

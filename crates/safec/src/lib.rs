@@ -11,6 +11,7 @@ pub mod diagnostics;
 pub mod driver;
 pub mod ir;
 pub mod lexer;
+pub mod lowering;
 pub mod options;
 pub mod parser;
 pub mod safety;
