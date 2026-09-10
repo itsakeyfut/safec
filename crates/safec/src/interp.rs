@@ -290,6 +290,18 @@ fn enter(
         ));
     }
 
+    // A caller that passes the wrong number is a caller with a mistake in it,
+    // and `zip` would take the shorter of the two and say nothing. `types.rs`
+    // checks this for every call a C program makes, so what reaches here is a
+    // hand-built unit or a caller of `run`, and both would rather be told.
+    if function.parameters().count() != arguments.len() {
+        return Err(Trap::new(format!(
+            "a call passing {} arguments to a function taking {}",
+            arguments.len(),
+            function.parameters().count()
+        )));
+    }
+
     let mut locals: Vec<Option<Value>> = function.locals().map(|_| None).collect();
     for (parameter, value) in function.parameters().zip(arguments) {
         locals[parameter.index()] = Some(value.clone());
@@ -521,7 +533,9 @@ mod tests {
     use crate::lexer::lex;
     use crate::lowering::lower;
     use crate::parser::parse;
-    use crate::sema::resolve;
+    // Renamed, because this module has a `resolve` of its own and the two
+    // answer different questions: one resolves a name, the other a place.
+    use crate::sema::resolve as resolve_names;
     use crate::source::SourceMap;
     use crate::types::check;
 
@@ -537,7 +551,7 @@ mod tests {
 
         let tokens = lex(file, sources.file(file), &mut diagnostics);
         let mut ast = parse(file, &tokens, &mut diagnostics);
-        let resolution = resolve(&sources, &ast, &mut diagnostics);
+        let resolution = resolve_names(&sources, &ast, &mut diagnostics);
         let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
         let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
         assert!(!diagnostics.has_errors(), "the program did not compile");
@@ -721,7 +735,7 @@ mod tests {
 
         let tokens = lex(file, sources.file(file), &mut diagnostics);
         let mut ast = parse(file, &tokens, &mut diagnostics);
-        let resolution = resolve(&sources, &ast, &mut diagnostics);
+        let resolution = resolve_names(&sources, &ast, &mut diagnostics);
         let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
         let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
 
@@ -887,6 +901,251 @@ mod tests {
     #[test]
     fn a_main_that_falls_off_the_end_answers_zero() {
         assert_eq!(ran("int main(void) {\n}\n"), Ok(Value::Int(0)));
+    }
+
+    /// Every operator computes what C says it computes.
+    ///
+    /// The lowering has its own table saying which `BinOp` a spelling becomes,
+    /// and that says nothing about what the operator then does: a `Mul` that
+    /// added would pass it. The expected side here is written out rather than
+    /// derived, for the reason RK-001 gives.
+    ///
+    /// Mutation: change any one arm of `binary` or of the unary match. The
+    /// spelling that moved fails, and the message names it.
+    #[test]
+    fn every_operator_computes_what_c_says() {
+        for (spelling, expected) in [
+            ("7 * 6", 42),
+            ("-7 / 2", -3),
+            ("-7 % 2", -1),
+            ("7 + 6", 13),
+            ("7 - 6", 1),
+            ("1 << 5", 32),
+            ("-8 >> 1", -4),
+            ("7 < 6", 0),
+            ("7 > 6", 1),
+            ("6 <= 6", 1),
+            ("6 >= 7", 0),
+            ("6 == 6", 1),
+            ("6 != 6", 0),
+            ("12 & 10", 8),
+            ("12 ^ 10", 6),
+            ("12 | 10", 14),
+            ("-7", -7),
+            ("!7", 0),
+            ("!0", 1),
+            ("~7", -8),
+            ("+7", 7),
+        ] {
+            // Through a local, so that the operands are read rather than folded
+            // by anything on the way: nothing folds today and this stops that
+            // from being what the test depends on.
+            let program =
+                format!("int main(void) {{\n    int n;\n    n = {spelling};\n    return n;\n}}\n");
+            assert_eq!(ran(&program), Ok(Value::Int(expected)), "{spelling}");
+        }
+    }
+
+    /// A shift nobody can answer stops the run.
+    ///
+    /// C17 6.5.7 p3 leaves a shift by a negative amount undefined, and the
+    /// width that would decide the rest of it is not here.
+    ///
+    /// Mutation: let a negative shift through to `checked_shl`. It answers
+    /// rather than stopping and this fails.
+    #[test]
+    fn a_shift_by_a_negative_amount_stops_the_run() {
+        let shifted =
+            ran("int main(void) {\n    int by;\n    by = 0 - 1;\n    return 1 << by;\n}\n");
+        let Err(trap) = shifted else {
+            panic!("{shifted:?}");
+        };
+        assert!(trap.why.contains("negative or enormous"), "{trap:?}");
+    }
+
+    /// A callee that answers nothing where the caller asked stops the run.
+    ///
+    /// C17 6.9.1 p12 leaves that undefined where the caller uses the value, and
+    /// the caller asking is exactly what a destination is.
+    ///
+    /// Mutation: answer zero instead. The run answers a number for a program
+    /// that computed none, and this fails.
+    #[test]
+    fn a_callee_with_no_answer_stops_the_caller() {
+        let missing = ran(
+            "int nothing(void) {\n    int x;\n    x = 1;\n}\n\nint main(void) {\n    return nothing();\n}\n",
+        );
+        let Err(trap) = missing else {
+            panic!("{missing:?}");
+        };
+        assert!(
+            trap.why.contains("without writing its return place"),
+            "{trap:?}"
+        );
+    }
+
+    /// A trap on a call points at the call.
+    ///
+    /// The operation traps carry the operation's origin; a call carries its
+    /// own, and it is the only terminator that does.
+    ///
+    /// Mutation: drop the span the call arm supplies. The trap has nowhere to
+    /// point and this fails.
+    #[test]
+    fn a_trap_on_a_call_points_at_the_call() {
+        let mut sources = SourceMap::new();
+        let text = "int elsewhere(void);\n\nint main(void) {\n    return elsewhere();\n}\n";
+        let file = sources.add_virtual("t.c", text);
+        let mut diagnostics = DiagnosticSink::new();
+
+        let tokens = lex(file, sources.file(file), &mut diagnostics);
+        let mut ast = parse(file, &tokens, &mut diagnostics);
+        let resolution = resolve_names(&sources, &ast, &mut diagnostics);
+        let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
+        let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
+
+        let main = unit
+            .functions()
+            .find(|id| sources.snippet(unit.function(*id).name) == "main")
+            .expect("a main");
+        let Err(trap) = run(&unit, main, &[]) else {
+            panic!("a call to a function with no body");
+        };
+
+        let at = trap.at.expect("the call had a span");
+        assert_eq!(sources.snippet(at), "elsewhere()");
+    }
+
+    /// A call passing the wrong number of arguments stops the run.
+    ///
+    /// `types.rs` checks this for every call a C program makes, so what reaches
+    /// here is a hand-built unit or a caller of `run`. Binding what was passed
+    /// and saying nothing about the rest would leave a parameter holding
+    /// whatever the last call left, which is the worst kind of answer.
+    ///
+    /// Mutation: bind the arguments with `zip` and no check. The run answers 1
+    /// rather than stopping and this fails.
+    #[test]
+    fn a_call_with_the_wrong_number_of_arguments_stops_the_run() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int twice(int n);\n");
+        let at = Span::new(file, 4, 9);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut twice = Function::new(at, int, [int]);
+        twice.push_block(Block {
+            operations: vec![Operation {
+                place: Place::local(twice.return_place()),
+                value: Rvalue::Use(Operand::Constant(1)),
+                origin: Origin::Written(at),
+            }],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(twice);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("a call with no arguments to a function with one parameter");
+        };
+        assert!(trap.why.contains("0 arguments"), "{trap:?}");
+    }
+
+    /// A dereference of something that is not a pointer stops the run.
+    ///
+    /// Nothing the frontend accepts reaches this, because `types.rs` refuses an
+    /// indirection through an `int`. A hand-built unit reaches it, and so will
+    /// a Clang adapter the day one exists.
+    ///
+    /// Mutation: read the local through the projection anyway. The run answers
+    /// what the local holds and this fails.
+    #[test]
+    fn a_dereference_of_a_number_stops_the_run() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int f(void);\n");
+        let at = Span::new(file, 4, 5);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let holding = function.push_local(int);
+
+        function.push_block(Block {
+            operations: vec![
+                Operation {
+                    place: Place::local(holding),
+                    value: Rvalue::Use(Operand::Constant(4)),
+                    origin: Origin::Written(at),
+                },
+                Operation {
+                    place: Place::local(function.return_place()),
+                    value: Rvalue::Use(Operand::Copy(Place {
+                        local: holding,
+                        projection: vec![Projection::Deref],
+                    })),
+                    origin: Origin::Written(at),
+                },
+            ],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(function);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("a dereference of a number");
+        };
+        assert!(trap.why.contains("not a pointer"), "{trap:?}");
+    }
+
+    /// A call that writes nowhere runs for what it does.
+    ///
+    /// The lowering gives every call a destination, so this shape only reaches
+    /// the interpreter from a hand-built unit today. It is what `free(p);` will
+    /// be, and `ir::Terminator::Call`'s doc comment says so.
+    ///
+    /// Mutation: demand a destination. The run stops on a call that asked for
+    /// nothing and this fails.
+    #[test]
+    fn a_call_that_writes_nowhere_runs() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "void nothing(void);\n");
+        let at = Span::new(file, 5, 12);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let void = unit.push_type(Ty::Void);
+
+        let mut callee = Function::new(at, void, []);
+        callee.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let callee = unit.push_function(callee);
+
+        let mut caller = Function::new(at, int, []);
+        let entry = caller.reserve_block();
+        let after = caller.push_block(Block {
+            operations: vec![Operation {
+                place: Place::local(caller.return_place()),
+                value: Rvalue::Use(Operand::Constant(7)),
+                origin: Origin::Written(at),
+            }],
+            terminator: Terminator::Return,
+        });
+        caller.fill_block(
+            entry,
+            Block {
+                operations: Vec::new(),
+                terminator: Terminator::Call {
+                    callee,
+                    arguments: Vec::new(),
+                    destination: None,
+                    then: after,
+                    origin: Origin::Written(at),
+                },
+            },
+        );
+        let id = unit.push_function(caller);
+
+        assert_eq!(run(&unit, id, &[]), Ok(Value::Int(7)));
     }
 
     /// A projection this cannot follow stops the run.
