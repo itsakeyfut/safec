@@ -648,6 +648,53 @@ mod tests {
         assert_eq!(run(&unit, id, &[Value::Int(7)]), Ok(Value::Int(14)));
     }
 
+    /// A projection this cannot follow stops the run.
+    ///
+    /// Nothing builds a `Projection::Index`: an array is a type the lowering
+    /// refuses, and a subscript is lowered as the arithmetic C17 6.5.2.1 p2
+    /// defines it as. So the only way to reach this is to build the place by
+    /// hand, which is what the interpreter's caller after #74 will do for real.
+    ///
+    /// Mutation: treat an index as no step at all. The read answers what the
+    /// local holds, a program that indexed something gets the thing itself, and
+    /// this fails.
+    #[test]
+    fn a_projection_this_cannot_follow_stops_the_run() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int f(void);\n");
+        let at = Span::new(file, 4, 5);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        let holding = function.push_local(int);
+
+        function.push_block(Block {
+            operations: vec![
+                Operation {
+                    place: Place::local(holding),
+                    value: Rvalue::Use(Operand::Constant(9)),
+                    origin: Origin::Written(at),
+                },
+                Operation {
+                    place: Place::local(function.return_place()),
+                    value: Rvalue::Use(Operand::Copy(Place {
+                        local: holding,
+                        projection: vec![Projection::Index(Operand::Constant(0))],
+                    })),
+                    origin: Origin::Written(at),
+                },
+            ],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(function);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("an index nothing can follow");
+        };
+        assert!(trap.why.contains("an index"), "{trap:?}");
+    }
+
     /// An edge no statement produced stops the run rather than being followed.
     ///
     /// ADR-0010 put the variant in the IR before anything produced one, and
