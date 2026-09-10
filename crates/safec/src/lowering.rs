@@ -1482,12 +1482,12 @@ mod tests {
 
     /// The function that name belongs to.
     fn function<'a>(lowered: &'a Lowered, name: &str) -> &'a Function {
-        lowered
+        let id = lowered
             .unit
             .functions()
-            .iter()
-            .find(|function| lowered.sources.snippet(function.name) == name)
-            .expect("a function of that name")
+            .find(|id| lowered.sources.snippet(lowered.unit.function(*id).name) == name)
+            .expect("a function of that name");
+        lowered.unit.function(id)
     }
 
     /// Which blocks each block can reach, in order.

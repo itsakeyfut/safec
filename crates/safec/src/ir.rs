@@ -845,9 +845,15 @@ impl TranslationUnit {
         &self.functions[id.0 as usize]
     }
 
-    /// Every function, in the order they were pushed.
-    pub fn functions(&self) -> &[Function] {
-        &self.functions
+    /// Every function's id, in the order they were pushed.
+    ///
+    /// Ids rather than functions, the way [`Function::locals`] hands back
+    /// locals: nothing outside this module can build a [`FuncId`], so a caller
+    /// that has a `&Function` cannot say which function it is holding, and an
+    /// interpreter asked to run `main` had no way to name it. The body comes
+    /// from [`Self::function`], and a count is `functions().len()`.
+    pub fn functions(&self) -> impl ExactSizeIterator<Item = FuncId> + use<> {
+        (0..self.functions.len() as u32).map(FuncId)
     }
 }
 
