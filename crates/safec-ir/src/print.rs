@@ -406,6 +406,42 @@ mod tests {
     use super::*;
     use crate::ir::{Block, Function, Operation, Origin};
 
+    /// Newline and tab survive, and every other control character does not.
+    ///
+    /// The two exceptions are the whole difference between laying text out and
+    /// obeying it: a diagnostic that runs to two lines is ordinary, and a
+    /// `shown` that escaped its own newlines would print one line saying
+    /// `first\nsecond`. Everything else in the class is an instruction to a
+    /// terminal.
+    ///
+    /// The newline half was already held, by
+    /// `render::a_newline_in_a_message_is_left_alone` and by twenty-five
+    /// corpus cases whose `.stderr` runs to more than one line. **The tab half
+    /// was held by nothing**: dropping `&& ch != '\t'` alone passed the whole
+    /// workspace, because no message and no artifact in the suite contains a
+    /// tab. That is the mutation this test exists for.
+    ///
+    /// It is worth asserting here rather than reading, because the pair this
+    /// predicate serves now sits either side of a crate boundary, `shown` here
+    /// and `render::echoed` in `safec`, and the two can no longer be changed
+    /// in one edit.
+    #[test]
+    fn only_newline_and_tab_are_laid_out_rather_than_obeyed() {
+        assert_eq!(shown("first\nsecond\tthird"), "first\nsecond\tthird");
+
+        // One from each of the ranges C0, C1 and the delete character, so that
+        // an exception added to any of them is an exception this catches.
+        for ch in ['\u{1b}', '\r', '\u{0}', '\u{7f}', '\u{85}', '\u{9b}'] {
+            assert!(is_obeyed(ch), "{ch:?} reaches a terminal unescaped");
+            let text = format!("a{ch}b");
+            assert!(
+                !shown(&text).contains(ch),
+                "{ch:?} survived `shown`: {:?}",
+                shown(&text)
+            );
+        }
+    }
+
     /// A file's name is content, and every artifact line begins with one.
     ///
     /// A name is not something this compiler wrote: it comes from a command
