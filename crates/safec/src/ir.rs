@@ -660,10 +660,35 @@ impl TranslationUnit {
     }
 
     /// Add a function, and hand back the id that names it.
+    ///
+    /// A caller with a body still to build pushes [`Function::declaration`]
+    /// here and hands the definition to [`Self::fill_function`] later. That is
+    /// what a call to a function whose body does not exist yet needs, and it is
+    /// not an unusual case: `int f(void) { return f(); }` is one, and so is
+    /// either half of a mutually recursive pair.
     pub fn push_function(&mut self, function: Function) -> FuncId {
         let id = FuncId(self.functions.len() as u32);
         self.functions.push(function);
         id
+    }
+
+    /// Give a function that was pushed as a declaration its body.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`TranslationUnit`], or if it already
+    /// names a definition. Replacing a definition would leave the calls that
+    /// were checked against the first one pointing at the second, which is a
+    /// unit that looks whole and is not, and it is the same reason
+    /// [`Function::fill_block`] refuses to fill a block twice.
+    pub fn fill_function(&mut self, id: FuncId, function: Function) {
+        let slot = &mut self.functions[id.index()];
+        assert!(
+            !slot.is_defined(),
+            "function {} is already defined",
+            id.index()
+        );
+        *slot = function;
     }
 
     /// The type `id` names.
