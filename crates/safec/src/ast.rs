@@ -24,7 +24,7 @@
 //!
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
-use crate::source::{SourceMap, Span};
+use safec_ir::source::{SourceMap, Span};
 
 /// Where an expression is in [`Ast`].
 ///
@@ -1002,7 +1002,7 @@ fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::source::SourceMap;
+    use safec_ir::source::SourceMap;
 
     /// What C17 calls compatible types, and what it does not.
     ///

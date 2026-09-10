@@ -37,8 +37,8 @@
 //! costs against `clang`, which fills it.
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::source::{FileId, SourceFile, Span};
 use crate::token::{Keyword, Punct, Token, TokenKind};
+use safec_ir::source::{FileId, SourceFile, Span};
 
 // Lexical diagnostics take `SC01xx`, which `docs/diagnostics.md` allocates. A
 // code is assigned once and never reused, so a wording can be improved without
@@ -469,7 +469,7 @@ fn is_stray(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::source::SourceMap;
+    use safec_ir::source::SourceMap;
 
     struct Scan {
         sources: SourceMap,

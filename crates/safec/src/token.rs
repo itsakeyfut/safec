@@ -2,7 +2,7 @@
 //!
 //! A token is a kind and a position, and nothing else. The text it covers is
 //! recovered from the source map when something needs it, which is the same
-//! arrangement [`crate::source`] already uses for position: one authority, and
+//! arrangement [`safec_ir::source`] already uses for position: one authority, and
 //! everything else derived from it on demand. See ADR-0006.
 //!
 //! That is a decision about where work happens as much as about size. A
@@ -14,7 +14,7 @@
 
 use std::mem;
 
-use crate::source::Span;
+use safec_ir::source::Span;
 
 /// One token: what it is, and where it is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -312,10 +312,14 @@ const _: () = assert!(mem::size_of::<Token>() == 16);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::source::FileId;
+    use safec_ir::source::SourceMap;
 
     fn span(start: u32, end: u32) -> Span {
-        Span::new(FileId::from_index(0), start, end)
+        // A handle out of a real map, because `FileId::from_index` belongs to
+        // `safec_ir` and is not `pub`: a handle is only meaningful against the
+        // map it came from, and ADR-0011 made that boundary a crate boundary.
+        let mut sources = SourceMap::new();
+        Span::new(sources.add_virtual("t.c", ""), start, end)
     }
 
     #[test]

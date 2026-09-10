@@ -26,8 +26,8 @@ use crate::ast::{
     UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::source::{FileId, Span};
 use crate::token::{Keyword, Punct, Token, TokenKind};
+use safec_ir::source::{FileId, Span};
 
 /// Something was expected and something else was there.
 ///
@@ -1401,7 +1401,7 @@ impl Parser<'_> {
 mod tests {
     use super::*;
     use crate::lexer::lex;
-    use crate::source::SourceMap;
+    use safec_ir::source::SourceMap;
 
     struct Parsed {
         ast: Ast,

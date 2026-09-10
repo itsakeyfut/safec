@@ -21,7 +21,7 @@ use std::collections::HashMap;
 
 use crate::ast::{Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::source::{SourceMap, Span};
+use safec_ir::source::{SourceMap, Span};
 
 /// A name used where nothing declares it.
 ///
@@ -395,7 +395,7 @@ mod tests {
     use super::*;
     use crate::lexer::lex;
     use crate::parser::parse;
-    use crate::source::FileId;
+    use safec_ir::source::FileId;
 
     struct Resolved {
         ast: Ast,
