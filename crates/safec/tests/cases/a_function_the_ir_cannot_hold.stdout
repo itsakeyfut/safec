@@ -1,6 +1,6 @@
 Function a_function_the_ir_cannot_hold.c:3:5 "f"
   Local "_0" "int" return
-  Block "bb0"
+  Block "bb0" entry
     Operation a_function_the_ir_cannot_hold.c:4:5 written
       Destination "_0"
       Use

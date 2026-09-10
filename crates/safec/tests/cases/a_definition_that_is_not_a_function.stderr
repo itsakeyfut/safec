@@ -1,0 +1,8 @@
+error[SC0304]: this defines something that is not a function
+   ╭─[ a_definition_that_is_not_a_function.c:5:7 ]
+   │
+ 5 │ int (*bad)(int) {
+   │       ─┬─  
+   │        ╰─── this declares `int (*)(int)`
+───╯
+  = note: C17 6.9.1 p2 requires the identifier in a function definition to have a function type

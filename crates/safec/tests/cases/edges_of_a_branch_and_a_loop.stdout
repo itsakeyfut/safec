@@ -6,7 +6,7 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int"
-  Block "bb0"
+  Block "bb0" entry
     Operation edges_of_a_branch_and_a_loop.c:2:9 written
       Destination "_2"
       Binary "Gt"

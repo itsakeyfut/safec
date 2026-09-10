@@ -395,7 +395,12 @@ fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
 /// This is for text this module writes. The text of a file, which `ariadne`
 /// echoes rather than this module, goes through [`echoed`] instead, for a
 /// reason that rules this function out there.
-fn shown(text: &str) -> Cow<'_, str> {
+///
+/// `pub(crate)` because the artifacts have the same question: every line of
+/// `--emit tokens`, `--emit ast` and `--emit safety-ir` begins with a file's
+/// name, and a name is content the same way a file's text is. `driver.rs`
+/// reaches this rather than keeping a second answer to one question.
+pub(crate) fn shown(text: &str) -> Cow<'_, str> {
     if !text.chars().any(is_obeyed) {
         return Cow::Borrowed(text);
     }

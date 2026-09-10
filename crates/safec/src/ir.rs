@@ -361,6 +361,12 @@ impl Rvalue {
 
 /// Whether the source wrote an operation, or something else caused it.
 ///
+/// `docs/c-family.md` calls this attribution, and `Span`'s own doc comment says
+/// it expects a third coordinate for where code came from, which implicit
+/// operations are named as one consumer of. If that coordinate arrives and
+/// wants this name, this is the type that gives way: what it distinguishes is
+/// narrower, and a span's origin is the more obvious reading of the word.
+///
 /// Both carry a span, because both have somewhere to point. What differs is
 /// what a diagnostic may say: text that a user wrote can be quoted back, and a
 /// destructor at the end of a scope has, in `docs/roadmap.md`'s words, "a
@@ -709,6 +715,28 @@ impl Function {
         self.defined()[id.index()]
             .as_ref()
             .unwrap_or_else(|| panic!("block {} was reserved and never filled", id.index()))
+    }
+
+    /// Where control enters, which is the block whose id was handed out first.
+    ///
+    /// Nothing outside this module can build a [`BlockId`], and a walk over a
+    /// control-flow graph has to start somewhere, so without this an
+    /// interpreter or an analysis could not take its first step. `blocks()`
+    /// hands back blocks rather than ids for the same reason `locals()` used to
+    /// hand back a count: it answers a different question.
+    ///
+    /// The first block is the entry because that is what a builder does, and
+    /// saying so here is what makes it a property of the IR rather than of
+    /// whoever built one.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration, or if it has no blocks. A definition always
+    /// has one, because a body ends with a terminator and a terminator ends a
+    /// block.
+    pub fn entry(&self) -> BlockId {
+        assert!(!self.defined().is_empty(), "a definition has a first block");
+        BlockId(0)
     }
 
     /// Every block, in the order their ids were handed out.

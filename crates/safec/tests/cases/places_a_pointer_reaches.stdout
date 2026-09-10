@@ -4,7 +4,7 @@ Function places_a_pointer_reaches.c:1:5 "f"
   Local "_2" "int" parameter
   Local "_3" "int"
   Local "_4" "int *"
-  Block "bb0"
+  Block "bb0" entry
     Operation places_a_pointer_reaches.c:2:5 written
       Destination "_1"
         Deref

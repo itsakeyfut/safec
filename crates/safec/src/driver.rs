@@ -5,6 +5,13 @@
 //! what the process reports. Keeping that in one place is what lets a phase be
 //! written without an opinion about the ones around it.
 //!
+//! It also holds what `--emit` writes. An artifact is a rendering of what a
+//! phase produced rather than a thing the phase owns, and the three of them
+//! share how a line is indented and how a span is spelled, so they are here
+//! together. The Safety IR's printer is the one that will want to move: #73
+//! makes the IR a crate of its own, and where its rendering lives is a question
+//! for whoever draws that boundary.
+//!
 //! [`compile`] does the work and hands back what it found, so that a caller can
 //! read the diagnostics rather than scrape them out of a stream. [`run_compiler`] is the
 //! half that reports and decides the outcome.
@@ -18,7 +25,7 @@ use std::process::ExitCode;
 use crate::ast::{
     Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId, spell_type,
 };
-use crate::diagnostics::render::Renderer;
+use crate::diagnostics::render::{Renderer, shown};
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
 use crate::ir::{
     LocalId, Operand, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
@@ -277,9 +284,9 @@ struct Analysed {
 /// reported about it.
 ///
 /// The two gates live here rather than in each `--emit` arm, because they are
-/// one decision about one input and a second copy of a gate is what RK-003 in
-/// the review knowledge bank records the cost of: a gate spelled twice left a
-/// case answered by neither.
+/// one decision about one input. The `Emitted` enum below is the same shape
+/// for the same reason, and its doc comment carries what one decision spelled
+/// in two places cost this compiler.
 ///
 /// The first gate is this input read whole. `has_errors` answers for the whole
 /// run, so a count taken either side of the work on one file is what says
@@ -364,9 +371,19 @@ fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
             continue;
         }
 
+        // A block's position is its id: `blocks` hands them back in the order
+        // their ids were handed out, and an id is where a block sits in the
+        // function. That is what lets an edge, which is printed from an id, and
+        // a block, which is printed from a position, name the same thing.
+        let entry = function.entry();
         for (index, block) in function.blocks().enumerate() {
             dump_line("Block", 1, out);
             write!(out, " {:?}", block_name(index)).expect("writing to a string cannot fail");
+            // Which block control enters is a fact about the function that the
+            // artifact would otherwise only imply by printing it first.
+            if index == entry.index() {
+                out.push_str(" entry");
+            }
             out.push('\n');
 
             for operation in &block.operations {
@@ -849,8 +866,18 @@ fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mu
     let at = file.line_col(span.start());
 
     dump_line(kind, depth, out);
-    write!(out, " {}:{}:{}", file.name(), at.line, at.column)
-        .expect("writing to a string cannot fail");
+    // A name is content: it comes from a command line today and from a file
+    // once `#include` lands, and every line of every artifact begins with one.
+    // RK-002 in the review knowledge bank is the entry, and `shown` is the
+    // answer the renderer already gives to the same question.
+    write!(
+        out,
+        " {}:{}:{}",
+        shown(&file.name().to_string()),
+        at.line,
+        at.column
+    )
+    .expect("writing to a string cannot fail");
 }
 
 /// A line that names a kind and nothing about where it is.
@@ -887,7 +914,7 @@ fn dump_tokens(file: &SourceFile, tokens: &[Token], out: &mut String) {
         write!(
             out,
             "{}:{}:{} {}",
-            file.name(),
+            shown(&file.name().to_string()),
             at.line,
             at.column,
             token.kind.name()
@@ -1646,6 +1673,47 @@ mod tests {
     /// it. The tree here is built by hand because the parser cannot yet produce
     /// one that spans two files.
     ///
+    /// A file's name is content, and every artifact line begins with one.
+    ///
+    /// A name is not something this compiler wrote: it comes from a command
+    /// line or, once `#include` lands, from a file. RK-002 in the review
+    /// knowledge bank is the entry, and the case it records is a `.c` file that
+    /// cleared the terminal of whoever compiled it. A name can do the same, and
+    /// a name that reorders the line it is on is the shape somebody would use
+    /// to make an artifact say something it does not.
+    ///
+    /// Mutation: write the name with `{}` rather than through `shown`. The
+    /// escape reaches the artifact and this fails.
+    #[test]
+    fn a_file_name_is_escaped_wherever_an_artifact_prints_one() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("evil\u{1b}[31m.c", "int f(void) { return 0; }\n");
+        let at = Span::new(file, 4, 5);
+
+        let mut unit = TranslationUnit::new();
+        let int = unit.push_type(Ty::Int);
+        let mut function = Function::new(at, int, []);
+        function.push_block(Block {
+            operations: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        unit.push_function(function);
+
+        let mut ir = String::new();
+        dump_ir(&sources, &unit, &mut ir);
+        assert!(!ir.contains('\u{1b}'), "{ir:?}");
+        assert!(
+            ir.contains("\\u{1b}"),
+            "the escape is shown rather than obeyed: {ir:?}"
+        );
+
+        // The tree and the tokens print the same name through the same
+        // function, so they answer the same question here.
+        let mut tree = String::new();
+        dump_node(&sources, "Node", at, 0, &mut tree);
+        assert!(!tree.contains('\u{1b}'), "{tree:?}");
+    }
+
     /// An operation nobody wrote says so, and one somebody wrote says that.
     ///
     /// The IR can tell them apart and the tree cannot, which is the whole
