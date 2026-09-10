@@ -11,13 +11,21 @@
 //! true, that the body is not here, which is a thing [`Function::declaration`]
 //! already exists to say.
 //!
-//! Three shapes are refused today, all of them `SC0304`: an expression the
-//! frontend could not type, a type the IR cannot hold, and a name the IR
-//! cannot reach. They are one code rather than three because the code says
-//! which stage could not go on and the message says what it met, which is how
-//! `parser.rs` spells every syntax error.
+//! Everything it refuses is `SC0304`: an expression the frontend could not
+//! type, a type the IR cannot hold, a name it cannot reach, a constant it
+//! cannot read, a call with no function to name, and a second definition of
+//! one name. One code rather than six, for the reason `types.rs` gives for
+//! `MISMATCH`: what differs between them is the message, and a reader
+//! filtering on the code wants to know the IR could not be built rather than a
+//! list of ways that can happen.
+//!
+//! `parser.rs` splits its two codes along a different line, and the difference
+//! is worth naming: `TOO_DEEP` is separate from `EXPECTED` because a program
+//! nested too deeply is well formed and refused, while an unexpected token is
+//! a program nobody wrote correctly. Every case here is the first kind, so the
+//! split has nothing to divide.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Ast, BinOp as AstBinOp, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type};
 use crate::ast::{TypeId, UnOp as AstUnOp, spell_type};
@@ -58,6 +66,7 @@ pub fn lower(
         unit: TranslationUnit::new(),
         locals: HashMap::new(),
         functions: HashMap::new(),
+        refused: HashSet::new(),
         pending: HashMap::new(),
     };
 
@@ -81,8 +90,22 @@ struct Lowering<'a> {
     /// it is where the name was declared, so it is one per declaration, and a
     /// use reaches it through the binding it resolved to.
     locals: HashMap<Span, LocalId>,
-    /// The same, one layer up: which function a name at this span became.
-    functions: HashMap<Span, FuncId>,
+    /// Which function a name at file scope became, keyed by the name itself.
+    ///
+    /// Not by span, the way a local is: a prototype and the definition that
+    /// follows it are two declarations of one function, at two spans, and a
+    /// call resolves to whichever the resolver had in scope. Keyed by span,
+    /// `int add(int, int);` and the `add` below it become two functions, and a
+    /// call written between them reaches the one with no body. Keyed by the
+    /// text, they are one, which is what C means by them and what
+    /// `sema.rs::lookup` already compares.
+    functions: HashMap<String, FuncId>,
+    /// The names whose signature this stage could not read.
+    ///
+    /// Reported once, where the declaration is. A call to one of them is not
+    /// reported again: the caller wrote an ordinary call and the fault is in a
+    /// declaration somewhere else.
+    refused: HashSet<String>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -172,9 +195,9 @@ impl Builder {
 ///
 /// The walk is a stack rather than a recursion because the tree is not bounded
 /// by the parser's own nesting limit: a chain folded by a loop, which is how
-/// every left-associative operator is read, adds a level per operator. RK-001's
-/// neighbour in the review knowledge bank is the entry, and `driver.rs`'s
-/// `dump_expr` is the walker that paid for it first.
+/// every left-associative operator is read, adds a level per operator. RK-008
+/// in the review knowledge bank is the entry, and `driver.rs`'s `dump_expr` is
+/// the walker that paid for it first.
 enum Task {
     /// Push the value of this expression.
     Value(ExprId),
@@ -225,13 +248,27 @@ impl Lowering<'_> {
             let (returns, parameters) = (*returns, parameters.clone());
             let Some((returns, lowered)) = self.signature(name, returns, &parameters, diagnostics)
             else {
+                // The signature was reported and there is no honest function to
+                // put here: inventing one would tell a caller a return type
+                // this compiler could not read. What is remembered instead is
+                // the name, so that a call to it says nothing more. The user
+                // has been told once, about the declaration, and a second
+                // diagnostic pointing at an ordinary call would be blaming code
+                // that is fine.
+                self.refused.insert(self.sources.snippet(name).to_owned());
                 continue;
             };
 
-            let id = self
-                .unit
-                .push_function(Function::declaration(name, returns, lowered));
-            self.functions.insert(name, id);
+            // A name declared twice is one function. The first declaration is
+            // the one whose span the IR carries, which is where a reader of a
+            // diagnostic about the callee is pointed.
+            if !self.functions.contains_key(self.sources.snippet(name)) {
+                let id = self
+                    .unit
+                    .push_function(Function::declaration(name, returns, lowered));
+                self.functions
+                    .insert(self.sources.snippet(name).to_owned(), id);
+            }
         }
     }
 
@@ -271,9 +308,29 @@ impl Lowering<'_> {
             };
             let (name, ty, body) = (function.name, function.ty, function.body);
 
-            let Some(id) = self.functions.get(&name).copied() else {
+            let Some(id) = self.functions.get(self.sources.snippet(name)).copied() else {
                 continue;
             };
+            // C17 6.9 p5 allows one external definition of a name and this
+            // compiler does not check it yet, so a second one arrives here
+            // rather than being reported before it. The first body is kept,
+            // because replacing it would leave every call that was lowered
+            // against it pointing at another function's blocks.
+            if self.unit.function(id).is_defined() {
+                diagnostics.report(
+                    Diagnostic::error(format!(
+                        "`{}` is defined more than once",
+                        self.sources.snippet(name)
+                    ))
+                    .with_code(LOWERING)
+                    .with_label(Label::primary(name, "this definition is not used"))
+                    .with_label(Label::secondary(
+                        self.unit.function(id).name,
+                        "the first one is here",
+                    )),
+                );
+                continue;
+            }
             let Some(built) = self.body(name, ty, body, diagnostics) else {
                 continue;
             };
@@ -319,9 +376,11 @@ impl Lowering<'_> {
         builder.open();
         self.stmt(&mut builder, body, diagnostics)?;
 
-        // Falling off the end leaves whatever the return place holds, which is
-        // what C says of `main` and undefined behaviour to read anywhere else.
-        // Saying that is the safety analyses' job and not this stage's.
+        // Falling off the end returns whatever the return place holds. C17
+        // 6.9.1 p12 makes reading that undefined, and 5.1.2.2.3 p1 makes
+        // `main` the exception by returning zero, which is not written here
+        // because nothing in the IR says which function is the entry point.
+        // Whoever gives it one writes that zero.
         if builder.reachable() {
             builder.end(Terminator::Return);
         }
@@ -348,8 +407,10 @@ impl Lowering<'_> {
                     current = *pointee;
                 }
                 // An array is not a pointer and saying it is would tell the
-                // memory analysis that one object is another. #74 is where the
-                // IR learns to hold the rest.
+                // memory analysis that one object is another. Nothing has
+                // asked the IR to hold either an array or a function yet, and
+                // #74, which is the issue for what it cannot say, is about
+                // storage duration rather than about these.
                 Type::Array { .. } | Type::Function { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
@@ -385,13 +446,13 @@ impl Lowering<'_> {
         let span = self.ast.expr(id).span();
         let Some(ty) = self.types.of(id) else {
             diagnostics.report(
-                Diagnostic::error("this expression has no type, so it cannot be lowered")
+                Diagnostic::error("cannot compile an expression whose type is not known")
                     .with_code(LOWERING)
-                    .with_label(Label::primary(span, "the type of this is not known"))
-                    .with_note(
-                        "the safety analyses read the IR, and an operation whose type nothing \
-                         worked out is one they cannot answer about",
-                    ),
+                    .with_label(Label::primary(
+                        span,
+                        "nothing worked out what type this has",
+                    ))
+                    .with_note("this is a gap in this compiler rather than a fault in the program"),
             );
             return None;
         };
@@ -598,7 +659,9 @@ impl Lowering<'_> {
                 Task::Finish(id) => {
                     self.finish_value(builder, id, &mut values, &mut places, diagnostics)?;
                 }
-                Task::FinishPlace(id) => self.finish_place(id, &mut values, &mut places),
+                Task::FinishPlace(id) => {
+                    self.finish_place(id, &mut values, &mut places, diagnostics)?;
+                }
                 Task::Split(id) => {
                     self.split(builder, id, &mut tasks, &mut values, diagnostics)?;
                 }
@@ -632,10 +695,13 @@ impl Lowering<'_> {
             Expr::Unary { op, operand, .. } => {
                 tasks.push(Task::Finish(id));
                 match op {
-                    // These read a place rather than a value, and `&x` never
-                    // reads `x` at all.
-                    AstUnOp::Deref
-                    | AstUnOp::AddrOf
+                    // C17 6.5.3.2 p4 makes the operand of `*` a value and the
+                    // result an lvalue, so `*(p + i)` and `*p++` are ordinary
+                    // C. Asking for the operand's place instead would refuse
+                    // both: what has a place here is `*p`, not `p + i`.
+                    AstUnOp::Deref => tasks.push(Task::Place(id)),
+                    // These read a place, and `&x` never reads `x` at all.
+                    AstUnOp::AddrOf
                     | AstUnOp::PreInc
                     | AstUnOp::PreDec
                     | AstUnOp::PostInc
@@ -717,19 +783,35 @@ impl Lowering<'_> {
                 tasks.push(Task::Value(*index));
                 tasks.push(Task::Value(*base));
             }
-            // Everything else has a value and no place. C17 6.5.16 p2 wants a
-            // modifiable lvalue on the left of an assignment, and whether this
+            // Everything else has a value and no place. An assignment, `&`,
+            // `++` and `--` each ask for one, so the message says that rather
+            // than naming assignment: `----n` asks through the innermost `--`
+            // and nothing in it is being assigned to. C17 6.5.16 p2 wants a
+            // modifiable lvalue on the left of an assignment, and whether a
             // program breaks that constraint is the type checker's to say; what
-            // is reported here is only that there is nothing to write into.
-            _ => {
+            // is said here is only that there is nothing to read or write.
+            //
+            // The kinds are written out rather than wildcarded, so an
+            // expression kind added later is `error[E0004]` here and has to say
+            // whether it names a place.
+            Expr::Number { .. }
+            | Expr::Unary { .. }
+            | Expr::Binary { .. }
+            | Expr::Assign { .. }
+            | Expr::Conditional { .. }
+            | Expr::Call { .. }
+            | Expr::Comma { .. }
+            | Expr::Error { .. } => {
                 diagnostics.report(
-                    Diagnostic::error("this cannot be assigned to")
+                    Diagnostic::error("this expression names no place")
                         .with_code(LOWERING)
                         .with_label(Label::primary(
                             self.ast.expr(id).span(),
-                            "this names no place",
+                            "this is a value, not somewhere a value can live",
                         ))
-                        .with_note("the IR writes to places, and this expression is a value"),
+                        .with_note(
+                            "an assignment, `&`, `++` and `--` each need a place to work on",
+                        ),
                 );
                 return None;
             }
@@ -775,9 +857,10 @@ impl Lowering<'_> {
                         });
                         values.push(Operand::Copy(Place::local(into)));
                     }
+                    // `begin_place` put the `Deref` on, because `*p` is the
+                    // place rather than `p` being one.
                     AstUnOp::Deref => {
-                        let mut place = places.pop().expect("a place");
-                        place.projection.push(Projection::Deref);
+                        let place = places.pop().expect("a place");
                         values.push(Operand::Copy(place));
                     }
                     AstUnOp::AddrOf => {
@@ -822,10 +905,24 @@ impl Lowering<'_> {
                             },
                             origin: Origin::Written(span),
                         });
-                        values.push(match kept {
-                            Some(kept) => Operand::Copy(Place::local(kept)),
-                            None => Operand::Copy(place),
-                        });
+                        // A prefix operator answers what the place holds after
+                        // the write, and that is taken here for the reason the
+                        // assignment above gives: what a call does to the same
+                        // place afterwards must not change this answer. 6.5.3.1
+                        // p2 is the clause.
+                        let answer = match kept {
+                            Some(kept) => kept,
+                            None => {
+                                let held = self.temporary(builder, id, diagnostics)?;
+                                builder.push(Operation {
+                                    place: Place::local(held),
+                                    value: Rvalue::Use(Operand::Copy(place)),
+                                    origin: Origin::Written(span),
+                                });
+                                held
+                            }
+                        };
+                        values.push(Operand::Copy(Place::local(answer)));
                     }
                 }
             }
@@ -861,9 +958,20 @@ impl Lowering<'_> {
                     value,
                     origin: Origin::Written(span),
                 });
-                // 6.5.16 p3: the value of an assignment is what the left
-                // operand holds afterwards.
-                values.push(Operand::Copy(place));
+
+                // 6.5.16 p3: the value is what the left operand holds after
+                // the assignment, and that is fixed here rather than read back
+                // later. `(b = 1) + g(&b)` is the case: 6.5.2.2 p10 makes the
+                // callee's execution indeterminately sequenced with the rest
+                // of the expression, so `g` may write `b` before the addition
+                // happens, and a copy taken now is one and not seven.
+                let held = self.temporary(builder, id, diagnostics)?;
+                builder.push(Operation {
+                    place: Place::local(held),
+                    value: Rvalue::Use(Operand::Copy(place)),
+                    origin: Origin::Written(span),
+                });
+                values.push(Operand::Copy(Place::local(held)));
             }
             Expr::Call {
                 callee,
@@ -894,6 +1002,9 @@ impl Lowering<'_> {
                 values.pop().expect("a left operand");
                 values.push(rhs);
             }
+            // A conditional is answered by `merge` and never asks to finish,
+            // and an `Error` is refused before it can. Both arms are here
+            // because the match is written out rather than wildcarded.
             Expr::Conditional { .. } | Expr::Error { .. } => {}
         }
 
@@ -901,29 +1012,72 @@ impl Lowering<'_> {
     }
 
     /// Build a node's place from what its children left.
-    fn finish_place(&mut self, id: ExprId, values: &mut Vec<Operand>, places: &mut Vec<Place>) {
+    fn finish_place(
+        &mut self,
+        id: ExprId,
+        values: &mut Vec<Operand>,
+        places: &mut Vec<Place>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
         match self.ast.expr(id) {
             Expr::Unary { .. } => {
                 let operand = values.pop().expect("a pointer");
-                let Operand::Copy(mut place) = operand else {
-                    // A constant is not a place, so `*0` has nowhere to point.
-                    // Nothing the frontend accepts reaches this today, and
-                    // saying so is cheaper than a diagnostic nobody can produce.
-                    return;
-                };
+                let mut place = self.pointed_at(id, operand, diagnostics)?;
                 place.projection.push(Projection::Deref);
                 places.push(place);
             }
             Expr::Subscript { .. } => {
                 let index = values.pop().expect("an index");
                 let base = values.pop().expect("a base");
-                let Operand::Copy(mut place) = base else {
-                    return;
-                };
+                let mut place = self.pointed_at(id, base, diagnostics)?;
                 place.projection.push(Projection::Index(index));
                 places.push(place);
             }
-            _ => {}
+            // Nothing else schedules a `FinishPlace`, and the kinds are written
+            // out rather than wildcarded because the cost of being wrong is
+            // paid elsewhere: an arm that pushed no place would leave the next
+            // `places.pop()` taking an outer expression's place instead.
+            Expr::Number { .. }
+            | Expr::Identifier { .. }
+            | Expr::Binary { .. }
+            | Expr::Assign { .. }
+            | Expr::Conditional { .. }
+            | Expr::Call { .. }
+            | Expr::Comma { .. }
+            | Expr::Error { .. } => {}
+        }
+
+        Some(())
+    }
+
+    /// The place an operand names, or a report that it names none.
+    ///
+    /// Everything this stage builds a value from is either a constant or a
+    /// copy of a place, so a projection onto a constant is the only way to get
+    /// here: `*0` is that shape. The frontend refuses it today, because
+    /// `types.rs` gives an indirection through a non-pointer no type at all,
+    /// and reporting rather than returning is what keeps that from being an
+    /// invariant somebody has to remember: the two stacks stay in step, and a
+    /// change upstream cannot turn this into a panic.
+    fn pointed_at(
+        &mut self,
+        id: ExprId,
+        operand: Operand,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Place> {
+        match operand {
+            Operand::Copy(place) => Some(place),
+            Operand::Constant(_) => {
+                diagnostics.report(
+                    Diagnostic::error("a constant does not point at anything")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(
+                            self.ast.expr(id).span(),
+                            "this has nothing to reach",
+                        )),
+                );
+                None
+            }
         }
     }
 
@@ -943,11 +1097,14 @@ impl Lowering<'_> {
         match self.ast.expr(id) {
             Expr::Binary { op, rhs, span, .. } => {
                 let (op, rhs, span) = (*op, *rhs, *span);
-                // The left operand is the answer unless the right is reached,
-                // so it is written before the branch and overwritten after.
+                // The left operand decides the answer unless the right is
+                // reached, so it is written before the branch and overwritten
+                // after. What is written is whether it is non-zero and not
+                // what it is: C17 6.5.13 p3 and 6.5.14 p3 say `&&` and `||`
+                // yield 1 or 0, so `3 && 5` is 1 rather than 5.
                 builder.push(Operation {
                     place: Place::local(answer),
-                    value: Rvalue::Use(condition),
+                    value: truth(condition),
                     origin: Origin::Written(span),
                 });
 
@@ -996,7 +1153,18 @@ impl Lowering<'_> {
                 tasks.push(Task::Second(id));
                 tasks.push(Task::Value(then));
             }
-            _ => {}
+            // Only a `&&`, a `||` and a `?:` split, and the kinds are written
+            // out because an arm that fell through here would leave `join`
+            // reserved and never filled, which is a panic at whatever later
+            // moment somebody walks the graph.
+            Expr::Number { .. }
+            | Expr::Identifier { .. }
+            | Expr::Unary { .. }
+            | Expr::Assign { .. }
+            | Expr::Call { .. }
+            | Expr::Subscript { .. }
+            | Expr::Comma { .. }
+            | Expr::Error { .. } => {}
         }
 
         Some(())
@@ -1039,9 +1207,17 @@ impl Lowering<'_> {
         let Pending { answer, join, .. } = self.pending.remove(&id).expect("a branch to merge");
 
         let value = values.pop().expect("the last arm");
+        // A `&&` or `||` answers 1 or 0 and a `?:` answers what its arm is
+        // worth. C17 6.5.13 p3 and 6.5.14 p3 say the first, and 6.5.15 p4 the
+        // second: the conditional operator's value is the operand's, converted,
+        // rather than a truth value.
+        let value = match self.ast.expr(id) {
+            Expr::Binary { .. } => truth(value),
+            _ => Rvalue::Use(value),
+        };
         builder.push(Operation {
             place: Place::local(answer),
-            value: Rvalue::Use(value),
+            value,
             origin: Origin::Written(span),
         });
         builder.end(Terminator::Goto(join));
@@ -1082,12 +1258,10 @@ impl Lowering<'_> {
 
         if local.is_none() {
             diagnostics.report(
-                Diagnostic::error("this name cannot be lowered to the Safety IR")
+                Diagnostic::error("cannot compile a use of this name yet")
                     .with_code(LOWERING)
                     .with_label(Label::primary(span, "this is not a local or a parameter"))
-                    .with_note(
-                        "every place the IR can name starts at a local, so an object declared                          outside a function has nothing to be",
-                    ),
+                    .with_note("an object declared outside a function is not supported so far"),
             );
         }
 
@@ -1095,15 +1269,23 @@ impl Lowering<'_> {
     }
 
     /// The function a call names.
+    ///
+    /// Nothing reaches the report below today, and the path that would is worth
+    /// naming: a callee this stage cannot resolve is a pointer to a function,
+    /// and a pointer to a function is a type [`Lowering::ty`] refuses where it
+    /// is declared, so the function holding the call is already refused by
+    /// then. The report is here because the day `Ty` grows a function type is
+    /// the day this becomes reachable, and a `None` returned in silence would
+    /// be a function dropped with nothing said.
     fn callee(&mut self, callee: ExprId, diagnostics: &mut DiagnosticSink) -> Option<FuncId> {
         let span = self.ast.expr(callee).span();
         let named = self
             .resolution
             .resolved(callee)
             .map(|binding| self.resolution.binding(binding).name)
-            .and_then(|name| self.functions.get(&name).copied());
+            .and_then(|name| self.functions.get(self.sources.snippet(name)).copied());
 
-        if named.is_none() {
+        if named.is_none() && !self.refused.contains(self.sources.snippet(span)) {
             diagnostics.report(
                 Diagnostic::error("this call cannot be lowered to the Safety IR")
                     .with_code(LOWERING)
@@ -1153,6 +1335,20 @@ impl Lowering<'_> {
                 ),
         );
         None
+    }
+}
+
+/// Whether an operand is non-zero, as a value.
+///
+/// C's truth values are 1 and 0 rather than whatever decided them: 6.5.13 p3
+/// and 6.5.14 p3 say `&&` and `||` yield one or the other, so an answer copied
+/// from the operand that decided it would make `3 && 5` five. The IR has no
+/// truth of its own, so the comparison is the operation that says it.
+fn truth(operand: Operand) -> Rvalue {
+    Rvalue::Binary {
+        op: BinOp::Ne,
+        lhs: operand,
+        rhs: Operand::Constant(0),
     }
 }
 
@@ -1403,8 +1599,12 @@ mod tests {
     /// Mutation: write the left operand into the answer after the branch rather
     /// than before it. The answer of `0 && x` stops being written at all and
     /// the assertion on the first block's operations fails.
+    ///
+    /// Mutation: write the operand itself into the answer rather than whether
+    /// it is non-zero. `3 && 5` becomes five where C17 6.5.13 p3 says one, and
+    /// both assertions on the comparison fail.
     #[test]
-    fn a_short_circuit_is_a_branch_and_not_an_operator() {
+    fn a_short_circuit_is_a_branch_and_answers_one_or_zero() {
         let lowered = lowered("int f(int a, int b) {\n    return a && b;\n}\n");
         assert_eq!(codes(&lowered), Vec::<String>::new());
 
@@ -1414,13 +1614,69 @@ mod tests {
         assert_eq!(edges(f), vec![vec![2, 1], vec![], vec![1]]);
 
         let blocks: Vec<_> = f.blocks().collect();
-        let [held] = &blocks[0].operations[..] else {
-            panic!("{:?}", blocks[0].operations);
-        };
-        let [a, _] = f.parameters().collect::<Vec<_>>()[..] else {
+        let [a, b] = f.parameters().collect::<Vec<_>>()[..] else {
             panic!("two parameters");
         };
-        assert_eq!(held.value, Rvalue::Use(Operand::Copy(Place::local(a))));
+
+        // Each arm writes whether its operand is non-zero, because 6.5.13 p3
+        // makes the answer 1 or 0 rather than whatever decided it.
+        let [decided] = &blocks[0].operations[..] else {
+            panic!("{:?}", blocks[0].operations);
+        };
+        assert_eq!(
+            decided.value,
+            Rvalue::Binary {
+                op: BinOp::Ne,
+                lhs: Operand::Copy(Place::local(a)),
+                rhs: Operand::Constant(0),
+            }
+        );
+
+        let [answered] = &blocks[2].operations[..] else {
+            panic!("{:?}", blocks[2].operations);
+        };
+        assert_eq!(answered.place, decided.place);
+        assert_eq!(
+            answered.value,
+            Rvalue::Binary {
+                op: BinOp::Ne,
+                lhs: Operand::Copy(Place::local(b)),
+                rhs: Operand::Constant(0),
+            }
+        );
+    }
+
+    /// A conditional operator answers what its arm is worth, and not a truth
+    /// value.
+    ///
+    /// C17 6.5.15 p4: the value is the operand's, which is what separates it
+    /// from `&&` and `||` a few lines above in this module.
+    ///
+    /// Mutation: normalise a `?:` arm the way a short circuit is normalised.
+    /// `a ? b : c` starts answering 1 or 0 and this fails.
+    #[test]
+    fn a_conditional_answers_the_arm_it_took() {
+        let lowered = lowered("int f(int a, int b, int c) {\n    return a ? b : c;\n}\n");
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [_, b, c] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("three parameters");
+        };
+        let blocks: Vec<_> = f.blocks().collect();
+
+        // Block 1 is the join, and the arms are the two blocks the branch
+        // names, in the order they were reserved.
+        assert_eq!(edges(f), vec![vec![2, 3], vec![], vec![1], vec![1]]);
+        let [taken] = &blocks[2].operations[..] else {
+            panic!("{:?}", blocks[2].operations);
+        };
+        let [skipped] = &blocks[3].operations[..] else {
+            panic!("{:?}", blocks[3].operations);
+        };
+        assert_eq!(taken.value, Rvalue::Use(Operand::Copy(Place::local(b))));
+        assert_eq!(skipped.value, Rvalue::Use(Operand::Copy(Place::local(c))));
+        assert_eq!(taken.place, skipped.place);
     }
 
     /// A function can call itself, which needs its id before its body.
@@ -1519,8 +1775,8 @@ mod tests {
 
     /// A type the IR cannot hold is reported at the declaration that wrote it.
     ///
-    /// The IR has `int`, `char`, `void` and pointers, and #74 is where the rest
-    /// arrives. Lowering an array as a pointer would tell the memory analysis
+    /// The IR has `int`, `char`, `void` and pointers, and nothing has asked it
+    /// for more. Lowering an array as a pointer would tell the memory analysis
     /// that one object is another.
     ///
     /// Mutation: lower `Type::Array` as a pointer to its element. Nothing is
@@ -1607,5 +1863,576 @@ mod tests {
                 assert!(!lowered.sources.snippet(operation.origin.span()).is_empty());
             }
         }
+    }
+
+    /// The one operation a function's only block ends up holding before it
+    /// returns, for a program of the shape the operator tests below use.
+    fn only_operation(lowered: &Lowered, name: &str) -> Operation {
+        let function = function(lowered, name);
+        let blocks: Vec<_> = function.blocks().collect();
+        let [computed, _returned] = &blocks[0].operations[..] else {
+            panic!("{:?}", blocks[0].operations);
+        };
+        computed.clone()
+    }
+
+    /// Every binary operator becomes the one it means.
+    ///
+    /// The expected side is written out rather than taken from `binary`, for
+    /// the reason RK-001 gives: a table built the way the code builds one
+    /// compares the code with itself. `&&` and `||` are absent because they are
+    /// branches, which the test above holds.
+    ///
+    /// Mutation: map any one of these to another variant, `Mul` to `Div` say.
+    /// This fails, naming the operator that moved.
+    #[test]
+    fn every_binary_operator_lowers_to_the_one_it_means() {
+        for (spelling, expected) in [
+            ("*", BinOp::Mul),
+            ("/", BinOp::Div),
+            ("%", BinOp::Rem),
+            ("+", BinOp::Add),
+            ("-", BinOp::Sub),
+            ("<<", BinOp::Shl),
+            (">>", BinOp::Shr),
+            ("<", BinOp::Lt),
+            (">", BinOp::Gt),
+            ("<=", BinOp::Le),
+            (">=", BinOp::Ge),
+            ("==", BinOp::Eq),
+            ("!=", BinOp::Ne),
+            ("&", BinOp::BitAnd),
+            ("^", BinOp::BitXor),
+            ("|", BinOp::BitOr),
+        ] {
+            let lowered = lowered(&format!(
+                "int f(int a, int b) {{\n    return a {spelling} b;\n}}\n"
+            ));
+            assert_eq!(codes(&lowered), Vec::<String>::new(), "{spelling}");
+
+            let f = function(&lowered, "f");
+            let [a, b] = f.parameters().collect::<Vec<_>>()[..] else {
+                panic!("two parameters");
+            };
+            assert_eq!(
+                only_operation(&lowered, "f").value,
+                Rvalue::Binary {
+                    op: expected,
+                    lhs: Operand::Copy(Place::local(a)),
+                    rhs: Operand::Copy(Place::local(b)),
+                },
+                "{spelling}"
+            );
+        }
+    }
+
+    /// Every unary operator becomes the one it means, and `+` becomes nothing.
+    ///
+    /// C17 6.5.3.3 p2 makes unary `+` the value of its operand, so there is no
+    /// operation for it to become.
+    ///
+    /// Mutation: map `-` to `UnOp::Not`, or give `+` an operation of its own.
+    /// This fails on the operator that moved.
+    #[test]
+    fn every_unary_operator_lowers_to_the_one_it_means() {
+        for (spelling, expected) in [
+            ("-", Some(UnOp::Neg)),
+            ("!", Some(UnOp::Not)),
+            ("~", Some(UnOp::BitNot)),
+            ("+", None),
+        ] {
+            let lowered = lowered(&format!("int f(int a) {{\n    return {spelling}a;\n}}\n"));
+            assert_eq!(codes(&lowered), Vec::<String>::new(), "{spelling}");
+
+            let f = function(&lowered, "f");
+            let [a] = f.parameters().collect::<Vec<_>>()[..] else {
+                panic!("one parameter");
+            };
+            let blocks: Vec<_> = f.blocks().collect();
+
+            match expected {
+                Some(op) => {
+                    let [applied, _] = &blocks[0].operations[..] else {
+                        panic!("{:?}", blocks[0].operations);
+                    };
+                    assert_eq!(
+                        applied.value,
+                        Rvalue::Unary {
+                            op,
+                            operand: Operand::Copy(Place::local(a)),
+                        },
+                        "{spelling}"
+                    );
+                }
+                None => {
+                    let [returned] = &blocks[0].operations[..] else {
+                        panic!("{:?}", blocks[0].operations);
+                    };
+                    assert_eq!(
+                        returned.value,
+                        Rvalue::Use(Operand::Copy(Place::local(a))),
+                        "{spelling}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// What a pointer reaches is a place, and it is not the pointer's place.
+    ///
+    /// The memory axis of `docs/safety-model.md` turns on this: `p` and `*p`
+    /// are two places, and an analysis told they are one would say a pointer is
+    /// live when what it points at is not.
+    ///
+    /// Mutation: drop the `Deref` that `finish_place` pushes. Reading and
+    /// writing both land on the pointer itself and this fails.
+    #[test]
+    fn a_pointer_is_read_and_written_through_a_deref() {
+        let lowered = lowered("int f(int *p) {\n    *p = 1;\n    return *p;\n}\n");
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [p] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("one parameter");
+        };
+        let pointee = Place {
+            local: p,
+            projection: vec![Projection::Deref],
+        };
+        let blocks: Vec<_> = f.blocks().collect();
+        let [written, held, returned] = &blocks[0].operations[..] else {
+            panic!("{:?}", blocks[0].operations);
+        };
+
+        assert_eq!(written.place, pointee);
+        assert_eq!(written.value, Rvalue::Use(Operand::Constant(1)));
+        assert_eq!(held.value, Rvalue::Use(Operand::Copy(pointee.clone())));
+        assert_eq!(returned.place, Place::local(f.return_place()));
+        // Reading through the pointer reads what it points at, which is the
+        // assertion a lowering that dropped the projection would fail.
+        assert_eq!(returned.value, Rvalue::Use(Operand::Copy(pointee)));
+        assert_ne!(written.place, Place::local(p));
+    }
+
+    /// A pointer's type is a pointer, however many times over.
+    ///
+    /// Mutation: have `ty` stop wrapping, so every pointer becomes what it
+    /// points at. The three parameters below become one type and this fails.
+    #[test]
+    fn a_pointer_type_is_not_the_type_it_points_at() {
+        let lowered = lowered("int f(int **pp, int *p, char c) {\n    return 0;\n}\n");
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [pp, p, c] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("three parameters");
+        };
+        let int = f.local(f.return_place());
+
+        assert_eq!(lowered.unit.ty(f.local(p)), Ty::Pointer(int));
+        assert_eq!(lowered.unit.ty(f.local(pp)), Ty::Pointer(f.local(p)));
+        assert_eq!(lowered.unit.ty(f.local(c)), Ty::Char);
+        assert_ne!(f.local(c), int);
+    }
+
+    /// Taking an address is the one operation that turns a place into a value.
+    ///
+    /// Mutation: lower `&x` as a copy of `x`. The lifetime analysis loses the
+    /// only shape it starts from, and this fails.
+    #[test]
+    fn an_address_is_taken_of_the_place_it_names() {
+        let lowered = lowered("int f(int n) {\n    int *p;\n    p = &n;\n    return 0;\n}\n");
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [n] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("one parameter");
+        };
+        let taken = f
+            .blocks()
+            .flat_map(|block| block.operations.clone())
+            .find(|operation| matches!(operation.value, Rvalue::Address(_)))
+            .expect("an address is taken");
+
+        assert_eq!(taken.value, Rvalue::Address(Place::local(n)));
+    }
+
+    /// A subscript is a place with an index on it, and `*(p + i)` is a place
+    /// reached through what the addition worked out.
+    ///
+    /// C17 6.5.2.1 p2 defines one in terms of the other; the IR spells them
+    /// differently, and `ir::Projection`'s doc comment is where that is said.
+    /// What matters here is that both are places rather than values, since the
+    /// second form is the one a lowering that asked for the operand's place
+    /// would refuse.
+    ///
+    /// Mutation: have `begin_value` ask for the operand's place under a `*`.
+    /// `*(p + i)` stops lowering, `SC0304` is reported, and this fails.
+    ///
+    /// Mutation: swap the base and the index in `finish_place`. The place is
+    /// rooted at the index and this fails.
+    #[test]
+    fn an_element_is_reached_by_a_subscript_and_by_arithmetic() {
+        let lowered = lowered(
+            "int f(int *p, int i) {\n    p[i] = 1;\n    *(p + i) = 2;\n    return p[i];\n}\n",
+        );
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [p, i] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("two parameters");
+        };
+        let element = Place {
+            local: p,
+            projection: vec![Projection::Index(Operand::Copy(Place::local(i)))],
+        };
+        let operations: Vec<_> = f
+            .blocks()
+            .flat_map(|block| block.operations.clone())
+            .collect();
+
+        assert_eq!(operations[0].place, element);
+        assert_eq!(operations[0].value, Rvalue::Use(Operand::Constant(1)));
+
+        // The arithmetic form works the address out into a temporary first, so
+        // its place is rooted there with a `Deref` on it rather than at `p`.
+        assert_eq!(
+            operations[2].value,
+            Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(p)),
+                rhs: Operand::Copy(Place::local(i)),
+            }
+        );
+        let through = &operations[3].place;
+        assert_eq!(through.local, operations[2].place.local);
+        assert_eq!(through.projection, vec![Projection::Deref]);
+        assert_ne!(through.local, p);
+
+        // Reading it back is the subscript again, and it is the same place as
+        // the write.
+        assert_eq!(operations[5].place, Place::local(f.return_place()));
+        assert_eq!(operations[5].value, Rvalue::Use(Operand::Copy(element)));
+    }
+
+    /// A comma evaluates its left operand and answers its right.
+    ///
+    /// C17 6.5.17 p2. Mutation: answer the left operand. This fails.
+    #[test]
+    fn a_comma_answers_its_right_operand() {
+        let lowered = lowered("int f(int a, int b) {\n    return (a, b);\n}\n");
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [_, b] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("two parameters");
+        };
+        // The left operand is evaluated and dropped, and a name needs no
+        // operation to be evaluated, so the only operation is the return.
+        let [returned] = &f.blocks().next().expect("a block").operations[..] else {
+            panic!("one operation");
+        };
+        assert_eq!(returned.place, Place::local(f.return_place()));
+        assert_eq!(returned.value, Rvalue::Use(Operand::Copy(Place::local(b))));
+    }
+
+    /// A compound assignment reads the place it writes.
+    ///
+    /// C17 6.5.16.2 p3 makes `a += b` mean `a = a + b` except that `a` is
+    /// evaluated once.
+    ///
+    /// Mutation: swap the operands, so `a -= b` means `b - a`. This fails.
+    #[test]
+    fn a_compound_assignment_reads_the_place_it_writes() {
+        let lowered = lowered("int f(int a, int b) {\n    a -= b;\n    return a;\n}\n");
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let [a, b] = f.parameters().collect::<Vec<_>>()[..] else {
+            panic!("two parameters");
+        };
+        let operations: Vec<_> = f
+            .blocks()
+            .flat_map(|block| block.operations.clone())
+            .collect();
+
+        assert_eq!(operations[0].place, Place::local(a));
+        assert_eq!(
+            operations[0].value,
+            Rvalue::Binary {
+                op: BinOp::Sub,
+                lhs: Operand::Copy(Place::local(a)),
+                rhs: Operand::Copy(Place::local(b)),
+            }
+        );
+    }
+
+    /// An increment answers differently before and after.
+    ///
+    /// C17 6.5.2.4 p2 makes the postfix form answer the value before the
+    /// increment, and 6.5.3.1 p2 makes the prefix form answer the one after.
+    /// Both write the same thing to the same place.
+    ///
+    /// Mutation: keep the old value for the prefix form rather than the
+    /// postfix one. The two functions below lower alike and this fails.
+    #[test]
+    fn an_increment_answers_before_or_after_the_write() {
+        let after = lowered("int f(int n) {\n    return n++;\n}\n");
+        let before = lowered("int f(int n) {\n    return ++n;\n}\n");
+        assert_eq!(codes(&after), Vec::<String>::new());
+        assert_eq!(codes(&before), Vec::<String>::new());
+
+        let taken = |lowered: &Lowered| {
+            let f = function(lowered, "f");
+            let operations: Vec<_> = f
+                .blocks()
+                .flat_map(|block| block.operations.clone())
+                .collect();
+            // Whether the copy of the old value is taken before the write or
+            // the copy of the new one after it is the whole difference.
+            let stepped = operations
+                .iter()
+                .position(|operation| matches!(operation.value, Rvalue::Binary { .. }))
+                .expect("an increment");
+            let held = operations
+                .iter()
+                .position(|operation| {
+                    matches!(&operation.value, Rvalue::Use(Operand::Copy(place))
+                        if place.local == f.parameters().next().expect("a parameter"))
+                })
+                .expect("a copy of the place");
+            held < stepped
+        };
+
+        assert!(taken(&after), "the postfix form keeps the value it had");
+        assert!(
+            !taken(&before),
+            "the prefix form answers the value it wrote"
+        );
+    }
+
+    /// A `for` becomes a header, a body, a step and an exit.
+    ///
+    /// C17 6.8.5.3 p1 puts the step at the end of the body and the condition
+    /// before each turn, and p2 makes an absent condition a non-zero constant,
+    /// so a `for (;;)` has no exit edge of its own.
+    ///
+    /// Mutation: send a `for` with no condition to the block after the loop.
+    /// The loop stops being one and this fails.
+    ///
+    /// Mutation: put the step before the body rather than after it. The
+    /// assertion on which block holds it fails.
+    #[test]
+    fn a_for_loop_asks_before_each_turn_and_steps_after_each_body() {
+        let counted = lowered(
+            "int f(int n) {\n    int i;\n    for (i = 0; i < n; i = i + 1) {\n        n = n - 1;\n    }\n    return n;\n}\n",
+        );
+        assert_eq!(codes(&counted), Vec::<String>::new());
+
+        let f = function(&counted, "f");
+        // The entry runs the initialiser and goes to the header; the header
+        // asks and branches; the body runs, steps, and comes back.
+        assert_eq!(edges(f), vec![vec![1], vec![2, 3], vec![1], vec![]]);
+
+        // The body holds its own statement and the step after it, and each
+        // assignment carries the copy that 6.5.16 p3 fixes its value with.
+        let blocks: Vec<_> = f.blocks().collect();
+        let stepped = blocks[2]
+            .operations
+            .last()
+            .expect("the step is written after the body");
+        assert!(matches!(stepped.value, Rvalue::Use(Operand::Copy(_))));
+        assert_eq!(
+            blocks[2].operations[3].value,
+            Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(blocks[2].operations[4].place.clone()),
+                rhs: Operand::Constant(1),
+            }
+        );
+
+        let forever = lowered("int f(int n) {\n    for (;;) {\n        n = n - 1;\n    }\n}\n");
+        assert_eq!(codes(&forever), Vec::<String>::new());
+
+        let f = function(&forever, "f");
+        let edges = edges(f);
+        let [entry, header, body, after] = &edges[..] else {
+            panic!("{edges:?}");
+        };
+        assert_eq!(entry, &vec![1]);
+        assert_eq!(header, &vec![2]);
+        assert_eq!(body, &vec![1]);
+        assert_eq!(after, &Vec::<usize>::new());
+    }
+
+    /// A prototype and the definition under it are one function.
+    ///
+    /// Keyed by the span of the name they would be two, because the resolver
+    /// answers with whichever declaration was in scope, so a call written
+    /// between them would reach a function with no body.
+    ///
+    /// Mutation: key the function map on the name's span. Two `add`s appear,
+    /// the call reaches the one with no body, and this fails.
+    #[test]
+    fn a_prototype_and_its_definition_are_one_function() {
+        let lowered = lowered(
+            "int add(int a, int b);\n\nint main(void) {\n    return add(1, 2);\n}\n\nint add(int a, int b) {\n    return a + b;\n}\n",
+        );
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+        assert_eq!(lowered.unit.functions().len(), 2);
+
+        let add = function(&lowered, "add");
+        assert!(add.is_defined());
+
+        let main = function(&lowered, "main");
+        let entry = main.blocks().next().expect("a block");
+        let Terminator::Call { callee, .. } = &entry.terminator else {
+            panic!("{:?}", entry.terminator);
+        };
+        assert!(lowered.unit.function(*callee).is_defined());
+    }
+
+    /// A name defined twice keeps the first body and is reported.
+    ///
+    /// C17 6.9 p5 allows one external definition and nothing before this stage
+    /// checks it, so the check that would panic is answered here instead.
+    ///
+    /// Mutation: fill the function with the second definition anyway. The
+    /// assertion in `fill_function` panics, which is a different failure and
+    /// the reason this arm exists.
+    #[test]
+    fn a_name_defined_twice_keeps_the_first_body() {
+        let lowered =
+            lowered("int f(void) {\n    return 1;\n}\n\nint f(void) {\n    return 2;\n}\n");
+        assert_eq!(codes(&lowered), ["SC0304"]);
+
+        let f = function(&lowered, "f");
+        assert!(f.is_defined());
+        assert_eq!(
+            f.blocks().next().expect("a block").operations[0].value,
+            Rvalue::Use(Operand::Constant(1))
+        );
+    }
+
+    /// The value of an assignment is what was assigned, and a call cannot
+    /// change it afterwards.
+    ///
+    /// C17 6.5.16 p3 fixes the value at the assignment, and 6.5.2.2 p10 makes a
+    /// callee's execution indeterminately sequenced with the rest of the
+    /// expression, so `(b = 1) + g(&b)` is one plus whatever `g` answers
+    /// however `g` treats `b`.
+    ///
+    /// Mutation: push the assigned place itself as the value rather than a copy
+    /// of it. The addition reads `b` after the call and this fails.
+    #[test]
+    fn the_value_of_an_assignment_is_taken_before_a_call_can_change_it() {
+        let lowered = lowered(
+            "int g(int *p);\n\nint f(void) {\n    int b;\n    return (b = 1) + g(&b);\n}\n",
+        );
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let blocks: Vec<_> = f.blocks().collect();
+        let Terminator::Call { .. } = &blocks[0].terminator else {
+            panic!("{:?}", blocks[0].terminator);
+        };
+
+        // Whatever the addition reads for the left operand was written before
+        // the call, which is what the block boundary says.
+        let added = blocks[1]
+            .operations
+            .iter()
+            .find_map(|operation| match &operation.value {
+                Rvalue::Binary {
+                    op: BinOp::Add,
+                    lhs,
+                    ..
+                } => Some(lhs.clone()),
+                _ => None,
+            })
+            .expect("an addition");
+        let Operand::Copy(read) = added else {
+            panic!("{added:?}");
+        };
+        assert!(
+            blocks[0]
+                .operations
+                .iter()
+                .any(|operation| operation.place == read),
+            "the left operand is a place written before the call"
+        );
+    }
+
+    /// An expression that names no place is reported where it is written.
+    ///
+    /// `1 = 2` type-checks today, because `types.rs` leaves the
+    /// modifiable-lvalue constraint of C17 6.5.16 p2 to a later phase, so this
+    /// stage is the first thing that has to say anything about it.
+    ///
+    /// Mutation: refuse it without reporting. Nothing is said about a program
+    /// nobody can compile and this fails.
+    #[test]
+    fn an_expression_that_names_no_place_is_reported() {
+        let lowered = lowered("int f(void) {\n    1 = 2;\n    return 0;\n}\n");
+        assert_eq!(codes(&lowered), ["SC0304"]);
+        assert!(!function(&lowered, "f").is_defined());
+    }
+
+    /// A call to something that is not a function is reported.
+    ///
+    /// The report comes from the type check having no type for the call rather
+    /// than from `callee`, which is what `callee`'s own doc comment says: a
+    /// callee that could name a pointer is refused at its declaration, because
+    /// the IR has no function type to give it.
+    ///
+    /// Mutation: refuse an untyped expression without reporting. This fails.
+    #[test]
+    fn a_call_to_something_that_is_not_a_function_is_reported() {
+        let lowered = lowered("int f(int p) {\n    return p(1);\n}\n");
+        assert_eq!(codes(&lowered), ["SC0304"]);
+        assert!(!function(&lowered, "f").is_defined());
+    }
+
+    /// A call to a function whose signature was refused says nothing more.
+    ///
+    /// The declaration is where the problem is and where it is reported; a
+    /// second diagnostic on an ordinary call would be blaming code that is
+    /// fine.
+    ///
+    /// Mutation: report at the call as well. Two codes come back and this
+    /// fails.
+    #[test]
+    fn a_call_to_a_refused_function_is_not_reported_twice() {
+        let lowered = lowered("int g(int a[3]);\n\nint f(void) {\n    return g(0);\n}\n");
+        assert_eq!(codes(&lowered), ["SC0304"]);
+    }
+
+    /// An expression deeper than the parser's own nesting limit still lowers.
+    ///
+    /// A chain folded by a loop adds a level to the tree per operator and none
+    /// to the parser's count, which is RK-008 in the review knowledge bank and
+    /// what killed the tree printer once. Ten thousand terms is far past
+    /// `parser::MAX_NESTING` and nowhere near the native stack.
+    ///
+    /// Mutation: walk an expression by recursion. The process dies rather than
+    /// failing, which is why this test exists at all: a stack overflow is not a
+    /// panic anything can catch.
+    #[test]
+    fn an_expression_deeper_than_the_parser_nests_still_lowers() {
+        let terms = 10_000;
+        let mut program = String::from("int f(int a) {\n    return a");
+        for _ in 0..terms {
+            program.push_str(" + a");
+        }
+        program.push_str(";\n}\n");
+
+        let lowered = lowered(&program);
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let operations: usize = f.blocks().map(|block| block.operations.len()).sum();
+        // One per operator, and one more writing the answer into the return
+        // place.
+        assert_eq!(operations, terms + 1);
     }
 }
