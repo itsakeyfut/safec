@@ -1,0 +1,82 @@
+target triple = "x86_64-pc-windows-msvc"
+
+define i32 @narrow(i8 %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i8
+  store i8 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  %t0 = load i8, ptr %_1
+  %t1 = sext i8 %t0 to i32
+  store i32 %t1, ptr %_0
+  %t2 = load i32, ptr %_0
+  ret i32 %t2
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  %_2 = alloca i8
+  %_3 = alloca i32
+  %_4 = alloca i8
+  %_5 = alloca i32
+  %_6 = alloca i32
+  %_7 = alloca i32
+  %_8 = alloca i32
+  %_9 = alloca i32
+  %_10 = alloca i8
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_1
+  %t0 = load i32, ptr %_1
+  store i32 %t0, ptr %_3
+  store i8 44, ptr %_2
+  %t1 = load i8, ptr %_2
+  store i8 %t1, ptr %_4
+  %t2 = icmp ne i32 1, 0
+  br i1 %t2, label %bb1, label %bb2
+
+bb1:
+  %t3 = call i32 @narrow(i8 44)
+  store i32 %t3, ptr %_5
+  br label %bb4
+
+bb2:
+  br label %bb3
+
+bb3:
+  %t4 = load i32, ptr %_1
+  %t5 = load i8, ptr %_2
+  %t6 = sext i8 %t5 to i32
+  %t7 = add nsw i32 %t4, %t6
+  store i32 %t7, ptr %_8
+  %t8 = load i32, ptr %_8
+  store i32 %t8, ptr %_1
+  %t9 = load i32, ptr %_1
+  store i32 %t9, ptr %_9
+  %t10 = load i32, ptr %_1
+  %t11 = trunc i32 %t10 to i8
+  store i8 %t11, ptr %_2
+  %t12 = load i8, ptr %_2
+  store i8 %t12, ptr %_10
+  %t13 = load i8, ptr %_2
+  %t14 = sext i8 %t13 to i32
+  store i32 %t14, ptr %_0
+  %t15 = load i32, ptr %_0
+  ret i32 %t15
+
+bb4:
+  %t16 = load i32, ptr %_1
+  %t17 = load i32, ptr %_5
+  %t18 = add nsw i32 %t16, %t17
+  store i32 %t18, ptr %_6
+  %t19 = load i32, ptr %_6
+  store i32 %t19, ptr %_1
+  %t20 = load i32, ptr %_1
+  store i32 %t20, ptr %_7
+  br label %bb3
+}

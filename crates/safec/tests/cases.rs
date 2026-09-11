@@ -47,8 +47,21 @@ cases! {
     a_declaration_is_not_a_body: ["--emit", "ast"],
     a_failed_parse_reports_no_names: ["--emit", "ast"],
     a_lexical_error_leaves_no_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The `--emit llvm-ir` cases, kept together because what each is for is
+    // only visible beside the others. `every_operator` is the one that stops
+    // the operator table being a table nothing checks: without it, spelling
+    // `BitAnd` as `or`, `Mul` as `add`, `Le` as `lt`, `Neg` as `add` and
+    // `BitNot` as `xor 0` all passed the whole suite, which is RK-001's shape.
+    // `conversions_and_a_constant_condition` is the same for C17 6.3.1.3 and
+    // 6.5.2.2 p7: `c = 300` and `narrow(300)` both answer 44, and a constant
+    // that ignored its destination's type passed everything before it.
+    //
+    // Every one of these is also in `llvm.rs`, which hands it to `clang`. The
+    // text and whether the text is LLVM are two claims.
     an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
+    llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+    llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     llvm_ir_of_pointers_branches_and_a_loop: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     the_mvp_becomes_llvm_ir: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     a_parse_error_leaves_no_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

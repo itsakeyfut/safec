@@ -26,6 +26,11 @@ use std::process::{Command, Stdio};
 const PROGRAMS: &[(&str, &str)] = &[
     ("the_mvp_becomes_llvm_ir", "x86_64-pc-windows-msvc"),
     ("llvm_ir_follows_the_target", "aarch64-unknown-linux-gnu"),
+    ("llvm_ir_of_every_operator", "x86_64-pc-windows-msvc"),
+    (
+        "llvm_ir_of_conversions_and_a_constant_condition",
+        "x86_64-pc-windows-msvc",
+    ),
     (
         "llvm_ir_of_pointers_branches_and_a_loop",
         "x86_64-pc-windows-msvc",
@@ -93,11 +98,13 @@ fn llvm_says(module: &[u8], triple: &str) -> String {
 
 /// Every module this compiler writes is one LLVM accepts without a word.
 ///
-/// Mutation: emit a `store` of an `i1` rather than widening a comparison. The
-/// corpus still matches nothing, so it fails there too, but `clang` is what
-/// says *why*: a value of the wrong type. Mutation: drop the `entry:` block's
-/// `br`. LLVM refuses a block with no terminator and this is the only test
-/// that would say so.
+/// Mutation: store a comparison's `i1` rather than widening it, **and then
+/// re-bless the corpus**. Every expectation agrees again, all 92 cases pass,
+/// and this is what still fails, beside the hand-written assertion in
+/// `two_pointers_can_be_compared`. Measured, because that is the whole claim:
+/// a blessed file is only as good as the run that blessed it, and this is the
+/// one test that asks something outside this repository whether the answer is
+/// right.
 ///
 /// Where there is no `clang`, this says what it did not check and passes,
 /// unless `SAFEC_REQUIRE_LLVM` is set. CI sets it, so "nobody has `clang` any
