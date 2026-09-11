@@ -252,6 +252,29 @@ impl Target {
         self.character
     }
 
+    /// What a program for this machine is called when nobody said.
+    ///
+    /// `a.out`, and `a.exe` where a program carries an extension, which is what
+    /// `cc` and `clang` do: `clang mvp.o` with no `-o` leaves `a.exe` on
+    /// Windows and `a.out` everywhere else, measured rather than recalled.
+    ///
+    /// **The machine's to say rather than the host's**, like everything else
+    /// here: a run on Linux compiling for Windows is asking what a Windows
+    /// program is called, and `docs/architecture.md` says output depends on the
+    /// target and never on the host.
+    ///
+    /// Read off the triple rather than given a column of its own, because seven
+    /// of the eight rows answer the same thing and a column would be seven
+    /// copies of it. What holds the answer is a test that writes all eight out,
+    /// so the table is not asked what it says. See RK-001.
+    pub fn program_name(self) -> &'static str {
+        if self.triple.contains("-windows-") {
+            "a.exe"
+        } else {
+            "a.out"
+        }
+    }
+
     /// Which way this machine widens that value on the way into and out of a
     /// call, or `None` where it leaves it alone.
     ///
@@ -494,5 +517,44 @@ mod tests {
 
         assert_eq!(signed.convert(-200), 56);
         assert_eq!(unsigned.convert(-200), 56);
+    }
+
+    /// What a program on each machine is called, written out rather than
+    /// walked.
+    ///
+    /// Eight rows, because a rule read off a triple is a rule that can be read
+    /// off the wrong part of one: `x86_64-pc-windows-msvc` is the only row with
+    /// `windows` in it today and `aarch64-pc-windows-msvc` is the obvious
+    /// ninth. Asking `Target::ALL` what it says would hold for any rule at all,
+    /// which is RK-001.
+    ///
+    /// Mutation: match on `windows` rather than `-windows-`, which is the same
+    /// answer today. Nothing here fails, and that is the point of the comment
+    /// above rather than of an assertion: the rows that would tell the two
+    /// apart are not in the table yet.
+    /// Mutation: answer `a.exe` everywhere. Seven rows fail.
+    #[test]
+    fn every_machine_says_what_a_program_on_it_is_called() {
+        let measured: &[(&str, &str)] = &[
+            ("aarch64-apple-darwin", "a.out"),
+            ("aarch64-unknown-linux-gnu", "a.out"),
+            ("armv7-unknown-linux-gnueabihf", "a.out"),
+            ("i686-unknown-linux-gnu", "a.out"),
+            ("wasm32-unknown-unknown", "a.out"),
+            ("x86_64-apple-darwin", "a.out"),
+            ("x86_64-pc-windows-msvc", "a.exe"),
+            ("x86_64-unknown-linux-gnu", "a.out"),
+        ];
+
+        assert_eq!(
+            measured.len(),
+            Target::ALL.len(),
+            "a machine nobody said the name of a program on"
+        );
+
+        for &(triple, expected) in measured {
+            let target = Target::from_triple(triple).expect("a known triple");
+            assert_eq!(target.program_name(), expected, "{triple}");
+        }
     }
 }

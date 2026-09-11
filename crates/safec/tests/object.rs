@@ -1,13 +1,19 @@
-//! What `--emit object` writes, and what a machine without `clang` is told.
+//! What `--emit object` and `--emit executable` write, and what a machine
+//! without `clang` is told.
 //!
-//! An object is not text, so the corpus cannot hold one: `cases.rs` compares
-//! bytes this compiler wrote against bytes this compiler wrote, and these bytes
-//! came from `clang`. What can be held is what the object *is*, which its own
-//! header says, and that something else accepts it.
+//! The two kinds `clang` makes, in one file because they are one subject: the
+//! same tool, the same four ways it can fail, and the same question about what
+//! a run leaves on disk. Neither is text, so the corpus cannot hold one:
+//! `cases.rs` compares bytes this compiler wrote against bytes this compiler
+//! wrote, and these came from `clang`. What can be held is what the object
+//! *is*, which its own header says, that something else accepts it, and that
+//! the program answers 3.
 //!
-//! Every test here needs a `clang`, because `--emit object` needs one: ADR-0015
-//! says why. They say what they did not check where there is none, and
-//! `SAFEC_REQUIRE_LLVM` makes that a failure, which CI sets.
+//! Most tests here need a `clang`, because both kinds do: ADR-0015 says why.
+//! They say what they did not check where there is none, and
+//! `SAFEC_REQUIRE_LLVM` makes that a failure, which CI sets. The ones that do
+//! not are the refusals, which answer before anything is spawned, and
+//! `a_missing_clang_says_what_to_install`, which needs `clang` to be absent.
 
 use std::env;
 use std::ffi::OsString;
@@ -389,6 +395,8 @@ fn a_run_that_read_nothing_makes_no_object() {
 ///
 /// Mutation: report the spawn failure as an ordinary I/O error. The message
 /// stops naming `clang` and this fails.
+/// Mutation: name a fixed kind in the message rather than the one that was
+/// asked for. One of the two halves says the wrong flag and this fails.
 #[test]
 fn a_missing_clang_says_what_to_install() {
     let scratch = Scratch::new("no_clang");
@@ -404,13 +412,28 @@ fn a_missing_clang_says_what_to_install() {
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(said.contains("needs `clang`"), "{said}");
-    assert!(said.contains("asks clang to make an object"), "{said}");
+    assert!(said.contains("`--emit object` needs `clang`"), "{said}");
+    assert!(said.contains("asks clang to make the artifact"), "{said}");
     assert!(said.contains("15 or newer"), "{said}");
     assert!(
         !scratch.path().join("mvp.o").exists(),
         "a run that made nothing left an object"
     );
+
+    // The kind the user typed, not the kind this was written for. Linking needs
+    // the same tool and a user who asked for a program is not helped by being
+    // told about `--emit object`.
+    let linked = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "executable"])
+        .arg(&source)
+        .env("PATH", "")
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&linked.stderr);
+    assert_eq!(linked.status.code(), Some(1), "{said}");
+    assert!(said.contains("`--emit executable` needs `clang`"), "{said}");
 }
 
 /// `--emit object` takes one input at a time, and says which kind it refused.
@@ -471,6 +494,9 @@ fn instead_of_clang(scratch: &Scratch) -> (PathBuf, OsString) {
 ///
 /// Mutation: answer `Ok(finished.stdout)` whenever the status is a success.
 /// The run exits 0, the kept file becomes empty, and both assertions fail.
+/// Mutation: read the program back with `unwrap_or_default`. A link that made
+/// nothing answers an empty program, which is written, and the second half of
+/// this fails.
 #[test]
 fn a_clang_that_answers_nothing_is_not_a_success() {
     if !clang_or_skip("a clang that answers no object") {
@@ -482,7 +508,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
     let kept = scratch.path().join("mvp.o");
     fs::write(&kept, "what was there before\n").expect("the temporary directory is writable");
 
-    let (stub, path) = instead_of_clang(&scratch);
+    let (stub, searched) = instead_of_clang(&scratch);
     let built = Command::new("clang")
         .arg(scratch.source("stub.c", "int main(void) { return 0; }\n"))
         .arg("-o")
@@ -498,19 +524,38 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
         .args(["--color", "never", "--emit", "object"])
         .arg(&source)
-        .env("PATH", path)
+        .env("PATH", &searched)
         .current_dir(scratch.path())
         .output()
         .expect("the compiler binary was built for this test");
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(said.contains("no object"), "{said}");
+    assert!(said.contains("did not make an object"), "{said}");
     assert_eq!(
         fs::read_to_string(&kept).expect("the file is still there"),
         "what was there before
 ",
         "a run that made no object wrote one anyway"
+    );
+
+    // The same tool and the same question for the other kind that runs it. A
+    // link reads its answer off a file rather than a pipe, so the two are
+    // different code and the same defect.
+    let linked = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "executable", "-o", "prog"])
+        .arg(&source)
+        .env("PATH", searched)
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&linked.stderr);
+    assert_eq!(linked.status.code(), Some(1), "{said}");
+    assert!(said.contains("did not make a program"), "{said}");
+    assert!(
+        !scratch.path().join("prog").exists(),
+        "a run that made no program wrote one anyway"
     );
 }
 
@@ -525,7 +570,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
 /// Needs no `clang`, and passes on a machine with none: what it arranges is
 /// found first either way.
 ///
-/// Mutation: fold the spawn failure back into `Unassembled::Refused`. The
+/// Mutation: fold the spawn failure back into `Unmade::Refused`. The
 /// message becomes "clang could not make an object of this module" and the
 /// second assertion fails.
 #[test]
@@ -610,4 +655,413 @@ fn an_object_is_not_written_over_its_own_input() {
         MVP,
         "the input was overwritten by the object made from it"
     );
+}
+
+/// The MVP program compiles to a native program that exits with 3, which is
+/// Phase 3's *Done when*.
+///
+/// The host's triple, because a program for another machine is one nothing here
+/// can run. `an_object_the_linker_accepts` is the same number through a
+/// different path and both are worth having: that one holds that `clang`
+/// accepts an object this compiler made, and this holds that one spawn from
+/// source to program answers the number `docs/roadmap.md` asks for.
+///
+/// Mutation: answer `Ok(Vec::new())` from `linked`. Nothing is written, the run
+/// fails, and this fails on the exit code.
+#[test]
+fn the_mvp_program_runs_and_answers_three() {
+    if !clang_or_skip("whether a linked program answers 3") {
+        return;
+    }
+
+    let scratch = Scratch::new("mvp_program");
+    scratch.source("mvp.c", MVP);
+    let program = scratch
+        .path()
+        .join(if cfg!(windows) { "mvp.exe" } else { "mvp" });
+
+    let output = safec(
+        &[
+            "--emit",
+            "executable",
+            "-o",
+            &program.to_string_lossy(),
+            "mvp.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(&program)
+        .status()
+        .expect("the program this compiler just wrote can be run");
+    assert_eq!(ran.code(), Some(3), "the program did not answer 3");
+}
+
+/// A run that names no path leaves the program where `cc` leaves one, and the
+/// plainest invocation there is makes one.
+///
+/// No `--emit` either, because `EmitKind::Executable` is what `--emit` defaults
+/// to: `safec mvp.c` is the run a user who has never read `--help` types, and
+/// until this change it said the pipeline was not implemented.
+///
+/// The name is written out here rather than asked of `Target::program_name`,
+/// which is the function under test: a test that computes what it expects from
+/// the code it is checking agrees with that code however wrong both are, and
+/// this one said in its own note that it caught a mutation it cannot see. That
+/// is RK-001's shape and it was found in review.
+///
+/// Mutation: answer the input's stem from `destination` rather than the
+/// machine's name for a program. Nothing is at `a.out` and this fails.
+/// Mutation: answer `a.out` from `Target::program_name` on every machine. This
+/// fails here on Windows; `every_machine_says_what_a_program_on_it_is_called`
+/// in `target.rs` is what fails on all eight rows wherever it runs.
+#[test]
+fn a_program_with_no_path_is_called_what_cc_calls_it() {
+    if !clang_or_skip("what a program with no path is called") {
+        return;
+    }
+
+    let scratch = Scratch::new("no_path");
+    scratch.source("mvp.c", MVP);
+    let expected = if cfg!(windows) { "a.exe" } else { "a.out" };
+
+    let output = safec(&["mvp.c"], scratch.path());
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(scratch.path().join(expected))
+        .status()
+        .expect("the program is where cc would have left it");
+    assert_eq!(ran.code(), Some(3), "{expected} did not answer 3");
+}
+
+/// A program is runnable by whoever can read it.
+///
+/// An artifact is bytes and a mode is not one of them, so the mode is put on
+/// where the file is written. `fs::write` creates `0o666` before the umask, and
+/// a program nobody can execute is not a program.
+///
+/// Unix only, because Windows has no such bit: a file there is runnable for
+/// being a file, and it is the name that decides.
+///
+/// Mutation: drop the call to `runnable` from `run_compiler`. The mode is
+/// `0o644` and this fails.
+#[test]
+#[cfg(unix)]
+fn a_program_is_runnable_by_whoever_can_read_it() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    if !clang_or_skip("whether a program is runnable") {
+        return;
+    }
+
+    let scratch = Scratch::new("mode");
+    scratch.source("mvp.c", MVP);
+
+    let output = safec(
+        &["--emit", "executable", "-o", "prog", "mvp.c"],
+        scratch.path(),
+    );
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let mode = fs::metadata(scratch.path().join("prog"))
+        .expect("the program is on disk")
+        .permissions()
+        .mode();
+
+    // Wherever the file can be read it can be run, which is what the mode the
+    // file was created with decides. The umask is the user's to set and this
+    // does not overrule it.
+    assert_eq!(mode & 0o444, (mode & 0o111) << 2, "mode {mode:o}");
+    assert!(mode & 0o100 != 0, "mode {mode:o}");
+}
+
+/// `--emit executable` takes one input at a time, like the two kinds before it.
+///
+/// A program is made of several translation units by definition, and this links
+/// one: the rule follows what the implementation does, because a rule that
+/// promises more is a run that silently builds the last input and throws the
+/// rest away.
+///
+/// Mutation: answer `true` from `spans_inputs` for `Executable`. The refusal
+/// stops, one of the two inputs is linked, and this fails.
+#[test]
+fn a_program_is_one_input_at_a_time() {
+    let scratch = Scratch::new("two_programs");
+    scratch.source("one.c", "int f(int x);\n");
+    scratch.source("two.c", "int main(void) { return 3; }\n");
+
+    let output = safec(&["--emit", "executable", "one.c", "two.c"], scratch.path());
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(
+        said.contains("`--emit executable` takes one input"),
+        "{said}"
+    );
+}
+
+/// A link for another machine says what that would need.
+///
+/// Assembling for one of the eight targets needs no linker and no sysroot;
+/// linking for it needs both, and `clang`'s own words about a missing linker do
+/// not mention the target. A machine that *can* cross-link is not refused, so
+/// this asserts about the failure rather than asserting that there is one, and
+/// says so where there is not.
+///
+/// Mutation: drop the note from `link_failure`. The message no longer names a
+/// sysroot and this fails wherever the link fails, which is every runner.
+#[test]
+fn linking_for_another_machine_says_what_it_needs() {
+    if !clang_or_skip("what a link for another machine says") {
+        return;
+    }
+
+    let elsewhere = Target::ALL
+        .iter()
+        .map(|target| target.triple())
+        .find(|triple| *triple != env!("SAFEC_HOST_TRIPLE"))
+        .expect("more than one machine is known");
+
+    let scratch = Scratch::new("another_machine");
+    scratch.source("mvp.c", MVP);
+
+    let output = safec(
+        &[
+            "--emit",
+            "executable",
+            "--target",
+            elsewhere,
+            "-o",
+            "prog",
+            "mvp.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    if output.status.success() {
+        eprintln!(
+            "this machine links for {elsewhere}: what it says when it cannot was not checked"
+        );
+        return;
+    }
+    assert!(said.contains(elsewhere), "{said}");
+    assert!(said.contains("sysroot"), "{said}");
+}
+
+/// A run that reported an error leaves no program, though `clang` linked one.
+///
+/// The same rule `a_run_that_reported_an_error_leaves_no_object` holds, and for
+/// the same reason: a module missing a function the backend refused still
+/// links, and a program with a function deleted from it is worse on disk than
+/// absent.
+///
+/// Mutation: answer `true` from `survives_an_error` for `Executable`. The
+/// program is written and this fails.
+#[test]
+fn a_run_that_reported_an_error_leaves_no_program() {
+    if !clang_or_skip("what a failed link leaves behind") {
+        return;
+    }
+
+    let scratch = Scratch::new("refused_program");
+    scratch.source(
+        "index.c",
+        "int g(int *p) {\n    return p[1];\n}\n\nint main(void) {\n    return 3;\n}\n",
+    );
+
+    let output = safec(
+        &["--emit", "executable", "-o", "prog", "index.c"],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(
+        !scratch.path().join("prog").exists(),
+        "a run that failed left a program with a function missing from it"
+    );
+}
+
+/// A program with nothing to start from, which is the commonest link failure
+/// there is.
+const NO_MAIN: &str = "int f(int x) {\n    return x;\n}\n";
+
+/// A link that failed on this machine says nothing about a sysroot.
+///
+/// The note that says what linking for another machine needs is added only when
+/// the target is not the host, and a user whose own link failed for an ordinary
+/// reason should not be sent to look for a cross toolchain they do not need.
+///
+/// Mutation: add the note whatever the target. This fails, and
+/// `linking_for_another_machine_says_what_it_needs` goes on passing, which is
+/// why the branch needs both halves.
+#[test]
+fn a_failed_link_here_says_nothing_about_a_sysroot() {
+    if !clang_or_skip("what a link that failed on this machine says") {
+        return;
+    }
+
+    let scratch = Scratch::new("no_main");
+    scratch.source("nomain.c", NO_MAIN);
+
+    let output = safec(
+        &["--emit", "executable", "-o", "prog", "nomain.c"],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(!said.contains("sysroot"), "{said}");
+}
+
+/// What the linker said reaches the user, even where it says it on the other
+/// stream.
+///
+/// `link.exe` writes its own diagnosis to standard output and `clang`'s driver
+/// writes the summary to standard error, so on Windows the line that says *why*
+/// is the one a compile would have to throw away, because for a compile that
+/// stream is the object. Measured here: a module with no `main` answers
+/// `LINK : fatal error LNK1561` on standard output.
+///
+/// Windows only, because it is the only machine where the two streams disagree.
+/// Where the linker speaks on standard error the diagnostic already carried it,
+/// which is what made this invisible.
+///
+/// Mutation: keep only standard error for a link, the way a compile does. The
+/// diagnostic falls back to the exit code alone and this fails.
+#[test]
+#[cfg(windows)]
+fn a_failed_link_says_more_than_an_exit_code() {
+    if !clang_or_skip("whether the linker's own words reach the user") {
+        return;
+    }
+
+    let scratch = Scratch::new("linker_words");
+    scratch.source("nomain.c", NO_MAIN);
+
+    let output = safec(
+        &["--emit", "executable", "-o", "prog", "nomain.c"],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("linker command failed"), "{said}");
+    // The linker's own code for "an entry point must be specified". Its
+    // sentence is in the machine's code page and arrives mangled; the code is
+    // ASCII and is the part worth holding.
+    assert!(said.contains("LNK"), "{said}");
+}
+
+/// A machine with nowhere to work is not told about `clang`.
+///
+/// A program is linked in a directory of its own, so a temporary directory that
+/// cannot be made is a failure with nothing to do with the tool. Reporting it in
+/// the tool's words sends a user to inspect an installation that is fine, which
+/// is the mistake RK-024 records one level over.
+///
+/// Mutation: answer `Unlinked::Tool(Unmade::Unrunnable(..))` when the directory
+/// cannot be made. The message names `clang` and this fails.
+#[test]
+fn a_machine_with_nowhere_to_work_is_not_told_about_clang() {
+    let scratch = Scratch::new("nowhere");
+    let source = scratch.source("mvp.c", MVP);
+    let nowhere = scratch.path().join("no").join("such").join("directory");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "executable", "-o", "prog"])
+        .arg(&source)
+        // The three a temporary directory is read from, so that this says the
+        // same thing on the three runners.
+        .env("TMPDIR", &nowhere)
+        .env("TMP", &nowhere)
+        .env("TEMP", &nowhere)
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("needs somewhere to work"), "{said}");
+    assert!(!said.contains("clang"), "{said}");
+}
+
+/// The refusal to write over an input says which name it means, and how it got
+/// it.
+///
+/// One check, two kinds, and the notes were written for the one that came
+/// first: an object is named after its input, and a program is named after
+/// nothing. A user who wrote `-o` is also not helped by being told to write
+/// `-o`, which is how they got here.
+///
+/// Mutation: answer the object's note for both kinds. The first assertion
+/// fails.
+/// Mutation: ignore `options.output` when saying where the name came from. The
+/// second run is told to name it with `-o`, which it did, and this fails.
+#[test]
+fn what_a_refused_destination_says_fits_the_kind_that_asked() {
+    let scratch = Scratch::new("named_like_a_program");
+    let program = if cfg!(windows) { "a.exe" } else { "a.out" };
+    scratch.source(program, MVP);
+    scratch.source("mvp.c", MVP);
+
+    let derived = safec(&["--emit", "executable", program], scratch.path());
+
+    let said = String::from_utf8_lossy(&derived.stderr);
+    assert_eq!(derived.status.code(), Some(1), "{said}");
+    assert!(said.contains("would write over its own input"), "{said}");
+    assert!(!said.contains("an object"), "{said}");
+
+    let given = safec(
+        &["--emit", "executable", "-o", "mvp.c", "mvp.c"],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&given.stderr);
+    assert_eq!(given.status.code(), Some(1), "{said}");
+    assert!(said.contains("`-o` named it"), "{said}");
+    assert!(!said.contains("name it with `-o`"), "{said}");
+}
+
+/// A unit the frontend reported on never reaches `clang`.
+///
+/// A type the lowering cannot hold leaves a module with a function missing from
+/// it, which still assembles and links against nothing. Without this the run
+/// ends with the frontend saying what is wrong and a linker saying `exit code
+/// 1561`, and the second one names another program and a number the user can do
+/// nothing with.
+///
+/// Mutation: drop the `said_something` gate from either arm. The link runs, its
+/// exit code reaches the report, and this fails.
+#[test]
+fn a_unit_the_frontend_reported_on_never_reaches_clang() {
+    if !clang_or_skip("what a unit the frontend reported on is handed to") {
+        return;
+    }
+
+    let scratch = Scratch::new("reported_on");
+    scratch.source(
+        "array.c",
+        "int f(void) {\n    int xs[3];\n    return 0;\n}\n\nint main(void) {\n    return f();\n}\n",
+    );
+
+    for kind in ["object", "executable"] {
+        let output = safec(&["--emit", kind, "-o", "made", "array.c"], scratch.path());
+
+        let said = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(1), "{kind}: {said}");
+        assert!(said.contains("SC0304"), "{kind}: {said}");
+        assert!(!said.contains("clang"), "{kind}: {said}");
+        assert!(
+            !scratch.path().join("made").exists(),
+            "{kind} left something behind"
+        );
+    }
 }

@@ -1,3 +1,0 @@
-error: the compilation pipeline is not implemented yet
-  = note: safec reads its inputs, builds a Safety IR, and writes LLVM IR and objects
-  = note: `--emit tokens`, `--emit ast`, `--emit safety-ir`, `--emit llvm-ir` and `--emit object` are what it can make

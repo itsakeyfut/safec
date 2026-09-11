@@ -27,9 +27,9 @@ fn missing(name: &str) -> PathBuf {
 }
 
 /// Zero for success and one for a compilation that failed is what `cc` does.
-/// Nothing today can reach zero through a compilation, because the pipeline
-/// reports that it does not exist, so this pins the failing half and the two
-/// invocations that answer without compiling anything.
+/// This pins the failing half and the two invocations that answer without
+/// compiling anything; the half that succeeds is below, and could not be
+/// written until something compiled all the way through.
 ///
 /// The substring check is deliberate and is the only one left in this
 /// directory. `cannot read` ends in a note that is the operating system's text,
@@ -46,6 +46,58 @@ fn a_compilation_that_failed_exits_one() {
     assert_eq!(output.status.code(), Some(1), "{output:?}");
     let report = String::from_utf8(output.stderr).expect("the report is text");
     assert!(report.contains("cannot read"), "{report}");
+}
+
+/// The other half: a compilation that worked exits zero and says nothing.
+///
+/// Until `--emit executable` linked something there was no run that compiled
+/// all the way through, so the file above could only pin the failing half. This
+/// is the one a build system reads to decide it may go on, and the whole point
+/// of the pair is that the two are told apart.
+///
+/// It needs a `clang`, because the default `--emit` is a program. Said out loud
+/// where there is none, which `SAFEC_REQUIRE_LLVM` turns into a failure and CI
+/// sets.
+///
+/// Mutation: answer `Outcome::Failed` from `run_compiler` whatever was
+/// reported. This fails on the code, and `a_compilation_that_failed_exits_one`
+/// goes on passing, which is why both halves are here.
+#[test]
+fn a_compilation_that_worked_exits_zero() {
+    let clang = Command::new("clang")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok();
+    if !clang {
+        assert!(
+            std::env::var_os("SAFEC_REQUIRE_LLVM").is_none(),
+            "SAFEC_REQUIRE_LLVM is set and there is no `clang` to compile with"
+        );
+        eprintln!("no `clang` on this machine: what a run that worked exits with was not checked");
+        return;
+    }
+
+    let scratch = std::env::temp_dir().join(format!("safec_exit_code_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&scratch);
+    std::fs::create_dir_all(&scratch).expect("the temporary directory is writable");
+
+    let source = scratch.join("mvp.c");
+    std::fs::write(&source, "int main(void) { return 3; }\n").expect("the directory is writable");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "-o", "prog"])
+        .arg(&source)
+        .current_dir(&scratch)
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let report = String::from_utf8_lossy(&output.stderr).into_owned();
+    let _ = std::fs::remove_dir_all(&scratch);
+
+    assert_eq!(output.status.code(), Some(0), "{report}");
+    assert!(report.is_empty(), "{report}");
 }
 
 /// Diagnostics go to stderr, so that `safec ... > out` leaves them on the
