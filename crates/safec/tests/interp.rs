@@ -20,6 +20,7 @@ use safec::sema::resolve as resolve_names;
 use safec::types::check;
 use safec_ir::interp::{Trap, Value, run};
 use safec_ir::source::SourceMap;
+use safec_ir::target::Target;
 
 /// Compile a program the way the driver does, then run its `main`.
 ///
@@ -27,15 +28,32 @@ use safec_ir::source::SourceMap;
 /// that a program still means what it meant after five stages have had it,
 /// and a test that started from IR could not say that.
 fn ran(text: &str) -> Result<Value, Trap> {
+    ran_for("x86_64-pc-windows-msvc", text)
+}
+
+/// The same, for a machine the test names.
+///
+/// Most of these do not turn on the target, which is why `ran` picks one and
+/// says nothing about it. The ones that do are about `char`, whose signedness
+/// is the target's to choose: C17 6.2.5 p15.
+fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
     let mut sources = SourceMap::new();
     let file = sources.add_virtual("t.c", text);
     let mut diagnostics = DiagnosticSink::new();
+    let target = Target::from_triple(triple).expect("a known triple");
 
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let mut ast = parse(file, &tokens, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
     let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
-    let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
+    let unit = lower(
+        &sources,
+        &ast,
+        &resolution,
+        &types,
+        target,
+        &mut diagnostics,
+    );
     assert!(!diagnostics.has_errors(), "the program did not compile");
 
     let main = unit
@@ -363,18 +381,20 @@ fn every_operator_computes_what_c_says() {
 
 /// A shift nobody can answer stops the run.
 ///
-/// C17 6.5.7 p3 leaves a shift by a negative amount undefined, and the
-/// width that would decide the rest of it is not here.
+/// C17 6.5.7 p3 leaves a shift by a negative amount undefined. The other half
+/// of that paragraph, a count at least the width of the promoted left operand,
+/// is `a_shift_by_at_least_the_target_width_stops_the_run`, which could not be
+/// written until the IR knew what a width was.
 ///
-/// Mutation: let a negative shift through to `checked_shl`. It answers
-/// rather than stopping and this fails.
+/// Mutation: let a negative shift through to `checked_shl`. It answers rather
+/// than stopping and this fails.
 #[test]
 fn a_shift_by_a_negative_amount_stops_the_run() {
     let shifted = ran("int main(void) {\n    int by;\n    by = 0 - 1;\n    return 1 << by;\n}\n");
     let Err(trap) = shifted else {
         panic!("{shifted:?}");
     };
-    assert!(trap.why.contains("negative or enormous"), "{trap:?}");
+    assert!(trap.why.contains("a shift by -1"), "{trap:?}");
 }
 
 /// A callee that answers nothing where the caller asked stops the run.
@@ -433,7 +453,15 @@ fn a_trap_points_at_what_stopped_it() {
     let mut ast = parse(file, &tokens, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
     let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
-    let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
+    let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+    let unit = lower(
+        &sources,
+        &ast,
+        &resolution,
+        &types,
+        target,
+        &mut diagnostics,
+    );
 
     let main = unit
         .functions()
@@ -465,7 +493,15 @@ fn a_trap_on_a_call_points_at_the_call() {
     let mut ast = parse(file, &tokens, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
     let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
-    let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
+    let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+    let unit = lower(
+        &sources,
+        &ast,
+        &resolution,
+        &types,
+        target,
+        &mut diagnostics,
+    );
 
     let main = unit
         .functions()
@@ -596,4 +632,231 @@ fn a_write_through_a_pointer_into_a_returned_function_stops_the_run() {
         panic!("a write into a frame that has returned: {escaped:?}");
     };
     assert!(trap.why.contains("has returned"), "{trap:?}");
+}
+
+/// An operation whose result the destination cannot hold stops the run.
+///
+/// C17 6.5 p5: "if the result is not mathematically defined or not in the range
+/// of representable values for its type, the behavior is undefined". This
+/// interpreter stops rather than answering wherever C says nothing, the same as
+/// it does for a division by zero, so it does not wrap the way a real machine
+/// does. `docs/frontend.md` recorded `2147483648` here until the IR knew what
+/// `int` was worth.
+///
+/// The width comes from the destination place's type, which is the type the
+/// frontend worked out for the expression, promotions included. ADR-0013.
+///
+/// Mutation: have `fits` answer `Ok` whatever the type, or drop the width from
+/// `Integer`. This fails and the run answers 2147483648 again.
+#[test]
+fn an_arithmetic_result_the_target_cannot_hold_stops_the_run() {
+    let over = ran("int main(void) { int x; x = 2147483647; return x + 1; }\n");
+    let Err(trap) = over else {
+        panic!("a signed overflow at 32 bits: {over:?}");
+    };
+    assert!(trap.why.contains("32 bits signed cannot hold"), "{trap:?}");
+
+    // The same width, reached by a shift rather than by an addition. C17
+    // 6.5.7 p4 leaves a left shift undefined when the value "is not
+    // representable in the result type", which `1 << 31` is not at 32 bits.
+    let shifted = ran("int main(void) { int x; x = 1; return x << 31; }\n");
+    let Err(trap) = shifted else {
+        panic!("a shift whose result does not fit: {shifted:?}");
+    };
+    assert!(trap.why.contains("32 bits signed cannot hold"), "{trap:?}");
+
+    // One below each is ordinary arithmetic and still answers.
+    assert_eq!(
+        ran("int main(void) { int x; x = 2147483646; return x + 1; }\n"),
+        Ok(Value::Int(2_147_483_647)),
+    );
+    assert_eq!(
+        ran("int main(void) { int x; x = 1; return x << 30; }\n"),
+        Ok(Value::Int(1_073_741_824)),
+    );
+}
+
+/// A shift by at least the width of the left operand stops the run.
+///
+/// C17 6.5.7 p3, the half that is about the count rather than the result: "if
+/// the value of the right operand is negative or is greater than or equal to
+/// the width of the promoted left operand, the behavior is undefined". The
+/// width was not in the IR before, so what this checked was what an `i128`
+/// could answer, which let a shift by 40 through.
+///
+/// Mutation: check the count against `i128::BITS` rather than against the
+/// destination's width. A shift by 32 answers zero and this fails.
+#[test]
+fn a_shift_by_at_least_the_target_width_stops_the_run() {
+    let wide = ran("int main(void) { int x; x = 1; return x << 32; }\n");
+    let Err(trap) = wide else {
+        panic!("a shift by the whole width: {wide:?}");
+    };
+    assert!(trap.why.contains("a shift by 32"), "{trap:?}");
+    assert!(trap.why.contains("32 bits"), "{trap:?}");
+}
+
+/// A value too large for where it is written is converted, not refused.
+///
+/// An assignment is not an operation: C17 6.5.16.1 p2 converts the right
+/// operand to the type of the assignment expression, and 6.3.1.3 says what that
+/// gives. Nothing there is undefined, so nothing stops. `clang 20.1.6` answers
+/// 44 for this on every target, because 300 truncates to `0x2C`.
+///
+/// Mutation: check an assignment the way an operation is checked. This stops
+/// and the test fails. Mutation: drop the conversion and copy the value
+/// through. It answers 300.
+#[test]
+fn a_value_too_large_for_its_destination_is_converted() {
+    assert_eq!(
+        ran("int main(void) { char c; c = 300; return c; }\n"),
+        Ok(Value::Int(44)),
+    );
+}
+
+/// Whether `char` carries a sign is the target's to say, and the answer differs.
+///
+/// C17 6.2.5 p15: "the implementation shall define char to have the same range,
+/// representation, and behavior as either signed char or unsigned char". Of the
+/// targets this compiler knows, `aarch64-unknown-linux-gnu` is the one where it
+/// is unsigned, which was measured rather than recalled: `clang 20.1.6`
+/// compiles `char c; c = 200; return c;` to a `sext i8` for
+/// `x86_64-pc-windows-msvc` and a `zext i8` for `aarch64-unknown-linux-gnu`.
+///
+/// 200 is the value that tells them apart. 300 does not: it truncates to 44,
+/// which is positive, so both answer the same.
+///
+/// Mutation: make `char` signed on every row of `Target::ALL`, or take the
+/// signedness from the host. The two answers become one and this fails.
+#[test]
+fn what_a_char_holds_follows_the_target() {
+    let program = "int main(void) { char c; c = 200; return c; }\n";
+
+    assert_eq!(
+        ran_for("x86_64-pc-windows-msvc", program),
+        Ok(Value::Int(-56)),
+    );
+    assert_eq!(
+        ran_for("aarch64-unknown-linux-gnu", program),
+        Ok(Value::Int(200)),
+    );
+}
+
+/// A compound assignment on a `char` is not undefined, and must not stop.
+///
+/// C17 6.5.16.2 p3 makes `E1 op= E2` mean `E1 = E1 op E2` bar evaluating `E1`
+/// once, so the operation happens after the integer promotions of 6.3.1.1 p2,
+/// at `int`, and only the store back is a conversion under 6.3.1.3. There is no
+/// undefined behaviour anywhere in `char c = -56; c &= 200;`, and this compiler
+/// reported one: the lowering wrote the operation straight into the `char`, and
+/// the interpreter read that place's type as the width the arithmetic happened
+/// at.
+///
+/// The `&=` row is the one that admits no argument. C17 6.5.10 leaves bitwise
+/// AND undefined for nothing at all.
+///
+/// Mutation: write the `Binary` of a compound assignment into the place rather
+/// than into a promoted temporary. All four stop and this fails.
+#[test]
+fn a_compound_assignment_on_a_char_is_not_undefined() {
+    // The two spellings C17 6.5.16.2 p3 calls equivalent answer the same thing,
+    // which is the assertion with the most in it: before this they did not.
+    assert_eq!(
+        ran("int main(void) { char c; c = 100; c += 100; return c; }\n"),
+        ran("int main(void) { char c; c = 100; c = c + 100; return c; }\n"),
+    );
+    assert_eq!(
+        ran("int main(void) { char c; c = 100; c += 100; return c; }\n"),
+        Ok(Value::Int(-56)),
+    );
+    assert_eq!(
+        ran("int main(void) { char c; c = -56; c &= 200; return c; }\n"),
+        Ok(Value::Int(-56)),
+    );
+
+    // `clang 20.1.6 --target=x86_64-pc-windows-msvc` answers -128 and 127 for
+    // these, computing at `i32` and truncating with `trunc i32 to i8`.
+    assert_eq!(
+        ran("int main(void) { char c; c = 127; c++; return c; }\n"),
+        Ok(Value::Int(-128)),
+    );
+    assert_eq!(
+        ran("int main(void) { char c; c = 0 - 128; c--; return c; }\n"),
+        Ok(Value::Int(127)),
+    );
+}
+
+/// An argument is converted to its parameter's type.
+///
+/// C17 6.5.2.2 p7: for a prototyped function "the arguments are implicitly
+/// converted, as if by assignment, to the types of the corresponding
+/// parameters". As if by assignment is 6.3.1.3, the same conversion an
+/// `Rvalue::Use` does, and this is the other edge where a value crosses into a
+/// differently typed object. Only one of the two had it.
+///
+/// This one answered rather than stopping, which is the worse failure: nothing
+/// reported it, and a parameter holding a value its type cannot represent
+/// carries it into arithmetic that then stops somewhere it could never have
+/// reached. `clang 20.1.6` answers 44 and warns.
+///
+/// Mutation: bind the argument without converting. This fails.
+#[test]
+fn an_argument_is_converted_to_its_parameter_s_type() {
+    assert_eq!(
+        ran("int f(char c) { return c; }\nint main(void) { return f(300); }\n"),
+        Ok(Value::Int(44)),
+    );
+
+    // And the signedness is the target's, as it is everywhere else.
+    let program = "int f(char c) { return c; }\nint main(void) { return f(200); }\n";
+    assert_eq!(
+        ran_for("x86_64-pc-windows-msvc", program),
+        Ok(Value::Int(-56)),
+    );
+    assert_eq!(
+        ran_for("aarch64-unknown-linux-gnu", program),
+        Ok(Value::Int(200)),
+    );
+}
+
+/// A constant too large for any type converts rather than killing the run.
+///
+/// The frontend parses a decimal literal into an `i128` with no range check of
+/// its own, which `lowering.rs::constant` records, so a number near the top of
+/// the carrier reaches the conversion at an assignment. Before the conversion
+/// was written to fold first, that panicked with "attempt to subtract with
+/// overflow": the one answer a compiler must not give, on a `.c` file with
+/// nothing else unusual in it.
+///
+/// What it answers is not a claim about C. `2^127 - 1` has no type in C17
+/// 6.4.4.1 p5 at all, and `types.rs` knowingly calls every integer constant an
+/// `int`, which `docs/frontend.md` records. What is asserted here is that the
+/// run ends rather than dies.
+///
+/// Mutation: subtract `min` from the value before taking the remainder. This
+/// panics and the test fails.
+#[test]
+fn a_constant_at_the_top_of_the_carrier_does_not_kill_the_run() {
+    let huge =
+        ran("int main(void) { int x; x = 170141183460469231731687303715884105727; return x; }\n");
+
+    assert_eq!(huge, Ok(Value::Int(-1)), "the low 32 bits of all ones");
+}
+
+/// Negating the smallest `int` stops, because the result is not one.
+///
+/// C17 6.5 p5 again: `-(-2147483648)` is 2147483648, which a 32-bit signed
+/// `int` does not hold, so C says nothing about it and this stops. A real
+/// machine answers `-2147483648` and a compiler that repeated that would be
+/// deciding what C declined to.
+///
+/// Mutation: drop the `fits` call from the `Neg` arm. The run answers
+/// -2147483648 and this fails.
+#[test]
+fn negating_the_smallest_int_stops_the_run() {
+    let negated = ran("int main(void) { int x; x = 0 - 2147483647; x = x - 1; return -x; }\n");
+    let Err(trap) = negated else {
+        panic!("a negation whose result does not fit: {negated:?}");
+    };
+    assert!(trap.why.contains("32 bits signed cannot hold"), "{trap:?}");
 }

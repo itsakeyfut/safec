@@ -49,6 +49,7 @@ use crate::ir::{
     TranslationUnit, Ty, UnOp,
 };
 use crate::source::Span;
+use crate::target::Integer;
 
 /// How deep a call stack may go before the run is stopped.
 ///
@@ -84,18 +85,18 @@ pub const MAX_STEPS: usize = 1 << 20;
 /// What a local holds while a program runs.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
-    /// An integer, as wide as the IR's own constants.
+    /// An integer, held wider than any type a target names.
     ///
-    /// No narrowing to a target's width: `ir::Ty` says it holds none, and
-    /// `docs/architecture.md` puts widths in the phase that lowers to LLVM.
+    /// The carrier is wide so that the rules can be applied to it rather than
+    /// suffered from it: an operation is computed here and then asked whether
+    /// the type it is written into holds the result, which is C17 6.5 p5's
+    /// question and not a question about this machine. `INT_MAX + 1` stops
+    /// where `int` is 32 bits, and would answer where it is 64.
     ///
-    /// So a program whose answer depends on a width gets this machine's answer
-    /// rather than the target's, and gets it without being told: `INT_MAX + 1`
-    /// is 2147483648 here and -2147483648 under a compiler that knows `int` is
-    /// 32 bits. C17 6.5 p5 leaves that undefined, so no answer is wrong, but
-    /// this one is a different program's answer and `docs/frontend.md` records
-    /// it beside the rest. What [`Trap`] catches is only what an `i128` cannot
-    /// hold, which is a bound of this machine rather than a rule of C.
+    /// So a value in flight can be outside the range of the type it came from
+    /// or is going to. What keeps that honest is that every edge converts or
+    /// checks: `rvalue` at an assignment, `enter` at a parameter, and `fits` at
+    /// an operation. ADR-0013 is where the widths come from.
     Int(i128),
     /// A pointer to a local of a frame.
     ///
@@ -230,7 +231,14 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
             // quietly ignores. RK-018 is the entry.
             match element {
                 Element::Assign(operation) => {
-                    let value = rvalue(&frames, &operation.value)
+                    // What the destination is worth on this unit's target,
+                    // which is what decides both the width an operation may
+                    // overflow at and the type an assignment converts to.
+                    // `None` for a pointer, which has neither question.
+                    let ty = unit
+                        .place_ty(function, &operation.place)
+                        .and_then(|ty| unit.integer(ty));
+                    let value = rvalue(&frames, &operation.value, ty)
                         .map_err(|trap| trap.at(operation.origin.span()))?;
                     let at = resolve(&frames, current, &operation.place)
                         .map_err(|trap| trap.at(operation.origin.span()))?;
@@ -387,7 +395,19 @@ fn enter(
     // names it as the change this moves with.
     let mut locals: Vec<Slot> = function.locals().map(|_| Slot::Unwritten).collect();
     for (parameter, value) in function.parameters().zip(arguments) {
-        locals[parameter.index()] = Slot::Held(value.clone());
+        // C17 6.5.2.2 p7: for a prototyped function "the arguments are
+        // implicitly converted, as if by assignment, to the types of the
+        // corresponding parameters". As if by assignment is 6.3.1.3, which is
+        // what `Rvalue::Use` already does at the other edge where a value
+        // crosses into a differently typed object. Both edges or neither: a
+        // parameter left holding a value its type cannot represent carries it
+        // into arithmetic that then stops somewhere the value could not have
+        // reached.
+        let converted = match (value, unit.integer(function.local(parameter))) {
+            (Value::Int(value), Some(ty)) => Value::Int(ty.convert(*value)),
+            (value, _) => value.clone(),
+        };
+        locals[parameter.index()] = Slot::Held(converted);
     }
 
     Ok(Frame {
@@ -400,12 +420,30 @@ fn enter(
     })
 }
 
-/// What an operation computes.
-fn rvalue(frames: &[Frame], value: &Rvalue) -> Result<Value, Trap> {
+/// What an operation computes, as the type it is written into.
+///
+/// `ty` is what the destination place is worth on the target, and the two kinds
+/// of `Rvalue` ask two different things of it.
+///
+/// An arithmetic result is **checked**. C17 6.5 p5: "if the result is not
+/// mathematically defined or not in the range of representable values for its
+/// type, the behavior is undefined", and this stops rather than answering, the
+/// same as it does for a division by zero. The type to check against is the
+/// destination's, which [`crate::ir::Operation`] says is the type C performs
+/// the operation at; that is an obligation on whoever built the unit, stated
+/// there rather than assumed here.
+///
+/// A `Use` is **converted**. C17 6.5.16.1 p2 converts the right operand of an
+/// assignment to the type of the assignment expression, and 6.3.1.3 says what
+/// that gives. Nothing is undefined there, so nothing stops.
+fn rvalue(frames: &[Frame], value: &Rvalue, ty: Option<Integer>) -> Result<Value, Trap> {
     let current = frames.len() - 1;
 
     Ok(match value {
-        Rvalue::Use(from) => operand(frames, current, from)?,
+        Rvalue::Use(from) => match (operand(frames, current, from)?, ty) {
+            (Value::Int(value), Some(ty)) => Value::Int(ty.convert(value)),
+            (value, _) => value,
+        },
         // The one operation that turns a place into a value, and the place is
         // resolved here rather than remembered: what `&p[i]` names is the
         // object it reached, and reaching it again later could reach another.
@@ -418,14 +456,15 @@ fn rvalue(frames: &[Frame], value: &Rvalue) -> Result<Value, Trap> {
         } if matches!(operand(frames, current, from)?, Value::Pointer(_)) => Value::Int(0),
         Rvalue::Unary { op, operand: from } => {
             let value = integer(operand(frames, current, from)?)?;
-            Value::Int(match op {
+            let computed = match op {
                 UnOp::Neg => value
                     .checked_neg()
                     .ok_or_else(|| Trap::new("a negation whose result does not fit"))?,
                 // C17 6.5.3.3 p5: `!x` is 1 where `x` compares equal to zero.
                 UnOp::Not => i128::from(value == 0),
                 UnOp::BitNot => !value,
-            })
+            };
+            Value::Int(fits(computed, ty)?)
         }
         Rvalue::Binary { op, lhs, rhs } => {
             let lhs = operand(frames, current, lhs)?;
@@ -439,7 +478,7 @@ fn rvalue(frames: &[Frame], value: &Rvalue) -> Result<Value, Trap> {
                 | (BinOp::Eq | BinOp::Ne, _, Value::Pointer(_)) => {
                     Value::Int(compared(*op, &lhs, &rhs)?)
                 }
-                _ => Value::Int(binary(*op, integer(lhs)?, integer(rhs)?)?),
+                _ => Value::Int(binary(*op, integer(lhs)?, integer(rhs)?, ty)?),
             }
         }
     })
@@ -483,10 +522,27 @@ fn compared(op: BinOp, lhs: &Value, rhs: &Value) -> Result<i128, Trap> {
     }))
 }
 
-/// What an operator does to two numbers.
-fn binary(op: BinOp, lhs: i128, rhs: i128) -> Result<i128, Trap> {
+/// Whether a result is one the type it is written into can hold.
+///
+/// C17 6.5 p5 leaves an operation undefined whose result "is not in the range of
+/// representable values for its type", so this stops rather than wrapping. A
+/// destination with no width to check against, which is a pointer, is nothing
+/// to ask about: only `Rvalue::Address` writes one and it computes no number.
+fn fits(value: i128, ty: Option<Integer>) -> Result<i128, Trap> {
+    match ty {
+        Some(ty) if !ty.holds(value) => Err(Trap::new(format!(
+            "an arithmetic result of {value}, which {} bits {} cannot hold",
+            ty.bits(),
+            if ty.signed() { "signed" } else { "unsigned" },
+        ))),
+        _ => Ok(value),
+    }
+}
+
+/// What an operator does to two numbers, as the type it is written into.
+fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, Trap> {
     let overflow = || Trap::new("an arithmetic result that does not fit");
-    Ok(match op {
+    let computed = match op {
         BinOp::Mul => lhs.checked_mul(rhs).ok_or_else(overflow)?,
         // C17 6.5.5 p5 leaves division and remainder by zero undefined, and
         // 6.5 p5 leaves an overflowing signed result undefined. Answering a
@@ -500,16 +556,24 @@ fn binary(op: BinOp, lhs: i128, rhs: i128) -> Result<i128, Trap> {
         BinOp::Add => lhs.checked_add(rhs).ok_or_else(overflow)?,
         BinOp::Sub => lhs.checked_sub(rhs).ok_or_else(overflow)?,
         // 6.5.7 p3: a shift by a negative amount, or by at least the width of
-        // the promoted left operand, is undefined. The width is not here, so
-        // what is checked is what this machine can answer.
-        BinOp::Shl => u32::try_from(rhs)
-            .ok()
-            .and_then(|by| lhs.checked_shl(by))
-            .ok_or_else(|| Trap::new("a shift by a negative or enormous amount"))?,
-        BinOp::Shr => u32::try_from(rhs)
-            .ok()
-            .and_then(|by| lhs.checked_shr(by))
-            .ok_or_else(|| Trap::new("a shift by a negative or enormous amount"))?,
+        // the promoted left operand, is undefined. The promoted left operand is
+        // what the result is written into, so `ty` is that width. 6.5.7 p4 is
+        // the other half and is answered below by `fits`: a left shift whose
+        // value is not representable in the result type is undefined too, which
+        // is what `1 << 31` is at 32 bits.
+        BinOp::Shl | BinOp::Shr => {
+            let width = ty.map_or(i128::BITS, Integer::bits);
+            if rhs < 0 || rhs >= i128::from(width) {
+                return Err(Trap::new(format!(
+                    "a shift by {rhs}, where the left operand is {width} bits"
+                )));
+            }
+            let by = u32::try_from(rhs).expect("checked against the width above");
+            match op {
+                BinOp::Shl => lhs.checked_shl(by).ok_or_else(overflow)?,
+                _ => lhs.checked_shr(by).ok_or_else(overflow)?,
+            }
+        }
         // 6.5.8 p6 and 6.5.9 p3: a comparison yields 1 or 0, with type `int`.
         BinOp::Lt => i128::from(lhs < rhs),
         BinOp::Gt => i128::from(lhs > rhs),
@@ -520,7 +584,9 @@ fn binary(op: BinOp, lhs: i128, rhs: i128) -> Result<i128, Trap> {
         BinOp::BitAnd => lhs & rhs,
         BinOp::BitXor => lhs ^ rhs,
         BinOp::BitOr => lhs | rhs,
-    })
+    };
+
+    fits(computed, ty)
 }
 
 /// What an operand reads.
@@ -635,6 +701,16 @@ fn live(frames: &[Frame], at: Location) -> Result<usize, Trap> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::target::Target;
+
+    /// A target, for a test that is not about the machine.
+    ///
+    /// Named rather than defaulted, because `TranslationUnit::new` takes one on
+    /// purpose: ADR-0013 says a unit nobody said the target of is one whose
+    /// `int` has no width. A test that *is* about the machine names its own.
+    fn a_target() -> Target {
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple")
+    }
     use crate::ir::{Block, Function, Operation, Origin, Ty};
     use crate::source::SourceMap;
 
@@ -660,7 +736,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int twice(int n);\n");
         let at = Span::new(file, 4, 9);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut twice = Function::new(at, int, [int]);
         let n = twice.parameters().next().expect("one parameter");
@@ -696,7 +772,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int twice(int n);\n");
         let at = Span::new(file, 4, 9);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut twice = Function::new(at, int, [int]);
         twice.push_block(Block {
@@ -729,7 +805,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int f(void);\n");
         let at = Span::new(file, 4, 5);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         let holding = function.push_local(int);
@@ -760,6 +836,66 @@ mod tests {
         assert!(trap.why.contains("not a pointer"), "{trap:?}");
     }
 
+    /// An unsigned destination overflows too, and says so in its own words.
+    ///
+    /// Built by hand, because the frontend cannot reach this shape: every
+    /// arithmetic expression it lowers lands in a temporary of the promoted
+    /// type, and C17 6.3.1.1 p2 promotes every integer type it has to `int`,
+    /// which is signed on every row of `Target::ALL`. So the unsigned half of
+    /// `fits` has no producer above it and is reachable only from a unit like
+    /// this one, which is exactly what a Clang adapter or a later IR pass would
+    /// build.
+    ///
+    /// The sentence matters as much as the stop. "8 bits signed" for an
+    /// unsigned type would send a reader looking for a sign bit that is not
+    /// there.
+    ///
+    /// Mutation: check only signed types, `ty.signed() && !ty.holds(value)`.
+    /// Nothing else in the workspace fails and this does. Mutation: say
+    /// "signed" whatever the type. The last assertion fails.
+    #[test]
+    fn an_unsigned_destination_overflows_in_its_own_words() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual(
+            "t.c",
+            "int f(void);
+",
+        );
+        let at = Span::new(file, 4, 5);
+
+        // The row of `Target::ALL` where `char` is unsigned, so that `holds`
+        // has a lower bound of zero rather than of a negative number.
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let character = unit.push_type(Ty::Char);
+
+        let mut function = Function::new(at, int, []);
+        let narrow = function.push_local(character);
+        function.push_block(Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(narrow),
+                // 0 - 1, which an unsigned `char` cannot hold. Written as an
+                // operation rather than as a `Use`, because a `Use` would
+                // convert it to 255 and that is the defined half.
+                value: Rvalue::Binary {
+                    op: BinOp::Sub,
+                    lhs: Operand::Constant(0),
+                    rhs: Operand::Constant(1),
+                },
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(function);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("an unsigned type cannot hold -1");
+        };
+        assert!(trap.why.contains("8 bits unsigned"), "{trap:?}");
+    }
+
     /// A call that writes nowhere runs for what it does.
     ///
     /// The lowering gives every call a destination, so this shape only reaches
@@ -774,7 +910,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "void nothing(void);\n");
         let at = Span::new(file, 5, 12);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let void = unit.push_type(Ty::Void);
 
@@ -829,7 +965,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int f(void);\n");
         let at = Span::new(file, 4, 5);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         let holding = function.push_local(int);
@@ -875,7 +1011,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int f(void);\n");
         let at = Span::new(file, 4, 5);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
 

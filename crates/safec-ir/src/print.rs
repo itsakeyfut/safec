@@ -177,6 +177,14 @@ pub fn dump_line(kind: &str, depth: usize, out: &mut String) {
 /// name rather than by its [`crate::ir::FuncId`], which is an index into a table this
 /// artifact does not show.
 pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
+    // First, because the rest means something else for a different machine:
+    // what `int` is worth and whether `char` carries a sign are the target's to
+    // say, and an artifact that hid which one it was built for would be two
+    // different programs printed identically. See ADR-0013.
+    dump_line("Target", 0, out);
+    write!(out, " {:?}", unit.target().triple()).expect("writing to a string cannot fail");
+    out.push('\n');
+
     for id in unit.functions() {
         let function = unit.function(id);
         dump_node(sources, "Function", function.name, 0, out);
@@ -437,6 +445,16 @@ fn dump_terminator(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::target::Target;
+
+    /// A target, for a test that is not about the machine.
+    ///
+    /// Named rather than defaulted, because `TranslationUnit::new` takes one on
+    /// purpose: ADR-0013 says a unit nobody said the target of is one whose
+    /// `int` has no width. A test that *is* about the machine names its own.
+    fn a_target() -> Target {
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple")
+    }
     use crate::ir::{Block, Function, Operation, Origin};
 
     /// Newline and tab survive, and every other control character does not.
@@ -492,7 +510,7 @@ mod tests {
         let file = sources.add_virtual("evil\u{1b}[31m.c", "int f(void) { return 0; }\n");
         let at = Span::new(file, 4, 5);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         function.push_block(Block {
@@ -534,7 +552,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int f(void) { int x; }\n");
         let at = Span::new(file, 14, 20);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         let local = function.push_local(int);
@@ -583,7 +601,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "void f(void) { g(); }\n");
         let at = Span::new(file, 15, 18);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let void = unit.push_type(Ty::Void);
         let callee = unit.push_function(Function::declaration(at, void, []));
 
@@ -636,7 +654,7 @@ mod tests {
         let there = Span::new(file, 4, 5);
         let here = Span::new(file, 17, 18);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         unit.push_function(Function::declaration(there, int, []));
 
@@ -673,7 +691,7 @@ mod tests {
         let file = sources.add_virtual("t.c", "int f(int *p) { return p[0]; }\n");
         let at = Span::new(file, 23, 27);
 
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let pointer = unit.push_type(Ty::Pointer(int));
 

@@ -199,7 +199,14 @@ pub fn compile(options: &Options) -> Compiled {
                     continue;
                 };
 
-                let unit = lower(&sources, &analysed.ast, resolution, types, &mut diagnostics);
+                let unit = lower(
+                    &sources,
+                    &analysed.ast,
+                    resolution,
+                    types,
+                    options.target,
+                    &mut diagnostics,
+                );
                 dump_ir(&sources, &unit, out);
             }
             None => {}
@@ -678,6 +685,7 @@ mod tests {
     use crate::options::{ColorMode, EmitKind};
     use crate::safety::SafetyLevel;
     use safec_ir::source::Span;
+    use safec_ir::target::Target;
 
     fn options(inputs: Vec<PathBuf>) -> Options {
         Options {
@@ -685,6 +693,7 @@ mod tests {
             output: None,
             safety: SafetyLevel::Memory,
             emit: EmitKind::Executable,
+            target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
             deny_unknown: false,
             color: ColorMode::Never,
         }

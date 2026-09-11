@@ -45,6 +45,7 @@
 use std::collections::HashMap;
 
 use crate::source::Span;
+use crate::target::{Integer, Target};
 
 /// Which function, within one [`TranslationUnit`].
 ///
@@ -120,10 +121,12 @@ impl BlockId {
 /// the whole boundary, and an adapter for another language reaches this type
 /// rather than `ast::Type`.
 ///
-/// **No widths.** `docs/architecture.md` says an artifact depends on the target
-/// "once type widths reach them", and nothing here has reached that yet: an
-/// `Int` is C's `int` for whatever target, and the phase that lowers to LLVM is
-/// where a width becomes a thing this has to carry.
+/// **No widths here, and that is the decision rather than a gap.** What an
+/// `Int` is worth is asked of the unit, which carries the target:
+/// [`TranslationUnit::integer`]. Putting it in the type instead would dissolve
+/// `Int` and `Char` into one integer kind with a width and a sign, and `--emit
+/// safety-ir` would stop saying which one a program wrote. See ADR-0013, which
+/// rejected exactly that and says what would reverse it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Ty {
     /// `int`.
@@ -473,6 +476,21 @@ impl Element {
 }
 
 /// One step: a place, and what is written into it.
+///
+/// **An arithmetic operation's destination carries the type C performs it at.**
+/// Whoever builds one owes that: C17 6.3.1.1 p2 promotes the operands of an
+/// arithmetic operator, so `char + char` happens at `int` and the narrowing
+/// back to a `char` is a separate assignment under 6.3.1.3. An `Operation`
+/// whose `value` is a [`Rvalue::Binary`] or a [`Rvalue::Unary`] and whose
+/// `place` is narrower says the arithmetic happened at the narrow width, and a
+/// consumer that believes it calls a defined program undefined. The interpreter
+/// is that consumer today and a backend is the next one: LLVM needs the
+/// operation's own type to emit it at all.
+///
+/// A frontend that lowers `c += 1` as one operation into `c` breaks this, which
+/// is what `safec`'s did until it was measured. The fix is what C says the
+/// program is: compute into a temporary of the promoted type, then assign.
+/// `lowering.rs::promoted` is where that is done and why.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Operation {
     /// What is written to.
@@ -830,8 +848,13 @@ impl Function {
 /// A translation unit and not a program: linking is what would make several of
 /// these one program, and nothing links yet. It is the unit a lowering produces
 /// and the unit an analysis is handed.
-#[derive(Clone, Debug, Default)]
+/// Not `Default`, deliberately. A unit that nobody said the target of is one
+/// whose `int` has no width, and `docs/architecture.md` says the artifact
+/// depends on that target rather than on whoever is running. Making the target
+/// the one argument of [`TranslationUnit::new`] is how a caller cannot forget.
+#[derive(Clone, Debug)]
 pub struct TranslationUnit {
+    target: Target,
     functions: Vec<Function>,
     types: Vec<Ty>,
     /// So that one type has one id. Not part of the shape: an implementation
@@ -840,9 +863,63 @@ pub struct TranslationUnit {
 }
 
 impl TranslationUnit {
-    /// An empty unit.
-    pub fn new() -> Self {
-        Self::default()
+    /// An empty unit, for that machine.
+    pub fn new(target: Target) -> Self {
+        Self {
+            target,
+            functions: Vec::new(),
+            types: Vec::new(),
+            interned: HashMap::new(),
+        }
+    }
+
+    /// The machine this unit is for.
+    ///
+    /// See ADR-0013 for why it is here rather than in the backend, and why a
+    /// pointer's width is not among what it says.
+    pub fn target(&self) -> Target {
+        self.target
+    }
+
+    /// What this type is worth on this unit's target, if it is an integer.
+    ///
+    /// `None` for `void` and for a pointer, which are the two that have no
+    /// width to answer with: a `void` is not a value and a pointer's width is
+    /// not something this compiler needs yet. A caller that wants to convert or
+    /// to check a range has to say what it does about those, which is the point
+    /// of answering `Option` rather than panicking.
+    pub fn integer(&self, id: TyId) -> Option<Integer> {
+        match self.ty(id) {
+            Ty::Int => Some(self.target.int()),
+            Ty::Char => Some(self.target.char()),
+            Ty::Void | Ty::Pointer(_) => None,
+        }
+    }
+
+    /// The type a place reaches, or `None` where its projections do not fit.
+    ///
+    /// A fact about the IR rather than about running it, so it is here rather
+    /// than in the interpreter: what `*p` is worth is the same question whoever
+    /// asks.
+    ///
+    /// `None` rather than a panic, because the caller that asks most is the
+    /// interpreter, whose whole doctrine is that it stops and says why instead
+    /// of dying. A `Deref` of something that is not a pointer is a unit the
+    /// lowering would not build and a hand-built one can, which is the case a
+    /// Clang adapter is: telling it what is wrong beats a backtrace.
+    pub fn place_ty(&self, function: &Function, place: &Place) -> Option<TyId> {
+        let mut ty = function.local(place.local);
+        for projection in &place.projection {
+            ty = match (projection, self.ty(ty)) {
+                (Projection::Deref, Ty::Pointer(pointee)) => pointee,
+                (Projection::Deref, _) => return None,
+                // `Index` is never built: `p[i]` lowers as `*(p + i)`, which
+                // `docs/frontend.md` records. An analysis that starts building
+                // one has to answer here.
+                (Projection::Index(_), _) => return None,
+            };
+        }
+        Some(ty)
     }
 
     /// The id for this type, which is the one it already had if it has one.
@@ -930,6 +1007,87 @@ impl TranslationUnit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The type a place reaches is the one its projections lead to.
+    ///
+    /// `p` and `*p` are two places and two types, which is the distinction
+    /// `Place`'s own doc comment says an analysis depends on. The interpreter
+    /// asks this to know what width an operation happens at, so answering the
+    /// pointer's own type would check an `int`'s arithmetic against a pointer.
+    ///
+    /// Mutation: answer `function.local(place.local)` and ignore the
+    /// projections. This fails on the second assertion.
+    #[test]
+    fn the_type_a_place_reaches_follows_its_projections() {
+        let mut unit = TranslationUnit::new(a_target());
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+
+        let (_sources, at) = spans();
+        let mut function = Function::new(at, int, [pointer]);
+        let p = function.parameters().next().expect("one parameter");
+
+        assert_eq!(unit.place_ty(&function, &Place::local(p)), Some(pointer));
+        assert_eq!(
+            unit.place_ty(
+                &function,
+                &Place {
+                    local: p,
+                    projection: vec![Projection::Deref],
+                }
+            ),
+            Some(int)
+        );
+
+        // A projection that does not fit is not a panic: the interpreter asks
+        // this before it resolves anything, and stopping with a sentence is
+        // what it promises. Only a hand-built unit gets here.
+        let holding = function.push_local(int);
+        assert_eq!(
+            unit.place_ty(
+                &function,
+                &Place {
+                    local: holding,
+                    projection: vec![Projection::Deref],
+                }
+            ),
+            None
+        );
+    }
+
+    /// What a type is worth is the target's answer, and `void` has none.
+    ///
+    /// Mutation: answer `Some` for a pointer or for `void`. The last two
+    /// assertions fail, and the interpreter would start checking a pointer's
+    /// arithmetic against a width nothing measured.
+    #[test]
+    fn what_a_type_is_worth_is_the_target_s_to_say() {
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let character = unit.push_type(Ty::Char);
+        let void = unit.push_type(Ty::Void);
+        let pointer = unit.push_type(Ty::Pointer(int));
+
+        assert_eq!(unit.integer(int).expect("an integer").bits(), 32);
+        assert!(unit.integer(int).expect("an integer").signed());
+        // The row of `Target::ALL` where `char` is unsigned, which is what makes
+        // this a question about the machine rather than about C.
+        assert!(!unit.integer(character).expect("an integer").signed());
+
+        assert_eq!(unit.integer(void), None);
+        assert_eq!(unit.integer(pointer), None);
+    }
+
+    /// A target, for a test that is not about the machine.
+    ///
+    /// Named rather than defaulted, because `TranslationUnit::new` takes one on
+    /// purpose: ADR-0013 says a unit nobody said the target of is one whose
+    /// `int` has no width. A test that *is* about the machine names its own.
+    fn a_target() -> Target {
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple")
+    }
     use crate::source::SourceMap;
 
     /// A source map with one file, so that a span can be built at all.
@@ -961,7 +1119,7 @@ mod tests {
     #[test]
     fn a_function_is_built_and_read_back() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
 
         let character = unit.push_type(Ty::Char);
@@ -1026,7 +1184,7 @@ mod tests {
     #[test]
     fn an_edge_no_statement_produced_can_be_built() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let void = unit.push_type(Ty::Void);
         let mut function = Function::new(at, void, []);
 
@@ -1121,7 +1279,7 @@ mod tests {
     #[test]
     fn an_id_still_names_its_block_after_more_are_pushed() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let void = unit.push_type(Ty::Void);
         let mut function = Function::new(at, void, []);
 
@@ -1149,7 +1307,7 @@ mod tests {
     /// fails.
     #[test]
     fn one_type_has_one_id() {
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
 
         let int = unit.push_type(Ty::Int);
         let also_int = unit.push_type(Ty::Int);
@@ -1178,7 +1336,7 @@ mod tests {
     #[test]
     fn an_operation_can_say_nobody_wrote_it() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         let temporary = function.push_local(int);
@@ -1213,7 +1371,7 @@ mod tests {
     #[test]
     fn two_functions_with_one_name_have_two_ids() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let character = unit.push_type(Ty::Char);
 
@@ -1245,7 +1403,7 @@ mod tests {
     #[test]
     fn an_address_can_be_taken_of_an_element() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let pointer = unit.push_type(Ty::Pointer(int));
 
@@ -1291,7 +1449,7 @@ mod tests {
     #[test]
     fn a_loop_is_built_by_reserving_the_block_it_jumps_back_to() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         let counter = function.push_local(int);
@@ -1349,7 +1507,7 @@ mod tests {
     #[test]
     fn a_call_says_where_it_is_and_may_write_nowhere() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let void = unit.push_type(Ty::Void);
         let int = unit.push_type(Ty::Int);
         let pointer = unit.push_type(Ty::Pointer(int));
@@ -1397,7 +1555,7 @@ mod tests {
     #[test]
     fn a_declaration_is_not_a_definition_with_no_blocks() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let void = unit.push_type(Ty::Void);
         let int = unit.push_type(Ty::Int);
 
@@ -1439,7 +1597,7 @@ mod tests {
     #[test]
     fn a_declared_function_can_be_given_its_body() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
 
         let first = unit.push_function(Function::declaration(at, int, []));
@@ -1462,7 +1620,7 @@ mod tests {
     #[should_panic(expected = "already defined")]
     fn a_function_is_not_given_a_body_twice() {
         let (_sources, at) = spans();
-        let mut unit = TranslationUnit::new();
+        let mut unit = TranslationUnit::new(a_target());
         let int = unit.push_type(Ty::Int);
 
         let id = unit.push_function(Function::declaration(at, int, []));

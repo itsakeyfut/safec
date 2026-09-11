@@ -503,6 +503,7 @@ impl DiagnosticSink {
 mod tests {
     use super::*;
     use safec_ir::source::{SourceMap, Span};
+    use safec_ir::target::Target;
 
     fn span(start: u32, end: u32) -> Span {
         // A handle out of a real map, because `FileId::from_index` belongs to
@@ -806,6 +807,7 @@ mod tests {
             output: None,
             safety: SafetyLevel::Memory,
             emit: crate::options::EmitKind::Executable,
+            target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
             deny_unknown: false,
             color: crate::options::ColorMode::Never,
         };
@@ -828,6 +830,7 @@ mod tests {
             output: None,
             safety: SafetyLevel::Strict,
             emit: crate::options::EmitKind::Executable,
+            target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
             deny_unknown: false,
             color: crate::options::ColorMode::Never,
         };

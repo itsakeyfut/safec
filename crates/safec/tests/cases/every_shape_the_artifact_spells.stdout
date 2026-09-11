@@ -1,3 +1,4 @@
+Target "x86_64-pc-windows-msvc"
 Function every_shape_the_artifact_spells.c:1:6 "nothing"
   Local "_0" "void" return
   Block "bb0" entry

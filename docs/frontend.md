@@ -119,28 +119,43 @@ thing, which is that the body is not here.
 
 ### What the interpreter answers differently
 
-`crates/safec-ir/src/interp.rs` runs the IR so that a program can be tested without
-a backend, and it computes in `i128` because `ir::Ty` holds no widths. That is
-the source of all of these. Each was measured against the interpreter and
-against `clang 20.1.6 --target=x86_64-pc-windows-msvc`, where `int` is 32 bits
-and `char` is signed.
+`crates/safec-ir/src/interp.rs` runs the IR so that a program can be tested
+without a backend, and it computes at the target's widths. The unit says what
+those are; ADR-0013 is where that decision lives, and `--target` is how a run
+names one. Each row below was measured against the interpreter and against
+`clang 20.1.6 --target=x86_64-pc-windows-msvc`, where `int` is 32 bits and
+`char` is signed.
 
 | Written | This interpreter | `clang` |
 |---|---|---|
-| `int x = 2147483647; return x + 1;` | `2147483648` | `-2147483648` |
-| `int x = 1; return x << 31;` | `2147483648` | `-2147483648` |
-| `char c = 300; return c;` | `300` | `44` |
+| `int x = 2147483647; return x + 1;` | stops | `-2147483648` |
+| `int x = 1; return x << 31;` | stops | `-2147483648` |
+| `char c = 300; return c;` | `44` | `44` |
+| `char c = 200; return c;` | `-56`, and `200` for an unsigned `char` | the same |
 
-**The first two are undefined and the third is not.** C17 6.5 p5 leaves a signed
-overflow undefined and 6.5.7 p3 leaves that shift undefined, so no answer to
-those is wrong; what is worth recording is that this answers a number rather
-than stopping, which is the opposite of what it does for a division by zero.
-6.3.1.3 p3 makes the conversion in the third implementation-defined, and this
-implementation answers a value no implementation with an 8-bit `char` can.
+**The first two are undefined and the last two are not**, and that is the
+difference these four rows are about. It is not a claim that the table is
+exhaustive: what a program means here is measured case by case against `clang`,
+and a row appears when a measurement disagrees. C17 6.5 p5 leaves an operation undefined whose result "is not
+in the range of representable values for its type", and 6.5.7 p4 says the same
+of a left shift whose value is not representable, which `1 << 31` is not at 32
+bits. This stops on both rather than answering, which is what it does for a
+division by zero and is the opposite of what a real machine does. A compiler
+that answered `-2147483648` would be deciding what C declined to.
 
-None of the three is a decision. They are what a machine with one integer width
-answers, and the phase that gives the IR widths is where they stop being true:
-`docs/architecture.md` puts that in the lowering to LLVM.
+`x << 32` is the third undefined one and is not in the table, because there is
+no number to put in the last column: it is a shift count at least the width,
+which C17 6.5.7 p3 leaves undefined, and what `clang` answers is whatever the
+hardware did. Measured once here it was `1324023808`, and it is not a fact worth
+writing down. `clang` warns about it, and this stops on it.
+
+The last two are conversions rather than operations. C17 6.5.16.1 p2 converts
+the value of an assignment's right operand to the type of the assignment, and
+6.3.1.3 says what that gives, so nothing is undefined and nothing stops. 300
+truncates to `0x2C` and 44 is positive, so the sign does not show; 200 is where
+it does, and whether `char` carries one is the target's to say under C17 6.2.5
+p15. Of the targets this compiler knows, `aarch64-unknown-linux-gnu` is the one
+where it does not.
 
 A run is bounded twice: by how deep the calls go and by how many blocks it
 enters. A program that would answer after more steps than the second bound

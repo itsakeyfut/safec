@@ -37,6 +37,7 @@ use safec_ir::ir::{
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
+use safec_ir::target::Target;
 
 /// Something the frontend accepted and this stage cannot express.
 ///
@@ -56,6 +57,7 @@ pub fn lower(
     ast: &Ast,
     resolution: &Resolution,
     types: &Types,
+    target: Target,
     diagnostics: &mut DiagnosticSink,
 ) -> TranslationUnit {
     let mut lowering = Lowering {
@@ -63,7 +65,9 @@ pub fn lower(
         ast,
         resolution,
         types,
-        unit: TranslationUnit::new(),
+        // The one thing this stage learns about the machine, and it only
+        // passes it on: what a type is worth is asked of the unit, below this.
+        unit: TranslationUnit::new(target),
         locals: HashMap::new(),
         scopes: Vec::new(),
         functions: HashMap::new(),
@@ -987,13 +991,23 @@ impl Lowering<'_> {
                             None
                         };
 
+                        // 6.5.3.1 p2 and 6.5.2.4 p2 make `++E` and `E++` mean
+                        // `E += 1`, which 6.5.16.2 p3 makes `E = E + 1`. So the
+                        // step happens at the promoted type, the same as a
+                        // compound assignment above, and for the same reason.
+                        let stepped = self.promoted(builder);
                         builder.push(Operation {
-                            place: place.clone(),
+                            place: Place::local(stepped),
                             value: Rvalue::Binary {
                                 op: step,
                                 lhs: Operand::Copy(place.clone()),
                                 rhs: Operand::Constant(1),
                             },
+                            origin: Origin::Written(span),
+                        });
+                        builder.push(Operation {
+                            place: place.clone(),
+                            value: Rvalue::Use(Operand::Copy(Place::local(stepped))),
                             origin: Origin::Written(span),
                         });
                         // A prefix operator answers what the place holds after
@@ -1035,13 +1049,25 @@ impl Lowering<'_> {
                 let value = values.pop().expect("a value");
                 let place = places.pop().expect("a place");
                 let value = match op {
-                    // `a += b` reads `a`, so the place is both what is read and
-                    // what is written, and one operation says both.
-                    Some(op) => Rvalue::Binary {
-                        op: binary(op).expect("a compound assignment is never `&&` or `||`"),
-                        lhs: Operand::Copy(place.clone()),
-                        rhs: value,
-                    },
+                    // 6.5.16.2 p3: `a += b` is `a = a + b` but for evaluating
+                    // `a` once. Spelled that way here too, through a temporary
+                    // of the promoted type, so that the two spellings are one
+                    // IR and the addition is checked at the width C performs it
+                    // at rather than at the width it is stored into.
+                    Some(op) => {
+                        let computed = self.promoted(builder);
+                        builder.push(Operation {
+                            place: Place::local(computed),
+                            value: Rvalue::Binary {
+                                op: binary(op)
+                                    .expect("a compound assignment is never `&&` or `||`"),
+                                lhs: Operand::Copy(place.clone()),
+                                rhs: value,
+                            },
+                            origin: Origin::Written(span),
+                        });
+                        Rvalue::Use(Operand::Copy(Place::local(computed)))
+                    }
                     None => Rvalue::Use(value),
                 };
                 builder.push(Operation {
@@ -1358,6 +1384,27 @@ impl Lowering<'_> {
         Some(builder.function.push_local(ty))
     }
 
+    /// A temporary of the type an arithmetic operation is performed at.
+    ///
+    /// `int`, always, because C17 6.3.1.1 p2 promotes every integer type this
+    /// frontend has to it and 6.5.16.2 p3 makes `E1 op= E2` mean `E1 = E1 op
+    /// E2`, which puts the operation at the promoted type and the narrowing in
+    /// the assignment. `types.rs` says the same about `a + b` and is where this
+    /// stops being a constant: the day `long` parses, the promoted type of a
+    /// pair is a question again.
+    ///
+    /// Without this, `c += 100` on a `char` writes its addition straight into
+    /// an 8-bit place, and the interpreter reads that place's type as the width
+    /// the operation happened at. C says 200 is an ordinary `int` there and the
+    /// truncation to `char` is a conversion, so a run that stopped would be
+    /// reporting a defined program as undefined. ADR-0013 rests on an
+    /// operation's destination carrying the promoted type; this is what makes
+    /// that true where no expression node does.
+    fn promoted(&mut self, builder: &mut Builder) -> LocalId {
+        let int = self.unit.push_type(Ty::Int);
+        builder.function.push_local(int)
+    }
+
     /// The local an identifier means.
     ///
     /// A name with no local is one the IR cannot reach: an object at file
@@ -1547,7 +1594,18 @@ mod tests {
         let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
         assert!(!diagnostics.has_errors(), "the input did not check");
 
-        let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
+        // A target this test suite does not otherwise care about: what a
+        // program lowers to does not turn on the machine, and the one test
+        // that is about the machine names its own.
+        let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+        let unit = lower(
+            &sources,
+            &ast,
+            &resolution,
+            &types,
+            target,
+            &mut diagnostics,
+        );
         Lowered {
             unit,
             diagnostics,
@@ -2430,14 +2488,23 @@ mod tests {
         assert_eq!(returned.value, Rvalue::Use(Operand::Copy(Place::local(b))));
     }
 
-    /// A compound assignment reads the place it writes.
+    /// A compound assignment is the assignment C says it stands for.
     ///
-    /// C17 6.5.16.2 p3 makes `a += b` mean `a = a + b` except that `a` is
-    /// evaluated once.
+    /// C17 6.5.16.2 p3 makes `a -= b` mean `a = a - b` except that `a` is
+    /// evaluated once, so it lowers to two operations: the subtraction into a
+    /// temporary of the promoted type, and the place written from that. Writing
+    /// the subtraction straight into `a` is shorter and says the arithmetic
+    /// happened at `a`'s width, which is false whenever `a` is narrower than
+    /// `int`, and is what made `char c; c += 100;` a program this compiler
+    /// stopped on.
     ///
     /// Mutation: swap the operands, so `a -= b` means `b - a`. This fails.
+    /// Mutation: write the `Binary` into `a` and drop the temporary. The
+    /// assertions below fail, and so does
+    /// `a_compound_assignment_on_a_char_is_not_undefined` in
+    /// `crates/safec/tests/interp.rs`.
     #[test]
-    fn a_compound_assignment_reads_the_place_it_writes() {
+    fn a_compound_assignment_is_the_assignment_it_stands_for() {
         let lowered = lowered("int f(int a, int b) {\n    a -= b;\n    return a;\n}\n");
         assert_eq!(codes(&lowered), Vec::<String>::new());
 
@@ -2450,7 +2517,17 @@ mod tests {
             .flat_map(|block| assigns(block).into_iter().cloned().collect::<Vec<_>>())
             .collect();
 
-        assert_eq!(operations[0].place, Place::local(a));
+        let computed = operations[0].place.local;
+        assert!(operations[0].place.projection.is_empty());
+        assert_ne!(
+            computed, a,
+            "the subtraction does not happen at `a`'s width"
+        );
+        assert_eq!(
+            f.local(computed),
+            f.local(a),
+            "`int`, being the promoted type"
+        );
         assert_eq!(
             operations[0].value,
             Rvalue::Binary {
@@ -2458,6 +2535,12 @@ mod tests {
                 lhs: Operand::Copy(Place::local(a)),
                 rhs: Operand::Copy(Place::local(b)),
             }
+        );
+
+        assert_eq!(operations[1].place, Place::local(a));
+        assert_eq!(
+            operations[1].value,
+            Rvalue::Use(Operand::Copy(Place::local(computed)))
         );
     }
 
