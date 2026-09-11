@@ -101,7 +101,7 @@ because `&self.files[i]` still derefs to a `&SourceFile` living in the map.
 
 ### Confirmation
 
-`a_file_can_be_read_while_another_is_added` in `crates/safec/src/source.rs`
+`a_file_can_be_read_while_another_is_added` in `crates/safec-ir/src/source.rs`
 holds a file's text, adds a second file to the map, and reads both.
 
 The guard is the compiler rather than the assertions, in the same way ADR-0003's
@@ -178,7 +178,7 @@ remembers this record.
 
 ## More Information
 
-* `crates/safec/src/source.rs`: `SourceMap`, `SourceMap::file`,
+* `crates/safec-ir/src/source.rs`: `SourceMap`, `SourceMap::file`,
   `SourceMap::file_owned`.
 * [ADR-0003](0003-pass-the-source-map-to-each-render-call.md): the same conflict
   one layer out, and the record that named this one without fixing it.

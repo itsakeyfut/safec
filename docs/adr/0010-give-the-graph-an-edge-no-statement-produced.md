@@ -68,7 +68,7 @@ but it cannot be absent.
 
 ### Confirmation
 
-`E0004`. `Terminator::successors` in `crates/safec/src/ir.rs` matches every
+`E0004`. `Terminator::successors` in `crates/safec-ir/src/ir.rs` matches every
 kind and is written out rather than wildcarded, so a kind added later stops it
 and every other walk from compiling until somebody says what it means there.
 The fields are written out too, because the edge set is what this record is

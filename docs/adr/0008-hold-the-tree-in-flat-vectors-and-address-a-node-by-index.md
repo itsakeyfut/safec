@@ -70,7 +70,7 @@ because nothing can break it and still build.
   table keyed by id rather than rebuilding the tree. What such a table needs
   from an id, an `index()` or a `Hash`, and a length per arena, was not here
   when this was written and was deliberately not invented before its first
-  caller. `FileId::index` in `crates/safec/src/source.rs` is the same pattern
+  caller. `FileId::index` in `crates/safec-ir/src/source.rs` is the same pattern
   one layer up and is the shape to copy. Adding them breaks nothing, which is
   the point: the choice being made here is the one that cannot be added later.
 

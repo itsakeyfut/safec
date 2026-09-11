@@ -119,7 +119,7 @@ thing, which is that the body is not here.
 
 ### What the interpreter answers differently
 
-`crates/safec/src/interp.rs` runs the IR so that a program can be tested without
+`crates/safec-ir/src/interp.rs` runs the IR so that a program can be tested without
 a backend, and it computes in `i128` because `ir::Ty` holds no widths. That is
 the source of all of these. Each was measured against the interpreter and
 against `clang 20.1.6 --target=x86_64-pc-windows-msvc`, where `int` is 32 bits

@@ -143,7 +143,7 @@ than leaving a reader to assume a guard exists.
 ## More Information
 
 * `crates/safec/src/token.rs`: `Token`, `TokenKind`, and the size assertion.
-* `crates/safec/src/source.rs`: the module documentation stating the same rule
+* `crates/safec-ir/src/source.rs`: the module documentation stating the same rule
   for positions, which this generalises.
 * [ADR-0004](0004-resolve-the-strictest-level-where-the-policy-is-built.md): the same
   argument about invariants that nothing can enforce, in a different place.
