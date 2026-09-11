@@ -37,6 +37,7 @@ use safec_ir::ir::{
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
+use safec_ir::target::Target;
 
 /// Something the frontend accepted and this stage cannot express.
 ///
@@ -56,6 +57,7 @@ pub fn lower(
     ast: &Ast,
     resolution: &Resolution,
     types: &Types,
+    target: Target,
     diagnostics: &mut DiagnosticSink,
 ) -> TranslationUnit {
     let mut lowering = Lowering {
@@ -63,7 +65,9 @@ pub fn lower(
         ast,
         resolution,
         types,
-        unit: TranslationUnit::new(),
+        // The one thing this stage learns about the machine, and it only
+        // passes it on: what a type is worth is asked of the unit, below this.
+        unit: TranslationUnit::new(target),
         locals: HashMap::new(),
         scopes: Vec::new(),
         functions: HashMap::new(),
@@ -1547,7 +1551,18 @@ mod tests {
         let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
         assert!(!diagnostics.has_errors(), "the input did not check");
 
-        let unit = lower(&sources, &ast, &resolution, &types, &mut diagnostics);
+        // A target this test suite does not otherwise care about: what a
+        // program lowers to does not turn on the machine, and the one test
+        // that is about the machine names its own.
+        let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+        let unit = lower(
+            &sources,
+            &ast,
+            &resolution,
+            &types,
+            target,
+            &mut diagnostics,
+        );
         Lowered {
             unit,
             diagnostics,

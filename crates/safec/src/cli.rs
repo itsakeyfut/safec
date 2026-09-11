@@ -10,8 +10,16 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+use safec_ir::target::Target;
+
 use crate::options::{ColorMode, EmitKind, Options};
 use crate::safety::SafetyLevel;
+
+/// The triple this compiler was built to run on.
+///
+/// Set by `build.rs` from cargo's `TARGET`, which is the only thing that knows
+/// it exactly. It is what `--target` defaults to.
+pub const HOST_TRIPLE: &str = env!("SAFEC_HOST_TRIPLE");
 
 /// A small, hackable, safety-oriented C compiler.
 #[derive(Debug, Parser)]
@@ -54,6 +62,22 @@ pub struct Cli {
     #[arg(long)]
     pub deny_unknown: bool,
 
+    /// The machine to compile for.
+    ///
+    /// Validated by clap against the triples [`Target::ALL`] holds, so an
+    /// unknown one is reported with the known ones listed, the way an unknown
+    /// `--emit` is. Defaults to [`HOST_TRIPLE`]; ADR-0013 says why the host
+    /// picking the default is not the host reaching the output.
+    #[arg(
+        long,
+        value_name = "TRIPLE",
+        default_value = HOST_TRIPLE,
+        value_parser = clap::builder::PossibleValuesParser::new(
+            Target::ALL.iter().map(|target| target.triple()).collect::<Vec<_>>()
+        )
+    )]
+    pub target: String,
+
     /// When to colorize diagnostics.
     #[arg(
         long,
@@ -80,6 +104,7 @@ impl Cli {
             output,
             safety,
             emit,
+            target,
             deny_unknown,
             color,
         } = self;
@@ -89,6 +114,9 @@ impl Cli {
             output,
             safety,
             emit,
+            // clap answered for the spelling against `Target::ALL`, so the only
+            // way here is a triple that table holds.
+            target: Target::from_triple(&target).expect("clap accepted this triple"),
             // `--safety strict` is defined as leaving nothing `Unknown`, so it
             // carries `--deny-unknown` with it. Resolved once here rather than
             // in every consumer of `Options`, which is what this method is for.
@@ -300,6 +328,7 @@ mod tests {
                 output: Some(PathBuf::from("out.ir")),
                 safety: SafetyLevel::Strict,
                 emit: EmitKind::SafetyIr,
+                target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
                 deny_unknown: true,
                 color: ColorMode::Never,
             }
@@ -324,6 +353,61 @@ mod tests {
         assert_eq!(
             parse_error(&["safec", "--emit", "qbe", "a.c"]),
             ErrorKind::InvalidValue
+        );
+    }
+
+    /// A triple nothing measured is refused, with the known ones listed.
+    ///
+    /// The same shape as an unknown `--emit`, and for the same reason: this
+    /// compiler cannot say what `char` is worth on a machine nobody measured,
+    /// and guessing is how an artifact starts lying about its target.
+    ///
+    /// Mutation: take the triple as a plain `String` with no `value_parser`.
+    /// The parse succeeds and this fails.
+    #[test]
+    fn rejects_a_triple_this_compiler_does_not_know() {
+        assert_eq!(
+            parse_error(&["safec", "--target", "x86_64-unknown-none", "a.c"]),
+            ErrorKind::InvalidValue
+        );
+    }
+
+    /// `--target` defaults to the machine this compiler was built to run on,
+    /// and naming one overrides it.
+    ///
+    /// The host picking the default is not the host reaching the output:
+    /// ADR-0013 records the difference, and the corpus is what holds it, by
+    /// naming a target and comparing bytes on three runners whose hosts differ.
+    ///
+    /// Mutation: default to a fixed triple rather than to `HOST_TRIPLE`. The
+    /// first assertion fails on every host but that one. Mutation: ignore
+    /// `--target`. The second fails.
+    #[test]
+    fn the_target_defaults_to_the_host_and_a_flag_overrides_it() {
+        let defaulted = Cli::try_parse_from(["safec", "a.c"])
+            .expect("a bare invocation parses")
+            .into_options();
+        assert_eq!(defaulted.target.triple(), HOST_TRIPLE);
+
+        let named = Cli::try_parse_from(["safec", "--target", "wasm32-unknown-unknown", "a.c"])
+            .expect("a known triple parses")
+            .into_options();
+        assert_eq!(named.target.triple(), "wasm32-unknown-unknown");
+    }
+
+    /// The machine this was built for is one this compiler knows.
+    ///
+    /// `--target` defaults to `HOST_TRIPLE`, and clap validates it against
+    /// `Target::ALL`, so a host missing from that table makes every bare
+    /// invocation fail. Better to find that here than in somebody's terminal.
+    ///
+    /// Mutation: remove this host's row from `Target::ALL`. This fails, and so
+    /// does the test above.
+    #[test]
+    fn the_host_this_was_built_for_is_a_target_this_compiler_knows() {
+        assert!(
+            Target::from_triple(HOST_TRIPLE).is_some(),
+            "{HOST_TRIPLE} is not in `Target::ALL`: measure it with              `clang --target={HOST_TRIPLE} -dM -E -x c /dev/null` and add the row"
         );
     }
 

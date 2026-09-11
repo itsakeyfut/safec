@@ -10,6 +10,8 @@
 
 use std::path::PathBuf;
 
+use safec_ir::target::Target;
+
 use clap::ValueEnum;
 
 use crate::safety::SafetyLevel;
@@ -25,6 +27,12 @@ pub struct Options {
     pub safety: SafetyLevel,
     /// The artifact to produce.
     pub emit: EmitKind,
+    /// The machine to compile for.
+    ///
+    /// Not the one this is running on, except by default. See ADR-0013 and
+    /// `docs/architecture.md`'s "Output depends on the target, never on the
+    /// host".
+    pub target: Target,
     /// Whether `Unknown` analysis results are errors rather than warnings.
     ///
     /// The resolved answer, not the raw flag: `--safety strict` sets it too,
