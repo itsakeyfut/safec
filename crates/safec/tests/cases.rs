@@ -89,7 +89,6 @@ cases! {
     places_a_pointer_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     the_mvp_lowers_to_blocks_and_edges: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     not_a_declaration: ["--emit", "ast"],
-    output_path_not_supported: ["-o", "out.tok", "--emit", "tokens"],
     parentheses_regroup: ["--emit", "ast"],
     parsed_function: ["--emit", "ast"],
     pipeline_not_implemented: ["--emit", "llvm-ir"],

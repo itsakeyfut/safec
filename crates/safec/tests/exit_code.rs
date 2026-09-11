@@ -205,19 +205,23 @@ fn a_run_whose_artifact_could_not_be_written_does_not_report_success() {
     );
 }
 
-/// `-o` is reported as unsupported, and the path it names is left alone.
+/// `-o` puts the artifact where it was asked to, and leaves standard output
+/// empty.
 ///
-/// `driver.rs`'s `an_output_path_that_is_not_honoured_is_reported` is the other
-/// half and checks the report. Neither it nor anything else looked at the path,
-/// so a compiler that started writing there would have been caught by nothing:
-/// a build system reading that file would get content this compiler never
-/// claimed to have produced, which is the failure `driver.rs` names where it
-/// makes the decision.
+/// Through the binary rather than the library, because this is the half of the
+/// contract a build system reads: `make` names a target, runs the compiler, and
+/// then opens that file. The in-process tests in `driver.rs` cover the rest.
 ///
-/// Mutation: write anything to `options.output` in `run_compiler`. This test
-/// fails and no other does.
+/// This test used to assert the opposite, that the path was left alone, and its
+/// own note said "Mutation: write anything to `options.output` in
+/// `run_compiler`. This test fails and no other does." That is what #89 did on
+/// purpose, and the test it predicted is this one.
+///
+/// Mutation: write the artifact to the stream as well as to the path. The
+/// assertion on standard output fails. Mutation: write it to the stream
+/// instead. The file does not exist and this fails first.
 #[test]
-fn an_output_path_that_is_not_honoured_is_left_alone() {
+fn an_output_path_is_where_the_artifact_goes() {
     let path = std::env::temp_dir().join(format!("safec_output_{}.tok", std::process::id()));
     let _ = std::fs::remove_file(&path);
 
@@ -232,11 +236,17 @@ fn an_output_path_that_is_not_honoured_is_left_alone() {
         &source.display().to_string(),
     ]);
 
-    let written = path.exists();
+    let written = std::fs::read_to_string(&path);
     let _ = std::fs::remove_file(&path);
 
-    assert_eq!(output.status.code(), Some(1), "{output:?}");
-    assert!(!written, "the compiler wrote to {}", path.display());
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let written = written.expect("the compiler wrote the path it was given");
+    assert!(written.contains("keyword \"int\""), "{written}");
+    assert!(
+        output.stdout.is_empty(),
+        "the artifact went to the path and to standard output: {:?}",
+        String::from_utf8_lossy(&output.stdout)
+    );
 }
 
 /// The deepest nest of statements the parser accepts is printed, rather than

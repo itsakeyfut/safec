@@ -18,6 +18,7 @@
 
 use std::collections::HashSet;
 use std::fmt::Write as _;
+use std::fs;
 use std::io;
 use std::path::Path;
 use std::process::ExitCode;
@@ -213,24 +214,14 @@ pub fn compile(options: &Options) -> Compiled {
         }
     }
 
-    // Accepted by the parser and acted on by nothing. Saying so is not the
-    // same as implementing it, and it is the half that cannot wait: a run that
-    // was told where to put its output, put it somewhere else, and exited
-    // successfully has lied about the one thing the exit code is for. What `-o`
-    // should mean for several inputs, one artifact and no linker is a decision
-    // for when there is a backend to make it with.
-    if options.output.is_some() {
-        diagnostics.report(
-            Diagnostic::error("`-o` is not supported yet")
-                .with_note("the artifact is written to standard output")
-                .with_note("redirect it instead, until an output path is honoured"),
-        );
-    }
-
-    // The other half of the same decision, and it reads from the same answer
-    // rather than asking again. Said whenever it applies, including on a run
-    // that also failed to read a file, because a run that compiled nothing has
-    // to say so: leaving it out lets a user with one bad path among several
+    // Where the artifact goes is `run_compiler`'s and not this function's: what
+    // an artifact *is* does not depend on where it is written, and a test that
+    // wants to read one back should not have to give it a path to get it.
+    //
+    // That a run produced nothing at all is this function's, though, because it
+    // is a fact about the compilation. Said whenever it applies, including on a
+    // run that also failed to read a file, because a run that compiled nothing
+    // has to say so: leaving it out lets a user with one bad path among several
     // believe the rest were built. Exiting successfully without producing what
     // was asked for is the one thing a compiler must never do.
     if artifact.is_none() {
@@ -660,18 +651,50 @@ pub fn run_compiler(
     report: &mut impl io::Write,
     artifact: &mut impl io::Write,
 ) -> io::Result<Outcome> {
-    let compiled = compile(options);
+    let mut compiled = compile(options);
+
+    // One `match` rather than two `if`s, so that the four combinations are
+    // answered here and not by whichever condition happened to be written
+    // first. RK-003 in the review knowledge bank is what that costs: a gate
+    // spelled as two comparisons left a case answered by neither, and the
+    // compiler exited zero having produced nothing.
+    //
+    // Written before the diagnostics are rendered, because a path that cannot
+    // be written is one of them and there is no sink left to say it into
+    // afterwards.
+    match (&options.output, &compiled.artifact) {
+        // `fs::write` creates, truncates and writes in one call, so one failure
+        // covers all three and the note says which it was.
+        (Some(path), Some(emitted)) => {
+            if let Err(error) = fs::write(path, emitted.as_bytes()) {
+                compiled.diagnostics.report(write_failure(path, &error));
+            }
+        }
+        // A run that produced nothing leaves no file, rather than an empty one
+        // that a build system would read as newer than the source it came from.
+        // The diagnostic saying so is `compile`'s and has already been made.
+        (Some(_), None) => {}
+        (None, Some(emitted)) => artifact.write_all(emitted.as_bytes())?,
+        (None, None) => {}
+    }
 
     Renderer::new(options.color).render_all(&compiled.sources, &compiled.diagnostics, report)?;
-    if let Some(emitted) = &compiled.artifact {
-        artifact.write_all(emitted.as_bytes())?;
-    }
 
     Ok(if compiled.diagnostics.has_errors() {
         Outcome::Failed
     } else {
         Outcome::Succeeded
     })
+}
+
+/// Why an artifact could not be written where it was asked for.
+///
+/// The shape [`load_failure`] has for the other end of the same question, and
+/// carrying no code for the same reason: this is the driver saying something
+/// about a path rather than about a program, and `docs/diagnostics.md`'s topics
+/// are about programs.
+fn write_failure(path: &Path, error: &io::Error) -> Diagnostic {
+    Diagnostic::error(format!("cannot write `{}`", path.display())).with_note(error.to_string())
 }
 
 #[cfg(test)]
@@ -707,6 +730,17 @@ mod tests {
         fn new(name: &str, contents: impl AsRef<[u8]>) -> Self {
             let path = std::env::temp_dir().join(name);
             fs::write(&path, contents).expect("the temporary directory is writable");
+            Self(path)
+        }
+
+        /// A path in the same place that nothing has created.
+        ///
+        /// For a destination rather than a source: what the test is about is
+        /// what the compiler writes there, and `Drop` still removes it however
+        /// the test ends.
+        fn reserve(name: &str) -> Self {
+            let path = std::env::temp_dir().join(name);
+            let _ = fs::remove_file(&path);
             Self(path)
         }
 
@@ -1207,28 +1241,142 @@ mod tests {
         assert!(!artifact.is_empty());
     }
 
-    /// Accepted and then ignored is the shape of the failure this driver is
-    /// most careful about elsewhere: a run that was told where to put its
-    /// output, put it somewhere else, and exited zero. Reported until it is
-    /// honoured.
+    /// A path that cannot be written is reported, and the run fails.
+    ///
+    /// The other end of `load_failure`'s question, and the reason it is
+    /// answered before the diagnostics are rendered: after that there is no
+    /// sink left to say it into, and a run that could not write what it was
+    /// asked for must not exit zero.
+    ///
+    /// The path names a directory that does not exist, which every platform
+    /// refuses and none refuses in the same words. What is asserted is this
+    /// compiler's half of the sentence; the operating system's goes in a note,
+    /// the way `cannot read` already carries one.
+    ///
+    /// Mutation: ignore the `Err` from `fs::write`. The run succeeds and this
+    /// fails twice over.
     #[test]
-    fn an_output_path_that_is_not_honoured_is_reported() {
-        let file = TempFile::new(
-            "safec_driver_output_path.c",
-            "int x;
-",
-        );
+    fn an_output_path_that_cannot_be_written_is_reported() {
+        let file = TempFile::new("safec_driver_output_unwritable.c", "int x;\n");
         let mut options = options(vec![file.path().to_path_buf()]);
         options.emit = EmitKind::Tokens;
-        options.output = Some(PathBuf::from("out.tok"));
+        options.output = Some(missing_path("safec_no_such_dir").join("out.tok"));
 
         let (report, artifact, outcome) = run(&options);
 
         assert_eq!(outcome, Outcome::Failed);
-        assert!(report.contains("`-o` is not supported yet"), "{report}");
-        // Still emitted: the tokens are what was asked for, and stdout is
-        // somewhere the caller can reach.
-        assert!(artifact.contains("keyword"), "{artifact}");
+        assert!(report.contains("cannot write"), "{report}");
+        assert!(report.contains("out.tok"), "{report}");
+        assert_eq!(
+            artifact, "",
+            "nothing reaches the stream when a path was given"
+        );
+    }
+
+    /// A path does not move the diagnostics.
+    ///
+    /// They are this compiler's speech and go where speech goes, whatever the
+    /// artifact does. A reader running `safec -o a.tok x.c` and seeing nothing
+    /// would take a failed run for a clean one.
+    ///
+    /// Mutation: render into the artifact stream. The report is empty and this
+    /// fails.
+    #[test]
+    fn an_output_path_does_not_move_the_diagnostics() {
+        let file = TempFile::new("safec_driver_output_says.c", "int x = @;\n");
+        let written = TempFile::reserve("safec_driver_output_says.tok");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+        options.output = Some(written.path().to_path_buf());
+
+        let (report, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("unexpected character"), "{report}");
+    }
+
+    /// A run that reported an error still writes what it produced.
+    ///
+    /// `a_lexical_error_does_not_withhold_the_tokens` decided that for the
+    /// stream: the tokens are still what was asked for and still worth reading.
+    /// A path changes where the artifact goes and not whether there is one.
+    ///
+    /// This is a deliberate divergence from `clang` and `rustc`, which leave no
+    /// file on a failed compile and delete an existing one. Measured rather
+    /// than recalled. The exit code still says the run failed, which is what a
+    /// build system reads.
+    ///
+    /// Mutation: write only when the sink has no errors. The file is missing
+    /// and this fails.
+    #[test]
+    fn a_failing_run_still_writes_what_it_produced() {
+        let file = TempFile::new("safec_driver_output_failing.c", "int x = @;\n");
+        let written = TempFile::reserve("safec_driver_output_failing.tok");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+        options.output = Some(written.path().to_path_buf());
+
+        let (_, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        let text = fs::read_to_string(written.path()).expect("the artifact was written");
+        assert!(text.contains("keyword"), "{text}");
+    }
+
+    /// A run that produced nothing leaves no file.
+    ///
+    /// Not an empty one: a build system compares timestamps, and a file created
+    /// by a run that made nothing is newer than the source it did not compile.
+    ///
+    /// Mutation: create the file before asking whether there is an artifact.
+    /// The file exists and this fails.
+    #[test]
+    fn a_run_that_produces_nothing_writes_no_file() {
+        let file = TempFile::new("safec_driver_output_nothing.c", "int x;\n");
+        let written = TempFile::reserve("safec_driver_output_nothing.ll");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::LlvmIr;
+        options.output = Some(written.path().to_path_buf());
+
+        let (report, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("not implemented yet"), "{report}");
+        assert!(
+            !written.path().exists(),
+            "a run that made nothing left {}",
+            written.path().display()
+        );
+    }
+
+    /// Every input appends to one file, which is what standard output does.
+    ///
+    /// `every_input_appends_to_one_artifact` is the same claim for the stream,
+    /// and a path changes nothing about it: there is one artifact per run here
+    /// rather than one per input, so `-o` names it unambiguously. `clang`
+    /// refuses the same spelling because it writes one output per input, and
+    /// `--emit object` is where that distinction arrives.
+    ///
+    /// Mutation: truncate per input rather than writing once at the end. Only
+    /// the last input's tokens are in the file and this fails.
+    #[test]
+    fn every_input_appends_to_one_file() {
+        let first = TempFile::new("safec_driver_output_one.c", "int a;\n");
+        let second = TempFile::new("safec_driver_output_two.c", "int b;\n");
+        let written = TempFile::reserve("safec_driver_output_both.tok");
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.emit = EmitKind::Tokens;
+        options.output = Some(written.path().to_path_buf());
+
+        let (_, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Succeeded);
+        let text = fs::read_to_string(written.path()).expect("the artifact was written");
+        assert!(text.contains("\"a\""), "{text}");
+        assert!(text.contains("\"b\""), "{text}");
     }
 
     /// The rule, over every kind there is: a run either produces what was
