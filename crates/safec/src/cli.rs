@@ -313,6 +313,8 @@ mod tests {
             "--deny-unknown",
             "--color",
             "never",
+            "--target",
+            "wasm32-unknown-unknown",
             "-o",
             "out.ir",
             "a.c",
@@ -328,7 +330,13 @@ mod tests {
                 output: Some(PathBuf::from("out.ir")),
                 safety: SafetyLevel::Strict,
                 emit: EmitKind::SafetyIr,
-                target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+                // Named in the arguments above, and a triple nothing hosts.
+                // Leaving `--target` out and writing a host's triple here made
+                // this pass on the machine it was written on and fail on the
+                // other two CI runners, which is the defect
+                // `a_target_the_host_is_not` exists to catch in the corpus and
+                // the same one, one layer up.
+                target: Target::from_triple("wasm32-unknown-unknown").expect("a known triple"),
                 deny_unknown: true,
                 color: ColorMode::Never,
             }
