@@ -1275,7 +1275,7 @@ mod tests {
     /// Mutation: ignore the `Err` from `fs::write`. The run succeeds and this
     /// fails twice over. Mutation: drop the `with_note` from `write_failure`.
     /// The path is still reported and the reason is not, which is half of what
-    /// this issue's second acceptance criterion asks for, and nothing else in
+    /// #89's second acceptance criterion asks for, and nothing else in
     /// the workspace notices.
     #[test]
     fn an_output_path_that_cannot_be_written_is_reported() {
@@ -1332,10 +1332,13 @@ mod tests {
     /// stream: the tokens are still what was asked for and still worth reading.
     /// A path changes where the artifact goes and not whether there is one.
     ///
-    /// This is a deliberate divergence from `clang` and `rustc`, which leave no
-    /// file on a failed compile and delete an existing one. Measured rather
-    /// than recalled. The exit code still says the run failed, which is what a
-    /// build system reads.
+    /// This is a deliberate divergence from `clang`, which leaves no file on a
+    /// failed compile and deletes one that was already there: `clang -c b.c -o
+    /// probe.o` removed a `probe.o` that a previous run had made. `rustc` is
+    /// not the same and is not cited for it: after `E0308` the binary an
+    /// earlier run wrote was still there, same size and same mtime. Both
+    /// measured on this host rather than recalled. The exit code still says the
+    /// run failed, which is what a build system reads.
     ///
     /// Mutation: write only when the sink has no errors. The file is missing
     /// and this fails.
