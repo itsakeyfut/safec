@@ -114,3 +114,24 @@ which are held by the compiler rather than by remembering to run a test.
 Everything else can stay in one crate until it hurts.
 
 This keeps the initial codebase small and easy to navigate.
+
+## What the split actually is, now that one has happened
+
+That criterion fired once, and the workspace is two crates:
+
+```text
+crates/
+├── safec/        the lexer, the parser, sema, the types, the lowering, the
+│                 diagnostics, the CLI and the driver
+└── safec-ir/     the Safety IR, its printer, its interpreter, and the source
+                  map a span is an offset into
+```
+
+One arrow, `safec -> safec-ir`, and nothing the other way.
+[ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) has the
+reasoning and the options it rejected, including why `source` is on the IR side
+rather than the frontend's.
+
+Nothing else has been split, and the paragraphs above still hold for the rest:
+the lexer, the parser and sema are boundaries nothing is pushing on, so
+enforcing them would cost the crates and buy nothing.

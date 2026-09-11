@@ -13,6 +13,7 @@ name = "safec"
 path = "src/main.rs"
 
 [dependencies]
+safec-ir = { path = "../safec-ir" }
 clap.workspace = true
 ariadne.workspace = true
 

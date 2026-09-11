@@ -7,7 +7,7 @@
 //!
 //! Two divergences from [`SourceFile`] are worth
 //! knowing about, because both make a rendered gutter disagree with a
-//! [`LineCol`](crate::source::LineCol).
+//! [`LineCol`](safec_ir::source::LineCol).
 //!
 //! `ariadne` breaks lines on seven separators, among them a lone `\r` and a
 //! vertical tab; the source map breaks only on `\n`. And a file ending in `\n`
@@ -28,7 +28,8 @@ use ariadne::{Color, Config, Fmt, IndexType, Label as AriadneLabel, Report, Repo
 
 use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Severity};
 use crate::options::ColorMode;
-use crate::source::{FileId, SourceFile, SourceMap, Span};
+use safec_ir::print::{is_obeyed, shown};
+use safec_ir::source::{FileId, SourceFile, SourceMap, Span};
 
 /// How `ariadne` names a region: a file, and a byte range within it.
 ///
@@ -379,43 +380,6 @@ fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
     Ok(())
 }
 
-/// Text the compiler is echoing back, made safe to print.
-///
-/// A file name today, and an identifier or a string literal out of the source
-/// once there is a lexer, is content rather than something this renderer wrote.
-/// A terminal reads an escape sequence in it as an instruction: a colour, a
-/// cursor move, or clearing the line the diagnostic above it is on. Colour is
-/// something the renderer adds and not something content may smuggle in, so a
-/// control character arriving from content is shown rather than obeyed, under
-/// every colour mode rather than only under `--color never`.
-///
-/// Newline and tab are left alone. They are laid out rather than acted on, and
-/// a message that runs to two lines is ordinary.
-///
-/// This is for text this module writes. The text of a file, which `ariadne`
-/// echoes rather than this module, goes through [`echoed`] instead, for a
-/// reason that rules this function out there.
-///
-/// `pub(crate)` because the artifacts have the same question: every line of
-/// `--emit tokens`, `--emit ast` and `--emit safety-ir` begins with a file's
-/// name, and a name is content the same way a file's text is. `driver.rs`
-/// reaches this rather than keeping a second answer to one question.
-pub(crate) fn shown(text: &str) -> Cow<'_, str> {
-    if !text.chars().any(is_obeyed) {
-        return Cow::Borrowed(text);
-    }
-
-    let mut safe = String::with_capacity(text.len());
-    for ch in text.chars() {
-        if is_obeyed(ch) {
-            safe.extend(ch.escape_debug());
-        } else {
-            safe.push(ch);
-        }
-    }
-    Cow::Owned(safe)
-}
-
 /// A file's text, made safe to echo, with every byte offset preserved.
 ///
 /// [`shown`] is the wrong tool here. It turns one character into several, and a
@@ -460,11 +424,6 @@ fn echoed(text: &str) -> Cow<'_, str> {
 /// rules out the characters that would say it better, U+FFFD and the Control
 /// Pictures block among them.
 const REPLACEMENT: char = '?';
-
-/// Whether a terminal would act on this rather than print it.
-fn is_obeyed(ch: char) -> bool {
-    ch.is_control() && ch != '\n' && ch != '\t'
-}
 
 /// Remove the colour `ariadne` insists on putting in a custom header.
 ///
@@ -844,6 +803,38 @@ mod tests {
         }
     }
 
+    /// A file's name reaches the terminal on the header line too.
+    ///
+    /// `content_never_reaches_the_terminal_as_an_instruction` puts the escape
+    /// in a message, a label and a note, which are the three things this module
+    /// writes. It never gives the source map a hostile *name*, so it never
+    /// exercises the fourth: `ariadne` asks the cache what to call a file and
+    /// prints the answer in `╭─[ name:line:col ]`, the first structural line of
+    /// every anchored report.
+    ///
+    /// A name is not this compiler's text. It comes from a command line today
+    /// and from a `#include` later, and RK-002 records what a `.c` file did to
+    /// somebody's terminal when its bytes were echoed verbatim.
+    ///
+    /// Mutation: drop the `shown` from `SourceMapCache::display`. The escape
+    /// reaches the header under every colour mode and this fails; before it was
+    /// written, nothing in either crate did.
+    #[test]
+    fn a_file_name_is_escaped_on_the_line_that_locates_a_diagnostic() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("evil\u{1b}[31m.c", "int x;\n");
+
+        let anchored =
+            Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 0, 3), "here"));
+
+        for mode in [ColorMode::Never, ColorMode::Always] {
+            let rendered = render_with(&sources, &anchored, mode);
+
+            assert!(rendered.contains("evil\\u{1b}"), "{mode:?}: {rendered:?}");
+            assert!(!rendered.contains("evil\u{1b}"), "{mode:?}: {rendered:?}");
+        }
+    }
+
     /// The other half of `content_never_reaches_the_terminal_as_an_instruction`,
     /// and it needs its own test because the text of a file is echoed by
     /// `ariadne` rather than written by this module. Nothing reached this path
@@ -931,7 +922,12 @@ mod tests {
     fn a_label_naming_a_file_this_renderer_does_not_have_is_noted() {
         let mut sources = SourceMap::new();
         sources.add_virtual("main.c", "int x;\n");
-        let foreign = FileId::from_index(7);
+        // Minted by another map, which is the hazard `FileId`'s doc describes
+        // and, since ADR-0011, the only way a caller outside `safec_ir` can
+        // build one. Its index is past anything this renderer holds.
+        let mut elsewhere = SourceMap::new();
+        elsewhere.add_virtual("a.c", "");
+        let foreign = elsewhere.add_virtual("b.c", "");
 
         let rendered = render(
             &sources,
@@ -940,7 +936,7 @@ mod tests {
 
         assert_eq!(
             rendered,
-            "error: boom\n  = note: `here` points into a file this renderer does not have (index 7)\n"
+            "error: boom\n  = note: `here` points into a file this renderer does not have (index 1)\n"
         );
     }
 

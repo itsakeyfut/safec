@@ -150,7 +150,12 @@ version = "0.1.0"
 dependencies = [
  "ariadne",
  "clap",
+ "safec-ir",
 ]
+
+[[package]]
+name = "safec-ir"
+version = "0.1.0"
 
 [[package]]
 name = "strsim"

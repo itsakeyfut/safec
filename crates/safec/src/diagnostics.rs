@@ -16,7 +16,7 @@ use std::fmt;
 
 use crate::options::Options;
 use crate::safety::SafetyLevel;
-use crate::source::Span;
+use safec_ir::source::Span;
 
 /// How serious a diagnostic is.
 ///
@@ -224,7 +224,7 @@ impl Label {
 ///
 /// ```
 /// # use safec::diagnostics::{Code, Diagnostic, Label};
-/// # use safec::source::{SourceMap, Span};
+/// # use safec_ir::source::{SourceMap, Span};
 /// # let mut map = SourceMap::new();
 /// # let file = map.add_virtual("main.c", "int *p = 0;");
 /// let diagnostic = Diagnostic::error("use of freed value `p`")
@@ -502,10 +502,14 @@ impl DiagnosticSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::source::{FileId, Span};
+    use safec_ir::source::{SourceMap, Span};
 
     fn span(start: u32, end: u32) -> Span {
-        Span::new(FileId::from_index(0), start, end)
+        // A handle out of a real map, because `FileId::from_index` belongs to
+        // `safec_ir` and is not `pub`: a handle is only meaningful against the
+        // map it came from, and ADR-0011 made that boundary a crate boundary.
+        let mut sources = SourceMap::new();
+        Span::new(sources.add_virtual("t.c", ""), start, end)
     }
 
     #[test]

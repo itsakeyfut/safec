@@ -26,7 +26,7 @@ use crate::ast::{
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
-use crate::source::{SourceMap, Span};
+use safec_ir::source::{SourceMap, Span};
 
 /// A value of the wrong type, C17 6.5.16.1 p1.
 ///

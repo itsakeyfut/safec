@@ -30,13 +30,13 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::{Ast, BinOp as AstBinOp, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type};
 use crate::ast::{TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::ir::{
+use crate::sema::Resolution;
+use crate::types::Types;
+use safec_ir::ir::{
     BinOp, Block, BlockId, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
-use crate::sema::Resolution;
-use crate::source::{SourceMap, Span};
-use crate::types::Types;
+use safec_ir::source::{SourceMap, Span};
 
 /// Something the frontend accepted and this stage cannot express.
 ///

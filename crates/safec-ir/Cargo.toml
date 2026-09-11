@@ -1,0 +1,12 @@
+[package]
+name = "safec-ir"
+description = "The Safety IR: its shape, its printer, its interpreter, and the source map a span is an offset into"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
