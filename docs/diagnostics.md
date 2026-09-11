@@ -89,17 +89,27 @@ of the change that adds it.
 
 ### What carries no code
 
-A diagnostic about the invocation rather than about a program's text has no
-code. `no input files` and `cannot read <path>` are that kind, and five of the
-six diagnostics in `crates/safec/src/driver.rs` carry none. There is no class of
-program for a reader to search for and nothing for an explanation to hang on, so
-a number there would be a handle onto nothing.
+A diagnostic about the invocation, or about the machine a run is on, rather than
+about a program's text has no code. `no input files`, `cannot read <path>` and
+`--emit object needs clang` are that kind, and eleven of the twelve diagnostics
+in `crates/safec/src/driver.rs` carry none. There is no class of program for a
+reader to search for and nothing for an explanation to hang on, so a number
+there would be a handle onto nothing.
 
-`SC0801` is the sixth and is the other kind. The backend refusing an IR shape is
-a fact about a function in a program, with a span to point at and a class of
-program to search for, so it takes a code the way the lowering's `SC0304` does.
+`SC0801` is the one that does not, and is the other kind. The backend refusing
+an IR shape is a fact about a function in a program, with a span to point at and
+a class of program to search for, so it takes a code the way the lowering's
+`SC0304` does.
 The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
 all, so the code is attached where the diagnostic is built.
+
+**The count is checked by nobody and has been wrong twice.** It said six while
+`driver.rs` built seven, from the change that added a refusal without coming
+back here; and a comment beside the code in that file counted the uncoded ones
+as five while there were six, from the change that added `--emit object`. That
+comment no longer counts anything, because this is the one place that does. A
+number in prose about code in another file is exactly RK-017's shape, and
+`grep -c "Diagnostic::error" crates/safec/src/driver.rs` is what settles it.
 
 ## Where this lives now
 

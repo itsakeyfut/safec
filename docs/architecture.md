@@ -101,7 +101,7 @@ Three, and saying so is part of the intent rather than a caveat on it.
   `#[non_exhaustive]`, so however many kinds are given words of their own, some
   failure will always fall through to what the operating system said.
 
-### A known divergence
+### Two known divergences
 
 `cannot read` puts the operating system's message in a note, so it reads
 `The system cannot find the file specified. (os error 2)` on Windows and
@@ -117,6 +117,14 @@ The shape of the fix, when it is taken, is to name the common kinds in this
 compiler's own words and keep the operating system's string for the rest, rather
 than to drop the note: a diagnostic made testable by saying less is a worse
 diagnostic. It is tracked as issue 17, and this section goes when that lands.
+
+The second is `--emit object`, which passes `clang`'s own words through when
+`clang` refuses a module. That text is another tool's, and it varies by version
+and by build: it is not this compiler's speech and cannot be a search key. It is
+taken on purpose, because `clang` knows what is wrong with a module and this
+compiler does not, and [ADR-0015](adr/0015-make-an-object-by-spawning-clang.md)
+argues it. What follows from it is that these two diagnostics can never join the
+corpus, which compares bytes this compiler wrote.
 
 ## What Defines the Safety IR
 
@@ -181,7 +189,14 @@ library and the first backend deliberately went the other way:
 the reasoning, what it rejected, and the trigger for reversing it, which is
 `--emit object`.
 
-Possible libraries when that day comes:
+That trigger has fired and the answer was none of the three this document once
+listed. `--emit object` asks `clang` to make an object of the text, as a child
+process, so nothing here links against LLVM and nothing has to be installed to
+*build* this compiler.
+[ADR-0015](adr/0015-make-an-object-by-spawning-clang.md) carries that decision
+and what it costs, which is that `--emit object` needs a `clang` to *run*.
+
+Still the libraries to reach for on the day that changes:
 
 - `inkwell`
 - `llvm-sys`

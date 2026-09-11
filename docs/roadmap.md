@@ -141,10 +141,12 @@ LLVM stay a backend rather than leak into the frontend and the analyses, which
 is a claim worth a test rather than a paragraph.
 
 - the LLVM backend. It writes textual LLVM IR and links against no LLVM, so
-  there is no version to pin yet. ADR-0014 has why, and names `--emit object`
-  as the day that question reopens
+  there is no version to pin yet. ADR-0014 has why, and named `--emit object`
+  as the day that question reopens. It reopened and the answer was still no
+  library: ADR-0015 spawns `clang` to make an object, so there is still nothing
+  to pin and still nothing to install to build this
 - Safety IR to LLVM IR: `--emit llvm-ir`
-- object files: `--emit object`
+- object files: `--emit object`, which `clang` makes from the text
 - linking, and a native executable: `--emit executable`
 - targets and triples
 - `-o` is done ahead of the rest of this phase: `run_compiler` writes the

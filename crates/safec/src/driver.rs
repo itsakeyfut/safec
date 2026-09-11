@@ -20,8 +20,10 @@ use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::fs;
 use std::io;
-use std::path::Path;
-use std::process::ExitCode;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::process::{Command, ExitCode, Stdio};
+use std::thread;
 
 use crate::ast::{
     Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId, spell_type,
@@ -38,6 +40,7 @@ use crate::types::{Types, check};
 use safec_ir::ir::TranslationUnit;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, SourceFile, SourceMap};
+use safec_ir::target::Target;
 use safec_llvm::emit::Refusal;
 
 // Code generation takes `SC08xx`, which `docs/diagnostics.md` allocates. One
@@ -46,9 +49,12 @@ use safec_llvm::emit::Refusal;
 // on the code wants "the backend could not write this" rather than a list of
 // the ways that can happen.
 //
-// The first diagnostic in this file to carry one. The five above it are the
-// driver saying something about a run, and this is the backend saying something
-// about a program, which is the line `docs/diagnostics.md` draws.
+// The only diagnostic in this file that carries one. The others are the driver
+// saying something about a run or about the machine it is on, and this is the
+// backend saying something about a program, which is the line
+// `docs/diagnostics.md` draws. No count here: that document carries one, with
+// the command that settles it, and two places counting the same thing is one
+// place too many.
 const BACKEND: Code = Code::new("SC0801");
 
 /// Everything one run of the compiler produced.
@@ -73,8 +79,18 @@ pub struct Compiled {
     ///
     /// `--emit ast` answers differently, and `compile` says why: an input the
     /// scan reported on is not parsed, so it contributes no tree. A run of one
-    /// such file produces `Some("")`.
-    pub artifact: Option<String>,
+    /// such file produces `Some(empty)`.
+    ///
+    /// Bytes rather than text, because `--emit object` is not text. Every other
+    /// kind is UTF-8 this compiler wrote and a caller reading one back can say
+    /// so; an object is what `clang` handed over and has no encoding at all.
+    ///
+    /// Bytes carry no file mode, and the one artifact that will need one is the
+    /// executable: [`run_compiler`] writes with `fs::write`, which creates a
+    /// file nothing can run on a machine that has modes. That is three lines
+    /// where the write is, on the day `--emit executable` lands, rather than a
+    /// shape to change here now.
+    pub artifact: Option<Vec<u8>>,
 }
 
 /// What a run amounted to.
@@ -104,6 +120,13 @@ impl From<Outcome> for ExitCode {
 ///
 /// Split from [`run_compiler`] so that a test can inspect what was reported
 /// instead of reading it back out of a stream.
+///
+/// **Nothing here writes to a path the user named.** This function reads files
+/// and spawns children that answer on a pipe; [`run_compiler`] is the only
+/// thing that writes, which is what makes one rule about what a failed run
+/// leaves behind enough. `--emit executable` is where that is tempting to
+/// break, because a linker wants to write its own output, and breaking it means
+/// moving that rule rather than losing it.
 ///
 /// **The gate for per-input work is on the input, not on the run.**
 /// [`DiagnosticSink::has_errors`] answers whether anything in the whole run
@@ -136,10 +159,15 @@ pub fn compile(options: &Options) -> Compiled {
     // No code, because this is about the invocation rather than about a
     // program. `--emit object` is where one artifact per input arrives, and
     // where this stops being a refusal.
-    if matches!(options.emit, EmitKind::LlvmIr) && options.inputs.len() > 1 {
+    //
+    // The question is asked of the kind rather than answered by a list here,
+    // so that a kind added to `EmitKind` has to say which half it is in before
+    // the workspace builds. See `EmitKind::spans_inputs`.
+    if !options.emit.spans_inputs() && options.inputs.len() > 1 {
         diagnostics.report(
             Diagnostic::error(format!(
-                "`--emit llvm-ir` takes one input at a time, and this run was given {}",
+                "`--emit {}` takes one input at a time, and this run was given {}",
+                options.emit.spelling(),
                 options.inputs.len()
             ))
             .with_note(
@@ -152,6 +180,39 @@ pub fn compile(options: &Options) -> Compiled {
             diagnostics,
             artifact: None,
         };
+    }
+
+    // An object is the one artifact whose destination can be derived rather
+    // than given, and this compiler does not look at an extension to decide
+    // what an input is. So `safec --emit object x.o` derives the name it was
+    // handed, and writing it would destroy the source. Said before anything is
+    // read, because the answer does not depend on what the file turns out to
+    // contain.
+    //
+    // `-o` naming an input is the same collision said out loud and is refused
+    // the same way: a user who meant it can still say so with a different name.
+    //
+    // Two spellings of one path are two paths here, as they are for a repeated
+    // input above, so `-o ./x.o` on `x.o` is not caught. Deciding when two
+    // paths name one file belongs to the source map, and `#include` is what
+    // will make it worth deciding.
+    if let Some(path) = destination(options) {
+        if options.inputs.contains(&path) {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`--emit {}` would write over its own input `{}`",
+                    options.emit.spelling(),
+                    path.display()
+                ))
+                .with_note("an object is named after its input when `-o` does not say otherwise")
+                .with_note("name the object with `-o`"),
+            );
+            return Compiled {
+                sources,
+                diagnostics,
+                artifact: None,
+            };
+        }
     }
 
     let mut seen = HashSet::new();
@@ -197,7 +258,8 @@ pub fn compile(options: &Options) -> Compiled {
         EmitKind::Ast => Some(Emitted::Ast(String::new())),
         EmitKind::SafetyIr => Some(Emitted::SafetyIr(String::new())),
         EmitKind::LlvmIr => Some(Emitted::LlvmIr(String::new())),
-        EmitKind::Object | EmitKind::Executable => None,
+        EmitKind::Object => Some(Emitted::Object(Vec::new())),
+        EmitKind::Executable => None,
     };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
@@ -252,23 +314,32 @@ pub fn compile(options: &Options) -> Compiled {
                 ) else {
                     continue;
                 };
-                // The header goes in here rather than where the artifact is
-                // made, so that a run which read none of its inputs leaves an
-                // artifact that is empty rather than one holding a module with
-                // no functions in it. `run_compiler` reads emptiness as "made
-                // nothing" and declines to write it over a path the user gave;
-                // a header alone would pass that test and destroy the file.
-                //
-                // Once per artifact, because `--emit llvm-ir` refuses a second
-                // input above and a module may carry one `target triple`.
-                out.push_str(&safec_llvm::emit::header(options.target));
+                out.push_str(&module(&sources, &unit, options.target, &mut diagnostics));
+            }
+            Some(Emitted::Object(out)) => {
+                let Some(unit) = lowered(
+                    &sources,
+                    file,
+                    &tokens,
+                    read_whole,
+                    options,
+                    &mut diagnostics,
+                ) else {
+                    continue;
+                };
+                // Nothing reaches `clang` from a run that read nothing, because
+                // this arm is what builds the module and an input that could
+                // not be read never gets here. So the artifact stays empty and
+                // `run_compiler` declines to write an empty one over a path the
+                // user gave. That is the same rule the header's placement buys
+                // `--emit llvm-ir`, and it is worth saying because the failure
+                // it avoids is quieter here: `clang` answers a valid, useless
+                // object for a module with no functions in it.
+                let module = module(&sources, &unit, options.target, &mut diagnostics);
 
-                // The backend answers what it could not write rather than
-                // reporting it, because it cannot see a `Diagnostic`: ADR-0011
-                // put those in this crate. Every function it could write is in
-                // `out` already, and the ones it could not are declarations.
-                for refusal in safec_llvm::emit::functions(&sources, &unit, out) {
-                    diagnostics.report(backend_failure(&refusal));
+                match assembled(&module, options.target) {
+                    Ok(object) => *out = object,
+                    Err(why) => diagnostics.report(assembly_failure(&why)),
                 }
             }
             None => {}
@@ -289,10 +360,10 @@ pub fn compile(options: &Options) -> Compiled {
         diagnostics.report(
             Diagnostic::error("the compilation pipeline is not implemented yet")
                 .with_note(
-                    "safec currently reads its inputs, builds a Safety IR, and writes LLVM IR",
+                    "safec reads its inputs, builds a Safety IR, and writes LLVM IR and objects",
                 )
                 .with_note(
-                    "`--emit tokens`, `--emit ast`, `--emit safety-ir` and `--emit llvm-ir` are what it can make",
+                    "`--emit tokens`, `--emit ast`, `--emit safety-ir`, `--emit llvm-ir` and `--emit object` are what it can make",
                 ),
         );
     }
@@ -300,7 +371,7 @@ pub fn compile(options: &Options) -> Compiled {
     Compiled {
         sources,
         diagnostics,
-        artifact: artifact.map(Emitted::into_text),
+        artifact: artifact.map(Emitted::into_bytes),
     }
 }
 
@@ -322,14 +393,20 @@ enum Emitted {
     SafetyIr(String),
     /// What `--emit llvm-ir` asked for.
     LlvmIr(String),
+    /// What `--emit object` asked for.
+    ///
+    /// The one kind that is not text, and the reason [`Compiled::artifact`] is
+    /// bytes. `clang` made these and this compiler only carries them.
+    Object(Vec<u8>),
 }
 
 impl Emitted {
-    fn into_text(self) -> String {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
             Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) | Self::LlvmIr(text) => {
-                text
+                text.into_bytes()
             }
+            Self::Object(object) => object,
         }
     }
 }
@@ -414,6 +491,150 @@ fn lowered(
         types,
         options.target,
         diagnostics,
+    ))
+}
+
+/// Where an artifact is written, which is not always what `-o` said.
+///
+/// An object is the one kind with a default. `cc` and `rustc` both write
+/// `<stem>.o` into the *current* directory whatever path the input came from,
+/// measured rather than recalled: `clang -c sub/deep.c` leaves `./deep.o` and
+/// `rustc --emit obj sub/r.rs` leaves `./r.o`, and `clang` writes `.o` on this
+/// host rather than `.obj`. A user typing `safec --emit object a.c` means the
+/// same thing by it, and the alternative is a stream, which for an object is
+/// bytes into a terminal.
+///
+/// The stem rather than `Path::with_extension`, which keeps the directory the
+/// input came from and would leave `sub/deep.o` beside `sub/deep.c`. Both spell
+/// the name the same way, `a.tar.c` included; where they differ is where the
+/// file lands, and `cc` and `rustc` both land it here.
+///
+/// Every other kind answers what `-o` said, so `Options` keeps meaning what was
+/// asked for and the default lives in one place.
+fn destination(options: &Options) -> Option<PathBuf> {
+    if let Some(path) = &options.output {
+        return Some(path.clone());
+    }
+    if !matches!(options.emit, EmitKind::Object) {
+        return None;
+    }
+
+    let mut named = options.inputs.first()?.file_stem()?.to_os_string();
+    named.push(".o");
+    Some(PathBuf::from(named))
+}
+
+/// The module one unit becomes, with whatever the backend could not write
+/// already reported.
+///
+/// Shared by the two `--emit` kinds that reach the backend rather than written
+/// out in each, for the reason [`Emitted`] gives for existing: two copies of a
+/// rule are two things that have to agree.
+///
+/// The header goes in here rather than where the artifact is made, so that a
+/// run which read none of its inputs leaves nothing rather than a module with
+/// no functions in it. `run_compiler` reads emptiness as "made nothing" and
+/// declines to write it over a path the user gave; a header alone would pass
+/// that test and destroy the file. Once per artifact, because both kinds refuse
+/// a second input and a module may carry one `target triple`.
+fn module(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    target: Target,
+    diagnostics: &mut DiagnosticSink,
+) -> String {
+    let mut module = safec_llvm::emit::header(target);
+
+    // The backend answers what it could not write rather than reporting it,
+    // because it cannot see a `Diagnostic`: ADR-0011 put those in this crate.
+    // Every function it could write is in `module` already, and the ones it
+    // could not are declarations.
+    for refusal in safec_llvm::emit::functions(sources, unit, &mut module) {
+        diagnostics.report(backend_failure(&refusal));
+    }
+
+    module
+}
+
+/// Why a module could not be made into an object.
+#[derive(Debug)]
+enum Unassembled {
+    /// There is no `clang` to run.
+    Absent,
+    /// There is something by that name and it could not be started, and this is
+    /// what the operating system said about it.
+    Unrunnable(String),
+    /// It ran and refused, or could not be spoken to, and this is what it said.
+    Refused(String),
+    /// It ran, said nothing was wrong, and answered no object.
+    Silent,
+}
+
+/// One module as an object for the machine it names, made by `clang`.
+///
+/// Spawning a tool rather than linking one is ADR-0015, which also says what it
+/// costs: this is the first thing here that needs a program at run time, and
+/// `--emit object` does not work on a machine without one.
+///
+/// The IR goes in on one pipe and the object comes back on another, so nothing
+/// here needs a temporary file and no temporary name reaches the object: `clang`
+/// records what it was given, and the same module assembled twice is the same
+/// bytes.
+///
+/// **Standard input is written on a thread.** Both pipes are open at once, and
+/// a module larger than the pipe buffer would otherwise deadlock against a
+/// `clang` that has begun answering before it has finished reading. About 64
+/// KiB on this host, which an ordinary `.c` file reaches; the same hazard was
+/// measured in `tests/llvm.rs` and is why that one does not `expect` its write.
+fn assembled(module: &str, target: Target) -> Result<Vec<u8>, Unassembled> {
+    let mut clang = Command::new("clang")
+        // `-Wno-override-module` because the module names its own triple and
+        // `clang`'s own is more specific, so it warns about agreeing.
+        .args(["-c", "-x", "ir", "-Wno-override-module"])
+        .arg(format!("--target={}", target.triple()))
+        .args(["-o", "-", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        // A spawn that failed for any other reason is a third answer and not a
+        // refusal: `clang` never ran, so it has said nothing about the module,
+        // and wording it as though it had blames the program for a directory
+        // named `clang` on the path, or a binary this machine cannot start.
+        .map_err(|error| match error.kind() {
+            io::ErrorKind::NotFound => Unassembled::Absent,
+            _ => Unassembled::Unrunnable(error.to_string()),
+        })?;
+
+    let mut input = clang.stdin.take().expect("the pipe was asked for");
+    let written = module.to_owned();
+    let feeding = thread::spawn(move || input.write_all(written.as_bytes()));
+
+    let finished = clang
+        .wait_with_output()
+        .map_err(|error| Unassembled::Refused(error.to_string()))?;
+
+    // After the output, because a `clang` that gave up early breaks the pipe
+    // and its own words are the better answer. A write that failed for any
+    // other reason surfaces as a `clang` that got an incomplete module and
+    // said so.
+    let _ = feeding.join();
+
+    // An exit status is not evidence that an object exists. A `clang` on the
+    // path is not always LLVM's: a compiler cache or a distributing wrapper is
+    // routinely installed under that name, and one that is misconfigured
+    // answers nothing and exits successfully. Taking that as an object writes
+    // zero bytes over whatever `-o` named and exits zero, which is the one
+    // thing `compile` says a compiler must never do.
+    if finished.status.success() {
+        return if finished.stdout.is_empty() {
+            Err(Unassembled::Silent)
+        } else {
+            Ok(finished.stdout)
+        };
+    }
+    Err(Unassembled::Refused(
+        String::from_utf8_lossy(&finished.stderr).into_owned(),
     ))
 }
 
@@ -786,7 +1007,8 @@ pub fn run_compiler(
     // path that cannot be written is one of them. The stream is answered after
     // the rendering instead, which is why this yields what to write rather than
     // writing it: see the ordering paragraph on this function.
-    let to_stream = match (&options.output, &compiled.artifact) {
+    let written = destination(options);
+    let to_stream = match (&written, &compiled.artifact) {
         // `fs::write` creates, truncates and writes in one call, so one failure
         // covers all three and the note says which it was.
         //
@@ -797,9 +1019,18 @@ pub fn run_compiler(
         // zero-byte file newer than every source that the arm below exists to
         // avoid. An empty artifact from a run that reported nothing is a real
         // answer to an empty program, and is written.
+        //
+        // A failed run leaves no build product either, empty or not. A module
+        // missing a function the backend refused still assembles, so without
+        // this the run exits 1 having left a program with a function deleted
+        // from it, newer than the source, for a build system to read as
+        // finished. Which kinds are that sort of artifact is
+        // `EmitKind::survives_an_error`.
         (Some(path), Some(emitted)) => {
-            if !(emitted.is_empty() && compiled.diagnostics.has_errors()) {
-                if let Err(error) = fs::write(path, emitted.as_bytes()) {
+            let unfinished = compiled.diagnostics.has_errors()
+                && (emitted.is_empty() || !options.emit.survives_an_error());
+            if !unfinished {
+                if let Err(error) = fs::write(path, emitted) {
                     compiled.diagnostics.report(write_failure(path, &error));
                 }
             }
@@ -815,7 +1046,7 @@ pub fn run_compiler(
     Renderer::new(options.color).render_all(&compiled.sources, &compiled.diagnostics, report)?;
 
     if let Some(emitted) = to_stream {
-        artifact.write_all(emitted.as_bytes())?;
+        artifact.write_all(emitted)?;
     }
 
     Ok(if compiled.diagnostics.has_errors() {
@@ -823,6 +1054,51 @@ pub fn run_compiler(
     } else {
         Outcome::Succeeded
     })
+}
+
+/// Why a module could not be made into an object, as a diagnostic.
+///
+/// No code, like the five beside it and unlike `SC0801`: this is the driver
+/// saying something about the machine a run is on rather than about the program
+/// it was given. `docs/diagnostics.md` draws that line.
+///
+/// The absent case says what to install, because a user who reaches it has a
+/// working compiler and a missing tool, and "cannot run clang" on its own leaves
+/// them to guess which clang and why. The refused case passes `clang`'s own
+/// words through rather than interpreting them: it knows what is wrong with a
+/// module and this does not, and a clang older than LLVM 15 answers about the
+/// opaque pointers this writes.
+///
+/// The other two are the cases where nothing was heard from `clang` at all, and
+/// they are separate for exactly that reason. Saying "could not make an object
+/// of this module" about a run that never started, or about one that started
+/// and answered nothing, points a user at their program when the fault is on
+/// their machine.
+fn assembly_failure(why: &Unassembled) -> Diagnostic {
+    match why {
+        Unassembled::Absent => Diagnostic::error("`--emit object` needs `clang` and found none")
+            .with_note("safec writes LLVM IR and asks clang to make an object of it")
+            .with_note("any clang whose LLVM is 15 or newer reads the IR this writes"),
+        Unassembled::Unrunnable(said) => {
+            Diagnostic::error("`--emit object` found `clang` and could not run it")
+                .with_note(said.trim())
+                .with_note("this is what the machine said, not what clang said")
+        }
+        Unassembled::Refused(said) => {
+            let reported = Diagnostic::error("clang could not make an object of this module");
+            // A `clang` that was killed, or that crashed, exits unsuccessfully
+            // with nothing to say. An empty note is worse than no note: it
+            // reads as a message this compiler failed to fill in.
+            match said.trim() {
+                "" => reported.with_note("it exited unsuccessfully and said nothing"),
+                said => reported.with_note(said),
+            }
+        }
+        Unassembled::Silent => {
+            Diagnostic::error("clang answered no object and said nothing was wrong")
+                .with_note("the clang on this path may be a wrapper rather than a compiler")
+        }
+    }
 }
 
 /// Why an artifact could not be written where it was asked for.
@@ -858,6 +1134,62 @@ mod tests {
             deny_unknown: false,
             color: ColorMode::Never,
         }
+    }
+
+    /// What `clang` refused reaches the user in `clang`'s own words.
+    ///
+    /// The one path that needs a `clang` which runs and says no, and nothing
+    /// this backend writes can produce one: the module is always valid IR, and
+    /// a function it could not write becomes a `declare`. So the module is
+    /// handed over directly rather than compiled from C, which is also why this
+    /// is here rather than in `tests/object.rs`: `assembled` is private.
+    ///
+    /// Its own gate, for the same reason the tests over there have one. A
+    /// feature that needs a tool cannot be tested without it, and a check that
+    /// cannot fail loudly reports the state it was asked to prove, which is
+    /// RK-012.
+    ///
+    /// Mutation: answer `Ok` whatever the exit status. The artifact becomes
+    /// whatever `clang` wrote before giving up, the run exits successfully, and
+    /// this fails on the error it did not get.
+    #[test]
+    fn what_clang_refused_is_said_in_clang_s_own_words() {
+        let here = Command::new("clang")
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok();
+        if !here {
+            assert!(
+                std::env::var_os("SAFEC_REQUIRE_LLVM").is_none(),
+                "SAFEC_REQUIRE_LLVM is set and there is no `clang` to refuse anything"
+            );
+            eprintln!(
+                "no `clang` on this machine: what it says about a bad module was not checked"
+            );
+            return;
+        }
+
+        let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+        let why = assembled(
+            "this is not LLVM IR at all
+",
+            target,
+        )
+        .expect_err("clang has nothing to make an object of");
+
+        let Unassembled::Refused(said) = &why else {
+            panic!("{why:?}");
+        };
+        assert!(!said.is_empty(), "clang refused without saying why");
+
+        let reported = assembly_failure(&why);
+        assert!(
+            reported.message().contains("could not make an object"),
+            "{reported:?}"
+        );
+        assert_eq!(reported.notes().len(), 1, "{reported:?}");
     }
 
     /// A file on disk that removes itself. Named per test, because the suite
@@ -1489,9 +1821,9 @@ mod tests {
         let written = TempFile::reserve("safec_driver_output_nothing.o");
         let mut options = options(vec![file.path().to_path_buf()]);
         // Whichever kind the pipeline cannot reach yet. It was `LlvmIr` until
-        // a backend reached it, and this test is about a run that made nothing
-        // rather than about any one kind.
-        options.emit = EmitKind::Object;
+        // a backend reached it and `Object` until one was assembled, and this
+        // test is about a run that made nothing rather than about any one kind.
+        options.emit = EmitKind::Executable;
         options.output = Some(written.path().to_path_buf());
 
         let (report, _, outcome) = run(&options);
@@ -1548,6 +1880,8 @@ mod tests {
     ///
     /// Mutation: let the run through. The artifact holds two units, `clang`
     /// refuses it, and this fails on the outcome.
+    /// Mutation: answer a fixed kind from `EmitKind::spelling`. The refusal
+    /// names `--emit object` for a run that asked for llvm-ir and this fails.
     #[test]
     fn an_llvm_module_is_one_input_at_a_time() {
         let first = TempFile::new(
@@ -1570,7 +1904,10 @@ mod tests {
 
         assert_eq!(outcome, Outcome::Failed);
         assert!(artifact.is_empty(), "{artifact}");
-        assert!(report.contains("one input at a time"), "{report}");
+        assert!(
+            report.contains("`--emit llvm-ir` takes one input at a time"),
+            "{report}"
+        );
         // The other kinds are a dump rather than a module, and appending is
         // what they are for.
         options.emit = EmitKind::SafetyIr;
@@ -1712,30 +2049,26 @@ mod tests {
     fn asking_for_an_artifact_the_pipeline_cannot_reach_is_an_error() {
         let file = TempFile::new("safec_driver_emit_beyond.c", "int x;\n");
 
-        for emit in [
-            // `Ast` was here until a parser existed to reach it, `SafetyIr`
-            // until a lowering and a printer did, and `LlvmIr` until a backend
-            // did. What is left is everything past a module of LLVM IR, and the
-            // list shrinks again each time a phase lands.
-            EmitKind::Object,
-            EmitKind::Executable,
-        ] {
-            let mut options = options(vec![file.path().to_path_buf()]);
-            options.emit = emit;
+        // `Ast` was named here until a parser existed to reach it, `SafetyIr`
+        // until a lowering and a printer did, `LlvmIr` until a backend did, and
+        // `Object` until something assembled one. Linking is what is left, and
+        // when #93 lands this test has nothing to be about and goes with it.
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Executable;
 
-            let compiled = compile(&options);
+        let compiled = compile(&options);
 
-            assert!(compiled.artifact.is_none(), "{emit:?}");
-            assert!(compiled.diagnostics.has_errors(), "{emit:?}");
-            assert!(
-                compiled
-                    .diagnostics
-                    .diagnostics()
-                    .iter()
-                    .any(|diagnostic| diagnostic.message().contains("not implemented")),
-                "{emit:?}"
-            );
-        }
+        assert!(compiled.artifact.is_none());
+        assert!(compiled.diagnostics.has_errors());
+        assert!(
+            compiled
+                .diagnostics
+                .diagnostics()
+                .iter()
+                .any(|diagnostic| diagnostic.message().contains("not implemented")),
+            "{:?}",
+            compiled.diagnostics.diagnostics()
+        );
     }
 
     /// A reader of one must not be handed the other. The binary sends them to
@@ -1981,7 +2314,10 @@ mod tests {
             compiled.diagnostics.diagnostics()
         );
 
-        let artifact = compiled.artifact.expect("`--emit ast` produces one");
+        // Text, because every kind but `--emit object` is UTF-8 this compiler
+        // wrote. `Compiled::artifact` is bytes for the one that is not.
+        let artifact = String::from_utf8(compiled.artifact.expect("`--emit ast` produces one"))
+            .expect("`--emit ast` writes text");
         assert!(artifact.contains("safec_driver_gate_whole.c"), "{artifact}");
         assert!(
             !artifact.contains("safec_driver_gate_broken.c"),
