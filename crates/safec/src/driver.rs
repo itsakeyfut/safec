@@ -75,10 +75,12 @@ pub struct Compiled {
     pub diagnostics: DiagnosticSink,
     /// What `--emit` asked for, if the pipeline reaches that far.
     ///
-    /// `None` means the run was asked for something it cannot produce yet, and
-    /// the diagnostics say so. It does not mean nothing was written: a run that
-    /// reported a lexical error still emits the tokens, because they are still
-    /// what was asked for and they are still worth reading.
+    /// `None` means the run was refused before it read anything: too many
+    /// inputs for a kind that takes one, or a destination that is one of the
+    /// inputs. Both are facts about the invocation, and the diagnostics say so.
+    /// It does not mean nothing was compiled: a run that reported a lexical
+    /// error still emits the tokens, because they are still what was asked for
+    /// and they are still worth reading.
     ///
     /// `--emit ast` answers differently, and `compile` says why: an input the
     /// scan reported on is not parsed, so it contributes no tree. A run of one
@@ -88,11 +90,9 @@ pub struct Compiled {
     /// kind is UTF-8 this compiler wrote and a caller reading one back can say
     /// so; an object is what `clang` handed over and has no encoding at all.
     ///
-    /// Bytes carry no file mode, and the one artifact that will need one is the
-    /// executable: [`run_compiler`] writes with `fs::write`, which creates a
-    /// file nothing can run on a machine that has modes. That is three lines
-    /// where the write is, on the day `--emit executable` lands, rather than a
-    /// shape to change here now.
+    /// Bytes carry no file mode, and one artifact needs one. The mode is put on
+    /// where [`run_compiler`] writes, which is the only place that knows there
+    /// is a file at all.
     pub artifact: Option<Vec<u8>>,
 }
 

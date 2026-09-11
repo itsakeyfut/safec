@@ -1,13 +1,19 @@
-//! What `--emit object` writes, and what a machine without `clang` is told.
+//! What `--emit object` and `--emit executable` write, and what a machine
+//! without `clang` is told.
 //!
-//! An object is not text, so the corpus cannot hold one: `cases.rs` compares
-//! bytes this compiler wrote against bytes this compiler wrote, and these bytes
-//! came from `clang`. What can be held is what the object *is*, which its own
-//! header says, and that something else accepts it.
+//! The two kinds `clang` makes, in one file because they are one subject: the
+//! same tool, the same four ways it can fail, and the same question about what
+//! a run leaves on disk. Neither is text, so the corpus cannot hold one:
+//! `cases.rs` compares bytes this compiler wrote against bytes this compiler
+//! wrote, and these came from `clang`. What can be held is what the object
+//! *is*, which its own header says, that something else accepts it, and that
+//! the program answers 3.
 //!
-//! Every test here needs a `clang`, because `--emit object` needs one: ADR-0015
-//! says why. They say what they did not check where there is none, and
-//! `SAFEC_REQUIRE_LLVM` makes that a failure, which CI sets.
+//! Most tests here need a `clang`, because both kinds do: ADR-0015 says why.
+//! They say what they did not check where there is none, and
+//! `SAFEC_REQUIRE_LLVM` makes that a failure, which CI sets. The ones that do
+//! not are the refusals, which answer before anything is spawned, and
+//! `a_missing_clang_says_what_to_install`, which needs `clang` to be absent.
 
 use std::env;
 use std::ffi::OsString;
@@ -564,7 +570,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
 /// Needs no `clang`, and passes on a machine with none: what it arranges is
 /// found first either way.
 ///
-/// Mutation: fold the spawn failure back into `Unassembled::Refused`. The
+/// Mutation: fold the spawn failure back into `Unmade::Refused`. The
 /// message becomes "clang could not make an object of this module" and the
 /// second assertion fails.
 #[test]
@@ -701,11 +707,17 @@ fn the_mvp_program_runs_and_answers_three() {
 /// to: `safec mvp.c` is the run a user who has never read `--help` types, and
 /// until this change it said the pipeline was not implemented.
 ///
+/// The name is written out here rather than asked of `Target::program_name`,
+/// which is the function under test: a test that computes what it expects from
+/// the code it is checking agrees with that code however wrong both are, and
+/// this one said in its own note that it caught a mutation it cannot see. That
+/// is RK-001's shape and it was found in review.
+///
 /// Mutation: answer the input's stem from `destination` rather than the
 /// machine's name for a program. Nothing is at `a.out` and this fails.
 /// Mutation: answer `a.out` from `Target::program_name` on every machine. This
-/// fails on Windows and passes elsewhere, which is what the eight rows in
-/// `target.rs` are for.
+/// fails here on Windows; `every_machine_says_what_a_program_on_it_is_called`
+/// in `target.rs` is what fails on all eight rows wherever it runs.
 #[test]
 fn a_program_with_no_path_is_called_what_cc_calls_it() {
     if !clang_or_skip("what a program with no path is called") {
@@ -714,9 +726,7 @@ fn a_program_with_no_path_is_called_what_cc_calls_it() {
 
     let scratch = Scratch::new("no_path");
     scratch.source("mvp.c", MVP);
-    let expected = Target::from_triple(env!("SAFEC_HOST_TRIPLE"))
-        .expect("the host is a target this compiler knows")
-        .program_name();
+    let expected = if cfg!(windows) { "a.exe" } else { "a.out" };
 
     let output = safec(&["mvp.c"], scratch.path());
 
