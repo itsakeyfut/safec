@@ -1,0 +1,18 @@
+[package]
+name = "safec-llvm"
+description = "The LLVM backend: the Safety IR written out as textual LLVM IR"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+# The only dependency, and the point of the crate. `safec` is not here and
+# cannot be: it depends on this one, so the arrow the other way is a cycle cargo
+# refuses before anything compiles. See ADR-0011 and ADR-0014.
+[dependencies]
+safec-ir = { path = "../safec-ir" }
+
+[lints]
+workspace = true

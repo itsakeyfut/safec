@@ -4,6 +4,10 @@ Function a_target_the_host_is_not.c:1:5 "main"
   Local "_1" "char"
   Local "_2" "char"
   Block "bb0" entry
+    Operation a_target_the_host_is_not.c:1:5 generated
+      Destination "_0"
+      Use
+        Constant 0
     Operation a_target_the_host_is_not.c:4:5 written
       Destination "_1"
       Use

@@ -27,7 +27,7 @@ use crate::ast::{
     Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId, spell_type,
 };
 use crate::diagnostics::render::Renderer;
-use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy};
+use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Policy};
 use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
@@ -35,8 +35,21 @@ use crate::parser::parse;
 use crate::sema::{Resolution, resolve};
 use crate::token::Token;
 use crate::types::{Types, check};
+use safec_ir::ir::TranslationUnit;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, SourceFile, SourceMap};
+use safec_llvm::emit::Refusal;
+
+// Code generation takes `SC08xx`, which `docs/diagnostics.md` allocates. One
+// code for every shape of a refusal, for the reason `types.rs` gives for
+// `MISMATCH`: what differs between them is the message, and a reader filtering
+// on the code wants "the backend could not write this" rather than a list of
+// the ways that can happen.
+//
+// The first diagnostic in this file to carry one. The five above it are the
+// driver saying something about a run, and this is the backend saying something
+// about a program, which is the line `docs/diagnostics.md` draws.
+const BACKEND: Code = Code::new("SC0801");
 
 /// Everything one run of the compiler produced.
 ///
@@ -113,6 +126,34 @@ pub fn compile(options: &Options) -> Compiled {
         diagnostics.report(Diagnostic::error("no input files"));
     }
 
+    // A module is one translation unit, and this compiler makes one artifact
+    // per run. Appending a second unit to the first is not a module with
+    // duplicates in it: `int f(int);` in one input and `int f(int x) { ... }`
+    // in another gives a `declare` beside a `define` of one name, and LLVM
+    // refuses to parse that. Ordinary, correct C, so the answer is to say no
+    // rather than to write something nothing can read.
+    //
+    // No code, because this is about the invocation rather than about a
+    // program. `--emit object` is where one artifact per input arrives, and
+    // where this stops being a refusal.
+    if matches!(options.emit, EmitKind::LlvmIr) && options.inputs.len() > 1 {
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`--emit llvm-ir` takes one input at a time, and this run was given {}",
+                options.inputs.len()
+            ))
+            .with_note(
+                "a module is one translation unit, and two appended into one is not a module",
+            )
+            .with_note("run it once per input"),
+        );
+        return Compiled {
+            sources,
+            diagnostics,
+            artifact: None,
+        };
+    }
+
     let mut seen = HashSet::new();
     let mut loaded = Vec::new();
     for input in &options.inputs {
@@ -155,7 +196,8 @@ pub fn compile(options: &Options) -> Compiled {
         EmitKind::Tokens => Some(Emitted::Tokens(String::new())),
         EmitKind::Ast => Some(Emitted::Ast(String::new())),
         EmitKind::SafetyIr => Some(Emitted::SafetyIr(String::new())),
-        EmitKind::LlvmIr | EmitKind::Object | EmitKind::Executable => None,
+        EmitKind::LlvmIr => Some(Emitted::LlvmIr(String::new())),
+        EmitKind::Object | EmitKind::Executable => None,
     };
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
@@ -187,28 +229,47 @@ pub fn compile(options: &Options) -> Compiled {
                 dump_ast(&sources, &analysed.ast, out);
             }
             Some(Emitted::SafetyIr(out)) => {
-                let Some(analysed) =
-                    analysed(&sources, file, &tokens, read_whole, &mut diagnostics)
-                else {
-                    continue;
-                };
-                // Nothing to lower from a tree whose names and types are not
-                // known: the IR would be built out of what the frontend could
-                // not work out, and the lowering says so about each piece
-                // rather than saying it once here.
-                let Some((resolution, types)) = &analysed.typed else {
-                    continue;
-                };
-
-                let unit = lower(
+                let Some(unit) = lowered(
                     &sources,
-                    &analysed.ast,
-                    resolution,
-                    types,
-                    options.target,
+                    file,
+                    &tokens,
+                    read_whole,
+                    options,
                     &mut diagnostics,
-                );
+                ) else {
+                    continue;
+                };
                 dump_ir(&sources, &unit, out);
+            }
+            Some(Emitted::LlvmIr(out)) => {
+                let Some(unit) = lowered(
+                    &sources,
+                    file,
+                    &tokens,
+                    read_whole,
+                    options,
+                    &mut diagnostics,
+                ) else {
+                    continue;
+                };
+                // The header goes in here rather than where the artifact is
+                // made, so that a run which read none of its inputs leaves an
+                // artifact that is empty rather than one holding a module with
+                // no functions in it. `run_compiler` reads emptiness as "made
+                // nothing" and declines to write it over a path the user gave;
+                // a header alone would pass that test and destroy the file.
+                //
+                // Once per artifact, because `--emit llvm-ir` refuses a second
+                // input above and a module may carry one `target triple`.
+                out.push_str(&safec_llvm::emit::header(options.target));
+
+                // The backend answers what it could not write rather than
+                // reporting it, because it cannot see a `Diagnostic`: ADR-0011
+                // put those in this crate. Every function it could write is in
+                // `out` already, and the ones it could not are declarations.
+                for refusal in safec_llvm::emit::functions(&sources, &unit, out) {
+                    diagnostics.report(backend_failure(&refusal));
+                }
             }
             None => {}
         }
@@ -227,9 +288,11 @@ pub fn compile(options: &Options) -> Compiled {
     if artifact.is_none() {
         diagnostics.report(
             Diagnostic::error("the compilation pipeline is not implemented yet")
-                .with_note("safec currently reads its inputs and builds a Safety IR from them")
                 .with_note(
-                    "`--emit tokens`, `--emit ast` and `--emit safety-ir` are what it can make",
+                    "safec currently reads its inputs, builds a Safety IR, and writes LLVM IR",
+                )
+                .with_note(
+                    "`--emit tokens`, `--emit ast`, `--emit safety-ir` and `--emit llvm-ir` are what it can make",
                 ),
         );
     }
@@ -257,12 +320,16 @@ enum Emitted {
     Ast(String),
     /// What `--emit safety-ir` asked for.
     SafetyIr(String),
+    /// What `--emit llvm-ir` asked for.
+    LlvmIr(String),
 }
 
 impl Emitted {
     fn into_text(self) -> String {
         match self {
-            Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) => text,
+            Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) | Self::LlvmIr(text) => {
+                text
+            }
         }
     }
 }
@@ -318,6 +385,58 @@ fn analysed(
         ast,
         typed: Some((resolution, types)),
     })
+}
+
+/// One input's IR, or nothing where the frontend could not get that far.
+///
+/// Shared by the two `--emit` kinds that read the IR rather than duplicated in
+/// each, for the reason [`Emitted`] gives for existing at all: two copies of a
+/// gate are two things that have to agree, and RK-003 is what that costs when
+/// they stop.
+fn lowered(
+    sources: &SourceMap,
+    file: FileId,
+    tokens: &[Token],
+    read_whole: usize,
+    options: &Options,
+    diagnostics: &mut DiagnosticSink,
+) -> Option<TranslationUnit> {
+    let analysed = analysed(sources, file, tokens, read_whole, diagnostics)?;
+    // Nothing to lower from a tree whose names and types are not known: the IR
+    // would be built out of what the frontend could not work out, and the
+    // lowering says so about each piece rather than saying it once here.
+    let (resolution, types) = analysed.typed.as_ref()?;
+
+    Some(lower(
+        sources,
+        &analysed.ast,
+        resolution,
+        types,
+        options.target,
+        diagnostics,
+    ))
+}
+
+/// What the backend could not write, as a diagnostic.
+///
+/// The refusal's own sentence is the message, because it is the specific half:
+/// "the backend cannot write an indexed place, which counts elements and so
+/// needs a width" says more than a heading and a note would. `load_failure` has
+/// the same shape for the same reason.
+///
+/// A [`Refusal`] never carries text out of a source file, only type spellings
+/// this compiler wrote and numbers, so nothing here needs `shown`. RK-002 in
+/// the review knowledge bank is why that is worth stating rather than assuming.
+fn backend_failure(refusal: &Refusal) -> Diagnostic {
+    let reported =
+        Diagnostic::error(format!("the backend cannot write {}", refusal.why)).with_code(BACKEND);
+
+    match refusal.at {
+        Some(span) => reported.with_label(Label::primary(span, "this is what it could not write")),
+        // Only a call among the terminators carries a span, so a refusal about
+        // one of the others has nowhere to point and says so.
+        None => reported.with_note("the IR does not say where this came from"),
+    }
 }
 
 /// The tree, as a caller redirecting it would see.
@@ -1367,9 +1486,12 @@ mod tests {
     #[test]
     fn a_run_that_produces_nothing_writes_no_file() {
         let file = TempFile::new("safec_driver_output_nothing.c", "int x;\n");
-        let written = TempFile::reserve("safec_driver_output_nothing.ll");
+        let written = TempFile::reserve("safec_driver_output_nothing.o");
         let mut options = options(vec![file.path().to_path_buf()]);
-        options.emit = EmitKind::LlvmIr;
+        // Whichever kind the pipeline cannot reach yet. It was `LlvmIr` until
+        // a backend reached it, and this test is about a run that made nothing
+        // rather than about any one kind.
+        options.emit = EmitKind::Object;
         options.output = Some(written.path().to_path_buf());
 
         let (report, _, outcome) = run(&options);
@@ -1380,6 +1502,101 @@ mod tests {
             !written.path().exists(),
             "a run that made nothing left {}",
             written.path().display()
+        );
+    }
+
+    /// The same, for `--emit llvm-ir`, whose artifact has a header in it.
+    ///
+    /// The header is written where the first unit is rather than where the
+    /// artifact is made, so that a run which read nothing leaves an artifact
+    /// that is empty rather than one holding a module with no functions. A
+    /// header alone would pass the guard above and destroy the file, and it is
+    /// worse than a zero-byte one: `clang` accepts a module with nothing in it,
+    /// so whatever reads the file next succeeds.
+    ///
+    /// Mutation: write the header where the artifact is made. The file holds
+    /// one `target triple` line and this fails on its contents.
+    #[test]
+    fn a_module_with_nothing_in_it_does_not_overwrite_the_file() {
+        let written = TempFile::new(
+            "safec_driver_module_kept.ll",
+            "what was there before
+",
+        );
+        let mut options = options(vec![missing_path("safec_driver_module_kept.c")]);
+        options.emit = EmitKind::LlvmIr;
+        options.output = Some(written.path().to_path_buf());
+
+        let (report, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("cannot read"), "{report}");
+        assert_eq!(
+            fs::read_to_string(written.path()).expect("the file is still there"),
+            "what was there before
+"
+        );
+    }
+
+    /// `--emit llvm-ir` takes one input at a time, and says so.
+    ///
+    /// A module is one translation unit. `int f(int);` in one input and
+    /// `int f(int x) { ... }` in another is ordinary, correct C, and appending
+    /// both into one artifact puts a `declare` beside a `define` of one name,
+    /// which LLVM refuses to parse. Saying no beats writing something nothing
+    /// can read, and `--emit object` is where one artifact per input arrives.
+    ///
+    /// Mutation: let the run through. The artifact holds two units, `clang`
+    /// refuses it, and this fails on the outcome.
+    #[test]
+    fn an_llvm_module_is_one_input_at_a_time() {
+        let first = TempFile::new(
+            "safec_driver_two_units_a.c",
+            "int f(int x);
+",
+        );
+        let second = TempFile::new(
+            "safec_driver_two_units_b.c",
+            "int f(int x) { return x; }
+",
+        );
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.emit = EmitKind::LlvmIr;
+
+        let (report, artifact, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(artifact.is_empty(), "{artifact}");
+        assert!(report.contains("one input at a time"), "{report}");
+        // The other kinds are a dump rather than a module, and appending is
+        // what they are for.
+        options.emit = EmitKind::SafetyIr;
+        assert_eq!(run(&options).2, Outcome::Succeeded);
+    }
+
+    /// A refusal the IR could not place says so rather than pointing anywhere.
+    ///
+    /// Only a call among the terminators carries a span, so a refusal about one
+    /// of the others has nothing to point at. Nothing the frontend builds
+    /// reaches it, which is why this asks `backend_failure` directly rather
+    /// than compiling something.
+    ///
+    /// Mutation: drop the note. The diagnostic says what could not be written
+    /// and nothing about why it points nowhere, and this fails.
+    #[test]
+    fn a_refusal_with_nowhere_to_point_says_so() {
+        let reported = backend_failure(&Refusal {
+            why: "an edge no statement produced, which has no LLVM spelling".to_owned(),
+            at: None,
+        });
+
+        assert!(reported.primary_label().is_none(), "{reported:?}");
+        assert_eq!(
+            reported.notes(),
+            ["the IR does not say where this came from"]
         );
     }
 
@@ -1496,11 +1713,10 @@ mod tests {
         let file = TempFile::new("safec_driver_emit_beyond.c", "int x;\n");
 
         for emit in [
-            // `Ast` was here until a parser existed to reach it, and `SafetyIr`
-            // until a lowering and a printer did. What is left is everything
-            // past this compiler's own IR, and the list shrinks again each time
-            // a phase lands.
-            EmitKind::LlvmIr,
+            // `Ast` was here until a parser existed to reach it, `SafetyIr`
+            // until a lowering and a printer did, and `LlvmIr` until a backend
+            // did. What is left is everything past a module of LLVM IR, and the
+            // list shrinks again each time a phase lands.
             EmitKind::Object,
             EmitKind::Executable,
         ] {

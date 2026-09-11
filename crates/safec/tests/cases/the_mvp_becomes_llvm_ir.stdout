@@ -1,0 +1,41 @@
+target triple = "x86_64-pc-windows-msvc"
+
+define i32 @add(i32 %arg0, i32 %arg1) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  %_2 = alloca i32
+  %_3 = alloca i32
+  store i32 %arg0, ptr %_1
+  store i32 %arg1, ptr %_2
+  br label %bb0
+
+bb0:
+  %t0 = load i32, ptr %_1
+  %t1 = load i32, ptr %_2
+  %t2 = add nsw i32 %t0, %t1
+  store i32 %t2, ptr %_3
+  %t3 = load i32, ptr %_3
+  store i32 %t3, ptr %_0
+  %t4 = load i32, ptr %_0
+  ret i32 %t4
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  %t0 = call i32 @add(i32 1, i32 2)
+  store i32 %t0, ptr %_1
+  br label %bb1
+
+bb1:
+  %t1 = load i32, ptr %_1
+  store i32 %t1, ptr %_0
+  %t2 = load i32, ptr %_0
+  ret i32 %t2
+}

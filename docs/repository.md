@@ -117,20 +117,27 @@ This keeps the initial codebase small and easy to navigate.
 
 ## What the split actually is, now that one has happened
 
-That criterion fired once, and the workspace is two crates:
+That criterion has fired twice, and the workspace is three crates:
 
 ```text
 crates/
 ├── safec/        the lexer, the parser, sema, the types, the lowering, the
 │                 diagnostics, the CLI and the driver
-└── safec-ir/     the Safety IR, its printer, its interpreter, and the source
-                  map a span is an offset into
+├── safec-ir/     the Safety IR, its printer, its interpreter, and the source
+│                 map a span is an offset into
+└── safec-llvm/   the LLVM backend, which writes textual LLVM IR
 ```
 
-One arrow, `safec -> safec-ir`, and nothing the other way.
+The arrows are `safec -> safec-ir`, `safec -> safec-llvm` and
+`safec-llvm -> safec-ir`, and nothing points the other way.
 [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) has the
-reasoning and the options it rejected, including why `source` is on the IR side
-rather than the frontend's.
+reasoning for the first and the options it rejected, including why `source` is
+on the IR side rather than the frontend's.
+[ADR-0014](adr/0014-write-llvm-ir-as-text-from-a-crate-of-its-own.md) has the
+second: `docs/architecture.md` asks that LLVM not leak into the frontend and the
+analyses, and a backend that cannot see a token is that sentence held by cargo.
+One crate per backend rather than one `codegen` crate, because a WASM backend
+sharing a crate with an LLVM one shares its dependencies the day one arrives.
 
 Nothing else has been split, and the paragraphs above still hold for the rest:
 the lexer, the parser and sema are boundaries nothing is pushing on, so

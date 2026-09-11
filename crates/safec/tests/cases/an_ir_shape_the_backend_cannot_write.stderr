@@ -1,0 +1,7 @@
+error[SC0801]: the backend cannot write arithmetic on a pointer, which counts elements and so needs a width
+   ╭─[ an_ir_shape_the_backend_cannot_write.c:6:9 ]
+   │
+ 6 │     p = p + 1;
+   │         ──┬──  
+   │           ╰──── this is what it could not write
+───╯

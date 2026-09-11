@@ -414,13 +414,32 @@ impl Lowering<'_> {
             elements: Vec::new(),
         };
         builder.open();
+
+        // C17 5.1.2.2.3 p1: reaching the `}` that terminates `main` returns
+        // zero. Written at the top rather than beside the fall-off below,
+        // because a `goto` can reach that `}` from anywhere and because this is
+        // what `clang` does: the return place holds zero from the first
+        // instruction and a `return` of its own overwrites it.
+        //
+        // By name, which is what C17 5.1.2.2.1 p1 calls the entry point. The IR
+        // says nothing about which function that is, so it is the C frontend's
+        // to know, which is what the note this replaces pointed here for. A
+        // `main` returning anything but `int` is not one 5.1.2.2.1 describes,
+        // and writing a zero into its return place would be writing into a
+        // `void`.
+        if self.sources.snippet(name) == "main" && self.unit.ty(returns) == Ty::Int {
+            builder.push(Operation {
+                place: Place::local(builder.function.return_place()),
+                value: Rvalue::Use(Operand::Constant(0)),
+                origin: Origin::Generated(name),
+            });
+        }
+
         self.stmt(&mut builder, body, diagnostics)?;
 
-        // Falling off the end returns whatever the return place holds. C17
-        // 6.9.1 p12 makes reading that undefined, and 5.1.2.2.3 p1 makes
-        // `main` the exception by returning zero, which is not written here
-        // because nothing in the IR says which function is the entry point.
-        // Whoever gives it one writes that zero.
+        // Falling off the end returns whatever the return place holds, which
+        // C17 6.9.1 p12 makes undefined to read. `main` is the exception and
+        // has already written its zero above.
         if builder.reachable() {
             builder.end(Terminator::Return);
         }
@@ -1769,6 +1788,43 @@ mod tests {
         assert_eq!(body.len(), 1, "both markers are in one block");
     }
 
+    /// `main` is given its zero before its body, and nothing else is.
+    ///
+    /// C17 5.1.2.2.3 p1: reaching the `}` that terminates `main` returns zero,
+    /// unconditionally. 6.9.1 p12 leaves falling off the end of any other
+    /// value-returning function undefined, so only `main` gets one.
+    ///
+    /// Written at the top rather than beside the fall-off, because a `goto` can
+    /// reach that `}` from anywhere, and a `return` of its own overwrites it.
+    ///
+    /// **The interpreter cannot show this.** `interp.rs` answers zero for a top
+    /// frame whose return place nothing wrote, which is the same rule read from
+    /// the other end, so a program run through it gave the right answer while
+    /// the IR said nothing. It took a backend, whose output a real machine runs,
+    /// for that to be a wrong answer: measured, `int main() { fill(7); }` built
+    /// through `--emit llvm-ir` and `clang -O2` exited 108 where `clang`
+    /// compiling the same C exited 0.
+    ///
+    /// Mutation: drop the zero. This fails on the first element, and seven
+    /// corpus expectations fail with it.
+    #[test]
+    fn main_is_given_its_zero_and_nothing_else_is() {
+        let lowered = lowered("int main() { } int other() { }");
+
+        let main = function(&lowered, "main");
+        let entry = main.blocks().next().expect("a first block");
+        let [zero] = assigns(entry)[..] else {
+            panic!("one operation");
+        };
+        assert_eq!(zero.place, Place::local(main.return_place()));
+        assert_eq!(zero.value, Rvalue::Use(Operand::Constant(0)));
+        assert!(matches!(zero.origin, Origin::Generated(_)));
+
+        let other = function(&lowered, "other");
+        let entry = other.blocks().next().expect("a first block");
+        assert!(assigns(entry).is_empty());
+    }
+
     /// The MVP program of `docs/roadmap.md` lowers, which is the first clause
     /// of Phase 2's Done-when.
     ///
@@ -1816,7 +1872,15 @@ mod tests {
         let [entry, after] = main.blocks().collect::<Vec<_>>()[..] else {
             panic!("two blocks");
         };
-        assert!(assigns(entry).is_empty());
+        // One operation before the call, and it is `main`'s zero: C17
+        // 5.1.2.2.3 p1 puts it there whatever the body does.
+        let [zero] = assigns(entry)[..] else {
+            panic!("one operation before the call");
+        };
+        assert_eq!(zero.place, Place::local(main.return_place()));
+        assert_eq!(zero.value, Rvalue::Use(Operand::Constant(0)));
+        assert!(matches!(zero.origin, Origin::Generated(_)));
+
         let Terminator::Call {
             callee,
             arguments,

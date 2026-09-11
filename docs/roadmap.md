@@ -140,7 +140,9 @@ The backend, reading the Safety IR. [architecture.md](architecture.md) asks that
 LLVM stay a backend rather than leak into the frontend and the analyses, which
 is a claim worth a test rather than a paragraph.
 
-- the LLVM backend, through `inkwell`, and the LLVM version that pins
+- the LLVM backend. It writes textual LLVM IR and links against no LLVM, so
+  there is no version to pin yet. ADR-0014 has why, and names `--emit object`
+  as the day that question reopens
 - Safety IR to LLVM IR: `--emit llvm-ir`
 - object files: `--emit object`
 - linking, and a native executable: `--emit executable`

@@ -67,7 +67,18 @@ jobs:
       - name: Install the toolchain named by rust-toolchain.toml
         run: rustup show
       - uses: Swatinem/rust-cache@v2
+      # The LLVM backend writes textual IR and `tests/llvm.rs` hands it to
+      # `clang` to find out whether it is IR at all. Printed here so that a
+      # runner without one says so in a line rather than in a test name.
+      - name: Show which clang will check the emitted IR
+        run: clang --version
       - run: cargo test --workspace
+        env:
+          # Without this, a runner that lost its `clang` would keep passing
+          # while checking nothing. RK-012 in the review knowledge bank is what
+          # that costs. Set here and nowhere else: a developer with no `clang`
+          # still gets a green suite and a line saying what was skipped.
+          SAFEC_REQUIRE_LLVM: 1
 
   # --------------------------------------------------------------------------
   # MSRV: the crate still builds on the oldest compiler the workspace manifest
