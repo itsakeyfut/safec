@@ -26,10 +26,12 @@
 //! frame does not have to be kept to be recognised. That catches the defect
 //! `docs/roadmap.md`'s Phase 6 exists to catch, caught here by running.
 //!
-//! What it cannot catch is a scope: the IR has no statement that says a local's
-//! storage ended, so `{ int x; p = &x; }` leaves `x` alive until the function
-//! returns and a read through `p` answers. #74 is the issue for that, and until
-//! it lands this interpreter is honest about a frame and silent about a block.
+//! A scope is caught the same way and by a different mechanism. The IR says
+//! where a local's storage began and ended, so `{ int x; p = &x; } return *p;`
+//! reaches a slot with no storage rather than one the frame still holds, and
+//! the run stops there. See ADR-0012. Reading storage that is gone and reading
+//! storage nothing has written are two sentences, because they are two things a
+//! C program did.
 //!
 //! Nothing but tests calls this. `docs/roadmap.md` asks for no flag, and a
 //! `--run` would be a second way to execute a program that Phase 3's backend
