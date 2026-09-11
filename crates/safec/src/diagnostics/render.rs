@@ -543,6 +543,18 @@ impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
 
 #[cfg(test)]
 mod tests {
+    use safec_ir::analysis::Conclusion;
+
+    /// What a check that could not prove anything reports, for a test that is
+    /// about what happens to one rather than about how it is built.
+    ///
+    /// Through `concluded` rather than beside it, so that these tests exercise
+    /// the path a check takes: an unproven diagnostic has one way to exist and
+    /// this is it.
+    fn unproven(message: &str) -> Diagnostic {
+        Diagnostic::concluded(Conclusion::Unknown, message)
+            .expect("an unknown conclusion is reported")
+    }
     use super::*;
     use clap::Parser as _;
 
@@ -994,7 +1006,7 @@ mod tests {
     fn an_unproven_diagnostic_says_that_it_could_not_be_proven() {
         let sources = SourceMap::new();
 
-        let unproven = render(&sources, &Diagnostic::unproven("`p` may escape"));
+        let unproven = render(&sources, &unproven("`p` may escape"));
         assert!(
             unproven
                 .contains("  = note: this could not be proven; `--deny-unknown` makes it an error"),
@@ -1022,7 +1034,7 @@ mod tests {
                 .unwrap()
                 .into_options();
             let mut sink = DiagnosticSink::with_policy(crate::diagnostics::Policy::from(&options));
-            sink.report(Diagnostic::unproven("`p` may escape"));
+            sink.report(unproven("`p` may escape"));
 
             let rendered = render(&SourceMap::new(), &sink.diagnostics()[0]);
 
@@ -1046,8 +1058,7 @@ mod tests {
 
         let rendered = render(
             &sources,
-            &Diagnostic::unproven("`p` may escape")
-                .with_safety_level(crate::safety::SafetyLevel::Lifetime),
+            &unproven("`p` may escape").with_safety_level(crate::safety::SafetyLevel::Lifetime),
         );
 
         assert!(
