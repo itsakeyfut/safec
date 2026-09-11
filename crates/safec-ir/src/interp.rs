@@ -863,8 +863,9 @@ mod tests {
         );
         let at = Span::new(file, 4, 5);
 
-        // The row of `Target::ALL` where `char` is unsigned, so that `holds`
-        // has a lower bound of zero rather than of a negative number.
+        // One of the two rows of `Target::ALL` where `char` is unsigned, so
+        // that `holds` has a lower bound of zero rather than of a negative
+        // number.
         let mut unit = TranslationUnit::new(
             Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
         );

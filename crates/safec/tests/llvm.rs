@@ -14,6 +14,8 @@ use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use safec_ir::target::Target;
+
 /// Programs whose IR is worth handing to LLVM, and the machine each is for.
 ///
 /// Listed rather than discovered, the way `cases.rs` lists its cases and for
@@ -27,6 +29,14 @@ const PROGRAMS: &[(&str, &str)] = &[
     ("the_mvp_becomes_llvm_ir", "x86_64-pc-windows-msvc"),
     ("llvm_ir_follows_the_target", "aarch64-unknown-linux-gnu"),
     ("llvm_ir_of_every_operator", "x86_64-pc-windows-msvc"),
+    (
+        "a_narrow_value_is_extended_where_the_target_asks",
+        "x86_64-unknown-linux-gnu",
+    ),
+    (
+        "a_narrow_unsigned_value_is_extended_without_a_sign",
+        "armv7-unknown-linux-gnueabihf",
+    ),
     (
         "llvm_ir_of_conversions_and_a_constant_condition",
         "x86_64-pc-windows-msvc",
@@ -106,7 +116,7 @@ fn llvm_says(module: &[u8], triple: &str) -> String {
 /// Every module this compiler writes is one LLVM accepts without a word.
 ///
 /// Mutation: store a comparison's `i1` rather than widening it, **and then
-/// re-bless the corpus**. Every expectation agrees again, all 92 cases pass,
+/// re-bless the corpus**. Every expectation agrees again, all 94 cases pass,
 /// and this is what still fails, beside the hand-written assertion in
 /// `two_pointers_can_be_compared`. Measured, because that is the whole claim:
 /// a blessed file is only as good as the run that blessed it, and this is the
@@ -143,5 +153,147 @@ fn the_emitted_ir_is_what_llvm_accepts() {
 
         let said = llvm_says(&emitted.stdout, triple);
         assert!(said.is_empty(), "{name}: clang said {said}");
+    }
+}
+
+/// Every triple this compiler knows, for the differential below.
+///
+/// Written out rather than read from `Target::ALL`, for the reason
+/// `every_target_is_what_clang_says_it_is` gives: a test that asks the table
+/// about itself holds for any table. A triple added there and not here fails
+/// the count.
+const TRIPLES: &[&str] = &[
+    "aarch64-apple-darwin",
+    "aarch64-unknown-linux-gnu",
+    "armv7-unknown-linux-gnueabihf",
+    "i686-unknown-linux-gnu",
+    "wasm32-unknown-unknown",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+];
+
+/// The extension attributes on the one line of a module that carries this
+/// marker and names this function, in the order they appear.
+///
+/// The whole line cannot be compared. `clang` writes `dso_local`, `hidden`,
+/// `noundef` and a reference to an attribute group, none of which is about how
+/// a narrow value crosses a call and none of which this compiler writes. What
+/// is left after those is the claim.
+///
+/// In order rather than as a set, so that an attribute on the result and one on
+/// a parameter are not the same answer.
+///
+/// A marker rather than a prefix because the three places an attribute appears
+/// are not all at the start of a line, and because the two compilers do not put
+/// a module together in the same order: `declare` comes first here and last
+/// there, so a walk over the lines would compare a `define` with a `declare`.
+fn extensions(module: &str, marker: &str, name: &str) -> Vec<&'static str> {
+    let called = format!("@{name}(");
+    let line = module
+        .lines()
+        .find(|line| line.contains(marker) && line.contains(&called))
+        .unwrap_or_else(|| {
+            panic!(
+                "no `{marker}` of `{name}`:
+{module}"
+            )
+        });
+
+    line.split(|character: char| !character.is_ascii_alphanumeric())
+        .filter_map(|word| match word {
+            "signext" => Some("signext"),
+            "zeroext" => Some("zeroext"),
+            _ => None,
+        })
+        .collect()
+}
+
+/// What this compiler writes about a narrow value is what `clang` writes.
+///
+/// A `char` is passed and returned already widened on six of the eight measured
+/// targets and left narrow on the other two, and which is which does not follow
+/// from anything else: `aarch64-apple-darwin` and `x86_64-pc-windows-msvc`
+/// agree that `char` is signed and disagree about this. So the table is a
+/// measurement, and this is what re-measures it.
+///
+/// This replaces the acceptance criterion that asked for a `clang`-compiled
+/// caller linked against a `safec`-compiled callee. Not because such a program
+/// cannot be built: a reviewer built one under WSL for
+/// `x86_64-unknown-linux-gnu` and ran it over all 256 values of a `char`, and
+/// the two callees agreed byte for byte. Because of where it can *fail*. This
+/// host is `x86_64-pc-windows-msvc`, one of the two that ask for nothing, so
+/// such a program answers the same with the attribute and without it, and so
+/// does `windows-latest`. A test that cannot fail where its author runs it is
+/// RK-012's shape, and it would cover one target where this covers eight from
+/// any host, because `-S -emit-llvm` cross-compiles with no sysroot.
+///
+/// Mutation: answer `None` from `Emitter::extension` whatever the target. The
+/// six that ask fail. Mutation: answer `Some` whatever the target. The two that
+/// do not fail. Mutation: always `signext`. The `armv7` row fails. Mutation:
+/// drop the attribute from the `call` alone and re-bless the corpus. All 94
+/// cases agree again and this is the only thing left that objects, which is
+/// what the three markers below are for.
+#[test]
+fn the_attributes_are_what_clang_asks_for() {
+    // Before the gate below, so that a target added to the table without a row
+    // here is caught on a machine with no `clang` too.
+    assert_eq!(
+        TRIPLES.len(),
+        Target::ALL.len(),
+        "a target nobody asked `clang` about is one this list forgot"
+    );
+
+    if !clang_is_here() {
+        assert!(
+            std::env::var_os("SAFEC_REQUIRE_LLVM").is_none(),
+            "SAFEC_REQUIRE_LLVM is set and there is no `clang` to ask"
+        );
+        eprintln!("no `clang` on this machine: the ABI attributes were not checked against it");
+        return;
+    }
+
+    let program = case("a_narrow_value_is_extended_where_the_target_asks");
+
+    for triple in TRIPLES {
+        let ours = Command::new(env!("CARGO_BIN_EXE_safec"))
+            .args(["--color", "never", "--emit", "llvm-ir", "--target", triple])
+            .arg(&program)
+            .output()
+            .expect("the compiler binary was built for this test");
+        let ours = String::from_utf8(ours.stdout).expect("this compiler writes UTF-8");
+
+        let theirs = Command::new("clang")
+            .args(["-S", "-emit-llvm", "-O0"])
+            .arg(format!("--target={triple}"))
+            .args(["-o", "-"])
+            .arg(&program)
+            .output()
+            .expect("clang answered `--version` a moment ago");
+        // Both halves, the way `llvm_says` does it: a `clang` that succeeds and
+        // still says something has said something worth reading.
+        let complaint = String::from_utf8_lossy(&theirs.stderr).into_owned();
+        assert!(
+            theirs.status.success() && complaint.is_empty(),
+            "{triple}: clang exited {:?} and said {complaint}",
+            theirs.status.code()
+        );
+        let theirs = String::from_utf8_lossy(&theirs.stdout).into_owned();
+
+        // All three places an attribute appears, because a regression in any
+        // one of them survives a re-blessed corpus and LLVM takes a call site
+        // that disagrees with its callee silently. Measured: dropping it from
+        // the call alone, then re-blessing, left the whole suite green.
+        for (marker, function) in [
+            ("define ", "use_it"),
+            ("declare ", "twice"),
+            ("call ", "twice"),
+        ] {
+            assert_eq!(
+                extensions(&ours, marker, function),
+                extensions(&theirs, marker, function),
+                "{triple}: {marker}{function}"
+            );
+        }
     }
 }

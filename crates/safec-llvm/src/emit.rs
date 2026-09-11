@@ -20,7 +20,7 @@ use safec_ir::ir::{
 };
 use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
-use safec_ir::target::{Integer, Target};
+use safec_ir::target::{Extend, Integer, Target};
 
 /// Something the IR can express and this backend cannot.
 ///
@@ -144,6 +144,44 @@ impl Emitter<'_> {
             Ty::Char => format!("i{}", self.unit.target().char().bits()),
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
+        }
+    }
+
+    /// How LLVM spells what the target asks of this type when it crosses a
+    /// call.
+    ///
+    /// The spelling is all this decides. **Which values a machine widens and
+    /// which way is the machine's to say**, and `Target::extension` is where
+    /// that lives: a WASM backend and a C backend need the same answer and
+    /// write it differently, and three copies of the rule would be three
+    /// chances to disagree. `Ty::Void` and a pointer answer no `Integer`, so
+    /// they never reach it.
+    fn extension(&self, id: TyId) -> Option<&'static str> {
+        let value = self.unit.integer(id)?;
+        Some(match self.unit.target().extension(value)? {
+            Extend::Sign => "signext",
+            Extend::Zero => "zeroext",
+        })
+    }
+
+    /// A result's type, with whatever the ABI asks of it in front.
+    ///
+    /// In front for a result and after for a parameter, which is where LLVM
+    /// puts them and not a choice: `define signext i8 @f(i8 signext %0)`.
+    fn result(&self, id: TyId) -> String {
+        let spelled = self.spell(id);
+        match self.extension(id) {
+            Some(extension) => format!("{extension} {spelled}"),
+            None => spelled,
+        }
+    }
+
+    /// A parameter's type, with whatever the ABI asks of it after.
+    fn parameter(&self, id: TyId) -> String {
+        let spelled = self.spell(id);
+        match self.extension(id) {
+            Some(extension) => format!("{spelled} {extension}"),
+            None => spelled,
         }
     }
 
@@ -668,11 +706,15 @@ impl Emitter<'_> {
         let mut passed = Vec::with_capacity(arguments.len());
         for (argument, parameter) in arguments.iter().zip(&parameters) {
             let value = self.operand(function, argument, *parameter, out)?;
-            passed.push(format!("{} {value}", self.spell(*parameter)));
+            passed.push(format!("{} {value}", self.parameter(*parameter)));
         }
         let passed = passed.join(", ");
 
-        let spelled = self.spell(returns);
+        // The attribute goes on the call as well as on the callee. LLVM reads a
+        // call site whose attributes disagree with its callee's as undefined
+        // rather than as a mistake, so this is the third of the three places
+        // one appears, beside `define` and `declare`.
+        let spelled = self.result(returns);
         if spelled == "void" {
             writeln!(out, "  call void {name}({passed})").expect("writing to a string cannot fail");
         } else {
@@ -727,15 +769,15 @@ impl Emitter<'_> {
     /// such a function is refused in turn, because there is nothing to call.
     fn signature(&mut self, function: &Function) -> Option<(String, String, Vec<String>)> {
         let name = self.name(function);
-        let returns = self.spell(function.local(function.return_place()));
+        let returns = self.result(function.local(function.return_place()));
         let mut parameters = Vec::new();
 
         for local in function.parameters() {
-            let spelled = self.spell(function.local(local));
-            if spelled == "void" {
+            let ty = function.local(local);
+            if matches!(self.unit.ty(ty), Ty::Void) {
                 return self.refuse(format!("{name}, which has a parameter that holds nothing"));
             }
-            parameters.push(spelled);
+            parameters.push(self.parameter(ty));
         }
 
         Some((name, returns, parameters))

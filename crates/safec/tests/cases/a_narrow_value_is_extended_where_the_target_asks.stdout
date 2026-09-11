@@ -1,0 +1,42 @@
+target triple = "x86_64-unknown-linux-gnu"
+
+declare signext i8 @twice(i8 signext)
+
+declare void @nothing(ptr)
+
+define signext i8 @use_it(i8 signext %arg0, i32 %arg1, ptr %arg2) {
+entry:
+  %_0 = alloca i8
+  %_1 = alloca i8
+  %_2 = alloca i32
+  %_3 = alloca ptr
+  %_5 = alloca i8
+  %_6 = alloca i32
+  store i8 %arg0, ptr %_1
+  store i32 %arg1, ptr %_2
+  store ptr %arg2, ptr %_3
+  br label %bb0
+
+bb0:
+  %t0 = load ptr, ptr %_3
+  call void @nothing(ptr %t0)
+  br label %bb1
+
+bb1:
+  %t1 = load i8, ptr %_1
+  %t2 = call signext i8 @twice(i8 signext %t1)
+  store i8 %t2, ptr %_5
+  br label %bb2
+
+bb2:
+  %t3 = load i8, ptr %_5
+  %t4 = sext i8 %t3 to i32
+  %t5 = load i32, ptr %_2
+  %t6 = add nsw i32 %t4, %t5
+  store i32 %t6, ptr %_6
+  %t7 = load i32, ptr %_6
+  %t8 = trunc i32 %t7 to i8
+  store i8 %t8, ptr %_0
+  %t9 = load i8, ptr %_0
+  ret i8 %t9
+}
