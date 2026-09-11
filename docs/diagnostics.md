@@ -91,7 +91,7 @@ of the change that adds it.
 
 A diagnostic about the invocation, or about the machine a run is on, rather than
 about a program's text has no code. `no input files`, `cannot read <path>` and
-`--emit object needs clang` are that kind, and eleven of the twelve diagnostics
+`--emit object needs clang` are that kind, and ten of the eleven diagnostics
 in `crates/safec/src/driver.rs` carry none. There is no class of program for a
 reader to search for and nothing for an explanation to hang on, so a number
 there would be a handle onto nothing.
@@ -107,9 +107,12 @@ all, so the code is attached where the diagnostic is built.
 `driver.rs` built seven, from the change that added a refusal without coming
 back here; and a comment beside the code in that file counted the uncoded ones
 as five while there were six, from the change that added `--emit object`. That
-comment no longer counts anything, because this is the one place that does. A
-number in prose about code in another file is exactly RK-017's shape, and
-`grep -c "Diagnostic::error" crates/safec/src/driver.rs` is what settles it.
+comment no longer counts anything, because this is the one place that does. The
+count goes down as well as up: `--emit executable` removed `the compilation
+pipeline is not implemented yet`, which nothing could reach once every kind
+produced something. A number in prose about code in another file is exactly
+RK-017's shape, and `grep -c "Diagnostic::error" crates/safec/src/driver.rs` is
+what settles it.
 
 ## Where this lives now
 

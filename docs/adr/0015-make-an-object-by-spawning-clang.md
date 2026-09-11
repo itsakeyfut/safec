@@ -147,8 +147,14 @@ that needs a tool cannot be tested without it, so the gate is the same one
   succeeding, which this keeps rather than reports. What it no longer hides is
   a `clang` that is not one: four answers are told apart rather than two, and
   only the one where `clang` ran and spoke passes its words through.
-* Neutral, because `--emit executable` in #93 meets the same question and will
-  answer it the same way or say why not.
+* Neutral, because `--emit executable` met the same question and answered it
+  the same way: one spawn rather than two, since `clang -x ir` with no `-c`
+  reads a module and answers a linked program. What it could not keep is the
+  pipe, because a linker will not write to a stream, so that one artifact goes
+  through a directory of its own and is read back. The cost of *linking* for
+  another machine is not the cost of assembling for one: every target here
+  assembles with no sysroot and only the host links, which the diagnostic says
+  rather than the record deciding.
 
 ## More Information
 
