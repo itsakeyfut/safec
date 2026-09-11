@@ -162,7 +162,11 @@ Phase 2 built the graph. This phase builds what walks it.
 - the dataflow framework: lattices, transfer functions, fixpoint iteration
 - variable state tracking
 - whatever the analyses need from the graph itself: reachability, dominance,
-  loop structure
+  loop structure. Reachability is done ahead of the rest of this phase, with
+  the predecessors and the visiting order that a dataflow pass wants beside it;
+  dominance and loop structure wait for something that needs them, because
+  "whatever the analyses need" is the measure and an interface with no caller is
+  invented rather than designed
 - the shape a check reports through, so that a check names its conclusion and
   never reads the policy. See [safety-model.md](safety-model.md)
 
