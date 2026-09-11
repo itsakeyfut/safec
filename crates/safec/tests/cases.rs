@@ -81,6 +81,11 @@ cases! {
     missing_semicolon: ["--emit", "ast"],
     mvp_program: ["--emit", "ast"],
     a_scope_that_opens_and_closes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `wasm32` on purpose, and not the triple every other IR case names: no
+    // CI runner and no developer machine hosts it, so this is the case that
+    // fails wherever `--target` stops being honoured. On a machine that hosts
+    // the triple the others name, they cannot tell the two apart.
+    a_target_the_host_is_not: ["--emit", "safety-ir", "--target", "wasm32-unknown-unknown"],
     places_a_pointer_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     the_mvp_lowers_to_blocks_and_edges: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     not_a_declaration: ["--emit", "ast"],
