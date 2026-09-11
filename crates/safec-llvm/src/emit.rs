@@ -20,7 +20,7 @@ use safec_ir::ir::{
 };
 use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
-use safec_ir::target::{Integer, Target};
+use safec_ir::target::{Extension, Integer, Target};
 
 /// Something the IR can express and this backend cannot.
 ///
@@ -144,6 +144,56 @@ impl Emitter<'_> {
             Ty::Char => format!("i{}", self.unit.target().char().bits()),
             Ty::Void => "void".to_owned(),
             Ty::Pointer(_) => "ptr".to_owned(),
+        }
+    }
+
+    /// What the ABI asks of this type when it crosses a call, as LLVM spells
+    /// it.
+    ///
+    /// Nothing unless the target asks for it *and* the type is narrower than
+    /// that target's `int`. C17 6.3.1.1 p2 is why `int` itself is never narrow:
+    /// an arithmetic operand is promoted to it before anything happens, so
+    /// nothing below its width is ever computed with.
+    ///
+    /// `Target::extension` is the only fact on a target that is about how a
+    /// function is called rather than about what a value is worth, and it is
+    /// the reason the interpreter needs none of this: nothing in there crosses
+    /// a real ABI.
+    fn extension(&self, id: TyId) -> Option<&'static str> {
+        if self.unit.target().extension() != Extension::Required {
+            return None;
+        }
+
+        let narrow = self.unit.integer(id)?;
+        if narrow.bits() >= self.unit.target().int().bits() {
+            return None;
+        }
+
+        Some(if narrow.signed() {
+            "signext"
+        } else {
+            "zeroext"
+        })
+    }
+
+    /// A result's type, with whatever the ABI asks of it in front.
+    ///
+    /// In front for a result and after for a parameter, which is where LLVM
+    /// puts them and not a choice: `define signext i8 @f(i8 signext %0)`.
+    fn result(&self, id: TyId) -> String {
+        let spelled = self.spell(id);
+        match self.extension(id) {
+            Some(extension) => format!("{extension} {spelled}"),
+            None => spelled,
+        }
+    }
+
+    /// A parameter's type, with whatever the ABI asks of it after.
+    fn parameter(&self, id: TyId) -> String {
+        let spelled = self.spell(id);
+        match self.extension(id) {
+            Some(extension) => format!("{spelled} {extension}"),
+            None => spelled,
         }
     }
 
@@ -668,11 +718,15 @@ impl Emitter<'_> {
         let mut passed = Vec::with_capacity(arguments.len());
         for (argument, parameter) in arguments.iter().zip(&parameters) {
             let value = self.operand(function, argument, *parameter, out)?;
-            passed.push(format!("{} {value}", self.spell(*parameter)));
+            passed.push(format!("{} {value}", self.parameter(*parameter)));
         }
         let passed = passed.join(", ");
 
-        let spelled = self.spell(returns);
+        // The attribute goes on the call as well as on the callee. LLVM reads a
+        // call site whose attributes disagree with its callee's as undefined
+        // rather than as a mistake, so this is the third of the three places
+        // one appears, beside `define` and `declare`.
+        let spelled = self.result(returns);
         if spelled == "void" {
             writeln!(out, "  call void {name}({passed})").expect("writing to a string cannot fail");
         } else {
@@ -727,15 +781,15 @@ impl Emitter<'_> {
     /// such a function is refused in turn, because there is nothing to call.
     fn signature(&mut self, function: &Function) -> Option<(String, String, Vec<String>)> {
         let name = self.name(function);
-        let returns = self.spell(function.local(function.return_place()));
+        let returns = self.result(function.local(function.return_place()));
         let mut parameters = Vec::new();
 
         for local in function.parameters() {
-            let spelled = self.spell(function.local(local));
-            if spelled == "void" {
+            let ty = function.local(local);
+            if matches!(self.unit.ty(ty), Ty::Void) {
                 return self.refuse(format!("{name}, which has a parameter that holds nothing"));
             }
-            parameters.push(spelled);
+            parameters.push(self.parameter(ty));
         }
 
         Some((name, returns, parameters))

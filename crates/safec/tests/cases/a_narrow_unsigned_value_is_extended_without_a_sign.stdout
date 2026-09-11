@@ -1,0 +1,24 @@
+target triple = "armv7-unknown-linux-gnueabihf"
+
+declare zeroext i8 @twice(i8 zeroext)
+
+define zeroext i8 @use_it(i8 zeroext %arg0) {
+entry:
+  %_0 = alloca i8
+  %_1 = alloca i8
+  %_2 = alloca i8
+  store i8 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  %t0 = load i8, ptr %_1
+  %t1 = call zeroext i8 @twice(i8 zeroext %t0)
+  store i8 %t1, ptr %_2
+  br label %bb1
+
+bb1:
+  %t2 = load i8, ptr %_2
+  store i8 %t2, ptr %_0
+  %t3 = load i8, ptr %_0
+  ret i8 %t3
+}
