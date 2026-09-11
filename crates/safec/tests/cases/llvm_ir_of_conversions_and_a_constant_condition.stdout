@@ -15,6 +15,28 @@ bb0:
   ret i32 %t2
 }
 
+define i32 @mix(i32 %arg0, i8 %arg1) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  %_2 = alloca i8
+  %_3 = alloca i32
+  store i32 %arg0, ptr %_1
+  store i8 %arg1, ptr %_2
+  br label %bb0
+
+bb0:
+  %t0 = load i32, ptr %_1
+  %t1 = load i8, ptr %_2
+  %t2 = sext i8 %t1 to i32
+  %t3 = add nsw i32 %t0, %t2
+  store i32 %t3, ptr %_3
+  %t4 = load i32, ptr %_3
+  store i32 %t4, ptr %_0
+  %t5 = load i32, ptr %_0
+  ret i32 %t5
+}
+
 define i32 @main() {
 entry:
   %_0 = alloca i32
@@ -27,7 +49,10 @@ entry:
   %_7 = alloca i32
   %_8 = alloca i32
   %_9 = alloca i32
-  %_10 = alloca i8
+  %_10 = alloca i32
+  %_11 = alloca i32
+  %_12 = alloca i32
+  %_13 = alloca i8
   br label %bb0
 
 bb0:
@@ -59,25 +84,38 @@ bb3:
   store i32 %t8, ptr %_1
   %t9 = load i32, ptr %_1
   store i32 %t9, ptr %_9
-  %t10 = load i32, ptr %_1
-  %t11 = trunc i32 %t10 to i8
-  store i8 %t11, ptr %_2
-  %t12 = load i8, ptr %_2
-  store i8 %t12, ptr %_10
-  %t13 = load i8, ptr %_2
-  %t14 = sext i8 %t13 to i32
-  store i32 %t14, ptr %_0
-  %t15 = load i32, ptr %_0
-  ret i32 %t15
+  %t10 = call i32 @mix(i32 1, i8 4)
+  store i32 %t10, ptr %_10
+  br label %bb5
 
 bb4:
+  %t11 = load i32, ptr %_1
+  %t12 = load i32, ptr %_5
+  %t13 = add nsw i32 %t11, %t12
+  store i32 %t13, ptr %_6
+  %t14 = load i32, ptr %_6
+  store i32 %t14, ptr %_1
+  %t15 = load i32, ptr %_1
+  store i32 %t15, ptr %_7
+  br label %bb3
+
+bb5:
   %t16 = load i32, ptr %_1
-  %t17 = load i32, ptr %_5
+  %t17 = load i32, ptr %_10
   %t18 = add nsw i32 %t16, %t17
-  store i32 %t18, ptr %_6
-  %t19 = load i32, ptr %_6
+  store i32 %t18, ptr %_11
+  %t19 = load i32, ptr %_11
   store i32 %t19, ptr %_1
   %t20 = load i32, ptr %_1
-  store i32 %t20, ptr %_7
-  br label %bb3
+  store i32 %t20, ptr %_12
+  %t21 = load i32, ptr %_1
+  %t22 = trunc i32 %t21 to i8
+  store i8 %t22, ptr %_2
+  %t23 = load i8, ptr %_2
+  store i8 %t23, ptr %_13
+  %t24 = load i8, ptr %_2
+  %t25 = sext i8 %t24 to i32
+  store i32 %t25, ptr %_0
+  %t26 = load i32, ptr %_0
+  ret i32 %t26
 }

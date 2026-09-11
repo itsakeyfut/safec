@@ -81,12 +81,19 @@ fn llvm_says(module: &[u8], triple: &str) -> String {
         .spawn()
         .expect("clang answered `--version` a moment ago");
 
-    clang
+    // A `clang` that gives up before reading its input breaks the pipe, and
+    // that is its answer rather than this test's failure. Not hypothetical:
+    // Windows buffers about 64 KiB, so a module smaller than that is written
+    // whatever `clang` does, and a larger one is not.
+    let given = clang
         .stdin
         .take()
         .expect("the pipe was asked for")
-        .write_all(module)
-        .expect("clang reads its whole input before answering");
+        .write_all(module);
+    if let Err(error) = given {
+        let _ = clang.wait();
+        return format!("could not be given the module: {error}");
+    }
 
     let output = clang.wait_with_output().expect("clang was spawned");
     let said = String::from_utf8_lossy(&output.stderr).into_owned();

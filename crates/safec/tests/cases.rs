@@ -54,7 +54,10 @@ cases! {
     // `BitNot` as `xor 0` all passed the whole suite, which is RK-001's shape.
     // `conversions_and_a_constant_condition` is the same for C17 6.3.1.3 and
     // 6.5.2.2 p7: `c = 300` and `narrow(300)` both answer 44, and a constant
-    // that ignored its destination's type passed everything before it.
+    // that ignored its destination's type passed everything before it. `mix`
+    // is there because every other call in the suite has one parameter or two
+    // of one type, so pairing each argument with the wrong parameter passed
+    // everything too.
     //
     // Every one of these is also in `llvm.rs`, which hands it to `clang`. The
     // text and whether the text is LLVM are two claims.

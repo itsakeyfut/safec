@@ -1337,6 +1337,128 @@ mod tests {
         assert!(!out.contains("@g"), "{out}");
     }
 
+    /// Taking the address of an indexed place is refused, and so is taking the
+    /// address of a dereference of something that is not a pointer.
+    ///
+    /// Both reach `address` without going through `place_ty` first, which is
+    /// what makes them the two shapes that arm answers for. Nothing the
+    /// frontend builds is either: `p[i]` lowers as `*(p + i)`, which
+    /// `docs/frontend.md` records, and the type checker is what stops the
+    /// other one.
+    ///
+    /// Mutation: emit a `getelementptr` for an index. The first half stops
+    /// being refused. Mutation: treat a `Deref` of a non-pointer as a `load`
+    /// of `ptr`. The second half does.
+    #[test]
+    fn a_place_this_cannot_reach_is_refused() {
+        for (projection, why) in [
+            (
+                Projection::Index(Operand::Constant(0)),
+                "an indexed place, which counts elements and so needs a width",
+            ),
+            (
+                Projection::Deref,
+                "a dereference of something that is not a pointer",
+            ),
+        ] {
+            let (sources, at) = named("f");
+            let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+            let int = unit.push_type(Ty::Int);
+            let pointer = unit.push_type(Ty::Pointer(int));
+            let mut f = Function::new(at, pointer, [int]);
+            let n = f.parameters().next().expect("one parameter");
+            f.push_block(Block {
+                elements: vec![Element::Assign(Operation {
+                    place: Place::local(f.return_place()),
+                    value: Rvalue::Address(Place {
+                        local: n,
+                        projection: vec![projection],
+                    }),
+                    origin: Origin::Written(at),
+                })],
+                terminator: Terminator::Return,
+            });
+            unit.push_function(f);
+
+            let (_, refusals) = module(&sources, &unit);
+
+            assert_eq!(
+                refusals,
+                vec![Refusal {
+                    why: why.to_owned(),
+                    at: Some(at),
+                }]
+            );
+        }
+    }
+
+    /// A conversion with no instruction behind it is refused rather than
+    /// written as something else.
+    ///
+    /// An integer becoming a pointer is the shape: C gives it no meaning
+    /// without a cast, and LLVM's `inttoptr` would be this backend deciding
+    /// one. Nothing the frontend builds reaches it, because the type checker
+    /// is in the way.
+    ///
+    /// Mutation: answer the value unchanged when neither side is an integer.
+    /// The module holds `store ptr %t0` where `%t0` is an `i32`, nothing is
+    /// refused, and this fails.
+    #[test]
+    fn a_conversion_with_no_instruction_is_refused() {
+        let (sources, at) = named("f");
+        let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let mut f = Function::new(at, pointer, [int]);
+        let n = f.parameters().next().expect("one parameter");
+        f.push_block(Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(f.return_place()),
+                value: Rvalue::Use(Operand::Copy(Place::local(n))),
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Return,
+        });
+        unit.push_function(f);
+
+        let (_, refusals) = module(&sources, &unit);
+
+        assert_eq!(
+            refusals,
+            vec![Refusal {
+                why: "a conversion from `i32` to `ptr`".to_owned(),
+                at: Some(at),
+            }]
+        );
+    }
+
+    /// A name is quoted for every reason LLVM has, not only for a byte that
+    /// needs escaping.
+    ///
+    /// `@0` is an unnamed value rather than a name, so a name beginning with a
+    /// digit needs the quoted form even though every character in it is one
+    /// LLVM takes. `-`, `$` and `.` do not: they are in the unquoted set and a
+    /// name of them is written bare.
+    ///
+    /// Mutation: drop the leading-digit test from `plain`. The first row
+    /// fails. Mutation: take `$`, `.` and `-` out of `is_name`. The last three
+    /// do.
+    #[test]
+    fn a_name_is_quoted_for_every_reason_llvm_has() {
+        for (name, quoted) in [
+            ("0f", true),
+            ("f0", false),
+            ("a$b", false),
+            ("a.b", false),
+            ("a-b", false),
+            ("a b", true),
+        ] {
+            assert_eq!(plain(name), !quoted, "{name}");
+        }
+        assert_eq!(escaped("a b"), "a b");
+        assert_eq!(escaped("a\"b"), "a\\22b");
+    }
+
     /// The header names the target and is written once, which is what makes an
     /// artifact with several inputs in it one module rather than a parse error
     /// at the second `target triple`.

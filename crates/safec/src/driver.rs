@@ -1577,6 +1577,29 @@ mod tests {
         assert_eq!(run(&options).2, Outcome::Succeeded);
     }
 
+    /// A refusal the IR could not place says so rather than pointing anywhere.
+    ///
+    /// Only a call among the terminators carries a span, so a refusal about one
+    /// of the others has nothing to point at. Nothing the frontend builds
+    /// reaches it, which is why this asks `backend_failure` directly rather
+    /// than compiling something.
+    ///
+    /// Mutation: drop the note. The diagnostic says what could not be written
+    /// and nothing about why it points nowhere, and this fails.
+    #[test]
+    fn a_refusal_with_nowhere_to_point_says_so() {
+        let reported = backend_failure(&Refusal {
+            why: "an edge no statement produced, which has no LLVM spelling".to_owned(),
+            at: None,
+        });
+
+        assert!(reported.primary_label().is_none(), "{reported:?}");
+        assert_eq!(
+            reported.notes(),
+            ["the IR does not say where this came from"]
+        );
+    }
+
     /// A run that could not read anything does not empty the file it was given.
     ///
     /// `--emit tokens` answers `Some("")` for an input it never opened, so this
