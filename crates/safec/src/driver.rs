@@ -2368,7 +2368,9 @@ mod tests {
     /// an empty answer is a defect rather than a state.
     ///
     /// The MVP rather than a declaration, because two of these kinds link and a
-    /// translation unit with no `main` is not a program.
+    /// translation unit with no `main` is not a program. For the host's own
+    /// machine, for the same reason: one of them links, and nothing links for
+    /// another machine without a toolchain for it.
     ///
     /// Mutation: leave `out` alone in any one arm of the loop in `compile`.
     /// That kind answers nothing and this fails naming it.
@@ -2388,6 +2390,13 @@ int main(void) { return add(1, 2); }
         for &emit in EmitKind::value_variants() {
             let mut options = options(vec![file.path().to_path_buf()]);
             options.emit = emit;
+            // The machine this is running on, and not the one the helper names.
+            // Every other kind is the same work for any target, and one of them
+            // links: assembling for another machine needs no sysroot and
+            // linking for one needs a toolchain no runner has, so a fixed
+            // triple here asks three runners a question only one of them can
+            // answer. CI found this rather than a reader.
+            options.target = Target::from_triple(HOST_TRIPLE).expect("the host is a known triple");
 
             let compiled = compile(&options);
 
