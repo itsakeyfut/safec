@@ -1033,9 +1033,10 @@ fn backend_failure(refusal: &Refusal) -> Diagnostic {
 /// The tree, as a caller redirecting it would see.
 ///
 /// One node per line, two spaces of indent per level: the kind, where it is,
-/// and whatever that node alone carries. Past [`DEEPEST_INDENT`] levels the
-/// indent stops growing and the line says how many it is short by, which is
-/// where the depth of a tree nothing bounds stops being a number of spaces.
+/// and whatever that node alone carries. Past
+/// [`safec_ir::print::DEEPEST_INDENT`] levels the indent stops growing and the
+/// line says how many it is short by, which is where the depth of a tree
+/// nothing bounds stops being a number of spaces.
 ///
 /// **No node identity.** `clang -Xclang -ast-dump` prints one and it is the
 /// node's address, so two runs of the same command on the same file disagree.
