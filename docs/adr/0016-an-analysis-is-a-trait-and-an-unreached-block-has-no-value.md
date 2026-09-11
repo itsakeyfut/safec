@@ -77,13 +77,31 @@ avoids a name that points the wrong way: the identity of a must-analysis is
 "true of everything", and calling that the bottom makes the weakest-sounding
 word mean the strongest claim.
 
+There is a second reason, found later and worth more than the first. `on_entry`
+takes `&self`, so what holds at a function's start is a property of the analysis
+value rather than of the lattice. A driver that runs one function's body under
+two callers, or under two threads, builds two analysis values and gets two entry
+facts. Had the entry been the lattice's bottom it would have been one constant
+per analysis, and that driver could not be written without a second mechanism.
+
 **Forward only, and one value per outgoing edge.** The transfer runs over a
 block's elements and then its terminator, and the result is joined into every
-successor. A backward analysis and an edge-sensitive one are both real and
-neither is asked for: liveness is the usual first backward analysis and no phase
-wants one yet, and refining `p` to non-null on the taken arm of a branch is
-Phase 6's question. Each is a defaulted method and a change to the solver away,
-and neither costs an analysis written today a line.
+successor. Two things are left out, and they cost differently.
+
+Refining `p` to non-null on the taken arm of a branch is not built. It is a
+defaulted method taking the successor's *index*, and three lines of the solver:
+measured, with every test in the crate passing unchanged. The index rather than
+the destination, because `Branch { then: b, otherwise: b }` is two edges and
+`Cfg` keeps it that way on purpose. `docs/roadmap.md` puts nullability in Phase
+5, so the first caller who wants this is the next phase rather than a distant
+one, and that is the reason to have measured the cost rather than guessed it.
+
+A backward analysis is not a defaulted method. It needs a second entry point,
+and `on_entry` and `Solution::entry` both come to mean the other end of a block
+and of a function. Nothing in the type system says so, which is the hazard worth
+writing down: a liveness pass written as an `impl Analysis` and handed to
+`solve` compiles and answers forwards. Liveness is the usual first backward
+analysis and no phase asks for one yet.
 
 **A value per block entry, not per program point.** A caller that needs a point
 inside a block replays that block's elements from its entry value, which is what
@@ -99,13 +117,16 @@ and rewrite all of them on each pass, for a reader that does not exist.
 * Making the solver ignore what `join` answered fails the same test and
   nothing else, for the same reason: the worklist empties early either way.
 * Seeding every block with `on_entry` rather than the entry alone fails
-  `a_block_nothing_reaches_has_no_answer`, and two more besides: a value
-  waiting in a block joins into whatever that block reaches.
+  `a_block_nothing_reaches_has_no_answer`, and with it every test whose answer
+  depends on a value having arrived rather than having been put there: a value
+  waiting in a block joins into whatever that block reaches. Four when this was
+  measured, and the number is not the claim.
 * Joining the first arrival into `on_entry` rather than storing it fails
-  `what_a_loop_writes_and_what_comes_before_it_are_answered_apart`, because a
-  must-analysis joined against a fact nothing produced answers that nothing is
-  known. That is this record's central claim, and it is the mutation that
-  reverses it.
+  `what_a_loop_writes_and_what_comes_before_it_are_answered_apart`, and every
+  other test that writes something before the block it asks about: three when
+  this was measured. A must-analysis joined against a value nothing produced
+  answers that nothing is known, which is what having no identity element buys
+  and the mutation that reverses this record.
 * A fifth method on `Analysis` without a default is `error[E0046]` at every
   implementation, which is what makes the set of questions an analysis answers
   something the compiler holds rather than a convention.
@@ -126,11 +147,36 @@ Each of the first four was applied and the named tests observed to fail.
   and a widening chosen before any analysis needs one is a guess.
 * Bad, because `Fact: Clone` puts a clone on every edge. A bitset per local is
   what the first analyses hold, and a graph is one function wide.
+* Bad, because `join` both folds and answers whether it folded, and the
+  answer is the only thing that ends the walk. A `join` that folds correctly and
+  under-reports hands back a `Solution` that is not a fixpoint and carries no
+  mark saying so, and for a may-analysis the blocks below the edge it stopped
+  keep the optimistic value: silence, in the direction the safety model exists
+  to prevent. This record rejects bottom-as-identity for being a law nothing
+  checks, and then rests on a law nothing checks whose failure is quieter. What
+  makes it tolerable rather than equal is where it is visible: an identity
+  mistake answers wrongly on the first program, and this one is caught by
+  comparing each successor's stored value against a re-join after the walk,
+  which is a `PartialEq` bound and a debug-only pass whenever it is wanted.
+* Bad, because an analysis that needs a type reaches `TranslationUnit::place_ty`
+  and therefore holds a `&Function` of its own, while `solve` takes the function
+  as a separate argument and nothing ties the two together. Handing an analysis
+  built for one function to a solve over another compiles and answers about
+  neither. "There is no fifth thing to be right about" is true of the trait and
+  not of the pair, and every analysis in Phases 5 through 8 that asks a type is
+  the case.
+* Bad, because a fact that carries a span, which
+  [the safety model](../safety-model.md) requires for "p freed here", can fail
+  to terminate: a span is not a lattice element, and a `join` that takes the
+  arriving one oscillates where two move sites meet below a branch inside a
+  loop. Measured as a hang rather than a failure. Choosing the payload stably is
+  one line and nothing says to.
 * What would reverse this: an analysis that has to say something different on
   two edges out of one branch, which is the first thing
-  [the safety model](../safety-model.md)'s null-pointer case will want. That is
-  a defaulted method rather than a new shape, and if it turns out that the fact
-  has to be split per edge everywhere, this record is the one to supersede.
+  [the safety model](../safety-model.md)'s null-pointer case will want, and
+  which `docs/roadmap.md` puts in Phase 5. That is a defaulted method rather
+  than a new shape, and if it turns out that the fact has to be split per edge
+  everywhere, this record is the one to supersede.
 
 ## Pros and Cons of the Options
 
