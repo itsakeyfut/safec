@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/safec", "crates/safec-ir"]
+members = ["crates/safec", "crates/safec-ir", "crates/safec-llvm"]
 
 [workspace.package]
 version = "0.1.0"

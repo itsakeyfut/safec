@@ -151,11 +151,19 @@ dependencies = [
  "ariadne",
  "clap",
  "safec-ir",
+ "safec-llvm",
 ]
 
 [[package]]
 name = "safec-ir"
 version = "0.1.0"
+
+[[package]]
+name = "safec-llvm"
+version = "0.1.0"
+dependencies = [
+ "safec-ir",
+]
 
 [[package]]
 name = "strsim"
