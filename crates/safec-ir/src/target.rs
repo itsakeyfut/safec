@@ -268,9 +268,10 @@ mod tests {
     /// Mutation: make `char` signed on `aarch64-unknown-linux-gnu`, or change
     /// any width. This fails. Mutation: add a row to `Target::ALL` without
     /// measuring it. The count fails. Mutation: give
-    /// `x86_64-pc-windows-msvc` `Extension::Required`, or take it from
-    /// `aarch64-apple-darwin`. The column fails, and nothing else can: the two
-    /// are not predictable from the signedness beside them.
+    /// `x86_64-pc-windows-msvc` `Extension::Required`. The column fails, and so
+    /// do four other tests: the two machines that ask for nothing are not
+    /// predictable from the signedness beside them, so everything downstream of
+    /// the column moves with it.
     #[test]
     fn every_target_is_what_clang_says_it_is() {
         let measured: &[(&str, u32, u32, bool, Extension)] = &[

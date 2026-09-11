@@ -2,23 +2,32 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare signext i8 @twice(i8 signext)
 
-define signext i8 @use_it(i8 signext %arg0) {
+define signext i8 @use_it(i8 signext %arg0, i32 %arg1) {
 entry:
   %_0 = alloca i8
   %_1 = alloca i8
-  %_2 = alloca i8
+  %_2 = alloca i32
+  %_3 = alloca i8
+  %_4 = alloca i32
   store i8 %arg0, ptr %_1
+  store i32 %arg1, ptr %_2
   br label %bb0
 
 bb0:
   %t0 = load i8, ptr %_1
   %t1 = call signext i8 @twice(i8 signext %t0)
-  store i8 %t1, ptr %_2
+  store i8 %t1, ptr %_3
   br label %bb1
 
 bb1:
-  %t2 = load i8, ptr %_2
-  store i8 %t2, ptr %_0
-  %t3 = load i8, ptr %_0
-  ret i8 %t3
+  %t2 = load i8, ptr %_3
+  %t3 = sext i8 %t2 to i32
+  %t4 = load i32, ptr %_2
+  %t5 = add nsw i32 %t3, %t4
+  store i32 %t5, ptr %_4
+  %t6 = load i32, ptr %_4
+  %t7 = trunc i32 %t6 to i8
+  store i8 %t7, ptr %_0
+  %t8 = load i8, ptr %_0
+  ret i8 %t8
 }

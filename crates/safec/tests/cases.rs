@@ -59,6 +59,13 @@ cases! {
     // of one type, so pairing each argument with the wrong parameter passed
     // everything too.
     //
+    // The two `extended` cases are one program on two machines, because what
+    // differs is the machine: `x86_64-unknown-linux-gnu` asks for `signext` and
+    // `armv7-unknown-linux-gnueabihf` for `zeroext`, and the `int` beside the
+    // `char` is what says the rule reads a width rather than a type. Every
+    // other `--emit llvm-ir` case is on a target that asks for nothing, so
+    // these two are the only place in the tree an attribute appears at all.
+    //
     // Every one of these is also in `llvm.rs`, which hands it to `clang`. The
     // text and whether the text is LLVM are two claims.
     a_narrow_unsigned_value_is_extended_without_a_sign: ["--emit", "llvm-ir", "--target", "armv7-unknown-linux-gnueabihf"],
