@@ -670,9 +670,19 @@ pub fn run_compiler(
     let to_stream = match (&options.output, &compiled.artifact) {
         // `fs::write` creates, truncates and writes in one call, so one failure
         // covers all three and the note says which it was.
+        //
+        // Nothing is written when a failed run produced an empty artifact. That
+        // is not the same as producing nothing: `--emit tokens` answers
+        // `Some("")` for an input it could not open, and writing it would
+        // truncate whatever the path already held, leaving exactly the
+        // zero-byte file newer than every source that the arm below exists to
+        // avoid. An empty artifact from a run that reported nothing is a real
+        // answer to an empty program, and is written.
         (Some(path), Some(emitted)) => {
-            if let Err(error) = fs::write(path, emitted.as_bytes()) {
-                compiled.diagnostics.report(write_failure(path, &error));
+            if !(emitted.is_empty() && compiled.diagnostics.has_errors()) {
+                if let Err(error) = fs::write(path, emitted.as_bytes()) {
+                    compiled.diagnostics.report(write_failure(path, &error));
+                }
             }
             None
         }
@@ -1367,6 +1377,32 @@ mod tests {
             !written.path().exists(),
             "a run that made nothing left {}",
             written.path().display()
+        );
+    }
+
+    /// A run that could not read anything does not empty the file it was given.
+    ///
+    /// `--emit tokens` answers `Some("")` for an input it never opened, so this
+    /// reaches the arm above through a path rather than through a missing
+    /// artifact, and writing it would leave exactly the zero-byte file newer
+    /// than every source that the arm above exists to avoid.
+    ///
+    /// Mutation: drop the `is_empty` and `has_errors` guard on the write. The
+    /// file is truncated and this fails on its contents.
+    #[test]
+    fn a_run_that_read_nothing_does_not_empty_the_file_it_was_given() {
+        let written = TempFile::new("safec_driver_output_kept.tok", "what was there before\n");
+        let mut options = options(vec![missing_path("safec_driver_output_kept.c")]);
+        options.emit = EmitKind::Tokens;
+        options.output = Some(written.path().to_path_buf());
+
+        let (report, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("cannot read"), "{report}");
+        assert_eq!(
+            fs::read_to_string(written.path()).expect("the file is still there"),
+            "what was there before\n"
         );
     }
 
