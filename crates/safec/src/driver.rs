@@ -638,9 +638,13 @@ fn load_failure(path: &Path, error: &io::Error) -> Diagnostic {
 /// artifact is what it was asked to make. A caller reading one must not be
 /// handed the other, which is why the binary sends them to stderr and stdout.
 ///
-/// The report goes first. If the artifact is being piped into something that
-/// stops reading, the write fails, and a user who loses the diagnostics as well
-/// learns nothing about why.
+/// The report goes first, and it is the stream that this is about. If the
+/// artifact is being piped into something that stops reading, the write fails,
+/// and a user who loses the diagnostics as well learns nothing about why.
+///
+/// A path is the exception, and is written before the report rather than after
+/// it: a path that cannot be written is itself a diagnostic, and after the
+/// report there is no sink left to say it into.
 ///
 /// # Errors
 ///
@@ -659,26 +663,31 @@ pub fn run_compiler(
     // spelled as two comparisons left a case answered by neither, and the
     // compiler exited zero having produced nothing.
     //
-    // Written before the diagnostics are rendered, because a path that cannot
-    // be written is one of them and there is no sink left to say it into
-    // afterwards.
-    match (&options.output, &compiled.artifact) {
+    // A path is answered here, before the diagnostics are rendered, because a
+    // path that cannot be written is one of them. The stream is answered after
+    // the rendering instead, which is why this yields what to write rather than
+    // writing it: see the ordering paragraph on this function.
+    let to_stream = match (&options.output, &compiled.artifact) {
         // `fs::write` creates, truncates and writes in one call, so one failure
         // covers all three and the note says which it was.
         (Some(path), Some(emitted)) => {
             if let Err(error) = fs::write(path, emitted.as_bytes()) {
                 compiled.diagnostics.report(write_failure(path, &error));
             }
+            None
         }
         // A run that produced nothing leaves no file, rather than an empty one
         // that a build system would read as newer than the source it came from.
         // The diagnostic saying so is `compile`'s and has already been made.
-        (Some(_), None) => {}
-        (None, Some(emitted)) => artifact.write_all(emitted.as_bytes())?,
-        (None, None) => {}
-    }
+        (Some(_), None) => None,
+        (None, emitted) => emitted.as_deref(),
+    };
 
     Renderer::new(options.color).render_all(&compiled.sources, &compiled.diagnostics, report)?;
+
+    if let Some(emitted) = to_stream {
+        artifact.write_all(emitted.as_bytes())?;
+    }
 
     Ok(if compiled.diagnostics.has_errors() {
         Outcome::Failed
@@ -1359,6 +1368,31 @@ mod tests {
             "a run that made nothing left {}",
             written.path().display()
         );
+    }
+
+    /// A stream that stopped being read does not take the report with it.
+    ///
+    /// This is the ordering the doc comment on `run_compiler` promises: a user
+    /// piping the artifact into something that exits early still learns why the
+    /// run failed. A path is the other way round and is written first, because
+    /// a path that cannot be written is a diagnostic and needs the report.
+    ///
+    /// Mutation: write the stream inside the `match`, above `render_all`. The
+    /// write fails, `?` returns, and the report arrives empty.
+    #[test]
+    fn a_closed_artifact_stream_does_not_swallow_the_report() {
+        let file = TempFile::new("safec_driver_closed_report.c", "@\n");
+        let mut options = options(vec![file.path().to_path_buf()]);
+        options.emit = EmitKind::Tokens;
+        options.color = ColorMode::Never;
+        let mut report = Vec::new();
+
+        let error = run_compiler(&options, &mut report, &mut Closed)
+            .expect_err("a failed write must not come back as an outcome");
+
+        assert_eq!(error.kind(), io::ErrorKind::BrokenPipe);
+        let said = String::from_utf8(report).expect("the renderer writes UTF-8");
+        assert!(said.contains("unexpected character"), "{said}");
     }
 
     /// Every input appends to one file, which is what standard output does.
