@@ -375,7 +375,7 @@ impl Diagnostic {
     /// Raise an unproven warning to an error.
     ///
     /// Private, and called from exactly one place: [`DiagnosticSink::report`]
-    /// under `--deny-unknown`. Because [`Diagnostic::unproven`] is the only
+    /// under `--deny-unknown`. Because [`Diagnostic::concluded`] is the only
     /// source of [`Certainty::Unproven`] and fixes the severity at
     /// [`Severity::Warning`], this only ever has one direction to handle.
     fn promote_to_error(&mut self) {
