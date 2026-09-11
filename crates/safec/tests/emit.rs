@@ -10,14 +10,7 @@
 //! file per stream. What is left here is what a pair of files cannot say.
 
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
-
-fn safec(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_safec"))
-        .args(args)
-        .output()
-        .expect("the compiler binary was built for this test")
-}
+use std::process::{Command, Stdio};
 
 /// A real `.c` file rather than a string built in a test, so that the path a
 /// user takes is the path under test: reading from disk, scanning, and writing
@@ -83,30 +76,4 @@ fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
         output.stderr == expected_report,
         "the report stayed on stderr, and the artifact did not follow it"
     );
-}
-
-/// Everything past the parser. Asking for it produces nothing on stdout and a
-/// non-zero exit, rather than an empty artifact and a claim of success.
-///
-/// Hand written rather than a case, because the claim was about the emit ladder
-/// rather than about any one artifact: one invocation per kind over one source,
-/// and a case is one invocation over one source. One kind is left, so it is one
-/// invocation now, and when #93 lands there is none and this goes with it.
-///
-/// `ast` was in this list until a parser existed to reach it, `safety-ir` until
-/// a lowering and a printer did, `llvm-ir` until a backend did, and `object`
-/// until something assembled one. The list is what the compiler cannot do yet,
-/// so it shrinks as phases land.
-#[test]
-fn asking_for_an_artifact_that_does_not_exist_yet_produces_nothing() {
-    let output = safec(&[
-        "--color",
-        "never",
-        "--emit",
-        "executable",
-        &test_file("cases/add.c").display().to_string(),
-    ]);
-
-    assert_eq!(output.status.code(), Some(1), "{output:?}");
-    assert!(output.stdout.is_empty(), "{output:?}");
 }

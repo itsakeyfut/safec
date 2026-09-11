@@ -101,15 +101,14 @@ impl EmitKind {
     /// A dump appends: `--emit tokens a.c b.c` reads as one listing because
     /// every line names its file. A module cannot, because appending two
     /// translation units is not a module with duplicates in it, so the driver
-    /// refuses a run that asks for one. A program is made of several
-    /// translation units by definition, which is what linking is, so it
-    /// answers yes about what [`Self::Executable`] will do rather than about
-    /// the nothing it does today.
+    /// refuses a run that asks for one.
     ///
-    /// **Whoever makes `--emit executable` real owes this answer a second
-    /// look.** It is yes because a program holds several inputs, and it is only
-    /// true of an implementation that links them rather than building each one
-    /// over the last.
+    /// A program is made of several translation units by definition, which is
+    /// what linking is, and this still answers no for one: the linker here is
+    /// handed one module. **The rule follows the implementation rather than the
+    /// intention**, because a rule that promises what the code does not do is a
+    /// run that silently builds the last input and throws the rest away. The
+    /// day a link takes several objects is the day this answers yes.
     ///
     /// Asked of the kind, and exhaustively, rather than spelled as a list of
     /// the kinds that cannot: a second input is either *appended* to what the
@@ -119,8 +118,23 @@ impl EmitKind {
     /// not a `matches!`.
     pub fn spans_inputs(self) -> bool {
         match self {
-            Self::Tokens | Self::Ast | Self::SafetyIr | Self::Executable => true,
-            Self::LlvmIr | Self::Object => false,
+            Self::Tokens | Self::Ast | Self::SafetyIr => true,
+            Self::LlvmIr | Self::Object | Self::Executable => false,
+        }
+    }
+
+    /// Whether a file of this kind has to be runnable by the machine it was
+    /// made for.
+    ///
+    /// The one kind that needs a mode as well as bytes. An artifact is bytes
+    /// here, and a mode is not one of them, so the run that writes a program
+    /// has to say that it is one.
+    ///
+    /// Exhaustive for the reason [`Self::spans_inputs`] gives.
+    pub fn is_a_program(self) -> bool {
+        match self {
+            Self::Tokens | Self::Ast | Self::SafetyIr | Self::LlvmIr | Self::Object => false,
+            Self::Executable => true,
         }
     }
 
