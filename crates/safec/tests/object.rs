@@ -9,6 +9,8 @@
 //! says why. They say what they did not check where there is none, and
 //! `SAFEC_REQUIRE_LLVM` makes that a failure, which CI sets.
 
+use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -359,6 +361,7 @@ fn a_missing_clang_says_what_to_install() {
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
     assert!(said.contains("needs `clang`"), "{said}");
+    assert!(said.contains("asks clang to make an object"), "{said}");
     assert!(said.contains("15 or newer"), "{said}");
     assert!(
         !scratch.path().join("mvp.o").exists(),
@@ -386,4 +389,116 @@ fn an_object_is_one_input_at_a_time() {
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
     assert!(said.contains("`--emit object` takes one input"), "{said}");
+}
+
+/// A directory to search for `clang` before the real one, and the `PATH` that
+/// finds it first.
+///
+/// The directory is made; what goes in it is the caller's. Windows needs the
+/// `.exe`, because a program is found by that name and not by a mode bit.
+fn ahead_of_clang(scratch: &Scratch) -> (PathBuf, OsString) {
+    let tools = scratch.path().join("tools");
+    fs::create_dir_all(&tools).expect("the temporary directory is writable");
+
+    let mut searched = vec![tools.clone()];
+    searched.extend(env::split_paths(&env::var_os("PATH").unwrap_or_default()));
+    let path = env::join_paths(searched).expect("a path this test just took apart");
+
+    (
+        tools.join(if cfg!(windows) { "clang.exe" } else { "clang" }),
+        path,
+    )
+}
+
+/// An exit status is not an object, and a `clang` that answers nothing is not a
+/// successful run.
+///
+/// Not a hypothetical machine. A compiler cache or a distributing wrapper is
+/// routinely installed under the name `clang`, and one that is misconfigured
+/// answers nothing and exits zero. Believing it wrote whatever it did not
+/// answer over the path the user named, which is zero bytes, and said so with
+/// exit zero.
+///
+/// The stub is built by the real `clang`, which every test in this file needs
+/// anyway, so nothing new has to be on the machine for this to run.
+///
+/// Mutation: answer `Ok(finished.stdout)` whenever the status is a success.
+/// The run exits 0, the kept file becomes empty, and both assertions fail.
+#[test]
+fn a_clang_that_answers_nothing_is_not_a_success() {
+    if !clang_or_skip("a clang that answers no object") {
+        return;
+    }
+
+    let scratch = Scratch::new("silent_clang");
+    let source = scratch.source("mvp.c", MVP);
+    let kept = scratch.path().join("mvp.o");
+    fs::write(&kept, "what was there before\n").expect("the temporary directory is writable");
+
+    let (stub, path) = ahead_of_clang(&scratch);
+    let built = Command::new("clang")
+        .arg(scratch.source("stub.c", "int main(void) { return 0; }\n"))
+        .arg("-o")
+        .arg(&stub)
+        .output()
+        .expect("there is a clang, which this test checked for");
+    assert!(
+        built.status.success(),
+        "{}",
+        String::from_utf8_lossy(&built.stderr)
+    );
+
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "object"])
+        .arg(&source)
+        .env("PATH", path)
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("no object"), "{said}");
+    assert_eq!(
+        fs::read_to_string(&kept).expect("the file is still there"),
+        "what was there before
+",
+        "a run that made no object wrote one anyway"
+    );
+}
+
+/// A `clang` that could not be started said nothing about the module, and the
+/// diagnostic does not pretend otherwise.
+///
+/// A directory named `clang` is the cheapest way to arrange it and is a real
+/// shape: a stale build tree on the path, a binary for another architecture, a
+/// file somebody cannot execute. Spawning answers an error that is not "no such
+/// file", which is the only thing that separates this from the missing case.
+///
+/// Needs no `clang`, and passes on a machine with none: what it arranges is
+/// found first either way.
+///
+/// Mutation: fold the spawn failure back into `Unassembled::Refused`. The
+/// message becomes "clang could not make an object of this module" and the
+/// second assertion fails.
+#[test]
+fn a_clang_that_cannot_be_run_does_not_blame_the_module() {
+    let scratch = Scratch::new("unrunnable_clang");
+    let source = scratch.source("mvp.c", MVP);
+
+    let (stub, path) = ahead_of_clang(&scratch);
+    fs::create_dir_all(&stub).expect("the temporary directory is writable");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "object"])
+        .arg(&source)
+        .env("PATH", path)
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("could not run it"), "{said}");
+    assert!(!said.contains("of this module"), "{said}");
 }

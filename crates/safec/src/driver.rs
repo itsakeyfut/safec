@@ -508,8 +508,13 @@ fn module(
 enum Unassembled {
     /// There is no `clang` to run.
     Absent,
+    /// There is something by that name and it could not be started, and this is
+    /// what the operating system said about it.
+    Unrunnable(String),
     /// It ran and refused, or could not be spoken to, and this is what it said.
     Refused(String),
+    /// It ran, said nothing was wrong, and answered no object.
+    Silent,
 }
 
 /// One module as an object for the machine it names, made by `clang`.
@@ -539,9 +544,13 @@ fn assembled(module: &str, target: Target) -> Result<Vec<u8>, Unassembled> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
+        // A spawn that failed for any other reason is a third answer and not a
+        // refusal: `clang` never ran, so it has said nothing about the module,
+        // and wording it as though it had blames the program for a directory
+        // named `clang` on the path, or a binary this machine cannot start.
         .map_err(|error| match error.kind() {
             io::ErrorKind::NotFound => Unassembled::Absent,
-            _ => Unassembled::Refused(error.to_string()),
+            _ => Unassembled::Unrunnable(error.to_string()),
         })?;
 
     let mut input = clang.stdin.take().expect("the pipe was asked for");
@@ -558,8 +567,18 @@ fn assembled(module: &str, target: Target) -> Result<Vec<u8>, Unassembled> {
     // said so.
     let _ = feeding.join();
 
+    // An exit status is not evidence that an object exists. A `clang` on the
+    // path is not always LLVM's: a compiler cache or a distributing wrapper is
+    // routinely installed under that name, and one that is misconfigured
+    // answers nothing and exits successfully. Taking that as an object writes
+    // zero bytes over whatever `-o` named and exits zero, which is the one
+    // thing `compile` says a compiler must never do.
     if finished.status.success() {
-        return Ok(finished.stdout);
+        return if finished.stdout.is_empty() {
+            Err(Unassembled::Silent)
+        } else {
+            Ok(finished.stdout)
+        };
     }
     Err(Unassembled::Refused(
         String::from_utf8_lossy(&finished.stderr).into_owned(),
@@ -987,14 +1006,35 @@ pub fn run_compiler(
 /// words through rather than interpreting them: it knows what is wrong with a
 /// module and this does not, and a clang older than LLVM 15 answers about the
 /// opaque pointers this writes.
+///
+/// The other two are the cases where nothing was heard from `clang` at all, and
+/// they are separate for exactly that reason. Saying "could not make an object
+/// of this module" about a run that never started, or about one that started
+/// and answered nothing, points a user at their program when the fault is on
+/// their machine.
 fn assembly_failure(why: &Unassembled) -> Diagnostic {
     match why {
         Unassembled::Absent => Diagnostic::error("`--emit object` needs `clang` and found none")
             .with_note("safec writes LLVM IR and asks clang to make an object of it")
             .with_note("any clang whose LLVM is 15 or newer reads the IR this writes"),
-        Unassembled::Refused(said) => {
-            Diagnostic::error("clang could not make an object of this module")
+        Unassembled::Unrunnable(said) => {
+            Diagnostic::error("`--emit object` found `clang` and could not run it")
                 .with_note(said.trim())
+                .with_note("this is what the machine said, not what clang said")
+        }
+        Unassembled::Refused(said) => {
+            let reported = Diagnostic::error("clang could not make an object of this module");
+            // A `clang` that was killed, or that crashed, exits unsuccessfully
+            // with nothing to say. An empty note is worse than no note: it
+            // reads as a message this compiler failed to fill in.
+            match said.trim() {
+                "" => reported.with_note("it exited unsuccessfully and said nothing"),
+                said => reported.with_note(said),
+            }
+        }
+        Unassembled::Silent => {
+            Diagnostic::error("clang answered no object and said nothing was wrong")
+                .with_note("the clang on this path may be a wrapper rather than a compiler")
         }
     }
 }
