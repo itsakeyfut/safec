@@ -435,18 +435,21 @@ fn an_object_is_one_input_at_a_time() {
     assert!(said.contains("`--emit object` takes one input"), "{said}");
 }
 
-/// A directory to search for `clang` before the real one, and the `PATH` that
-/// finds it first.
+/// A directory to find `clang` in, and the `PATH` that finds nothing else.
 ///
 /// The directory is made; what goes in it is the caller's. Windows needs the
 /// `.exe`, because a program is found by that name and not by a mode bit.
-fn ahead_of_clang(scratch: &Scratch) -> (PathBuf, OsString) {
+///
+/// **The only entry, rather than the first.** A search that finds something it
+/// cannot execute does not stop: `execvp` remembers the error and carries on to
+/// the next entry, so a `clang` that cannot be run is found and then walked past
+/// on Linux and macOS, and the real one answers. Leaving nothing else to find is
+/// what makes the same arrangement mean the same thing on the three runners.
+fn instead_of_clang(scratch: &Scratch) -> (PathBuf, OsString) {
     let tools = scratch.path().join("tools");
     fs::create_dir_all(&tools).expect("the temporary directory is writable");
 
-    let mut searched = vec![tools.clone()];
-    searched.extend(env::split_paths(&env::var_os("PATH").unwrap_or_default()));
-    let path = env::join_paths(searched).expect("a path this test just took apart");
+    let path = env::join_paths([tools.clone()]).expect("one directory is a path");
 
     (
         tools.join(if cfg!(windows) { "clang.exe" } else { "clang" }),
@@ -479,7 +482,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
     let kept = scratch.path().join("mvp.o");
     fs::write(&kept, "what was there before\n").expect("the temporary directory is writable");
 
-    let (stub, path) = ahead_of_clang(&scratch);
+    let (stub, path) = instead_of_clang(&scratch);
     let built = Command::new("clang")
         .arg(scratch.source("stub.c", "int main(void) { return 0; }\n"))
         .arg("-o")
@@ -530,7 +533,7 @@ fn a_clang_that_cannot_be_run_does_not_blame_the_module() {
     let scratch = Scratch::new("unrunnable_clang");
     let source = scratch.source("mvp.c", MVP);
 
-    let (stub, path) = ahead_of_clang(&scratch);
+    let (stub, path) = instead_of_clang(&scratch);
     fs::create_dir_all(&stub).expect("the temporary directory is writable");
 
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
