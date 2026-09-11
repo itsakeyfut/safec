@@ -818,3 +818,45 @@ fn an_argument_is_converted_to_its_parameter_s_type() {
         Ok(Value::Int(200)),
     );
 }
+
+/// A constant too large for any type converts rather than killing the run.
+///
+/// The frontend parses a decimal literal into an `i128` with no range check of
+/// its own, which `lowering.rs::constant` records, so a number near the top of
+/// the carrier reaches the conversion at an assignment. Before the conversion
+/// was written to fold first, that panicked with "attempt to subtract with
+/// overflow": the one answer a compiler must not give, on a `.c` file with
+/// nothing else unusual in it.
+///
+/// What it answers is not a claim about C. `2^127 - 1` has no type in C17
+/// 6.4.4.1 p5 at all, and `types.rs` knowingly calls every integer constant an
+/// `int`, which `docs/frontend.md` records. What is asserted here is that the
+/// run ends rather than dies.
+///
+/// Mutation: subtract `min` from the value before taking the remainder. This
+/// panics and the test fails.
+#[test]
+fn a_constant_at_the_top_of_the_carrier_does_not_kill_the_run() {
+    let huge =
+        ran("int main(void) { int x; x = 170141183460469231731687303715884105727; return x; }\n");
+
+    assert_eq!(huge, Ok(Value::Int(-1)), "the low 32 bits of all ones");
+}
+
+/// Negating the smallest `int` stops, because the result is not one.
+///
+/// C17 6.5 p5 again: `-(-2147483648)` is 2147483648, which a 32-bit signed
+/// `int` does not hold, so C says nothing about it and this stops. A real
+/// machine answers `-2147483648` and a compiler that repeated that would be
+/// deciding what C declined to.
+///
+/// Mutation: drop the `fits` call from the `Neg` arm. The run answers
+/// -2147483648 and this fails.
+#[test]
+fn negating_the_smallest_int_stops_the_run() {
+    let negated = ran("int main(void) { int x; x = 0 - 2147483647; x = x - 1; return -x; }\n");
+    let Err(trap) = negated else {
+        panic!("a negation whose result does not fit: {negated:?}");
+    };
+    assert!(trap.why.contains("32 bits signed cannot hold"), "{trap:?}");
+}

@@ -74,21 +74,29 @@ impl Integer {
     ///
     /// # Panics
     ///
-    /// If `bits` is 128 or more, where the arithmetic below would overflow. No
-    /// target names such a type and none can while `Target` is a fixed table.
+    /// If `bits` is 128 or more, where a value of the type would not fit the
+    /// carrier. No target names such a type and none can while `Target` is a
+    /// fixed table.
     pub fn convert(self, value: i128) -> i128 {
         assert!(self.bits < 128, "an integer wider than the arithmetic here");
-        if self.holds(value) {
-            return value;
-        }
 
         let span = 1i128 << self.bits;
         // `rem_euclid` rather than `%`, because `%` keeps the sign of the left
-        // operand in Rust and C's rule is about adding or subtracting the span
+        // operand in Rust, and C's rule is about adding or subtracting the span
         // until the value is in range, which is what a non-negative remainder
-        // is. Shifting by `min` first is what makes the same expression serve
-        // the signed case.
-        (value - self.min()).rem_euclid(span) + self.min()
+        // is.
+        //
+        // Taken before anything is added to `value`, because `value` can be
+        // anywhere an `i128` reaches: a constant in the IR is whatever the
+        // source spelled, and `value - self.min()` on a number near
+        // `i128::MAX` overflows the carrier and panics. This way the only
+        // arithmetic on the full-width value is a remainder, which cannot.
+        let folded = value.rem_euclid(span);
+        if folded > self.max() {
+            folded - span
+        } else {
+            folded
+        }
     }
 }
 
@@ -289,6 +297,36 @@ mod tests {
         for value in [0, 1, -1, 127, -128] {
             assert_eq!(character.convert(value), value);
         }
+    }
+
+    /// A value anywhere an `i128` reaches converts without overflowing it.
+    ///
+    /// A constant in the IR is whatever the source spelled, and this frontend
+    /// parses a decimal literal into an `i128` with no range check of its own,
+    /// so `int x = 170141183460469231731687303715884105727;` reaches here. An
+    /// implementation that shifted the value by `min` before folding it
+    /// overflowed the carrier and panicked, which is the one answer a compiler
+    /// must not give.
+    ///
+    /// Mutation: write it as `(value - self.min()).rem_euclid(span) +
+    /// self.min()`. The extremes panic with "attempt to subtract with
+    /// overflow" and this fails.
+    #[test]
+    fn a_value_anywhere_in_the_carrier_converts() {
+        let int = Target::from_triple("x86_64-pc-windows-msvc")
+            .expect("a known triple")
+            .int();
+
+        for value in [i128::MAX, i128::MIN, i128::MAX - 1, i128::MIN + 1] {
+            let converted = int.convert(value);
+            assert!(int.holds(converted), "{value} became {converted}");
+        }
+
+        // The answer is the two's complement one, not merely something in
+        // range: `i128::MAX` is all ones below the sign, so its low 32 bits are
+        // all ones, which is -1 as a 32-bit signed integer.
+        assert_eq!(int.convert(i128::MAX), -1);
+        assert_eq!(int.convert(i128::MIN), 0);
     }
 
     /// A value that does not fit is converted the way the target's `clang` does.
