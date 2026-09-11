@@ -121,10 +121,12 @@ impl BlockId {
 /// the whole boundary, and an adapter for another language reaches this type
 /// rather than `ast::Type`.
 ///
-/// **No widths.** `docs/architecture.md` says an artifact depends on the target
-/// "once type widths reach them", and nothing here has reached that yet: an
-/// `Int` is C's `int` for whatever target, and the phase that lowers to LLVM is
-/// where a width becomes a thing this has to carry.
+/// **No widths here, and that is the decision rather than a gap.** What an
+/// `Int` is worth is asked of the unit, which carries the target:
+/// [`TranslationUnit::integer`]. Putting it in the type instead would dissolve
+/// `Int` and `Char` into one integer kind with a width and a sign, and `--emit
+/// safety-ir` would stop saying which one a program wrote. See ADR-0013, which
+/// rejected exactly that and says what would reverse it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Ty {
     /// `int`.
@@ -474,6 +476,21 @@ impl Element {
 }
 
 /// One step: a place, and what is written into it.
+///
+/// **An arithmetic operation's destination carries the type C performs it at.**
+/// Whoever builds one owes that: C17 6.3.1.1 p2 promotes the operands of an
+/// arithmetic operator, so `char + char` happens at `int` and the narrowing
+/// back to a `char` is a separate assignment under 6.3.1.3. An `Operation`
+/// whose `value` is a [`Rvalue::Binary`] or a [`Rvalue::Unary`] and whose
+/// `place` is narrower says the arithmetic happened at the narrow width, and a
+/// consumer that believes it calls a defined program undefined. The interpreter
+/// is that consumer today and a backend is the next one: LLVM needs the
+/// operation's own type to emit it at all.
+///
+/// A frontend that lowers `c += 1` as one operation into `c` breaks this, which
+/// is what `safec`'s did until it was measured. The fix is what C says the
+/// program is: compute into a temporary of the promoted type, then assign.
+/// `lowering.rs::promoted` is where that is done and why.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Operation {
     /// What is written to.
@@ -874,37 +891,35 @@ impl TranslationUnit {
     pub fn integer(&self, id: TyId) -> Option<Integer> {
         match self.ty(id) {
             Ty::Int => Some(self.target.int()),
-            Ty::Char => Some(self.target.character()),
+            Ty::Char => Some(self.target.char()),
             Ty::Void | Ty::Pointer(_) => None,
         }
     }
 
-    /// The type a place reaches, following its projections.
+    /// The type a place reaches, or `None` where its projections do not fit.
     ///
     /// A fact about the IR rather than about running it, so it is here rather
     /// than in the interpreter: what `*p` is worth is the same question whoever
     /// asks.
     ///
-    /// # Panics
-    ///
-    /// If a projection does not fit the type it is applied to, which only a
-    /// hand-built [`TranslationUnit`] can arrange: a `Deref` of something that
-    /// is not a pointer is a unit the lowering would not have built.
-    pub fn place_ty(&self, function: &Function, place: &Place) -> TyId {
+    /// `None` rather than a panic, because the caller that asks most is the
+    /// interpreter, whose whole doctrine is that it stops and says why instead
+    /// of dying. A `Deref` of something that is not a pointer is a unit the
+    /// lowering would not build and a hand-built one can, which is the case a
+    /// Clang adapter is: telling it what is wrong beats a backtrace.
+    pub fn place_ty(&self, function: &Function, place: &Place) -> Option<TyId> {
         let mut ty = function.local(place.local);
         for projection in &place.projection {
             ty = match (projection, self.ty(ty)) {
                 (Projection::Deref, Ty::Pointer(pointee)) => pointee,
-                (Projection::Deref, other) => {
-                    panic!("a dereference of {other:?}, which is not a pointer")
-                }
+                (Projection::Deref, _) => return None,
                 // `Index` is never built: `p[i]` lowers as `*(p + i)`, which
                 // `docs/frontend.md` records. An analysis that starts building
                 // one has to answer here.
-                (Projection::Index(_), _) => panic!("an index, which nothing builds"),
+                (Projection::Index(_), _) => return None,
             };
         }
-        ty
+        Some(ty)
     }
 
     /// The id for this type, which is the one it already had if it has one.
@@ -1009,10 +1024,10 @@ mod tests {
         let pointer = unit.push_type(Ty::Pointer(int));
 
         let (_sources, at) = spans();
-        let function = Function::new(at, int, [pointer]);
+        let mut function = Function::new(at, int, [pointer]);
         let p = function.parameters().next().expect("one parameter");
 
-        assert_eq!(unit.place_ty(&function, &Place::local(p)), pointer);
+        assert_eq!(unit.place_ty(&function, &Place::local(p)), Some(pointer));
         assert_eq!(
             unit.place_ty(
                 &function,
@@ -1021,7 +1036,22 @@ mod tests {
                     projection: vec![Projection::Deref],
                 }
             ),
-            int
+            Some(int)
+        );
+
+        // A projection that does not fit is not a panic: the interpreter asks
+        // this before it resolves anything, and stopping with a sentence is
+        // what it promises. Only a hand-built unit gets here.
+        let holding = function.push_local(int);
+        assert_eq!(
+            unit.place_ty(
+                &function,
+                &Place {
+                    local: holding,
+                    projection: vec![Projection::Deref],
+                }
+            ),
+            None
         );
     }
 

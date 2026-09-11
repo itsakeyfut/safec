@@ -741,3 +741,80 @@ fn what_a_char_holds_follows_the_target() {
         Ok(Value::Int(200)),
     );
 }
+
+/// A compound assignment on a `char` is not undefined, and must not stop.
+///
+/// C17 6.5.16.2 p3 makes `E1 op= E2` mean `E1 = E1 op E2` bar evaluating `E1`
+/// once, so the operation happens after the integer promotions of 6.3.1.1 p2,
+/// at `int`, and only the store back is a conversion under 6.3.1.3. There is no
+/// undefined behaviour anywhere in `char c = -56; c &= 200;`, and this compiler
+/// reported one: the lowering wrote the operation straight into the `char`, and
+/// the interpreter read that place's type as the width the arithmetic happened
+/// at.
+///
+/// The `&=` row is the one that admits no argument. C17 6.5.10 leaves bitwise
+/// AND undefined for nothing at all.
+///
+/// Mutation: write the `Binary` of a compound assignment into the place rather
+/// than into a promoted temporary. All four stop and this fails.
+#[test]
+fn a_compound_assignment_on_a_char_is_not_undefined() {
+    // The two spellings C17 6.5.16.2 p3 calls equivalent answer the same thing,
+    // which is the assertion with the most in it: before this they did not.
+    assert_eq!(
+        ran("int main(void) { char c; c = 100; c += 100; return c; }\n"),
+        ran("int main(void) { char c; c = 100; c = c + 100; return c; }\n"),
+    );
+    assert_eq!(
+        ran("int main(void) { char c; c = 100; c += 100; return c; }\n"),
+        Ok(Value::Int(-56)),
+    );
+    assert_eq!(
+        ran("int main(void) { char c; c = -56; c &= 200; return c; }\n"),
+        Ok(Value::Int(-56)),
+    );
+
+    // `clang 20.1.6 --target=x86_64-pc-windows-msvc` answers -128 and 127 for
+    // these, computing at `i32` and truncating with `trunc i32 to i8`.
+    assert_eq!(
+        ran("int main(void) { char c; c = 127; c++; return c; }\n"),
+        Ok(Value::Int(-128)),
+    );
+    assert_eq!(
+        ran("int main(void) { char c; c = 0 - 128; c--; return c; }\n"),
+        Ok(Value::Int(127)),
+    );
+}
+
+/// An argument is converted to its parameter's type.
+///
+/// C17 6.5.2.2 p7: for a prototyped function "the arguments are implicitly
+/// converted, as if by assignment, to the types of the corresponding
+/// parameters". As if by assignment is 6.3.1.3, the same conversion an
+/// `Rvalue::Use` does, and this is the other edge where a value crosses into a
+/// differently typed object. Only one of the two had it.
+///
+/// This one answered rather than stopping, which is the worse failure: nothing
+/// reported it, and a parameter holding a value its type cannot represent
+/// carries it into arithmetic that then stops somewhere it could never have
+/// reached. `clang 20.1.6` answers 44 and warns.
+///
+/// Mutation: bind the argument without converting. This fails.
+#[test]
+fn an_argument_is_converted_to_its_parameter_s_type() {
+    assert_eq!(
+        ran("int f(char c) { return c; }\nint main(void) { return f(300); }\n"),
+        Ok(Value::Int(44)),
+    );
+
+    // And the signedness is the target's, as it is everywhere else.
+    let program = "int f(char c) { return c; }\nint main(void) { return f(200); }\n";
+    assert_eq!(
+        ran_for("x86_64-pc-windows-msvc", program),
+        Ok(Value::Int(-56)),
+    );
+    assert_eq!(
+        ran_for("aarch64-unknown-linux-gnu", program),
+        Ok(Value::Int(200)),
+    );
+}

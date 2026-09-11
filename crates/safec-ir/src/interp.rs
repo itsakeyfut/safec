@@ -85,18 +85,18 @@ pub const MAX_STEPS: usize = 1 << 20;
 /// What a local holds while a program runs.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
-    /// An integer, as wide as the IR's own constants.
+    /// An integer, held wider than any type a target names.
     ///
-    /// No narrowing to a target's width: `ir::Ty` says it holds none, and
-    /// `docs/architecture.md` puts widths in the phase that lowers to LLVM.
+    /// The carrier is wide so that the rules can be applied to it rather than
+    /// suffered from it: an operation is computed here and then asked whether
+    /// the type it is written into holds the result, which is C17 6.5 p5's
+    /// question and not a question about this machine. `INT_MAX + 1` stops
+    /// where `int` is 32 bits, and would answer where it is 64.
     ///
-    /// So a program whose answer depends on a width gets this machine's answer
-    /// rather than the target's, and gets it without being told: `INT_MAX + 1`
-    /// is 2147483648 here and -2147483648 under a compiler that knows `int` is
-    /// 32 bits. C17 6.5 p5 leaves that undefined, so no answer is wrong, but
-    /// this one is a different program's answer and `docs/frontend.md` records
-    /// it beside the rest. What [`Trap`] catches is only what an `i128` cannot
-    /// hold, which is a bound of this machine rather than a rule of C.
+    /// So a value in flight can be outside the range of the type it came from
+    /// or is going to. What keeps that honest is that every edge converts or
+    /// checks: `rvalue` at an assignment, `enter` at a parameter, and `fits` at
+    /// an operation. ADR-0013 is where the widths come from.
     Int(i128),
     /// A pointer to a local of a frame.
     ///
@@ -235,7 +235,9 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     // which is what decides both the width an operation may
                     // overflow at and the type an assignment converts to.
                     // `None` for a pointer, which has neither question.
-                    let ty = unit.integer(unit.place_ty(function, &operation.place));
+                    let ty = unit
+                        .place_ty(function, &operation.place)
+                        .and_then(|ty| unit.integer(ty));
                     let value = rvalue(&frames, &operation.value, ty)
                         .map_err(|trap| trap.at(operation.origin.span()))?;
                     let at = resolve(&frames, current, &operation.place)
@@ -393,7 +395,19 @@ fn enter(
     // names it as the change this moves with.
     let mut locals: Vec<Slot> = function.locals().map(|_| Slot::Unwritten).collect();
     for (parameter, value) in function.parameters().zip(arguments) {
-        locals[parameter.index()] = Slot::Held(value.clone());
+        // C17 6.5.2.2 p7: for a prototyped function "the arguments are
+        // implicitly converted, as if by assignment, to the types of the
+        // corresponding parameters". As if by assignment is 6.3.1.3, which is
+        // what `Rvalue::Use` already does at the other edge where a value
+        // crosses into a differently typed object. Both edges or neither: a
+        // parameter left holding a value its type cannot represent carries it
+        // into arithmetic that then stops somewhere the value could not have
+        // reached.
+        let converted = match (value, unit.integer(function.local(parameter))) {
+            (Value::Int(value), Some(ty)) => Value::Int(ty.convert(*value)),
+            (value, _) => value.clone(),
+        };
+        locals[parameter.index()] = Slot::Held(converted);
     }
 
     Ok(Frame {
@@ -415,9 +429,9 @@ fn enter(
 /// mathematically defined or not in the range of representable values for its
 /// type, the behavior is undefined", and this stops rather than answering, the
 /// same as it does for a division by zero. The type to check against is the
-/// destination's because the lowering gives an operation a temporary of the
-/// type the frontend worked out for it, promotions included: `char + char`
-/// lands in an `int`.
+/// destination's, which [`crate::ir::Operation`] says is the type C performs
+/// the operation at; that is an obligation on whoever built the unit, stated
+/// there rather than assumed here.
 ///
 /// A `Use` is **converted**. C17 6.5.16.1 p2 converts the right operand of an
 /// assignment to the type of the assignment expression, and 6.3.1.3 says what
@@ -820,6 +834,66 @@ mod tests {
             panic!("a dereference of a number");
         };
         assert!(trap.why.contains("not a pointer"), "{trap:?}");
+    }
+
+    /// An unsigned destination overflows too, and says so in its own words.
+    ///
+    /// Built by hand, because the frontend cannot reach this shape: every
+    /// arithmetic expression it lowers lands in a temporary of the promoted
+    /// type, and C17 6.3.1.1 p2 promotes every integer type it has to `int`,
+    /// which is signed on every row of `Target::ALL`. So the unsigned half of
+    /// `fits` has no producer above it and is reachable only from a unit like
+    /// this one, which is exactly what a Clang adapter or a later IR pass would
+    /// build.
+    ///
+    /// The sentence matters as much as the stop. "8 bits signed" for an
+    /// unsigned type would send a reader looking for a sign bit that is not
+    /// there.
+    ///
+    /// Mutation: check only signed types, `ty.signed() && !ty.holds(value)`.
+    /// Nothing else in the workspace fails and this does. Mutation: say
+    /// "signed" whatever the type. The last assertion fails.
+    #[test]
+    fn an_unsigned_destination_overflows_in_its_own_words() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual(
+            "t.c",
+            "int f(void);
+",
+        );
+        let at = Span::new(file, 4, 5);
+
+        // The row of `Target::ALL` where `char` is unsigned, so that `holds`
+        // has a lower bound of zero rather than of a negative number.
+        let mut unit = TranslationUnit::new(
+            Target::from_triple("aarch64-unknown-linux-gnu").expect("a known triple"),
+        );
+        let int = unit.push_type(Ty::Int);
+        let character = unit.push_type(Ty::Char);
+
+        let mut function = Function::new(at, int, []);
+        let narrow = function.push_local(character);
+        function.push_block(Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(narrow),
+                // 0 - 1, which an unsigned `char` cannot hold. Written as an
+                // operation rather than as a `Use`, because a `Use` would
+                // convert it to 255 and that is the defined half.
+                value: Rvalue::Binary {
+                    op: BinOp::Sub,
+                    lhs: Operand::Constant(0),
+                    rhs: Operand::Constant(1),
+                },
+                origin: Origin::Written(at),
+            })],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(function);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("an unsigned type cannot hold -1");
+        };
+        assert!(trap.why.contains("8 bits unsigned"), "{trap:?}");
     }
 
     /// A call that writes nowhere runs for what it does.

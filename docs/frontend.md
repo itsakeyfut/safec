@@ -133,8 +133,10 @@ names one. Each row below was measured against the interpreter and against
 | `char c = 300; return c;` | `44` | `44` |
 | `char c = 200; return c;` | `-56`, and `200` for an unsigned `char` | the same |
 
-**The first two are undefined and the last two are not**, and that is the whole
-of the difference. C17 6.5 p5 leaves an operation undefined whose result "is not
+**The first two are undefined and the last two are not**, and that is the
+difference these four rows are about. It is not a claim that the table is
+exhaustive: what a program means here is measured case by case against `clang`,
+and a row appears when a measurement disagrees. C17 6.5 p5 leaves an operation undefined whose result "is not
 in the range of representable values for its type", and 6.5.7 p4 says the same
 of a left shift whose value is not representable, which `1 << 31` is not at 32
 bits. This stops on both rather than answering, which is what it does for a

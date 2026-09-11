@@ -57,21 +57,25 @@ analysis from Phase 4 onwards reads, because they are written against
 Chosen option: the unit carries the target.
 
 ```rust
-pub struct Target {
-    pub triple: String,
-    pub int_bits: u32,
-    pub char_bits: u32,
-    pub char_signed: bool,
-}
+/// What an integer type is worth: a width and a signedness, with the C rules
+/// about range and conversion on it.
+pub struct Integer { /* private */ }
+
+/// A machine, and what C's types are worth on it. Private fields and a private
+/// constructor, so the only targets that exist are the measured rows of `ALL`.
+pub struct Target { /* private */ }
 
 impl TranslationUnit {
-    pub fn target(&self) -> &Target;
-    /// What a value of this type is worth, in bits.
-    pub fn bits(&self, ty: TyId) -> u32;
-    /// Whether a value of this type carries a sign.
-    pub fn signed(&self, ty: TyId) -> bool;
+    pub fn target(&self) -> Target;
+    /// What this type is worth here, or `None` for `void` and for a pointer,
+    /// which have no width to answer with.
+    pub fn integer(&self, ty: TyId) -> Option<Integer>;
 }
 ```
+
+One function rather than a `bits` and a `signed` that each panic on the two
+types that have neither: a caller has to say what it does about `void` and
+about a pointer, and `Option` is where it says it.
 
 `Ty` does not change, so `--emit safety-ir` still says `int` and `char` and the
 corpus still reads as a program's shape rather than as a machine's.
@@ -88,12 +92,11 @@ the host chooses the default, and the output then depends on that target and on
 nothing else. A run that names a target gets the same answer everywhere.
 
 **Only what something reads.** The frontend parses `int`, `char`, `void` and
-pointers, so `long` and the rest have nothing to say yet. `int_bits` is here
-despite being 4 on every target measured (`x86_64-pc-windows-msvc`,
-`x86_64-unknown-linux-gnu`, `i686-unknown-linux-gnu`, `wasm32-unknown-unknown`,
-`aarch64-unknown-linux-gnu`) because the interpreter needs a width to detect an
-overflow at, not because it is expected to vary. `char_signed` does vary, and
-the last of those is where.
+pointers, so `long` and the rest have nothing to say yet. `int`'s width is the
+same on every target measured, and it is here anyway because the interpreter
+needs a width to detect an overflow at, not because it is expected to vary.
+What does vary is whether `char` carries a sign, and
+`aarch64-unknown-linux-gnu` is where.
 
 **A pointer's width is not here**, and that is the rule rather than an
 oversight. Nothing can observe one: the artifact prints `int *` rather than a
@@ -145,8 +148,9 @@ that cannot parse.
   test that builds one gains a line.
 * Bad, because the interpreter gets slower and more complicated: an operation's
   width comes from its destination place's type, so it has to ask.
-* Bad, because a triple is a `String` in a crate that had none, and comparing
-  targets becomes string comparison until something needs more.
+* Bad, because the set of targets is a table in the crate that must not depend
+  on the backend, and the backend is what will really know which targets it can
+  emit for. Nothing to do until there is one to disagree with the list.
 * What would reverse this: a second frontend whose notion of a type is not C's,
   which would argue for the widths moving into `Ty` where a non-C adapter can
   set them directly rather than describing a C machine.

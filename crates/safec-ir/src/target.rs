@@ -172,12 +172,17 @@ impl Target {
 
     /// What `char` is worth here.
     ///
-    /// Not `char`, which is a Rust type and a different thing. C17 6.2.5 p15
-    /// makes plain `char` a third type that behaves as one of the other two,
-    /// and which one is the target's to say: it is unsigned on
-    /// `aarch64-unknown-linux-gnu` and signed on every other row of
-    /// [`Self::ALL`].
-    pub fn character(self) -> Integer {
+    /// Named after the C keyword, the way [`Self::int`] is and the way `clang`
+    /// names the same thing (`getCharWidth`, `SignedChar`, `UnsignedChar`). A
+    /// method and a primitive type do not share a namespace in Rust, so this
+    /// costs nothing and keeps `Ty::Char` and `char()` reading as one pair.
+    ///
+    /// C17 6.2.5 p15 makes plain `char` a third type beside `signed char` and
+    /// `unsigned char`: "the implementation shall define char to have the same
+    /// range, representation, and behavior as either". Which one is the
+    /// target's to say, and it is unsigned on `aarch64-unknown-linux-gnu` and
+    /// signed on every other row of [`Self::ALL`].
+    pub fn char(self) -> Integer {
         self.character
     }
 }
@@ -219,8 +224,8 @@ mod tests {
             let target = Target::from_triple(triple).expect("a measured triple is known");
             assert_eq!(target.int().bits(), int_bits, "{triple}");
             assert!(target.int().signed(), "{triple}: C17 6.2.5 p4");
-            assert_eq!(target.character().bits(), char_bits, "{triple}");
-            assert_eq!(target.character().signed(), char_signed, "{triple}");
+            assert_eq!(target.char().bits(), char_bits, "{triple}");
+            assert_eq!(target.char().signed(), char_signed, "{triple}");
         }
     }
 
@@ -259,7 +264,7 @@ mod tests {
     fn an_unsigned_type_holds_nothing_below_zero() {
         let character = Target::from_triple("aarch64-unknown-linux-gnu")
             .expect("a known triple")
-            .character();
+            .char();
 
         assert_eq!((character.min(), character.max()), (0, 255));
         assert!(!character.holds(-1));
@@ -279,7 +284,7 @@ mod tests {
     fn a_value_that_fits_is_unchanged() {
         let character = Target::from_triple("x86_64-pc-windows-msvc")
             .expect("a known triple")
-            .character();
+            .char();
 
         for value in [0, 1, -1, 127, -128] {
             assert_eq!(character.convert(value), value);
@@ -302,10 +307,10 @@ mod tests {
     fn a_value_that_does_not_fit_is_converted_the_way_the_target_does() {
         let signed = Target::from_triple("x86_64-pc-windows-msvc")
             .expect("a known triple")
-            .character();
+            .char();
         let unsigned = Target::from_triple("aarch64-unknown-linux-gnu")
             .expect("a known triple")
-            .character();
+            .char();
 
         assert_eq!(signed.convert(200), -56);
         assert_eq!(unsigned.convert(200), 200);
