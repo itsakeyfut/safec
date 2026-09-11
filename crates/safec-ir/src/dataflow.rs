@@ -110,10 +110,13 @@ impl<F> Solution<F> {
 ///
 /// The `Cfg` is taken rather than built, so that a caller holding one does not
 /// walk the graph twice and so that the graph this runs over is visibly the one
-/// the caller asked about.
+/// the caller asked about. Only its order is read: this pushes a value forward
+/// along the edges rather than pulling one back from each predecessor, and a
+/// successor of a reachable block is reachable, so there is nothing here to
+/// filter.
 ///
-/// A block is walked from its entry value: every element in order, then the
-/// terminator, and the result is joined into each successor the graph admits.
+/// A block is walked from its entry value: every element in the order it is
+/// written, then the terminator, and the result is joined into every successor.
 /// A successor whose value moved goes back on the list, which is what makes a
 /// loop converge rather than being answered from whatever reached it first.
 ///
@@ -498,6 +501,53 @@ mod tests {
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
         assert_eq!(solution.entry(after), Some(&vec![false, true]));
+    }
+
+    /// The elements of a block happen in the order they are written in, which
+    /// every analysis rests on: `p = malloc(); free(p);` is one block, and a
+    /// walk that read it the other way round would answer that `p` is live.
+    ///
+    /// Mutation: run a block's elements in reverse. `b`, whose storage ends
+    /// before it is written, is answered unwritten and this fails. Nothing else
+    /// in the crate fails under it, which is why this test exists: it was
+    /// measured after the rest of them were written.
+    #[test]
+    fn the_elements_of_a_block_happen_in_the_order_they_are_written() {
+        let (_sources, at) = spans();
+        let (_unit, mut function, int) = a_function(at);
+        let origin = Origin::Written(at);
+        let a = function.push_local(int);
+        let b = function.push_local(int);
+
+        let entry = function.reserve_block();
+        let after = function.reserve_block();
+
+        function.fill_block(
+            entry,
+            goto(
+                after,
+                vec![
+                    // Written, then its storage ends: not written afterwards.
+                    write(a, origin),
+                    Element::StorageDead { origin, local: a },
+                    // The same pair the other way round: written afterwards.
+                    Element::StorageDead { origin, local: b },
+                    write(b, origin),
+                ],
+            ),
+        );
+        function.fill_block(
+            after,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+        let solution = solve(&Written(function.locals().len()), &function, &cfg);
+
+        assert_eq!(solution.entry(after), Some(&vec![false, false, true]));
     }
 
     /// A block the entry cannot reach is answered with nothing, rather than
