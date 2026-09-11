@@ -16,8 +16,8 @@ use crate::ir::{BlockId, Function};
 ///
 /// Three questions and one traversal. A depth-first walk from the entry visits
 /// exactly the blocks the entry can reach, so the order it produces *is* the
-/// reachable set, and "can control get here" is answered by asking where a
-/// block sits in it rather than by a second table that could disagree.
+/// reachable set, and what answers "can control get here" is read off that
+/// order rather than worked out by a second walk that could disagree with it.
 ///
 /// Built per function and thrown away: the IR does not change while a pass runs
 /// over it, and a `Cfg` that outlived one would be a claim about a function that
@@ -27,12 +27,17 @@ pub struct Cfg {
     /// Every block the entry reaches, in an order where a block comes after the
     /// blocks that reach it wherever the graph allows one.
     order: Vec<BlockId>,
-    /// Where each block sits in `order`, and `None` for a block the entry does
-    /// not reach. Indexed by [`BlockId::index`].
+    /// Whether the entry reaches each block, indexed by [`BlockId::index`].
     ///
-    /// One walk fills this and `order` together, so nothing here can disagree
-    /// with what is in the walk about which blocks run.
-    position: Vec<Option<u32>>,
+    /// Filled from `order` rather than by a second walk, so the two cannot
+    /// disagree about which blocks run: there is one traversal and one place
+    /// that decides.
+    ///
+    /// A `bool` rather than where the block sits in `order`, which is the other
+    /// thing a walk could leave here. Nothing reads a position, and a number
+    /// nobody reads is a number nobody notices is wrong: one was here, and
+    /// setting every block's to zero failed no test.
+    reachable: Vec<bool>,
     /// Where control can arrive from, per block, indexed by [`BlockId::index`].
     ///
     /// **Reachable blocks only, on both sides.** A block the entry never
@@ -101,9 +106,9 @@ impl Cfg {
 
         let order: Vec<BlockId> = postorder.into_iter().rev().collect();
 
-        let mut position = vec![None; count];
-        for (at, block) in order.iter().enumerate() {
-            position[block.index()] = Some(at as u32);
+        let mut reachable = vec![false; count];
+        for &block in &order {
+            reachable[block.index()] = true;
         }
 
         // From `order` rather than from every block, which is what keeps an
@@ -123,7 +128,7 @@ impl Cfg {
 
         Self {
             order,
-            position,
+            reachable,
             predecessors,
         }
     }
@@ -145,7 +150,7 @@ impl Cfg {
     /// Whether that deserves a diagnostic is a question for whoever decides this
     /// compiler says so; what this owes is the answer.
     pub fn reaches(&self, block: BlockId) -> bool {
-        self.position[block.index()].is_some()
+        self.reachable[block.index()]
     }
 }
 
