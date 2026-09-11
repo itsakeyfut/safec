@@ -116,7 +116,7 @@ fn llvm_says(module: &[u8], triple: &str) -> String {
 /// Every module this compiler writes is one LLVM accepts without a word.
 ///
 /// Mutation: store a comparison's `i1` rather than widening it, **and then
-/// re-bless the corpus**. Every expectation agrees again, all 92 cases pass,
+/// re-bless the corpus**. Every expectation agrees again, all 94 cases pass,
 /// and this is what still fails, beside the hand-written assertion in
 /// `two_pointers_can_be_compared`. Measured, because that is the whole claim:
 /// a blessed file is only as good as the run that blessed it, and this is the
@@ -173,23 +173,29 @@ const TRIPLES: &[&str] = &[
     "x86_64-unknown-linux-gnu",
 ];
 
-/// The extension attributes on a `define` line, in the order they appear.
+/// The extension attributes on the one line of a module that carries this
+/// marker and names this function, in the order they appear.
 ///
 /// The whole line cannot be compared. `clang` writes `dso_local`, `hidden`,
 /// `noundef` and a reference to an attribute group, none of which is about how
 /// a narrow value crosses a call and none of which this compiler writes. What
 /// is left after those is the claim.
 ///
-/// In order rather than as a set, so that an attribute on the result and one
-/// on a parameter are not the same answer.
-fn extensions(module: &str, name: &str) -> Vec<&'static str> {
-    let wanted = format!("@{name}(");
+/// In order rather than as a set, so that an attribute on the result and one on
+/// a parameter are not the same answer.
+///
+/// A marker rather than a prefix because the three places an attribute appears
+/// are not all at the start of a line, and because the two compilers do not put
+/// a module together in the same order: `declare` comes first here and last
+/// there, so a walk over the lines would compare a `define` with a `declare`.
+fn extensions(module: &str, marker: &str, name: &str) -> Vec<&'static str> {
+    let called = format!("@{name}(");
     let line = module
         .lines()
-        .find(|line| line.starts_with("define ") && line.contains(&wanted))
+        .find(|line| line.contains(marker) && line.contains(&called))
         .unwrap_or_else(|| {
             panic!(
-                "no definition of `{name}`:
+                "no `{marker}` of `{name}`:
 {module}"
             )
         });
@@ -205,24 +211,29 @@ fn extensions(module: &str, name: &str) -> Vec<&'static str> {
 
 /// What this compiler writes about a narrow value is what `clang` writes.
 ///
-/// A `char` is passed and returned already widened on five of the eight
-/// measured targets and left narrow on the other three, and which is which does
-/// not follow from anything else: `aarch64-apple-darwin` and
-/// `x86_64-pc-windows-msvc` agree that `char` is signed and disagree about
-/// this. So the table is a measurement, and this is what re-measures it.
+/// A `char` is passed and returned already widened on six of the eight measured
+/// targets and left narrow on the other two, and which is which does not follow
+/// from anything else: `aarch64-apple-darwin` and `x86_64-pc-windows-msvc`
+/// agree that `char` is signed and disagree about this. So the table is a
+/// measurement, and this is what re-measures it.
 ///
 /// This replaces the acceptance criterion that asked for a `clang`-compiled
-/// caller linked against a `safec`-compiled callee. That was measured before it
-/// was designed against: this host is `x86_64-pc-windows-msvc`, one of the
-/// three that ask for nothing, so such a program answers the same with the
-/// attribute and without it, and so does `windows-latest`. A test that cannot
-/// fail where its author runs it is RK-012's shape. This one covers all eight
-/// targets from any host, because `-S -emit-llvm` cross-compiles with no
-/// sysroot.
+/// caller linked against a `safec`-compiled callee. Not because such a program
+/// cannot be built: a reviewer built one under WSL for
+/// `x86_64-unknown-linux-gnu` and ran it over all 256 values of a `char`, and
+/// the two callees agreed byte for byte. Because of where it can *fail*. This
+/// host is `x86_64-pc-windows-msvc`, one of the two that ask for nothing, so
+/// such a program answers the same with the attribute and without it, and so
+/// does `windows-latest`. A test that cannot fail where its author runs it is
+/// RK-012's shape, and it would cover one target where this covers eight from
+/// any host, because `-S -emit-llvm` cross-compiles with no sysroot.
 ///
 /// Mutation: answer `None` from `Emitter::extension` whatever the target. The
-/// five that ask fail. Mutation: answer `Some` whatever the target. The three
-/// that do not fail. Mutation: always `signext`. The `armv7` row fails.
+/// six that ask fail. Mutation: answer `Some` whatever the target. The two that
+/// do not fail. Mutation: always `signext`. The `armv7` row fails. Mutation:
+/// drop the attribute from the `call` alone and re-bless the corpus. All 94
+/// cases agree again and this is the only thing left that objects, which is
+/// what the three markers below are for.
 #[test]
 fn the_attributes_are_what_clang_asks_for() {
     // Before the gate below, so that a target added to the table without a row
@@ -259,17 +270,30 @@ fn the_attributes_are_what_clang_asks_for() {
             .arg(&program)
             .output()
             .expect("clang answered `--version` a moment ago");
+        // Both halves, the way `llvm_says` does it: a `clang` that succeeds and
+        // still says something has said something worth reading.
+        let complaint = String::from_utf8_lossy(&theirs.stderr).into_owned();
         assert!(
-            theirs.status.success(),
-            "{triple}: clang said {}",
-            String::from_utf8_lossy(&theirs.stderr)
+            theirs.status.success() && complaint.is_empty(),
+            "{triple}: clang exited {:?} and said {complaint}",
+            theirs.status.code()
         );
         let theirs = String::from_utf8_lossy(&theirs.stdout).into_owned();
 
-        assert_eq!(
-            extensions(&ours, "use_it"),
-            extensions(&theirs, "use_it"),
-            "{triple}"
-        );
+        // All three places an attribute appears, because a regression in any
+        // one of them survives a re-blessed corpus and LLVM takes a call site
+        // that disagrees with its callee silently. Measured: dropping it from
+        // the call alone, then re-blessing, left the whole suite green.
+        for (marker, function) in [
+            ("define ", "use_it"),
+            ("declare ", "twice"),
+            ("call ", "twice"),
+        ] {
+            assert_eq!(
+                extensions(&ours, marker, function),
+                extensions(&theirs, marker, function),
+                "{triple}: {marker}{function}"
+            );
+        }
     }
 }
