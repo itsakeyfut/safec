@@ -137,8 +137,8 @@ impl From<Outcome> for ExitCode {
 /// failed, so gating a phase on it would let a typo in `a.c` decide that `b.c`
 /// is never looked at, and a user with two broken files would fix them one run
 /// at a time. The loop below takes an error count either side of each input's
-/// own work instead, and the run-level answer is left for what genuinely spans
-/// the run: the outcome, and later, linking.
+/// own work instead, and the run-level answer is for what genuinely spans the
+/// run: the outcome, and linking, which `finish` does once the loop is done.
 pub fn compile(options: &Options) -> Compiled {
     // The one place a sink is built from the options, so that no part of the
     // compiler can invent its own policy. See ADR-0001.
@@ -281,12 +281,11 @@ pub fn compile(options: &Options) -> Compiled {
         EmitKind::SafetyIr => Emitted::SafetyIr(String::new()),
         EmitKind::LlvmIr => Emitted::LlvmIr(String::new()),
         EmitKind::Object => Emitted::Object(Vec::new()),
-        EmitKind::Executable => Emitted::Program(Vec::new()),
+        EmitKind::Executable => Emitted::Program {
+            modules: Vec::new(),
+            bytes: Vec::new(),
+        },
     };
-    // What the loop makes for a kind that does not finish an artifact per
-    // input. A program is the only one: it is made out of every input at once,
-    // so the loop keeps the modules and `finish` turns them into one.
-    let mut modules: Vec<Module> = Vec::new();
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
         // than a statement, and adds to the map while doing so once `#include`
@@ -371,7 +370,7 @@ pub fn compile(options: &Options) -> Compiled {
                     Err(why) => diagnostics.report(clang_failure(options.emit, "an object", &why)),
                 }
             }
-            Emitted::Program(_) => {
+            Emitted::Program { modules, .. } => {
                 let Some(unit) = lowered(
                     &sources,
                     file,
@@ -382,15 +381,18 @@ pub fn compile(options: &Options) -> Compiled {
                 ) else {
                     continue;
                 };
-                // **Nothing is linked here.** A program is one artifact out of
-                // every input, so the only thing this arm can do about one of
-                // them is keep it. `finish` below is where they become a
-                // program, and this arm has nothing to link with: the modules
-                // are not in the artifact.
+                // **Nothing is linked here.** A program is one artifact out
+                // of every input, so the only thing this arm can do about one
+                // of them is keep it, and `finish` is where they become a
+                // program.
+                //
+                // No gate on what this input reported, unlike the arm above:
+                // `finish` declines to link a run that reported anything at
+                // all, so a module kept from an input that failed is a module
+                // nothing reads. A gate here would be a second answer to a
+                // question already answered, and the arm above needs its own
+                // because nothing downstream of it asks again.
                 let text = module(&sources, &unit, options.target, &mut diagnostics);
-                if said_something(&diagnostics, read_whole) {
-                    continue;
-                }
 
                 modules.push(Module {
                     named: stem(sources.file(file).name()),
@@ -400,7 +402,7 @@ pub fn compile(options: &Options) -> Compiled {
         }
     }
 
-    finish(&mut artifact, modules, options, &mut diagnostics);
+    finish(&mut artifact, options, &mut diagnostics);
 
     // Where the artifact goes is `run_compiler`'s and not this function's: what
     // an artifact *is* does not depend on where it is written, and a test that
@@ -436,12 +438,21 @@ enum Emitted {
     /// The one kind that is not text, and the reason [`Compiled::artifact`] is
     /// bytes. `clang` made these and this compiler only carries them.
     Object(Vec<u8>),
-    /// What `--emit executable` asked for.
+    /// What `--emit executable` asked for, and what it is being made of.
     ///
-    /// Bytes for the same reason, and the one artifact that needs a mode as
-    /// well as bytes: see [`EmitKind::is_a_program`] and where [`run_compiler`]
-    /// writes.
-    Program(Vec<u8>),
+    /// Bytes for the same reason as an object, and the one artifact that needs
+    /// a mode as well: see [`EmitKind::is_a_program`] and where
+    /// [`run_compiler`] writes.
+    ///
+    /// **The only kind that is not finished per input**, so it is the only one
+    /// that carries work in progress. The modules live here rather than in a
+    /// local beside the artifact for the reason this enum exists at all: a
+    /// second place that only one kind fills is a second thing that has to
+    /// agree with the first, and `match options.emit` cannot see a local.
+    Program {
+        modules: Vec<Module>,
+        bytes: Vec<u8>,
+    },
 }
 
 impl Emitted {
@@ -450,7 +461,7 @@ impl Emitted {
             Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) | Self::LlvmIr(text) => {
                 text.into_bytes()
             }
-            Self::Object(bytes) | Self::Program(bytes) => bytes,
+            Self::Object(bytes) | Self::Program { bytes, .. } => bytes,
         }
     }
 }
@@ -621,14 +632,15 @@ fn module(
 /// comment named linking as the thing that would want the second one.
 ///
 /// Only a program is made here. Every other kind finishes an artifact per input
-/// and has nothing left to do, which is what the empty arm says.
-fn finish(
-    artifact: &mut Emitted,
-    modules: Vec<Module>,
-    options: &Options,
-    diagnostics: &mut DiagnosticSink,
-) {
-    let Emitted::Program(out) = artifact else {
+/// and has nothing left to do, which is what the early return says.
+///
+/// **Nothing here can point at source.** It holds modules, which are backend
+/// text, and no source map, so every diagnostic it makes is a sentence without
+/// a span. That is enough for what a linker says, and not enough for anything
+/// that wants to blame one of the inputs: whoever needs that keeps the
+/// translation unit rather than its text.
+fn finish(artifact: &mut Emitted, options: &Options, diagnostics: &mut DiagnosticSink) {
+    let Emitted::Program { modules, bytes } = artifact else {
         return;
     };
 
@@ -637,12 +649,16 @@ fn finish(
     // reported, or one that was given none, and both of those have said so
     // already. Spawning here would answer a linker's words about an empty
     // program on top of the reason the user already has.
+    //
+    // **This is the gate for a program, and the only one.** The per-input arm
+    // keeps whatever it built, because a module from an input that reported is
+    // one nothing here will read.
     if diagnostics.has_errors() {
         return;
     }
 
-    match linked(&modules, options.target) {
-        Ok(program) => *out = program,
+    match linked(modules, options.target) {
+        Ok(program) => *bytes = program,
         Err(why) => diagnostics.report(link_failure(options, &why)),
     }
 }
@@ -715,6 +731,12 @@ enum Unmade {
 ///
 /// `-Wno-override-module` because the module names its own triple and `clang`'s
 /// own is more specific, so it warns about agreeing.
+///
+/// **`-x ir` is sticky**: it says what every file after it is, so a job naming
+/// something that is not a module would have that read as one too. Both jobs
+/// hand over modules, and a third that does not would move the flag into the
+/// jobs rather than add a file to one. The failure is loud, which is why this
+/// is a sentence rather than a shape.
 ///
 /// **A module goes in on standard input or does not.** One does, for a compile,
 /// because the object comes back on the other pipe and nothing needs a name. A
@@ -790,14 +812,17 @@ fn clang(job: &[&OsStr], stdin: Option<&str>, target: Target) -> Result<Output, 
 fn refused(streams: &[&[u8]]) -> Unmade {
     let said: Vec<String> = streams
         .iter()
-        .map(|stream| String::from_utf8_lossy(stream).trim().to_owned())
+        // A carriage return in the middle is the tool's line ending rather than
+        // something it meant to say, and the renderer escapes what it does not
+        // recognise, so leaving one in puts a literal escape in a note.
+        // Trimming the ends is not enough once a tool writes more than one
+        // line, which is what a linker over several modules does.
+        .map(|stream| String::from_utf8_lossy(stream).replace("\r\n", "\n"))
+        .map(|stream| stream.trim().to_owned())
         .filter(|stream| !stream.is_empty())
         .collect();
 
-    Unmade::Refused(said.join(
-        "
-",
-    ))
+    Unmade::Refused(said.join("\n"))
 }
 
 /// One module as an object for the machine it names.
@@ -847,8 +872,20 @@ fn assembled(module: &str, target: Target) -> Result<Vec<u8>, Unmade> {
 /// measured. Reading the program back rather than pointing `clang` at what the
 /// user asked for is what keeps `compile` from writing to a path the user
 /// named, which is the invariant the write rule in [`run_compiler`] rests on.
-/// The directory's own name reaches neither: two runs of the same modules from
-/// differently named directories answer byte for byte, measured.
+/// The directory's own name reaches neither, measured: the same modules linked
+/// from two differently named directories answer the same bytes. That is not
+/// the same as two runs agreeing, and they do not: `link.exe` stamps the time
+/// into a program, so two runs a second apart differ in four bytes. What is
+/// reproducible is what this compiler decides, which is why the claim is about
+/// the directory rather than about the program.
+///
+/// **One command line names every module, and a command line has a ceiling.**
+/// About six hundred inputs with short names on this host, where the limit is
+/// 32767 characters; fewer with the paths a real project has. Past it the spawn
+/// fails and the run says so, honestly but in the wrong voice: the fault is
+/// this compiler's command line rather than the user's installation, and the
+/// message is the one about `clang`. A response file is what answers it, and
+/// nothing reaches the ceiling while an input is one file a person wrote.
 ///
 /// It does reach a *diagnostic*, because a linker quotes the path it was told
 /// to write as well as the files it was given: a duplicate symbol answers
@@ -1438,7 +1475,10 @@ fn clang_failure(kind: EmitKind, made: &str, why: &Unmade) -> Diagnostic {
         .with_note(said.trim())
         .with_note("this is what the machine said, not what clang said"),
         Unmade::Refused(said) => {
-            let reported = Diagnostic::error(format!("clang could not make {made} of this module"));
+            // Not "of this module": a link is over as many as the run had
+            // inputs, and counting them in a message is a count to keep right
+            // for nothing. What it could not make is the part a user needs.
+            let reported = Diagnostic::error(format!("clang could not make {made}"));
             // A `clang` that was killed, or that crashed, exits unsuccessfully
             // with nothing to say. An empty note is worse than no note: it
             // reads as a message this compiler failed to fill in.
@@ -1607,9 +1647,15 @@ mod tests {
         assert_eq!(stem(&FileName::Real(PathBuf::from("add.c"))), "add");
         assert_eq!(stem(&FileName::Real(PathBuf::from("sub/add.c"))), "add");
         assert_eq!(stem(&FileName::Real(PathBuf::from("a.tar.c"))), "a.tar");
-        // No stem at all, which `Path` answers for a name that is all
-        // extension. The name itself is better than nothing to write.
+        // A name that is all extension keeps the lot: `Path::file_stem`
+        // answers `Some(".c")` here, not `None`, because a leading dot with
+        // nothing after it is a name rather than an extension. Measured, and
+        // written down because the obvious reading is the other one.
         assert_eq!(stem(&FileName::Real(PathBuf::from(".c"))), ".c");
+        // What `file_stem` really has no answer for, and where the fallback
+        // is. Neither can be opened, so neither reaches this from a run.
+        assert_eq!(stem(&FileName::Real(PathBuf::from(".."))), "..");
+        assert_eq!(stem(&FileName::Real(PathBuf::from("."))), ".");
         assert_eq!(stem(&FileName::Virtual("held".to_owned())), "held");
     }
 

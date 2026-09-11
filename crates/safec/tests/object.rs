@@ -510,7 +510,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
 
     let (stub, searched) = instead_of_clang(&scratch);
     let built = Command::new("clang")
-        .arg(scratch.source("stub.c", "int main(void) { return 0; }\n"))
+        .arg(scratch.source("stub.c", STUB))
         .arg("-o")
         .arg(&stub)
         .output()
@@ -841,8 +841,15 @@ fn two_inputs_become_one_program() {
 /// Two `main`s rather than anything subtler, because it is the one link failure
 /// that is about which inputs there were rather than about what is in them.
 ///
+/// It also says the order the inputs were given in, which nothing else does:
+/// the two modules go under `0-` and `1-`, so the message names which input was
+/// which. A test that looked only for the stem passed with the modules handed
+/// over backwards, which is how that hole was found.
+///
 /// Mutation: drop `named` from the file the module is written to. The message
 /// names the index alone and this fails.
+/// Mutation: hand the modules over in reverse. The indices swap and this
+/// fails.
 #[test]
 fn what_the_linker_says_names_a_file_the_user_named() {
     if !clang_or_skip("what a linker says about two inputs") {
@@ -860,7 +867,11 @@ fn what_the_linker_says_names_a_file_the_user_named() {
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(said.contains("second"), "{said}");
+    // With the index as well as the stem, because the index is the only thing
+    // that says the order the user typed reached the linker: `second` alone
+    // appears whichever way round the two modules were handed over.
+    assert!(said.contains("0-first"), "{said}");
+    assert!(said.contains("1-second"), "{said}");
     assert!(
         !scratch.path().join("prog").exists(),
         "a link that failed left a program"
@@ -1010,6 +1021,29 @@ fn a_run_that_reported_an_error_leaves_no_program() {
         "a run that failed left a program with a function missing from it"
     );
 }
+
+/// A `clang` that exits successfully and makes an empty file wherever `-o`
+/// named, which is what a compiler cache or a distributing wrapper does when it
+/// is misconfigured.
+///
+/// **It creates the file rather than leaving nothing**, because those are two
+/// different silences and only one of them is caught by an exit status: a run
+/// that reads its answer back off disk sees a file that is there and empty, and
+/// a run that reads its answer off a pipe sees the same nothing either way.
+const STUB: &str = r#"#include <stdio.h>
+
+int main(int argc, char **argv) {
+    for (int i = 1; i + 1 < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'o' && argv[i][2] == 0) {
+            FILE *made = fopen(argv[i + 1], "wb");
+            if (made) {
+                fclose(made);
+            }
+        }
+    }
+    return 0;
+}
+"#;
 
 /// A program with nothing to start from, which is the commonest link failure
 /// there is.
