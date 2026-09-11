@@ -12,12 +12,15 @@
 //! lexer, the parser or the AST, and a line in `Cargo.toml` is what says so.
 //! ADR-0011 made the same argument one crate earlier.
 //!
-//! Nothing here reports. [`Refusal`] is what this crate answers instead, the
-//! shape `interp::Trap` has and for the same reason: `Diagnostic` lives in
-//! `safec`, which this crate cannot see.
+//! Nothing here reports. [`emit::Refusal`] is what this crate answers instead,
+//! the shape [`interp::Trap`] has and for the same reason: `Diagnostic` lives
+//! in `safec`, which this crate cannot see.
+//!
+//! One module, reached as `safec_llvm::emit::*` rather than re-exported at the
+//! root. That is what `safec-ir` does, and it is what a second backend needs: a
+//! `safec-wasm` with a `header` and a `functions` of its own would collide at
+//! the one call site that wants both.
 //!
 //! [`interp::Trap`]: safec_ir::interp::Trap
 
 pub mod emit;
-
-pub use emit::{Refusal, functions, header};

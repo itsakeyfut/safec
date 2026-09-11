@@ -38,7 +38,7 @@ use crate::types::{Types, check};
 use safec_ir::ir::TranslationUnit;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, SourceFile, SourceMap};
-use safec_llvm::Refusal;
+use safec_llvm::emit::Refusal;
 
 // Code generation takes `SC08xx`, which `docs/diagnostics.md` allocates. One
 // code for every shape of a refusal, for the reason `types.rs` gives for
@@ -261,13 +261,13 @@ pub fn compile(options: &Options) -> Compiled {
                 //
                 // Once per artifact, because `--emit llvm-ir` refuses a second
                 // input above and a module may carry one `target triple`.
-                out.push_str(&safec_llvm::header(options.target));
+                out.push_str(&safec_llvm::emit::header(options.target));
 
                 // The backend answers what it could not write rather than
                 // reporting it, because it cannot see a `Diagnostic`: ADR-0011
                 // put those in this crate. Every function it could write is in
                 // `out` already, and the ones it could not are declarations.
-                for refusal in safec_llvm::functions(&sources, &unit, out) {
+                for refusal in safec_llvm::emit::functions(&sources, &unit, out) {
                     diagnostics.report(backend_failure(&refusal));
                 }
             }

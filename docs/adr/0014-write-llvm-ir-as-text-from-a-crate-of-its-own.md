@@ -62,7 +62,7 @@ rather than about LLVM:
 **A byte-exact corpus is a property this project can keep.** `inkwell` prints
 what its LLVM prints, so an expectation blessed against one version of LLVM is
 re-blessed by the next, and the corpus stops being the compiler's own claim.
-Four `--emit llvm-ir` cases compare byte for byte today.
+Six `--emit llvm-ir` cases compare byte for byte today.
 
 **Nothing has to be installed.** No `llvm-config`, no system package on three CI
 runners, no version to pin, and the MSRV job keeps checking a workspace that
@@ -90,15 +90,20 @@ library, and this record is what that decision reverses.
 `Diagnostic`, which ADR-0011 left in `safec` and gave a different trigger for
 moving. That is the shape `interp::Trap` already has for the interpreter, and
 the two now match on purpose: **what the backend refuses is what the interpreter
-refuses, in the same words.** Arithmetic on a pointer counts elements and
-`ir::Ty` holds no width to count them with, which ADR-0013 decided; both say so.
-Two consumers of one IR that disagreed about which programs it can express would
-make the IR mean two things.
+refuses**, because two consumers of one IR that disagreed about which programs it
+can express would make the IR mean two things. Arithmetic on a pointer counts
+elements and `ir::Ty` holds no width to count them with, which ADR-0013 decided,
+and both say that in the same words. Where the reason differs the words do too:
+an index is refused here because scaling needs a width and there because nothing
+builds one yet, and both are true.
 
 A function this cannot write becomes a `declare` and the rest of the module is
 written, which is what the frontend's lowering already does with a function it
 cannot build. The module stays something LLVM parses, the exit code still says
-the run failed, and a link is where the missing symbol surfaces.
+the run failed, and a link is where the missing symbol surfaces. The exception is
+a signature this cannot spell at all: `void` is a result type and nothing else,
+so a parameter of it leaves no declaration either, and a call to such a function
+is refused in turn.
 
 ### Confirmation
 
@@ -109,16 +114,16 @@ resolve either, as `E0432` or `E0433` depending on how far the path gets. The
 manifest is the guard because the manifest is where the reversal would be
 written, which is ADR-0011's argument and the same one line of evidence.
 
-The text is held by four corpus cases: `the_mvp_becomes_llvm_ir`,
-`llvm_ir_follows_the_target`, `llvm_ir_of_pointers_branches_and_a_loop` and
-`an_ir_shape_the_backend_cannot_write`. That the text is *LLVM* is a different
-claim and is held by `the_emitted_ir_is_what_llvm_accepts` in
-`crates/safec/tests/llvm.rs`, which hands each module to `clang -x ir`: spelling
-`Add` as `Sub` changes every corpus expectation and leaves that test passing,
-which is what says they are two tests rather than one written twice.
+The text is held by six corpus cases, all six of which `llvm.rs` also hands to
+`clang`. That the text is *LLVM* is a different claim: spelling `Add` as `Sub`
+changes every corpus expectation and leaves `the_emitted_ir_is_what_llvm_accepts`
+passing, which is what says they are two tests rather than one written twice.
+The other direction was measured too: storing a comparison's `i1` without
+widening it and then re-blessing the corpus leaves all 92 cases green and that
+test still failing.
 
 That the backend can be reached with no frontend in the graph is held by the
-eleven hand-built tests in `crates/safec-llvm/src/emit.rs`, of which
+fifteen hand-built tests in `crates/safec-llvm/src/emit.rs`, of which
 `a_unit_built_by_hand_becomes_a_module` is the whole module written out byte for
 byte. `cargo tree -p safec-llvm` prints two lines, which is the same claim from
 the other side.
@@ -132,7 +137,12 @@ the other side.
 * Bad, because LLVM's own verifier is not in the loop while the text is being
   built: a malformed module is found by a test rather than by a type error.
 * Bad, because everything a later backend needs from LLVM, from attributes to
-  debug information, is text this has to learn to write.
+  debug information, is text this has to learn to write. One of those is already
+  owed rather than merely future: a `char` parameter or result carries
+  `signext` on some ABIs and nothing on others, `clang` writes it, and this does
+  not, so a `clang`-compiled caller of a function this wrote passes an
+  unextended byte. It is invisible inside a module this wrote whole and matters
+  the moment two toolchains meet, which is `--emit object`.
 * Neutral, because `#92` reopens it with the evidence that only an object file
   can provide.
 

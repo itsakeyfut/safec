@@ -6,9 +6,11 @@
 //! dataflow framework written a phase early. `mem2reg` is what turns these back
 //! into registers, and optimisation is somebody else's job.
 //!
-//! What this refuses is what the interpreter refuses, and the messages say so
-//! in the same words. Two consumers of one IR that disagreed about which
-//! programs it can express would make the IR mean two things.
+//! What this refuses is what the interpreter refuses: the same shapes, so that
+//! two consumers of one IR do not disagree about which programs it can
+//! express. Where the *reason* is the same it is said in the same words, and
+//! where it is not it is not: an index is refused here because scaling needs a
+//! width and there because nothing builds one yet, and both are true.
 
 use std::fmt::Write as _;
 
@@ -191,8 +193,10 @@ impl Emitter<'_> {
                 },
                 // `p[i]` lowers as `*(p + i)`, so nothing builds one of these.
                 // Whoever does needs a width to scale by, and `ir::Ty` holds
-                // none for a pointer: the same reason the interpreter refuses
-                // pointer arithmetic, in the same words.
+                // none for a pointer, which is the reason the arm for pointer
+                // arithmetic below gives in the same words. The interpreter
+                // refuses this one too and says something else, because it
+                // stops at "nothing builds one yet" before reaching the width.
                 Projection::Index(_) => {
                     return self
                         .refuse("an indexed place, which counts elements and so needs a width");
@@ -504,7 +508,7 @@ impl Emitter<'_> {
             return self.refuse("a place whose projections do not fit its type");
         };
         if matches!(self.unit.ty(to), Ty::Void) {
-            return self.refuse("a write to a place that holds nothing");
+            return self.refuse("an assignment to a place that holds nothing");
         }
 
         let value = match &operation.value {
