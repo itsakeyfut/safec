@@ -18,7 +18,7 @@ use safec_ir::ir::{
 };
 use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
-use safec_ir::target::Target;
+use safec_ir::target::{Integer, Target};
 
 /// Something the IR can express and this backend cannot.
 ///
@@ -354,10 +354,12 @@ impl Emitter<'_> {
             // C17 6.5.3.3 p5 again: `!x` is `(0 == x)`, whatever `x` is.
             UnOp::Not => self.widen(format!("icmp eq {wanted} {value}, 0"), to, out),
             // There is no `neg` instruction: LLVM spells it as a subtraction
-            // from zero.
+            // from zero, and it carries `nsw` on the same terms a `sub` does.
             UnOp::Neg => {
+                let signed = self.unit.integer(to).is_some_and(Integer::signed);
+                let flag = if signed { " nsw" } else { "" };
                 let result = self.temp();
-                writeln!(out, "  {result} = sub nsw {wanted} 0, {value}")
+                writeln!(out, "  {result} = sub{flag} {wanted} 0, {value}")
                     .expect("writing to a string cannot fail");
                 Some(result)
             }
@@ -416,15 +418,19 @@ impl Emitter<'_> {
         let signed = int.signed();
 
         let spelled = match op {
-            BinOp::Mul => Spelled::Compute("mul nsw"),
+            BinOp::Mul => Spelled::Compute(if signed { "mul nsw" } else { "mul" }),
             BinOp::Div => Spelled::Compute(if signed { "sdiv" } else { "udiv" }),
             BinOp::Rem => Spelled::Compute(if signed { "srem" } else { "urem" }),
             // `nsw` because C17 6.5 p5 leaves a signed overflow undefined and
             // the interpreter stops rather than wrapping. A plain `add` would
             // decide what C declined to, in the direction of wrapping; this is
             // the spelling that says the program must not overflow.
-            BinOp::Add => Spelled::Compute("add nsw"),
-            BinOp::Sub => Spelled::Compute("sub nsw"),
+            //
+            // Only where the type has a sign to overflow. C17 6.2.5 p9 says a
+            // computation on unsigned operands can never overflow and wraps
+            // instead, so `nsw` there would make a defined program poison.
+            BinOp::Add => Spelled::Compute(if signed { "add nsw" } else { "add" }),
+            BinOp::Sub => Spelled::Compute(if signed { "sub nsw" } else { "sub" }),
             BinOp::Shl => Spelled::Compute("shl"),
             // An arithmetic shift keeps the sign and a logical one does not,
             // which is the difference between `-8 >> 1` answering -4 and
@@ -1021,8 +1027,11 @@ mod tests {
         }
     }
 
-    /// A division and a shift right mean different instructions on a signed
-    /// type and on an unsigned one, and which a `char` is follows the target.
+    /// A division, a shift right and an addition mean different things on a
+    /// signed type and on an unsigned one, and which a `char` is follows the
+    /// target. C17 6.2.5 p9 is why the addition is in this list: an unsigned
+    /// computation cannot overflow, so `nsw` there would make a defined
+    /// program poison.
     ///
     /// Nothing the frontend builds reaches this: C17 6.3.1.1 p2 promotes a
     /// `char` operand, so an operation never happens at `char` in a unit this
@@ -1030,14 +1039,14 @@ mod tests {
     /// adapter is, and is why this crate is the side of ADR-0011's arrow that
     /// can be tested without a frontend.
     ///
-    /// Mutation: use `sdiv` and `ashr` whatever the type. The unsigned half
-    /// fails. Mutation: use `udiv` and `lshr` whatever the type. The signed
-    /// half does.
+    /// Mutation: use `sdiv`, `ashr` and `add nsw` whatever the type. The
+    /// unsigned half fails. Mutation: use `udiv`, `lshr` and a plain `add`
+    /// whatever the type. The signed half does.
     #[test]
     fn an_operation_on_an_unsigned_type_is_unsigned() {
-        for (triple, division, shift) in [
-            ("x86_64-pc-windows-msvc", "sdiv", "ashr"),
-            ("aarch64-unknown-linux-gnu", "udiv", "lshr"),
+        for (triple, division, shift, addition) in [
+            ("x86_64-pc-windows-msvc", "sdiv", "ashr", "add nsw"),
+            ("aarch64-unknown-linux-gnu", "udiv", "lshr", "add"),
         ] {
             let (sources, at) = named("f");
             let mut unit = TranslationUnit::new(target(triple));
@@ -1058,7 +1067,11 @@ mod tests {
                 })
             };
             f.push_block(Block {
-                elements: vec![operation(BinOp::Div), operation(BinOp::Shr)],
+                elements: vec![
+                    operation(BinOp::Div),
+                    operation(BinOp::Shr),
+                    operation(BinOp::Add),
+                ],
                 terminator: Terminator::Return,
             });
             unit.push_function(f);
@@ -1071,6 +1084,10 @@ mod tests {
                 "{triple}: {out}"
             );
             assert!(out.contains(&format!("= {shift} i8 ")), "{triple}: {out}");
+            assert!(
+                out.contains(&format!("= {addition} i8 ")),
+                "{triple}: {out}"
+            );
         }
     }
 
