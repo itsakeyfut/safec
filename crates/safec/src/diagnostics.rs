@@ -293,7 +293,11 @@ impl Diagnostic {
     /// a check that reaches [`Conclusion::Unknown`] does not need to know what
     /// `--deny-unknown` is. See ADR-0001.
     ///
-    /// The only way to build a [`Certainty::Unproven`] diagnostic.
+    /// **The only way to build a [`Certainty::Unproven`] diagnostic from
+    /// outside this module**, which is what a check is. Every field of a
+    /// `Diagnostic` is private, so nothing else can make one; inside this file
+    /// a second constructor could, and the only thing stopping that is
+    /// somebody reading this sentence.
     pub fn concluded(what: Conclusion, message: impl Into<String>) -> Option<Self> {
         match what {
             Conclusion::Safe => None,
@@ -790,11 +794,17 @@ mod tests {
         );
     }
 
-    /// The only way to build an unprovable diagnostic, and it fixes the
-    /// severity, so an unproven diagnostic is a warning until the sink says
-    /// otherwise.
+    /// An unprovable diagnostic is a warning until the sink says otherwise.
+    ///
+    /// The name said `unproven` until that constructor was replaced by
+    /// `concluded`, and what it holds is the severity a conclusion starts at
+    /// rather than which function made it: the promotion below is about a
+    /// warning becoming an error, and this is where the warning comes from.
+    ///
+    /// Mutation: start an unknown conclusion at any other severity. This fails,
+    /// and so does the pair of sink tests under it.
     #[test]
-    fn unproven_is_the_one_constructor_that_could_not_prove_itself() {
+    fn a_result_that_could_not_be_proven_starts_as_a_warning() {
         let diagnostic = unproven("`p` may escape the lifetime of `buf`");
 
         assert_eq!(diagnostic.certainty(), Certainty::Unproven);
