@@ -1,3 +1,3 @@
 error: the compilation pipeline is not implemented yet
-  = note: safec currently reads its inputs and builds a Safety IR from them
-  = note: `--emit tokens`, `--emit ast` and `--emit safety-ir` are what it can make
+  = note: safec currently reads its inputs, builds a Safety IR, and writes LLVM IR
+  = note: `--emit tokens`, `--emit ast`, `--emit safety-ir` and `--emit llvm-ir` are what it can make

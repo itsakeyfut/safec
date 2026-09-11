@@ -1,0 +1,120 @@
+target triple = "x86_64-pc-windows-msvc"
+
+define void @bump(ptr %arg0) {
+entry:
+  %_1 = alloca ptr
+  %_2 = alloca i32
+  %_3 = alloca i32
+  store ptr %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  %t0 = load ptr, ptr %_1
+  %t1 = load i32, ptr %t0
+  %t2 = add nsw i32 %t1, 1
+  store i32 %t2, ptr %_2
+  %t3 = load i32, ptr %_2
+  %t4 = load ptr, ptr %_1
+  store i32 %t3, ptr %t4
+  %t5 = load ptr, ptr %_1
+  %t6 = load i32, ptr %t5
+  store i32 %t6, ptr %_3
+  ret void
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  %_2 = alloca ptr
+  %_3 = alloca i8
+  %_4 = alloca i32
+  %_5 = alloca ptr
+  %_6 = alloca ptr
+  %_8 = alloca i8
+  %_9 = alloca i32
+  %_10 = alloca i32
+  %_11 = alloca i8
+  %_12 = alloca i32
+  %_13 = alloca i32
+  %_14 = alloca i8
+  %_15 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 40, ptr %_1
+  %t0 = load i32, ptr %_1
+  store i32 %t0, ptr %_4
+  store ptr %_1, ptr %_5
+  %t1 = load ptr, ptr %_5
+  store ptr %t1, ptr %_2
+  %t2 = load ptr, ptr %_2
+  store ptr %t2, ptr %_6
+  %t3 = load ptr, ptr %_2
+  call void @bump(ptr %t3)
+  br label %bb1
+
+bb1:
+  store i8 2, ptr %_3
+  %t4 = load i8, ptr %_3
+  store i8 %t4, ptr %_8
+  %t5 = load i32, ptr %_1
+  %t6 = icmp sgt i32 %t5, 40
+  %t7 = zext i1 %t6 to i32
+  store i32 %t7, ptr %_9
+  %t8 = load i32, ptr %_9
+  %t9 = icmp ne i32 %t8, 0
+  br i1 %t9, label %bb2, label %bb3
+
+bb2:
+  %t10 = load i8, ptr %_3
+  %t11 = sext i8 %t10 to i32
+  %t12 = add nsw i32 %t11, 1
+  store i32 %t12, ptr %_10
+  %t13 = load i32, ptr %_10
+  %t14 = trunc i32 %t13 to i8
+  store i8 %t14, ptr %_3
+  %t15 = load i8, ptr %_3
+  store i8 %t15, ptr %_11
+  br label %bb4
+
+bb3:
+  br label %bb4
+
+bb4:
+  br label %bb5
+
+bb5:
+  %t16 = load i8, ptr %_3
+  %t17 = sext i8 %t16 to i32
+  %t18 = icmp slt i32 %t17, 5
+  %t19 = zext i1 %t18 to i32
+  store i32 %t19, ptr %_12
+  %t20 = load i32, ptr %_12
+  %t21 = icmp ne i32 %t20, 0
+  br i1 %t21, label %bb6, label %bb7
+
+bb6:
+  %t22 = load i8, ptr %_3
+  %t23 = sext i8 %t22 to i32
+  %t24 = add nsw i32 %t23, 1
+  store i32 %t24, ptr %_13
+  %t25 = load i32, ptr %_13
+  %t26 = trunc i32 %t25 to i8
+  store i8 %t26, ptr %_3
+  %t27 = load i8, ptr %_3
+  store i8 %t27, ptr %_14
+  br label %bb5
+
+bb7:
+  %t28 = load ptr, ptr %_2
+  %t29 = load i32, ptr %t28
+  %t30 = load i8, ptr %_3
+  %t31 = sext i8 %t30 to i32
+  %t32 = add nsw i32 %t29, %t31
+  store i32 %t32, ptr %_15
+  %t33 = load i32, ptr %_15
+  store i32 %t33, ptr %_0
+  %t34 = load i32, ptr %_0
+  ret i32 %t34
+}

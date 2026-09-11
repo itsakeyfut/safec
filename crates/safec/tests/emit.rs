@@ -97,7 +97,7 @@ fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
 /// yet, so it shrinks as phases land.
 #[test]
 fn asking_for_an_artifact_that_does_not_exist_yet_produces_nothing() {
-    for emit in ["llvm-ir", "object", "executable"] {
+    for emit in ["object", "executable"] {
         let output = safec(&[
             "--color",
             "never",

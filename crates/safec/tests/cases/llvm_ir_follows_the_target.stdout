@@ -1,0 +1,16 @@
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @widen(i8 %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i8
+  store i8 %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  %t0 = load i8, ptr %_1
+  %t1 = zext i8 %t0 to i32
+  store i32 %t1, ptr %_0
+  %t2 = load i32, ptr %_0
+  ret i32 %t2
+}
