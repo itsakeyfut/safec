@@ -181,7 +181,14 @@ library and the first backend deliberately went the other way:
 the reasoning, what it rejected, and the trigger for reversing it, which is
 `--emit object`.
 
-Possible libraries when that day comes:
+That trigger has fired and the answer was none of the three this document once
+listed. `--emit object` asks `clang` to make an object of the text, as a child
+process, so nothing here links against LLVM and nothing has to be installed to
+*build* this compiler.
+[ADR-0015](adr/0015-make-an-object-by-spawning-clang.md) carries that decision
+and what it costs, which is that `--emit object` needs a `clang` to *run*.
+
+Still the libraries to reach for on the day that changes:
 
 - `inkwell`
 - `llvm-sys`
