@@ -43,7 +43,7 @@ use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::ir::TranslationUnit;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
-use safec_ir::source::{FileId, SourceFile, SourceMap};
+use safec_ir::source::{FileId, FileName, SourceFile, SourceMap};
 use safec_ir::target::Target;
 use safec_llvm::emit::Refusal;
 
@@ -283,6 +283,10 @@ pub fn compile(options: &Options) -> Compiled {
         EmitKind::Object => Emitted::Object(Vec::new()),
         EmitKind::Executable => Emitted::Program(Vec::new()),
     };
+    // What the loop makes for a kind that does not finish an artifact per
+    // input. A program is the only one: it is made out of every input at once,
+    // so the loop keeps the modules and `finish` turns them into one.
+    let mut modules: Vec<Module> = Vec::new();
     for &file in &loaded {
         // `file_owned` rather than `file`: the scan holds its text for longer
         // than a statement, and adds to the map while doing so once `#include`
@@ -367,7 +371,7 @@ pub fn compile(options: &Options) -> Compiled {
                     Err(why) => diagnostics.report(clang_failure(options.emit, "an object", &why)),
                 }
             }
-            Emitted::Program(out) => {
+            Emitted::Program(_) => {
                 let Some(unit) = lowered(
                     &sources,
                     file,
@@ -378,21 +382,25 @@ pub fn compile(options: &Options) -> Compiled {
                 ) else {
                     continue;
                 };
-                // The same shape as the arm above, and one spawn rather than
-                // two: `clang` reads a module and answers a linked program, so
-                // there is no object in between for this to hold.
-                let module = module(&sources, &unit, options.target, &mut diagnostics);
+                // **Nothing is linked here.** A program is one artifact out of
+                // every input, so the only thing this arm can do about one of
+                // them is keep it. `finish` below is where they become a
+                // program, and this arm has nothing to link with: the modules
+                // are not in the artifact.
+                let text = module(&sources, &unit, options.target, &mut diagnostics);
                 if said_something(&diagnostics, read_whole) {
                     continue;
                 }
 
-                match linked(&module, options.target) {
-                    Ok(program) => *out = program,
-                    Err(why) => diagnostics.report(link_failure(options, &why)),
-                }
+                modules.push(Module {
+                    named: stem(sources.file(file).name()),
+                    text,
+                });
             }
         }
     }
+
+    finish(&mut artifact, modules, options, &mut diagnostics);
 
     // Where the artifact goes is `run_compiler`'s and not this function's: what
     // an artifact *is* does not depend on where it is written, and a test that
@@ -603,6 +611,60 @@ fn module(
     module
 }
 
+/// Everything that is about the run rather than about one input.
+///
+/// The loop in [`compile`] is gated on each input, for the reason that function
+/// gives: a typo in `a.c` must not decide that `b.c` is never looked at. This is
+/// the other half, and it is gated on the run, because a program made of the
+/// inputs that happened to compile is not the program that was asked for. That
+/// distinction is why the two halves are separate at all, and `compile`'s own
+/// comment named linking as the thing that would want the second one.
+///
+/// Only a program is made here. Every other kind finishes an artifact per input
+/// and has nothing left to do, which is what the empty arm says.
+fn finish(
+    artifact: &mut Emitted,
+    modules: Vec<Module>,
+    options: &Options,
+    diagnostics: &mut DiagnosticSink,
+) {
+    let Emitted::Program(out) = artifact else {
+        return;
+    };
+
+    // Nothing is linked for a run that reported anything, and there is no
+    // second condition: a run with no modules is a run whose inputs all
+    // reported, or one that was given none, and both of those have said so
+    // already. Spawning here would answer a linker's words about an empty
+    // program on top of the reason the user already has.
+    if diagnostics.has_errors() {
+        return;
+    }
+
+    match linked(&modules, options.target) {
+        Ok(program) => *out = program,
+        Err(why) => diagnostics.report(link_failure(options, &why)),
+    }
+}
+
+/// What to call a file made out of this one.
+///
+/// The stem, because the extension belongs to what the file held rather than to
+/// what is being made out of it, and the name rather than the path, because a
+/// name is what a linker quotes back. A file with no name of its own on disk
+/// keeps the one it was given, angle brackets and all, since nothing but a
+/// test builds one.
+fn stem(name: &FileName) -> String {
+    match name {
+        FileName::Real(path) => path
+            .file_stem()
+            .unwrap_or(path.as_os_str())
+            .to_string_lossy()
+            .into_owned(),
+        FileName::Virtual(named) => named.clone(),
+    }
+}
+
 /// Whether this input's own work reported anything.
 ///
 /// **Nothing goes to a tool from a unit that is not what the source said.** A
@@ -649,16 +711,17 @@ enum Unmade {
 /// The two callers differ in what they ask for and in what they read back, and
 /// share everything about what a tool on the path might do instead of the job,
 /// which is why this is one function. The arguments carry the job; `-x ir` and
-/// the target are here because both jobs take a module for a named machine.
+/// the target are here because both jobs take modules for a named machine.
 ///
 /// `-Wno-override-module` because the module names its own triple and `clang`'s
 /// own is more specific, so it warns about agreeing.
 ///
-/// **A module goes in on standard input or does not.** Both of today's jobs
-/// have one, and the job says so rather than this appending a `-` to whatever
-/// it was given: an argument added to every invocation is one a caller cannot
-/// leave out, and the first thing to want that is a link over several modules,
-/// where only one of them could be a stream.
+/// **A module goes in on standard input or does not.** One does, for a compile,
+/// because the object comes back on the other pipe and nothing needs a name. A
+/// link names files instead, because there can be several and only one of them
+/// could be a stream; there is then nothing to write, and the child is given a
+/// standard input that is already at its end rather than a pipe nobody writes
+/// to.
 ///
 /// **When there is one, it is written on a thread.** Both pipes are open at
 /// once, and a module larger than the pipe buffer would otherwise deadlock
@@ -771,28 +834,44 @@ fn assembled(module: &str, target: Target) -> Result<Vec<u8>, Unmade> {
     Ok(finished.stdout)
 }
 
-/// One module as a program for the machine it names.
+/// Several modules as one program for the machine it names.
 ///
-/// One spawn and not two: `clang -x ir` with no `-c` reads a module and answers
-/// a linked program, so there is no object in between and nothing to keep it
-/// in. Measured rather than assumed, and it is why this does not go through
-/// [`assembled`].
+/// One spawn and not one per module: `clang -x ir` with no `-c` reads every
+/// module it is given and answers a linked program, so there is no object in
+/// between and nothing to keep one in. Measured rather than assumed, and it is
+/// why this does not go through [`assembled`].
 ///
-/// **The program goes to a directory of this run's own and is read back.** A
-/// linker cannot write to a stream: `-o -` makes a file called `-` and exits
-/// successfully, measured. Reading it back rather than pointing `clang` at what
-/// the user asked for is what keeps `compile` from writing to a path the user
+/// **The modules go to a directory of this run's own, and so does the
+/// program.** Only one of them could have been a stream, and a linker cannot
+/// write to one either: `-o -` makes a file called `-` and exits successfully,
+/// measured. Reading the program back rather than pointing `clang` at what the
+/// user asked for is what keeps `compile` from writing to a path the user
 /// named, which is the invariant the write rule in [`run_compiler`] rests on.
-fn linked(module: &str, target: Target) -> Result<Vec<u8>, Unlinked> {
+/// The directory's own name reaches neither: two runs of the same modules from
+/// differently named directories answer byte for byte, measured.
+///
+/// It does reach a *diagnostic*, because a linker quotes the path it was told
+/// to write as well as the files it was given: a duplicate symbol answers
+/// `<scratch>\program : fatal error LNK1169`. That is another tool's text and
+/// `docs/architecture.md` records passing it through as a divergence; the only
+/// way to keep the path out of it is to hand `clang` what the user asked for,
+/// which is the invariant above.
+fn linked(modules: &[Module], target: Target) -> Result<Vec<u8>, Unlinked> {
     let scratch = Scratch::new().map_err(|error| Unlinked::Nowhere(error.to_string()))?;
     let program = scratch.path().join("program");
 
-    let finished = clang(
-        &[OsStr::new("-o"), program.as_os_str(), OsStr::new("-")],
-        Some(module),
-        target,
-    )
-    .map_err(Unlinked::Tool)?;
+    let mut job = vec![
+        OsStr::new("-o").to_owned(),
+        program.clone().into_os_string(),
+    ];
+    for (index, module) in modules.iter().enumerate() {
+        let written = scratch.path().join(format!("{index}-{}.ll", module.named));
+        fs::write(&written, &module.text).map_err(|error| Unlinked::Nowhere(error.to_string()))?;
+        job.push(written.into_os_string());
+    }
+
+    let job: Vec<&OsStr> = job.iter().map(AsRef::as_ref).collect();
+    let finished = clang(&job, None, target).map_err(Unlinked::Tool)?;
 
     if !finished.status.success() {
         // Both streams, because the linker and the driver that ran it do not
@@ -826,6 +905,19 @@ enum Unlinked {
     /// There was nowhere to put the program while it was being made, and this
     /// is what the operating system said about that.
     Nowhere(String),
+}
+
+/// One input's module, and the name it goes under.
+///
+/// **The name is the input's.** `clang` derives the temporary object names it
+/// links from the stems it is handed, and those names are what the linker
+/// quotes when two inputs define one symbol: two modules written as `0.ll` and
+/// `1.ll` produce `0-a43ee2.o : error LNK2005: main is already defined in
+/// 1-82f49a.o`, which names nothing the user wrote. Measured. The index keeps
+/// two inputs with one stem apart, which `a/x.c` and `b/x.c` are.
+struct Module {
+    named: String,
+    text: String,
 }
 
 /// A directory of one link's own, removed however the link ends.
