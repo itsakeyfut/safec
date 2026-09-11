@@ -15,6 +15,7 @@
 //! part of the IR: every operation, terminator and trap carries one, and an
 //! instruction that cannot say where it came from cannot be reported about.
 
+pub mod analysis;
 pub mod cfg;
 pub mod interp;
 pub mod ir;

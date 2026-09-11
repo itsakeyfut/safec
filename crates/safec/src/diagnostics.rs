@@ -16,6 +16,7 @@ use std::fmt;
 
 use crate::options::Options;
 use crate::safety::SafetyLevel;
+use safec_ir::analysis::Conclusion;
 use safec_ir::source::Span;
 
 /// How serious a diagnostic is.
@@ -94,9 +95,10 @@ impl fmt::Display for Severity {
 
 /// What an analysis concluded, as distinct from how it is reported.
 ///
-/// The safety model is three-valued: safe, unsafe, and unknown. A safe result
-/// produces no diagnostic at all, so only the other two reach a [`Diagnostic`],
-/// and what separates them is whether the analysis could prove what it reports.
+/// Two, where the model has three: a safe result produces no diagnostic at all,
+/// so only the other two reach a [`Diagnostic`], and what separates them is
+/// whether the analysis could prove what it reports. Which conclusion becomes
+/// which is [`Diagnostic::concluded`]'s to say and is not repeated here.
 ///
 /// Severity is not this. A check decides what it concluded; whether an
 /// unprovable conclusion is a warning or an error is [`DiagnosticSink`]'s
@@ -269,20 +271,41 @@ impl Diagnostic {
         Self::new(Severity::Warning, message)
     }
 
-    /// A diagnostic for something the analysis could not prove.
+    /// What a check concluded, as what is reported about it.
     ///
-    /// This is what a safety check reports when it can neither show the code is
-    /// safe nor show that it is wrong. It starts as a warning; whether it stays
-    /// one is [`DiagnosticSink`]'s decision under `--deny-unknown`, so a check
-    /// says what it concluded and never reads the policy.
+    /// **The whole of the table in `docs/safety-model.md`, in one place.** A
+    /// check answers a [`Conclusion`] and never decides a severity, so no two
+    /// checks can remember the mapping differently: the arms are here, and a
+    /// fourth conclusion is `error[E0004]` until somebody says what it reports.
     ///
-    /// The only way to build a [`Certainty::Unproven`] diagnostic. A proven
-    /// unsafe result is a statement of fact, and [`Diagnostic::error`] already
-    /// says that.
-    pub fn unproven(message: impl Into<String>) -> Self {
-        Self {
-            certainty: Certainty::Unproven,
-            ..Self::new(Severity::Warning, message)
+    /// What `E0004` cannot do is make these three right, which is RK-015 in the
+    /// review knowledge bank: it makes somebody look and nothing more. Three
+    /// arms a reader can hold against the table in the document are what is
+    /// left, and `every_conclusion_is_reported_the_way_the_model_says` writes
+    /// them out again rather than asking this what it says.
+    ///
+    /// `None` for [`Conclusion::Safe`], because nothing is the report. That is
+    /// also what makes reporting a safe result impossible rather than merely
+    /// wrong: there is no diagnostic to hand the sink.
+    ///
+    /// An unproven result starts as a warning and may not stay one. Whether it
+    /// fails the build is [`DiagnosticSink`]'s, taken once from [`Policy`], so
+    /// a check that reaches [`Conclusion::Unknown`] does not need to know what
+    /// `--deny-unknown` is. See ADR-0001.
+    ///
+    /// **The only way to build a [`Certainty::Unproven`] diagnostic from
+    /// outside this module**, which is what a check is. Every field of a
+    /// `Diagnostic` is private, so nothing else can make one; inside this file
+    /// a second constructor could, and the only thing stopping that is
+    /// somebody reading this sentence.
+    pub fn concluded(what: Conclusion, message: impl Into<String>) -> Option<Self> {
+        match what {
+            Conclusion::Safe => None,
+            Conclusion::Unsafe => Some(Self::error(message)),
+            Conclusion::Unknown => Some(Self {
+                certainty: Certainty::Unproven,
+                ..Self::new(Severity::Warning, message)
+            }),
         }
     }
 
@@ -352,7 +375,7 @@ impl Diagnostic {
     /// Raise an unproven warning to an error.
     ///
     /// Private, and called from exactly one place: [`DiagnosticSink::report`]
-    /// under `--deny-unknown`. Because [`Diagnostic::unproven`] is the only
+    /// under `--deny-unknown`. Because [`Diagnostic::concluded`] is the only
     /// source of [`Certainty::Unproven`] and fixes the severity at
     /// [`Severity::Warning`], this only ever has one direction to handle.
     fn promote_to_error(&mut self) {
@@ -501,6 +524,56 @@ impl DiagnosticSink {
 
 #[cfg(test)]
 mod tests {
+    use safec_ir::analysis::Conclusion;
+
+    /// What a check that could not prove anything reports, for a test that is
+    /// about what happens to one rather than about how it is built.
+    ///
+    /// Through `concluded` rather than beside it, so that these tests exercise
+    /// the path a check takes: an unproven diagnostic has one way to exist and
+    /// this is it.
+    fn unproven(message: &str) -> Diagnostic {
+        Diagnostic::concluded(Conclusion::Unknown, message)
+            .expect("an unknown conclusion is reported")
+    }
+
+    /// Each conclusion is reported the way `docs/safety-model.md` says.
+    ///
+    /// The three written out rather than walked, for RK-001's reason: a test
+    /// that asks `concluded` what it answers agrees with it whatever it
+    /// answers. These rows are the document's table copied by a reader, which
+    /// is the only thing that can disagree with the code.
+    ///
+    /// What holds the *fourth* conclusion is `error[E0004]` in `concluded`
+    /// rather than anything here. Nothing makes somebody add a row to this
+    /// table, which is RK-015's limit: a compiler that makes you look does not
+    /// make you right.
+    ///
+    /// Mutation: answer `Some` for `Safe`. The first row fails, and only it.
+    /// Mutation: give `Unsafe` a warning's severity. The second row fails, and
+    /// only it. Mutation: build `Unknown` with `Diagnostic::error`, so that its
+    /// certainty is `Proven`. Eight tests fail, this among them: everything
+    /// that watches the sink promote an unprovable result is downstream of this
+    /// arm, which is what the third row is worth.
+    #[test]
+    fn every_conclusion_is_reported_the_way_the_model_says() {
+        assert_eq!(
+            Diagnostic::concluded(Conclusion::Safe, "nothing to say"),
+            None
+        );
+
+        let unsafe_ = Diagnostic::concluded(Conclusion::Unsafe, "use of freed value `p`")
+            .expect("an unsafe conclusion is reported");
+        assert_eq!(unsafe_.severity(), Severity::Error);
+        assert_eq!(unsafe_.certainty(), Certainty::Proven);
+        assert_eq!(unsafe_.message(), "use of freed value `p`");
+
+        let unknown = Diagnostic::concluded(Conclusion::Unknown, "`p` may escape")
+            .expect("an unknown conclusion is reported");
+        assert_eq!(unknown.severity(), Severity::Warning);
+        assert_eq!(unknown.certainty(), Certainty::Unproven);
+        assert_eq!(unknown.message(), "`p` may escape");
+    }
     use super::*;
     use safec_ir::source::{SourceMap, Span};
     use safec_ir::target::Target;
@@ -722,12 +795,24 @@ mod tests {
         );
     }
 
-    /// The only way to build an unprovable diagnostic, and it fixes the
-    /// severity, so an unproven diagnostic is a warning until the sink says
-    /// otherwise.
+    /// An unprovable diagnostic is a warning until the sink says otherwise.
+    ///
+    /// The name said `unproven` until that constructor was replaced by
+    /// `concluded`, and what it holds is the severity a conclusion starts at
+    /// rather than which function made it: the promotion below is about a
+    /// warning becoming an error, and this is where the warning comes from.
+    ///
+    /// Mutation: start an unknown conclusion at any other severity. This fails,
+    /// and so does `a_sink_leaves_an_unproven_warning_alone_by_default`.
+    ///
+    /// **Not the promotion test beside that one**, which is worth knowing:
+    /// `promote_to_error` sets the severity to `Error` whatever it was, so
+    /// where an unproven result *started* is invisible to the one test that
+    /// promotes it. Only the test that declines to promote can see it, which is
+    /// why these two are not interchangeable.
     #[test]
-    fn unproven_is_the_one_constructor_that_could_not_prove_itself() {
-        let diagnostic = Diagnostic::unproven("`p` may escape the lifetime of `buf`");
+    fn a_result_that_could_not_be_proven_starts_as_a_warning() {
+        let diagnostic = unproven("`p` may escape the lifetime of `buf`");
 
         assert_eq!(diagnostic.certainty(), Certainty::Unproven);
         assert_eq!(diagnostic.severity(), Severity::Warning);
@@ -736,7 +821,7 @@ mod tests {
     #[test]
     fn a_sink_leaves_an_unproven_warning_alone_by_default() {
         let mut sink = DiagnosticSink::new();
-        sink.report(Diagnostic::unproven("`p` may escape"));
+        sink.report(unproven("`p` may escape"));
 
         assert_eq!(sink.diagnostics()[0].severity(), Severity::Warning);
         assert_eq!(sink.error_count(), 0);
@@ -748,7 +833,7 @@ mod tests {
     #[test]
     fn a_sink_that_denies_unknown_raises_an_unproven_warning_to_an_error() {
         let mut sink = DiagnosticSink::with_policy(Policy::new(SafetyLevel::Off, true));
-        sink.report(Diagnostic::unproven("`p` may escape"));
+        sink.report(unproven("`p` may escape"));
 
         assert_eq!(sink.diagnostics()[0].severity(), Severity::Error);
         assert_eq!(sink.error_count(), 1);
@@ -776,8 +861,8 @@ mod tests {
             let mut sink = DiagnosticSink::with_policy(Policy::new(SafetyLevel::Off, deny_unknown));
             sink.report(Diagnostic::error("expected `;`"));
             sink.report(Diagnostic::warning("unused variable `x`"));
-            sink.report(Diagnostic::unproven("`p` may escape"));
-            sink.report(Diagnostic::unproven("`q` may escape"));
+            sink.report(unproven("`p` may escape"));
+            sink.report(unproven("`q` may escape"));
 
             let recount = sink
                 .diagnostics()
@@ -791,8 +876,7 @@ mod tests {
 
     #[test]
     fn a_diagnostic_carries_the_safety_level_it_came_from() {
-        let diagnostic =
-            Diagnostic::unproven("`p` may escape").with_safety_level(SafetyLevel::Lifetime);
+        let diagnostic = unproven("`p` may escape").with_safety_level(SafetyLevel::Lifetime);
 
         assert_eq!(diagnostic.safety_level(), Some(SafetyLevel::Lifetime));
         assert_eq!(Diagnostic::error("expected `;`").safety_level(), None);
@@ -838,7 +922,7 @@ mod tests {
         assert!(Policy::from(&options).deny_unknown());
 
         let mut sink = DiagnosticSink::with_policy(Policy::from(&options));
-        sink.report(Diagnostic::unproven("`p` may escape"));
+        sink.report(unproven("`p` may escape"));
         assert_eq!(sink.diagnostics()[0].severity(), Severity::Error);
         assert!(sink.has_errors());
     }
@@ -855,7 +939,7 @@ mod tests {
         assert!(policy.deny_unknown());
 
         let mut sink = DiagnosticSink::with_policy(policy);
-        sink.report(Diagnostic::unproven("`p` may escape"));
+        sink.report(unproven("`p` may escape"));
         assert_eq!(sink.diagnostics()[0].severity(), Severity::Error);
         assert!(sink.has_errors());
     }
