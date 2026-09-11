@@ -120,7 +120,7 @@ cases! {
     not_a_declaration: ["--emit", "ast"],
     parentheses_regroup: ["--emit", "ast"],
     parsed_function: ["--emit", "ast"],
-    pipeline_not_implemented: ["--emit", "object"],
+    pipeline_not_implemented: ["--emit", "executable"],
     pointer_declaration: ["--emit", "ast"],
     pointer_to_function: ["--emit", "ast"],
     precedence_additive: ["--emit", "ast"],

@@ -79,6 +79,24 @@ pub enum EmitKind {
     Executable,
 }
 
+impl EmitKind {
+    /// How `--emit` spells this kind.
+    ///
+    /// Asked of the `ValueEnum` derive rather than answered by a table beside
+    /// it, which is what that derive is here for: a second spelling of the same
+    /// thing is a second thing to keep in step, and this one is read by a user
+    /// in a diagnostic while the other decides what they may type.
+    ///
+    /// A `String` because the name is borrowed from a value clap builds on
+    /// demand. A diagnostic allocates anyway.
+    pub fn spelling(self) -> String {
+        self.to_possible_value()
+            .expect("every kind is a value `--emit` takes")
+            .get_name()
+            .to_owned()
+    }
+}
+
 /// When to colorize output.
 ///
 /// Deliberately not `clap::ColorChoice`: that type governs clap's own help
