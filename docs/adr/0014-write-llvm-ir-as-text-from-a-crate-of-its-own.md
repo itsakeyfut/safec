@@ -114,12 +114,12 @@ resolve either, as `E0432` or `E0433` depending on how far the path gets. The
 manifest is the guard because the manifest is where the reversal would be
 written, which is ADR-0011's argument and the same one line of evidence.
 
-The text is held by six corpus cases, all six of which `llvm.rs` also hands to
-`clang`. That the text is *LLVM* is a different claim: spelling `Add` as `Sub`
+The text is held by eight corpus cases, all eight of which `llvm.rs` also hands
+to `clang`. That the text is *LLVM* is a different claim: spelling `Add` as `Sub`
 changes every corpus expectation and leaves `the_emitted_ir_is_what_llvm_accepts`
 passing, which is what says they are two tests rather than one written twice.
 The other direction was measured too: storing a comparison's `i1` without
-widening it and then re-blessing the corpus leaves all 92 cases green and that
+widening it and then re-blessing the corpus leaves all 94 cases green and that
 test still failing.
 
 That the backend can be reached with no frontend in the graph is held by the
@@ -139,8 +139,8 @@ the other side.
 * Bad, because everything a later backend needs from LLVM, from attributes to
   debug information, is text this has to learn to write. The first of them was
   owed rather than future and has since been written: a `char` parameter or
-  result carries `signext` or `zeroext` on five of the eight measured targets
-  and nothing on the other three, `clang` writes it, and this did not, so a
+  result carries `signext` or `zeroext` on six of the eight measured targets
+  and nothing on the other two, `clang` writes it, and this did not, so a
   `clang`-compiled caller of a function this wrote passed an unextended byte.
   `the_attributes_are_what_clang_asks_for` in `crates/safec/tests/llvm.rs` is
   what holds it now. The rest of the category is still ahead.

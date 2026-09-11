@@ -718,8 +718,9 @@ fn a_value_too_large_for_its_destination_is_converted() {
 ///
 /// C17 6.2.5 p15: "the implementation shall define char to have the same range,
 /// representation, and behavior as either signed char or unsigned char". Of the
-/// targets this compiler knows, `aarch64-unknown-linux-gnu` is the one where it
-/// is unsigned, which was measured rather than recalled: `clang 20.1.6`
+/// targets this compiler knows, `aarch64-unknown-linux-gnu` and
+/// `armv7-unknown-linux-gnueabihf` are the two where it is unsigned, which was
+/// measured rather than recalled: `clang 20.1.6`
 /// compiles `char c; c = 200; return c;` to a `sext i8` for
 /// `x86_64-pc-windows-msvc` and a `zext i8` for `aarch64-unknown-linux-gnu`.
 ///
