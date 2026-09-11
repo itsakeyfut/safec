@@ -1072,8 +1072,8 @@ mod tests {
 
         assert_eq!(unit.integer(int).expect("an integer").bits(), 32);
         assert!(unit.integer(int).expect("an integer").signed());
-        // The row of `Target::ALL` where `char` is unsigned, which is what makes
-        // this a question about the machine rather than about C.
+        // One of the two rows of `Target::ALL` where `char` is unsigned, which
+        // is what makes this a question about the machine rather than about C.
         assert!(!unit.integer(character).expect("an integer").signed());
 
         assert_eq!(unit.integer(void), None);
