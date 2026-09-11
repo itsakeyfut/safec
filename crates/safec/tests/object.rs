@@ -119,12 +119,46 @@ fn machine(object: &[u8]) -> String {
     format!("coff {:#06x}", word(0))
 }
 
+/// Whether this `clang` was built with the backend a triple needs.
+///
+/// A `clang` is not one list of targets. Apple's, on `macos-latest`, has no
+/// WebAssembly backend and answers `unable to create target` for
+/// `wasm32-unknown-unknown` while assembling the other seven. Asked by handing
+/// it an empty module, which is valid IR and says nothing about this compiler,
+/// so the answer is about the tool and not about what safec wrote.
+///
+/// Read rather than matched on the message: a string comparison against another
+/// tool's wording is a guard that breaks when it is reworded.
+fn targetable(triple: &str) -> bool {
+    let mut probe = Command::new("clang")
+        .args(["-c", "-x", "ir", "-Wno-override-module"])
+        .arg(format!("--target={triple}"))
+        .args(["-o", "-", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("there is a clang, which the caller checked for");
+
+    drop(probe.stdin.take().expect("the pipe was asked for"));
+    probe
+        .wait()
+        .expect("a process that was spawned can be waited for")
+        .success()
+}
+
 /// An object is for the machine the run named, and not for the host.
 ///
 /// Written out rather than walked, the way `Target::ALL`'s own test is and for
 /// RK-001's reason: asking the table what it says would hold for any table.
 /// These came from `clang 20.1.6 --target=<triple>` on the MVP, read out of the
 /// bytes with the helper above.
+///
+/// A row whose backend this `clang` does not have is said out loud and skipped,
+/// which is a weaker check on that machine and is the honest one: what it would
+/// otherwise hold is that whoever built `clang` chose to include a target, and
+/// that is not a fact about this compiler. The host's own triple is not allowed
+/// to be one of them, so the test cannot quietly check nothing.
 ///
 /// Mutation: pass the host's triple to `clang` rather than the one the run
 /// named. Seven rows fail on this host and a different seven on each CI runner.
@@ -157,6 +191,16 @@ fn an_object_is_for_the_machine_the_run_named() {
     let source = source.to_string_lossy().into_owned();
 
     for &(triple, expected) in measured {
+        if !targetable(triple) {
+            assert_ne!(
+                triple,
+                env!("SAFEC_HOST_TRIPLE"),
+                "this clang cannot target the machine it is running on"
+            );
+            eprintln!("this clang has no backend for {triple}: that row was not checked");
+            continue;
+        }
+
         let object = scratch.path().join(format!("{triple}.o"));
         let output = safec(
             &[

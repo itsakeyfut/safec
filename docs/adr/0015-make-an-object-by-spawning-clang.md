@@ -45,8 +45,16 @@ object on the other.
 
 Measured rather than argued. Every one of the eight targets in `Target::ALL`
 assembles this way with no sysroot, from exactly the text `--emit llvm-ir`
-already writes. The host's object links and the program answers 3, which is the
-first clause of Phase 3's *Done when*. `llvm-config`, which `inkwell` needs, is
+already writes. **On an LLVM `clang`**: that measurement was taken with
+`clang 20.1.6`, and CI has since shown it is a claim about the tool rather than
+about the triples. Apple's `clang` on `macos-latest` has no WebAssembly backend
+and answers `unable to create target` for one of the eight while assembling the
+other seven. That costs a user nothing they did not already have, since a
+machine without the backend could not have made that object any other way
+either, and it is why the eight-row test asks before it measures.
+
+The host's object links and the program answers 3, which is the first clause of
+Phase 3's *Done when*. `llvm-config`, which `inkwell` needs, is
 absent on the machine this was written on. CI has run a `clang --version` step
 on `ubuntu-latest`, `windows-latest` and `macos-latest` since #91, and three
 merges to `main` have been green with it.
@@ -96,10 +104,12 @@ measured during #91's review, which an ordinary `.c` file reaches.
 
 `an_object_is_for_the_machine_the_run_named` in `crates/safec/tests/object.rs`
 makes an object for all eight targets and reads what each one is out of its own
-header, against eight measurements written out rather than walked. It needs no
-`llvm-objdump`: every format puts the machine at a fixed offset. Passing the
-host's triple to `clang` rather than the one the run named fails seven of the
-eight rows here and a different seven on each CI runner.
+header, against eight measurements written out rather than walked. A target this
+`clang` was not built with is said out loud and skipped, and the host's own
+triple may not be one of them, so the test cannot quietly check nothing. It
+needs no `llvm-objdump`: every format puts the machine at a fixed offset.
+Passing the host's triple to `clang` rather than the one the run named fails
+seven of the eight rows here and a different seven on each CI runner.
 
 `an_object_the_linker_accepts` links the host's object and runs the program,
 which answers 3.
