@@ -20,7 +20,7 @@ use safec_ir::ir::{
 };
 use safec_ir::print::quoted;
 use safec_ir::source::{SourceMap, Span};
-use safec_ir::target::{Extension, Integer, Target};
+use safec_ir::target::{Extend, Integer, Target};
 
 /// Something the IR can express and this backend cannot.
 ///
@@ -147,32 +147,20 @@ impl Emitter<'_> {
         }
     }
 
-    /// What the ABI asks of this type when it crosses a call, as LLVM spells
-    /// it.
+    /// How LLVM spells what the target asks of this type when it crosses a
+    /// call.
     ///
-    /// Nothing unless the target asks for it *and* the type is narrower than
-    /// that target's `int`. C17 6.3.1.1 p2 is why `int` itself is never narrow:
-    /// an arithmetic operand is promoted to it before anything happens, so
-    /// nothing below its width is ever computed with.
-    ///
-    /// `Target::extension` is the only fact on a target that is about how a
-    /// function is called rather than about what a value is worth, and it is
-    /// the reason the interpreter needs none of this: nothing in there crosses
-    /// a real ABI.
+    /// The spelling is all this decides. **Which values a machine widens and
+    /// which way is the machine's to say**, and `Target::extension` is where
+    /// that lives: a WASM backend and a C backend need the same answer and
+    /// write it differently, and three copies of the rule would be three
+    /// chances to disagree. `Ty::Void` and a pointer answer no `Integer`, so
+    /// they never reach it.
     fn extension(&self, id: TyId) -> Option<&'static str> {
-        if self.unit.target().extension() != Extension::Required {
-            return None;
-        }
-
-        let narrow = self.unit.integer(id)?;
-        if narrow.bits() >= self.unit.target().int().bits() {
-            return None;
-        }
-
-        Some(if narrow.signed() {
-            "signext"
-        } else {
-            "zeroext"
+        let value = self.unit.integer(id)?;
+        Some(match self.unit.target().extension(value)? {
+            Extend::Sign => "signext",
+            Extend::Zero => "zeroext",
         })
     }
 

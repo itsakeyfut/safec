@@ -100,42 +100,55 @@ impl Integer {
     }
 }
 
-/// A machine, and what C's types are worth on it.
+/// Which way a value is widened when an ABI asks for it.
 ///
-/// Only `int` and `char` are described, because they are the only integer types
-/// the frontend parses. A pointer's width is deliberately absent: nothing can
-/// observe one yet, and ADR-0013 records that as the rule rather than an
-/// What an ABI asks of a value narrower than `int` when it crosses a call.
+/// LLVM spells these `signext` and `zeroext`, and takes a call site whose
+/// attribute disagrees with its callee's as undefined rather than as a mistake.
+/// The names here are the question rather than that spelling, because a WASM or
+/// a C backend needs the same answer and writes it differently.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Extend {
+    /// Widened by repeating the top bit.
+    Sign,
+    /// Widened with zeroes.
+    Zero,
+}
+
+/// Whether an ABI widens a value on the way into and out of a call at all.
 ///
-/// Some machines pass and return such a value already widened to a wider one
-/// and let the receiver trust that; others leave it narrow and make the
-/// receiver widen it itself. LLVM spells the first as a `signext` or `zeroext`
-/// attribute on a parameter and on a result, and gets it wrong in silence if
-/// the two sides of a call disagree.
-///
-/// Which of the two a machine is does not follow from anything else here.
-/// `aarch64-apple-darwin` and `x86_64-pc-windows-msvc` agree that `char` is
-/// signed and disagree about this.
+/// Private, and the reason [`Target::extension`] exists: *which* values an ABI
+/// widens, and which way, is the machine's to say and not a caller's to work
+/// out. Measured elsewhere and not hypothetically: `riscv64-unknown-linux-gnu`
+/// widens an `int` itself, so "narrower than `int`" is not the rule everywhere,
+/// and widens an `unsigned int` with `signext`, so the value's own signedness
+/// is not the direction everywhere either. A caller holding this flag would
+/// have had to know both.
 ///
 /// An enum rather than a `bool` because the constructor behind [`Target::ALL`]
 /// would otherwise take two adjacent booleans, and swapping them in a table of
 /// eight rows is `error[E0308]` this way and a test failure the other. A guard
 /// the compiler holds beats one somebody has to remember to run.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Extension {
+enum Widening {
     /// The caller widens an argument, and the callee widens a result.
     Required,
     /// Neither does, and whoever receives one narrows it itself.
     None,
 }
 
+/// A machine, and what C's types are worth on it, and what it asks of a value
+/// crossing a call.
+///
+/// Only `int` and `char` are described, because they are the only integer types
+/// the frontend parses. A pointer's width is deliberately absent: nothing can
+/// observe one yet, and ADR-0013 records that as the rule rather than an
 /// oversight.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Target {
     triple: &'static str,
     int: Integer,
     character: Integer,
-    extension: Extension,
+    widening: Widening,
 }
 
 impl Target {
@@ -151,29 +164,29 @@ impl Target {
     /// The eight are what is needed rather than what exists: five so that each
     /// of the three CI runners and this project's own machines can host
     /// themselves, `i686` and `wasm32` for the 32-bit cases a later phase will
-    /// want, and two where `char` is unsigned. Two, because one of them asks
-    /// for [`Extension::Required`] and the other does not, and a `zeroext`
-    /// nothing can reach is a branch nothing can execute.
+    /// want, and two where `char` is unsigned. Two, because one of them widens
+    /// a narrow value and the other does not, and a [`Extend::Zero`] nothing
+    /// can reach is a branch nothing can execute.
     ///
-    /// The extension column came from
+    /// The widening column came from
     /// `clang 20.1.6 --target=<triple> -S -emit-llvm -O0` on a function of one
     /// `char` returning one, reading the attribute on the result and on the
     /// parameter.
     pub const ALL: &'static [Self] = &[
-        Self::new("aarch64-apple-darwin", 32, 8, true, Extension::Required),
-        Self::new("aarch64-unknown-linux-gnu", 32, 8, false, Extension::None),
+        Self::new("aarch64-apple-darwin", 32, 8, true, Widening::Required),
+        Self::new("aarch64-unknown-linux-gnu", 32, 8, false, Widening::None),
         Self::new(
             "armv7-unknown-linux-gnueabihf",
             32,
             8,
             false,
-            Extension::Required,
+            Widening::Required,
         ),
-        Self::new("i686-unknown-linux-gnu", 32, 8, true, Extension::Required),
-        Self::new("wasm32-unknown-unknown", 32, 8, true, Extension::Required),
-        Self::new("x86_64-apple-darwin", 32, 8, true, Extension::Required),
-        Self::new("x86_64-pc-windows-msvc", 32, 8, true, Extension::None),
-        Self::new("x86_64-unknown-linux-gnu", 32, 8, true, Extension::Required),
+        Self::new("i686-unknown-linux-gnu", 32, 8, true, Widening::Required),
+        Self::new("wasm32-unknown-unknown", 32, 8, true, Widening::Required),
+        Self::new("x86_64-apple-darwin", 32, 8, true, Widening::Required),
+        Self::new("x86_64-pc-windows-msvc", 32, 8, true, Widening::None),
+        Self::new("x86_64-unknown-linux-gnu", 32, 8, true, Widening::Required),
     ];
 
     /// One row of [`Self::ALL`], and nothing else builds one.
@@ -186,11 +199,11 @@ impl Target {
         int_bits: u32,
         char_bits: u32,
         char_signed: bool,
-        extension: Extension,
+        widening: Widening,
     ) -> Self {
         Self {
             triple,
-            extension,
+            widening,
             int: Integer {
                 bits: int_bits,
                 // C17 6.2.5 p4: `int` is one of the standard signed integer
@@ -239,14 +252,37 @@ impl Target {
         self.character
     }
 
-    /// What this machine asks of a value narrower than its `int` when it
-    /// crosses a call.
+    /// Which way this machine widens that value on the way into and out of a
+    /// call, or `None` where it leaves it alone.
     ///
-    /// The only fact here that says something about how a function is called
-    /// rather than about what a value is worth, which is why a backend needs it
-    /// and the interpreter does not: nothing crosses a real ABI in there.
-    pub fn extension(self) -> Extension {
-        self.extension
+    /// The only question here that is about how a function is called rather
+    /// than about what a value is worth, which is why a backend asks it and the
+    /// interpreter does not: nothing crosses a real ABI in there.
+    ///
+    /// **The rule is here rather than at the call site**, because every part of
+    /// it is the machine's to say. Two of the eight rows leave a `char` alone;
+    /// `riscv64-unknown-linux-gnu`, which is not in the table yet, widens an
+    /// `int` as well and widens an `unsigned int` by its *sign*. A backend that
+    /// worked any of that out for itself would be a second place to get it
+    /// wrong, and `docs/architecture.md` names two more backends after this
+    /// one.
+    pub fn extension(self, value: Integer) -> Option<Extend> {
+        if self.widening != Widening::Required {
+            return None;
+        }
+        // C17 6.3.1.1 p2 promotes an arithmetic operand to `int`, so nothing
+        // below that width is ever computed with and nothing at or above it is
+        // narrow. True of every row measured so far and not of every machine
+        // there is, which is why it is here where a row can disagree.
+        if value.bits() >= self.int.bits() {
+            return None;
+        }
+
+        Some(if value.signed() {
+            Extend::Sign
+        } else {
+            Extend::Zero
+        })
     }
 }
 
@@ -268,27 +304,30 @@ mod tests {
     /// Mutation: make `char` signed on `aarch64-unknown-linux-gnu`, or change
     /// any width. This fails. Mutation: add a row to `Target::ALL` without
     /// measuring it. The count fails. Mutation: give
-    /// `x86_64-pc-windows-msvc` `Extension::Required`. The column fails, and so
-    /// do four other tests: the two machines that ask for nothing are not
-    /// predictable from the signedness beside them, so everything downstream of
-    /// the column moves with it.
+    /// `x86_64-pc-windows-msvc` `Widening::Required`. The `char` column fails,
+    /// and so do four other tests: the two machines that ask for nothing are
+    /// not predictable from the signedness beside them, so everything
+    /// downstream of the column moves with it.
     #[test]
     fn every_target_is_what_clang_says_it_is() {
-        let measured: &[(&str, u32, u32, bool, Extension)] = &[
-            ("aarch64-apple-darwin", 32, 8, true, Extension::Required),
-            ("aarch64-unknown-linux-gnu", 32, 8, false, Extension::None),
+        // The last column is what `clang` writes for a `char`, which is the
+        // measurement, rather than the flag behind it, which is this module's
+        // own business.
+        let measured: &[(&str, u32, u32, bool, Option<Extend>)] = &[
+            ("aarch64-apple-darwin", 32, 8, true, Some(Extend::Sign)),
+            ("aarch64-unknown-linux-gnu", 32, 8, false, None),
             (
                 "armv7-unknown-linux-gnueabihf",
                 32,
                 8,
                 false,
-                Extension::Required,
+                Some(Extend::Zero),
             ),
-            ("i686-unknown-linux-gnu", 32, 8, true, Extension::Required),
-            ("wasm32-unknown-unknown", 32, 8, true, Extension::Required),
-            ("x86_64-apple-darwin", 32, 8, true, Extension::Required),
-            ("x86_64-pc-windows-msvc", 32, 8, true, Extension::None),
-            ("x86_64-unknown-linux-gnu", 32, 8, true, Extension::Required),
+            ("i686-unknown-linux-gnu", 32, 8, true, Some(Extend::Sign)),
+            ("wasm32-unknown-unknown", 32, 8, true, Some(Extend::Sign)),
+            ("x86_64-apple-darwin", 32, 8, true, Some(Extend::Sign)),
+            ("x86_64-pc-windows-msvc", 32, 8, true, None),
+            ("x86_64-unknown-linux-gnu", 32, 8, true, Some(Extend::Sign)),
         ];
 
         assert_eq!(
@@ -303,33 +342,35 @@ mod tests {
             assert!(target.int().signed(), "{triple}: C17 6.2.5 p4");
             assert_eq!(target.char().bits(), char_bits, "{triple}");
             assert_eq!(target.char().signed(), char_signed, "{triple}");
-            assert_eq!(target.extension(), extension, "{triple}");
+            assert_eq!(target.extension(target.char()), extension, "{triple}");
+            // Nothing widens an `int`, on every row measured so far. It is what
+            // C17 6.3.1.1 p2 promotes to, so nothing is narrower than it that
+            // an operation ever sees.
+            assert_eq!(target.extension(target.int()), None, "{triple}");
         }
     }
 
-    /// Both halves of the extension question have a machine that answers them,
-    /// and so do both halves of `char`'s signedness crossed with it.
+    /// Every answer this can give has a machine that gives it.
     ///
-    /// Without that, `zeroext` is a branch no C program on any known target can
-    /// reach: the direction follows the type's signedness and the attribute
-    /// follows the target, and until `armv7-unknown-linux-gnueabihf` was
-    /// measured the only unsigned `char` was on a machine that asks for no
-    /// attribute at all.
+    /// Without one, `zeroext` is a branch no C program on any known target can
+    /// reach: the direction follows the value's signedness and whether there is
+    /// an attribute at all follows the target, and until
+    /// `armv7-unknown-linux-gnueabihf` was measured the only unsigned `char`
+    /// was on a machine that widens nothing.
     ///
     /// Mutation: drop the `armv7` row. This fails, and so does the corpus case
     /// that is the only `zeroext` in the tree.
     #[test]
     fn every_answer_to_the_extension_question_has_a_machine() {
-        let asked = |extension, char_signed| {
-            Target::ALL.iter().any(|target| {
-                target.extension() == extension && target.char().signed() == char_signed
-            })
+        let answers = |answer| {
+            Target::ALL
+                .iter()
+                .any(|target| target.extension(target.char()) == answer)
         };
 
-        assert!(asked(Extension::Required, true), "signext");
-        assert!(asked(Extension::Required, false), "zeroext");
-        assert!(asked(Extension::None, true), "nothing, signed");
-        assert!(asked(Extension::None, false), "nothing, unsigned");
+        assert!(answers(Some(Extend::Sign)), "signext");
+        assert!(answers(Some(Extend::Zero)), "zeroext");
+        assert!(answers(None), "nothing");
     }
 
     /// A triple nothing measured is not a target.
