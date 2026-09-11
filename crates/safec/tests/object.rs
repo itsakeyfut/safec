@@ -1187,3 +1187,54 @@ fn a_unit_the_frontend_reported_on_never_reaches_clang() {
         );
     }
 }
+
+/// Two inputs that share a stem are two modules.
+///
+/// `a/x.c` and `b/x.c` are ordinary in a project with a directory per part, and
+/// the name a module goes under is the input's. Without the index they would be
+/// one name written twice, so the second would overwrite the first and the link
+/// would be handed one module twice: every symbol in it defined twice, from a
+/// file the user cannot see.
+///
+/// Mutation: drop the index from the name a module is written under. The link
+/// answers a duplicate symbol and this fails on the exit code.
+#[test]
+fn two_inputs_that_share_a_stem_are_two_modules() {
+    if !clang_or_skip("whether two inputs with one stem are two modules") {
+        return;
+    }
+
+    let scratch = Scratch::new("one_stem");
+    fs::create_dir_all(scratch.path().join("sub")).expect("the temporary directory is writable");
+    scratch.source(
+        "same.c",
+        "int add(int a, int b);\n\nint main(void) {\n    return add(1, 2);\n}\n",
+    );
+    scratch.source(
+        "sub/same.c",
+        "int add(int a, int b) {\n    return a + b;\n}\n",
+    );
+    let program = scratch
+        .path()
+        .join(if cfg!(windows) { "both.exe" } else { "both" });
+
+    let output = safec(
+        &[
+            "--emit",
+            "executable",
+            "-o",
+            &program.to_string_lossy(),
+            "same.c",
+            "sub/same.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(&program)
+        .status()
+        .expect("the program this compiler just wrote can be run");
+    assert_eq!(ran.code(), Some(3), "the program did not answer 3");
+}

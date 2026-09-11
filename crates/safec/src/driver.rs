@@ -1592,6 +1592,27 @@ mod tests {
         }
     }
 
+    /// What a module is called, for both kinds of name there are.
+    ///
+    /// Written out rather than derived, because the answer is what a linker
+    /// quotes back at a user and an arm nobody wrote down is an arm anybody can
+    /// change. `Virtual` is not reachable from the command line, since every
+    /// input is a path, and it is here because the match has to answer for it
+    /// and because the interpreter's tests build one.
+    ///
+    /// Mutation: answer the whole file name rather than its stem. The first row
+    /// fails. Mutation: answer nothing for a name with no path. The last fails.
+    #[test]
+    fn a_module_is_called_what_its_input_is_called() {
+        assert_eq!(stem(&FileName::Real(PathBuf::from("add.c"))), "add");
+        assert_eq!(stem(&FileName::Real(PathBuf::from("sub/add.c"))), "add");
+        assert_eq!(stem(&FileName::Real(PathBuf::from("a.tar.c"))), "a.tar");
+        // No stem at all, which `Path` answers for a name that is all
+        // extension. The name itself is better than nothing to write.
+        assert_eq!(stem(&FileName::Real(PathBuf::from(".c"))), ".c");
+        assert_eq!(stem(&FileName::Virtual("held".to_owned())), "held");
+    }
+
     /// A link's directory is gone when the link is.
     ///
     /// The only thing this compiler writes outside a path the user named, and
