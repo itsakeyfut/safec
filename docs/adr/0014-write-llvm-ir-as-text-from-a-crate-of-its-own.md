@@ -137,12 +137,13 @@ the other side.
 * Bad, because LLVM's own verifier is not in the loop while the text is being
   built: a malformed module is found by a test rather than by a type error.
 * Bad, because everything a later backend needs from LLVM, from attributes to
-  debug information, is text this has to learn to write. One of those is already
-  owed rather than merely future: a `char` parameter or result carries
-  `signext` on some ABIs and nothing on others, `clang` writes it, and this does
-  not, so a `clang`-compiled caller of a function this wrote passes an
-  unextended byte. It is invisible inside a module this wrote whole and matters
-  the moment two toolchains meet, which is `--emit object`.
+  debug information, is text this has to learn to write. The first of them was
+  owed rather than future and has since been written: a `char` parameter or
+  result carries `signext` or `zeroext` on five of the eight measured targets
+  and nothing on the other three, `clang` writes it, and this did not, so a
+  `clang`-compiled caller of a function this wrote passed an unextended byte.
+  `the_attributes_are_what_clang_asks_for` in `crates/safec/tests/llvm.rs` is
+  what holds it now. The rest of the category is still ahead.
 * Neutral, because `#92` reopens it with the evidence that only an object file
   can provide.
 
