@@ -11,10 +11,11 @@ decision-makers: itsakeyfut
 [ADR-0014](./0014-write-llvm-ir-as-text-from-a-crate-of-its-own.md) decided that
 the backend writes textual LLVM IR, and named its own reversal trigger:
 
-> **The trigger for reversing this is `--emit object`**. An object cannot go to
-> a stream and cannot be compared byte for byte against an expectation this
-> repository wrote, so the reason above stops applying on exactly that day. The
-> question then is whether to spawn `clang -x ir` or to link a library.
+> **The trigger for reversing this is `--emit object`**, which is #92. An object
+> cannot go to a stream and cannot be compared byte for byte against an
+> expectation this repository wrote, so the reason above stops applying on
+> exactly that day. The question then is whether to spawn `clang -x ir` or to
+> link a library, and this record is what that decision reverses.
 
 That day is this one. Text can be printed and an object cannot, so whatever
 makes one is a dependency: on every machine that builds this compiler, or on
@@ -71,7 +72,9 @@ nothing older than `clang 20.1.6` is on the machine this was written on. A
 `clang` below it answers in its own words and the diagnostic passes those
 through rather than interpreting them.
 
-This does **not** supersede ADR-0014. That record decided what the backend
+This does **not** supersede ADR-0014, which is a disagreement with that record
+rather than an oversight: it expected "this record is what that decision
+reverses", and nothing about it is reversed. ADR-0014 decided what the backend
 writes, and it still writes text; this decides what a second tool makes of the
 text. The two are separable, which is the point: a WASM or a C backend writes
 its own text and this record says nothing about what turns that into anything.
@@ -101,6 +104,15 @@ eight rows here and a different seven on each CI runner.
 `an_object_the_linker_accepts` links the host's object and runs the program,
 which answers 3.
 
+`a_clang_that_answers_nothing_is_not_a_success` and
+`a_clang_that_cannot_be_run_does_not_blame_the_module` hold the two ways a tool
+on the path is not the tool this asked for. Spawning one is trusting a name, and
+a name on `PATH` is not a promise: a cache or a distributing wrapper is
+routinely installed as `clang`, so an exit status is not evidence that an object
+exists, and a spawn that never started is not `clang` refusing a module. Both
+arrange it with a stub the real `clang` builds, so neither needs anything new on
+the machine.
+
 `a_missing_clang_says_what_to_install` runs the compiler with an emptied `PATH`
 and holds that the diagnostic names `clang` and the version it needs. It is the
 only test here that needs `clang` to be *absent*, and the only thing this
@@ -122,7 +134,9 @@ that needs a tool cannot be tested without it, so the gate is the same one
   make an object with it.
 * Bad, because a process boundary is slower than a function call and hides
   whatever `clang` decides to do, including any warning it emits while
-  succeeding, which this keeps rather than reports.
+  succeeding, which this keeps rather than reports. What it no longer hides is
+  a `clang` that is not one: four answers are told apart rather than two, and
+  only the one where `clang` ran and spoke passes its words through.
 * Neutral, because `--emit executable` in #93 meets the same question and will
   answer it the same way or say why not.
 

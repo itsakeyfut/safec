@@ -49,9 +49,12 @@ use safec_llvm::emit::Refusal;
 // on the code wants "the backend could not write this" rather than a list of
 // the ways that can happen.
 //
-// The first diagnostic in this file to carry one. The five above it are the
-// driver saying something about a run, and this is the backend saying something
-// about a program, which is the line `docs/diagnostics.md` draws.
+// The only diagnostic in this file that carries one. The others are the driver
+// saying something about a run or about the machine it is on, and this is the
+// backend saying something about a program, which is the line
+// `docs/diagnostics.md` draws. No count here: that document carries one, with
+// the command that settles it, and two places counting the same thing is one
+// place too many.
 const BACKEND: Code = Code::new("SC0801");
 
 /// Everything one run of the compiler produced.
@@ -81,6 +84,12 @@ pub struct Compiled {
     /// Bytes rather than text, because `--emit object` is not text. Every other
     /// kind is UTF-8 this compiler wrote and a caller reading one back can say
     /// so; an object is what `clang` handed over and has no encoding at all.
+    ///
+    /// Bytes carry no file mode, and the one artifact that will need one is the
+    /// executable: [`run_compiler`] writes with `fs::write`, which creates a
+    /// file nothing can run on a machine that has modes. That is three lines
+    /// where the write is, on the day `--emit executable` lands, rather than a
+    /// shape to change here now.
     pub artifact: Option<Vec<u8>>,
 }
 
@@ -111,6 +120,13 @@ impl From<Outcome> for ExitCode {
 ///
 /// Split from [`run_compiler`] so that a test can inspect what was reported
 /// instead of reading it back out of a stream.
+///
+/// **Nothing here writes to a path the user named.** This function reads files
+/// and spawns children that answer on a pipe; [`run_compiler`] is the only
+/// thing that writes, which is what makes one rule about what a failed run
+/// leaves behind enough. `--emit executable` is where that is tempting to
+/// break, because a linker wants to write its own output, and breaking it means
+/// moving that rule rather than losing it.
 ///
 /// **The gate for per-input work is on the input, not on the run.**
 /// [`DiagnosticSink::has_errors`] answers whether anything in the whole run
