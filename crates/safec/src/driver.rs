@@ -73,8 +73,12 @@ pub struct Compiled {
     ///
     /// `--emit ast` answers differently, and `compile` says why: an input the
     /// scan reported on is not parsed, so it contributes no tree. A run of one
-    /// such file produces `Some("")`.
-    pub artifact: Option<String>,
+    /// such file produces `Some(empty)`.
+    ///
+    /// Bytes rather than text, for the artifact that is not text. Every kind
+    /// there is today is UTF-8 this compiler wrote and a caller reading one back
+    /// can say so; `--emit object` is the one on its way that will not be.
+    pub artifact: Option<Vec<u8>>,
 }
 
 /// What a run amounted to.
@@ -300,7 +304,7 @@ pub fn compile(options: &Options) -> Compiled {
     Compiled {
         sources,
         diagnostics,
-        artifact: artifact.map(Emitted::into_text),
+        artifact: artifact.map(Emitted::into_bytes),
     }
 }
 
@@ -325,10 +329,10 @@ enum Emitted {
 }
 
 impl Emitted {
-    fn into_text(self) -> String {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
             Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) | Self::LlvmIr(text) => {
-                text
+                text.into_bytes()
             }
         }
     }
@@ -799,7 +803,7 @@ pub fn run_compiler(
         // answer to an empty program, and is written.
         (Some(path), Some(emitted)) => {
             if !(emitted.is_empty() && compiled.diagnostics.has_errors()) {
-                if let Err(error) = fs::write(path, emitted.as_bytes()) {
+                if let Err(error) = fs::write(path, emitted) {
                     compiled.diagnostics.report(write_failure(path, &error));
                 }
             }
@@ -815,7 +819,7 @@ pub fn run_compiler(
     Renderer::new(options.color).render_all(&compiled.sources, &compiled.diagnostics, report)?;
 
     if let Some(emitted) = to_stream {
-        artifact.write_all(emitted.as_bytes())?;
+        artifact.write_all(emitted)?;
     }
 
     Ok(if compiled.diagnostics.has_errors() {
@@ -1981,7 +1985,11 @@ mod tests {
             compiled.diagnostics.diagnostics()
         );
 
-        let artifact = compiled.artifact.expect("`--emit ast` produces one");
+        // Text, because every kind there is today is UTF-8 this compiler
+        // wrote. `Compiled::artifact` is bytes for the one on its way that will
+        // not be.
+        let artifact = String::from_utf8(compiled.artifact.expect("`--emit ast` produces one"))
+            .expect("`--emit ast` writes text");
         assert!(artifact.contains("safec_driver_gate_whole.c"), "{artifact}");
         assert!(
             !artifact.contains("safec_driver_gate_broken.c"),
