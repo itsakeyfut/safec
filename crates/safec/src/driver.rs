@@ -1254,7 +1254,10 @@ mod tests {
     /// the way `cannot read` already carries one.
     ///
     /// Mutation: ignore the `Err` from `fs::write`. The run succeeds and this
-    /// fails twice over.
+    /// fails twice over. Mutation: drop the `with_note` from `write_failure`.
+    /// The path is still reported and the reason is not, which is half of what
+    /// this issue's second acceptance criterion asks for, and nothing else in
+    /// the workspace notices.
     #[test]
     fn an_output_path_that_cannot_be_written_is_reported() {
         let file = TempFile::new("safec_driver_output_unwritable.c", "int x;\n");
@@ -1267,6 +1270,15 @@ mod tests {
         assert_eq!(outcome, Outcome::Failed);
         assert!(report.contains("cannot write"), "{report}");
         assert!(report.contains("out.tok"), "{report}");
+        // That there is a reason, not which reason. The words are the
+        // operating system's and differ across the three platforms CI runs;
+        // `docs/architecture.md` records that divergence for `cannot read`,
+        // which carries its note the same way. Asserting the text would make
+        // this a dictionary of other people's error messages.
+        assert!(
+            report.contains("= note:"),
+            "reported the path and not the reason: {report}"
+        );
         assert_eq!(
             artifact, "",
             "nothing reaches the stream when a path was given"
