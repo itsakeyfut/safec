@@ -317,6 +317,7 @@ entry:
   br label %bb0
 
 bb0:
+  store i32 0, ptr %_0
   %t0 = call i32 @ops(i32 7, i32 2)
   store i32 %t0, ptr %_1
   br label %bb1
