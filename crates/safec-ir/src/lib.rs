@@ -17,6 +17,7 @@
 
 pub mod analysis;
 pub mod cfg;
+pub mod dataflow;
 pub mod interp;
 pub mod ir;
 pub mod print;
