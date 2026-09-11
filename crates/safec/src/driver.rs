@@ -654,18 +654,28 @@ enum Unmade {
 /// `-Wno-override-module` because the module names its own triple and `clang`'s
 /// own is more specific, so it warns about agreeing.
 ///
-/// **Standard input is written on a thread.** Both pipes are open at once, and
-/// a module larger than the pipe buffer would otherwise deadlock against a
-/// `clang` that has begun answering before it has finished reading. About 64
-/// KiB on this host, which an ordinary `.c` file reaches; the same hazard was
-/// measured in `tests/llvm.rs` and is why that one does not `expect` its write.
-fn clang(job: &[&OsStr], module: &str, target: Target) -> Result<Output, Unmade> {
+/// **A module goes in on standard input or does not.** Both of today's jobs
+/// have one, and the job says so rather than this appending a `-` to whatever
+/// it was given: an argument added to every invocation is one a caller cannot
+/// leave out, and the first thing to want that is a link over several modules,
+/// where only one of them could be a stream.
+///
+/// **When there is one, it is written on a thread.** Both pipes are open at
+/// once, and a module larger than the pipe buffer would otherwise deadlock
+/// against a `clang` that has begun answering before it has finished reading.
+/// About 64 KiB on this host, which an ordinary `.c` file reaches; the same
+/// hazard was measured in `tests/llvm.rs` and is why that one does not `expect`
+/// its write.
+fn clang(job: &[&OsStr], stdin: Option<&str>, target: Target) -> Result<Output, Unmade> {
     let mut spawned = Command::new("clang")
         .args(["-x", "ir", "-Wno-override-module"])
         .arg(format!("--target={}", target.triple()))
         .args(job)
-        .arg("-")
-        .stdin(Stdio::piped())
+        .stdin(if stdin.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -678,9 +688,11 @@ fn clang(job: &[&OsStr], module: &str, target: Target) -> Result<Output, Unmade>
             _ => Unmade::Unrunnable(error.to_string()),
         })?;
 
-    let mut input = spawned.stdin.take().expect("the pipe was asked for");
-    let written = module.to_owned();
-    let feeding = thread::spawn(move || input.write_all(written.as_bytes()));
+    let feeding = stdin.map(|module| {
+        let mut input = spawned.stdin.take().expect("the pipe was asked for");
+        let written = module.to_owned();
+        thread::spawn(move || input.write_all(written.as_bytes()))
+    });
 
     let finished = spawned
         .wait_with_output()
@@ -690,7 +702,9 @@ fn clang(job: &[&OsStr], module: &str, target: Target) -> Result<Output, Unmade>
     // and its own words are the better answer. A write that failed for any
     // other reason surfaces as a `clang` that got an incomplete module and
     // said so.
-    let _ = feeding.join();
+    if let Some(feeding) = feeding {
+        let _ = feeding.join();
+    }
 
     Ok(finished)
 }
@@ -737,8 +751,13 @@ fn refused(streams: &[&[u8]]) -> Unmade {
 /// must never do.
 fn assembled(module: &str, target: Target) -> Result<Vec<u8>, Unmade> {
     let finished = clang(
-        &[OsStr::new("-c"), OsStr::new("-o"), OsStr::new("-")],
-        module,
+        &[
+            OsStr::new("-c"),
+            OsStr::new("-o"),
+            OsStr::new("-"),
+            OsStr::new("-"),
+        ],
+        Some(module),
         target,
     )?;
 
@@ -768,8 +787,12 @@ fn linked(module: &str, target: Target) -> Result<Vec<u8>, Unlinked> {
     let scratch = Scratch::new().map_err(|error| Unlinked::Nowhere(error.to_string()))?;
     let program = scratch.path().join("program");
 
-    let finished =
-        clang(&[OsStr::new("-o"), program.as_os_str()], module, target).map_err(Unlinked::Tool)?;
+    let finished = clang(
+        &[OsStr::new("-o"), program.as_os_str(), OsStr::new("-")],
+        Some(module),
+        target,
+    )
+    .map_err(Unlinked::Tool)?;
 
     if !finished.status.success() {
         // Both streams, because the linker and the driver that ran it do not
