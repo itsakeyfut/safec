@@ -8,8 +8,8 @@ Function a_scope_that_opens_and_closes.c:1:5 "outlives"
   Local "_6" "int *"
   Local "_7" "int *"
   Block "bb0" entry
-    StorageLive a_scope_that_opens_and_closes.c:5:9 "_2"
-    StorageLive a_scope_that_opens_and_closes.c:6:9 "_3"
+    StorageLive a_scope_that_opens_and_closes.c:5:9 generated "_2"
+    StorageLive a_scope_that_opens_and_closes.c:6:9 generated "_3"
     Operation a_scope_that_opens_and_closes.c:8:9 written
       Destination "_2"
       Use
@@ -38,8 +38,8 @@ Function a_scope_that_opens_and_closes.c:1:5 "outlives"
       Destination "_7"
       Use
         Copy "_1"
-    StorageDead a_scope_that_opens_and_closes.c:4:5 "_3"
-    StorageDead a_scope_that_opens_and_closes.c:4:5 "_2"
+    StorageDead a_scope_that_opens_and_closes.c:11:5 generated "_3"
+    StorageDead a_scope_that_opens_and_closes.c:11:5 generated "_2"
     Operation a_scope_that_opens_and_closes.c:13:5 written
       Destination "_0"
       Use

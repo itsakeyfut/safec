@@ -530,15 +530,30 @@ impl Lowering<'_> {
                     }
                 }
 
+                // The function's own body collects nothing, because the
+                // `Declaration` arm only records a local when a scope narrower
+                // than the body is open, so there is nothing to close for it
+                // and no need to ask whether this is that one.
                 let declared = self.scopes.pop().expect("the scope this arm pushed");
-                if !self.scopes.is_empty() && builder.reachable() {
+                if builder.reachable() {
                     // Reverse order of declaration, which is the order a C++
                     // destructor would run in and costs nothing to get right
                     // while the list is being written.
                     for &local in declared.iter().rev() {
                         builder.element(Element::StorageDead {
+                            // Nobody wrote "end this storage": the `}` is what
+                            // it exists because of, which is what `Generated`
+                            // means and what stops a diagnostic quoting a
+                            // block of source back as if a user had asked for
+                            // this. The last byte of a compound statement is
+                            // its `}`, and the lowering only ever sees a tree
+                            // that parsed without a word said about it.
+                            origin: Origin::Generated(Span::new(
+                                span.file(),
+                                span.end() - 1,
+                                span.end(),
+                            )),
                             local,
-                            origin: Origin::Written(span),
                         });
                     }
                 }
@@ -574,9 +589,13 @@ impl Lowering<'_> {
                     if self.scopes.len() > 1 {
                         let scope = self.scopes.last_mut().expect("a scope is open");
                         scope.push(local);
+                        // Generated for the same reason as the closing half:
+                        // the declaration is what this exists because of, and
+                        // is not itself an instruction to begin storage that
+                        // somebody wrote.
                         builder.element(Element::StorageLive {
                             local,
-                            origin: Origin::Written(span),
+                            origin: Origin::Generated(span),
                         });
                     }
                 }

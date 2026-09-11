@@ -153,7 +153,10 @@ impl Trap {
 /// own reasons and is not the same sentence.
 #[derive(Clone, Debug)]
 enum Slot {
-    /// No storage. Before the scope that declares it opens, or after it closes.
+    /// No storage, because the scope that declares it has closed.
+    ///
+    /// Not before it opens: [`enter`] starts every local `Unwritten`, and why
+    /// that is both permissive and unobservable is written there.
     Dead,
     /// Storage, and nothing written into it.
     Unwritten,
@@ -368,9 +371,13 @@ fn enter(
         )));
     }
 
-    // A local starts with storage and nothing in it. The ones whose scope is
-    // narrower than the function are put back to `Dead` by the `StorageLive`
-    // that opens their scope, which is the first thing that runs in it.
+    // Every local starts with storage and nothing in it, whatever its scope.
+    // A nested one is therefore `Unwritten` rather than `Dead` until its scope
+    // has opened and closed once, which is a more permissive start than the IR
+    // strictly says and is unobservable: C17 6.2.1 p7 starts a name's scope at
+    // its declarator, so nothing can name the local before the `StorageLive`
+    // that follows it. `goto` into a block is what ends that, and ADR-0012
+    // names it as the change this moves with.
     let mut locals: Vec<Slot> = function.locals().map(|_| Slot::Unwritten).collect();
     for (parameter, value) in function.parameters().zip(arguments) {
         locals[parameter.index()] = Slot::Held(value.clone());
@@ -583,15 +590,21 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
 
 /// Write a value where a location says, or a stop saying why it cannot be.
 ///
-/// [`resolve`] has already checked that the frame is the one the pointer was
-/// taken in, and the frame cannot return between the two without the run
-/// passing through a terminator. What it has not checked is whether the local
-/// still has storage: `{ int x; p = &x; } *p = 1;` resolves to a live frame and
-/// a dead slot, and writing it would be the same undefined behaviour as reading
-/// it, silently made to look defined. [`load`] answers the same question from
-/// the other side.
+/// The same two questions [`load`] asks, in the same order and for the same
+/// reasons. [`resolve`] checks a frame on each step it loads *through* and not
+/// on the location it hands back, so a write has to ask both itself: whether
+/// the frame the pointer was taken in is still the frame at that depth, and
+/// whether the local still has storage.
+///
+/// Neither is hypothetical. `int *leak(void) { int x; int *q; q = &x; return
+/// q; } ... *p = 5;` names a depth the stack no longer has, and before this
+/// asked, it was an index out of bounds rather than a stop. `{ int x; p = &x; }
+/// *p = 1;` names a live frame and a dead slot, and a write let through would
+/// put a value where the next scope at that depth is about to keep one, so the
+/// program that pays for it is not the one that did it.
 fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
-    let slot = &mut frames[at.depth].locals[at.local.index()];
+    let frame = live(frames, at)?;
+    let slot = &mut frames[frame].locals[at.local.index()];
     if matches!(slot, Slot::Dead) {
         return Err(Trap::new(
             "a write to a local whose scope has ended, through a pointer that outlived it",

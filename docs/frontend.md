@@ -148,7 +148,10 @@ allows is stopped instead, which is the trade a test instrument makes so that a
 suite fails rather than hangs.
 
 A read through a pointer whose object's scope has ended stops the run and says
-which, rather than answering whatever is still in the slot. The IR says where a
+which, rather than answering whatever is still in the slot, and so does a write
+through the same pointer. The write matters as much: one that went through would
+put a value into a slot the next scope at that depth is about to use, so the
+program that paid for it would not be the one that did it. The IR says where a
 block-scoped local's storage began and ended, which is what makes the two
 tellable apart; ADR-0012 has the shape and #74 built it. A local the function
 itself declares has no such marker, because its storage is the frame's and a

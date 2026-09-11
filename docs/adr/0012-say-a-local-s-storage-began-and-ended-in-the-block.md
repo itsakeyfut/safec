@@ -99,6 +99,13 @@ worth paying for a difference nothing can observe. The two come apart with
 object is already alive; `goto` is also what forces the pre-pass to exist for
 its own reasons, so that is the change that moves this.
 
+**A local's state before its own `StorageLive` is a convention, not a fact the
+IR records.** Nothing marks which locals are scoped, so "no marker here" means
+either "frame-lived" or "not on this path". The interpreter starts every local
+with storage, which is the permissive reading and is unobservable while a name
+cannot be used before its declarator. `goto` into a block is what ends that,
+and it is the same change that moves `StorageLive` to the top of the scope.
+
 **Markers only where a scope is narrower than the function.** A parameter and a
 local declared in the function's own body live exactly as long as the frame,
 which every consumer already models: the interpreter pops the frame, and a
@@ -152,9 +159,23 @@ and fails.
 * Good, because the question Phase 5 asks, "is this place still allocated at
   this point", is answered by walking a block, which is what a transfer
   function does.
-* Good, because a C++ destructor at the end of a scope is an element in the
-  same list, carrying the `Origin::Generated` that `docs/c-family.md` asks for,
-  rather than something a tree has no room for.
+* Good, because a marker carries the attribution `docs/c-family.md` asks for.
+  Both halves are `Origin::Generated`: nobody writes "end this storage", it
+  exists because of the brace, and saying `Written` would license a diagnostic
+  to quote a block of source back as if somebody had asked for it. These are
+  the first `Generated` this compiler produces.
+* Bad, because a C++ destructor at a scope end is **not** an element in this
+  list, and an earlier draft of this record said it was. A destructor is a
+  call, and ADR-0010 put a call in the terminator, so a scope end in C++ is a
+  chain of blocks each ended by `Terminator::Call`, with the markers among
+  them. That is expressible and is not what this record first claimed.
+* Bad, because the lowering emits `StorageDead` at one place only, where a
+  compound statement falls off its end. `break`, `continue` and `goto` leave a
+  scope on a path that has no marker on it, and if every path leaves that way
+  the marker is emitted nowhere. The element shape is what makes the fix
+  possible, and the fix is per-exit-edge emission in the lowering rather than
+  anything here. Today the only non-falling exit is `return`, where the frame
+  goes and nothing can observe the difference.
 * Good, because `goto` leaving a scope is expressible: the element sits on the
   path control takes, and the CFG already carries that path.
 * Bad, because every walk changes. The lowering, the printer, the interpreter
@@ -204,6 +225,9 @@ and fails.
   was not written*, for what a scope end has to carry once C++ arrives.
 * [ADR-0010](./0010-give-the-graph-an-edge-no-statement-produced.md) made the
   same argument for the edge set and deliberately decided nothing else.
-* C17 6.2.4 p6 for when an automatic object's lifetime begins and ends and for
-  a fresh instance per entry, 6.2.1 p7 for where a name's scope starts, and
-  6.5.3.2 p1 for why a temporary needs no marker. Quoted from N2310.
+* C17 6.2.4 p2 and p6 for when an automatic object's lifetime begins and ends,
+  6.2.1 p7 for where a name's scope starts, and 6.5.3.2 p1 for why a temporary
+  needs no marker. Read in N2310, which is the first C2x working draft and
+  carries the C17 text with change bars; none of those paragraphs is marked, so
+  what is quoted above is C17's own wording. N2176 is C17's final draft and is
+  the document to check against if that ever matters.

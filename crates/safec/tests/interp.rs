@@ -572,3 +572,28 @@ fn a_write_through_a_pointer_to_dead_storage_stops_the_run() {
     assert!(trap.why.contains("a write to a local"), "{trap:?}");
     assert!(trap.why.contains("scope has ended"), "{trap:?}");
 }
+
+/// A write through a pointer into a function that has returned stops the run.
+///
+/// The read form of this was already answered, because `load` asks which frame
+/// a location names before it reads the slot. `store` did not ask, and indexed
+/// the frame stack directly: this program was an `index out of bounds` panic
+/// rather than a stop, on C the frontend accepts and lowers without a word.
+///
+/// `resolve` is not where the check belongs. It validates each frame it loads
+/// *through* while following a projection, and hands back the location it
+/// reached without asking about that one, which is exactly the location being
+/// written.
+///
+/// Mutation: drop the `live` call from `store` and index `frames[at.depth]`.
+/// This panics rather than failing, which still counts: the suite goes red.
+#[test]
+fn a_write_through_a_pointer_into_a_returned_function_stops_the_run() {
+    let escaped = ran(
+        "int *leak(void) { int x; int *q; x = 1; q = &x; return q; }\nint main(void) { int *p; p = leak(); *p = 5; return 0; }\n",
+    );
+    let Err(trap) = escaped else {
+        panic!("a write into a frame that has returned: {escaped:?}");
+    };
+    assert!(trap.why.contains("has returned"), "{trap:?}");
+}

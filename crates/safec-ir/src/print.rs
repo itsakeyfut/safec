@@ -247,7 +247,12 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                         // descending to read it would cost a line to say what
                         // fits here.
                         dump_node(sources, element.name(), origin.span(), 2, out);
-                        write!(out, " {:?}", name_of(*local))
+                        // The origin's kind, the same word an `Operation` line
+                        // carries. Nobody writes a storage marker, so every one
+                        // says `generated`; printing it is what makes a marker
+                        // that claimed otherwise show up in a corpus case
+                        // rather than only in the source.
+                        write!(out, " {} {:?}", origin.name(), name_of(*local))
                             .expect("writing to a string cannot fail");
                         out.push('\n');
                     }
@@ -516,8 +521,9 @@ mod tests {
     /// The IR can tell them apart and the tree cannot, which is the whole
     /// reason `Origin` exists; `docs/roadmap.md` asks for "a location to blame
     /// and no source text". Built by hand because nothing in the lowering
-    /// produces a generated operation yet: the first producer will be whatever
-    /// ends a scope, which is #74's territory.
+    /// produces a generated *operation*: what ends a scope is generated and is
+    /// a storage marker rather than an operation, so this shape still has no
+    /// producer. A C++ destructor is the one that will.
     ///
     /// Mutation: print `written` whatever the origin. This fails on the second
     /// line, and with it goes the only thing the artifact says that `--emit
