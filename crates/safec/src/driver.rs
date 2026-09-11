@@ -143,7 +143,11 @@ pub fn compile(options: &Options) -> Compiled {
     // No code, because this is about the invocation rather than about a
     // program. `--emit object` is where one artifact per input arrives, and
     // where this stops being a refusal.
-    if matches!(options.emit, EmitKind::LlvmIr | EmitKind::Object) && options.inputs.len() > 1 {
+    //
+    // The question is asked of the kind rather than answered by a list here,
+    // so that a kind added to `EmitKind` has to say which half it is in before
+    // the workspace builds. See `EmitKind::spans_inputs`.
+    if !options.emit.spans_inputs() && options.inputs.len() > 1 {
         diagnostics.report(
             Diagnostic::error(format!(
                 "`--emit {}` takes one input at a time, and this run was given {}",
@@ -1818,6 +1822,8 @@ mod tests {
     ///
     /// Mutation: let the run through. The artifact holds two units, `clang`
     /// refuses it, and this fails on the outcome.
+    /// Mutation: answer a fixed kind from `EmitKind::spelling`. The refusal
+    /// names `--emit object` for a run that asked for llvm-ir and this fails.
     #[test]
     fn an_llvm_module_is_one_input_at_a_time() {
         let first = TempFile::new(
@@ -1840,7 +1846,10 @@ mod tests {
 
         assert_eq!(outcome, Outcome::Failed);
         assert!(artifact.is_empty(), "{artifact}");
-        assert!(report.contains("one input at a time"), "{report}");
+        assert!(
+            report.contains("`--emit llvm-ir` takes one input at a time"),
+            "{report}"
+        );
         // The other kinds are a dump rather than a module, and appending is
         // what they are for.
         options.emit = EmitKind::SafetyIr;

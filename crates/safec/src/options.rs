@@ -95,6 +95,34 @@ impl EmitKind {
             .get_name()
             .to_owned()
     }
+
+    /// Whether one artifact of this kind can be made from several inputs.
+    ///
+    /// A dump appends: `--emit tokens a.c b.c` reads as one listing because
+    /// every line names its file. A module cannot, because appending two
+    /// translation units is not a module with duplicates in it, so the driver
+    /// refuses a run that asks for one. A program is made of several
+    /// translation units by definition, which is what linking is, so it
+    /// answers yes about what [`Self::Executable`] will do rather than about
+    /// the nothing it does today.
+    ///
+    /// **Whoever makes `--emit executable` real owes this answer a second
+    /// look.** It is yes because a program holds several inputs, and it is only
+    /// true of an implementation that links them rather than building each one
+    /// over the last.
+    ///
+    /// Asked of the kind, and exhaustively, rather than spelled as a list of
+    /// the kinds that cannot: a second input is either *appended* to what the
+    /// first produced or *replaces* it, so a kind added to this enum and
+    /// forgotten here would silently throw away every input but the last.
+    /// `E0004` is what stops that, and it is the reason this is a `match` and
+    /// not a `matches!`.
+    pub fn spans_inputs(self) -> bool {
+        match self {
+            Self::Tokens | Self::Ast | Self::SafetyIr | Self::Executable => true,
+            Self::LlvmIr | Self::Object => false,
+        }
+    }
 }
 
 /// When to colorize output.
