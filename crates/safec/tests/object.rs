@@ -538,3 +538,29 @@ fn a_run_that_reported_an_error_leaves_no_object() {
         "a run that failed left an object with a function missing from it"
     );
 }
+
+/// The name an object is given is refused when it is the name of the input.
+///
+/// This compiler does not look at an extension to decide what an input is, so
+/// `safec --emit object x.o` is a run over a C file that happens to be called
+/// `x.o`, and the name it derives is the one it was given. Writing it would
+/// destroy the source.
+///
+/// Mutation: drop the check and let the derived name through. The source is
+/// replaced by an object and the last assertion fails.
+#[test]
+fn an_object_is_not_written_over_its_own_input() {
+    let scratch = Scratch::new("named_like_an_object");
+    scratch.source("mvp.o", MVP);
+
+    let output = safec(&["--emit", "object", "mvp.o"], scratch.path());
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("would write over its own input"), "{said}");
+    assert_eq!(
+        fs::read_to_string(scratch.path().join("mvp.o")).expect("the file is still there"),
+        MVP,
+        "the input was overwritten by the object made from it"
+    );
+}

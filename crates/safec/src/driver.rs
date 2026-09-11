@@ -166,6 +166,39 @@ pub fn compile(options: &Options) -> Compiled {
         };
     }
 
+    // An object is the one artifact whose destination can be derived rather
+    // than given, and this compiler does not look at an extension to decide
+    // what an input is. So `safec --emit object x.o` derives the name it was
+    // handed, and writing it would destroy the source. Said before anything is
+    // read, because the answer does not depend on what the file turns out to
+    // contain.
+    //
+    // `-o` naming an input is the same collision said out loud and is refused
+    // the same way: a user who meant it can still say so with a different name.
+    //
+    // Two spellings of one path are two paths here, as they are for a repeated
+    // input above, so `-o ./x.o` on `x.o` is not caught. Deciding when two
+    // paths name one file belongs to the source map, and `#include` is what
+    // will make it worth deciding.
+    if let Some(path) = destination(options) {
+        if options.inputs.contains(&path) {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`--emit {}` would write over its own input `{}`",
+                    options.emit.spelling(),
+                    path.display()
+                ))
+                .with_note("an object is named after its input when `-o` does not say otherwise")
+                .with_note("name the object with `-o`"),
+            );
+            return Compiled {
+                sources,
+                diagnostics,
+                artifact: None,
+            };
+        }
+    }
+
     let mut seen = HashSet::new();
     let mut loaded = Vec::new();
     for input in &options.inputs {
