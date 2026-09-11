@@ -103,6 +103,12 @@ jobs:
   # --------------------------------------------------------------------------
   # Docs. The modules lean on intra-doc links to tie the 0-based and 1-based
   # line APIs together, and a broken link silently drops that guidance.
+  #
+  # Private items too, because most of this compiler is private and a link in
+  # one of them is read by exactly the person this project asks to read the
+  # code. Without the flag rustdoc never resolves those links, so half the tree
+  # went unchecked: two had been dead long enough that the moves which broke
+  # them are in the history rather than in anybody's memory.
   # --------------------------------------------------------------------------
   docs:
     name: Docs
@@ -112,7 +118,7 @@ jobs:
       - name: Install the toolchain named by rust-toolchain.toml
         run: rustup show
       - uses: Swatinem/rust-cache@v2
-      - run: cargo doc --workspace --no-deps
+      - run: cargo doc --workspace --no-deps --document-private-items
         env:
           RUSTDOCFLAGS: -D warnings
 
