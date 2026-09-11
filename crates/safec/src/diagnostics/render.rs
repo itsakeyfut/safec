@@ -494,8 +494,9 @@ impl<'a> SourceMapCache<'a> {
     /// Sizing `cached` once is sound because this borrows the map for as long
     /// as it lives, and it lives for a single call, so no file can be added
     /// underneath it. A cache that outlived the borrow would need to grow in
-    /// [`SourceMapCache::fetch`] instead, and forgetting that would report
-    /// every file added afterwards as one this renderer does not have.
+    /// [`ariadne::Cache::fetch`] instead, which is the one accessor that takes
+    /// `&mut self`, and forgetting that would report every file added
+    /// afterwards as one this renderer does not have.
     fn new(sources: &'a SourceMap) -> Self {
         Self {
             sources,
