@@ -502,3 +502,39 @@ fn a_clang_that_cannot_be_run_does_not_blame_the_module() {
     assert!(said.contains("could not run it"), "{said}");
     assert!(!said.contains("of this module"), "{said}");
 }
+
+/// A run that reported an error leaves no object, even though `clang` made one.
+///
+/// The backend refusing a function is the case that separates this from a run
+/// that produced nothing: the module still assembles, so there are real bytes
+/// to write, and they are a program with a function deleted from it. A build
+/// system reads whatever is on disk as finished and newer than the source.
+///
+/// `p[1]` is what the backend refuses today. When it stops refusing, this test
+/// fails on the exit code rather than passing quietly, which is the right way
+/// round.
+///
+/// Mutation: drop `EmitKind::survives_an_error` from the write rule in
+/// `run_compiler`, leaving only the empty case. The object is written and this
+/// fails.
+#[test]
+fn a_run_that_reported_an_error_leaves_no_object() {
+    if !clang_or_skip("what a failed run leaves behind") {
+        return;
+    }
+
+    let scratch = Scratch::new("refused_function");
+    scratch.source(
+        "index.c",
+        "int g(int *p) {\n    return p[1];\n}\n\nint main() {\n    return 3;\n}\n",
+    );
+
+    let output = safec(&["--emit", "object", "index.c"], scratch.path());
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(
+        !scratch.path().join("index.o").exists(),
+        "a run that failed left an object with a function missing from it"
+    );
+}

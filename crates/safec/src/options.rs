@@ -123,6 +123,25 @@ impl EmitKind {
             Self::LlvmIr | Self::Object => false,
         }
     }
+
+    /// Whether an artifact of this kind is worth writing when the run reported
+    /// an error.
+    ///
+    /// A dump of what could be read is still true about what could be read: a
+    /// user redirecting `--emit safety-ir` over three inputs, one of which is
+    /// missing, wants the two that are there. A build product is not, because
+    /// nothing downstream reads a diagnostic. An object whose module lost a
+    /// function the backend refused still assembles, and left on disk it is a
+    /// program with a function deleted from it, newer than the source it came
+    /// from.
+    ///
+    /// Exhaustive for the reason [`Self::spans_inputs`] gives.
+    pub fn survives_an_error(self) -> bool {
+        match self {
+            Self::Tokens | Self::Ast | Self::SafetyIr | Self::LlvmIr => true,
+            Self::Object | Self::Executable => false,
+        }
+    }
 }
 
 /// When to colorize output.

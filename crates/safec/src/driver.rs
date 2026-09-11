@@ -970,8 +970,17 @@ pub fn run_compiler(
         // zero-byte file newer than every source that the arm below exists to
         // avoid. An empty artifact from a run that reported nothing is a real
         // answer to an empty program, and is written.
+        //
+        // A failed run leaves no build product either, empty or not. A module
+        // missing a function the backend refused still assembles, so without
+        // this the run exits 1 having left a program with a function deleted
+        // from it, newer than the source, for a build system to read as
+        // finished. Which kinds are that sort of artifact is
+        // `EmitKind::survives_an_error`.
         (Some(path), Some(emitted)) => {
-            if !(emitted.is_empty() && compiled.diagnostics.has_errors()) {
+            let unfinished = compiled.diagnostics.has_errors()
+                && (emitted.is_empty() || !options.emit.survives_an_error());
+            if !unfinished {
                 if let Err(error) = fs::write(path, emitted) {
                     compiled.diagnostics.report(write_failure(path, &error));
                 }
