@@ -389,6 +389,8 @@ fn a_run_that_read_nothing_makes_no_object() {
 ///
 /// Mutation: report the spawn failure as an ordinary I/O error. The message
 /// stops naming `clang` and this fails.
+/// Mutation: name a fixed kind in the message rather than the one that was
+/// asked for. One of the two halves says the wrong flag and this fails.
 #[test]
 fn a_missing_clang_says_what_to_install() {
     let scratch = Scratch::new("no_clang");
@@ -404,13 +406,28 @@ fn a_missing_clang_says_what_to_install() {
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(said.contains("needs `clang`"), "{said}");
+    assert!(said.contains("`--emit object` needs `clang`"), "{said}");
     assert!(said.contains("asks clang to make the artifact"), "{said}");
     assert!(said.contains("15 or newer"), "{said}");
     assert!(
         !scratch.path().join("mvp.o").exists(),
         "a run that made nothing left an object"
     );
+
+    // The kind the user typed, not the kind this was written for. Linking needs
+    // the same tool and a user who asked for a program is not helped by being
+    // told about `--emit object`.
+    let linked = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "executable"])
+        .arg(&source)
+        .env("PATH", "")
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&linked.stderr);
+    assert_eq!(linked.status.code(), Some(1), "{said}");
+    assert!(said.contains("`--emit executable` needs `clang`"), "{said}");
 }
 
 /// `--emit object` takes one input at a time, and says which kind it refused.
@@ -471,6 +488,9 @@ fn instead_of_clang(scratch: &Scratch) -> (PathBuf, OsString) {
 ///
 /// Mutation: answer `Ok(finished.stdout)` whenever the status is a success.
 /// The run exits 0, the kept file becomes empty, and both assertions fail.
+/// Mutation: read the program back with `unwrap_or_default`. A link that made
+/// nothing answers an empty program, which is written, and the second half of
+/// this fails.
 #[test]
 fn a_clang_that_answers_nothing_is_not_a_success() {
     if !clang_or_skip("a clang that answers no object") {
@@ -482,7 +502,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
     let kept = scratch.path().join("mvp.o");
     fs::write(&kept, "what was there before\n").expect("the temporary directory is writable");
 
-    let (stub, path) = instead_of_clang(&scratch);
+    let (stub, searched) = instead_of_clang(&scratch);
     let built = Command::new("clang")
         .arg(scratch.source("stub.c", "int main(void) { return 0; }\n"))
         .arg("-o")
@@ -498,7 +518,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
         .args(["--color", "never", "--emit", "object"])
         .arg(&source)
-        .env("PATH", path)
+        .env("PATH", &searched)
         .current_dir(scratch.path())
         .output()
         .expect("the compiler binary was built for this test");
@@ -511,6 +531,25 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
         "what was there before
 ",
         "a run that made no object wrote one anyway"
+    );
+
+    // The same tool and the same question for the other kind that runs it. A
+    // link reads its answer off a file rather than a pipe, so the two are
+    // different code and the same defect.
+    let linked = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "executable", "-o", "prog"])
+        .arg(&source)
+        .env("PATH", searched)
+        .current_dir(scratch.path())
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&linked.stderr);
+    assert_eq!(linked.status.code(), Some(1), "{said}");
+    assert!(said.contains("did not make a program"), "{said}");
+    assert!(
+        !scratch.path().join("prog").exists(),
+        "a run that made no program wrote one anyway"
     );
 }
 

@@ -1347,6 +1347,33 @@ mod tests {
         }
     }
 
+    /// A link's directory is gone when the link is.
+    ///
+    /// The only thing this compiler writes outside a path the user named, and
+    /// the only one nothing else would notice: a `--emit executable` run that
+    /// left one behind would leave one every time, in a directory nobody looks
+    /// at, and every test in the suite would still pass.
+    ///
+    /// Its own path rather than a count of what is in the temporary directory,
+    /// because the tests here run at once and another thread's link is allowed
+    /// to be halfway through.
+    ///
+    /// Mutation: empty the `Drop` body. The directory is still there and this
+    /// fails.
+    #[test]
+    fn a_links_directory_is_gone_when_the_link_is() {
+        let workspace = Workspace::new().expect("the temporary directory is writable");
+        let path = workspace.path().to_path_buf();
+        assert!(path.is_dir(), "{}", path.display());
+
+        // A program is what would be in it, and a directory with something in
+        // it is the case `remove_dir` alone would not answer.
+        fs::write(path.join("program"), b"bytes").expect("the directory is writable");
+        drop(workspace);
+
+        assert!(!path.exists(), "{} was left behind", path.display());
+    }
+
     /// What `clang` refused reaches the user in `clang`'s own words.
     ///
     /// The one path that needs a `clang` which runs and says no, and nothing
