@@ -12,6 +12,13 @@
 //! for the first would make this compiler the one that decided what `1 / 0`
 //! means; skipping the second would make a wrong answer look like a right one.
 //!
+//! **One shape escapes that and is known.** A pointer taken in one iteration of
+//! a loop and read in the next is answered, not stopped: identity here is a
+//! frame's generation, and a frame does not change when a block inside it is
+//! entered again. C17 6.2.4 p6 makes each entry a new object, so that read is
+//! undefined and this says a number for it. Telling the two instances apart
+//! needs an identity per entry rather than per call, which #86 is.
+//!
 //! **A pointer is a local in a frame, resolved where the address was taken.**
 //! Every place in this IR is rooted at a local, so there is nothing else for a
 //! pointer to point at until #74, and no heap and no addresses-as-numbers are

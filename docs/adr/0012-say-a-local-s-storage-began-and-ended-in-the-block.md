@@ -169,6 +169,10 @@ and fails.
   call, and ADR-0010 put a call in the terminator, so a scope end in C++ is a
   chain of blocks each ended by `Terminator::Call`, with the markers among
   them. That is expressible and is not what this record first claimed.
+* Bad, because the IR can now say each entry to a block is a fresh lifetime and
+  the interpreter cannot act on it: its identity is a frame's generation, so a
+  pointer taken in one iteration of a loop still reads in the next. #86 is that
+  work, and nothing here forecloses it.
 * Bad, because the lowering emits `StorageDead` at one place only, where a
   compound statement falls off its end. `break`, `continue` and `goto` leave a
   scope on a path that has no marker on it, and if every path leaves that way
