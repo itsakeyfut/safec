@@ -45,19 +45,24 @@ use crate::ir::{BlockId, Element, Function, Terminator};
 pub trait Analysis {
     /// What is known at one point in the program.
     ///
-    /// [`Clone`] because the solver hands a copy of a block's entry value to
-    /// the transfer rather than editing the answer in place: a block is walked
+    /// A value rather than a fact, because half of these will be
+    /// over-approximations: [`crate::analysis::Conclusion`] uses "fact" for
+    /// something proven, "unlike a suspicion", and a may-analysis carries
+    /// exactly the suspicion.
+    ///
+    /// [`Clone`] because the solver hands a copy of a block's value to the
+    /// transfer rather than editing the answer in place: a block is walked
     /// again every time something arriving at it changes, and a transfer that
     /// consumed the stored value would have nothing to walk from the second
     /// time.
-    type Fact: Clone;
+    type Value: Clone;
 
     /// What holds where the function starts.
     ///
     /// Not "nothing is known": a check that asks whether a local has been
     /// written starts with the parameters written and the rest not, and a
     /// function's entry is the one place that can say so.
-    fn on_entry(&self) -> Self::Fact;
+    fn on_entry(&self) -> Self::Value;
 
     /// Fold `from` into `into`, and answer whether `into` moved.
     ///
@@ -65,10 +70,15 @@ pub trait Analysis {
     /// is how the solver learns it has nothing left to do, so one that always
     /// answers `false` stops the fixpoint after a single pass and one that
     /// always answers `true` never stops at all.
-    fn join(&self, into: &mut Self::Fact, from: &Self::Fact) -> bool;
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool;
 
     /// What one element of a block does to what is known.
-    fn element(&self, element: &Element, fact: &mut Self::Fact);
+    ///
+    /// The function is handed over rather than held, so that an analysis asking
+    /// `TranslationUnit::place_ty` what a place is does not have to capture a
+    /// [`Function`] of its own. One that did could be handed to a [`solve`]
+    /// over a different function: that compiles, and answers about neither.
+    fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
 
     /// What the end of a block does to what is known.
     ///
@@ -77,7 +87,7 @@ pub trait Analysis {
     /// and `docs/roadmap.md` puts nullability in Phase 5, which is the next
     /// one. It is not built: ADR-0016 says what it would cost, and it was
     /// measured at a defaulted method and three lines of the solver.
-    fn terminator(&self, terminator: &Terminator, fact: &mut Self::Fact);
+    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value);
 }
 
 /// What an analysis concluded, one value per block.
@@ -91,19 +101,23 @@ pub trait Analysis {
 /// and are reachable by whoever asked, so hiding them inside the solver would
 /// take the per-point answer away from every check without failing a test.
 #[derive(Debug)]
-pub struct Solution<F> {
+pub struct Solution<V> {
     /// What holds where each block starts, indexed by [`BlockId::index`].
     ///
     /// `None` is a block the entry cannot reach. It is also what a block holds
     /// before anything has arrived at it, and the two cannot be confused once
     /// the walk is over: every reachable block is arrived at, because the walk
     /// starts at the entry and follows the same edges that made it reachable.
-    entry: Vec<Option<F>>,
+    values: Vec<Option<V>>,
 }
 
-impl<F> Solution<F> {
+impl<V> Solution<V> {
     /// What holds where this block starts, or nothing if the entry cannot
     /// reach it.
+    ///
+    /// Not spelled `entry`, which [`Function::entry`] already uses for the
+    /// block a function starts at: the two would be one word for a block and
+    /// for a value, taking opposite arguments.
     ///
     /// **An answer rather than a value that stands for one.** A block that
     /// never runs and a block that runs with nothing known are different
@@ -118,8 +132,8 @@ impl<F> Solution<F> {
     /// call has no edge for the callee not returning. A check that reads `None`
     /// as "nobody runs this" will be silent about that code on the day the
     /// frontend lowers it, which is ADR-0010's whole subject.
-    pub fn entry(&self, block: BlockId) -> Option<&F> {
-        self.entry[block.index()].as_ref()
+    pub fn value(&self, block: BlockId) -> Option<&V> {
+        self.values[block.index()].as_ref()
     }
 }
 
@@ -153,9 +167,9 @@ impl<F> Solution<F> {
 /// mistake the compiler cannot make on its own: [`Function::fill_block`] is the
 /// only way a reserved id becomes a block, and outside the tests the only
 /// caller that reserves one is `safec`'s lowering.
-pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solution<A::Fact> {
-    let mut entry: Vec<Option<A::Fact>> = (0..function.blocks().len()).map(|_| None).collect();
-    entry[function.entry().index()] = Some(analysis.on_entry());
+pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solution<A::Value> {
+    let mut values: Vec<Option<A::Value>> = (0..function.blocks().len()).map(|_| None).collect();
+    values[function.entry().index()] = Some(analysis.on_entry());
 
     // Reversed, because this is popped from the back: the first pass then comes
     // out in the order `Cfg` produced, which visits a block after the blocks
@@ -174,25 +188,25 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         //
         // Skipping rather than seeding is also what keeps `None` meaning
         // "the entry cannot reach this" in the answer rather than "not yet".
-        let Some(mut fact) = entry[block.index()].clone() else {
+        let Some(mut value) = values[block.index()].clone() else {
             continue;
         };
 
         for element in &function.block(block).elements {
-            analysis.element(element, &mut fact);
+            analysis.element(function, element, &mut value);
         }
-        analysis.terminator(&function.block(block).terminator, &mut fact);
+        analysis.terminator(function, &function.block(block).terminator, &mut value);
 
         successors.clear();
         function.block(block).terminator.successors(&mut successors);
 
         for &successor in &successors {
-            let changed = match &mut entry[successor.index()] {
-                Some(arrived) => analysis.join(arrived, &fact),
+            let changed = match &mut values[successor.index()] {
+                Some(arrived) => analysis.join(arrived, &value),
                 // The first answer to arrive is kept rather than joined, which
                 // is what lets an analysis have no bottom. See ADR-0016.
                 nothing @ None => {
-                    *nothing = Some(fact.clone());
+                    *nothing = Some(value.clone());
                     true
                 }
             };
@@ -206,7 +220,7 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         }
     }
 
-    Solution { entry }
+    Solution { values }
 }
 
 #[cfg(test)]
@@ -233,13 +247,13 @@ mod tests {
     struct Written(usize);
 
     impl Analysis for Written {
-        type Fact = Vec<bool>;
+        type Value = Vec<bool>;
 
-        fn on_entry(&self) -> Self::Fact {
+        fn on_entry(&self) -> Self::Value {
             vec![false; self.0]
         }
 
-        fn join(&self, into: &mut Self::Fact, from: &Self::Fact) -> bool {
+        fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool {
             let mut changed = false;
             for (here, there) in into.iter_mut().zip(from) {
                 let both = *here && *there;
@@ -249,19 +263,24 @@ mod tests {
             changed
         }
 
-        fn element(&self, element: &Element, fact: &mut Self::Fact) {
+        fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
             // Every field written out, never `..`: RK-018 in the review
             // knowledge bank is a field added to a variant that already exists
             // walking past an exhaustive match. This is the file Phase 5 will
             // copy from.
             match element {
-                Element::Assign(operation) => fact[operation.place.local.index()] = true,
-                Element::StorageLive { local, origin: _ } => fact[local.index()] = false,
-                Element::StorageDead { origin: _, local } => fact[local.index()] = false,
+                Element::Assign(operation) => value[operation.place.local.index()] = true,
+                Element::StorageLive { local, origin: _ } => value[local.index()] = false,
+                Element::StorageDead { origin: _, local } => value[local.index()] = false,
             }
         }
 
-        fn terminator(&self, terminator: &Terminator, fact: &mut Self::Fact) {
+        fn terminator(
+            &self,
+            _function: &Function,
+            terminator: &Terminator,
+            value: &mut Self::Value,
+        ) {
             match terminator {
                 Terminator::Call {
                     callee: _,
@@ -271,7 +290,7 @@ mod tests {
                     origin: _,
                 } => {
                     if let Some(place) = destination {
-                        fact[place.local.index()] = true;
+                        value[place.local.index()] = true;
                     }
                 }
                 Terminator::Goto(_)
@@ -384,8 +403,8 @@ mod tests {
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
         // Local 0 is the return place, then `a`, then `b`.
-        assert_eq!(solution.entry(exit), Some(&vec![false, true, false]));
-        assert_eq!(solution.entry(body), Some(&vec![false, true, false]));
+        assert_eq!(solution.value(exit), Some(&vec![false, true, false]));
+        assert_eq!(solution.value(body), Some(&vec![false, true, false]));
     }
 
     /// A local written before a loop whose storage ends inside it is not
@@ -437,7 +456,7 @@ mod tests {
         let cfg = Cfg::of(&function);
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
-        assert_eq!(solution.entry(exit), Some(&vec![false, false]));
+        assert_eq!(solution.value(exit), Some(&vec![false, false]));
     }
 
     /// A local written on one arm of a branch and not the other is not written
@@ -481,8 +500,8 @@ mod tests {
         let cfg = Cfg::of(&function);
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
-        assert_eq!(solution.entry(taken), Some(&vec![false, false]));
-        assert_eq!(solution.entry(after), Some(&vec![false, false]));
+        assert_eq!(solution.value(taken), Some(&vec![false, false]));
+        assert_eq!(solution.value(after), Some(&vec![false, false]));
     }
 
     /// A call writes the place it names, so what a terminator does reaches the
@@ -527,7 +546,7 @@ mod tests {
         let cfg = Cfg::of(&function);
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
-        assert_eq!(solution.entry(after), Some(&vec![false, true]));
+        assert_eq!(solution.value(after), Some(&vec![false, true]));
     }
 
     /// The elements of a block happen in the order they are written in, which
@@ -535,9 +554,12 @@ mod tests {
     /// walk that read it the other way round would answer that `p` is live.
     ///
     /// Mutation: run a block's elements in reverse. `b`, whose storage ends
-    /// before it is written, is answered unwritten and this fails. Nothing else
-    /// in the crate fails under it, which is why this test exists: it was
-    /// measured after the rest of them were written.
+    /// before it is written, is answered unwritten and this fails. It was
+    /// measured after the rest of them were written, and nothing failed under
+    /// it then, which is why it exists;
+    /// `storage_beginning_leaves_a_local_holding_nothing` came later and now
+    /// fails under it too, because it also depends on which of two elements
+    /// happens second.
     #[test]
     fn the_elements_of_a_block_happen_in_the_order_they_are_written() {
         let (_sources, at) = spans();
@@ -574,7 +596,7 @@ mod tests {
         let cfg = Cfg::of(&function);
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
-        assert_eq!(solution.entry(after), Some(&vec![false, false, true]));
+        assert_eq!(solution.value(after), Some(&vec![false, false, true]));
     }
 
     /// Storage beginning leaves a local holding nothing, so a write before it
@@ -612,7 +634,7 @@ mod tests {
         let cfg = Cfg::of(&function);
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
-        assert_eq!(solution.entry(after), Some(&vec![false, false]));
+        assert_eq!(solution.value(after), Some(&vec![false, false]));
     }
 
     /// What a block sends reaches its own successors and nobody else's.
@@ -620,7 +642,7 @@ mod tests {
     /// `solve` fills one buffer with each block's successors in turn, so this
     /// is a guard on it being emptied first. Mutation: drop the
     /// `successors.clear()`. The buffer keeps every earlier block's successors,
-    /// `killer`'s fact joins into `reached` as well as into its own successor,
+    /// `killer`'s value joins into `reached` as well as into its own successor,
     /// and `reached` is answered unwritten though the only way to it never
     /// killed anything. This fails and nothing else does.
     #[test]
@@ -667,9 +689,9 @@ mod tests {
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
         // Only `keeper` reaches `reached`, and `keeper` kills nothing.
-        assert_eq!(solution.entry(reached), Some(&vec![false, true]));
+        assert_eq!(solution.value(reached), Some(&vec![false, true]));
         // Both arms reach `end`, and one of them killed it.
-        assert_eq!(solution.entry(end), Some(&vec![false, false]));
+        assert_eq!(solution.value(end), Some(&vec![false, false]));
     }
 
     /// A block the entry cannot reach is answered with nothing, rather than
@@ -709,7 +731,7 @@ mod tests {
         let cfg = Cfg::of(&function);
         let solution = solve(&Written(function.locals().len()), &function, &cfg);
 
-        assert_eq!(solution.entry(entry), Some(&vec![false, false]));
-        assert_eq!(solution.entry(stranded), None);
+        assert_eq!(solution.value(entry), Some(&vec![false, false]));
+        assert_eq!(solution.value(stranded), None);
     }
 }

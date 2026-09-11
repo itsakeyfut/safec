@@ -53,13 +53,20 @@ Chosen option: **a trait, and the first arrival is stored rather than joined**.
 
 ```rust
 pub trait Analysis {
-    type Fact: Clone;
-    fn on_entry(&self) -> Self::Fact;
-    fn join(&self, into: &mut Self::Fact, from: &Self::Fact) -> bool;
-    fn element(&self, element: &Element, fact: &mut Self::Fact);
-    fn terminator(&self, terminator: &Terminator, fact: &mut Self::Fact);
+    type Value: Clone;
+    fn on_entry(&self) -> Self::Value;
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool;
+    fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
+    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value);
 }
 ```
+
+The function is handed to the transfers rather than left for an analysis to
+hold. An analysis that asks what a place is reaches `TranslationUnit::place_ty`,
+which takes one, and one holding its own could be handed to a `solve` over a
+different function: that compiles and answers about neither. Passing it is what
+makes "there is no fifth thing to be right about" true of the pair and not only
+of the trait.
 
 A trait rather than closures because the four pieces have names, a place for the
 doc comment that says what each owes, and a compiler that answers when the set
@@ -67,7 +74,7 @@ grows: a fifth method without a default is `error[E0046]` at every
 implementation, while a fifth closure parameter is a silent change of arity at
 every call site that already passes four.
 
-**No bottom.** `Solution` answers `Option<&Fact>` because a block the entry
+**No bottom.** `Solution` answers `Option<&Value>` because a block the entry
 cannot reach has no value and must not be given one, which `Cfg` already decided
 for predecessors and for the same reason. That `Option` is also what the solver
 holds while it runs, so "nothing has arrived here yet" is already
@@ -145,7 +152,7 @@ Each of the first four was applied and the named tests observed to fail.
   fixpoint, and the failure is a hang rather than a diagnostic. The framework
   says so and does not bound it, because bounding it means choosing a widening,
   and a widening chosen before any analysis needs one is a guess.
-* Bad, because `Fact: Clone` puts a clone on every edge. A bitset per local is
+* Bad, because `Value: Clone` puts a clone on every edge. A bitset per local is
   what the first analyses hold, and a graph is one function wide.
 * Bad, because `join` both folds and answers whether it folded, and the
   answer is the only thing that ends the walk. A `join` that folds correctly and
@@ -158,13 +165,6 @@ Each of the first four was applied and the named tests observed to fail.
   mistake answers wrongly on the first program, and this one is caught by
   comparing each successor's stored value against a re-join after the walk,
   which is a `PartialEq` bound and a debug-only pass whenever it is wanted.
-* Bad, because an analysis that needs a type reaches `TranslationUnit::place_ty`
-  and therefore holds a `&Function` of its own, while `solve` takes the function
-  as a separate argument and nothing ties the two together. Handing an analysis
-  built for one function to a solve over another compiles and answers about
-  neither. "There is no fifth thing to be right about" is true of the trait and
-  not of the pair, and every analysis in Phases 5 through 8 that asks a type is
-  the case.
 * Bad, because a fact that carries a span, which
   [the safety model](../safety-model.md) requires for "p freed here", can fail
   to terminate: a span is not a lattice element, and a `join` that takes the
