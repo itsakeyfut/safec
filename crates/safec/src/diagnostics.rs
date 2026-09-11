@@ -549,11 +549,12 @@ mod tests {
     /// table, which is RK-015's limit: a compiler that makes you look does not
     /// make you right.
     ///
-    /// Mutation: answer `Some` for `Safe`. The first row fails. Mutation: build
-    /// `Unknown` with `Diagnostic::error`. Its certainty is `Proven` and the
-    /// third row fails, and so does
-    /// `an_unproven_result_is_an_error_only_under_deny_unknown`. Mutation: give
-    /// `Unsafe` a warning's severity. The second row fails.
+    /// Mutation: answer `Some` for `Safe`. The first row fails, and only it.
+    /// Mutation: give `Unsafe` a warning's severity. The second row fails, and
+    /// only it. Mutation: build `Unknown` with `Diagnostic::error`, so that its
+    /// certainty is `Proven`. Eight tests fail, this among them: everything
+    /// that watches the sink promote an unprovable result is downstream of this
+    /// arm, which is what the third row is worth.
     #[test]
     fn every_conclusion_is_reported_the_way_the_model_says() {
         assert_eq!(
@@ -802,7 +803,13 @@ mod tests {
     /// warning becoming an error, and this is where the warning comes from.
     ///
     /// Mutation: start an unknown conclusion at any other severity. This fails,
-    /// and so does the pair of sink tests under it.
+    /// and so does `a_sink_leaves_an_unproven_warning_alone_by_default`.
+    ///
+    /// **Not the promotion test beside that one**, which is worth knowing:
+    /// `promote_to_error` sets the severity to `Error` whatever it was, so
+    /// where an unproven result *started* is invisible to the one test that
+    /// promotes it. Only the test that declines to promote can see it, which is
+    /// why these two are not interchangeable.
     #[test]
     fn a_result_that_could_not_be_proven_starts_as_a_warning() {
         let diagnostic = unproven("`p` may escape the lifetime of `buf`");
