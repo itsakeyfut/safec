@@ -53,11 +53,12 @@ records why the prefix is this one and what was rejected.
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
-| `SC08xx`, `SC09xx` | free | none |
+| `SC08xx` | code generation, what a backend can write | `SC0801` |
+| `SC09xx` | free | none |
 
-The last four are the four safeties [`concept.md`](concept.md) asks the question
-about, in the order it names them, so they are reserved before anything can emit
-from them.
+`SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
+the question about, in the order it names them, so they are reserved before
+anything can emit from them.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from
@@ -89,10 +90,16 @@ of the change that adds it.
 ### What carries no code
 
 A diagnostic about the invocation rather than about a program's text has no
-code. `no input files` and `cannot read <path>` are that kind, and none of the
-five diagnostics in `crates/safec/src/driver.rs` carries one. There is no class
-of program for a reader to search for and nothing for an explanation to hang on,
-so a number there would be a handle onto nothing.
+code. `no input files` and `cannot read <path>` are that kind, and five of the
+six diagnostics in `crates/safec/src/driver.rs` carry none. There is no class of
+program for a reader to search for and nothing for an explanation to hang on, so
+a number there would be a handle onto nothing.
+
+`SC0801` is the sixth and is the other kind. The backend refusing an IR shape is
+a fact about a function in a program, with a span to point at and a class of
+program to search for, so it takes a code the way the lowering's `SC0304` does.
+The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
+all, so the code is attached where the diagnostic is built.
 
 ## Where this lives now
 

@@ -174,13 +174,17 @@ LLVM Backend
 LLVM IR
 ```
 
-Potential initial library:
+That arrow is now `crates/safec-llvm`, which writes textual LLVM IR and links
+against no LLVM at all. This document named `inkwell` as the potential initial
+library and the first backend deliberately went the other way:
+[ADR-0014](adr/0014-write-llvm-ir-as-text-from-a-crate-of-its-own.md) carries
+the reasoning, what it rejected, and the trigger for reversing it, which is
+`--emit object`.
+
+Possible libraries when that day comes:
 
 - `inkwell`
-
-Possible lower-level alternatives later:
-
 - `llvm-sys`
 - LLVM C API
 
-The project should avoid making LLVM APIs leak throughout the frontend and safety-analysis code.
+The project should avoid making LLVM APIs leak throughout the frontend and safety-analysis code. That is a crate boundary rather than a convention: `safec-llvm` depends on `safec-ir` and on nothing else, so it cannot see a token, a tree or a diagnostic, and cargo is what says so.

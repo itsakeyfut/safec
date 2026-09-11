@@ -35,8 +35,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 | [0012](./0012-say-a-local-s-storage-began-and-ended-in-the-block.md) | Say a local's storage began and ended as elements of a block, not as a tree beside it | accepted | `E0004`: a fourth `Element` kind stops `ir.rs`, `interp.rs` and `print.rs` compiling at once, and a field added to one is `E0027` in each walk and `E0063` where the lowering builds it. `the_same_program_in_a_nested_scope_is_not_the_same_ir` and `a_read_through_a_pointer_to_dead_storage_stops_the_run` are the same claim by assertion and by running |
 
 | [0013](./0013-the-translation-unit-carries-the-target-and-answers-what-a-type-is-worth.md) | The translation unit carries the target, and the IR answers what a type is worth | accepted | `TranslationUnit::new` takes a target and has no `Default`, and `Target`'s private fields make the only targets the measured ones. `every_target_is_what_clang_says_it_is` writes the measurements out rather than walking the table, and `what_a_char_holds_follows_the_target` is the difference between two machines: `c = 200` answers -56 and 200 |
+| [0014](./0014-write-llvm-ir-as-text-from-a-crate-of-its-own.md) | Write LLVM IR as text, from a crate of its own | accepted | adding `safec = { path = "../safec" }` to `crates/safec-llvm/Cargo.toml` is `error: cyclic package dependency`, and a `use safec::` without it does not resolve either. Four corpus cases hold the text and `the_emitted_ir_is_what_llvm_accepts` in `crates/safec/tests/llvm.rs` holds that the text is LLVM: spelling `Add` as `Sub` changes every corpus expectation and leaves that test passing. `a_unit_built_by_hand_becomes_a_module` in `crates/safec-llvm/src/emit.rs` writes a whole module with no frontend in the graph |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013 · proposed: none · superseded: none
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 
