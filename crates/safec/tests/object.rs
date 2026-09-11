@@ -510,7 +510,7 @@ fn a_clang_that_answers_nothing_is_not_a_success() {
 
     let (stub, searched) = instead_of_clang(&scratch);
     let built = Command::new("clang")
-        .arg(scratch.source("stub.c", "int main(void) { return 0; }\n"))
+        .arg(scratch.source("stub.c", STUB))
         .arg("-o")
         .arg(&stub)
         .output()
@@ -781,28 +781,161 @@ fn a_program_is_runnable_by_whoever_can_read_it() {
     assert!(mode & 0o100 != 0, "mode {mode:o}");
 }
 
-/// `--emit executable` takes one input at a time, like the two kinds before it.
+/// Several translation units become one program, which is what linking is.
 ///
-/// A program is made of several translation units by definition, and this links
-/// one: the rule follows what the implementation does, because a rule that
-/// promises more is a run that silently builds the last input and throws the
-/// rest away.
+/// `add.c` defines what `main.c` calls, so a program that answers 3 is one that
+/// holds both: each module alone links against nothing. The same number Phase
+/// 3's *Done when* asks for, which is the point of choosing it.
 ///
-/// Mutation: answer `true` from `spans_inputs` for `Executable`. The refusal
-/// stops, one of the two inputs is linked, and this fails.
+/// Mutation: link inside the per-input loop again. Each link is missing the
+/// other input's symbols and this fails on the exit code.
+/// Mutation: keep only the last module. The link answers an undefined symbol
+/// and this fails the same way.
+/// Mutation: answer `false` from `spans_inputs` for `Executable`. The run is
+/// refused and this fails.
 #[test]
-fn a_program_is_one_input_at_a_time() {
-    let scratch = Scratch::new("two_programs");
-    scratch.source("one.c", "int f(int x);\n");
-    scratch.source("two.c", "int main(void) { return 3; }\n");
+fn two_inputs_become_one_program() {
+    if !clang_or_skip("whether several inputs become one program") {
+        return;
+    }
 
-    let output = safec(&["--emit", "executable", "one.c", "two.c"], scratch.path());
+    let scratch = Scratch::new("several");
+    scratch.source("add.c", "int add(int a, int b) {\n    return a + b;\n}\n");
+    scratch.source(
+        "main.c",
+        "int add(int a, int b);\n\nint main(void) {\n    return add(1, 2);\n}\n",
+    );
+    let program = scratch
+        .path()
+        .join(if cfg!(windows) { "prog.exe" } else { "prog" });
+
+    let output = safec(
+        &[
+            "--emit",
+            "executable",
+            "-o",
+            &program.to_string_lossy(),
+            "add.c",
+            "main.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(&program)
+        .status()
+        .expect("the program this compiler just wrote can be run");
+    assert_eq!(ran.code(), Some(3), "the program did not answer 3");
+}
+
+/// What the linker says about two inputs names one of them.
+///
+/// `clang` derives the temporary object names it links from the stems it is
+/// handed, and those names are what a linker quotes when two inputs define one
+/// symbol. Modules written as `0.ll` and `1.ll` would answer
+/// `0-a43ee2.o : error LNK2005: main is already defined in 1-82f49a.o`, which
+/// names nothing the user wrote.
+///
+/// Two `main`s rather than anything subtler, because it is the one link failure
+/// that is about which inputs there were rather than about what is in them.
+///
+/// It also says the order the inputs were given in, which nothing else does:
+/// the two modules go under `0-` and `1-`, so the message names which input was
+/// which. A test that looked only for the stem passed with the modules handed
+/// over backwards, which is how that hole was found.
+///
+/// Mutation: drop `named` from the file the module is written to. The message
+/// names the index alone and this fails.
+/// Mutation: hand the modules over in reverse. The indices swap and this
+/// fails.
+#[test]
+fn what_the_linker_says_names_a_file_the_user_named() {
+    if !clang_or_skip("what a linker says about two inputs") {
+        return;
+    }
+
+    let scratch = Scratch::new("two_mains");
+    scratch.source("first.c", "int main(void) {\n    return 1;\n}\n");
+    scratch.source("second.c", "int main(void) {\n    return 2;\n}\n");
+
+    let output = safec(
+        &["--emit", "executable", "-o", "prog", "first.c", "second.c"],
+        scratch.path(),
+    );
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
+    // With the index as well as the stem, because the index is the only thing
+    // that says the order the user typed reached the linker: `second` alone
+    // appears whichever way round the two modules were handed over.
+    assert!(said.contains("0-first"), "{said}");
+    assert!(said.contains("1-second"), "{said}");
     assert!(
-        said.contains("`--emit executable` takes one input"),
-        "{said}"
+        !scratch.path().join("prog").exists(),
+        "a link that failed left a program"
+    );
+}
+
+/// A program is all of its inputs or none of them.
+///
+/// The loop is gated on each input and this is gated on the run, which is the
+/// difference the two halves of `compile` exist for: a program made of the
+/// inputs that happened to compile is not the program that was asked for, and
+/// the linker's account of what is missing from it is not a thing a user can
+/// act on beside the reason they already have.
+///
+/// **The input that fails is the one that defines what the other calls**, which
+/// is what makes the gate the thing under test. A run whose survivor links by
+/// itself would pass either way, because nothing writes a program from a run
+/// that reported, and a test resting on that while claiming to hold the gate is
+/// a note nobody can act on.
+///
+/// Mutation: gate `finish` on nothing. The link runs over the caller alone,
+/// answers the symbol it cannot find, and this fails on `clang` reaching the
+/// report.
+#[test]
+fn a_program_from_several_inputs_is_all_of_them_or_none() {
+    if !clang_or_skip("what a run leaves when one of several inputs failed") {
+        return;
+    }
+
+    let scratch = Scratch::new("one_of_several");
+    scratch.source(
+        "caller.c",
+        "int add(int a, int b);
+
+int main(void) {
+    return add(1, 2);
+}
+",
+    );
+    scratch.source(
+        "broken.c",
+        "int add(int a, int b) {
+    return a + b;
+}
+
+int f(void) {
+    int xs[3];
+    return 0;
+}
+",
+    );
+
+    let output = safec(
+        &["--emit", "executable", "-o", "prog", "caller.c", "broken.c"],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("SC0304"), "{said}");
+    assert!(!said.contains("clang"), "{said}");
+    assert!(
+        !scratch.path().join("prog").exists(),
+        "a run that could not compile every input left a program"
     );
 }
 
@@ -888,6 +1021,29 @@ fn a_run_that_reported_an_error_leaves_no_program() {
         "a run that failed left a program with a function missing from it"
     );
 }
+
+/// A `clang` that exits successfully and makes an empty file wherever `-o`
+/// named, which is what a compiler cache or a distributing wrapper does when it
+/// is misconfigured.
+///
+/// **It creates the file rather than leaving nothing**, because those are two
+/// different silences and only one of them is caught by an exit status: a run
+/// that reads its answer back off disk sees a file that is there and empty, and
+/// a run that reads its answer off a pipe sees the same nothing either way.
+const STUB: &str = r#"#include <stdio.h>
+
+int main(int argc, char **argv) {
+    for (int i = 1; i + 1 < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'o' && argv[i][2] == 0) {
+            FILE *made = fopen(argv[i + 1], "wb");
+            if (made) {
+                fclose(made);
+            }
+        }
+    }
+    return 0;
+}
+"#;
 
 /// A program with nothing to start from, which is the commonest link failure
 /// there is.
@@ -1064,4 +1220,55 @@ fn a_unit_the_frontend_reported_on_never_reaches_clang() {
             "{kind} left something behind"
         );
     }
+}
+
+/// Two inputs that share a stem are two modules.
+///
+/// `a/x.c` and `b/x.c` are ordinary in a project with a directory per part, and
+/// the name a module goes under is the input's. Without the index they would be
+/// one name written twice, so the second would overwrite the first and the link
+/// would be handed one module twice: every symbol in it defined twice, from a
+/// file the user cannot see.
+///
+/// Mutation: drop the index from the name a module is written under. The link
+/// answers a duplicate symbol and this fails on the exit code.
+#[test]
+fn two_inputs_that_share_a_stem_are_two_modules() {
+    if !clang_or_skip("whether two inputs with one stem are two modules") {
+        return;
+    }
+
+    let scratch = Scratch::new("one_stem");
+    fs::create_dir_all(scratch.path().join("sub")).expect("the temporary directory is writable");
+    scratch.source(
+        "same.c",
+        "int add(int a, int b);\n\nint main(void) {\n    return add(1, 2);\n}\n",
+    );
+    scratch.source(
+        "sub/same.c",
+        "int add(int a, int b) {\n    return a + b;\n}\n",
+    );
+    let program = scratch
+        .path()
+        .join(if cfg!(windows) { "both.exe" } else { "both" });
+
+    let output = safec(
+        &[
+            "--emit",
+            "executable",
+            "-o",
+            &program.to_string_lossy(),
+            "same.c",
+            "sub/same.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+
+    let ran = Command::new(&program)
+        .status()
+        .expect("the program this compiler just wrote can be run");
+    assert_eq!(ran.code(), Some(3), "the program did not answer 3");
 }

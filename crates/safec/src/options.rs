@@ -104,11 +104,12 @@ impl EmitKind {
     /// refuses a run that asks for one.
     ///
     /// A program is made of several translation units by definition, which is
-    /// what linking is, and this still answers no for one: the linker here is
-    /// handed one module. **The rule follows the implementation rather than the
-    /// intention**, because a rule that promises what the code does not do is a
-    /// run that silently builds the last input and throws the rest away. The
-    /// day a link takes several objects is the day this answers yes.
+    /// what linking is, and this answers yes because that is what the driver
+    /// does: every input's module is kept and one link is run over all of them.
+    /// It answered no while one was, which is the rule following the
+    /// implementation rather than the intention, because a rule that promises
+    /// what the code does not do is a run that silently builds the last input
+    /// and throws the rest away.
     ///
     /// Asked of the kind, and exhaustively, rather than spelled as a list of
     /// the kinds that cannot: a second input is either *appended* to what the
@@ -118,8 +119,8 @@ impl EmitKind {
     /// not a `matches!`.
     pub fn spans_inputs(self) -> bool {
         match self {
-            Self::Tokens | Self::Ast | Self::SafetyIr => true,
-            Self::LlvmIr | Self::Object | Self::Executable => false,
+            Self::Tokens | Self::Ast | Self::SafetyIr | Self::Executable => true,
+            Self::LlvmIr | Self::Object => false,
         }
     }
 
