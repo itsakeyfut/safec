@@ -73,14 +73,23 @@ pub trait Analysis {
     /// What the end of a block does to what is known.
     ///
     /// The same value then reaches every successor. Saying something different
-    /// on the taken and untaken arms of a branch is what a null check wants and
-    /// is not built; ADR-0016 says what it would cost.
+    /// on the taken and untaken arms of a branch is what a null check wants,
+    /// and `docs/roadmap.md` puts nullability in Phase 5, which is the next
+    /// one. It is not built: ADR-0016 says what it would cost, and it was
+    /// measured at a defaulted method and three lines of the solver.
     fn terminator(&self, terminator: &Terminator, fact: &mut Self::Fact);
 }
 
 /// What an analysis concluded, one value per block.
 ///
 /// Built by [`solve`] and read by whatever asked for the analysis.
+///
+/// **A point inside a block is reached by replaying it.** The caller clones a
+/// block's value and walks it through [`Analysis::element`] and
+/// [`Analysis::terminator`] itself, which is how a check says *here* rather
+/// than *somewhere in this block*. That works only because those take `&self`
+/// and are reachable by whoever asked, so hiding them inside the solver would
+/// take the per-point answer away from every check without failing a test.
 #[derive(Debug)]
 pub struct Solution<F> {
     /// What holds where each block starts, indexed by [`BlockId::index`].
@@ -101,6 +110,14 @@ impl<F> Solution<F> {
     /// things, and handing back the second for the first would let a check
     /// conclude about code no execution reaches. [`Cfg`] keeps unreachable
     /// blocks out of its predecessors for the same reason.
+    ///
+    /// **Unreachable here is a claim about the graph, not about executions.**
+    /// Nothing arrives at this block along an edge the IR holds. A handler that
+    /// a `longjmp` or an unwinding call would reach is such a block today,
+    /// because [`Terminator::Abnormal`] exists and nothing builds one and a
+    /// call has no edge for the callee not returning. A check that reads `None`
+    /// as "nobody runs this" will be silent about that code on the day the
+    /// frontend lowers it, which is ADR-0010's whole subject.
     pub fn entry(&self, block: BlockId) -> Option<&F> {
         self.entry[block.index()].as_ref()
     }
@@ -122,11 +139,20 @@ impl<F> Solution<F> {
 ///
 /// # Panics
 ///
-/// If `function` is a declaration, or if a block was reserved and never filled.
-/// Both are [`Function::blocks`]'s panic rather than one invented here, and
-/// [`Cfg::of`] has already made them by the time this is called: a fixpoint over
-/// a function nobody finished building would answer about a program that does
-/// not exist yet.
+/// If `function` is a declaration, which is [`Function::blocks`]'s panic, or if
+/// a block the entry **reaches** was reserved and never filled, which is
+/// [`Function::block`]'s. Neither is invented here, and [`Cfg::of`] has already
+/// made both by the time this is called: a fixpoint over a function nobody
+/// finished building would answer about a program that does not exist yet.
+///
+/// **A hole the entry cannot reach is not one of those**, and it was measured:
+/// neither the walk nor this touches such a block, so it is answered `None`,
+/// which is what an unreachable block is answered anyway. A caller that
+/// reserved a block and forgot to fill it learns nothing from that. Noticing
+/// would mean walking every block to look for a hole, on every function, for a
+/// mistake the compiler cannot make on its own: [`Function::fill_block`] is the
+/// only way a reserved id becomes a block, and outside the tests the only
+/// caller that reserves one is `safec`'s lowering.
 pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solution<A::Fact> {
     let mut entry: Vec<Option<A::Fact>> = (0..function.blocks().len()).map(|_| None).collect();
     entry[function.entry().index()] = Some(analysis.on_entry());
@@ -307,9 +333,10 @@ mod tests {
     /// never writes it.
     ///
     /// Mutation: never run `element`. `a` is answered unwritten and this fails.
-    /// Mutation: join into the entry block rather than storing `on_entry`
-    /// there. The entry's own writes are intersected against a fact nothing
-    /// produced, `a` is answered unwritten, and this fails.
+    /// Mutation: in `solve`, join the first arrival at a block into a fresh
+    /// `analysis.on_entry()` rather than storing it. `a` is intersected against
+    /// a value nothing produced, is answered unwritten, and this fails. That
+    /// second one is what ADR-0016's no-bottom decision costs to reverse.
     ///
     /// **This is not the fixpoint's guard**, which was measured rather than
     /// assumed: cutting the solver to one visit per block leaves it passing,
@@ -550,13 +577,109 @@ mod tests {
         assert_eq!(solution.entry(after), Some(&vec![false, false, true]));
     }
 
+    /// Storage beginning leaves a local holding nothing, so a write before it
+    /// is not a write that survives it.
+    ///
+    /// C17 6.2.4 p6 begins a local's lifetime at entry into its block, which is
+    /// why `StorageLive` is an event an analysis answers for rather than a note
+    /// about the declaration. Mutation: have `StorageLive` leave the local
+    /// written. This fails, and it is the only test that builds one.
+    #[test]
+    fn storage_beginning_leaves_a_local_holding_nothing() {
+        let (_sources, at) = spans();
+        let (_unit, mut function, int) = a_function(at);
+        let origin = Origin::Written(at);
+        let a = function.push_local(int);
+
+        let entry = function.reserve_block();
+        let after = function.reserve_block();
+
+        function.fill_block(
+            entry,
+            goto(
+                after,
+                vec![write(a, origin), Element::StorageLive { local: a, origin }],
+            ),
+        );
+        function.fill_block(
+            after,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+        let solution = solve(&Written(function.locals().len()), &function, &cfg);
+
+        assert_eq!(solution.entry(after), Some(&vec![false, false]));
+    }
+
+    /// What a block sends reaches its own successors and nobody else's.
+    ///
+    /// `solve` fills one buffer with each block's successors in turn, so this
+    /// is a guard on it being emptied first. Mutation: drop the
+    /// `successors.clear()`. The buffer keeps every earlier block's successors,
+    /// `killer`'s fact joins into `reached` as well as into its own successor,
+    /// and `reached` is answered unwritten though the only way to it never
+    /// killed anything. This fails and nothing else does.
+    #[test]
+    fn what_a_block_sends_reaches_its_own_successors_and_no_others() {
+        let (_sources, at) = spans();
+        let (_unit, mut function, int) = a_function(at);
+        let origin = Origin::Written(at);
+        let a = function.push_local(int);
+
+        let entry = function.reserve_block();
+        let keeper = function.reserve_block();
+        let killer = function.reserve_block();
+        let reached = function.reserve_block();
+        let elsewhere = function.reserve_block();
+        let end = function.reserve_block();
+
+        function.fill_block(
+            entry,
+            Block {
+                elements: vec![write(a, origin)],
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: keeper,
+                    otherwise: killer,
+                },
+            },
+        );
+        function.fill_block(keeper, goto(reached, vec![]));
+        function.fill_block(
+            killer,
+            goto(elsewhere, vec![Element::StorageDead { origin, local: a }]),
+        );
+        function.fill_block(reached, goto(end, vec![]));
+        function.fill_block(elsewhere, goto(end, vec![]));
+        function.fill_block(
+            end,
+            Block {
+                elements: vec![],
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+        let solution = solve(&Written(function.locals().len()), &function, &cfg);
+
+        // Only `keeper` reaches `reached`, and `keeper` kills nothing.
+        assert_eq!(solution.entry(reached), Some(&vec![false, true]));
+        // Both arms reach `end`, and one of them killed it.
+        assert_eq!(solution.entry(end), Some(&vec![false, false]));
+    }
+
     /// A block the entry cannot reach is answered with nothing, rather than
     /// with a value that would let a check conclude about code no execution
     /// reaches.
     ///
     /// Mutation: seed every block with `Some(analysis.on_entry())` rather than
-    /// the entry alone. This fails, and so do two others, because a value
-    /// waiting in a block also joins into whatever that block reaches.
+    /// the entry alone. This fails, and so does every test whose answer depends
+    /// on a value having arrived rather than having been put there, because a
+    /// value waiting in a block also joins into whatever that block reaches.
     #[test]
     fn a_block_nothing_reaches_has_no_answer() {
         let (_sources, at) = spans();
