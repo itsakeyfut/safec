@@ -71,13 +71,15 @@ diagnostic at all:
 
 | The analysis concluded | The check calls | Severity | Under `--deny-unknown` |
 |---|---|---|---|
-| Safe | nothing | n/a | n/a |
-| Unsafe (proven) | `Diagnostic::error(..)` | `Error` | `Error` |
-| Unknown (unproven) | `Diagnostic::unproven(..)` | `Warning` | **`Error`** |
+| Safe | `Diagnostic::concluded(Safe, ..)`, which answers nothing | n/a | n/a |
+| Unsafe (proven) | `Diagnostic::concluded(Unsafe, ..)` | `Error` | `Error` |
+| Unknown (unproven) | `Diagnostic::concluded(Unknown, ..)` | `Warning` | **`Error`** |
 
 Every existing constructor is `Certainty::Proven`, so a syntax error never has to
-mention certainty. `Diagnostic::unproven` is the only new constructor: a proven
-unsafe result is a statement of fact, and `error` already says that.
+mention certainty. One new constructor is enough: a proven unsafe result is a
+statement of fact, and `error` already says that. It was `Diagnostic::unproven`
+when this was written and is `Diagnostic::concluded` since #108, which takes the
+conclusion rather than leaving a check to pick the constructor that matches it.
 
 **Constructors that name the conclusion.** A safety check chooses a conclusion,
 not a severity. Writing `Diagnostic::warning(..)` for an unprovable result is
@@ -116,8 +118,13 @@ mutation that makes it fail:
   equals a recount over `diagnostics()` in both policies.
 * Dropping the `|| safety >= SafetyLevel::Strict` clause fails the `cli.rs` test
   that `--safety strict` alone resolves `deny_unknown` to true.
-* Making `Diagnostic::unproven` return `Certainty::Proven` fails the test that it
-  is the only constructor producing an unprovable diagnostic.
+* Making `Diagnostic::concluded` answer `Certainty::Proven` for
+  `Conclusion::Unknown` fails eight named tests, which is what this decision
+  costs to break: `a_result_that_could_not_be_proven_starts_as_a_warning`,
+  `a_sink_that_denies_unknown_raises_an_unproven_warning_to_an_error`,
+  `every_conclusion_is_reported_the_way_the_model_says`,
+  `the_error_count_agrees_with_the_diagnostics_under_either_policy`, the two
+  `the_strictest_safety_level_denies_unknown` tests, and two in `render.rs`.
 
 Each of those mutations was applied and the named test observed to fail.
 
@@ -139,9 +146,11 @@ at all.
   recorded: promotion happens before counting, and nothing can mutate a
   diagnostic after it is pushed.
 * Good, because `Certainty::Unproven` is reachable only through
-  `Diagnostic::unproven`, which fixes the severity at `Warning`. An unproven
+  `Diagnostic::concluded`, which fixes the severity at `Warning`. An unproven
   diagnostic is therefore always a warning until the sink promotes it, and
-  `promote_to_error` only ever handles one direction.
+  `promote_to_error` only ever handles one direction. Every field of a
+  `Diagnostic` is private, so that holds for everything outside
+  `diagnostics.rs`, which is what a check is.
 * Bad, because a check author can still write `Diagnostic::warning(..)` for a
   result they could not prove, and nothing detects it. The constructor names make
   it conspicuous; they do not make it impossible.
