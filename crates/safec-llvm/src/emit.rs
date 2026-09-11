@@ -634,7 +634,11 @@ impl Emitter<'_> {
     ) -> Option<()> {
         let unit = self.unit;
         let called = unit.function(callee);
-        let name = self.name(called);
+
+        // A callee whose signature cannot be written is not in the module at
+        // all, so a call to it would name nothing. The refusal points at the
+        // call rather than at the callee, which is the span this walk holds.
+        let (name, _, _) = self.signature(called)?;
         let returns = called.local(called.return_place());
         let parameters: Vec<TyId> = called
             .parameters()
@@ -704,16 +708,40 @@ impl Emitter<'_> {
         Some(())
     }
 
+    /// What a function's type looks like to LLVM, and the name it goes by.
+    ///
+    /// `void` is a result type and nothing else: LLVM answers
+    /// `void type only allowed for function results` to a parameter of it, and
+    /// a `declare` cannot carry one either. So this is the one refusal that
+    /// leaves nothing at all behind rather than a declaration, and a call to
+    /// such a function is refused in turn, because there is nothing to call.
+    fn signature(&mut self, function: &Function) -> Option<(String, String, Vec<String>)> {
+        let name = self.name(function);
+        let returns = self.spell(function.local(function.return_place()));
+        let mut parameters = Vec::new();
+
+        for local in function.parameters() {
+            let spelled = self.spell(function.local(local));
+            if spelled == "void" {
+                return self.refuse(format!("{name}, which has a parameter that holds nothing"));
+            }
+            parameters.push(spelled);
+        }
+
+        Some((name, returns, parameters))
+    }
+
     /// One function, appended to the module.
     fn function(&mut self, id: FuncId, out: &mut String) {
         let unit = self.unit;
         let function = unit.function(id);
-        let name = self.name(function);
-        let returns = self.spell(function.local(function.return_place()));
-        let parameters: Vec<String> = function
-            .parameters()
-            .map(|local| self.spell(function.local(local)))
-            .collect();
+
+        // The name is where a refusal about the whole function points, since
+        // it is the only span a `Function` carries.
+        self.at = Some(function.name);
+        let Some((name, returns, parameters)) = self.signature(function) else {
+            return;
+        };
 
         out.push('\n');
 
@@ -1257,6 +1285,39 @@ mod tests {
         assert_eq!(refusals, Vec::new());
         assert!(out.contains("  call void @v()\n"), "{out}");
         assert!(!out.contains("= call"), "{out}");
+    }
+
+    /// A parameter that holds nothing cannot be written at all, so the function
+    /// it belongs to leaves neither a definition nor a declaration.
+    ///
+    /// `void` is a result type and nothing else: LLVM answers `void type only
+    /// allowed for function results` to `declare i32 @g(void)` just as it does
+    /// to a definition. This is the one refusal that leaves nothing behind,
+    /// and it is why a caller of such a function is refused in turn.
+    ///
+    /// Mutation: spell the parameter and carry on. The module holds
+    /// `declare i32 @g(void)`, `clang` refuses to parse it, and this fails on
+    /// both the refusal and the text. Mutation: leave a `declare` behind after
+    /// refusing. This fails on the text.
+    #[test]
+    fn a_parameter_that_holds_nothing_leaves_no_function() {
+        let (sources, at) = named("g");
+        let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+        let int = unit.push_type(Ty::Int);
+        let void = unit.push_type(Ty::Void);
+        unit.push_function(Function::declaration(at, int, [void]));
+
+        let (out, refusals) = module(&sources, &unit);
+
+        assert_eq!(
+            refusals,
+            vec![Refusal {
+                why: "@g, which has a parameter that holds nothing".to_owned(),
+                at: Some(at),
+            }]
+        );
+        assert!(!out.contains("void"), "{out}");
+        assert!(!out.contains("@g"), "{out}");
     }
 
     /// The header names the target and is written once, which is what makes an

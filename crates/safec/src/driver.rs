@@ -126,6 +126,34 @@ pub fn compile(options: &Options) -> Compiled {
         diagnostics.report(Diagnostic::error("no input files"));
     }
 
+    // A module is one translation unit, and this compiler makes one artifact
+    // per run. Appending a second unit to the first is not a module with
+    // duplicates in it: `int f(int);` in one input and `int f(int x) { ... }`
+    // in another gives a `declare` beside a `define` of one name, and LLVM
+    // refuses to parse that. Ordinary, correct C, so the answer is to say no
+    // rather than to write something nothing can read.
+    //
+    // No code, because this is about the invocation rather than about a
+    // program. `--emit object` is where one artifact per input arrives, and
+    // where this stops being a refusal.
+    if matches!(options.emit, EmitKind::LlvmIr) && options.inputs.len() > 1 {
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`--emit llvm-ir` takes one input at a time, and this run was given {}",
+                options.inputs.len()
+            ))
+            .with_note(
+                "a module is one translation unit, and two appended into one is not a module",
+            )
+            .with_note("run it once per input"),
+        );
+        return Compiled {
+            sources,
+            diagnostics,
+            artifact: None,
+        };
+    }
+
     let mut seen = HashSet::new();
     let mut loaded = Vec::new();
     for input in &options.inputs {
@@ -168,7 +196,7 @@ pub fn compile(options: &Options) -> Compiled {
         EmitKind::Tokens => Some(Emitted::Tokens(String::new())),
         EmitKind::Ast => Some(Emitted::Ast(String::new())),
         EmitKind::SafetyIr => Some(Emitted::SafetyIr(String::new())),
-        EmitKind::LlvmIr => Some(Emitted::LlvmIr(safec_llvm::header(options.target))),
+        EmitKind::LlvmIr => Some(Emitted::LlvmIr(String::new())),
         EmitKind::Object | EmitKind::Executable => None,
     };
     for &file in &loaded {
@@ -224,6 +252,17 @@ pub fn compile(options: &Options) -> Compiled {
                 ) else {
                     continue;
                 };
+                // The header goes in here rather than where the artifact is
+                // made, so that a run which read none of its inputs leaves an
+                // artifact that is empty rather than one holding a module with
+                // no functions in it. `run_compiler` reads emptiness as "made
+                // nothing" and declines to write it over a path the user gave;
+                // a header alone would pass that test and destroy the file.
+                //
+                // Once per artifact, because `--emit llvm-ir` refuses a second
+                // input above and a module may carry one `target triple`.
+                out.push_str(&safec_llvm::header(options.target));
+
                 // The backend answers what it could not write rather than
                 // reporting it, because it cannot see a `Diagnostic`: ADR-0011
                 // put those in this crate. Every function it could write is in
@@ -282,11 +321,6 @@ enum Emitted {
     /// What `--emit safety-ir` asked for.
     SafetyIr(String),
     /// What `--emit llvm-ir` asked for.
-    ///
-    /// The one kind that does not start empty. An artifact holds one module
-    /// however many inputs were appended to it, and `target triple` may appear
-    /// once in a module, so the header is written where the artifact is made
-    /// rather than by whichever input arrived first.
     LlvmIr(String),
 }
 
@@ -1469,6 +1503,78 @@ mod tests {
             "a run that made nothing left {}",
             written.path().display()
         );
+    }
+
+    /// The same, for `--emit llvm-ir`, whose artifact has a header in it.
+    ///
+    /// The header is written where the first unit is rather than where the
+    /// artifact is made, so that a run which read nothing leaves an artifact
+    /// that is empty rather than one holding a module with no functions. A
+    /// header alone would pass the guard above and destroy the file, and it is
+    /// worse than a zero-byte one: `clang` accepts a module with nothing in it,
+    /// so whatever reads the file next succeeds.
+    ///
+    /// Mutation: write the header where the artifact is made. The file holds
+    /// one `target triple` line and this fails on its contents.
+    #[test]
+    fn a_module_with_nothing_in_it_does_not_overwrite_the_file() {
+        let written = TempFile::new(
+            "safec_driver_module_kept.ll",
+            "what was there before
+",
+        );
+        let mut options = options(vec![missing_path("safec_driver_module_kept.c")]);
+        options.emit = EmitKind::LlvmIr;
+        options.output = Some(written.path().to_path_buf());
+
+        let (report, _, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(report.contains("cannot read"), "{report}");
+        assert_eq!(
+            fs::read_to_string(written.path()).expect("the file is still there"),
+            "what was there before
+"
+        );
+    }
+
+    /// `--emit llvm-ir` takes one input at a time, and says so.
+    ///
+    /// A module is one translation unit. `int f(int);` in one input and
+    /// `int f(int x) { ... }` in another is ordinary, correct C, and appending
+    /// both into one artifact puts a `declare` beside a `define` of one name,
+    /// which LLVM refuses to parse. Saying no beats writing something nothing
+    /// can read, and `--emit object` is where one artifact per input arrives.
+    ///
+    /// Mutation: let the run through. The artifact holds two units, `clang`
+    /// refuses it, and this fails on the outcome.
+    #[test]
+    fn an_llvm_module_is_one_input_at_a_time() {
+        let first = TempFile::new(
+            "safec_driver_two_units_a.c",
+            "int f(int x);
+",
+        );
+        let second = TempFile::new(
+            "safec_driver_two_units_b.c",
+            "int f(int x) { return x; }
+",
+        );
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.emit = EmitKind::LlvmIr;
+
+        let (report, artifact, outcome) = run(&options);
+
+        assert_eq!(outcome, Outcome::Failed);
+        assert!(artifact.is_empty(), "{artifact}");
+        assert!(report.contains("one input at a time"), "{report}");
+        // The other kinds are a dump rather than a module, and appending is
+        // what they are for.
+        options.emit = EmitKind::SafetyIr;
+        assert_eq!(run(&options).2, Outcome::Succeeded);
     }
 
     /// A run that could not read anything does not empty the file it was given.
