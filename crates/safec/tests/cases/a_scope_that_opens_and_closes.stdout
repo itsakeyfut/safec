@@ -1,0 +1,36 @@
+Function a_scope_that_opens_and_closes.c:1:5 "outlives"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    StorageLive a_scope_that_opens_and_closes.c:5:9 "_2"
+    Operation a_scope_that_opens_and_closes.c:6:9 written
+      Destination "_2"
+      Use
+        Constant 42
+    Operation a_scope_that_opens_and_closes.c:6:9 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_scope_that_opens_and_closes.c:7:13 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_scope_that_opens_and_closes.c:7:9 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Operation a_scope_that_opens_and_closes.c:7:9 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    StorageDead a_scope_that_opens_and_closes.c:4:5 "_2"
+    Operation a_scope_that_opens_and_closes.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Return

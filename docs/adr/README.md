@@ -32,7 +32,9 @@ standard. Copy [`adr-template.md`](./adr-template.md) to start one.
 
 | [0011](./0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) | The IR crate depends on nothing in the workspace, and the frontend depends on it | accepted | cargo, before anything compiles: adding `safec = { path = "../safec" }` to `crates/safec-ir/Cargo.toml` is `error: cyclic package dependency`, and a `use safec::` without it does not resolve either, as `E0432` or `E0433` depending on how far the path gets. The hand-built interpreter tests in `crates/safec-ir/src/interp.rs` are the other half: `a_function_built_by_hand_runs` and five others run the IR with no frontend in the graph |
 
-**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010, 0011 · proposed: none · superseded: none
+| [0012](./0012-say-a-local-s-storage-began-and-ended-in-the-block.md) | Say a local's storage began and ended as elements of a block, not as a tree beside it | accepted | `E0004`: a fourth `Element` kind stops `ir.rs`, `interp.rs` and `print.rs` compiling at once, and a field added to one is `E0027` in each walk and `E0063` where the lowering builds it. `the_same_program_in_a_nested_scope_is_not_the_same_ir` and `a_read_through_a_pointer_to_dead_storage_stops_the_run` are the same claim by assertion and by running |
+
+**By status**: accepted: 0001, 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012 · proposed: none · superseded: none
 
 Records are numbered consecutively from `0001`.
 

@@ -478,3 +478,73 @@ fn a_trap_on_a_call_points_at_the_call() {
     let at = trap.at.expect("the call had a span");
     assert_eq!(sources.snippet(at), "elsewhere()");
 }
+
+/// A pointer that outlived the scope it pointed into stops the run.
+///
+/// The defect the lifetime axis of `docs/safety-model.md` exists to catch, and
+/// the reason ADR-0012 put a storage marker in the block: before it, this
+/// program and the same one without the braces were the same IR, so the
+/// interpreter answered 42 for both. Now the read finds a slot with no storage
+/// and stops, which is what a compiler that cannot prove the program should do
+/// rather than answer.
+///
+/// Mutation: treat `Element::StorageDead` as a no-op in `interp::run`. The run
+/// answers 42 and this fails. Mutation: drop the `Slot::Dead` arm from `load`
+/// and answer the value anyway; the same.
+#[test]
+fn a_read_through_a_pointer_to_dead_storage_stops_the_run() {
+    let dangling = ran("int main(void) { int *p; { int x; x = 42; p = &x; } return *p; }\n");
+    let Err(trap) = dangling else {
+        panic!("a read of storage whose scope ended: {dangling:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+
+    // The same program without the braces is defined, and still answers.
+    assert_eq!(
+        ran("int main(void) { int *p; int x; x = 42; p = &x; return *p; }\n"),
+        Ok(Value::Int(42)),
+    );
+}
+
+/// Storage that is gone and storage nothing has written are two sentences.
+///
+/// A compiler that exists to say what a program did wrong should not describe
+/// a dangling read as an uninitialised one. C17 6.2.4 p2 makes the first
+/// undefined by referring to an object outside its lifetime; the second is an
+/// indeterminate value, which is a different rule and a different fix.
+///
+/// Mutation: give `Slot::Dead` the sentence `Slot::Unwritten` has, or merge the
+/// two states back into an `Option`. This fails.
+#[test]
+fn dead_storage_and_uninitialised_storage_are_not_one_sentence() {
+    let dangling = ran("int main(void) { int *p; { int x; x = 42; p = &x; } return *p; }\n");
+    let unwritten = ran("int main(void) { int x; return x; }\n");
+
+    let (Err(dangling), Err(unwritten)) = (dangling, unwritten) else {
+        panic!("both stop");
+    };
+    assert_ne!(dangling.why, unwritten.why);
+    assert!(
+        unwritten.why.contains("nothing has written"),
+        "{unwritten:?}"
+    );
+}
+
+/// A local in a loop body is a new object on each iteration.
+///
+/// C17 6.2.4 p6 ends its lifetime when the block does and begins it again on
+/// the next entry, so the second iteration writes to storage that is there.
+/// Without the `StorageLive` half of the pair this program stops on the second
+/// iteration instead of answering.
+///
+/// Mutation: stop emitting `StorageLive` in the lowering, or make the
+/// interpreter ignore it. The run stops and this fails.
+#[test]
+fn a_loop_body_that_declares_something_runs_more_than_once() {
+    assert_eq!(
+        ran(
+            "int main(void) {\n    int n; int s;\n    n = 0; s = 0;\n    while (n < 3) { int x; x = n; s = s + x; n = n + 1; }\n    return s;\n}\n"
+        ),
+        Ok(Value::Int(3)),
+    );
+}
