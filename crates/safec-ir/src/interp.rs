@@ -222,7 +222,8 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                         .map_err(|trap| trap.at(operation.origin.span()))?;
                     let at = resolve(&frames, current, &operation.place)
                         .map_err(|trap| trap.at(operation.origin.span()))?;
-                    store(&mut frames, at, value);
+                    store(&mut frames, at, value)
+                        .map_err(|trap| trap.at(operation.origin.span()))?;
                 }
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
@@ -314,7 +315,7 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     match answer {
                         Some(answer) => {
                             let at = resolve(&frames, below, &destination)?;
-                            store(&mut frames, at, answer);
+                            store(&mut frames, at, answer)?;
                         }
                         None if returns_something => {
                             return Err(Trap::new(
@@ -578,14 +579,24 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
     }
 }
 
-/// Write a value where a location says.
+/// Write a value where a location says, or a stop saying why it cannot be.
 ///
-/// A location that has been resolved has already been checked, which is why
-/// this cannot fail: [`resolve`] is the only way to make one, and the frame it
-/// names cannot return between the two without the run passing through a
-/// terminator.
-fn store(frames: &mut [Frame], at: Location, value: Value) {
-    frames[at.depth].locals[at.local.index()] = Slot::Held(value);
+/// [`resolve`] has already checked that the frame is the one the pointer was
+/// taken in, and the frame cannot return between the two without the run
+/// passing through a terminator. What it has not checked is whether the local
+/// still has storage: `{ int x; p = &x; } *p = 1;` resolves to a live frame and
+/// a dead slot, and writing it would be the same undefined behaviour as reading
+/// it, silently made to look defined. [`load`] answers the same question from
+/// the other side.
+fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
+    let slot = &mut frames[at.depth].locals[at.local.index()];
+    if matches!(slot, Slot::Dead) {
+        return Err(Trap::new(
+            "a write to a local whose scope has ended, through a pointer that outlived it",
+        ));
+    }
+    *slot = Slot::Held(value);
+    Ok(())
 }
 
 /// Which frame a location names, or a stop saying it names none.

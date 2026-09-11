@@ -3,8 +3,11 @@ int outlives(void) {
 
     {
         int x;
+        int y;
+
         x = 42;
-        p = &x;
+        y = x;
+        p = &y;
     }
 
     return *p;

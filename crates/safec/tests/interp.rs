@@ -548,3 +548,27 @@ fn a_loop_body_that_declares_something_runs_more_than_once() {
         Ok(Value::Int(3)),
     );
 }
+
+/// A write through a pointer to dead storage stops the run too.
+///
+/// C17 6.2.4 p2 makes referring to an object outside its lifetime undefined,
+/// and does not say "reading". A write that was let through would be worse than
+/// a read that was: it puts a value into a slot the next scope at that depth is
+/// about to use, so the program that pays for it is not the one that did it.
+///
+/// It is also what makes `StorageLive` observable at all. Without this check a
+/// write revives a dead slot, so the second iteration of a loop works whether or
+/// not anything said its storage began again, and
+/// `a_loop_body_that_declares_something_runs_more_than_once` guards nothing.
+///
+/// Mutation: drop the `Slot::Dead` arm from `store`. This fails, and so does
+/// the loop test once `StorageLive` is made a no-op.
+#[test]
+fn a_write_through_a_pointer_to_dead_storage_stops_the_run() {
+    let dangling = ran("int main(void) { int *p; { int x; x = 1; p = &x; } *p = 2; return 0; }\n");
+    let Err(trap) = dangling else {
+        panic!("a write to storage whose scope ended: {dangling:?}");
+    };
+    assert!(trap.why.contains("a write to a local"), "{trap:?}");
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}

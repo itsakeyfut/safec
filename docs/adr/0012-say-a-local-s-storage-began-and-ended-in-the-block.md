@@ -131,13 +131,21 @@ loop goes from the `Compound` arm. `a_local_the_function_declares_has_no_marker`
 holds the other half, that a local whose scope is the function's gets nothing,
 and fails if the depth test goes.
 
-The claim by running rather than by inspection is
-`a_read_through_a_pointer_to_dead_storage_stops_the_run` in
-`crates/safec/tests/interp.rs`, which fails if the interpreter treats a
-storage-end as a no-op, and `a_loop_body_that_declares_something_runs_more_than_once`,
-which fails if `StorageLive` goes and the second iteration finds no storage.
+The claim by running rather than by inspection is in
+`crates/safec/tests/interp.rs`. `a_read_through_a_pointer_to_dead_storage_stops_the_run`
+fails if the interpreter treats a storage-end as a no-op, and
+`a_write_through_a_pointer_to_dead_storage_stops_the_run` fails if only the read
+is checked. That second one is load-bearing twice: a write to a slot with no
+storage would otherwise revive it, and then nothing anywhere would notice
+`StorageLive` being a no-op, which is what
+`a_loop_body_that_declares_something_runs_more_than_once` is for.
 `dead_storage_and_uninitialised_storage_are_not_one_sentence` is what keeps the
 two states from collapsing back into an `Option`.
+
+The order a scope closes in is held by the corpus, byte for byte:
+`a_scope_that_opens_and_closes` declares two locals in its nested block, so
+closing them in declaration order rather than in reverse changes the artifact
+and fails.
 
 ### Consequences
 
