@@ -236,11 +236,17 @@ fn an_object_the_linker_accepts() {
 }
 
 /// With no `-o`, an object is named after its input and lands where the run
-/// was, which is what `cc` and `rustc` both do.
+/// was rather than beside the input, which is what `cc` and `rustc` both do.
 ///
-/// Mutation: write it to the stream instead. Nothing is beside the input and
-/// this fails. Mutation: use `Path::with_extension`. `a.tar.c` loses its middle
-/// and this fails on the name.
+/// The input is in a directory of its own and its name has two dots, because
+/// those are the two things the answer could get wrong: `sub/a.tar.c` becomes
+/// `./a.tar.o` and not `sub/a.tar.o`, and not `a.o`.
+///
+/// Mutation: write it to the stream instead. Nothing is named after the input
+/// and this fails. Mutation: use `Path::with_extension` on the whole path. The
+/// object lands beside the source and this fails on where it is. (Not on its
+/// name: `with_extension` spells `a.tar.c` the same way, which is why the
+/// comment beside the code says the difference is the directory.)
 #[test]
 fn an_object_with_no_path_is_named_after_its_input() {
     if !clang_or_skip("where an object goes when nobody says") {
@@ -248,7 +254,8 @@ fn an_object_with_no_path_is_named_after_its_input() {
     }
 
     let scratch = Scratch::new("named");
-    scratch.source("a.tar.c", MVP);
+    fs::create_dir_all(scratch.path().join("sub")).expect("the temporary directory is writable");
+    scratch.source("sub/a.tar.c", MVP);
 
     let output = safec(
         &[
@@ -256,7 +263,7 @@ fn an_object_with_no_path_is_named_after_its_input() {
             "object",
             "--target",
             env!("SAFEC_HOST_TRIPLE"),
-            "a.tar.c",
+            "sub/a.tar.c",
         ],
         scratch.path(),
     );
@@ -271,6 +278,58 @@ fn an_object_with_no_path_is_named_after_its_input() {
         scratch.path().join("a.tar.o").exists(),
         "nothing is named after the input in {}",
         scratch.path().display()
+    );
+    assert!(
+        !scratch.path().join("sub").join("a.tar.o").exists(),
+        "an object was left beside the input"
+    );
+}
+
+/// A run that could not read its input makes no object, and does not empty the
+/// file it was given.
+///
+/// `clang` answers a valid, useless object for a module with no functions in it,
+/// and that object would pass the emptiness test `run_compiler` uses to decide
+/// whether a failed run may overwrite a path. What stops it is where the module
+/// is built: in the arm, which an input that could not be read never reaches, so
+/// the artifact stays empty and nothing is written.
+///
+/// Mutation: build the module before the loop, the way `--emit llvm-ir`'s header
+/// was until #91. The file is replaced by an object with nothing in it and this
+/// fails on its contents.
+#[test]
+fn a_run_that_read_nothing_makes_no_object() {
+    if !clang_or_skip("what a failed run leaves where an object would go") {
+        return;
+    }
+
+    let scratch = Scratch::new("read_nothing");
+    let kept = scratch.source(
+        "kept.o",
+        "what was there before
+",
+    );
+
+    let output = safec(
+        &[
+            "--emit",
+            "object",
+            "--target",
+            env!("SAFEC_HOST_TRIPLE"),
+            "-o",
+            &kept.to_string_lossy(),
+            "nosuch.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("cannot read"), "{said}");
+    assert_eq!(
+        fs::read_to_string(&kept).expect("the file is still there"),
+        "what was there before
+"
     );
 }
 

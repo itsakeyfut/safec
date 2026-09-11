@@ -274,16 +274,15 @@ pub fn compile(options: &Options) -> Compiled {
                 ) else {
                     continue;
                 };
+                // Nothing reaches `clang` from a run that read nothing, because
+                // this arm is what builds the module and an input that could
+                // not be read never gets here. So the artifact stays empty and
+                // `run_compiler` declines to write an empty one over a path the
+                // user gave. That is the same rule the header's placement buys
+                // `--emit llvm-ir`, and it is worth saying because the failure
+                // it avoids is quieter here: `clang` answers a valid, useless
+                // object for a module with no functions in it.
                 let module = module(&sources, &unit, options.target, &mut diagnostics);
-
-                // Nothing is assembled from nothing. `clang` answers a valid,
-                // useless object for a module with no functions in it, and that
-                // object would pass the emptiness test `run_compiler` uses to
-                // decide whether a failed run may overwrite a path. This is the
-                // same rule the header's placement buys `--emit llvm-ir`.
-                if module.is_empty() {
-                    continue;
-                }
 
                 match assembled(&module, options.target) {
                     Ok(object) => *out = object,
@@ -452,8 +451,10 @@ fn lowered(
 /// same thing by it, and the alternative is a stream, which for an object is
 /// bytes into a terminal.
 ///
-/// The stem rather than `Path::with_extension`, which would turn `a.tar.c` into
-/// `a.o` by replacing what it read as an extension.
+/// The stem rather than `Path::with_extension`, which keeps the directory the
+/// input came from and would leave `sub/deep.o` beside `sub/deep.c`. Both spell
+/// the name the same way, `a.tar.c` included; where they differ is where the
+/// file lands, and `cc` and `rustc` both land it here.
 ///
 /// Every other kind answers what `-o` said, so `Options` keeps meaning what was
 /// asked for and the default lives in one place.
@@ -1031,6 +1032,62 @@ mod tests {
             deny_unknown: false,
             color: ColorMode::Never,
         }
+    }
+
+    /// What `clang` refused reaches the user in `clang`'s own words.
+    ///
+    /// The one path that needs a `clang` which runs and says no, and nothing
+    /// this backend writes can produce one: the module is always valid IR, and
+    /// a function it could not write becomes a `declare`. So the module is
+    /// handed over directly rather than compiled from C, which is also why this
+    /// is here rather than in `tests/object.rs`: `assembled` is private.
+    ///
+    /// Its own gate, for the same reason the tests over there have one. A
+    /// feature that needs a tool cannot be tested without it, and a check that
+    /// cannot fail loudly reports the state it was asked to prove, which is
+    /// RK-012.
+    ///
+    /// Mutation: answer `Ok` whatever the exit status. The artifact becomes
+    /// whatever `clang` wrote before giving up, the run exits successfully, and
+    /// this fails on the error it did not get.
+    #[test]
+    fn what_clang_refused_is_said_in_clang_s_own_words() {
+        let here = Command::new("clang")
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok();
+        if !here {
+            assert!(
+                std::env::var_os("SAFEC_REQUIRE_LLVM").is_none(),
+                "SAFEC_REQUIRE_LLVM is set and there is no `clang` to refuse anything"
+            );
+            eprintln!(
+                "no `clang` on this machine: what it says about a bad module was not checked"
+            );
+            return;
+        }
+
+        let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+        let why = assembled(
+            "this is not LLVM IR at all
+",
+            target,
+        )
+        .expect_err("clang has nothing to make an object of");
+
+        let Unassembled::Refused(said) = &why else {
+            panic!("{why:?}");
+        };
+        assert!(!said.is_empty(), "clang refused without saying why");
+
+        let reported = assembly_failure(&why);
+        assert!(
+            reported.message().contains("could not make an object"),
+            "{reported:?}"
+        );
+        assert_eq!(reported.notes().len(), 1, "{reported:?}");
     }
 
     /// A file on disk that removes itself. Named per test, because the suite
