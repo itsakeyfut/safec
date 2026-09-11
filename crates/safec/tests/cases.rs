@@ -80,6 +80,7 @@ cases! {
     increment: ["--emit", "ast"],
     missing_semicolon: ["--emit", "ast"],
     mvp_program: ["--emit", "ast"],
+    a_scope_that_opens_and_closes: ["--emit", "safety-ir"],
     places_a_pointer_reaches: ["--emit", "safety-ir"],
     the_mvp_lowers_to_blocks_and_edges: ["--emit", "safety-ir"],
     not_a_declaration: ["--emit", "ast"],

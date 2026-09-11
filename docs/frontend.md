@@ -119,7 +119,7 @@ thing, which is that the body is not here.
 
 ### What the interpreter answers differently
 
-`crates/safec/src/interp.rs` runs the IR so that a program can be tested without
+`crates/safec-ir/src/interp.rs` runs the IR so that a program can be tested without
 a backend, and it computes in `i128` because `ir::Ty` holds no widths. That is
 the source of all of these. Each was measured against the interpreter and
 against `clang 20.1.6 --target=x86_64-pc-windows-msvc`, where `int` is 32 bits
@@ -147,11 +147,19 @@ enters. A program that would answer after more steps than the second bound
 allows is stopped instead, which is the trade a test instrument makes so that a
 suite fails rather than hangs.
 
-Two more, which are decisions rather than gaps. A local's storage lasts as long
-as its function, because the IR has no statement that says a scope ended, so a
-pointer to a block-scoped object still reads after the block. And a pointer is a
-place, so there is no null: a comparison of a pointer with a zero constant is
-answered as unequal rather than by a value that could be either.
+A read through a pointer whose object's scope has ended stops the run and says
+which, rather than answering whatever is still in the slot, and so does a write
+through the same pointer. The write matters as much: one that went through would
+put a value into a slot the next scope at that depth is about to use, so the
+program that paid for it would not be the one that did it. The IR says where a
+block-scoped local's storage began and ended, which is what makes the two
+tellable apart; ADR-0012 has the shape and #74 built it. A local the function
+itself declares has no such marker, because its storage is the frame's and a
+pointer into a frame that has returned is already caught.
+
+One decision rather than a gap. A pointer is a place, so there is no null: a
+comparison of a pointer with a zero constant is answered as unequal rather than
+by a value that could be either.
 
 ## One problem, one diagnostic
 

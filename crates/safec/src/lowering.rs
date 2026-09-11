@@ -33,7 +33,7 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use crate::types::Types;
 use safec_ir::ir::{
-    BinOp, Block, BlockId, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
+    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
@@ -65,6 +65,7 @@ pub fn lower(
         types,
         unit: TranslationUnit::new(),
         locals: HashMap::new(),
+        scopes: Vec::new(),
         functions: HashMap::new(),
         refused: HashSet::new(),
         pending: HashMap::new(),
@@ -90,6 +91,14 @@ struct Lowering<'a> {
     /// it is where the name was declared, so it is one per declaration, and a
     /// use reaches it through the binding it resolved to.
     locals: HashMap<Span, LocalId>,
+    /// The compound statements that are open, innermost last, each holding the
+    /// locals it declared directly.
+    ///
+    /// The function's body is the first, so a scope narrower than the function
+    /// is one at index 1 or beyond. Only those get storage markers: a local
+    /// declared in the body itself lives exactly as long as the frame, which
+    /// every consumer already knows, and ADR-0012 argues why that is enough.
+    scopes: Vec<Vec<LocalId>>,
     /// Which function a name at file scope became, keyed by the name itself.
     ///
     /// Not by span, the way a local is: a prototype and the definition that
@@ -137,7 +146,7 @@ struct Builder {
     /// something is written into it rather than when the last one ended.
     block: Option<BlockId>,
     /// What has been written into the block since it was opened.
-    operations: Vec<Operation>,
+    elements: Vec<Element>,
 }
 
 impl Builder {
@@ -155,18 +164,23 @@ impl Builder {
 
     /// Write an operation into the current block.
     fn push(&mut self, operation: Operation) {
+        self.element(Element::Assign(operation));
+    }
+
+    /// Write any element into the current block.
+    fn element(&mut self, element: Element) {
         self.open();
-        self.operations.push(operation);
+        self.elements.push(element);
     }
 
     /// End the current block, and leave none open.
     fn end(&mut self, terminator: Terminator) {
         let block = self.open();
-        let operations = std::mem::take(&mut self.operations);
+        let elements = std::mem::take(&mut self.elements);
         self.function.fill_block(
             block,
             Block {
-                operations,
+                elements,
                 terminator,
             },
         );
@@ -393,7 +407,7 @@ impl Lowering<'_> {
         let mut builder = Builder {
             function,
             block: None,
-            operations: Vec::new(),
+            elements: Vec::new(),
         };
         builder.open();
         self.stmt(&mut builder, body, diagnostics)?;
@@ -501,10 +515,49 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.stmt(id) {
-            Stmt::Compound { body, .. } => {
-                for &statement in body {
-                    self.stmt(builder, statement, diagnostics)?;
+            Stmt::Compound { body, span } => {
+                let (body, span) = (body.clone(), *span);
+                self.scopes.push(Vec::new());
+
+                // Not `?`: the scope has to be closed whether or not a
+                // statement inside it could be lowered, or the next compound
+                // at this depth would inherit an entry that is still open.
+                let mut lowered = Some(());
+                for statement in body {
+                    if self.stmt(builder, statement, diagnostics).is_none() {
+                        lowered = None;
+                        break;
+                    }
                 }
+
+                // The function's own body collects nothing, because the
+                // `Declaration` arm only records a local when a scope narrower
+                // than the body is open, so there is nothing to close for it
+                // and no need to ask whether this is that one.
+                let declared = self.scopes.pop().expect("the scope this arm pushed");
+                if builder.reachable() {
+                    // Reverse order of declaration, which is the order a C++
+                    // destructor would run in and costs nothing to get right
+                    // while the list is being written.
+                    for &local in declared.iter().rev() {
+                        builder.element(Element::StorageDead {
+                            // Nobody wrote "end this storage": the `}` is what
+                            // it exists because of, which is what `Generated`
+                            // means and what stops a diagnostic quoting a
+                            // block of source back as if a user had asked for
+                            // this. The last byte of a compound statement is
+                            // its `}`, and the lowering only ever sees a tree
+                            // that parsed without a word said about it.
+                            origin: Origin::Generated(Span::new(
+                                span.file(),
+                                span.end() - 1,
+                                span.end(),
+                            )),
+                            local,
+                        });
+                    }
+                }
+                lowered?;
             }
             Stmt::Return { value, span } => {
                 let (value, span) = (*value, *span);
@@ -529,6 +582,22 @@ impl Lowering<'_> {
                     let ty = self.ty(span, ty, diagnostics)?;
                     let local = builder.function.push_local(ty);
                     self.locals.insert(name, local);
+
+                    // Only a scope narrower than the function's own body. The
+                    // first entry is the body, and ADR-0012 says why a local
+                    // that lives as long as the frame needs no marker.
+                    if self.scopes.len() > 1 {
+                        let scope = self.scopes.last_mut().expect("a scope is open");
+                        scope.push(local);
+                        // Generated for the same reason as the closing half:
+                        // the declaration is what this exists because of, and
+                        // is not itself an instruction to begin storage that
+                        // somebody wrote.
+                        builder.element(Element::StorageLive {
+                            local,
+                            origin: Origin::Generated(span),
+                        });
+                    }
                 }
             }
             Stmt::Expression { value, .. } => {
@@ -1436,6 +1505,22 @@ mod tests {
     use crate::sema::resolve;
     use crate::types::check;
 
+    /// The assignments in a block, in order, with the storage markers dropped.
+    ///
+    /// Most of these tests are about what a program computes, and a marker is
+    /// not that. The ones that are about markers read `block.elements`
+    /// directly, which is the only way to see both.
+    fn assigns(block: &Block) -> Vec<&Operation> {
+        block
+            .elements
+            .iter()
+            .filter_map(|element| match element {
+                Element::Assign(operation) => Some(operation),
+                Element::StorageLive { .. } | Element::StorageDead { .. } => None,
+            })
+            .collect()
+    }
+
     /// One program, lowered, and whatever was said about it on the way.
     struct Lowered {
         unit: TranslationUnit,
@@ -1502,6 +1587,130 @@ mod tests {
             .collect()
     }
 
+    /// Every storage marker in a function, as `(kind, local)` in order.
+    fn markers(function: &Function) -> Vec<(&'static str, usize)> {
+        function
+            .blocks()
+            .flat_map(|block| block.elements.iter())
+            .filter_map(|element| match element {
+                Element::Assign(_) => None,
+                Element::StorageLive { local, origin: _ }
+                | Element::StorageDead { local, origin: _ } => {
+                    Some((element.name(), local.index()))
+                }
+            })
+            .collect()
+    }
+
+    /// Two programs that differ in one pair of braces are two IRs.
+    ///
+    /// This is the whole point of the markers. Before them the two below were
+    /// byte for byte the same artifact, so an analysis handed either had the
+    /// same material and had to answer both the same way: silent about the
+    /// dangling one, or wrong about the other. ADR-0012 has the argument.
+    ///
+    /// Mutation: delete the `StorageDead` loop from the `Compound` arm. The two
+    /// differ only in `StorageLive` then, and the assertion that the flat
+    /// program has no markers at all still holds, so this fails on the first
+    /// comparison. Mutation: delete both loops, and the two are equal again.
+    #[test]
+    fn the_same_program_in_a_nested_scope_is_not_the_same_ir() {
+        let nested = lowered("int g(void) { int *p; { int x; x = 42; p = &x; } return *p; }\n");
+        let flat = lowered("int g(void) { int *p; int x; x = 42; p = &x; return *p; }\n");
+
+        let (nested, flat) = (function(&nested, "g"), function(&flat, "g"));
+
+        // The same locals in the same order, so the difference is not that one
+        // program declares something the other does not.
+        assert_eq!(nested.locals().len(), flat.locals().len());
+
+        let marked = markers(nested);
+        let [(opens, live), (closes, dead)] = marked[..] else {
+            panic!("one pair, and nothing else: {marked:?}");
+        };
+        assert_eq!((opens, closes), ("StorageLive", "StorageDead"));
+        assert_eq!(live, dead, "one local, opened and closed");
+
+        assert_eq!(markers(flat), [], "the flat program has nothing to say");
+    }
+
+    /// A local the function itself declares gets no marker.
+    ///
+    /// Its storage is the frame's, which every consumer already models: the
+    /// interpreter pops the frame and a pointer into a returned one is caught
+    /// by its generation. ADR-0012 argues why that is enough, and the cost of
+    /// marking them anyway would be a pair per local in every artifact.
+    ///
+    /// Mutation: drop the `self.scopes.len() > 1` test in the `Declaration`
+    /// arm. Every local gets a pair and this fails.
+    #[test]
+    fn a_local_the_function_declares_has_no_marker() {
+        let lowered = lowered("int f(int n) { int a; int b; a = n; b = a; return b; }\n");
+
+        assert_eq!(markers(function(&lowered, "f")), []);
+    }
+
+    /// A scope that a `return` leaves ends no storage.
+    ///
+    /// The frame is going, so there is nothing for a marker to say, and an
+    /// element written after a block has ended would be written into the next
+    /// block instead.
+    ///
+    /// Mutation: emit the `StorageDead` loop whether or not `builder.reachable`
+    /// says the end is reachable. A `StorageDead` appears and this fails.
+    #[test]
+    fn a_scope_a_return_leaves_ends_no_storage() {
+        let lowered = lowered("int f(int n) { if (n) { int x; x = 1; return x; } return 0; }\n");
+
+        let marked = markers(function(&lowered, "f"));
+        let [(opens, _)] = marked[..] else {
+            panic!("the scope opens and nothing closes it: {marked:?}");
+        };
+        assert_eq!(opens, "StorageLive");
+    }
+
+    /// A local in a loop body gets its storage back on each iteration.
+    ///
+    /// C17 6.2.4 p6: an automatic object's lifetime "extends from entry into
+    /// the block with which it is associated until execution of that block ends
+    /// in any way". Each iteration enters and ends the body, so each iteration
+    /// is a fresh lifetime. Without the `StorageLive` the second iteration
+    /// would be writing into storage the IR says is gone.
+    ///
+    /// Mutation: emit `StorageDead` and no `StorageLive`. This fails, and the
+    /// interpreter stops on the second iteration of any loop that declares
+    /// anything.
+    #[test]
+    fn a_local_in_a_loop_body_gets_its_storage_back() {
+        let lowered = lowered(
+            "int f(void) {\n    int n; int s;\n    n = 0; s = 0;\n    while (n < 3) { int x; x = n; s = s + x; n = n + 1; }\n    return s;\n}\n",
+        );
+        let f = function(&lowered, "f");
+
+        let marked = markers(f);
+        let [(opens, live), (closes, dead)] = marked[..] else {
+            panic!("one pair, and nothing else: {marked:?}");
+        };
+        assert_eq!((opens, closes), ("StorageLive", "StorageDead"));
+        assert_eq!(live, dead, "one local, opened and closed");
+
+        // Both are in the body rather than around the loop, which is what makes
+        // the second iteration a fresh lifetime rather than a read of storage
+        // the first one ended.
+        let body: Vec<usize> = f
+            .blocks()
+            .enumerate()
+            .filter(|(_, block)| {
+                block
+                    .elements
+                    .iter()
+                    .any(|element| !matches!(element, Element::Assign(_)))
+            })
+            .map(|(index, _)| index)
+            .collect();
+        assert_eq!(body.len(), 1, "both markers are in one block");
+    }
+
     /// The MVP program of `docs/roadmap.md` lowers, which is the first clause
     /// of Phase 2's Done-when.
     ///
@@ -1523,8 +1732,8 @@ mod tests {
         let [entry] = add.blocks().collect::<Vec<_>>()[..] else {
             panic!("one block");
         };
-        let [sum, returned] = &entry.operations[..] else {
-            panic!("{:?}", entry.operations);
+        let [sum, returned] = assigns(entry)[..] else {
+            panic!("{:?}", entry.elements);
         };
         let [a, b] = add.parameters().collect::<Vec<_>>()[..] else {
             panic!("two parameters");
@@ -1549,7 +1758,7 @@ mod tests {
         let [entry, after] = main.blocks().collect::<Vec<_>>()[..] else {
             panic!("two blocks");
         };
-        assert!(entry.operations.is_empty());
+        assert!(assigns(entry).is_empty());
         let Terminator::Call {
             callee,
             arguments,
@@ -1569,8 +1778,8 @@ mod tests {
         assert_eq!(lowered.sources.snippet(origin.span()), "add(1, 2)");
 
         let destination = destination.clone().expect("somewhere to put the answer");
-        let [returned] = &after.operations[..] else {
-            panic!("{:?}", after.operations);
+        let [returned] = assigns(after)[..] else {
+            panic!("{:?}", after.elements);
         };
         assert_eq!(returned.place, Place::local(main.return_place()));
         assert_eq!(returned.value, Rvalue::Use(Operand::Copy(destination)));
@@ -1613,9 +1822,9 @@ mod tests {
 
         // The condition is asked in the header, which is where the back edge
         // arrives, so the comparison is written there and not before the loop.
-        assert!(blocks[0].operations.is_empty());
-        let [compared] = &blocks[1].operations[..] else {
-            panic!("{:?}", blocks[1].operations);
+        assert!(assigns(blocks[0]).is_empty());
+        let [compared] = assigns(blocks[1])[..] else {
+            panic!("{:?}", blocks[1].elements);
         };
         assert!(matches!(
             compared.value,
@@ -1670,8 +1879,8 @@ mod tests {
 
         // Each arm writes whether its operand is non-zero, because 6.5.13 p3
         // makes the answer 1 or 0 rather than whatever decided it.
-        let [decided] = &blocks[0].operations[..] else {
-            panic!("{:?}", blocks[0].operations);
+        let [decided] = assigns(blocks[0])[..] else {
+            panic!("{:?}", blocks[0].elements);
         };
         assert_eq!(
             decided.value,
@@ -1682,8 +1891,8 @@ mod tests {
             }
         );
 
-        let [answered] = &blocks[2].operations[..] else {
-            panic!("{:?}", blocks[2].operations);
+        let [answered] = assigns(blocks[2])[..] else {
+            panic!("{:?}", blocks[2].elements);
         };
         assert_eq!(answered.place, decided.place);
         assert_eq!(
@@ -1718,11 +1927,11 @@ mod tests {
         // Block 1 is the join, and the arms are the two blocks the branch
         // names, in the order they were reserved.
         assert_eq!(edges(f), vec![vec![2, 3], vec![], vec![1], vec![1]]);
-        let [taken] = &blocks[2].operations[..] else {
-            panic!("{:?}", blocks[2].operations);
+        let [taken] = assigns(blocks[2])[..] else {
+            panic!("{:?}", blocks[2].elements);
         };
-        let [skipped] = &blocks[3].operations[..] else {
-            panic!("{:?}", blocks[3].operations);
+        let [skipped] = assigns(blocks[3])[..] else {
+            panic!("{:?}", blocks[3].elements);
         };
         assert_eq!(taken.value, Rvalue::Use(Operand::Copy(Place::local(b))));
         assert_eq!(skipped.value, Rvalue::Use(Operand::Copy(Place::local(c))));
@@ -1816,8 +2025,8 @@ mod tests {
             let [block] = f.blocks().collect::<Vec<_>>()[..] else {
                 panic!("one block");
             };
-            let [returned] = &block.operations[..] else {
-                panic!("{:?}", block.operations);
+            let [returned] = assigns(block)[..] else {
+                panic!("{:?}", block.elements);
             };
             assert_eq!(returned.value, Rvalue::Use(Operand::Constant(value)));
         }
@@ -1914,7 +2123,7 @@ mod tests {
         let f = function(&lowered, "f");
         let mut seen = 0;
         for block in f.blocks() {
-            for operation in &block.operations {
+            for operation in assigns(block) {
                 assert!(
                     matches!(operation.origin, Origin::Written(_)),
                     "{:?}",
@@ -1940,8 +2149,8 @@ mod tests {
     fn only_operation(lowered: &Lowered, name: &str) -> Operation {
         let function = function(lowered, name);
         let blocks: Vec<_> = function.blocks().collect();
-        let [computed, _returned] = &blocks[0].operations[..] else {
-            panic!("{:?}", blocks[0].operations);
+        let [computed, _returned] = assigns(blocks[0])[..] else {
+            panic!("{:?}", blocks[0].elements);
         };
         computed.clone()
     }
@@ -2022,8 +2231,8 @@ mod tests {
 
             match expected {
                 Some(op) => {
-                    let [applied, _] = &blocks[0].operations[..] else {
-                        panic!("{:?}", blocks[0].operations);
+                    let [applied, _] = assigns(blocks[0])[..] else {
+                        panic!("{:?}", blocks[0].elements);
                     };
                     assert_eq!(
                         applied.value,
@@ -2035,8 +2244,8 @@ mod tests {
                     );
                 }
                 None => {
-                    let [returned] = &blocks[0].operations[..] else {
-                        panic!("{:?}", blocks[0].operations);
+                    let [returned] = assigns(blocks[0])[..] else {
+                        panic!("{:?}", blocks[0].elements);
                     };
                     assert_eq!(
                         returned.value,
@@ -2070,8 +2279,8 @@ mod tests {
             projection: vec![Projection::Deref],
         };
         let blocks: Vec<_> = f.blocks().collect();
-        let [written, held, returned] = &blocks[0].operations[..] else {
-            panic!("{:?}", blocks[0].operations);
+        let [written, held, returned] = assigns(blocks[0])[..] else {
+            panic!("{:?}", blocks[0].elements);
         };
 
         assert_eq!(written.place, pointee);
@@ -2120,7 +2329,7 @@ mod tests {
         };
         let taken = f
             .blocks()
-            .flat_map(|block| block.operations.clone())
+            .flat_map(|block| assigns(block).into_iter().cloned().collect::<Vec<_>>())
             .find(|operation| matches!(operation.value, Rvalue::Address(_)))
             .expect("an address is taken");
 
@@ -2160,7 +2369,7 @@ mod tests {
         };
         let operations: Vec<_> = f
             .blocks()
-            .flat_map(|block| block.operations.clone())
+            .flat_map(|block| assigns(block).into_iter().cloned().collect::<Vec<_>>())
             .collect();
 
         // Both spellings work the address out first and reach through it, and
@@ -2214,7 +2423,7 @@ mod tests {
         };
         // The left operand is evaluated and dropped, and a name needs no
         // operation to be evaluated, so the only operation is the return.
-        let [returned] = &f.blocks().next().expect("a block").operations[..] else {
+        let [returned] = assigns(f.blocks().next().expect("a block"))[..] else {
             panic!("one operation");
         };
         assert_eq!(returned.place, Place::local(f.return_place()));
@@ -2238,7 +2447,7 @@ mod tests {
         };
         let operations: Vec<_> = f
             .blocks()
-            .flat_map(|block| block.operations.clone())
+            .flat_map(|block| assigns(block).into_iter().cloned().collect::<Vec<_>>())
             .collect();
 
         assert_eq!(operations[0].place, Place::local(a));
@@ -2271,7 +2480,7 @@ mod tests {
             let f = function(lowered, "f");
             let operations: Vec<_> = f
                 .blocks()
-                .flat_map(|block| block.operations.clone())
+                .flat_map(|block| assigns(block).into_iter().cloned().collect::<Vec<_>>())
                 .collect();
             // Whether the copy of the old value is taken before the write or
             // the copy of the new one after it is the whole difference.
@@ -2322,16 +2531,16 @@ mod tests {
         // The body holds its own statement and the step after it, and each
         // assignment carries the copy that 6.5.16 p3 fixes its value with.
         let blocks: Vec<_> = f.blocks().collect();
-        let stepped = blocks[2]
-            .operations
+        let stepped = assigns(blocks[2])
             .last()
+            .copied()
             .expect("the step is written after the body");
         assert!(matches!(stepped.value, Rvalue::Use(Operand::Copy(_))));
         assert_eq!(
-            blocks[2].operations[3].value,
+            assigns(blocks[2])[3].value,
             Rvalue::Binary {
                 op: BinOp::Add,
-                lhs: Operand::Copy(blocks[2].operations[4].place.clone()),
+                lhs: Operand::Copy(assigns(blocks[2])[4].place.clone()),
                 rhs: Operand::Constant(1),
             }
         );
@@ -2394,7 +2603,7 @@ mod tests {
         let f = function(&lowered, "f");
         assert!(f.is_defined());
         assert_eq!(
-            f.blocks().next().expect("a block").operations[0].value,
+            assigns(f.blocks().next().expect("a block"))[0].value,
             Rvalue::Use(Operand::Constant(1))
         );
     }
@@ -2424,9 +2633,8 @@ mod tests {
 
         // Whatever the addition reads for the left operand was written before
         // the call, which is what the block boundary says.
-        let added = blocks[1]
-            .operations
-            .iter()
+        let added = assigns(blocks[1])
+            .into_iter()
             .find_map(|operation| match &operation.value {
                 Rvalue::Binary {
                     op: BinOp::Add,
@@ -2440,9 +2648,8 @@ mod tests {
             panic!("{added:?}");
         };
         assert!(
-            blocks[0]
-                .operations
-                .iter()
+            assigns(blocks[0])
+                .into_iter()
                 .any(|operation| operation.place == read),
             "the left operand is a place written before the call"
         );
@@ -2515,7 +2722,7 @@ mod tests {
         assert_eq!(codes(&lowered), Vec::<String>::new());
 
         let f = function(&lowered, "f");
-        let operations: usize = f.blocks().map(|block| block.operations.len()).sum();
+        let operations: usize = f.blocks().map(|block| assigns(block).len()).sum();
         // One per operator, and one more writing the answer into the return
         // place.
         assert_eq!(operations, terms + 1);

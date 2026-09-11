@@ -21,19 +21,26 @@
 //! edge no statement produced has to be the thing that ends a block. See
 //! [ADR-0010].
 //!
-//! **Every place is rooted at a local, and no statement says a local's storage
-//! ended.** So an object with static storage duration cannot be named at all,
-//! and a scope closing leaves nothing behind: `{ int x; p = &x; }` and the same
-//! program without the braces are one IR. An analysis on this can say where a
-//! pointer came from and not what it outlived. Both are additions that change
-//! what a [`Place`] is rooted at and what a [`Block`] holds, rather than
-//! variants beside the ones here, and #74 is where that is decided.
+//! **A block says where a local's storage began and ended.** `{ int x; p = &x;
+//! }` and the same program without the braces are two different IRs, because
+//! the first carries an [`Element::StorageDead`] the second does not, and an
+//! analysis can therefore say what a pointer outlived rather than only where it
+//! came from. See [ADR-0012].
+//!
+//! **Every place is still rooted at a local**, so an object with static storage
+//! duration cannot be named at all. That is the other half of what a lifetime
+//! analysis eventually needs, it changes what a [`Place`] is rooted at rather
+//! than adding a variant beside the ones here, and #85 is where it is decided.
+//! It waits on the frontend: the parser does not read the storage classes, so
+//! no C program can ask for one yet.
 //!
 //! Nothing here reads an IR. `crates/safec/src/lowering.rs` builds one from
-//! the typed AST; the printer is #71 and the interpreter is #72, and what this
-//! module owes them is a shape they do not have to agree about first.
+//! the typed AST; the printer is [`crate::print`] and the interpreter is
+//! [`crate::interp`], and what this module owes them is a shape they do not
+//! have to agree about first.
 //!
 //! [ADR-0010]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0010-give-the-graph-an-edge-no-statement-produced.md
+//! [ADR-0012]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0012-say-a-local-s-storage-began-and-ended-in-the-block.md
 
 use std::collections::HashMap;
 
@@ -402,6 +409,69 @@ impl Origin {
     }
 }
 
+/// One step of a block: something written, or storage beginning or ending.
+///
+/// Not every step writes a value. An automatic object's storage begins when
+/// control enters the block it belongs to and ends when that block does, and
+/// C17 6.2.4 p2 says the difference matters: "if an object is referred to
+/// outside of its lifetime, the behavior is undefined". Without a step that
+/// says so, `{ int x; p = &x; }` and the same program without the braces are
+/// one IR, and the analysis that is supposed to tell them apart has the same
+/// material for both. See [ADR-0012].
+///
+/// Only a local whose scope is narrower than its function gets a pair. A
+/// parameter and a local declared in the function's own body live exactly as
+/// long as the frame, which every consumer already knows.
+///
+/// [ADR-0012]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0012-say-a-local-s-storage-began-and-ended-in-the-block.md
+#[derive(Clone, Debug, PartialEq)]
+pub enum Element {
+    /// A place, and what is written into it.
+    Assign(Operation),
+    /// This local has storage from here on, and nothing in it.
+    ///
+    /// C17 6.2.4 p6 begins the lifetime at entry into the block rather than at
+    /// the declaration, and ends it when "execution of that block ends in any
+    /// way", so each iteration of a loop is a fresh lifetime and this is what
+    /// the second one starts from.
+    StorageLive {
+        /// Whose storage.
+        local: LocalId,
+        /// Where the declaration that asked for it is written.
+        origin: Origin,
+    },
+    /// This local's storage is gone from here on.
+    StorageDead {
+        /// The scope that is ending, named by its own span.
+        ///
+        /// Which starts at the `{`, so this points there rather than at the
+        /// `}` where the storage actually goes. The two coincide for saying
+        /// *which* scope ended and differ for saying *where*, and the first
+        /// diagnostic that has to say where is what should change it: the
+        /// closing brace is not on the tree today, so pointing at it means
+        /// giving `ast::Stmt::Compound` a second span rather than doing
+        /// arithmetic on this one.
+        origin: Origin,
+        /// Whose storage.
+        local: LocalId,
+    },
+}
+
+impl Element {
+    /// What this kind of element is called, for `--emit safety-ir`.
+    ///
+    /// `Assign` answers `"Operation"`, which is what the artifact called it
+    /// before there was anything else in the list. A word nobody had to change
+    /// is a corpus expectation nobody had to re-bless.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Assign(_) => "Operation",
+            Self::StorageLive { .. } => "StorageLive",
+            Self::StorageDead { .. } => "StorageDead",
+        }
+    }
+}
+
 /// One step: a place, and what is written into it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Operation {
@@ -524,11 +594,11 @@ impl Terminator {
     }
 }
 
-/// A straight run of operations with one way in and one way out.
+/// A straight run of elements with one way in and one way out.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block {
     /// What happens, in order.
-    pub operations: Vec<Operation>,
+    pub elements: Vec<Element>,
     /// How it ends.
     pub terminator: Terminator,
 }
@@ -902,7 +972,7 @@ mod tests {
         };
 
         add.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(add.return_place()),
                 value: Rvalue::Binary {
                     op: BinOp::Add,
@@ -910,7 +980,7 @@ mod tests {
                     rhs: Operand::Copy(Place::local(b)),
                 },
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Return,
         });
 
@@ -934,8 +1004,8 @@ mod tests {
         };
         assert_eq!(block.terminator, Terminator::Return);
         assert_eq!(
-            block.operations,
-            [Operation {
+            block.elements,
+            [Element::Assign(Operation {
                 place: Place::local(LocalId(0)),
                 value: Rvalue::Binary {
                     op: BinOp::Add,
@@ -943,7 +1013,7 @@ mod tests {
                     rhs: Operand::Copy(Place::local(LocalId(2))),
                 },
                 origin: Origin::Written(at),
-            }]
+            })]
         );
     }
 
@@ -961,11 +1031,11 @@ mod tests {
         let mut function = Function::new(at, void, []);
 
         let handler = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         let body = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Abnormal { to: handler },
         });
 
@@ -1056,11 +1126,11 @@ mod tests {
         let mut function = Function::new(at, void, []);
 
         let first = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         let second = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Goto(first),
         });
 
@@ -1228,11 +1298,11 @@ mod tests {
 
         let header = function.reserve_block();
         let exit = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         let body = function.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(counter),
                 value: Rvalue::Binary {
                     op: BinOp::Sub,
@@ -1240,13 +1310,13 @@ mod tests {
                     rhs: Operand::Constant(1),
                 },
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Goto(header),
         });
         function.fill_block(
             header,
             Block {
-                operations: Vec::new(),
+                elements: Vec::new(),
                 terminator: Terminator::Branch {
                     condition: Operand::Copy(Place::local(counter)),
                     then: body,
@@ -1288,11 +1358,11 @@ mod tests {
         let mut caller = Function::new(at, void, []);
         let p = caller.push_local(pointer);
         let after = caller.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         let call = caller.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Call {
                 callee: free,
                 arguments: vec![Operand::Copy(Place::local(p))],

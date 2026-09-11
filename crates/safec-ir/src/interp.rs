@@ -12,6 +12,13 @@
 //! for the first would make this compiler the one that decided what `1 / 0`
 //! means; skipping the second would make a wrong answer look like a right one.
 //!
+//! **One shape escapes that and is known.** A pointer taken in one iteration of
+//! a loop and read in the next is answered, not stopped: identity here is a
+//! frame's generation, and a frame does not change when a block inside it is
+//! entered again. C17 6.2.4 p6 makes each entry a new object, so that read is
+//! undefined and this says a number for it. Telling the two instances apart
+//! needs an identity per entry rather than per call, which #86 is.
+//!
 //! **A pointer is a local in a frame, resolved where the address was taken.**
 //! Every place in this IR is rooted at a local, so there is nothing else for a
 //! pointer to point at until #74, and no heap and no addresses-as-numbers are
@@ -26,17 +33,19 @@
 //! frame does not have to be kept to be recognised. That catches the defect
 //! `docs/roadmap.md`'s Phase 6 exists to catch, caught here by running.
 //!
-//! What it cannot catch is a scope: the IR has no statement that says a local's
-//! storage ended, so `{ int x; p = &x; }` leaves `x` alive until the function
-//! returns and a read through `p` answers. #74 is the issue for that, and until
-//! it lands this interpreter is honest about a frame and silent about a block.
+//! A scope is caught the same way and by a different mechanism. The IR says
+//! where a local's storage began and ended, so `{ int x; p = &x; } return *p;`
+//! reaches a slot with no storage rather than one the frame still holds, and
+//! the run stops there. See ADR-0012. Reading storage that is gone and reading
+//! storage nothing has written are two sentences, because they are two things a
+//! C program did.
 //!
 //! Nothing but tests calls this. `docs/roadmap.md` asks for no flag, and a
 //! `--run` would be a second way to execute a program that Phase 3's backend
 //! makes redundant.
 
 use crate::ir::{
-    BinOp, BlockId, FuncId, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    BinOp, BlockId, Element, FuncId, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit, Ty, UnOp,
 };
 use crate::source::Span;
@@ -141,6 +150,27 @@ impl Trap {
     }
 }
 
+/// What one local holds, or why it holds nothing.
+///
+/// Three states rather than an `Option`, because "nobody has written this" and
+/// "this has no storage" are two different things a C program did and this
+/// exists to say which. C17 6.2.4 p2 makes the second undefined outright: "if
+/// an object is referred to outside of its lifetime, the behavior is
+/// undefined". The first is an indeterminate value, which is undefined for its
+/// own reasons and is not the same sentence.
+#[derive(Clone, Debug)]
+enum Slot {
+    /// No storage, because the scope that declares it has closed.
+    ///
+    /// Not before it opens: [`enter`] starts every local `Unwritten`, and why
+    /// that is both permissive and unobservable is written there.
+    Dead,
+    /// Storage, and nothing written into it.
+    Unwritten,
+    /// What is in it.
+    Held(Value),
+}
+
 /// One call, while it is running.
 struct Frame {
     /// Which function this is running.
@@ -150,9 +180,8 @@ struct Frame {
     /// Two calls at one depth are two generations, so a pointer taken in the
     /// first and read in the second is caught rather than answered.
     generation: u64,
-    /// One slot per local, empty until something writes it. Reading an empty
-    /// one is what C leaves indeterminate, and this stops there.
-    locals: Vec<Option<Value>>,
+    /// One slot per local.
+    locals: Vec<Slot>,
     /// Which block is running.
     block: BlockId,
     /// Where this frame's callee writes its answer.
@@ -192,15 +221,32 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
         let current = frames.len() - 1;
         let function = unit.function(frames[current].function);
         let block = function.block(frames[current].block);
-        let operations = block.operations.clone();
+        let elements = block.elements.clone();
         let terminator = block.terminator.clone();
 
-        for operation in &operations {
-            let value = rvalue(&frames, &operation.value)
-                .map_err(|trap| trap.at(operation.origin.span()))?;
-            let at = resolve(&frames, current, &operation.place)
-                .map_err(|trap| trap.at(operation.origin.span()))?;
-            store(&mut frames, at, value);
+        for element in &elements {
+            // Written out rather than `..`, so that a field added to a storage
+            // marker is `error[E0027]` here rather than something the run
+            // quietly ignores. RK-018 is the entry.
+            match element {
+                Element::Assign(operation) => {
+                    let value = rvalue(&frames, &operation.value)
+                        .map_err(|trap| trap.at(operation.origin.span()))?;
+                    let at = resolve(&frames, current, &operation.place)
+                        .map_err(|trap| trap.at(operation.origin.span()))?;
+                    store(&mut frames, at, value)
+                        .map_err(|trap| trap.at(operation.origin.span()))?;
+                }
+                // Storage, and nothing in it. Entering the block again is what
+                // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
+                // not a check: whatever the last iteration left is gone.
+                Element::StorageLive { local, origin: _ } => {
+                    frames[current].locals[local.index()] = Slot::Unwritten;
+                }
+                Element::StorageDead { local, origin: _ } => {
+                    frames[current].locals[local.index()] = Slot::Dead;
+                }
+            }
         }
 
         match terminator {
@@ -252,7 +298,10 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 );
             }
             Terminator::Return => {
-                let answer = frames[current].locals[0].clone();
+                let answer = match frames[current].locals[0].clone() {
+                    Slot::Held(value) => Some(value),
+                    Slot::Unwritten | Slot::Dead => None,
+                };
                 // The frame is gone, and a pointer into it is stale from here
                 // on: the generation on the slot is what says so once another
                 // call takes the same depth.
@@ -278,7 +327,7 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     match answer {
                         Some(answer) => {
                             let at = resolve(&frames, below, &destination)?;
-                            store(&mut frames, at, answer);
+                            store(&mut frames, at, answer)?;
                         }
                         None if returns_something => {
                             return Err(Trap::new(
@@ -329,9 +378,16 @@ fn enter(
         )));
     }
 
-    let mut locals: Vec<Option<Value>> = function.locals().map(|_| None).collect();
+    // Every local starts with storage and nothing in it, whatever its scope.
+    // A nested one is therefore `Unwritten` rather than `Dead` until its scope
+    // has opened and closed once, which is a more permissive start than the IR
+    // strictly says and is unobservable: C17 6.2.1 p7 starts a name's scope at
+    // its declarator, so nothing can name the local before the `StorageLive`
+    // that follows it. `goto` into a block is what ends that, and ADR-0012
+    // names it as the change this moves with.
+    let mut locals: Vec<Slot> = function.locals().map(|_| Slot::Unwritten).collect();
     for (parameter, value) in function.parameters().zip(arguments) {
-        locals[parameter.index()] = Some(value.clone());
+        locals[parameter.index()] = Slot::Held(value.clone());
     }
 
     Ok(Frame {
@@ -526,19 +582,43 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
 /// would be the worst kind of right-looking answer.
 fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
     let frame = live(frames, at)?;
-    frames[frame].locals[at.local.index()]
-        .clone()
-        .ok_or_else(|| Trap::new("a read of a local nothing has written"))
+    match frames[frame].locals[at.local.index()].clone() {
+        Slot::Held(value) => Ok(value),
+        Slot::Unwritten => Err(Trap::new("a read of a local nothing has written")),
+        // A different sentence from the one above on purpose. This is the
+        // defect the lifetime axis of `docs/safety-model.md` exists to catch,
+        // and a compiler that said "nothing has written it" would be describing
+        // the wrong program.
+        Slot::Dead => Err(Trap::new(
+            "a read of a local whose scope has ended, through a pointer that outlived it",
+        )),
+    }
 }
 
-/// Write a value where a location says.
+/// Write a value where a location says, or a stop saying why it cannot be.
 ///
-/// A location that has been resolved has already been checked, which is why
-/// this cannot fail: [`resolve`] is the only way to make one, and the frame it
-/// names cannot return between the two without the run passing through a
-/// terminator.
-fn store(frames: &mut [Frame], at: Location, value: Value) {
-    frames[at.depth].locals[at.local.index()] = Some(value);
+/// The same two questions [`load`] asks, in the same order and for the same
+/// reasons. [`resolve`] checks a frame on each step it loads *through* and not
+/// on the location it hands back, so a write has to ask both itself: whether
+/// the frame the pointer was taken in is still the frame at that depth, and
+/// whether the local still has storage.
+///
+/// Neither is hypothetical. `int *leak(void) { int x; int *q; q = &x; return
+/// q; } ... *p = 5;` names a depth the stack no longer has, and before this
+/// asked, it was an index out of bounds rather than a stop. `{ int x; p = &x; }
+/// *p = 1;` names a live frame and a dead slot, and a write let through would
+/// put a value where the next scope at that depth is about to keep one, so the
+/// program that pays for it is not the one that did it.
+fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
+    let frame = live(frames, at)?;
+    let slot = &mut frames[frame].locals[at.local.index()];
+    if matches!(slot, Slot::Dead) {
+        return Err(Trap::new(
+            "a write to a local whose scope has ended, through a pointer that outlived it",
+        ));
+    }
+    *slot = Slot::Held(value);
+    Ok(())
 }
 
 /// Which frame a location names, or a stop saying it names none.
@@ -585,7 +665,7 @@ mod tests {
         let mut twice = Function::new(at, int, [int]);
         let n = twice.parameters().next().expect("one parameter");
         twice.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(twice.return_place()),
                 value: Rvalue::Binary {
                     op: BinOp::Add,
@@ -593,7 +673,7 @@ mod tests {
                     rhs: Operand::Copy(Place::local(n)),
                 },
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Return,
         });
         let id = unit.push_function(twice);
@@ -620,11 +700,11 @@ mod tests {
         let int = unit.push_type(Ty::Int);
         let mut twice = Function::new(at, int, [int]);
         twice.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(twice.return_place()),
                 value: Rvalue::Use(Operand::Constant(1)),
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Return,
         });
         let id = unit.push_function(twice);
@@ -655,20 +735,20 @@ mod tests {
         let holding = function.push_local(int);
 
         function.push_block(Block {
-            operations: vec![
-                Operation {
+            elements: vec![
+                Element::Assign(Operation {
                     place: Place::local(holding),
                     value: Rvalue::Use(Operand::Constant(4)),
                     origin: Origin::Written(at),
-                },
-                Operation {
+                }),
+                Element::Assign(Operation {
                     place: Place::local(function.return_place()),
                     value: Rvalue::Use(Operand::Copy(Place {
                         local: holding,
                         projection: vec![Projection::Deref],
                     })),
                     origin: Origin::Written(at),
-                },
+                }),
             ],
             terminator: Terminator::Return,
         });
@@ -700,7 +780,7 @@ mod tests {
 
         let mut callee = Function::new(at, void, []);
         callee.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         let callee = unit.push_function(callee);
@@ -708,17 +788,17 @@ mod tests {
         let mut caller = Function::new(at, int, []);
         let entry = caller.reserve_block();
         let after = caller.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(caller.return_place()),
                 value: Rvalue::Use(Operand::Constant(7)),
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Return,
         });
         caller.fill_block(
             entry,
             Block {
-                operations: Vec::new(),
+                elements: Vec::new(),
                 terminator: Terminator::Call {
                     callee,
                     arguments: Vec::new(),
@@ -755,20 +835,20 @@ mod tests {
         let holding = function.push_local(int);
 
         function.push_block(Block {
-            operations: vec![
-                Operation {
+            elements: vec![
+                Element::Assign(Operation {
                     place: Place::local(holding),
                     value: Rvalue::Use(Operand::Constant(9)),
                     origin: Origin::Written(at),
-                },
-                Operation {
+                }),
+                Element::Assign(Operation {
                     place: Place::local(function.return_place()),
                     value: Rvalue::Use(Operand::Copy(Place {
                         local: holding,
                         projection: vec![Projection::Index(Operand::Constant(0))],
                     })),
                     origin: Origin::Written(at),
-                },
+                }),
             ],
             terminator: Terminator::Return,
         });
@@ -804,17 +884,17 @@ mod tests {
         // the run answering 1 and saying nothing.
         let entry = function.reserve_block();
         let handler = function.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(function.return_place()),
                 value: Rvalue::Use(Operand::Constant(1)),
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Return,
         });
         function.fill_block(
             entry,
             Block {
-                operations: Vec::new(),
+                elements: Vec::new(),
                 terminator: Terminator::Abnormal { to: handler },
             },
         );

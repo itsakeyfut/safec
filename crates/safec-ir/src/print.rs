@@ -22,7 +22,7 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use crate::ir::{
-    LocalId, Operand, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Element, LocalId, Operand, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use crate::source::{SourceMap, Span};
 
@@ -225,14 +225,38 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
             }
             out.push('\n');
 
-            for operation in &block.operations {
-                dump_node(sources, "Operation", operation.origin.span(), 2, out);
-                write!(out, " {}", operation.origin.name())
-                    .expect("writing to a string cannot fail");
-                out.push('\n');
+            for element in &block.elements {
+                // Written out rather than `..`, so that a field added to a
+                // storage marker is `error[E0027]` here and not something the
+                // artifact silently stops showing. RK-018 is the entry, and
+                // `Terminator::successors` is where the rule was written.
+                match element {
+                    Element::Assign(operation) => {
+                        dump_node(sources, element.name(), operation.origin.span(), 2, out);
+                        write!(out, " {}", operation.origin.name())
+                            .expect("writing to a string cannot fail");
+                        out.push('\n');
 
-                dump_place(sources, "Destination", &operation.place, 3, out);
-                dump_rvalue(sources, &operation.value, 3, out);
+                        dump_place(sources, "Destination", &operation.place, 3, out);
+                        dump_rvalue(sources, &operation.value, 3, out);
+                    }
+                    Element::StorageLive { local, origin }
+                    | Element::StorageDead { local, origin } => {
+                        // The local goes on the kind's own line, the way a
+                        // block's name does, because a marker is one fact and
+                        // descending to read it would cost a line to say what
+                        // fits here.
+                        dump_node(sources, element.name(), origin.span(), 2, out);
+                        // The origin's kind, the same word an `Operation` line
+                        // carries. Nobody writes a storage marker, so every one
+                        // says `generated`; printing it is what makes a marker
+                        // that claimed otherwise show up in a corpus case
+                        // rather than only in the source.
+                        write!(out, " {} {:?}", origin.name(), name_of(*local))
+                            .expect("writing to a string cannot fail");
+                        out.push('\n');
+                    }
+                }
             }
 
             dump_terminator(sources, unit, &block.terminator, 2, out);
@@ -472,7 +496,7 @@ mod tests {
         let int = unit.push_type(Ty::Int);
         let mut function = Function::new(at, int, []);
         function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         unit.push_function(function);
@@ -497,8 +521,9 @@ mod tests {
     /// The IR can tell them apart and the tree cannot, which is the whole
     /// reason `Origin` exists; `docs/roadmap.md` asks for "a location to blame
     /// and no source text". Built by hand because nothing in the lowering
-    /// produces a generated operation yet: the first producer will be whatever
-    /// ends a scope, which is #74's territory.
+    /// produces a generated *operation*: what ends a scope is generated and is
+    /// a storage marker rather than an operation, so this shape still has no
+    /// producer. A C++ destructor is the one that will.
     ///
     /// Mutation: print `written` whatever the origin. This fails on the second
     /// line, and with it goes the only thing the artifact says that `--emit
@@ -514,17 +539,17 @@ mod tests {
         let mut function = Function::new(at, int, []);
         let local = function.push_local(int);
         function.push_block(Block {
-            operations: vec![
-                Operation {
+            elements: vec![
+                Element::Assign(Operation {
                     place: Place::local(local),
                     value: Rvalue::Use(Operand::Constant(1)),
                     origin: Origin::Written(at),
-                },
-                Operation {
+                }),
+                Element::Assign(Operation {
                     place: Place::local(local),
                     value: Rvalue::Use(Operand::Constant(0)),
                     origin: Origin::Generated(at),
-                },
+                }),
             ],
             terminator: Terminator::Return,
         });
@@ -564,15 +589,15 @@ mod tests {
 
         let mut function = Function::new(at, void, []);
         let handler = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         let after = function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Abnormal { to: handler },
         });
         function.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Call {
                 callee,
                 arguments: Vec::new(),
@@ -617,7 +642,7 @@ mod tests {
 
         let mut defined = Function::new(here, int, []);
         defined.push_block(Block {
-            operations: Vec::new(),
+            elements: Vec::new(),
             terminator: Terminator::Return,
         });
         unit.push_function(defined);
@@ -655,14 +680,14 @@ mod tests {
         let mut function = Function::new(at, int, [pointer]);
         let p = function.parameters().next().expect("one parameter");
         function.push_block(Block {
-            operations: vec![Operation {
+            elements: vec![Element::Assign(Operation {
                 place: Place::local(function.return_place()),
                 value: Rvalue::Use(Operand::Copy(Place {
                     local: p,
                     projection: vec![Projection::Index(Operand::Constant(0))],
                 })),
                 origin: Origin::Written(at),
-            }],
+            })],
             terminator: Terminator::Return,
         });
         unit.push_function(function);
