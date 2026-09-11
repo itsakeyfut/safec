@@ -145,12 +145,11 @@ is a claim worth a test rather than a paragraph.
 - object files: `--emit object`
 - linking, and a native executable: `--emit executable`
 - targets and triples
-- `-o`. The driver parses it today and reports it as unsupported
-  (`driver.rs:169`), because writing the artifact somewhere the user did not ask
-  for is worse than saying no
+- `-o` is done ahead of the rest of this phase: `run_compiler` writes the
+  artifact to the path, and a path it cannot write is reported with the reason
 
 **Done when:** the MVP program compiles to a native executable that exits with
-3, and `-o` puts it where it was asked to.
+3. `-o` already puts it where it was asked to.
 
 ### Phase 4: CFG and Dataflow
 

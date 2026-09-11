@@ -1,3 +1,0 @@
-error: `-o` is not supported yet
-  = note: the artifact is written to standard output
-  = note: redirect it instead, until an output path is honoured
