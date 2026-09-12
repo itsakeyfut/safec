@@ -1,0 +1,61 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_replaced_through_its_own_address.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_replaced_through_its_own_address.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_replaced_through_its_own_address.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "void"
+  Local "_6" "void *"
+  Local "_7" "int *"
+  Local "_8" "void"
+  Block "bb0" entry
+    Call a_pointer_replaced_through_its_own_address.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_replaced_through_its_own_address.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Operation a_pointer_replaced_through_its_own_address.c:5:16 written
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_pointer_replaced_through_its_own_address.c:5:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Call a_pointer_replaced_through_its_own_address.c:6:5 "free" "bb2"
+      Destination "_5"
+      Copy "_1"
+  Block "bb2"
+    Call a_pointer_replaced_through_its_own_address.c:7:11 "malloc" "bb3"
+      Destination "_6"
+      Constant 8
+  Block "bb3"
+    Operation a_pointer_replaced_through_its_own_address.c:7:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_pointer_replaced_through_its_own_address.c:7:5 written
+      Destination "_7"
+      Use
+        Copy "_3"
+          Deref
+    Call a_pointer_replaced_through_its_own_address.c:8:5 "free" "bb4"
+      Destination "_8"
+      Copy "_1"
+  Block "bb4"
+    Operation a_pointer_replaced_through_its_own_address.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

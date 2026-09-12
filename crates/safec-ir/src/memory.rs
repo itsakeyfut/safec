@@ -67,8 +67,9 @@ enum SiteState {
     /// as a hang. **That is not what this rule is doing here**, and borrowing
     /// the record's reason would be a claim nothing holds: `Unknown` is a top
     /// per site, so a span that would have alternated is absorbed before it
-    /// can. Measured, on this lattice: keeping whichever arrived leaves the
-    /// whole suite green and every walk still ends.
+    /// can. Measured, on this lattice: keeping whichever arrived still ends
+    /// every walk, and the loop-shaped test built to look for the hang passes
+    /// under it.
     ///
     /// What the rule is for is **which free the diagnostic names**. Without it
     /// the answer is whichever path the worklist reached last, which is stable
@@ -103,6 +104,24 @@ fn earlier(here: Span, there: Span) -> Span {
     } else {
         there
     }
+}
+
+/// What one argument of a call reaches.
+///
+/// The two are not the same answer and were once the same silence. A `free`
+/// whose argument reaches no site used to be indistinguishable from one whose
+/// sites were all proved live, and the check reported nothing for both. The
+/// second is a proof; the first is this check having lost the pointer, and
+/// saying nothing about it is [the safety model]'s worst failure rather than
+/// its best one.
+///
+/// [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
+enum Reached {
+    /// A site the argument may hold.
+    Site(usize),
+    /// A pointer this check was not following: one written through a
+    /// projection, or a local whose sites it had and lost.
+    Lost,
 }
 
 /// Which allocations each local may hold, and what is known about each.
@@ -156,24 +175,37 @@ impl Allocations<'_> {
         }
     }
 
-    /// Move every site the arguments reach, which is what a call does to what
-    /// it was handed.
+    /// What the arguments of a call reach, in the order they were written.
     ///
     /// Shared with [`check`], so that the walk which reports and the walk which
-    /// computes cannot disagree about which sites a call touches.
-    fn touching<'a>(
-        arguments: &'a [Operand],
-        known: &'a Known,
-    ) -> impl Iterator<Item = usize> + 'a {
-        arguments
-            .iter()
-            .filter_map(|argument| match argument {
-                // A projected argument is a value read through a pointer rather
-                // than the pointer itself, and this check follows locals.
-                Operand::Copy(place) if place.projection.is_empty() => Some(place.local),
-                Operand::Copy(_) | Operand::Constant(_) => None,
-            })
-            .flat_map(|local| known.sites_of(local).collect::<Vec<_>>())
+    /// computes cannot disagree about what a call touches.
+    fn touching(arguments: &[Operand], known: &Known) -> Vec<Reached> {
+        let mut reached = Vec::new();
+
+        for argument in arguments {
+            let place = match argument {
+                // Not a pointer that went missing. `free(0)` is the case, and
+                // C17 7.22.3.3 p1 makes it do nothing, so it is written on
+                // purpose and is not something this check lost track of.
+                Operand::Constant(_) => continue,
+                Operand::Copy(place) => place,
+            };
+
+            if !place.projection.is_empty() {
+                // `free(*pp)` frees whatever `pp` points at, and this check
+                // follows locals rather than what they point at.
+                reached.push(Reached::Lost);
+                continue;
+            }
+
+            let before = reached.len();
+            reached.extend(known.sites_of(place.local).map(Reached::Site));
+            if reached.len() == before {
+                reached.push(Reached::Lost);
+            }
+        }
+
+        reached
     }
 }
 
@@ -262,7 +294,22 @@ impl Analysis for Allocations<'_> {
                     // The address of a place is not an allocation this check
                     // follows: nothing here frees a local's own storage, which
                     // is `StorageDead` and is the lifetime phase's.
-                    Rvalue::Address(_) => value.clear(destination),
+                    //
+                    // **But the place whose address is taken stops being
+                    // something anything here proved.** A write through the
+                    // pointer that just escaped can put a different allocation
+                    // in it, and this check does not follow what a pointer
+                    // points at, so it would not see the write. `Rvalue::Address`
+                    // is the only way a local's address is taken in this IR, so
+                    // this is the one door, and leaving it open is what made
+                    // `int **pp = &p; *pp = q; free(q); free(p);` silent about
+                    // a double free.
+                    Rvalue::Address(taken) => {
+                        value.clear(destination);
+                        for site in value.sites_of(taken.local).collect::<Vec<_>>() {
+                            value.state[site] = SiteState::Unknown;
+                        }
+                    }
                 }
             }
             // Storage beginning or ending says nothing about what the local
@@ -295,10 +342,21 @@ impl Analysis for Allocations<'_> {
 
         // What the call does to what it was handed, before what it leaves
         // behind, which is the order the two happen in.
-        let touched: Vec<usize> = Self::touching(arguments, value).collect();
+        // A `Reached::Lost` moves nothing, because there is nothing to move:
+        // what it says is that this call touched something the check was not
+        // following, which is a fact about the report rather than about the
+        // lattice.
+        let touched = Self::touching(arguments, value);
+        let sites = || {
+            touched.iter().filter_map(|reached| match reached {
+                Reached::Site(site) => Some(*site),
+                Reached::Lost => None,
+            })
+        };
+
         match self.callee(*callee) {
             Callee::Frees => {
-                for site in touched {
+                for site in sites().collect::<Vec<_>>() {
                     value.state[site] = SiteState::Freed(origin.span());
                 }
             }
@@ -306,7 +364,7 @@ impl Analysis for Allocations<'_> {
             // name is read.
             Callee::Allocates => {}
             Callee::Opaque => {
-                for site in touched {
+                for site in sites().collect::<Vec<_>>() {
                     value.state[site] = SiteState::Unknown;
                 }
             }
@@ -406,6 +464,17 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         }
     }
 
+    // In the order a reader's eye goes rather than the order the walk reached
+    // them. `Cfg::of` hands blocks back in reverse postorder, so two findings
+    // in two arms of one branch come out with the later line first, and
+    // `DiagnosticSink` does not sort. Doing it here rather than there because
+    // the sink holds diagnostics from every stage and their order is the order
+    // the stages ran, which is right; this is one stage disagreeing with
+    // itself. `Terminator::successors` already says its order will change when
+    // an unwinding call gains an edge, and this is what keeps that from moving
+    // every expectation that holds two findings.
+    findings.sort_by_key(|finding| (finding.at.file().index(), finding.at.start()));
+
     findings
 }
 
@@ -435,11 +504,24 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
     // than a different volume: `docs/safety-model.md` gives the first to an
     // error at every level and leaves the second to `--deny-unknown`.
     let mut freed: Option<Span> = None;
+    let mut live = false;
     let mut unknown = false;
 
-    for site in Allocations::touching(arguments, known) {
+    for reached in Allocations::touching(arguments, known) {
+        let site = match reached {
+            Reached::Site(site) => site,
+            // **Not the same as proving it live.** This is the check having
+            // lost the pointer, and answering nothing about it is the failure
+            // `docs/safety-model.md` is written to prevent rather than the one
+            // it tolerates.
+            Reached::Lost => {
+                unknown = true;
+                continue;
+            }
+        };
+
         match known.state[site] {
-            SiteState::Live => {}
+            SiteState::Live => live = true,
             SiteState::Freed(before) => {
                 freed = Some(match freed {
                     Some(already) => earlier(already, before),
@@ -450,17 +532,32 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         }
     }
 
-    match (freed, unknown) {
-        (Some(before), _) => Some(Finding {
+    // **`points_to` is a may-set, so one freed site among several is not a
+    // proof.** `SiteState::joined` already answers `Unknown` where one path
+    // freed a site and another did not; this is the same question across two
+    // sites rather than across two paths, and answering it differently let the
+    // spelling of a program decide whether it was a warning or an error. A
+    // proof needs every site the argument can reach to have been freed, and
+    // nothing about it to have been lost.
+    let proved = freed.is_some() && !live && !unknown;
+    let suspected = freed.is_some() || unknown;
+
+    match (proved, suspected) {
+        (true, _) => Some(Finding {
             conclusion: Conclusion::Unsafe,
             at: origin.span(),
-            freed: Some(before),
+            freed,
         }),
-        (None, true) => Some(Finding {
+        // `freed` is dropped rather than carried: what makes this unproven is
+        // that the sites or the paths disagree, so there is no one earlier free
+        // that every execution reaching here went through.
+        (false, true) => Some(Finding {
             conclusion: Conclusion::Unknown,
             at: origin.span(),
             freed: None,
         }),
-        (None, false) => None,
+        // Every site the argument reaches is live, and none was lost. That is
+        // the only shape this check proves safe, and a proof says nothing.
+        (false, false) => None,
     }
 }
