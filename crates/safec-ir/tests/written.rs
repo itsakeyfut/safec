@@ -629,10 +629,13 @@ struct Counting(usize);
 impl Analysis for Counting {
     type Value = Vec<u8>;
 
-    /// Four steps per local, which is taller than the locals and the elements
-    /// together. An analysis that knows this is the one place that can say it.
+    /// Four steps for every local but the return place, which no arm counts
+    /// down. Taller than the locals and the elements together, so leaning on
+    /// the default would stop this, and exact rather than generous, so that
+    /// the one the solver adds to it is the difference between passing and
+    /// being stopped.
     fn height(&self, function: &Function) -> usize {
-        function.locals().len() * 4
+        (function.locals().len() - 1) * 4
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -668,6 +671,11 @@ impl Analysis for Counting {
 ///
 /// Mutation: have `solve` use the default rather than what the analysis
 /// answered. The same, and these are the only tests that notice either.
+///
+/// Mutation: drop the one the solver adds to the declared height. This
+/// analysis declares exactly what it needs, so the walk is one visit taller
+/// than its height and that one is what lets it finish. Nothing else in the
+/// suite declares tightly enough to notice.
 ///
 /// Mutation: count the walks across every block rather than per block. This
 /// fails too, along with every other test whose function has enough blocks for
