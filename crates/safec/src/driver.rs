@@ -609,22 +609,22 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     // diagnostic spends on the *earlier, legitimate* free would have a reader
     // who learned that pair take the suspect for the safe one.
     let (code, message, label) = match (finding.kind, finding.conclusion) {
-        (Kind::FreedTwice, Conclusion::Unsafe) => (
+        (Kind::DoubleFree, Conclusion::Unsafe) => (
             DOUBLE_FREE,
             "this frees a value that was freed already",
             "freed again here",
         ),
-        (Kind::FreedTwice, Conclusion::Unknown) => (
+        (Kind::DoubleFree, Conclusion::Unknown) => (
             DOUBLE_FREE,
             "this may free a value that was freed already",
             "may free it again here",
         ),
-        (Kind::UsedAfterFree, Conclusion::Unsafe) => (
+        (Kind::UseAfterFree, Conclusion::Unsafe) => (
             USE_AFTER_FREE,
             "this uses a value after it was freed",
             "used here",
         ),
-        (Kind::UsedAfterFree, Conclusion::Unknown) => (
+        (Kind::UseAfterFree, Conclusion::Unknown) => (
             USE_AFTER_FREE,
             "this may use a value after it was freed",
             "used here, perhaps after the free",

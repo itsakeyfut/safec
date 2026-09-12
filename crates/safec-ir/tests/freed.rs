@@ -168,7 +168,7 @@ fn a_value_freed_twice_is_unsafe() {
     let found = findings(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].kind, Kind::FreedTwice);
+    assert_eq!(found[0].kind, Kind::DoubleFree);
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].at, names.at[2]);
     assert_eq!(found[0].freed, Some(names.at[1]));
@@ -545,7 +545,7 @@ fn a_read_through_a_freed_pointer_is_unsafe() {
     let found = findings(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].kind, Kind::UsedAfterFree);
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].at, names.at[3]);
     assert_eq!(found[0].freed, Some(names.at[2]));
@@ -581,7 +581,7 @@ fn a_write_through_a_freed_pointer_is_unsafe() {
     let found = findings(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].kind, Kind::UsedAfterFree);
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].at, names.at[2]);
 }

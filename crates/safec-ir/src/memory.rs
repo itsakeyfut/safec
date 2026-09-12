@@ -229,7 +229,7 @@ impl Allocations<'_> {
         for argument in arguments {
             let place = match argument {
                 // Not a pointer that went missing. `free(0)` is the case, and
-                // C17 7.22.3.3 p1 makes it do nothing, so it is written on
+                // C17 7.22.3.3 p2 makes it do nothing, so it is written on
                 // purpose and is not something this check lost track of.
                 Operand::Constant(_) => continue,
                 Operand::Copy(place) => place,
@@ -451,17 +451,19 @@ impl Analysis for Allocations<'_> {
     }
 }
 
-/// Which of this module's checks a finding came from.
+/// Which of the two things this check answers about a finding is.
 ///
-/// Two checks reading one solution, so the reader has to be told which. They
-/// take different codes and different words, and the thing a caret lands on is
-/// a call in one and a dereference in the other.
+/// One walk over one lattice, so this is not two checks and `docs/diagnostics.md`
+/// says so where it hands the two their codes. What differs is the question:
+/// the codes and the words are different, and the thing a caret lands on is a
+/// call in one and a dereference in the other.
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     /// `free(p); free(p);`
-    FreedTwice,
+    DoubleFree,
     /// `free(p); *p = 42;`
-    UsedAfterFree,
+    UseAfterFree,
 }
 
 /// One thing this check concluded, and where.
@@ -471,7 +473,7 @@ pub enum Kind {
 /// answers it, and ADR-0001 is why there is only one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
-    /// Which check this is.
+    /// Which of the two this is.
     pub kind: Kind,
     /// What that check concluded.
     pub conclusion: Conclusion,
@@ -579,8 +581,9 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
 /// What a set of sites says about whatever touched them.
 ///
-/// The fold from many sites to one conclusion, and the one place both checks
-/// make it. RK-035 in the review knowledge bank is why there is one: a
+/// The fold from many sites to one conclusion, and the one place either kind
+/// of finding makes it. RK-035 in the review knowledge bank is why there is
+/// one: a
 /// may-analysis's join is forced to be right by the lattice, and the code that
 /// reads the answer is where the same rule gets lost.
 struct Verdict {
@@ -697,7 +700,7 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
     let verdict = verdict(Allocations::touching(arguments, known), known)?;
 
     Some(Finding {
-        kind: Kind::FreedTwice,
+        kind: Kind::DoubleFree,
         conclusion: verdict.conclusion,
         at: origin.span(),
         freed: verdict.freed,
@@ -731,7 +734,7 @@ fn used(findings: &mut Vec<Finding>, at: Option<(Span, Vec<&Place>)>, known: &Kn
         };
 
         findings.push(Finding {
-            kind: Kind::UsedAfterFree,
+            kind: Kind::UseAfterFree,
             conclusion: verdict.conclusion,
             at,
             freed: verdict.freed,
