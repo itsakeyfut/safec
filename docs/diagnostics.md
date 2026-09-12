@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304` |
-| `SC04xx` | memory | none yet |
+| `SC04xx` | memory | `SC0401` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -57,8 +57,11 @@ records why the prefix is this one and what was rejected.
 | `SC09xx` | free | none |
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
-the question about, in the order it names them, so they are reserved before
-anything can emit from them.
+the question about, in the order it names them, so they were reserved before
+anything could emit from them. The first of the four now does: `SC0401` is a
+value freed where it may already have been freed, and it is the first code in
+this compiler that says something about what a program does rather than about
+how it is written.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from

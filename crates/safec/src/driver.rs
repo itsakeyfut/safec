@@ -39,10 +39,13 @@ use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
 use crate::parser::parse;
+use crate::safety::SafetyLevel;
 use crate::sema::{Resolution, resolve};
 use crate::token::Token;
 use crate::types::{Types, check};
+use safec_ir::analysis::Conclusion;
 use safec_ir::ir::TranslationUnit;
+use safec_ir::memory::{self, Finding};
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::Target;
@@ -54,13 +57,22 @@ use safec_llvm::emit::Refusal;
 // on the code wants "the backend could not write this" rather than a list of
 // the ways that can happen.
 //
-// The only diagnostic in this file that carries one. The others are the driver
-// saying something about a run or about the machine it is on, and this is the
-// backend saying something about a program, which is the line
+// One of the two diagnostics in this file that carry one. The rest are the
+// driver saying something about a run or about the machine it is on, and this
+// is the backend saying something about a program, which is the line
 // `docs/diagnostics.md` draws. No count here: that document carries one, with
 // the command that settles it, and two places counting the same thing is one
 // place too many.
 const BACKEND: Code = Code::new("SC0801");
+
+/// A value freed where it may already have been freed.
+///
+/// `SC04xx` is the memory axis, reserved by `docs/diagnostics.md` before
+/// anything could emit from it, and this is the first. It is built here rather
+/// than where the check is because `safec_ir` cannot see a `Diagnostic` at all,
+/// which is ADR-0011, and `BACKEND` above is the same arrangement for the same
+/// reason.
+const DOUBLE_FREE: Code = Code::new("SC0401");
 
 /// Everything one run of the compiler produced.
 ///
@@ -540,14 +552,77 @@ fn lowered(
     // lowering says so about each piece rather than saying it once here.
     let (resolution, types) = analysed.typed.as_ref()?;
 
-    Some(lower(
+    let unit = lower(
         sources,
         &analysed.ast,
         resolution,
         types,
         options.target,
         diagnostics,
-    ))
+    );
+
+    // The one place a safety check runs, because this is the one place the IR
+    // is built: every artifact that has one reaches it through here, so there
+    // is no arm for a check to be left out of.
+    //
+    // A comparison rather than a match, which is the shape RK-003 in the review
+    // knowledge bank warns about and is right here for the reason `SafetyLevel`
+    // gives in its own doc comment: the levels are cumulative and ordered on
+    // purpose, so a level above this one runs this check too, and there is
+    // nothing below `Off`. `EmitKind` is the other case and deliberately has no
+    // `Ord` at all.
+    if options.safety >= SafetyLevel::Memory {
+        for finding in memory::check(sources, &unit) {
+            if let Some(diagnostic) = double_free(&finding) {
+                diagnostics.report(diagnostic);
+            }
+        }
+    }
+
+    Some(unit)
+}
+
+/// What the double-free check concluded, as what a user reads.
+///
+/// The check names a conclusion and never reads the policy, so this does not
+/// either: `Diagnostic::concluded` is the one place a conclusion becomes a
+/// severity and `DiagnosticSink` is the one place `--deny-unknown` is applied.
+/// ADR-0001 is why there is one of each.
+///
+/// The value is not named. `docs/safety-model.md` writes "use of freed value
+/// `p`" and the IR holds no `p`: a local is a type and an index, which is #136.
+/// The caret goes on the call, so the quoted line above it shows `free(p)` and
+/// the reader finds the name in their own text.
+fn double_free(finding: &Finding) -> Option<Diagnostic> {
+    // The label says only as much as the conclusion does. "freed again" asserts
+    // that there was a first time, which is exactly what an unproven result
+    // does not know, so a warning saying it would contradict its own message a
+    // line above.
+    let (message, label) = match finding.conclusion {
+        Conclusion::Unsafe => (
+            "this frees a value that was freed already",
+            "freed again here",
+        ),
+        Conclusion::Unknown => ("this may free a value that was freed already", "freed here"),
+        // The check never answers this and `Diagnostic::concluded` gives `None`
+        // for it, so neither is read. Written out rather than `_` so that a
+        // fourth conclusion has to be answered for here.
+        Conclusion::Safe => ("nothing", "nothing"),
+    };
+
+    let mut diagnostic = Diagnostic::concluded(finding.conclusion, message)?
+        .with_code(DOUBLE_FREE)
+        .with_safety_level(SafetyLevel::Memory)
+        .with_label(Label::primary(finding.at, label));
+
+    // Only where the check knows which earlier free it was. What makes a
+    // finding `Unknown` is that the paths reaching it disagree, and there is
+    // then no single place to point at.
+    if let Some(freed) = finding.freed {
+        diagnostic = diagnostic.with_label(Label::secondary(freed, "freed here"));
+    }
+
+    Some(diagnostic)
 }
 
 /// Where an artifact is written, which is not always what `-o` said.
