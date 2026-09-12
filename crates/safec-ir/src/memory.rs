@@ -447,7 +447,15 @@ impl Analysis for Allocations<'_> {
         // would report a double free for code that allocates each time round.
         value.clear(place.local);
         value.points_to[place.local.index()][place.local.index()] = true;
-        value.state[place.local.index()] = SiteState::Live(Some(origin.span()));
+        // **The span only where this check saw an allocation.** Every call's
+        // destination is a site, because a call this cannot read may hand back
+        // anything and a site is how that is tracked. But `allocated here` is a
+        // claim, and `void *p = bar();` gives no evidence that `bar` allocated
+        // anything. Naming that line was a caret asserting something nothing
+        // had established, so a site whose call is not `malloc` is `Live(None)`
+        // and the diagnostic leaves the label off.
+        let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
+        value.state[place.local.index()] = SiteState::Live(made);
     }
 }
 
