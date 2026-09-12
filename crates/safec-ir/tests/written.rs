@@ -590,14 +590,17 @@ impl Analysis for Climbing {
 /// suite run under that mutation has to be given a timeout to show anything at
 /// all. `cfg.rs` says the same of its own visited check.
 ///
-/// The expectation names this analysis, so dropping the `type_name` from the
-/// message fails it too. What it does not hold is the sentence that says the
-/// defect is safec's rather than the compiled code's, because a `should_panic`
-/// expectation is one substring and that one is not next to this one. It is a
-/// literal in the format string and a reader sees it in a diff.
+/// **The expectation is the whole message rather than a phrase from it**, so
+/// every part is held: the analysis's name, both causes and what to do about
+/// each, whose defect it is, and the three numbers. It was a phrase, and the
+/// three numbers were then the only part of a diagnostic nothing read, so
+/// adding one to the block index, to the visit count or to the height left the
+/// suite green. Mutation: any of those three, or reversing the sentence that
+/// says whose defect it is. Each fails here, and nothing else in the suite
+/// reads this message at all.
 #[test]
 #[should_panic(
-    expected = "`written::Climbing` analysis did not converge. Either its lattice is taller than it said, in which case raise what `Analysis::height` answers, or it has no top at all, in which case this is a defect in safec rather than in the code being compiled"
+    expected = "the `written::Climbing` analysis did not converge. Either its lattice is taller than it said, in which case raise what `Analysis::height` answers, or it has no top at all, in which case this is a defect in safec rather than in the code being compiled and is worth reporting. A join that rebuilds its value into a different shape with the same meaning is the usual way to have no top by accident.\n\nBlock 1 was walked 3 times, and `height` answered 1."
 )]
 fn an_analysis_that_cannot_converge_is_stopped_and_named() {
     let (_sources, at) = spans();
