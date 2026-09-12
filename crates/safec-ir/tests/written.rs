@@ -57,14 +57,10 @@ impl Analysis for Written {
         vec![false; self.0]
     }
 
-    fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool {
-        let mut changed = false;
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
         for (here, there) in into.iter_mut().zip(from) {
-            let both = *here && *there;
-            changed |= both != *here;
-            *here = both;
+            *here = *here && *there;
         }
-        changed
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
@@ -213,9 +209,10 @@ fn what_a_loop_writes_and_what_comes_before_it_are_answered_apart() {
 /// **The guard on the fixpoint itself.** Mutation: drop the re-push of a
 /// successor whose value changed, so each block is visited once. The header
 /// keeps what the entry gave it, the exit is answered written, and this
-/// fails. Mutation: `join` answers `false` whatever it did. The worklist
-/// empties after the first pass and this fails the same way. Both were
-/// applied and no other test in the suite fails under either.
+/// fails. Mutation: in `solve`, answer that nothing moved however the
+/// comparison came out. The worklist empties after the first pass and this
+/// fails the same way. Both were applied and no other test in the suite
+/// fails under either.
 #[test]
 fn the_back_edge_changes_the_answer_after_the_loop() {
     let (_sources, at) = spans();

@@ -18,7 +18,7 @@
 //! could report would be one Phase 5 could not be the first to use.
 //!
 //! **Termination belongs to the analysis, and nothing here can check it.** The
-//! walk ends when no [`Analysis::join`] answers that anything changed, so a
+//! walk ends when no [`Analysis::join`] moves a value, so a
 //! lattice whose values can keep rising forever does not end at all, and the
 //! failure is a hang rather than a diagnostic. Bounding it means choosing a
 //! widening, and a widening chosen before any analysis needs one is a guess.
@@ -63,6 +63,13 @@ pub trait Analysis {
     /// consumed the stored value would have nothing to walk from the second
     /// time.
     ///
+    /// [`PartialEq`] because the solver decides whether anything moved by
+    /// comparing, rather than by asking the join. That is what removes the
+    /// one law this framework used to rest on, and it puts a smaller one in
+    /// its place: the equality has to agree with the fold. A join that
+    /// rebuilds a value into a different shape with the same meaning never
+    /// compares equal and never converges. See ADR-0016.
+    ///
     /// **A value that carries a span is where the walk stops terminating.**
     /// `docs/safety-model.md` asks a diagnostic to say "p freed here", so the
     /// first value a real check carries will hold one, and a span is not a
@@ -72,7 +79,7 @@ pub trait Analysis {
     /// Choose the payload by a rule that cannot depend on which side arrived.
     /// ADR-0016 is where it is recorded, and why nothing here bounds the walk
     /// instead.
-    type Value: Clone;
+    type Value: Clone + PartialEq;
 
     /// What holds where the function starts.
     ///
@@ -81,13 +88,15 @@ pub trait Analysis {
     /// function's entry is the one place that can say so.
     fn on_entry(&self) -> Self::Value;
 
-    /// Fold `from` into `into`, and answer whether `into` moved.
+    /// Fold `from` into `into`.
     ///
-    /// **The answer is what ends the walk.** A join that says nothing changed
-    /// is how the solver learns it has nothing left to do, so one that always
-    /// answers `false` stops the fixpoint after a single pass and one that
-    /// always answers `true` never stops at all.
-    fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool;
+    /// **It does not answer whether anything moved**, and that is the whole
+    /// of this signature. The solver compares the value against what it was,
+    /// so there is no answer here for an analysis to be wrong about: one that
+    /// folded correctly and reported that it had not would hand back
+    /// something that is not a fixpoint and say nothing about it. See
+    /// ADR-0016.
+    fn join(&self, into: &mut Self::Value, from: &Self::Value);
 
     /// What one element of a block does to what is known.
     ///
@@ -219,7 +228,18 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
 
         for &successor in &successors {
             let changed = match &mut values[successor.index()] {
-                Some(arrived) => analysis.join(arrived, &value),
+                Some(arrived) => {
+                    // Compared rather than asked. What a clone per edge buys
+                    // is that the join has no answer to be wrong about. See
+                    // ADR-0016.
+                    //
+                    // Inverting this comparison does not fail a test, it hangs
+                    // one, which is a worse signal than a failure and the only
+                    // one available for a walk that never ends. Measured.
+                    let before = arrived.clone();
+                    analysis.join(arrived, &value);
+                    *arrived != before
+                }
                 // The first answer to arrive is kept rather than joined, which
                 // is what lets an analysis have no bottom. See ADR-0016.
                 nothing @ None => {
