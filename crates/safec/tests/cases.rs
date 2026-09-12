@@ -144,6 +144,8 @@ cases! {
     precedence_multiplicative: ["--emit", "ast"],
     precedence_relational: ["--emit", "ast"],
     precedence_shift: ["--emit", "ast"],
+    several_declarators_each_become_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    several_declarators_each_become_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     several_items_and_statements: ["--emit", "ast"],
     returning_the_wrong_type: ["--emit", "ast"],
     subscript: ["--emit", "ast"],

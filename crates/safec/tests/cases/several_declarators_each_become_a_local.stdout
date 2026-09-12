@@ -1,0 +1,25 @@
+Target "x86_64-pc-windows-msvc"
+Function several_declarators_each_become_a_local.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation several_declarators_each_become_a_local.c:2:9 written
+      Destination "_1"
+      Use
+        Constant 1
+    Operation several_declarators_each_become_a_local.c:2:16 written
+      Destination "_2"
+      Use
+        Constant 2
+    Operation several_declarators_each_become_a_local.c:3:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation several_declarators_each_become_a_local.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Return
