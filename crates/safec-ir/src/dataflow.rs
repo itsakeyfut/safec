@@ -223,6 +223,14 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         }
         analysis.terminator(function, &function.block(block).terminator, &mut value);
 
+        // What the block sends, and it is the same for every successor, so it
+        // is bound again here to stop the loop below writing to it. Folding a
+        // successor's value into this one rather than the other way round
+        // compiles while the binding is mutable, because `&mut T` coerces to
+        // `&T`, and it gives the next successor what two paths agree on rather
+        // than what this block sent. Spelled this way that is `error[E0596]`.
+        let value = value;
+
         successors.clear();
         function.block(block).terminator.successors(&mut successors);
 
