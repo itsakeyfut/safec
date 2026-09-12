@@ -59,13 +59,21 @@ enum SiteState {
     Live,
     /// Freed, and where the earliest free reaching here is.
     ///
-    /// Earliest by position rather than by which path arrived first. ADR-0016
-    /// records that a join keeping whichever span arrived oscillates where two
-    /// of them meet below a branch inside a loop, and that it was measured as
-    /// a hang rather than as a failure; this is the rule that record says
-    /// nothing was asking for. It is also the span the diagnostic wants, so
-    /// the rule that makes the walk end and the rule that makes the message
-    /// right are one rule.
+    /// Earliest by position rather than by which path arrived first.
+    ///
+    /// ADR-0016 records that a value carrying a span can fail to reach a
+    /// fixpoint, because a join keeping whichever one arrived oscillates where
+    /// two of them meet below a branch inside a loop, and that it was measured
+    /// as a hang. **That is not what this rule is doing here**, and borrowing
+    /// the record's reason would be a claim nothing holds: `Unknown` is a top
+    /// per site, so a span that would have alternated is absorbed before it
+    /// can. Measured, on this lattice: keeping whichever arrived leaves the
+    /// whole suite green and every walk still ends.
+    ///
+    /// What the rule is for is **which free the diagnostic names**. Without it
+    /// the answer is whichever path the worklist reached last, which is stable
+    /// for one program and arbitrary between two that differ only in the order
+    /// their blocks were built. `a_join_names_the_earlier_free` is the guard.
     Freed(Span),
     /// Freed on one path and not on another, or handed to a call this check
     /// cannot read.
@@ -180,6 +188,14 @@ impl Analysis for Allocations<'_> {
         // which it can do at most once per site that frees. Generous rather
         // than tight, which is the direction `Analysis::height` says to err in:
         // answering too low stops a correct analysis.
+        //
+        // **Nothing holds this number.** Measured: answering `locals` instead
+        // leaves the whole suite passing, because no function here takes more
+        // visits to a block than it has locals, and building one that did
+        // would be building a program for the bound rather than for the check.
+        // What a wrong answer costs is what that method promises: too low is a
+        // panic naming `Analysis::height`, which is a build that stops with
+        // something to read rather than a wrong answer about a program.
         locals * locals + locals * (locals + 2)
     }
 

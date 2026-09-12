@@ -21,14 +21,14 @@ use safec_ir::memory::{Finding, check};
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
 
-/// Four call sites and the two names the check reads.
+/// Six call sites and the two names the check reads.
 struct Names {
     free: Span,
     malloc: Span,
     function: Span,
     /// In the order they appear in the file, so `at[0]` is earlier than `at[1]`
     /// by the rule the join orders spans with.
-    at: [Span; 4],
+    at: [Span; 6],
 }
 
 /// A file whose bytes the check can read a callee's name out of.
@@ -40,7 +40,7 @@ struct Names {
 /// places for that ordering to be about anything.
 fn sources() -> (SourceMap, Names) {
     let mut map = SourceMap::new();
-    let file = map.add_virtual("t.c", "free malloc f a b c d\n");
+    let file = map.add_virtual("t.c", "free malloc f a b c d e g\n");
 
     let names = Names {
         free: Span::new(file, 0, 4),
@@ -51,6 +51,8 @@ fn sources() -> (SourceMap, Names) {
             Span::new(file, 16, 17),
             Span::new(file, 18, 19),
             Span::new(file, 20, 21),
+            Span::new(file, 22, 23),
+            Span::new(file, 24, 25),
         ],
     };
 
@@ -269,20 +271,142 @@ fn two_allocations_are_two_sites() {
     assert!(found.is_empty(), "{found:?}");
 }
 
-/// Two frees meeting below a branch inside a loop reach an answer.
+/// Where two frees meet, the diagnostic names the earlier of them.
 ///
-/// The shape ADR-0016 measured as a hang: the value carries a span, and a join
-/// that keeps whichever one arrived alternates between the two forever. The
-/// rule that ends it is that the earlier span wins, which is also the span the
-/// diagnostic wants, so one rule does both jobs.
+/// The rule ADR-0016 asked somebody to write down. It is not what makes the
+/// walk end here, which `a_free_that_may_not_be_the_first_is_unproven` says;
+/// it is what makes the answer the same whichever order the solver happened to
+/// reach the two arms in.
 ///
 /// Mutation: in `SiteState::joined`, keep `other`'s span rather than the
-/// earlier one. The walk does not converge and `solve` **panics** naming the
-/// analysis, which is what #122 bought: before the budget existed this was a
-/// hang with nothing to read, and the test would have had to be run under a
-/// timeout to show anything at all.
+/// earlier one. `freed` becomes the second arm's call and this fails on that
+/// field, with nothing else in the suite noticing.
 #[test]
-fn two_frees_below_a_branch_in_a_loop_are_reconciled() {
+fn a_join_names_the_earlier_free() {
+    let (sources, names) = sources();
+    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let held = function.parameters().next().expect("one parameter");
+
+    let entry = function.reserve_block();
+    let first_arm = function.reserve_block();
+    let second_arm = function.reserve_block();
+    let joined = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: first_arm,
+                otherwise: second_arm,
+            },
+        },
+    );
+    // The later span is on the arm the solver reaches first, so a rule that
+    // kept whichever arrived would answer differently from one that orders
+    // them. Without that the test would pass under both.
+    function.fill_block(first_arm, free(&callees, held, names.at[1], joined));
+    function.fill_block(second_arm, free(&callees, held, names.at[0], joined));
+    function.fill_block(joined, free(&callees, held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].at, names.at[2]);
+    assert_eq!(found[0].freed, Some(names.at[0]), "the earlier of the two");
+}
+
+/// Where a local holds either of two allocations and both were freed, the
+/// earlier free is the one named.
+///
+/// Different from `a_join_names_the_earlier_free`, which orders two spans
+/// inside one site: this orders across two sites, which is a second place the
+/// same rule has to be applied and which nothing else reaches. Every other case
+/// that joins two allocations frees them at one call, so the two spans are
+/// equal and the ordering would be about nothing.
+///
+/// Both allocations are freed before the branch, so both sites are freed on
+/// every path. **That is what makes this an error rather than a warning**: the
+/// value joins which site a local may hold separately from what is known about
+/// each site, so a program that frees one allocation on each arm loses the
+/// correlation between the two and comes back `Unknown`. Sound, and less than
+/// a reader might expect; this shape is the one that keeps a proof.
+///
+/// Mutation: in `reported`, keep the last freed span rather than the earlier
+/// one. This fails on `freed` and the rest of the suite does not notice.
+#[test]
+fn a_free_of_either_of_two_allocations_names_the_earlier() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let one = function.push_local(int);
+    let other = function.push_local(int);
+
+    let allocate_one = function.reserve_block();
+    let allocate_two = function.reserve_block();
+    let free_one = function.reserve_block();
+    let free_two = function.reserve_block();
+    let pick = function.reserve_block();
+    let take_one = function.reserve_block();
+    let take_two = function.reserve_block();
+    let joined = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        allocate_one,
+        malloc(&callees, one, names.at[0], allocate_two),
+    );
+    function.fill_block(allocate_two, malloc(&callees, other, names.at[1], free_one));
+    function.fill_block(free_one, free(&callees, one, names.at[2], free_two));
+    function.fill_block(free_two, free(&callees, other, names.at[3], pick));
+
+    function.fill_block(
+        pick,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: take_one,
+                otherwise: take_two,
+            },
+        },
+    );
+    function.fill_block(take_one, copy(held, one, names.at[4], joined));
+    function.fill_block(take_two, copy(held, other, names.at[4], joined));
+
+    function.fill_block(joined, free(&callees, held, names.at[5], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[5]);
+    assert_eq!(
+        found[0].freed,
+        Some(names.at[2]),
+        "the earlier of the two frees"
+    );
+}
+
+/// A free reaching a place where the value was not freed is neither proved nor
+/// disproved.
+///
+/// The shape ADR-0016 measured as a hang, built to see whether this lattice has
+/// the same problem. **It does not**, and that is worth a test rather than an
+/// assumption: `Unknown` is a top per site, so the span that would have
+/// alternated is absorbed before it can, and keeping whichever span arrived
+/// leaves this passing. `a_join_names_the_earlier_free` is what holds the rule
+/// that record asked for; this holds the answer.
+///
+/// Mutation: make `Live` joined with `Freed` answer `Freed` rather than
+/// `Unknown`. Both arms then claim the program is wrong on a path where it may
+/// not be, and this fails on the conclusion.
+#[test]
+fn a_free_that_may_not_be_the_first_is_unproven() {
     let (sources, names) = sources();
     let (unit, mut function, _int, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
