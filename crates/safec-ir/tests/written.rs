@@ -52,6 +52,11 @@ struct Written(usize);
 
 impl Analysis for Written {
     type Value = Vec<bool>;
+    /// One step per local. A local's bit starts set or clear and the
+    /// intersection only ever clears it, so it falls at most once.
+    fn height(&self, _function: &Function) -> usize {
+        self.0
+    }
 
     fn on_entry(&self) -> Self::Value {
         vec![false; self.0]
@@ -553,6 +558,13 @@ struct Climbing(usize);
 
 impl Analysis for Climbing {
     type Value = Vec<u32>;
+    /// Any answer here is wrong, because this lattice has no top and no number
+    /// bounds a walk with no end. It answers the locals, which is what an
+    /// author who had not noticed would answer, and what the solver does about
+    /// that is the test below.
+    fn height(&self, _function: &Function) -> usize {
+        self.0
+    }
 
     fn on_entry(&self) -> Self::Value {
         vec![0; self.0]
@@ -622,18 +634,18 @@ fn an_analysis_that_cannot_converge_is_stopped_and_named() {
 }
 
 /// Four states per local rather than one: every local counts down from four,
-/// and the join keeps the lower. Its lattice is four times as tall as the
-/// default answers for the same function, so it says so.
+/// and the join keeps the lower. Its lattice is four times as tall as its
+/// locals, which is what more than one state per key looks like and why no
+/// formula over the function could have answered for it.
 struct Counting(usize);
 
 impl Analysis for Counting {
     type Value = Vec<u8>;
 
     /// Four steps for every local but the return place, which no arm counts
-    /// down. Taller than the locals and the elements together, so leaning on
-    /// the default would stop this, and exact rather than generous, so that
-    /// the one the solver adds to it is the difference between passing and
-    /// being stopped.
+    /// down. Exact rather than generous, so that the one the solver adds to it
+    /// is the difference between this passing and being stopped, which makes
+    /// this the only test in the suite holding that `+ 1`.
     fn height(&self, function: &Function) -> usize {
         (function.locals().len() - 1) * 4
     }
@@ -662,15 +674,16 @@ impl Analysis for Counting {
 ///
 /// Sixty four locals, one loop arm each, and a value that takes four steps
 /// down per local. A block is walked once per step its value takes, so this
-/// walks the header about four times as many times as there are locals, which
-/// is more than the default height answers for this function.
+/// walks the header about four times as many times as there are locals.
 ///
-/// Mutation: delete `Counting::height`. The default answers the locals plus
-/// the elements, the walk needs four times the locals, and a correct analysis
-/// is stopped as though it were broken.
+/// Mutation: delete `Counting::height`. That is `error[E0046]` rather than a
+/// failing test, because the trait carries no default, and a reversal nobody
+/// can compile is the row above one somebody has to remember to run.
 ///
-/// Mutation: have `solve` use the default rather than what the analysis
-/// answered. The same, and these are the only tests that notice either.
+/// Mutation: have `solve` answer the locals plus the elements itself, which is
+/// the default this trait used to carry and which was taken away for being
+/// wrong about exactly this shape. The walk is stopped and a correct analysis
+/// is reported as broken.
 ///
 /// Mutation: drop the one the solver adds to the declared height. This
 /// analysis declares exactly what it needs, so the walk is one visit taller
@@ -741,12 +754,18 @@ fn an_analysis_that_says_how_tall_it_is_is_believed() {
 /// the number of sites, which has nothing to do with the number of locals.
 ///
 /// `Place`'s own doc comment says an analysis keys its lattice on a place
-/// rather than on a local, and this is the shape that says why the default
-/// height counts the elements as well.
+/// rather than on a local, and this is the shape that says why no formula over
+/// the function answers for every analysis.
 struct Reaching(usize);
 
 impl Analysis for Reaching {
     type Value = Vec<bool>;
+    /// One step per site. A site's bit is set once and the union never clears
+    /// it, so the value rises once per site and not at all per local, which is
+    /// the whole reason this analysis is in the suite.
+    fn height(&self, _function: &Function) -> usize {
+        self.0
+    }
 
     fn on_entry(&self) -> Self::Value {
         vec![false; self.0]
@@ -769,15 +788,16 @@ impl Analysis for Reaching {
 }
 
 /// An analysis keyed on something the function has more of than locals is not
-/// stopped, without having to say anything about its height.
+/// stopped.
 ///
 /// One local, two hundred sites that assign to it, each in its own loop arm.
-/// The walk needs one visit per site and the function has two locals, so a
-/// budget counting only the locals stops it on its third pass.
+/// The walk needs one visit per site and the function has two locals, so any
+/// budget counting locals stops it on its third pass.
 ///
-/// Mutation: drop the elements from the default height. The budget becomes two
-/// and a correct analysis is stopped as though it were broken. This is the only
-/// test that notices, because every other one keys on locals.
+/// Mutation: have `Reaching::height` answer the locals rather than the sites.
+/// The budget becomes three and a correct analysis is stopped as though it
+/// were broken. This is the only test that notices, because every other one
+/// keys on locals.
 #[test]
 fn an_analysis_that_keys_on_more_than_its_locals_is_not_stopped() {
     const SITES: usize = 200;

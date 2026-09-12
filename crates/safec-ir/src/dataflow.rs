@@ -38,13 +38,14 @@
 use crate::cfg::Cfg;
 use crate::ir::{BlockId, Element, Function, Terminator};
 
-/// What an analysis is: a value, a join, and what the program does to it.
+/// What an analysis is: a height, a value, a join, and what the program does
+/// to it.
 ///
-/// Implementing this is the whole of writing one. There is no fifth thing to
-/// be right about, which is deliberate: a method added later without a default
-/// is `error[E0046]` at every implementation, so what an analysis owes is held
-/// by the compiler rather than by a convention somebody remembers. See
-/// ADR-0016.
+/// Implementing this is the whole of writing one, and **none of the five has a
+/// default**, which is deliberate: a method without one is `error[E0046]` at
+/// every implementation, so what an analysis owes is held by the compiler
+/// rather than by a convention somebody remembers. [`Analysis::height`] says
+/// why that mattered enough to take a default away again. See ADR-0016.
 ///
 /// **There is no bottom.** A block nothing has reached yet holds no value at
 /// all, so the first answer to arrive is kept as it is and only the second is
@@ -99,20 +100,25 @@ pub trait Analysis {
     ///
     /// The walk is stopped when a block is visited more than this, because a
     /// walk that does not end has nothing to read. Answering too low stops a
-    /// correct analysis; answering too high makes a broken one take longer to
-    /// stop. Both are the same panic, and it names this method.
+    /// correct analysis; answering too high lets a broken one keep climbing,
+    /// and far enough above is the hang this exists to replace. Both are the
+    /// same panic, and it names this method, so answer tightly.
     ///
-    /// The default is the locals plus the elements, which covers an analysis
-    /// keyed on a local, on a place, or on the site an assignment makes: all
-    /// three were measured against it. An analysis whose value has more than
-    /// one state per key says so here rather than leaning on it.
-    fn height(&self, function: &Function) -> usize {
-        function.locals().len()
-            + function
-                .blocks()
-                .map(|block| block.elements.len())
-                .sum::<usize>()
-    }
+    /// **A value keyed on several things is a product, and the height of a
+    /// product is the sum of its parts.** The four states `docs/safety-model.md`
+    /// draws for a place, `ALLOCATED` through `INVALID`, are three steps per
+    /// place and not three: multiply by however many keys the value holds.
+    ///
+    /// There is deliberately no default. One was written, answering the locals
+    /// plus the elements, and it was measured wrong for two of the four
+    /// analyses the roadmap asks for: an ownership lattice takes about three
+    /// steps per place where that answers about two per local, and a points-to
+    /// value fills a matrix while the answer only grows with the code filling
+    /// it. It also could not see a key a terminator introduces, because it
+    /// counted elements, and a call's destination is a terminator's. A default
+    /// that no analysis it was written for can use is a trap shaped like help,
+    /// so this is `error[E0046]` at every implementation instead.
+    fn height(&self, function: &Function) -> usize;
 
     /// What holds where the function starts.
     ///
