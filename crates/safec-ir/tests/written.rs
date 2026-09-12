@@ -544,6 +544,179 @@ fn a_local_that_is_only_read_is_not_a_local_that_was_written() {
     assert_eq!(solution.value(after), Some(&vec![false, false, true]));
 }
 
+/// A lattice with no top: the join takes the larger of the two and adds one,
+/// so a value that meets itself keeps rising and no loop has a fixpoint.
+///
+/// ADR-0016 records that termination is the analysis's to answer for. This is
+/// what the solver does when it is not answered.
+struct Climbing(usize);
+
+impl Analysis for Climbing {
+    type Value = Vec<u32>;
+
+    fn on_entry(&self) -> Self::Value {
+        vec![0; self.0]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        for (here, there) in into.iter_mut().zip(from) {
+            *here = (*here).max(*there) + 1;
+        }
+    }
+
+    fn element(&self, _function: &Function, _element: &Element, _value: &mut Self::Value) {}
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// An analysis that cannot converge is stopped, and the message says whose
+/// defect it is rather than blaming the code being compiled.
+///
+/// Mutation: remove the assertion in `solve`. This test **hangs** rather than
+/// failing, which is the only signal a walk that never ends has, and is why a
+/// suite run under that mutation has to be given a timeout to show anything at
+/// all. `cfg.rs` says the same of its own visited check.
+///
+/// The expectation names this analysis, so dropping the `type_name` from the
+/// message fails it too. What it does not hold is the sentence that says the
+/// defect is safec's rather than the compiled code's, because a `should_panic`
+/// expectation is one substring and that one is not next to this one. It is a
+/// literal in the format string and a reader sees it in a diff.
+#[test]
+#[should_panic(expected = "`written::Climbing` analysis did not converge: block")]
+fn an_analysis_that_cannot_converge_is_stopped_and_named() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, _int) = a_function(at);
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let body = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(
+        header,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: body,
+                otherwise: exit,
+            },
+        },
+    );
+    function.fill_block(body, goto(header, vec![]));
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let _ = solve(&Climbing(function.locals().len()), &function, &cfg);
+}
+
+/// Two states per local rather than one: every local counts down from two, and
+/// the join keeps the lower. Its lattice is twice as tall as `Written`'s over
+/// the same function, which is what the budget's multiplier is slack for.
+struct Counting(usize);
+
+impl Analysis for Counting {
+    type Value = Vec<u8>;
+
+    fn on_entry(&self) -> Self::Value {
+        vec![2; self.0]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        for (here, there) in into.iter_mut().zip(from) {
+            *here = (*here).min(*there);
+        }
+    }
+
+    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        if let Element::StorageDead { origin: _, local } = element {
+            value[local.index()] = value[local.index()].saturating_sub(1);
+        }
+    }
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// A correct analysis over a large function is not stopped, even when its
+/// lattice is taller than the function has locals.
+///
+/// Sixty four locals, one loop arm each, and a value that takes two steps down
+/// per local rather than one. A block is walked once per step its value takes,
+/// so this walks the header about twice as many times as there are locals.
+///
+/// Mutation: make `STATES_PER_KEY` one. The budget becomes the local count, the
+/// walk needs twice that, and a correct analysis is stopped as though it were
+/// broken. That is the whole reason the budget is a multiple rather than the
+/// count itself, and this is the only test that notices.
+///
+/// Mutation: count the walks across every block rather than per block. This
+/// fails too, and it is the only test that notices that either: the others are
+/// small enough that the two counts stay under the budget together.
+#[test]
+fn a_correct_analysis_over_a_large_function_is_not_stopped() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let locals: Vec<_> = (0..64).map(|_| function.push_local(int)).collect();
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let picks: Vec<_> = locals.iter().map(|_| function.reserve_block()).collect();
+    let arms: Vec<_> = locals.iter().map(|_| function.reserve_block()).collect();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(header, goto(picks[0], vec![]));
+    for (i, &local) in locals.iter().enumerate() {
+        let otherwise = if i + 1 < picks.len() {
+            picks[i + 1]
+        } else {
+            exit
+        };
+        function.fill_block(
+            picks[i],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: arms[i],
+                    otherwise,
+                },
+            },
+        );
+        function.fill_block(
+            arms[i],
+            goto(header, vec![Element::StorageDead { origin, local }]),
+        );
+    }
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Counting(function.locals().len()), &function, &cfg);
+
+    // Every local is counted down to nothing on the way round, and the return
+    // place, which no arm names, is untouched.
+    let at_exit = solution.value(exit).expect("the exit is reachable");
+    assert_eq!(at_exit[0], 2);
+    assert!(at_exit[1..].iter().all(|&left| left == 0), "{at_exit:?}");
+}
+
 /// A block the entry cannot reach is answered with nothing, rather than
 /// with a value that would let a check conclude about code no execution
 /// reaches.

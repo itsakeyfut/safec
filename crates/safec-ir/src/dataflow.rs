@@ -17,12 +17,14 @@
 //! it wanted to: this crate cannot see one, which is ADR-0011. A framework that
 //! could report would be one Phase 5 could not be the first to use.
 //!
-//! **Termination belongs to the analysis, and nothing here can check it.** The
-//! walk ends when no [`Analysis::join`] moves a value, so a
-//! lattice whose values can keep rising forever does not end at all, and the
-//! failure is a hang rather than a diagnostic. Bounding it means choosing a
-//! widening, and a widening chosen before any analysis needs one is a guess.
-//! ADR-0016 carries this as a consequence rather than leaving it unsaid.
+//! **Termination belongs to the analysis, and the solver only says when it
+//! did not happen.** The walk ends when no [`Analysis::join`] moves a value,
+//! so a lattice whose values can keep rising forever has no end to reach.
+//! What this does about that is stop and say so: a budget per block, which
+//! changes no answer any fixpoint reaches and decides only what happens when
+//! there is no fixpoint. Choosing a widening, which would change an answer so
+//! that it converges, is a different thing and is still not done. ADR-0016
+//! carries both.
 //!
 //! **The tests are in `crates/safec-ir/tests/written.rs`, not beside this.**
 //! They implement an analysis against this trait and are compiled against the
@@ -180,6 +182,19 @@ impl<V> Solution<V> {
     }
 }
 
+/// How many states one thing an analysis keys on may pass through.
+///
+/// A block is walked once for every step its value takes up the lattice, and
+/// that was measured at exactly the number of locals for an analysis keying
+/// on them: seventeen, sixty five and two hundred and fifty seven visits for
+/// as many locals, while the block count grew twice as fast and did not
+/// matter. So the budget is this times the locals, and this is the slack for
+/// an analysis that keys on something finer, a place rather than a local.
+///
+/// If a legitimate analysis ever trips the budget, this is the number to
+/// raise, and the message says so.
+const STATES_PER_KEY: usize = 64;
+
 /// Run `analysis` over `function` until nothing changes.
 ///
 /// The `Cfg` is taken rather than built, so that a caller holding one does not
@@ -221,6 +236,13 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let mut worklist: Vec<BlockId> = cfg.order().iter().rev().copied().collect();
     let mut successors = Vec::new();
 
+    // A budget on the lattice's height rather than on the graph, for the
+    // reason `STATES_PER_KEY` gives. Not behind `debug_assertions`: a walk
+    // that does not end in a release build is the case this is for, and what
+    // it costs is this counter.
+    let budget = (function.locals().len() + 1).saturating_mul(STATES_PER_KEY);
+    let mut visits = vec![0usize; function.blocks().len()];
+
     while let Some(block) = worklist.pop() {
         // A block can be taken off the list before anything has reached it:
         // the list starts as every reachable block, and the order only puts a
@@ -234,6 +256,22 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         let Some(mut value) = values[block.index()].clone() else {
             continue;
         };
+
+        visits[block.index()] += 1;
+        assert!(
+            visits[block.index()] <= budget,
+            "the `{}` analysis did not converge: block {} was walked {} times, \
+             and the budget for this function is {}.
+
+This is a defect in \
+             safec rather than in the code being compiled. The likeliest cause \
+             is a `join` that rebuilds its value into a different shape with \
+             the same meaning, which never compares equal. Please report it.",
+            core::any::type_name::<A>(),
+            block.index(),
+            visits[block.index()],
+            budget,
+        );
 
         for element in &function.block(block).elements {
             analysis.element(function, element, &mut value);
