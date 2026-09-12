@@ -233,9 +233,15 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
                     // is that the join has no answer to be wrong about. See
                     // ADR-0016.
                     //
-                    // Inverting this comparison does not fail a test, it hangs
-                    // one, which is a worse signal than a failure and the only
-                    // one available for a walk that never ends. Measured.
+                    // Inverting this comparison fails
+                    // `the_back_edge_changes_the_answer_after_the_loop` and
+                    // hangs `what_a_loop_writes_and_what_comes_before_it_are_answered_apart`:
+                    // a block whose value did not move is pushed again, and
+                    // whether that ends at all depends on the check below
+                    // happening to catch it, which is a property of the graph
+                    // rather than of this line. One failure and one hang,
+                    // measured, so run the suite under a timeout to see
+                    // either.
                     let before = arrived.clone();
                     analysis.join(arrived, &value);
                     *arrived != before
