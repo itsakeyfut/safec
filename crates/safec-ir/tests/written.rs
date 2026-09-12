@@ -493,6 +493,60 @@ fn what_a_block_sends_reaches_its_own_successors_and_no_others() {
     assert_eq!(solution.value(end), Some(&vec![false, false]));
 }
 
+/// Reading a local is not writing it, and a local nothing writes is never
+/// written.
+///
+/// `_1` is never assigned and is read once, as the operand of the operation
+/// that writes `_2`. Afterwards `_2` has been written on every path and `_1`
+/// has not.
+///
+/// Mutation: have `element` mark what an operation reads as well as where it
+/// writes, by walking `operation.value` for a `Place`. `_1` is answered
+/// written and this fails. It is the only test that reads a local at all:
+/// every other operation in this file assigns a constant, so nothing else
+/// could notice.
+///
+/// **The second half of the name is the weaker claim**, and it is here rather
+/// than in a test of its own because no mutation distinguishes it: making
+/// `on_entry` answer that every local is already written fails most of this
+/// file, and a test nothing can uniquely break is weight rather than a guard.
+#[test]
+fn a_local_that_is_only_read_is_not_a_local_that_was_written() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let read = function.push_local(int);
+    let written = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        goto(
+            after,
+            vec![Element::Assign(Operation {
+                place: Place::local(written),
+                value: Rvalue::Use(Operand::Copy(Place::local(read))),
+                origin,
+            })],
+        ),
+    );
+    function.fill_block(
+        after,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Written(function.locals().len()), &function, &cfg);
+
+    // The return place, then the one that is only read, then the one written.
+    assert_eq!(solution.value(after), Some(&vec![false, false, true]));
+}
+
 /// A block the entry cannot reach is answered with nothing, rather than
 /// with a value that would let a check conclude about code no execution
 /// reaches.
