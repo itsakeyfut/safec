@@ -2168,6 +2168,63 @@ int main(void) { return 0; }
         ));
     }
 
+    /// A declarator's span runs from the specifiers through its own
+    /// initializer, and stops before the `;`.
+    ///
+    /// Both halves of what `Declaration::span` claims, and nothing else holds
+    /// either: `--emit ast` prints where a span starts and never where it ends,
+    /// so the only thing that would notice one stopping short is a diagnostic
+    /// that underlines a declaration, and there is not one yet.
+    ///
+    /// Mutation: give each declarator the span of the specifiers alone. The
+    /// starts still agree, the ends collapse onto them, and no corpus case
+    /// moves because none of them can see an end.
+    #[test]
+    fn a_declarator_spans_the_specifiers_through_its_own_initializer() {
+        let parsed = parsed("int a = 1, b;\n");
+        let [Item::Declaration { declarators, .. }] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let [first, second] = &declarators[..] else {
+            panic!("{declarators:?}");
+        };
+
+        // Neither carries the `;`, and both carry the specifiers they share.
+        assert_eq!(parsed.sources.snippet(first.declaration.span), "int a = 1");
+        assert_eq!(
+            parsed.sources.snippet(second.declaration.span),
+            "int a = 1, b"
+        );
+    }
+
+    /// A declarator that nests deeper than this parser goes is reported at
+    /// itself, not at the specifiers it shares with the others.
+    ///
+    /// The count is only known once the whole declarator has been read, so the
+    /// caret has to be put back deliberately; putting it on the declaration
+    /// would point at an `int` that is fine, in front of however many
+    /// declarators are also fine.
+    ///
+    /// Mutation: pass the declaration's start rather than the declarator's in
+    /// `init_declarator_list`. The caret moves to byte 0 and nothing else in
+    /// the suite notices, because no case nests a later declarator this deep.
+    #[test]
+    fn a_later_declarator_that_nests_too_deep_is_reported_where_it_was_written() {
+        let source = format!("int a, {}b;\n", "*".repeat(MAX_NESTING + 1));
+        let parsed = parsed(&source);
+
+        let [reported] = parsed.diagnostics.diagnostics() else {
+            panic!("{:?}", parsed.diagnostics.diagnostics());
+        };
+        let Some(label) = reported.primary_label() else {
+            panic!("{reported:?}");
+        };
+
+        // `int a, ` is seven bytes, so this is the first `*` of the second
+        // declarator rather than the `int` in front of both.
+        assert_eq!(label.span().start(), 7);
+    }
+
     /// The suffix written last is the first to wrap the base.
     ///
     /// C17 6.7.6.2 p3 reads `D [ ... ]` by handing "array of T" to `D`, so
