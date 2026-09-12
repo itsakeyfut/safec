@@ -62,6 +62,16 @@ pub trait Analysis {
     /// again every time something arriving at it changes, and a transfer that
     /// consumed the stored value would have nothing to walk from the second
     /// time.
+    ///
+    /// **A value that carries a span is where the walk stops terminating.**
+    /// `docs/safety-model.md` asks a diagnostic to say "p freed here", so the
+    /// first value a real check carries will hold one, and a span is not a
+    /// lattice element: a `join` that keeps whichever one arrived oscillates
+    /// forever where two of them meet below a branch inside a loop. Measured,
+    /// and it is a hang with no diagnostic and no stack rather than a failure.
+    /// Choose the payload by a rule that cannot depend on which side arrived.
+    /// ADR-0016 is where it is recorded, and why nothing here bounds the walk
+    /// instead.
     type Value: Clone;
 
     /// What holds where the function starts.
