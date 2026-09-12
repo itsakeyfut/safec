@@ -53,13 +53,25 @@ Chosen option: **a trait, and the first arrival is stored rather than joined**.
 
 ```rust
 pub trait Analysis {
-    type Value: Clone;
+    type Value: Clone + PartialEq;
     fn on_entry(&self) -> Self::Value;
-    fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool;
+    fn join(&self, into: &mut Self::Value, from: &Self::Value);
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
     fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value);
 }
 ```
+
+**`join` folds and does not report.** It answered whether it had folded when
+this was written, and that answer was the only thing that ended the walk: a
+join that folded correctly and under-reported handed back something that was
+not a fixpoint and said nothing about it. The solver compares instead, which
+is what the `PartialEq` bound is for, and there is then no answer for an
+analysis to be wrong about. Keeping the answer and checking it under
+`debug_assertions` was the alternative and was rejected on where it runs:
+nothing in CI builds a release binary, so the shipped compiler would have kept
+the failure. What it costs is a clone and a comparison on every edge, in every
+build, which has not been measured against anything because nothing here has a
+budget to measure it against.
 
 The function is handed to the transfers rather than left for an analysis to
 hold. An analysis that asks what a place is reaches `TranslationUnit::place_ty`,
@@ -121,8 +133,12 @@ and rewrite all of them on each pass, for a reader that does not exist.
   successor whose value changed, fails
   `the_back_edge_changes_the_answer_after_the_loop`, and fails nothing else:
   measured, and the reason the other loop test is not the guard.
-* Making the solver ignore what `join` answered fails the same test and
-  nothing else, for the same reason: the worklist empties early either way.
+* Making the solver answer that nothing moved, however the comparison came
+  out, fails the same test and nothing else, for the same reason: the worklist
+  empties early either way.
+* An analysis whose `join` returns a `bool` is `error[E0053]` at that
+  implementation, and dropping the `PartialEq` bound is `error[E0369]` in the
+  solver. Those two are what replaced a law this record used to rest on.
 * Seeding every block with `on_entry` rather than the entry alone fails
   `a_block_nothing_reaches_has_no_answer`, and with it every test whose answer
   depends on a value having arrived rather than having been put there: a value
@@ -157,17 +173,13 @@ Each of the first four was applied and the named tests observed to fail.
   and a widening chosen before any analysis needs one is a guess.
 * Bad, because `Value: Clone` puts a clone on every edge. A bitset per local is
   what the first analyses hold, and a graph is one function wide.
-* Bad, because `join` both folds and answers whether it folded, and the
-  answer is the only thing that ends the walk. A `join` that folds correctly and
-  under-reports hands back a `Solution` that is not a fixpoint and carries no
-  mark saying so, and for a may-analysis the blocks below the edge it stopped
-  keep the optimistic value: silence, in the direction the safety model exists
-  to prevent. This record rejects bottom-as-identity for being a law nothing
-  checks, and then rests on a law nothing checks whose failure is quieter. What
-  makes it tolerable rather than equal is where it is visible: an identity
-  mistake answers wrongly on the first program, and this one is caught by
-  comparing each successor's stored value against a re-join after the walk,
-  which is a `PartialEq` bound and a debug-only pass whenever it is wanted.
+* Bad, because the `PartialEq` bound puts a smaller law where a larger one
+  was. `join` used to answer whether it had folded and nothing checked the
+  answer; now nothing asks, and what is left is that the equality has to agree
+  with the fold. A join that rebuilds a value into a different shape with the
+  same meaning never compares equal and never converges, which is a hang and is
+  the row below the one the old law failed at. The law is smaller, more local,
+  and testable by a test of the analysis rather than only of the framework.
 * Bad, because a fact that carries a span, which
   [the safety model](../safety-model.md) requires for "p freed here", can fail
   to terminate: a span is not a lattice element, and a `join` that takes the
