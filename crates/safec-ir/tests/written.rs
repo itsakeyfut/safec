@@ -585,7 +585,7 @@ impl Analysis for Climbing {
 /// literal in the format string and a reader sees it in a diff.
 #[test]
 #[should_panic(
-    expected = "`written::Climbing` analysis did not converge. This is a defect in safec rather than in the code being compiled"
+    expected = "`written::Climbing` analysis did not converge. Either its lattice is taller than it said, in which case raise what `Analysis::height` answers, or it has no top at all, in which case this is a defect in safec rather than in the code being compiled"
 )]
 fn an_analysis_that_cannot_converge_is_stopped_and_named() {
     let (_sources, at) = spans();
@@ -621,16 +621,22 @@ fn an_analysis_that_cannot_converge_is_stopped_and_named() {
     let _ = solve(&Climbing(function.locals().len()), &function, &cfg);
 }
 
-/// Two states per local rather than one: every local counts down from two, and
-/// the join keeps the lower. Its lattice is twice as tall as `Written`'s over
-/// the same function, which is what the budget's multiplier is slack for.
+/// Four states per local rather than one: every local counts down from four,
+/// and the join keeps the lower. Its lattice is four times as tall as the
+/// default answers for the same function, so it says so.
 struct Counting(usize);
 
 impl Analysis for Counting {
     type Value = Vec<u8>;
 
+    /// Four steps per local, which is taller than the locals and the elements
+    /// together. An analysis that knows this is the one place that can say it.
+    fn height(&self, function: &Function) -> usize {
+        function.locals().len() * 4
+    }
+
     fn on_entry(&self) -> Self::Value {
-        vec![2; self.0]
+        vec![4; self.0]
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
@@ -649,23 +655,26 @@ impl Analysis for Counting {
     }
 }
 
-/// A correct analysis over a large function is not stopped, even when its
-/// lattice is taller than the function has locals.
+/// An analysis that says how tall it is is believed.
 ///
-/// Sixty four locals, one loop arm each, and a value that takes two steps down
-/// per local rather than one. A block is walked once per step its value takes,
-/// so this walks the header about twice as many times as there are locals.
+/// Sixty four locals, one loop arm each, and a value that takes four steps
+/// down per local. A block is walked once per step its value takes, so this
+/// walks the header about four times as many times as there are locals, which
+/// is more than the default height answers for this function.
 ///
-/// Mutation: make `STATES_PER_KEY` one. The budget becomes the local count, the
-/// walk needs twice that, and a correct analysis is stopped as though it were
-/// broken. That is the whole reason the budget is a multiple rather than the
-/// count itself, and this is the only test that notices.
+/// Mutation: delete `Counting::height`. The default answers the locals plus
+/// the elements, the walk needs four times the locals, and a correct analysis
+/// is stopped as though it were broken.
+///
+/// Mutation: have `solve` use the default rather than what the analysis
+/// answered. The same, and these are the only tests that notice either.
 ///
 /// Mutation: count the walks across every block rather than per block. This
-/// fails too, and it is the only test that notices that either: the others are
-/// small enough that the two counts stay under the budget together.
+/// fails too, along with every other test whose function has enough blocks for
+/// the two counts to come apart. Four of them, when it was measured, and the
+/// number is not the claim.
 #[test]
-fn a_correct_analysis_over_a_large_function_is_not_stopped() {
+fn an_analysis_that_says_how_tall_it_is_is_believed() {
     let (_sources, at) = spans();
     let (_unit, mut function, int) = a_function(at);
     let origin = Origin::Written(at);
@@ -715,8 +724,118 @@ fn a_correct_analysis_over_a_large_function_is_not_stopped() {
     // Every local is counted down to nothing on the way round, and the return
     // place, which no arm names, is untouched.
     let at_exit = solution.value(exit).expect("the exit is reachable");
-    assert_eq!(at_exit[0], 2);
+    assert_eq!(at_exit[0], 4);
     assert!(at_exit[1..].iter().all(|&left| left == 0), "{at_exit:?}");
+}
+
+/// Reaching definitions: which assignment sites may have written, keyed on the
+/// site rather than on the local. Union, monotone, finite, and its height is
+/// the number of sites, which has nothing to do with the number of locals.
+///
+/// `Place`'s own doc comment says an analysis keys its lattice on a place
+/// rather than on a local, and this is the shape that says why the default
+/// height counts the elements as well.
+struct Reaching(usize);
+
+impl Analysis for Reaching {
+    type Value = Vec<bool>;
+
+    fn on_entry(&self) -> Self::Value {
+        vec![false; self.0]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        for (here, there) in into.iter_mut().zip(from) {
+            *here = *here || *there;
+        }
+    }
+
+    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        if let Element::Assign(operation) = element {
+            value[operation.origin.span().start() as usize] = true;
+        }
+    }
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// An analysis keyed on something the function has more of than locals is not
+/// stopped, without having to say anything about its height.
+///
+/// One local, two hundred sites that assign to it, each in its own loop arm.
+/// The walk needs one visit per site and the function has two locals, so a
+/// budget counting only the locals stops it on its third pass.
+///
+/// Mutation: drop the elements from the default height. The budget becomes two
+/// and a correct analysis is stopped as though it were broken. This is the only
+/// test that notices, because every other one keys on locals.
+#[test]
+fn an_analysis_that_keys_on_more_than_its_locals_is_not_stopped() {
+    const SITES: usize = 200;
+
+    let mut sources = SourceMap::new();
+    let text = "a".repeat(SITES + 8);
+    let file = sources.add_virtual("t.c", &text);
+    let at = Span::new(file, 0, 1);
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let mut function = Function::new(at, int, []);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let picks: Vec<_> = (0..SITES).map(|_| function.reserve_block()).collect();
+    let arms: Vec<_> = (0..SITES).map(|_| function.reserve_block()).collect();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(header, goto(picks[0], vec![]));
+    for site in 0..SITES {
+        let otherwise = if site + 1 < SITES {
+            picks[site + 1]
+        } else {
+            exit
+        };
+        function.fill_block(
+            picks[site],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: arms[site],
+                    otherwise,
+                },
+            },
+        );
+        function.fill_block(
+            arms[site],
+            goto(
+                header,
+                vec![Element::Assign(Operation {
+                    place: Place::local(a),
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(Span::new(file, site as u32, site as u32 + 1)),
+                })],
+            ),
+        );
+    }
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Reaching(text.len()), &function, &cfg);
+
+    // Every site reaches the exit: each is on a path that leaves the loop.
+    let at_exit = solution.value(exit).expect("the exit is reachable");
+    assert_eq!(at_exit.iter().filter(|&&reached| reached).count(), SITES);
 }
 
 /// A block the entry cannot reach is answered with nothing, rather than

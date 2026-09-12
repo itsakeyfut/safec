@@ -95,6 +95,25 @@ pub trait Analysis {
     /// instead.
     type Value: Clone + Eq;
 
+    /// How many steps a value of this analysis can take up its lattice.
+    ///
+    /// The walk is stopped when a block is visited more than this, because a
+    /// walk that does not end has nothing to read. Answering too low stops a
+    /// correct analysis; answering too high makes a broken one take longer to
+    /// stop. Both are the same panic, and it names this method.
+    ///
+    /// The default is the locals plus the elements, which covers an analysis
+    /// keyed on a local, on a place, or on the site an assignment makes: all
+    /// three were measured against it. An analysis whose value has more than
+    /// one state per key says so here rather than leaning on it.
+    fn height(&self, function: &Function) -> usize {
+        function.locals().len()
+            + function
+                .blocks()
+                .map(|block| block.elements.len())
+                .sum::<usize>()
+    }
+
     /// What holds where the function starts.
     ///
     /// Not "nothing is known": a check that asks whether a local has been
@@ -182,19 +201,6 @@ impl<V> Solution<V> {
     }
 }
 
-/// How many states one thing an analysis keys on may pass through.
-///
-/// A block is walked once for every step its value takes up the lattice, and
-/// that was measured at exactly the number of locals for an analysis keying
-/// on them: seventeen, sixty five and two hundred and fifty seven visits for
-/// as many locals, while the block count grew twice as fast and did not
-/// matter. So the budget is this times the locals, and this is the slack for
-/// an analysis that keys on something finer, a place rather than a local.
-///
-/// If a legitimate analysis ever trips the budget, this is the number to
-/// raise, and the message says so.
-const STATES_PER_KEY: usize = 64;
-
 /// Run `analysis` over `function` until nothing changes.
 ///
 /// The `Cfg` is taken rather than built, so that a caller holding one does not
@@ -236,15 +242,14 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let mut worklist: Vec<BlockId> = cfg.order().iter().rev().copied().collect();
     let mut successors = Vec::new();
 
-    // A budget on the lattice's height rather than on the graph, for the
-    // reason `STATES_PER_KEY` gives. One more than the locals because a block
-    // is walked once more than its value moves: the first walk is what puts
-    // a value there. Nothing tests that one, and nothing can, because the
-    // multiplier is larger than the difference it makes.
+    // One more than the analysis said it needs, because a block is walked
+    // once more than its value moves: the first walk is what puts a value
+    // there. Measured, on an analysis keyed on locals with one state each.
     //
     // Not behind `debug_assertions`: a walk that does not end in a release
     // build is the case this is for, and what it costs is this counter.
-    let budget = (function.locals().len() + 1).saturating_mul(STATES_PER_KEY);
+    let height = analysis.height(function);
+    let budget = height.saturating_add(1);
     let mut visits = vec![0usize; function.blocks().len()];
 
     while let Some(block) = worklist.pop() {
@@ -264,16 +269,17 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         visits[block.index()] += 1;
         assert!(
             visits[block.index()] <= budget,
-            "the `{}` analysis did not converge. This is a defect in safec \
-             rather than in the code being compiled: the likeliest cause is a \
-             `join` that rebuilds its value into a different shape with the \
-             same meaning, which never compares equal. Please report it.\n\n\
-             Block {} was walked {} times, and the budget for this function \
-             is {}.",
+            "the `{}` analysis did not converge. Either its lattice is taller \
+             than it said, in which case raise what `Analysis::height` answers, \
+             or it has no top at all, in which case this is a defect in safec \
+             rather than in the code being compiled and is worth reporting. A \
+             join that rebuilds its value into a different shape with the same \
+             meaning is the usual way to have no top by accident.\n\n\
+             Block {} was walked {} times, and `height` answered {}.",
             core::any::type_name::<A>(),
             block.index(),
             visits[block.index()],
-            budget,
+            height,
         );
 
         for element in &function.block(block).elements {
