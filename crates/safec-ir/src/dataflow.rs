@@ -63,15 +63,22 @@ pub trait Analysis {
     /// consumed the stored value would have nothing to walk from the second
     /// time.
     ///
-    /// [`PartialEq`] because the solver decides whether anything moved by
-    /// comparing, rather than by asking the join. That is what removes the
-    /// one law this framework used to rest on, and it puts a smaller one in
-    /// its place: **the representation has to be canonical.** A join that
-    /// rebuilds a value into a different shape with the same meaning never
-    /// compares equal and never converges, and the ordinary way to write
-    /// that is a union collected through a `HashSet` and back into a `Vec`.
-    /// Measured, on eight sites meeting inside a loop: three lines of
-    /// unremarkable Rust, and the walk does not end. See ADR-0016.
+    /// [`Eq`] because the solver decides whether anything moved by comparing,
+    /// rather than by asking the join. That is what removes the one law this
+    /// framework used to rest on, and it puts a smaller one in its place:
+    /// **the representation has to be canonical.** A join that rebuilds a
+    /// value into a different shape with the same meaning never compares
+    /// equal and never converges, and the ordinary way to write that is a
+    /// union collected through a `HashSet` and back into a `Vec`. Measured,
+    /// on eight sites meeting inside a loop: three lines of unremarkable
+    /// Rust, and the walk does not end. See ADR-0016.
+    ///
+    /// [`Eq`] rather than [`PartialEq`], because the walk ends when a value
+    /// compares equal to itself and `PartialEq` does not promise that.
+    /// Measured: a value holding an `f64`, with a join that does nothing at
+    /// all, never terminates, because `NAN != NAN`. Under the shape this
+    /// replaced it did terminate, so the bound is what stops the trade this
+    /// signature made from costing a whole class of value its answer.
     ///
     /// **A value that carries a span is where the walk stops terminating.**
     /// `docs/safety-model.md` asks a diagnostic to say "p freed here", so the
@@ -79,10 +86,12 @@ pub trait Analysis {
     /// lattice element: a `join` that keeps whichever one arrived oscillates
     /// forever where two of them meet below a branch inside a loop. Measured,
     /// and it is a hang with no diagnostic and no stack rather than a failure.
-    /// Choose the payload by a rule that cannot depend on which side arrived.
+    /// Choose the payload by a rule that cannot depend on which side arrived,
+    /// and keep it inside the comparison rather than outside: hiding it from
+    /// `eq` ends the walk and is the failure [`Analysis::join`] describes.
     /// ADR-0016 is where it is recorded, and why nothing here bounds the walk
     /// instead.
-    type Value: Clone + PartialEq;
+    type Value: Clone + Eq;
 
     /// What holds where the function starts.
     ///
