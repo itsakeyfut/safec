@@ -577,6 +577,9 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
 
+        // Per function, because a span belongs to one of them.
+        let mut said: Vec<(Span, Place)> = Vec::new();
+
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
             // every reachable block a value, so nothing skips here today. It is
@@ -591,7 +594,12 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             for element in &block.elements {
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
-                used(&mut findings, dereferenced_in_element(element), &known);
+                used(
+                    &mut findings,
+                    &mut said,
+                    dereferenced_in_element(element),
+                    &known,
+                );
                 analysis.element(function, element, &mut known);
             }
 
@@ -600,6 +608,7 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             // the call was reached.
             used(
                 &mut findings,
+                &mut said,
                 dereferenced_in_terminator(&block.terminator),
                 &known,
             );
@@ -619,15 +628,6 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     // an unwinding call gains an edge, and this is what keeps that from moving
     // every expectation that holds two findings.
     findings.sort_by_key(|finding| (finding.at.file().index(), finding.at.start()));
-
-    // **One thing said once.** `*p = 42;` lowers to two operations that both
-    // read through `p`, because an assignment is an expression with a value and
-    // the lowering reads the place back into a temporary. Both are genuine
-    // dereferences and both produce the same finding, so a reader would get two
-    // carets on one line saying one thing. Only findings that agree in every
-    // field collapse: two different pointers used after a free on one line are
-    // two findings and stay two.
-    findings.dedup();
 
     findings
 }
@@ -780,12 +780,35 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// and is silence, and so is a dereference inside a controlling expression,
 /// which is #141. `docs/diagnostics.md` says what exit 0 does not mean here,
 /// because a boundary that lives only in a comment is one no user can find.
-fn used(findings: &mut Vec<Finding>, at: Option<(Span, Vec<&Place>)>, known: &Known) {
+fn used(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place)>,
+    at: Option<(Span, Vec<&Place>)>,
+    known: &Known,
+) {
     let Some((at, dereferenced)) = at else {
         return;
     };
 
     for place in dereferenced {
+        // **One place at one span said once.** `*p = 42;` lowers to two
+        // operations that both read through `p`, because an assignment is an
+        // expression with a value and the lowering reads the place back into a
+        // temporary. Both are genuine dereferences of one thing and two carets
+        // on one line would say it twice.
+        //
+        // The place and not the finding. Deduplicating finished findings was
+        // wrong in both directions at once, measured: two unproven uses on one
+        // line carry no spans at all, so they were field-identical and one was
+        // thrown away, while `*p = *q;` produced `p`, `q`, `p` in that order
+        // and the pair that should have collapsed was not adjacent for
+        // `Vec::dedup` to see. What decides whether two reports are one report
+        // is which place was dereferenced, and only this knows it.
+        if said.contains(&(at, place.clone())) {
+            continue;
+        }
+        said.push((at, place.clone()));
+
         let sites = known.sites_of(place.local).map(Reached::Site);
         let Some(verdict) = verdict(sites, known) else {
             continue;
