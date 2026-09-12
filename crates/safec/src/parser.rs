@@ -22,8 +22,8 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, BinOp, Declaration, Expr, ExprId, Function, Item, Parameters, Stmt, StmtId, Type, TypeId,
-    UnOp,
+    Ast, BinOp, Declaration, Expr, ExprId, Function, InitDeclarator, Item, Parameters, Stmt,
+    StmtId, Type, TypeId, UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::token::{Keyword, Punct, Token, TokenKind};
@@ -43,6 +43,23 @@ const EXPECTED: Code = Code::new("SC0201");
 /// program is well formed and this compiler is declining to read it, which is a
 /// different thing to tell a reader and a different thing to search for.
 const TOO_DEEP: Code = Code::new("SC0202");
+
+/// An initializer written in braces, which C17 6.7.9 allows and this stage
+/// does not read.
+///
+/// Its own code for [`TOO_DEEP`]'s reason and one more: nothing is wrong with
+/// the program, so a reader has to be able to tell an unimplemented feature
+/// from a defect, and a number they can search for is how they do it.
+///
+/// `int x = {1};` is the case that makes this worth saying. 6.7.9 p11 lets a
+/// scalar's initializer be a single expression "optionally enclosed in
+/// braces", so that program is valid C with no designator and no nested list
+/// in it, and `clang -std=c17 -pedantic-errors` accepts it in silence. This
+/// refuses it all the same, because unwrapping the braces is only correct
+/// where the declared type is scalar and this stage does not know the type.
+/// `docs/frontend.md` carries the row, which is where a reader looks to tell a
+/// gap from a decision.
+const BRACED_INITIALIZER: Code = Code::new("SC0203");
 
 /// How deep this parser will go before it declines.
 ///
@@ -111,6 +128,26 @@ const COMMA: u8 = 1;
 /// Named because an argument in a call is read at this power and so stops at a
 /// comma. That is the whole of what tells `f(a, b)` from `f((a, b))`.
 const ASSIGNMENT: u8 = 2;
+
+/// How a declaration and a function definition both begin: the specifiers and
+/// the first declarator.
+///
+/// The base is carried alongside the derived type because the two are needed
+/// for different things and neither can be recovered from the other. `ty` is
+/// what this declarator declared; `base` is what the specifiers said, and it
+/// is what every later declarator in the same declaration folds its own
+/// derivations onto.
+struct Declared {
+    /// Where the specifiers began, which is where the declaration's span
+    /// starts and where a first declarator that nests too deep is reported.
+    start: Span,
+    /// What the specifiers named, before any declarator derived from it.
+    base: TypeId,
+    /// The span of the name this declarator wrote.
+    name: Span,
+    /// The type this declarator derived from `base`.
+    ty: TypeId,
+}
 
 /// One step a declarator derives, in the order it wraps the base type.
 ///
@@ -381,7 +418,7 @@ impl Parser<'_> {
     fn item(&mut self, diagnostics: &mut DiagnosticSink) -> Item {
         let start = self.peek().span;
 
-        let Some((name, ty)) = self.declared(diagnostics) else {
+        let Some(declared) = self.declared(diagnostics) else {
             return Item::Error { span: start };
         };
 
@@ -392,12 +429,16 @@ impl Parser<'_> {
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
             return Item::Function(Function {
-                ty,
-                name,
+                ty: declared.ty,
+                name: declared.name,
                 body,
                 span,
             });
         }
+
+        let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
+            return Item::Error { span: start };
+        };
 
         if self
             .expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)
@@ -407,18 +448,37 @@ impl Parser<'_> {
         }
 
         let span = Span::new(self.file, start.start(), self.previous().span.end());
-        Item::Declaration(Declaration {
-            name: Some(name),
-            ty,
-            span,
-        })
+        Item::Declaration { declarators, span }
     }
 
     /// The specifiers and one declarator, which is how a declaration and a
     /// definition both begin.
-    fn declared(&mut self, diagnostics: &mut DiagnosticSink) -> Option<(Span, TypeId)> {
+    fn declared(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Declared> {
         let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
+        let (name, ty) = self.named_declarator(start, base, diagnostics)?;
+
+        Some(Declared {
+            start,
+            base,
+            name,
+            ty,
+        })
+    }
+
+    /// One declarator that has to have a name, with its derivations folded onto
+    /// the base.
+    ///
+    /// `start` is where a declarator that nests too deep is reported, so it is
+    /// that declarator's own first token rather than the declaration's: the
+    /// fourth declarator of a list is not a reason to put a caret on the
+    /// specifiers, which are shared and are not what is wrong.
+    fn named_declarator(
+        &mut self,
+        start: Span,
+        base: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<(Span, TypeId)> {
         let (name, derivations) = self.declarator(true, diagnostics)?;
         let ty = self.apply(start, base, derivations, diagnostics)?;
 
@@ -434,6 +494,88 @@ impl Parser<'_> {
         };
 
         Some((name, ty))
+    }
+
+    /// The rest of C17 6.7's `init-declarator-list`, after [`Parser::declared`]
+    /// has read the first declarator.
+    ///
+    /// The specifiers are read once and every declarator folds its own
+    /// derivations onto them, which is what makes `int *p, a[10];` a pointer
+    /// and an array rather than two of either.
+    ///
+    /// The `;` is the caller's to expect, because the caller is the one that
+    /// has already decided this is not a function definition.
+    fn init_declarator_list(
+        &mut self,
+        declared: Declared,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Vec<InitDeclarator>> {
+        let Declared {
+            start,
+            base,
+            mut name,
+            mut ty,
+        } = declared;
+        let mut declarators = Vec::new();
+
+        loop {
+            let init = self.initializer(diagnostics)?;
+            declarators.push(InitDeclarator {
+                declaration: Declaration {
+                    name: Some(name),
+                    ty,
+                    // From the specifiers, which all of these share, through
+                    // this one's initializer. `Declaration::span` says why they
+                    // all begin at the same byte and what tells them apart.
+                    span: Span::new(self.file, start.start(), self.previous().span.end()),
+                },
+                init,
+            });
+
+            if !self.eat(TokenKind::Punct(Punct::Comma)) {
+                return Some(declarators);
+            }
+
+            // The `,` is eaten before anything else is read, so a round of this
+            // loop always consumes a token and `spend`'s budget is not what
+            // stops it going round forever.
+            let at = self.peek().span;
+            (name, ty) = self.named_declarator(at, base, diagnostics)?;
+        }
+    }
+
+    /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
+    ///
+    /// [`Parser::assignment`] rather than [`Parser::expression`], which is the
+    /// difference between the two and the whole of why both exist. An
+    /// initializer is an assignment-expression, so the `,` in
+    /// `int a = 1, b = 2;` separates declarators. Read with `expression` the
+    /// comma operator takes it instead: `b = 2` is swallowed into `a`'s
+    /// initializer, one name is declared where the source wrote two, and
+    /// nothing is reported here at all.
+    ///
+    /// `Some(None)` is a declarator with no initializer and is the ordinary
+    /// case. `None` is a refusal that has already been reported.
+    fn initializer(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Option<ExprId>> {
+        if !self.eat(TokenKind::Punct(Punct::Equal)) {
+            return Some(None);
+        }
+
+        if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            self.report_noted(
+                BRACED_INITIALIZER,
+                "a braced initializer is not read yet",
+                "this stage reads an expression here, and not a brace",
+                "C17 6.7.9 p11 makes `= { e }` and `= e` the same thing for a \
+                 scalar, so dropping the braces is exact wherever the type is \
+                 one. The form that needs designators and nested lists is for \
+                 an aggregate, and arrives with structs and arrays",
+                diagnostics,
+            );
+            return None;
+        }
+
+        Some(Some(self.assignment(diagnostics)))
     }
 
     /// The declaration specifiers, of which this stage reads one.
@@ -721,7 +863,11 @@ impl Parser<'_> {
     fn declaration_statement(&mut self, diagnostics: &mut DiagnosticSink) -> StmtId {
         let start = self.peek().span;
 
-        let Some((name, ty)) = self.declared(diagnostics) else {
+        let Some(declared) = self.declared(diagnostics) else {
+            return self.ast.push_stmt(Stmt::Error { span: start });
+        };
+
+        let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return self.ast.push_stmt(Stmt::Error { span: start });
         };
 
@@ -733,11 +879,7 @@ impl Parser<'_> {
         }
 
         let span = Span::new(self.file, start.start(), self.previous().span.end());
-        self.ast.push_stmt(Stmt::Declaration(Declaration {
-            name: Some(name),
-            ty,
-            span,
-        }))
+        self.ast.push_stmt(Stmt::Declaration { declarators, span })
     }
 
     /// One statement, and where it went in the tree.
@@ -895,8 +1037,12 @@ impl Parser<'_> {
     /// C17 6.8.5 p1.
     ///
     /// The other form the same paragraph gives, `for ( declaration
-    /// expression_opt ; expression_opt )`, needs an initializer and so needs
-    /// #43. Until then `for (int i = 0; ...)` is refused, at the `int`.
+    /// expression_opt ; expression_opt )`, is still refused, at the `int`. It
+    /// used to be blocked on there being no initializer to read, which is no
+    /// longer true: what is left is that `Stmt::For`'s first clause holds an
+    /// expression, and that 6.8.5 p5 gives a declaration written here a scope
+    /// of its own. `docs/frontend.md` carries the row, so the refusal is
+    /// visible to a reader who is not in this file.
     fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         self.advance();
 
@@ -1384,13 +1530,49 @@ impl Parser<'_> {
         label: impl Into<String>,
         diagnostics: &mut DiagnosticSink,
     ) -> Span {
+        let built = Diagnostic::error(message)
+            .with_code(code)
+            .with_label(Label::primary(span, label));
+
+        self.report_built(span, built, diagnostics)
+    }
+
+    /// The same, at the token that is there, with a note under the label.
+    ///
+    /// For a refusal that is about this compiler rather than about the program:
+    /// the label says what cannot be read and the note says what it is waiting
+    /// on, so a reader can tell an unimplemented feature from a defect without
+    /// going to look.
+    fn report_noted(
+        &mut self,
+        code: Code,
+        message: impl Into<String>,
+        label: impl Into<String>,
+        note: impl Into<String>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
+        let span = self.peek().span;
+        let built = Diagnostic::error(message)
+            .with_code(code)
+            .with_label(Label::primary(span, label))
+            .with_note(note);
+
+        self.report_built(span, built, diagnostics)
+    }
+
+    /// Report one, unless something already has.
+    ///
+    /// The one place `failed` is set, so that "only the first one speaks" is a
+    /// property of this function rather than a rule every reporter remembers.
+    fn report_built(
+        &mut self,
+        span: Span,
+        diagnostic: Diagnostic,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Span {
         if !self.failed {
             self.failed = true;
-            diagnostics.report(
-                Diagnostic::error(message)
-                    .with_code(code)
-                    .with_label(Label::primary(span, label)),
-            );
+            diagnostics.report(diagnostic);
         }
 
         span
@@ -1422,6 +1604,22 @@ mod tests {
             diagnostics,
             sources,
         }
+    }
+
+    /// The one declarator of a source that declares exactly one name.
+    ///
+    /// The tests below are about what a declarator derives, and a declaration
+    /// carries a list of them, so this is where the list is unwrapped rather
+    /// than in each of them.
+    fn only_declared(parsed: &Parsed) -> &Declaration {
+        let [Item::Declaration { declarators, .. }] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let [declarator] = &declarators[..] else {
+            panic!("{declarators:?}");
+        };
+
+        &declarator.declaration
     }
 
     /// The smallest whole translation unit, and the shape it makes.
@@ -1771,11 +1969,17 @@ int main(void) { return 0; }
     /// which range they come from and why a code outlives the wording beside
     /// it. `lexer.rs` holds the same test over the lexical five.
     ///
-    /// Mutation: change either `EXPECTED` or `TOO_DEEP`. This fails. Before it
-    /// existed, `TOO_DEEP` could be renumbered with the whole suite still
-    /// green: no corpus case nests deep enough to reach it, so the six that
-    /// carry `SC0201` were guarding one of the parser's two codes and nothing
-    /// was guarding the other.
+    /// Mutation: change `EXPECTED`, `TOO_DEEP` or `BRACED_INITIALIZER`. Each
+    /// fails here. Before this test existed, `TOO_DEEP` could be renumbered
+    /// with the whole suite still green: no corpus case nests deep enough to
+    /// reach it, so the six that carry `SC0201` were guarding one of the
+    /// parser's codes and nothing was guarding the other.
+    ///
+    /// `BRACED_INITIALIZER` is the one case here that a corpus case also
+    /// holds, because `a_braced_initializer_is_refused` compares the whole
+    /// rendered diagnostic. It is listed anyway rather than left to that one,
+    /// so that the row somebody adds for the parser's fourth code has three
+    /// above it to copy rather than two.
     #[test]
     fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
         let too_deep = format!(
@@ -1784,7 +1988,11 @@ int main(void) { return 0; }
             "}".repeat(MAX_NESTING + 1)
         );
 
-        for (source, code) in [("int x\n", "SC0201"), (too_deep.as_str(), "SC0202")] {
+        for (source, code) in [
+            ("int x\n", "SC0201"),
+            (too_deep.as_str(), "SC0202"),
+            ("int x = {1};\n", "SC0203"),
+        ] {
             let parsed = parsed(source);
             let reported = parsed
                 .diagnostics
@@ -1960,9 +2168,7 @@ int main(void) { return 0; }
     #[test]
     fn parentheses_change_what_a_declarator_derives() {
         let function_returning_pointer = parsed("int *f(int);\n");
-        let [Item::Declaration(declaration)] = function_returning_pointer.ast.items() else {
-            panic!("{:?}", function_returning_pointer.ast.items());
-        };
+        let declaration = only_declared(&function_returning_pointer);
         let Type::Function { returns, .. } = function_returning_pointer.ast.ty(declaration.ty)
         else {
             panic!("{:?}", function_returning_pointer.ast.ty(declaration.ty));
@@ -1973,9 +2179,7 @@ int main(void) { return 0; }
         ));
 
         let pointer_to_function = parsed("int (*f)(int);\n");
-        let [Item::Declaration(declaration)] = pointer_to_function.ast.items() else {
-            panic!("{:?}", pointer_to_function.ast.items());
-        };
+        let declaration = only_declared(&pointer_to_function);
         let Type::Pointer(pointee) = pointer_to_function.ast.ty(declaration.ty) else {
             panic!("{:?}", pointer_to_function.ast.ty(declaration.ty));
         };
@@ -1983,6 +2187,63 @@ int main(void) { return 0; }
             pointer_to_function.ast.ty(*pointee),
             Type::Function { .. }
         ));
+    }
+
+    /// A declarator's span runs from the specifiers through its own
+    /// initializer, and stops before the `;`.
+    ///
+    /// Both halves of what `Declaration::span` claims, and nothing else holds
+    /// either: `--emit ast` prints where a span starts and never where it ends,
+    /// so the only thing that would notice one stopping short is a diagnostic
+    /// that underlines a declaration, and there is not one yet.
+    ///
+    /// Mutation: give each declarator the span of the specifiers alone. The
+    /// starts still agree, the ends collapse onto them, and no corpus case
+    /// moves because none of them can see an end.
+    #[test]
+    fn a_declarator_spans_the_specifiers_through_its_own_initializer() {
+        let parsed = parsed("int a = 1, b;\n");
+        let [Item::Declaration { declarators, .. }] = parsed.ast.items() else {
+            panic!("{:?}", parsed.ast.items());
+        };
+        let [first, second] = &declarators[..] else {
+            panic!("{declarators:?}");
+        };
+
+        // Neither carries the `;`, and both carry the specifiers they share.
+        assert_eq!(parsed.sources.snippet(first.declaration.span), "int a = 1");
+        assert_eq!(
+            parsed.sources.snippet(second.declaration.span),
+            "int a = 1, b"
+        );
+    }
+
+    /// A declarator that nests deeper than this parser goes is reported at
+    /// itself, not at the specifiers it shares with the others.
+    ///
+    /// The count is only known once the whole declarator has been read, so the
+    /// caret has to be put back deliberately; putting it on the declaration
+    /// would point at an `int` that is fine, in front of however many
+    /// declarators are also fine.
+    ///
+    /// Mutation: pass the declaration's start rather than the declarator's in
+    /// `init_declarator_list`. The caret moves to byte 0 and nothing else in
+    /// the suite notices, because no case nests a later declarator this deep.
+    #[test]
+    fn a_later_declarator_that_nests_too_deep_is_reported_where_it_was_written() {
+        let source = format!("int a, {}b;\n", "*".repeat(MAX_NESTING + 1));
+        let parsed = parsed(&source);
+
+        let [reported] = parsed.diagnostics.diagnostics() else {
+            panic!("{:?}", parsed.diagnostics.diagnostics());
+        };
+        let Some(label) = reported.primary_label() else {
+            panic!("{reported:?}");
+        };
+
+        // `int a, ` is seven bytes, so this is the first `*` of the second
+        // declarator rather than the `int` in front of both.
+        assert_eq!(label.span().start(), 7);
     }
 
     /// The suffix written last is the first to wrap the base.
@@ -1997,9 +2258,7 @@ int main(void) { return 0; }
     fn the_last_suffix_written_wraps_the_base_first() {
         let parsed = parsed("int a[3][5];\n");
 
-        let [Item::Declaration(declaration)] = parsed.ast.items() else {
-            panic!("{:?}", parsed.ast.items());
-        };
+        let declaration = only_declared(&parsed);
         let Type::Array {
             element,
             length: Some(outer),

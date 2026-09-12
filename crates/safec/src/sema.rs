@@ -19,7 +19,9 @@
 
 use std::collections::HashMap;
 
-use crate::ast::{Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId};
+use crate::ast::{
+    Ast, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId,
+};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use safec_ir::source::{SourceMap, Span};
 
@@ -162,8 +164,34 @@ impl Resolver<'_> {
                 self.stmt(function.body, diagnostics);
                 self.scopes.pop();
             }
-            Item::Declaration(declaration) => self.declaration(declaration, diagnostics),
+            Item::Declaration { declarators, .. } => {
+                self.declarators(declarators, diagnostics);
+            }
             Item::Error { .. } => {}
+        }
+    }
+
+    /// Every declarator of one declaration, in the order they were written.
+    ///
+    /// One at a time, and each one's name goes in before its own initializer is
+    /// walked. That is C17 6.2.1 p7 from the other side of the declarator to
+    /// the one [`Resolver::declaration`] cites: a name's scope begins at the
+    /// end of its declarator, an array length is inside the declarator and an
+    /// initializer is after it. So `int a = a;` resolves to the `a` being
+    /// declared, which `clang -std=c17` accepts with a warning rather than an
+    /// error, and `int b = a, a = 1;` does not resolve at all, which `clang`
+    /// reports as an undeclared identifier. Both were measured.
+    ///
+    /// Declaring every name first and walking the initializers afterwards would
+    /// resolve the second, which is the direction that stays quiet and is the
+    /// wrong one here: nothing about it is valid C, and accepting it would make
+    /// this compiler the only reader that thinks so.
+    fn declarators(&mut self, declarators: &[InitDeclarator], diagnostics: &mut DiagnosticSink) {
+        for declarator in declarators {
+            self.declaration(&declarator.declaration, diagnostics);
+            if let Some(init) = declarator.init {
+                self.expr(init, diagnostics);
+            }
         }
     }
 
@@ -269,7 +297,9 @@ impl Resolver<'_> {
                 }
                 self.scopes.pop();
             }
-            Stmt::Declaration(declaration) => self.declaration(declaration, diagnostics),
+            Stmt::Declaration { declarators, .. } => {
+                self.declarators(declarators, diagnostics);
+            }
             Stmt::Return { value, .. } | Stmt::Expression { value, .. } => {
                 if let Some(value) = *value {
                     self.expr(value, diagnostics);

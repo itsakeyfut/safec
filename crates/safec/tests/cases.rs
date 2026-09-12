@@ -39,13 +39,17 @@ macro_rules! cases {
 // The table is written out rather than discovered by walking `cases/`.
 // See ADR-0007 for why, and for what it rejected.
 cases! {
+    a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
+    a_braced_initializer_is_refused: ["--emit", "ast"],
     a_comma_in_a_controlling_expression: ["--emit", "ast"],
     a_dangling_else: ["--emit", "ast"],
     a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_function_the_ir_cannot_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_declaration_is_not_a_body: ["--emit", "ast"],
     a_failed_parse_reports_no_names: ["--emit", "ast"],
+    a_file_scope_declaration_carries_its_initializer: ["--emit", "ast"],
+    a_later_declarator_is_not_in_scope_in_an_earlier_initializer: ["--emit", "ast"],
     a_lexical_error_leaves_no_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The `--emit llvm-ir` cases, kept together because what each is for is
     // only visible beside the others. `every_operator` is the one that stops
@@ -83,6 +87,9 @@ cases! {
     abstract_function_type_parameter: ["--emit", "ast"],
     add: ["--emit", "tokens"],
     an_array_length_stops_at_a_comma: ["--emit", "ast"],
+    an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_initializer_can_name_what_it_initializes: ["--emit", "ast"],
+    an_initializer_stops_at_the_comma: ["--emit", "ast"],
     array_declaration: ["--emit", "ast"],
     array_length_is_not_evaluated: ["--emit", "ast"],
     assigning_the_wrong_type: ["--emit", "ast"],
@@ -90,6 +97,8 @@ cases! {
     block_declaration_without_a_semicolon: ["--emit", "ast"],
     block_function_declaration: ["--emit", "ast"],
     call: ["--emit", "ast"],
+    each_declarator_derives_its_own_type: ["--emit", "ast"],
+    one_declaration_declares_several_names: ["--emit", "ast"],
     edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     compound_assignment: ["--emit", "ast"],
@@ -135,6 +144,8 @@ cases! {
     precedence_multiplicative: ["--emit", "ast"],
     precedence_relational: ["--emit", "ast"],
     precedence_shift: ["--emit", "ast"],
+    several_declarators_each_become_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    several_declarators_each_become_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     several_items_and_statements: ["--emit", "ast"],
     returning_the_wrong_type: ["--emit", "ast"],
     subscript: ["--emit", "ast"],

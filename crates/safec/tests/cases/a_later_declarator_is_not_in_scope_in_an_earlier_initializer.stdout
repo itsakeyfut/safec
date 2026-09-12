@@ -1,0 +1,8 @@
+Function a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:1:1 "f" "int (void)"
+  Compound a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:1:13
+    Declaration a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:2:5 "b" "int"
+      Identifier a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:2:13 "a"
+    Declaration a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:2:5 "a" "int"
+      Number a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:2:20 "1"
+    Return a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:3:5
+      Identifier a_later_declarator_is_not_in_scope_in_an_earlier_initializer.c:3:12 "b"

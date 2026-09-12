@@ -1,0 +1,2 @@
+Declaration one_declaration_declares_several_names.c:1:1 "a" "int"
+Declaration one_declaration_declares_several_names.c:1:1 "b" "int"

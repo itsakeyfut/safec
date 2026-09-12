@@ -1,0 +1,3 @@
+Declaration each_declarator_derives_its_own_type.c:1:1 "p" "int *"
+  Number each_declarator_derives_its_own_type.c:1:10 "0"
+Declaration each_declarator_derives_its_own_type.c:1:1 "a" "int[10]"

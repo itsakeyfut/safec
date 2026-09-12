@@ -159,10 +159,34 @@ pub struct Declaration {
     pub name: Option<Span>,
     /// The type the declarator derived.
     pub ty: TypeId,
-    /// The specifiers through the declarator, and through the `;` as well for
-    /// a declaration that carries one. A parameter has no `;` and stops at its
-    /// declarator.
+    /// The specifiers through the declarator, and through its initializer
+    /// where it has one.
+    ///
+    /// The `;` is not in it. One declaration may carry several declarators
+    /// with one `;` between them all, so the `;` belongs to
+    /// [`Item::Declaration`] and [`Stmt::Declaration`] rather than to any one
+    /// of these. A parameter has neither and stops at its declarator.
+    ///
+    /// Every declarator of one declaration therefore begins at the same byte,
+    /// because C17 6.7 gives them one set of specifiers between them. What
+    /// tells two of them apart is [`Declaration::name`].
     pub span: Span,
+}
+
+/// One declarator of a declaration, with the initializer that followed it.
+///
+/// C17 6.7's `init-declarator`. A declaration shares its specifiers across
+/// every declarator and shares nothing else, which is why each one folds its
+/// own derivations onto the base type rather than the declaration deriving
+/// once: `int *p, a[10];` makes a pointer and an array, not two of either.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InitDeclarator {
+    /// The name and the type this declarator derived.
+    pub declaration: Declaration,
+    /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
+    ///
+    /// A braced initializer is refused by the parser and never reaches here.
+    pub init: Option<ExprId>,
 }
 
 /// An operator with an operand on each side.
@@ -437,7 +461,22 @@ pub enum Stmt {
     /// C17 6.8.2 makes a block-item either a declaration or a statement, and
     /// the two share a list. `clang` does the same, wrapping one in a
     /// `DeclStmt`.
-    Declaration(Declaration),
+    Declaration {
+        /// C17 6.7's `init-declarator-list`, in the order it was written.
+        ///
+        /// Never empty. C17 6.7 marks the list optional, but 6.7 p2 then
+        /// requires a declaration to declare a declarator, a tag, or an
+        /// enumeration's members, so `int;` is a constraint violation rather
+        /// than the empty case: `clang -std=c17 -pedantic-errors` reports it
+        /// and accepts it silently only as an extension. What is valid and
+        /// empty here is `struct S { int x; };`, which declares a tag, and
+        /// this parser reads no tags yet. Either way nothing downstream has to
+        /// answer for an empty list, and #125 is the change that would alter
+        /// that.
+        declarators: Vec<InitDeclarator>,
+        /// The specifiers through the `;`.
+        span: Span,
+    },
     /// An expression evaluated for its effect. C17 6.8.3 p1: `expression_opt ;`.
     ///
     /// A null statement is this with nothing in it. C gives it no production of
@@ -482,10 +521,13 @@ pub enum Stmt {
     /// `for`, in the form whose three clauses are expressions. C17 6.8.5 p1.
     ///
     /// The other form, `for ( declaration expression_opt ; expression_opt )`,
-    /// needs an initializer and so needs #43. These are three separate
-    /// `Option`s rather than something that could also hold a declaration,
-    /// because an interface with no caller is invented rather than designed and
-    /// widening this one later is additive.
+    /// is not read. It used to be blocked on there being no initializer to
+    /// read; there is one now, and what is left is this type and the scope:
+    /// `initialiser` holds an `ExprId`, and C17 6.8.5 p5 gives a declaration
+    /// written here a scope that is the loop rather than the block around it.
+    /// These are three separate `Option`s rather than something that could
+    /// also hold a declaration, because an interface with no caller is
+    /// invented rather than designed and widening this one later is additive.
     For {
         /// What runs once before the first turn.
         initialiser: Option<ExprId>,
@@ -533,7 +575,14 @@ pub enum Item {
     ///
     /// Which of the two it is follows from the type, and reading that is the
     /// semantic analysis's. What this says is only that no body was written.
-    Declaration(Declaration),
+    Declaration {
+        /// C17 6.7's `init-declarator-list`, in the order it was written.
+        ///
+        /// Never empty, for the reason [`Stmt::Declaration`] gives.
+        declarators: Vec<InitDeclarator>,
+        /// The specifiers through the `;`.
+        span: Span,
+    },
     /// An item the parser could not read.
     Error {
         /// What it gave up on.
@@ -643,7 +692,7 @@ impl Stmt {
         match self {
             Self::Compound { .. } => "Compound",
             Self::Return { .. } => "Return",
-            Self::Declaration(_) => "Declaration",
+            Self::Declaration { .. } => "Declaration",
             Self::Expression { .. } => "Expression",
             Self::If { .. } => "If",
             Self::While { .. } => "While",
@@ -661,8 +710,8 @@ impl Stmt {
             | Self::If { span, .. }
             | Self::While { span, .. }
             | Self::For { span, .. }
+            | Self::Declaration { span, .. }
             | Self::Error { span } => *span,
-            Self::Declaration(declaration) => declaration.span,
         }
     }
 }
@@ -672,7 +721,7 @@ impl Item {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Function(_) => "Function",
-            Self::Declaration(_) => "Declaration",
+            Self::Declaration { .. } => "Declaration",
             Self::Error { .. } => "Error",
         }
     }
@@ -681,8 +730,7 @@ impl Item {
     pub fn span(&self) -> Span {
         match self {
             Self::Function(function) => function.span,
-            Self::Declaration(declaration) => declaration.span,
-            Self::Error { span } => *span,
+            Self::Declaration { span, .. } | Self::Error { span } => *span,
         }
     }
 }

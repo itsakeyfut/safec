@@ -1,0 +1,4 @@
+Declaration an_initializer_stops_at_the_comma.c:1:1 "a" "int"
+  Number an_initializer_stops_at_the_comma.c:1:9 "1"
+Declaration an_initializer_stops_at_the_comma.c:1:1 "b" "int"
+  Number an_initializer_stops_at_the_comma.c:1:16 "2"

@@ -1,0 +1,31 @@
+Target "x86_64-pc-windows-msvc"
+Function several_declarators_each_become_a_function.c:1:5 "f" declared
+  Local "_0" "int" return
+Function several_declarators_each_become_a_function.c:1:14 "g" declared
+  Local "_0" "int" return
+Function several_declarators_each_become_a_function.c:2:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation several_declarators_each_become_a_function.c:2:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Call several_declarators_each_become_a_function.c:3:12 "f" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Call several_declarators_each_become_a_function.c:3:18 "g" "bb2"
+      Destination "_2"
+  Block "bb2"
+    Operation several_declarators_each_become_a_function.c:3:12 written
+      Destination "_3"
+      Binary "Add"
+        Copy "_1"
+        Copy "_2"
+    Operation several_declarators_each_become_a_function.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Return

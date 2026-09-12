@@ -1,0 +1,2 @@
+Declaration a_file_scope_declaration_carries_its_initializer.c:1:1 "x" "int"
+  Number a_file_scope_declaration_carries_its_initializer.c:1:9 "0"

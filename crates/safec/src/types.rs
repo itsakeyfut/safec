@@ -172,7 +172,7 @@ impl Checker<'_> {
             Stmt::While { body, .. } | Stmt::For { body, .. } => {
                 self.returns_in(ast, *body, returning);
             }
-            Stmt::Declaration(_) | Stmt::Expression { .. } | Stmt::Error { .. } => {}
+            Stmt::Declaration { .. } | Stmt::Expression { .. } | Stmt::Error { .. } => {}
         }
     }
 
