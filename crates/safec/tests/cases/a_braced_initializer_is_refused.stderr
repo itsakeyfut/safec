@@ -3,6 +3,6 @@ error[SC0203]: a braced initializer is not read yet
    │
  1 │ int x = {1};
    │         ┬  
-   │         ╰── only a single expression can initialize a declaration today
+   │         ╰── this stage reads an expression here, and not a brace
 ───╯
-  = note: a braced initializer needs designators and nested lists, which arrive with structs and arrays
+  = note: C17 6.7.9 p11 makes `= { e }` and `= e` the same thing for a scalar, so dropping the braces is exact wherever the type is one. The form that needs designators and nested lists is for an aggregate, and arrives with structs and arrays

@@ -656,16 +656,30 @@ impl Lowering<'_> {
                         // that has not begun is what ADR-0012's pair exists to
                         // make findable.
                         //
-                        // `Written` and not `Generated`: the source asked for this
-                        // store. Its span is the whole declarator rather than the
-                        // initializer alone, which is what `Stmt::Return` above
-                        // does with the value it writes.
+                        // `Written` and not `Generated`: the source asked for
+                        // this store.
+                        //
+                        // Its span runs from the name to the end of the
+                        // declarator, which for `int a = 1, b = 2;` is `b = 2`
+                        // rather than the whole line. `Declaration::span`
+                        // deliberately starts every declarator of one
+                        // declaration at the specifiers they share, so using
+                        // it here would report both of those stores at the
+                        // `int` in front of them, pointing a later diagnostic
+                        // at the declarator before the one it is about. An
+                        // ordinary `a = 1;` already carries a span that starts
+                        // at the place being written, so this is what the same
+                        // store gets written the other way.
                         if let Some(init) = declarator.init {
                             let operand = self.value(builder, init, diagnostics)?;
                             builder.push(Operation {
                                 place: Place::local(local),
                                 value: Rvalue::Use(operand),
-                                origin: Origin::Written(span),
+                                origin: Origin::Written(Span::new(
+                                    name.file(),
+                                    name.start(),
+                                    span.end(),
+                                )),
                             });
                         }
                     }

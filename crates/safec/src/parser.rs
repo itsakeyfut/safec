@@ -50,6 +50,15 @@ const TOO_DEEP: Code = Code::new("SC0202");
 /// Its own code for [`TOO_DEEP`]'s reason and one more: nothing is wrong with
 /// the program, so a reader has to be able to tell an unimplemented feature
 /// from a defect, and a number they can search for is how they do it.
+///
+/// `int x = {1};` is the case that makes this worth saying. 6.7.9 p11 lets a
+/// scalar's initializer be a single expression "optionally enclosed in
+/// braces", so that program is valid C with no designator and no nested list
+/// in it, and `clang -std=c17 -pedantic-errors` accepts it in silence. This
+/// refuses it all the same, because unwrapping the braces is only correct
+/// where the declared type is scalar and this stage does not know the type.
+/// `docs/frontend.md` carries the row, which is where a reader looks to tell a
+/// gap from a decision.
 const BRACED_INITIALIZER: Code = Code::new("SC0203");
 
 /// How deep this parser will go before it declines.
@@ -556,9 +565,11 @@ impl Parser<'_> {
             self.report_noted(
                 BRACED_INITIALIZER,
                 "a braced initializer is not read yet",
-                "only a single expression can initialize a declaration today",
-                "a braced initializer needs designators and nested lists, which \
-                 arrive with structs and arrays",
+                "this stage reads an expression here, and not a brace",
+                "C17 6.7.9 p11 makes `= { e }` and `= e` the same thing for a \
+                 scalar, so dropping the braces is exact wherever the type is \
+                 one. The form that needs designators and nested lists is for \
+                 an aggregate, and arrives with structs and arrays",
                 diagnostics,
             );
             return None;

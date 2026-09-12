@@ -3,7 +3,7 @@ Function an_initializer_becomes_a_store.c:1:5 "f"
   Local "_0" "int" return
   Local "_1" "int"
   Block "bb0" entry
-    Operation an_initializer_becomes_a_store.c:2:5 written
+    Operation an_initializer_becomes_a_store.c:2:9 written
       Destination "_1"
       Use
         Constant 7
