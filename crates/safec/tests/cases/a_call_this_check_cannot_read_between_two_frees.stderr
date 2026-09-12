@@ -3,7 +3,7 @@ warning[SC0401]: this may free a value that was freed already
    │
  7 │     free(p);
    │     ───┬───  
-   │        ╰───── freed here
+   │        ╰───── may free it again here
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error

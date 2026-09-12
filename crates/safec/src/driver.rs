@@ -594,16 +594,21 @@ fn lowered(
 /// The caret goes on the call, so the quoted line above it shows `free(p)` and
 /// the reader finds the name in their own text.
 fn double_free(finding: &Finding) -> Option<Diagnostic> {
-    // The label says only as much as the conclusion does. "freed again" asserts
-    // that there was a first time, which is exactly what an unproven result
-    // does not know, so a warning saying it would contradict its own message a
-    // line above.
+    // The label says only as much as the conclusion does, and says it in words
+    // nothing else here uses. "freed again" asserts there was a first time,
+    // which an unproven result does not know. "freed here" is worse than that:
+    // it is what the proved diagnostic calls the *earlier, legitimate* free, so
+    // a reader who learned that pair would read the suspect call as the safe
+    // one and the message above it as the correction.
     let (message, label) = match finding.conclusion {
         Conclusion::Unsafe => (
             "this frees a value that was freed already",
             "freed again here",
         ),
-        Conclusion::Unknown => ("this may free a value that was freed already", "freed here"),
+        Conclusion::Unknown => (
+            "this may free a value that was freed already",
+            "may free it again here",
+        ),
         // The check never answers this and `Diagnostic::concluded` gives `None`
         // for it, so neither is read. Written out rather than `_` so that a
         // fourth conclusion has to be answered for here.
