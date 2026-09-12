@@ -54,6 +54,7 @@ Chosen option: **a trait, and the first arrival is stored rather than joined**.
 ```rust
 pub trait Analysis {
     type Value: Clone + Eq;
+    fn height(&self, function: &Function) -> usize { /* locals + elements */ }
     fn on_entry(&self) -> Self::Value;
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
@@ -179,8 +180,8 @@ Each of the first four was applied and the named tests observed to fail.
 * Bad, because termination is the analysis's to answer for and nothing here
   can check it. A lattice with an infinite ascending chain does not reach a
   fixpoint. What the framework does about that is stop and say so, with a
-  budget per block derived from the function, so the failure is a panic
-  naming the analysis rather than a hang naming nothing.
+  budget per block, so the failure is a panic naming the analysis rather
+  than a hang naming nothing.
 
   **A budget is not a widening**, and this record said it was. A widening
   changes the answer a converging analysis reaches, and choosing one before
@@ -188,9 +189,24 @@ Each of the first four was applied and the named tests observed to fail.
   fixpoint reaches and decides only what happens when there is none. The
   first reason is sound and never reached the second.
 
-  What is left unheld is the budget's multiplier, which is a guess about how
-  many states one thing an analysis keys on may pass through. Its failure is
-  a panic that says which number to raise.
+  **The budget is what the analysis says it needs, not what the function
+  suggests.** Deriving it from the function was tried and is wrong: what
+  bounds the visits is the lattice's height, height is a property of the
+  value's type, and no number read off a function bounds every analysis. An
+  analysis keyed on assignment sites has a height that grows with the code,
+  and one keyed on pairs of places grows faster. Measured: reaching
+  definitions over one local was stopped by a budget counting locals, while
+  converging in well under a second when allowed to.
+
+  So `height` is a fifth method, and it has a default. That is not the fifth
+  thing this record refused: it refused one **without** a default, on
+  `error[E0046]`, and the law it rejected failed silently with a wrong answer
+  believed. A height that is too low is a panic naming the method to raise,
+  and one that is too high only makes a broken analysis take longer to stop.
+  The principle is the same and the ranking is what separates the two.
+
+  What is left unheld is that declaration. Nothing checks that an analysis
+  is as tall as it says.
 * Bad, because `Value: Clone` puts a clone on every edge. A bitset per local is
   what the first analyses hold, and a graph is one function wide.
 * Bad, because the `Eq` bound puts a smaller law where a larger one was.
