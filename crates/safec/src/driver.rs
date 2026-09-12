@@ -573,7 +573,7 @@ fn lowered(
     // `Ord` at all.
     if options.safety >= SafetyLevel::Memory {
         for finding in memory::check(sources, &unit) {
-            if let Some(diagnostic) = double_free(&finding) {
+            if let Some(diagnostic) = memory_finding(&finding) {
                 diagnostics.report(diagnostic);
             }
         }
@@ -582,7 +582,7 @@ fn lowered(
     Some(unit)
 }
 
-/// What the double-free check concluded, as what a user reads.
+/// What a memory check concluded, as what a user reads.
 ///
 /// The check names a conclusion and never reads the policy, so this does not
 /// either: `Diagnostic::concluded` is the one place a conclusion becomes a
@@ -591,40 +591,46 @@ fn lowered(
 ///
 /// The value is not named. `docs/safety-model.md` writes "use of freed value
 /// `p`" and the IR holds no `p`: a local is a type and an index, which is #136.
-/// The caret goes on the call, so the quoted line above it shows `free(p)` and
-/// the reader finds the name in their own text.
-fn double_free(finding: &Finding) -> Option<Diagnostic> {
+/// The caret goes on the call or the use, so the quoted line above it shows
+/// `free(p)` or `*p` and the reader finds the name in their own text.
+fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     // The label says only as much as the conclusion does, and says it in words
     // nothing else here uses. "freed again" asserts there was a first time,
-    // which an unproven result does not know. "freed here" is worse than that:
-    // it is what the proved diagnostic calls the *earlier, legitimate* free, so
-    // a reader who learned that pair would read the suspect call as the safe
-    // one and the message above it as the correction.
-    let (message, label) = match finding.conclusion {
+    // which an unproven result does not know, and reusing the word the other
+    // diagnostic spends on the *earlier, legitimate* free would have a reader
+    // who learned that pair take the suspect for the safe one.
+    let (code, message, label) = match finding.conclusion {
         Conclusion::Unsafe => (
+            DOUBLE_FREE,
             "this frees a value that was freed already",
             "freed again here",
         ),
         Conclusion::Unknown => (
+            DOUBLE_FREE,
             "this may free a value that was freed already",
             "may free it again here",
         ),
-        // The check never answers this and `Diagnostic::concluded` gives `None`
-        // for it, so neither is read. Written out rather than `_` so that a
-        // fourth conclusion has to be answered for here.
-        Conclusion::Safe => ("nothing", "nothing"),
+        // The check does not answer this and `Diagnostic::concluded` gives
+        // `None` for it, so none of the three is read. Written out rather than
+        // `_` so that a fourth conclusion has to be answered for here.
+        Conclusion::Safe => (DOUBLE_FREE, "nothing", "nothing"),
     };
 
     let mut diagnostic = Diagnostic::concluded(finding.conclusion, message)?
-        .with_code(DOUBLE_FREE)
+        .with_code(code)
         .with_safety_level(SafetyLevel::Memory)
         .with_label(Label::primary(finding.at, label));
 
-    // Only where the check knows which earlier free it was. What makes a
-    // finding `Unknown` is that the paths reaching it disagree, and there is
-    // then no single place to point at.
+    // These two mean the same thing under either conclusion, so they share
+    // their words where the primary does not. Each is attached only where the
+    // check knows it: what makes a finding `Unknown` is that the paths or the
+    // sites reaching it disagree, and there is then no single place to point
+    // at.
     if let Some(freed) = finding.freed {
         diagnostic = diagnostic.with_label(Label::secondary(freed, "freed here"));
+    }
+    if let Some(made) = finding.made {
+        diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
     }
 
     Some(diagnostic)

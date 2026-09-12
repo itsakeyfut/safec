@@ -55,8 +55,13 @@ enum Callee {
 /// What is known about the allocation one site stands for.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SiteState {
-    /// Not freed on any path that reaches here.
-    Live,
+    /// Not freed on any path that reaches here, and where it came from.
+    ///
+    /// `None` where this check did not see the allocation happen: a parameter,
+    /// whose allocation is a caller's, and every local nothing has allocated
+    /// into. The diagnostic leaves its `allocated here` label off rather than
+    /// pointing somewhere it guessed.
+    Live(Option<Span>),
     /// Freed, and where the earliest free reaching here is.
     ///
     /// Earliest by position rather than by which path arrived first.
@@ -75,7 +80,12 @@ enum SiteState {
     /// the answer is whichever path the worklist reached last, which is stable
     /// for one program and arbitrary between two that differ only in the order
     /// their blocks were built. `a_join_names_the_earlier_free` is the guard.
-    Freed(Span),
+    Freed {
+        /// Where the allocation came from, on the same terms as [`Self::Live`].
+        made: Option<Span>,
+        /// The earliest free reaching here.
+        freed: Span,
+    },
     /// Freed on one path and not on another, or handed to a call this check
     /// cannot read.
     Unknown,
@@ -85,10 +95,36 @@ impl SiteState {
     /// The two together, which is `Unknown` unless they agree.
     fn joined(self, other: Self) -> Self {
         match (self, other) {
-            (Self::Live, Self::Live) => Self::Live,
-            (Self::Freed(here), Self::Freed(there)) => Self::Freed(earlier(here, there)),
+            (Self::Live(here), Self::Live(there)) => Self::Live(same(here, there)),
+            (
+                Self::Freed {
+                    made: here,
+                    freed: from_here,
+                },
+                Self::Freed {
+                    made: there,
+                    freed: from_there,
+                },
+            ) => Self::Freed {
+                made: same(here, there),
+                freed: earlier(from_here, from_there),
+            },
             _ => Self::Unknown,
         }
+    }
+}
+
+/// Where an allocation came from, where two paths agree about it.
+///
+/// `None` where they do not, which only ever loses what was known and so cannot
+/// cycle. Two paths reaching one site with two different allocations is not a
+/// shape the frontend produces, because a site is the local a call writes into
+/// and each call has its own; the type allows it and so this answers for it
+/// rather than picking one and being wrong on the day something else does.
+fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
+    match (here, there) {
+        (Some(here), Some(there)) if here == there => Some(here),
+        _ => None,
     }
 }
 
@@ -234,7 +270,10 @@ impl Analysis for Allocations<'_> {
     fn on_entry(&self) -> Self::Value {
         let mut known = Known {
             points_to: vec![vec![false; self.locals]; self.locals],
-            state: vec![SiteState::Live; self.locals],
+            // Nothing has allocated into any of these yet, so none of them can
+            // say where it came from. A parameter stays this way: its
+            // allocation happened somewhere this check cannot see.
+            state: vec![SiteState::Live(None); self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -357,7 +396,16 @@ impl Analysis for Allocations<'_> {
         match self.callee(*callee) {
             Callee::Frees => {
                 for site in sites().collect::<Vec<_>>() {
-                    value.state[site] = SiteState::Freed(origin.span());
+                    // Whatever the site was known to have come from survives
+                    // the free: the diagnostic wants to name it.
+                    let made = match value.state[site] {
+                        SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                        SiteState::Unknown => None,
+                    };
+                    value.state[site] = SiteState::Freed {
+                        made,
+                        freed: origin.span(),
+                    };
                 }
             }
             // It does not free what it is passed, which is the whole of why the
@@ -391,7 +439,7 @@ impl Analysis for Allocations<'_> {
         // would report a double free for code that allocates each time round.
         value.clear(place.local);
         value.points_to[place.local.index()][place.local.index()] = true;
-        value.state[place.local.index()] = SiteState::Live;
+        value.state[place.local.index()] = SiteState::Live(Some(origin.span()));
     }
 }
 
@@ -402,15 +450,22 @@ impl Analysis for Allocations<'_> {
 /// answers it, and ADR-0001 is why there is only one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
-    /// What the check concluded about this call.
+    /// What that check concluded.
     pub conclusion: Conclusion,
-    /// The call that frees, which is where a caret goes.
+    /// Where a caret goes: the call that frees.
     pub at: Span,
-    /// The earlier free, where the check knows which one it was.
+    /// The earliest free reaching here, where the check knows which one it was.
     ///
-    /// `None` for an `Unknown`: what makes it unknown is that the paths
-    /// reaching here disagree, so there is no single earlier free to point at.
+    /// `None` for an `Unknown`: what makes it unknown is that the paths or the
+    /// sites reaching here disagree, so there is no single free to point at.
     pub freed: Option<Span>,
+    /// Where the allocation was made, where this check saw it happen.
+    ///
+    /// `None` for a parameter, whose allocation is a caller's, and for an
+    /// `Unknown` for the reason above. `docs/safety-model.md` asks the
+    /// diagnostic for this line and it is honest to leave it off rather than
+    /// point at an allocation that may not be the one.
+    pub made: Option<Span>,
 }
 
 /// Every double free this unit contains, and every one it cannot rule out.
@@ -475,10 +530,114 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     // every expectation that holds two findings.
     findings.sort_by_key(|finding| (finding.at.file().index(), finding.at.start()));
 
+    // **One thing said once.** `*p = 42;` lowers to two operations that both
+    // read through `p`, because an assignment is an expression with a value and
+    // the lowering reads the place back into a temporary. Both are genuine
+    // dereferences and both produce the same finding, so a reader would get two
+    // carets on one line saying one thing. Only findings that agree in every
+    // field collapse: two different pointers used after a free on one line are
+    // two findings and stay two.
+    findings.dedup();
+
     findings
 }
 
-/// What this terminator is worth reporting, if anything.
+/// What a set of sites says about whatever touched them.
+///
+/// The fold from many sites to one conclusion. RK-035 in the review knowledge
+/// bank is why it is a type rather than a tuple: a may-analysis's join is
+/// forced to be right by the lattice, and the code that reads the answer is
+/// where the same rule gets lost.
+struct Verdict {
+    conclusion: Conclusion,
+    /// The earliest free reaching here, where the conclusion is a proof.
+    freed: Option<Span>,
+    /// Where that allocation came from, where this check saw it happen.
+    made: Option<Span>,
+}
+
+/// What these sites amount to, or nothing where they amount to no report.
+///
+/// The caller decides what reaching nothing means, by what it puts in
+/// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
+/// following.
+fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<Verdict> {
+    let mut earliest: Option<Span> = None;
+    // Where the allocation came from, kept only while every freed site agrees.
+    // **RK-035 one level down**: proving a double free from one of several
+    // sites is the may-set mistake the fold below is written to avoid, and
+    // naming one of several allocations as *the* one is the same mistake about
+    // a label. `if (c) p = malloc(); else p = malloc();` reaches both, and
+    // pointing at either would be a caret on an allocation the value may not
+    // hold.
+    let mut made: Option<Span> = None;
+    let mut any_freed = false;
+    let mut live = false;
+    let mut unknown = false;
+
+    for entry in reached {
+        let site = match entry {
+            Reached::Site(site) => site,
+            // **Not the same as proving it live.** This is the check having
+            // lost the pointer, and answering nothing about it is the failure
+            // `docs/safety-model.md` is written to prevent rather than the one
+            // it tolerates.
+            Reached::Lost => {
+                unknown = true;
+                continue;
+            }
+        };
+
+        match known.state[site] {
+            SiteState::Live(_) => live = true,
+            SiteState::Freed {
+                made: from,
+                freed: before,
+            } => {
+                made = if any_freed { same(made, from) } else { from };
+                any_freed = true;
+                earliest = Some(match earliest {
+                    Some(already) if earlier(already, before) == already => already,
+                    _ => before,
+                });
+            }
+            SiteState::Unknown => unknown = true,
+        }
+    }
+
+    // **`points_to` is a may-set, so one freed site among several is not a
+    // proof.** `SiteState::joined` already answers `Unknown` where one path
+    // freed a site and another did not; this is the same question across two
+    // sites rather than across two paths, and answering it differently let the
+    // spelling of a program decide whether it was a warning or an error. A
+    // proof needs every site reached to have been freed, and nothing about it
+    // to have been lost.
+    let proved = !live && !unknown;
+
+    match earliest {
+        Some(freed) if proved => Some(Verdict {
+            conclusion: Conclusion::Unsafe,
+            freed: Some(freed),
+            made,
+        }),
+        // Neither span is carried. What makes this unproven is that the sites
+        // or the paths disagree, so there is no one free that every execution
+        // reaching here went through, and no one allocation to name beside it.
+        Some(_) => Some(Verdict {
+            conclusion: Conclusion::Unknown,
+            freed: None,
+            made: None,
+        }),
+        None if unknown => Some(Verdict {
+            conclusion: Conclusion::Unknown,
+            freed: None,
+            made: None,
+        }),
+        None => None,
+    }
+}
+
+/// What this terminator is worth reporting as a free, if anything.
 ///
 /// One finding per call rather than one per site: a local may point at several
 /// allocations where a branch put them there, and two carets on one `free` say
@@ -499,65 +658,12 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         return None;
     }
 
-    // The worst of what the arguments reach. A proved double free outranks one
-    // that could not be ruled out, because the two are a different claim rather
-    // than a different volume: `docs/safety-model.md` gives the first to an
-    // error at every level and leaves the second to `--deny-unknown`.
-    let mut freed: Option<Span> = None;
-    let mut live = false;
-    let mut unknown = false;
+    let verdict = verdict(Allocations::touching(arguments, known), known)?;
 
-    for reached in Allocations::touching(arguments, known) {
-        let site = match reached {
-            Reached::Site(site) => site,
-            // **Not the same as proving it live.** This is the check having
-            // lost the pointer, and answering nothing about it is the failure
-            // `docs/safety-model.md` is written to prevent rather than the one
-            // it tolerates.
-            Reached::Lost => {
-                unknown = true;
-                continue;
-            }
-        };
-
-        match known.state[site] {
-            SiteState::Live => live = true,
-            SiteState::Freed(before) => {
-                freed = Some(match freed {
-                    Some(already) => earlier(already, before),
-                    None => before,
-                });
-            }
-            SiteState::Unknown => unknown = true,
-        }
-    }
-
-    // **`points_to` is a may-set, so one freed site among several is not a
-    // proof.** `SiteState::joined` already answers `Unknown` where one path
-    // freed a site and another did not; this is the same question across two
-    // sites rather than across two paths, and answering it differently let the
-    // spelling of a program decide whether it was a warning or an error. A
-    // proof needs every site the argument can reach to have been freed, and
-    // nothing about it to have been lost.
-    let proved = freed.is_some() && !live && !unknown;
-    let suspected = freed.is_some() || unknown;
-
-    match (proved, suspected) {
-        (true, _) => Some(Finding {
-            conclusion: Conclusion::Unsafe,
-            at: origin.span(),
-            freed,
-        }),
-        // `freed` is dropped rather than carried: what makes this unproven is
-        // that the sites or the paths disagree, so there is no one earlier free
-        // that every execution reaching here went through.
-        (false, true) => Some(Finding {
-            conclusion: Conclusion::Unknown,
-            at: origin.span(),
-            freed: None,
-        }),
-        // Every site the argument reaches is live, and none was lost. That is
-        // the only shape this check proves safe, and a proof says nothing.
-        (false, false) => None,
-    }
+    Some(Finding {
+        conclusion: verdict.conclusion,
+        at: origin.span(),
+        freed: verdict.freed,
+        made: verdict.made,
+    })
 }

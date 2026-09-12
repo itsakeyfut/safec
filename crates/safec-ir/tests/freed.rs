@@ -171,6 +171,7 @@ fn a_value_freed_twice_is_unsafe() {
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].at, names.at[2]);
     assert_eq!(found[0].freed, Some(names.at[1]));
+    assert_eq!(found[0].made, Some(names.at[0]), "where the `malloc` was");
 }
 
 /// Freeing through a copy is the same allocation, and is proved rather than
