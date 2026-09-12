@@ -1,0 +1,21 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ a_pointer_replaced_through_its_own_address.c:6:5 ]
+   │
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_pointer_replaced_through_its_own_address.c:8:5 ]
+   │
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+   │ 
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

@@ -1,0 +1,9 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ a_free_on_one_arm_only.c:5:5 ]
+   │
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

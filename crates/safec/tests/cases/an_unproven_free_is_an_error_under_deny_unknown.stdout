@@ -1,0 +1,34 @@
+Target "x86_64-pc-windows-msvc"
+Function an_unproven_free_is_an_error_under_deny_unknown.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_unproven_free_is_an_error_under_deny_unknown.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_unproven_free_is_an_error_under_deny_unknown.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *" parameter
+  Local "_3" "void"
+  Local "_4" "void"
+  Block "bb0" entry
+    Branch "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Call an_unproven_free_is_an_error_under_deny_unknown.c:4:14 "free" "bb4"
+      Destination "_3"
+      Copy "_2"
+  Block "bb2"
+    Goto "bb3"
+  Block "bb3"
+    Call an_unproven_free_is_an_error_under_deny_unknown.c:5:5 "free" "bb5"
+      Destination "_4"
+      Copy "_2"
+  Block "bb4"
+    Goto "bb3"
+  Block "bb5"
+    Operation an_unproven_free_is_an_error_under_deny_unknown.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

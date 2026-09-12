@@ -1,0 +1,67 @@
+Target "x86_64-pc-windows-msvc"
+Function a_free_where_one_of_two_allocations_is_live.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_free_where_one_of_two_allocations_is_live.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_free_where_one_of_two_allocations_is_live.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int *"
+  Local "_7" "void"
+  Local "_8" "int *"
+  Local "_9" "void"
+  Block "bb0" entry
+    Call a_free_where_one_of_two_allocations_is_live.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_free_where_one_of_two_allocations_is_live.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call a_free_where_one_of_two_allocations_is_live.c:5:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 4
+  Block "bb2"
+    Operation a_free_where_one_of_two_allocations_is_live.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Operation a_free_where_one_of_two_allocations_is_live.c:6:10 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Call a_free_where_one_of_two_allocations_is_live.c:7:5 "free" "bb3"
+      Destination "_7"
+      Copy "_2"
+  Block "bb3"
+    Branch "bb4" "bb5"
+      Copy "_1"
+  Block "bb4"
+    Operation a_free_where_one_of_two_allocations_is_live.c:8:14 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Operation a_free_where_one_of_two_allocations_is_live.c:8:14 written
+      Destination "_8"
+      Use
+        Copy "_6"
+    Goto "bb6"
+  Block "bb5"
+    Goto "bb6"
+  Block "bb6"
+    Call a_free_where_one_of_two_allocations_is_live.c:9:5 "free" "bb7"
+      Destination "_9"
+      Copy "_6"
+  Block "bb7"
+    Operation a_free_where_one_of_two_allocations_is_live.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

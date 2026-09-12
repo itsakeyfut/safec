@@ -1,0 +1,11 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_value_freed_through_a_copy.c:7:5 ]
+   │
+ 6 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

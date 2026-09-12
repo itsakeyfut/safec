@@ -1,0 +1,66 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_whose_address_escaped.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_whose_address_escaped.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_whose_address_escaped.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "void"
+  Local "_9" "void"
+  Block "bb0" entry
+    Call a_pointer_whose_address_escaped.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_whose_address_escaped.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Call a_pointer_whose_address_escaped.c:5:14 "malloc" "bb2"
+      Destination "_4"
+      Constant 4
+  Block "bb2"
+    Operation a_pointer_whose_address_escaped.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation a_pointer_whose_address_escaped.c:6:16 written
+      Destination "_6"
+      Address
+        Place "_3"
+    Operation a_pointer_whose_address_escaped.c:6:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Operation a_pointer_whose_address_escaped.c:7:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_pointer_whose_address_escaped.c:7:5 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Call a_pointer_whose_address_escaped.c:8:5 "free" "bb3"
+      Destination "_8"
+      Copy "_1"
+  Block "bb3"
+    Call a_pointer_whose_address_escaped.c:9:5 "free" "bb4"
+      Destination "_9"
+      Copy "_3"
+  Block "bb4"
+    Operation a_pointer_whose_address_escaped.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

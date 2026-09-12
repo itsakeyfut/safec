@@ -1,0 +1,45 @@
+Target "x86_64-pc-windows-msvc"
+Function two_allocations_are_freed_once_each.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function two_allocations_are_freed_once_each.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function two_allocations_are_freed_once_each.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "void"
+  Local "_6" "void"
+  Block "bb0" entry
+    Call two_allocations_are_freed_once_each.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation two_allocations_are_freed_once_each.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Call two_allocations_are_freed_once_each.c:5:14 "malloc" "bb2"
+      Destination "_4"
+      Constant 4
+  Block "bb2"
+    Operation two_allocations_are_freed_once_each.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Call two_allocations_are_freed_once_each.c:6:5 "free" "bb3"
+      Destination "_5"
+      Copy "_1"
+  Block "bb3"
+    Call two_allocations_are_freed_once_each.c:7:5 "free" "bb4"
+      Destination "_6"
+      Copy "_3"
+  Block "bb4"
+    Operation two_allocations_are_freed_once_each.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

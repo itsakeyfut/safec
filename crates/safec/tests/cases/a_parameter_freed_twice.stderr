@@ -1,0 +1,11 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_parameter_freed_twice.c:5:5 ]
+   │
+ 4 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

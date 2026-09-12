@@ -1,0 +1,54 @@
+target triple = "x86_64-pc-windows-msvc"
+
+declare ptr @malloc(i32)
+
+declare void @free(ptr)
+
+define i32 @f() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  %_2 = alloca ptr
+  br label %bb0
+
+bb0:
+  %t0 = call ptr @malloc(i32 4)
+  store ptr %t0, ptr %_2
+  br label %bb1
+
+bb1:
+  %t1 = load ptr, ptr %_2
+  store ptr %t1, ptr %_1
+  %t2 = load ptr, ptr %_1
+  call void @free(ptr %t2)
+  br label %bb2
+
+bb2:
+  %t3 = load ptr, ptr %_1
+  call void @free(ptr %t3)
+  br label %bb3
+
+bb3:
+  store i32 0, ptr %_0
+  %t4 = load i32, ptr %_0
+  ret i32 %t4
+}
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  %t0 = call i32 @f()
+  store i32 %t0, ptr %_1
+  br label %bb1
+
+bb1:
+  %t1 = load i32, ptr %_1
+  store i32 %t1, ptr %_0
+  %t2 = load i32, ptr %_0
+  ret i32 %t2
+}

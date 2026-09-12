@@ -1,0 +1,9 @@
+error[SC0401]: this may free a value that was freed already
+   ╭─[ an_unproven_free_is_an_error_under_deny_unknown.c:5:5 ]
+   │
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation

@@ -1,0 +1,9 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ a_call_this_check_cannot_read_between_two_frees.c:7:5 ]
+   │
+ 7 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
