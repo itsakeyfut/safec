@@ -706,9 +706,13 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
 /// a caret on a line only one path reached, and a caret in the wrong place is
 /// worse than none.
 ///
-/// Mutation: in `verdict`, keep the first `made` span rather than collapsing
-/// two that disagree. `made` becomes the first arm's `malloc` and this fails on
-/// that field.
+/// Mutation: in `SiteState::joined`, keep `here`'s `made` rather than
+/// collapsing two that disagree. `made` becomes the first arm's `malloc` and
+/// this fails on that field. The join rather than the fold in `verdict`,
+/// measured: a site is the local a call writes into, so two `malloc`s into one
+/// local are one site and the two spans meet at the join. What guards the same
+/// rule in the fold is the corpus case `a_branch_that_allocates_either_way`,
+/// where they meet across two sites instead.
 #[test]
 fn a_use_after_two_allocations_names_no_allocation() {
     let (sources, names) = sources();
@@ -748,4 +752,69 @@ fn a_use_after_two_allocations_names_no_allocation() {
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].freed, Some(names.at[1]), "the earlier of the two");
     assert_eq!(found[0].made, None, "the two arms do not agree");
+}
+
+/// A free reaching one site that was freed and one the check gave up on is
+/// unproven, not proved.
+///
+/// The other half of the rule `a_free_where_one_of_two_allocations_is_live`
+/// holds. That one has a site this check proved is live; this one has a site it
+/// proved nothing about, and the two have to answer the same way for the same
+/// reason: `points_to` is a may-set, so what is true of one member of it is not
+/// true of the value. Nothing else in the suite reaches the combination,
+/// measured, because every other case that leaves a site `Unknown` leaves every
+/// site the free reaches `Unknown`, and then there is no span to name and the
+/// answer is the same either way.
+///
+/// Mutation: in `verdict`, `let proved = !live;`. This becomes an error naming
+/// a free the program may never reach, and nothing else in the suite fails.
+#[test]
+fn a_free_where_one_site_is_unknown_is_unproven() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 1);
+    let given = function.parameters().next().expect("one parameter");
+    let held = function.push_local(int);
+    let either = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let branch = function.reserve_block();
+    let arm = function.reserve_block();
+    let from_the_arm = function.reserve_block();
+    let otherwise = function.reserve_block();
+    let joined = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], branch));
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: arm,
+                otherwise,
+            },
+        },
+    );
+    // One arm frees the parameter and the other does not, which is what leaves
+    // its site `Unknown` where they meet.
+    function.fill_block(arm, free(&callees, given, names.at[2], from_the_arm));
+    function.fill_block(from_the_arm, copy(either, given, names.at[3], joined));
+    function.fill_block(otherwise, copy(either, held, names.at[4], joined));
+    function.fill_block(joined, free(&callees, either, names.at[5], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].at, names.at[5]);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unknown,
+        "one site was freed and the other was given up on"
+    );
+    assert_eq!(found[0].freed, None);
+    assert_eq!(found[0].made, None);
 }
