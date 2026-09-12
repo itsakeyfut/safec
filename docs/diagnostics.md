@@ -70,6 +70,18 @@ label they carry. They take separate codes because a code is the handle a reader
 searches with and a suppression list keys on, and freeing twice and reading
 through a dangling pointer are two classes of program to look for.
 
+**What `SC0402` not being emitted does not mean.** The check follows a pointer
+through a copy and through pointer arithmetic, so `q = p; *q` and `p[i]` are
+both read. It does not follow one out of another pointer, so `int *p = *pp;`
+leaves nothing to say about a later `*p`, and it says nothing about a
+dereference inside a controlling expression, because `Terminator::Branch`
+carries no span to put a caret on and a caret in the wrong place is worse than
+none. So `free(p); if (*p) {}` compiles quietly today, and issue #141 is what
+closes it. This is written here rather than only beside the code because a
+boundary a user cannot find is one they will discover by being wrong about it,
+and [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that
+silence is the most expensive answer this compiler gives.
+
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from
 somewhere that no diagnostic will ever claim.
