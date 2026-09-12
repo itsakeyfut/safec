@@ -237,9 +237,13 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let mut successors = Vec::new();
 
     // A budget on the lattice's height rather than on the graph, for the
-    // reason `STATES_PER_KEY` gives. Not behind `debug_assertions`: a walk
-    // that does not end in a release build is the case this is for, and what
-    // it costs is this counter.
+    // reason `STATES_PER_KEY` gives. One more than the locals because a block
+    // is walked once more than its value moves: the first walk is what puts
+    // a value there. Nothing tests that one, and nothing can, because the
+    // multiplier is larger than the difference it makes.
+    //
+    // Not behind `debug_assertions`: a walk that does not end in a release
+    // build is the case this is for, and what it costs is this counter.
     let budget = (function.locals().len() + 1).saturating_mul(STATES_PER_KEY);
     let mut visits = vec![0usize; function.blocks().len()];
 
