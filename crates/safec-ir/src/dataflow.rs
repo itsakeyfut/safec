@@ -26,6 +26,15 @@
 //! that it converges, is a different thing and is still not done. ADR-0016
 //! carries both.
 //!
+//! **That budget bounds one [`solve`] and nothing around it.** The count is a
+//! local of that call, so a caller running `solve` in a loop of its own gets a
+//! fresh one every time and is not bounded here at all. An interprocedural
+//! fixpoint is exactly that loop, and every analysis after Phase 5 wants one:
+//! `free` in a callee, a parameter's lifetime, an ownership transfer. A
+//! summary lattice with no top hangs that caller while every `solve` inside it
+//! converges and says nothing. Closing that is the caller's to do when there
+//! is a caller.
+//!
 //! **The tests are in `crates/safec-ir/tests/written.rs`, not beside this.**
 //! They implement an analysis against this trait and are compiled against the
 //! crate as a dependency, so they reach only what is public, which is the one
