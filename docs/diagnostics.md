@@ -94,17 +94,25 @@ of the change that adds it.
 
 A diagnostic about the invocation, or about the machine a run is on, rather than
 about a program's text has no code. `no input files`, `cannot read <path>` and
-`--emit object needs clang` are that kind, and ten of the eleven diagnostics
-in `crates/safec/src/driver.rs` carry none. There is no class of program for a
-reader to search for and nothing for an explanation to hang on, so a number
-there would be a handle onto nothing.
+`--emit object needs clang` are that kind, and eleven of the twelve diagnostics
+`crates/safec/src/driver.rs` builds with `Diagnostic::error` carry none. There
+is no class of program for a reader to search for and nothing for an
+explanation to hang on, so a number there would be a handle onto nothing.
 
-`SC0801` is the one that does not, and is the other kind. The backend refusing
-an IR shape is a fact about a function in a program, with a span to point at and
-a class of program to search for, so it takes a code the way the lowering's
-`SC0304` does.
+`SC0801` is the one of those twelve that does not, and is the other kind. The
+backend refusing an IR shape is a fact about a function in a program, with a
+span to point at and a class of program to search for, so it takes a code the
+way the lowering's `SC0304` does.
 The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
 all, so the code is attached where the diagnostic is built.
+
+**`SC0401` is a third kind and is why the count needs a second command.** It is
+built with `Diagnostic::concluded` rather than `Diagnostic::error`, because what
+a safety check answers is a [conclusion](safety-model.md#safe-unsafe-unknown)
+and the severity follows from it: the same finding is an error or a warning
+depending on what could be proved, so the constructor that decides has to be
+the one that reads the conclusion. It is made in `crates/safec-ir`, which
+cannot see a `Diagnostic` either, and for the same reason as the backend's.
 
 **The count is checked by nobody and has been wrong twice.** It said six while
 `driver.rs` built seven, from the change that added a refusal without coming
@@ -113,9 +121,21 @@ as five while there were six, from the change that added `--emit object`. That
 comment no longer counts anything, because this is the one place that does. The
 count goes down as well as up: `--emit executable` removed `the compilation
 pipeline is not implemented yet`, which nothing could reach once every kind
-produced something. A number in prose about code in another file is exactly
-RK-017's shape, and `grep -c "Diagnostic::error" crates/safec/src/driver.rs` is
-what settles it.
+produced something. **It has since been wrong a third time**, found by a review
+of the change that added `SC0401`: it said ten of eleven while the file built
+twelve.
+
+A number in prose about code in another file is exactly RK-017's shape, and two
+commands settle this one, which is one more than it used to take:
+
+```sh
+grep -c "Diagnostic::error"     crates/safec/src/driver.rs   # the twelve
+grep -c "Diagnostic::concluded" crates/safec/src/driver.rs   # what a check answers
+```
+
+The second exists because a safety check does not build its diagnostic the same
+way, and a count that runs only the first will be wrong again the moment the
+next check lands.
 
 ## Where this lives now
 
