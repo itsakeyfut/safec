@@ -47,3 +47,13 @@ Do not sacrifice the initial learning and experimentation loop by attempting ful
 ## 7. The compiler and analyzer should reinforce each other
 
 New safety semantics should be testable in the experimental compiler and eventually transferable to Clang-based analysis.
+
+## 8. A failure has to be readable
+
+What the compiler does when it is wrong is part of the design rather than an
+accident of it. Where two designs are both correct, prefer the one whose failure
+a reader can see: a build that stops with a name over one that hangs, and either
+over a program that passes unchecked.
+
+What is printed for a program the analysis rejects is
+[diagnostics](diagnostics.md); this is about everything else.
