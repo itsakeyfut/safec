@@ -584,7 +584,9 @@ impl Analysis for Climbing {
 /// expectation is one substring and that one is not next to this one. It is a
 /// literal in the format string and a reader sees it in a diff.
 #[test]
-#[should_panic(expected = "`written::Climbing` analysis did not converge: block")]
+#[should_panic(
+    expected = "`written::Climbing` analysis did not converge. This is a defect in safec rather than in the code being compiled"
+)]
 fn an_analysis_that_cannot_converge_is_stopped_and_named() {
     let (_sources, at) = spans();
     let (_unit, mut function, _int) = a_function(at);

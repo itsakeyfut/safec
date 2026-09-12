@@ -264,13 +264,12 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         visits[block.index()] += 1;
         assert!(
             visits[block.index()] <= budget,
-            "the `{}` analysis did not converge: block {} was walked {} times, \
-             and the budget for this function is {}.
-
-This is a defect in \
-             safec rather than in the code being compiled. The likeliest cause \
-             is a `join` that rebuilds its value into a different shape with \
-             the same meaning, which never compares equal. Please report it.",
+            "the `{}` analysis did not converge. This is a defect in safec \
+             rather than in the code being compiled: the likeliest cause is a \
+             `join` that rebuilds its value into a different shape with the \
+             same meaning, which never compares equal. Please report it.\n\n\
+             Block {} was walked {} times, and the budget for this function \
+             is {}.",
             core::any::type_name::<A>(),
             block.index(),
             visits[block.index()],
