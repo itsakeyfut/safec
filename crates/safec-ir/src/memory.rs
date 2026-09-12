@@ -260,8 +260,9 @@ impl Analysis for Allocations<'_> {
         let locals = function.locals().len();
         // Each local's set of sites only grows, so it takes at most one step
         // per site, and a site is a local. Each site's state walks `Live` to
-        // `Freed` to `Unknown`, and its span can only move to an earlier one,
-        // which it can do at most once per site that frees. Generous rather
+        // `Freed` to `Unknown`; its `freed` span can only move to an earlier
+        // one, which it can do at most once per site that frees; and its `made`
+        // span can only fall from `Some` to `None`, once. Generous rather
         // than tight, which is the direction `Analysis::height` says to err in:
         // answering too low stops a correct analysis.
         //
@@ -272,7 +273,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals + locals * (locals + 2)
+        locals * locals + locals * (locals + 3)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -329,13 +330,57 @@ impl Analysis for Allocations<'_> {
                         value.points_to[destination.index()] =
                             value.points_to[source.local.index()].clone();
                     }
-                    // Arithmetic on a pointer is not followed. C17 6.5.6 keeps
-                    // the result inside the same object, so `p + 1` points at
-                    // what `p` points at, and following it would be right;
-                    // this does not, because the sibling that reports a use of
-                    // a freed value is what would read it and there is no
-                    // caller for the precision yet.
-                    Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+                    // **Arithmetic on a pointer is followed.** C17 6.5.6 p8
+                    // keeps the result inside the object the operand points
+                    // into, so `p + 1` may hold whatever `p` holds, and `p[i]`
+                    // is that addition: 6.5.2.1 p2 defines `E1[E2]` as
+                    // `(*((E1)+(E2)))`. This arm used to clear the destination
+                    // instead, on the stated ground that nothing read the
+                    // precision yet. Something does now, and until it did the
+                    // cost was invisible: `free(p); p[i] = 42;` was silence
+                    // rather than a diagnostic, which is the worst answer this
+                    // compiler has.
+                    //
+                    // Both operands, and a union rather than a choice. Which
+                    // one is the pointer is a question about types and this
+                    // does not read them; taking both is a may-set growing,
+                    // which is the direction that cannot make a proof out of
+                    // nothing. `q - p` is an integer and picks up both, and
+                    // nothing dereferences an integer.
+                    //
+                    // Read before the write, so `p = p + 1` keeps what `p`
+                    // held rather than clearing it and unioning the result.
+                    //
+                    // **It costs a proof where the index is a local.** A
+                    // parameter is a site, so `p[i]` unions the allocation `p`
+                    // holds with the site `i` is, and a site that is live stops
+                    // the result being proved: `free(p); p[i] = 42;` is a
+                    // warning where `free(p); p[0] = 42;` is an error. The
+                    // types are in the IR and reading them would separate the
+                    // two, which is #143 rather than a line here.
+                    Rvalue::Binary { op: _, lhs, rhs } => {
+                        let mut reached = vec![false; value.points_to.len()];
+                        for operand in [lhs, rhs] {
+                            let Operand::Copy(source) = operand else {
+                                continue;
+                            };
+                            if !source.projection.is_empty() {
+                                continue;
+                            }
+                            for (here, there) in reached
+                                .iter_mut()
+                                .zip(&value.points_to[source.local.index()])
+                            {
+                                *here = *here || *there;
+                            }
+                        }
+                        value.points_to[destination.index()] = reached;
+                    }
+                    // A constant, a read through a projection, or a unary
+                    // operator. None of the three is a pointer this check can
+                    // follow: C17 6.5.3.3 gives unary `+`, `-` and `~`
+                    // arithmetic operands only, and `!` yields an `int`.
+                    Rvalue::Use(_) | Rvalue::Unary { .. } => {
                         value.clear(destination);
                     }
                     // The address of a place is not an allocation this check
@@ -727,9 +772,14 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// yet. Answering `Unknown` here would warn on every `*p` whose pointer came
 /// from anywhere this does not follow, which is most of them.
 ///
-/// Nothing is lost by it. A pointer written behind this check's back arrives
-/// here as `SiteState::Unknown` rather than as no site at all, because taking a
-/// local's address is what makes its sites unknown.
+/// **What that silence covers is a boundary rather than a rule.** A pointer
+/// written behind this check's back does arrive here as `SiteState::Unknown`
+/// rather than as no site at all, because taking a local's address is what
+/// makes its sites unknown. Pointer arithmetic is followed for the same reason.
+/// But a pointer read out of another pointer, `int *p = *pp;`, reaches no site
+/// and is silence, and so is a dereference inside a controlling expression,
+/// which is #141. `docs/diagnostics.md` says what exit 0 does not mean here,
+/// because a boundary that lives only in a comment is one no user can find.
 fn used(findings: &mut Vec<Finding>, at: Option<(Span, Vec<&Place>)>, known: &Known) {
     let Some((at, dereferenced)) = at else {
         return;
