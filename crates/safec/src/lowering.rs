@@ -253,6 +253,14 @@ impl Lowering<'_> {
                         // local, so there is nothing for a global to be. A use
                         // of one is reported where it is used, which is where a
                         // reader can see what it cost.
+                        //
+                        // **`declarator.init` is read and dropped here**, so
+                        // `int g = 5;` at file scope emits nothing and says
+                        // nothing. That is contained only because a use of `g`
+                        // is refused: there is no way to observe the value
+                        // that went missing. #85 is where a global gets
+                        // somewhere to live, and it is the change that has to
+                        // come back for this initializer.
                         if let Some(name) = declarator.declaration.name {
                             self.declare_one(name, declarator.declaration.ty, false, diagnostics);
                         }

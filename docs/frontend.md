@@ -88,6 +88,25 @@ None of the three is a decision anybody has taken to refuse forever. They are
 where the lexer stopped, and this section exists so that stopping there is
 visible rather than inferred from a diagnostic.
 
+Two more are where the *parser* stopped, and belong here for the same reason.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `int x = {1};` | `error[SC0203]` at the `{` | accepts | accepts |
+| `for (int i = 0; ...)` | `error[SC0201]` at the `int` | accepts | accepts |
+
+**Both are C and are not implemented.** 6.7.9 p11 lets a scalar's initializer
+be a single expression "optionally enclosed in braces", so the first is valid
+with no designator and no nested list in it; unwrapping the braces is only
+correct where the declared type is scalar, and the parser does not know the
+type. 6.8.5 p1 gives `for` a form whose first clause is a declaration, and
+6.8.5 p5 scopes that declaration to the loop rather than to the block around
+it; the tree holds an expression there.
+
+Neither is a gap the lexer left, which is why they are a table of their own:
+the first three rows are about what a token is, and these two are about what a
+sequence of them is allowed to be.
+
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so
 it also holds literal prefixes and non-ASCII identifiers, which are a token's

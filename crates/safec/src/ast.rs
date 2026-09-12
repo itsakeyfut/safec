@@ -464,9 +464,15 @@ pub enum Stmt {
     Declaration {
         /// C17 6.7's `init-declarator-list`, in the order it was written.
         ///
-        /// Never empty. `declaration-specifiers ;` with no declarator at all
-        /// is valid C that this parser refuses before an `Item` or a `Stmt` is
-        /// built, so nothing downstream has to answer for the empty case.
+        /// Never empty. C17 6.7 marks the list optional, but 6.7 p2 then
+        /// requires a declaration to declare a declarator, a tag, or an
+        /// enumeration's members, so `int;` is a constraint violation rather
+        /// than the empty case: `clang -std=c17 -pedantic-errors` reports it
+        /// and accepts it silently only as an extension. What is valid and
+        /// empty here is `struct S { int x; };`, which declares a tag, and
+        /// this parser reads no tags yet. Either way nothing downstream has to
+        /// answer for an empty list, and #125 is the change that would alter
+        /// that.
         declarators: Vec<InitDeclarator>,
         /// The specifiers through the `;`.
         span: Span,
@@ -515,10 +521,13 @@ pub enum Stmt {
     /// `for`, in the form whose three clauses are expressions. C17 6.8.5 p1.
     ///
     /// The other form, `for ( declaration expression_opt ; expression_opt )`,
-    /// needs an initializer and so needs #43. These are three separate
-    /// `Option`s rather than something that could also hold a declaration,
-    /// because an interface with no caller is invented rather than designed and
-    /// widening this one later is additive.
+    /// is not read. It used to be blocked on there being no initializer to
+    /// read; there is one now, and what is left is this type and the scope:
+    /// `initialiser` holds an `ExprId`, and C17 6.8.5 p5 gives a declaration
+    /// written here a scope that is the loop rather than the block around it.
+    /// These are three separate `Option`s rather than something that could
+    /// also hold a declaration, because an interface with no caller is
+    /// invented rather than designed and widening this one later is additive.
     For {
         /// What runs once before the first turn.
         initialiser: Option<ExprId>,

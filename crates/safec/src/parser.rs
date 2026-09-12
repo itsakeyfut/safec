@@ -1037,8 +1037,12 @@ impl Parser<'_> {
     /// C17 6.8.5 p1.
     ///
     /// The other form the same paragraph gives, `for ( declaration
-    /// expression_opt ; expression_opt )`, needs an initializer and so needs
-    /// #43. Until then `for (int i = 0; ...)` is refused, at the `int`.
+    /// expression_opt ; expression_opt )`, is still refused, at the `int`. It
+    /// used to be blocked on there being no initializer to read, which is no
+    /// longer true: what is left is that `Stmt::For`'s first clause holds an
+    /// expression, and that 6.8.5 p5 gives a declaration written here a scope
+    /// of its own. `docs/frontend.md` carries the row, so the refusal is
+    /// visible to a reader who is not in this file.
     fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         self.advance();
 
@@ -1965,11 +1969,17 @@ int main(void) { return 0; }
     /// which range they come from and why a code outlives the wording beside
     /// it. `lexer.rs` holds the same test over the lexical five.
     ///
-    /// Mutation: change either `EXPECTED` or `TOO_DEEP`. This fails. Before it
-    /// existed, `TOO_DEEP` could be renumbered with the whole suite still
-    /// green: no corpus case nests deep enough to reach it, so the six that
-    /// carry `SC0201` were guarding one of the parser's two codes and nothing
-    /// was guarding the other.
+    /// Mutation: change `EXPECTED`, `TOO_DEEP` or `BRACED_INITIALIZER`. Each
+    /// fails here. Before this test existed, `TOO_DEEP` could be renumbered
+    /// with the whole suite still green: no corpus case nests deep enough to
+    /// reach it, so the six that carry `SC0201` were guarding one of the
+    /// parser's codes and nothing was guarding the other.
+    ///
+    /// `BRACED_INITIALIZER` is the one case here that a corpus case also
+    /// holds, because `a_braced_initializer_is_refused` compares the whole
+    /// rendered diagnostic. It is listed anyway rather than left to that one,
+    /// so that the row somebody adds for the parser's fourth code has three
+    /// above it to copy rather than two.
     #[test]
     fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
         let too_deep = format!(
