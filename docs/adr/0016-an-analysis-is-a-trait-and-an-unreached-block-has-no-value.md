@@ -126,14 +126,17 @@ and rewrite all of them on each pass, for a reader that does not exist.
 * Seeding every block with `on_entry` rather than the entry alone fails
   `a_block_nothing_reaches_has_no_answer`, and with it every test whose answer
   depends on a value having arrived rather than having been put there: a value
-  waiting in a block joins into whatever that block reaches. Four when this was
-  measured, and the number is not the claim.
+  waiting in a block joins into whatever that block reaches. **How many is not
+  written down here on purpose.** It was, twice, and was wrong within the week
+  both times, because a count counts the tests that happen to exist rather than
+  anything this decision is about, and a guard is added to this suite most
+  weeks. What governs the set is the sentence before this one.
 * Joining the first arrival into `on_entry` rather than storing it fails
   `what_a_loop_writes_and_what_comes_before_it_are_answered_apart`, and every
-  other test that writes something before the block it asks about: three when
-  this was measured. A must-analysis joined against a value nothing produced
-  answers that nothing is known, which is what having no identity element buys
-  and the mutation that reverses this record.
+  other test that writes something before the block it asks about. A
+  must-analysis joined against a value nothing produced answers that nothing is
+  known, which is what having no identity element buys and the mutation that
+  reverses this record.
 * A fifth method on `Analysis` without a default is `error[E0046]` at every
   implementation, which is what makes the set of questions an analysis answers
   something the compiler holds rather than a convention.
