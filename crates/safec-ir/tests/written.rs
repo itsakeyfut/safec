@@ -673,32 +673,14 @@ impl Analysis for Counting {
     }
 }
 
-/// An analysis that says how tall it is is believed.
+/// Sixty four locals, one loop arm each, and every arm ends one local's
+/// storage, so the header's value moves once per arm and the walk is as tall
+/// as the lattice rather than as wide as the graph.
 ///
-/// Sixty four locals, one loop arm each, and a value that takes four steps
-/// down per local. A block is walked once per step its value takes, so this
-/// walks the header about four times as many times as there are locals.
-///
-/// Mutation: delete `Counting::height`. That is `error[E0046]` rather than a
-/// failing test, because the trait carries no default, and a reversal nobody
-/// can compile is the row above one somebody has to remember to run.
-///
-/// Mutation: have `solve` answer the locals plus the elements itself, which is
-/// the default this trait used to carry and which was taken away for being
-/// wrong about exactly this shape. The walk is stopped and a correct analysis
-/// is reported as broken.
-///
-/// Mutation: drop the one the solver adds to the declared height. This
-/// analysis declares exactly what it needs, so the walk is one visit taller
-/// than its height and that one is what lets it finish. Nothing else in the
-/// suite declares tightly enough to notice.
-///
-/// Mutation: count the walks across every block rather than per block. This
-/// fails too, along with every other test whose function has enough blocks for
-/// the two counts to come apart. Four of them, when it was measured, and the
-/// number is not the claim.
-#[test]
-fn an_analysis_that_says_how_tall_it_is_is_believed() {
+/// Two tests share it, and they ask opposite questions of the same shape: that
+/// a height which is right is believed, and that a height which is one short
+/// is not.
+fn a_function_counting_down() -> (Function, BlockId) {
     let (_sources, at) = spans();
     let (_unit, mut function, int) = a_function(at);
     let origin = Origin::Written(at);
@@ -742,6 +724,69 @@ fn an_analysis_that_says_how_tall_it_is_is_believed() {
         },
     );
 
+    (function, exit)
+}
+
+/// `Counting`, saying it is one step shorter than it is.
+///
+/// Everything else is delegated, so it converges exactly as `Counting` does
+/// and differs only in what it declares. Nothing else in the suite declares
+/// too low, which is why nothing else can notice a budget more generous than
+/// what the analysis asked for.
+struct OneShort(Counting);
+
+impl Analysis for OneShort {
+    type Value = Vec<u8>;
+
+    fn height(&self, function: &Function) -> usize {
+        self.0.height(function) - 1
+    }
+
+    fn on_entry(&self) -> Self::Value {
+        self.0.on_entry()
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        self.0.join(into, from);
+    }
+
+    fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
+        self.0.element(function, element, value);
+    }
+
+    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value) {
+        self.0.terminator(function, terminator, value);
+    }
+}
+
+/// An analysis that says how tall it is is believed.
+///
+/// Sixty four locals, one loop arm each, and a value that takes four steps
+/// down per local. A block is walked once per step its value takes, so this
+/// walks the header about four times as many times as there are locals.
+///
+/// Mutation: delete `Counting::height`. That is `error[E0046]` rather than a
+/// failing test, because the trait carries no default, and a reversal nobody
+/// can compile is the row above one somebody has to remember to run.
+///
+/// Mutation: have `solve` answer the locals plus the elements itself, which is
+/// the default this trait used to carry and which was taken away for being
+/// wrong about exactly this shape. The walk is stopped and a correct analysis
+/// is reported as broken.
+///
+/// Mutation: drop the one the solver adds to the declared height. This
+/// analysis declares exactly what it needs, so the walk is one visit taller
+/// than its height and that one is what lets it finish. Nothing else in the
+/// suite declares tightly enough to notice.
+///
+/// Mutation: count the walks across every block rather than per block. This
+/// fails too, along with every other test whose function has enough blocks for
+/// the two counts to come apart. Four of them, when it was measured, and the
+/// number is not the claim.
+#[test]
+fn an_analysis_that_says_how_tall_it_is_is_believed() {
+    let (function, exit) = a_function_counting_down();
+
     let cfg = Cfg::of(&function);
     let solution = solve(&Counting(function.locals().len()), &function, &cfg);
 
@@ -750,6 +795,37 @@ fn an_analysis_that_says_how_tall_it_is_is_believed() {
     let at_exit = solution.value(exit).expect("the exit is reachable");
     assert_eq!(at_exit[0], 4);
     assert!(at_exit[1..].iter().all(|&left| left == 0), "{at_exit:?}");
+}
+
+/// A height one step short of what the walk takes is not quietly forgiven.
+///
+/// `OneShort` converges. It only says it is one step shorter than it is, so
+/// the walk needs exactly one visit more than the budget allows and is
+/// stopped. Every other analysis here declares enough, which is why this is
+/// the only test that can notice a solver with room to spare.
+///
+/// Mutation: multiply the budget in `solve` by anything above one. This one
+/// stops being stopped, which is the claim. It is not the only failure:
+/// `an_analysis_that_cannot_converge_is_stopped_and_named` holds the visit
+/// count printed in the message, and a bigger budget changes that number
+/// before it gives up. That is a second reading of the same mutation rather
+/// than a second guard against it, which is why this test is here.
+///
+/// `an_analysis_that_says_how_tall_it_is_is_believed` holds the budget from
+/// below, by declaring exactly what it needs. The two together are what make a
+/// declared height mean the number of steps its doc comment says rather than a
+/// number the solver is free to reinterpret.
+#[test]
+#[should_panic(expected = "did not converge")]
+fn a_height_one_step_short_of_the_walk_is_stopped() {
+    let (function, _exit) = a_function_counting_down();
+    let cfg = Cfg::of(&function);
+
+    let _ = solve(
+        &OneShort(Counting(function.locals().len())),
+        &function,
+        &cfg,
+    );
 }
 
 /// Reaching definitions: which assignment sites may have written, keyed on the
