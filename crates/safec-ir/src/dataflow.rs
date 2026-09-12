@@ -17,12 +17,23 @@
 //! it wanted to: this crate cannot see one, which is ADR-0011. A framework that
 //! could report would be one Phase 5 could not be the first to use.
 //!
-//! **Termination belongs to the analysis, and nothing here can check it.** The
-//! walk ends when no [`Analysis::join`] moves a value, so a
-//! lattice whose values can keep rising forever does not end at all, and the
-//! failure is a hang rather than a diagnostic. Bounding it means choosing a
-//! widening, and a widening chosen before any analysis needs one is a guess.
-//! ADR-0016 carries this as a consequence rather than leaving it unsaid.
+//! **Termination belongs to the analysis, and the solver only says when it
+//! did not happen.** The walk ends when no [`Analysis::join`] moves a value,
+//! so a lattice whose values can keep rising forever has no end to reach.
+//! What this does about that is stop and say so: a budget per block, which
+//! changes no answer any fixpoint reaches and decides only what happens when
+//! there is no fixpoint. Choosing a widening, which would change an answer so
+//! that it converges, is a different thing and is still not done. ADR-0016
+//! carries both.
+//!
+//! **That budget bounds one [`solve`] and nothing around it.** The count is a
+//! local of that call, so a caller running `solve` in a loop of its own gets a
+//! fresh one every time and is not bounded here at all. An interprocedural
+//! fixpoint is exactly that loop, and every analysis after Phase 5 wants one:
+//! `free` in a callee, a parameter's lifetime, an ownership transfer. A
+//! summary lattice with no top hangs that caller while every `solve` inside it
+//! converges and says nothing. Closing that is the caller's to do when there
+//! is a caller.
 //!
 //! **The tests are in `crates/safec-ir/tests/written.rs`, not beside this.**
 //! They implement an analysis against this trait and are compiled against the
@@ -36,13 +47,14 @@
 use crate::cfg::Cfg;
 use crate::ir::{BlockId, Element, Function, Terminator};
 
-/// What an analysis is: a value, a join, and what the program does to it.
+/// What an analysis is: a height, a value, a join, and what the program does
+/// to it.
 ///
-/// Implementing this is the whole of writing one. There is no fifth thing to
-/// be right about, which is deliberate: a method added later without a default
-/// is `error[E0046]` at every implementation, so what an analysis owes is held
-/// by the compiler rather than by a convention somebody remembers. See
-/// ADR-0016.
+/// Implementing this is the whole of writing one, and **none of the five has a
+/// default**, which is deliberate: a method without one is `error[E0046]` at
+/// every implementation, so what an analysis owes is held by the compiler
+/// rather than by a convention somebody remembers. [`Analysis::height`] says
+/// why that mattered enough to take a default away again. See ADR-0016.
 ///
 /// **There is no bottom.** A block nothing has reached yet holds no value at
 /// all, so the first answer to arrive is kept as it is and only the second is
@@ -92,6 +104,30 @@ pub trait Analysis {
     /// ADR-0016 is where it is recorded, and why nothing here bounds the walk
     /// instead.
     type Value: Clone + Eq;
+
+    /// How many steps a value of this analysis can take up its lattice.
+    ///
+    /// The walk is stopped when a block is visited more than this, because a
+    /// walk that does not end has nothing to read. Answering too low stops a
+    /// correct analysis; answering too high lets a broken one keep climbing,
+    /// and far enough above is the hang this exists to replace. Both are the
+    /// same panic, and it names this method, so answer tightly.
+    ///
+    /// **A value keyed on several things is a product, and the height of a
+    /// product is the sum of its parts.** The four states `docs/safety-model.md`
+    /// draws for a place, `ALLOCATED` through `INVALID`, are three steps per
+    /// place and not three: multiply by however many keys the value holds.
+    ///
+    /// There is deliberately no default. One was written, answering the locals
+    /// plus the elements, and it was measured wrong for two of the four
+    /// analyses the roadmap asks for: an ownership lattice takes about three
+    /// steps per place where that answers about two per local, and a points-to
+    /// value fills a matrix while the answer only grows with the code filling
+    /// it. It also could not see a key a terminator introduces, because it
+    /// counted elements, and a call's destination is a terminator's. A default
+    /// that no analysis it was written for can use is a trap shaped like help,
+    /// so this is `error[E0046]` at every implementation instead.
+    fn height(&self, function: &Function) -> usize;
 
     /// What holds where the function starts.
     ///
@@ -221,6 +257,16 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let mut worklist: Vec<BlockId> = cfg.order().iter().rev().copied().collect();
     let mut successors = Vec::new();
 
+    // One more than the analysis said it needs, because a block is walked
+    // once more than its value moves: the first walk is what puts a value
+    // there. Measured, on an analysis keyed on locals with one state each.
+    //
+    // Not behind `debug_assertions`: a walk that does not end in a release
+    // build is the case this is for, and what it costs is this counter.
+    let height = analysis.height(function);
+    let budget = height.saturating_add(1);
+    let mut visits = vec![0usize; function.blocks().len()];
+
     while let Some(block) = worklist.pop() {
         // A block can be taken off the list before anything has reached it:
         // the list starts as every reachable block, and the order only puts a
@@ -234,6 +280,22 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         let Some(mut value) = values[block.index()].clone() else {
             continue;
         };
+
+        visits[block.index()] += 1;
+        assert!(
+            visits[block.index()] <= budget,
+            "the `{}` analysis did not converge. Either its lattice is taller \
+             than it said, in which case raise what `Analysis::height` answers, \
+             or it has no top at all, in which case this is a defect in safec \
+             rather than in the code being compiled and is worth reporting. A \
+             join that rebuilds its value into a different shape with the same \
+             meaning is the usual way to have no top by accident.\n\n\
+             Block {} was walked {} times, and `height` answered {}.",
+            core::any::type_name::<A>(),
+            block.index(),
+            visits[block.index()],
+            height,
+        );
 
         for element in &function.block(block).elements {
             analysis.element(function, element, &mut value);
@@ -258,15 +320,12 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
                     // is that the join has no answer to be wrong about. See
                     // ADR-0016.
                     //
-                    // Inverting this comparison fails
-                    // `the_back_edge_changes_the_answer_after_the_loop` and
-                    // hangs `what_a_loop_writes_and_what_comes_before_it_are_answered_apart`:
-                    // a block whose value did not move is pushed again, and
-                    // whether that ends at all depends on the check below
-                    // happening to catch it, which is a property of the graph
-                    // rather than of this line. One failure and one hang,
-                    // measured, so run the suite under a timeout to see
-                    // either.
+                    // Inverting this comparison pushes a block whose value did
+                    // not move, so the walk does not end on its own. It used to
+                    // hang for that reason and no longer does: the budget above
+                    // stops it, and the mutation now fails four tests and hangs
+                    // none. Measured, after the budget landed and made the
+                    // sentence that used to be here false.
                     let before = arrived.clone();
                     analysis.join(arrived, &value);
                     *arrived != before

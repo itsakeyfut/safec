@@ -52,6 +52,11 @@ struct Written(usize);
 
 impl Analysis for Written {
     type Value = Vec<bool>;
+    /// One step per local. A local's bit starts set or clear and the
+    /// intersection only ever clears it, so it falls at most once.
+    fn height(&self, _function: &Function) -> usize {
+        self.0
+    }
 
     fn on_entry(&self) -> Self::Value {
         vec![false; self.0]
@@ -542,6 +547,402 @@ fn a_local_that_is_only_read_is_not_a_local_that_was_written() {
 
     // The return place, then the one that is only read, then the one written.
     assert_eq!(solution.value(after), Some(&vec![false, false, true]));
+}
+
+/// A lattice with no top: the join takes the larger of the two and adds one,
+/// so a value that meets itself keeps rising and no loop has a fixpoint.
+///
+/// ADR-0016 records that termination is the analysis's to answer for. This is
+/// what the solver does when it is not answered.
+struct Climbing(usize);
+
+impl Analysis for Climbing {
+    type Value = Vec<u32>;
+    /// Any answer here is wrong, because this lattice has no top and no number
+    /// bounds a walk with no end. It answers the locals, which is what an
+    /// author who had not noticed would answer, and what the solver does about
+    /// that is the test below.
+    fn height(&self, _function: &Function) -> usize {
+        self.0
+    }
+
+    fn on_entry(&self) -> Self::Value {
+        vec![0; self.0]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        for (here, there) in into.iter_mut().zip(from) {
+            *here = (*here).max(*there) + 1;
+        }
+    }
+
+    fn element(&self, _function: &Function, _element: &Element, _value: &mut Self::Value) {}
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// An analysis that cannot converge is stopped, and the message says whose
+/// defect it is rather than blaming the code being compiled.
+///
+/// Mutation: remove the assertion in `solve`. This test **hangs** rather than
+/// failing, which is the only signal a walk that never ends has, and is why a
+/// suite run under that mutation has to be given a timeout to show anything at
+/// all. `cfg.rs` says the same of its own visited check.
+///
+/// **The expectation is the whole message rather than a phrase from it**, so
+/// every part is held: the analysis's name, both causes and what to do about
+/// each, whose defect it is, and the three numbers. It was a phrase, and the
+/// three numbers were then the only part of a diagnostic nothing read, so
+/// adding one to the block index, to the visit count or to the height left the
+/// suite green. Mutation: any of those three, or reversing the sentence that
+/// says whose defect it is. Each fails here, and nothing else in the suite
+/// reads this message at all.
+#[test]
+#[should_panic(
+    expected = "the `written::Climbing` analysis did not converge. Either its lattice is taller than it said, in which case raise what `Analysis::height` answers, or it has no top at all, in which case this is a defect in safec rather than in the code being compiled and is worth reporting. A join that rebuilds its value into a different shape with the same meaning is the usual way to have no top by accident.\n\nBlock 1 was walked 3 times, and `height` answered 1."
+)]
+fn an_analysis_that_cannot_converge_is_stopped_and_named() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, _int) = a_function(at);
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let body = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(
+        header,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: body,
+                otherwise: exit,
+            },
+        },
+    );
+    function.fill_block(body, goto(header, vec![]));
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let _ = solve(&Climbing(function.locals().len()), &function, &cfg);
+}
+
+/// Four states per local rather than one: every local counts down from four,
+/// and the join keeps the lower. Its lattice is four times as tall as its
+/// locals, which is what more than one state per key looks like and why no
+/// formula over the function could have answered for it.
+struct Counting(usize);
+
+impl Analysis for Counting {
+    type Value = Vec<u8>;
+
+    /// Four steps for every local but the return place, which no arm counts
+    /// down. Exact rather than generous, so that the one the solver adds to it
+    /// is the difference between this passing and being stopped, which makes
+    /// this the only test in the suite holding that `+ 1`.
+    fn height(&self, function: &Function) -> usize {
+        (function.locals().len() - 1) * 4
+    }
+
+    fn on_entry(&self) -> Self::Value {
+        vec![4; self.0]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        for (here, there) in into.iter_mut().zip(from) {
+            *here = (*here).min(*there);
+        }
+    }
+
+    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        if let Element::StorageDead { origin: _, local } = element {
+            value[local.index()] = value[local.index()].saturating_sub(1);
+        }
+    }
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// Sixty four locals, one loop arm each, and every arm ends one local's
+/// storage, so the header's value moves once per arm and the walk is as tall
+/// as the lattice rather than as wide as the graph.
+///
+/// Two tests share it, and they ask opposite questions of the same shape: that
+/// a height which is right is believed, and that a height which is one short
+/// is not.
+fn a_function_counting_down() -> (Function, BlockId) {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let locals: Vec<_> = (0..64).map(|_| function.push_local(int)).collect();
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let picks: Vec<_> = locals.iter().map(|_| function.reserve_block()).collect();
+    let arms: Vec<_> = locals.iter().map(|_| function.reserve_block()).collect();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(header, goto(picks[0], vec![]));
+    for (i, &local) in locals.iter().enumerate() {
+        let otherwise = if i + 1 < picks.len() {
+            picks[i + 1]
+        } else {
+            exit
+        };
+        function.fill_block(
+            picks[i],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: arms[i],
+                    otherwise,
+                },
+            },
+        );
+        function.fill_block(
+            arms[i],
+            goto(header, vec![Element::StorageDead { origin, local }]),
+        );
+    }
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    (function, exit)
+}
+
+/// `Counting`, saying it is one step shorter than it is.
+///
+/// Everything else is delegated, so it converges exactly as `Counting` does
+/// and differs only in what it declares. Nothing else in the suite declares
+/// too low, which is why nothing else can notice a budget more generous than
+/// what the analysis asked for.
+struct OneShort(Counting);
+
+impl Analysis for OneShort {
+    type Value = Vec<u8>;
+
+    fn height(&self, function: &Function) -> usize {
+        self.0.height(function) - 1
+    }
+
+    fn on_entry(&self) -> Self::Value {
+        self.0.on_entry()
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        self.0.join(into, from);
+    }
+
+    fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
+        self.0.element(function, element, value);
+    }
+
+    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value) {
+        self.0.terminator(function, terminator, value);
+    }
+}
+
+/// An analysis that says how tall it is is believed.
+///
+/// Sixty four locals, one loop arm each, and a value that takes four steps
+/// down per local. A block is walked once per step its value takes, so this
+/// walks the header about four times as many times as there are locals.
+///
+/// Mutation: delete `Counting::height`. That is `error[E0046]` rather than a
+/// failing test, because the trait carries no default, and a reversal nobody
+/// can compile is the row above one somebody has to remember to run.
+///
+/// Mutation: have `solve` answer the locals plus the elements itself, which is
+/// the default this trait used to carry and which was taken away for being
+/// wrong about exactly this shape. The walk is stopped and a correct analysis
+/// is reported as broken.
+///
+/// Mutation: drop the one the solver adds to the declared height. This
+/// analysis declares exactly what it needs, so the walk is one visit taller
+/// than its height and that one is what lets it finish. Nothing else in the
+/// suite declares tightly enough to notice.
+///
+/// Mutation: count the walks across every block rather than per block. This
+/// fails too, along with every other test whose function has enough blocks for
+/// the two counts to come apart. Four of them, when it was measured, and the
+/// number is not the claim.
+#[test]
+fn an_analysis_that_says_how_tall_it_is_is_believed() {
+    let (function, exit) = a_function_counting_down();
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Counting(function.locals().len()), &function, &cfg);
+
+    // Every local is counted down to nothing on the way round, and the return
+    // place, which no arm names, is untouched.
+    let at_exit = solution.value(exit).expect("the exit is reachable");
+    assert_eq!(at_exit[0], 4);
+    assert!(at_exit[1..].iter().all(|&left| left == 0), "{at_exit:?}");
+}
+
+/// A height one step short of what the walk takes is not quietly forgiven.
+///
+/// `OneShort` converges. It only says it is one step shorter than it is, so
+/// the walk needs exactly one visit more than the budget allows and is
+/// stopped. Every other analysis here declares enough, which is why this is
+/// the only test that can notice a solver with room to spare.
+///
+/// Mutation: multiply the budget in `solve` by anything above one. This one
+/// stops being stopped, which is the claim. It is not the only failure:
+/// `an_analysis_that_cannot_converge_is_stopped_and_named` holds the visit
+/// count printed in the message, and a bigger budget changes that number
+/// before it gives up. That is a second reading of the same mutation rather
+/// than a second guard against it, which is why this test is here.
+///
+/// `an_analysis_that_says_how_tall_it_is_is_believed` holds the budget from
+/// below, by declaring exactly what it needs. The two together are what make a
+/// declared height mean the number of steps its doc comment says rather than a
+/// number the solver is free to reinterpret.
+#[test]
+#[should_panic(expected = "did not converge")]
+fn a_height_one_step_short_of_the_walk_is_stopped() {
+    let (function, _exit) = a_function_counting_down();
+    let cfg = Cfg::of(&function);
+
+    let _ = solve(
+        &OneShort(Counting(function.locals().len())),
+        &function,
+        &cfg,
+    );
+}
+
+/// Reaching definitions: which assignment sites may have written, keyed on the
+/// site rather than on the local. Union, monotone, finite, and its height is
+/// the number of sites, which has nothing to do with the number of locals.
+///
+/// `Place`'s own doc comment says an analysis keys its lattice on a place
+/// rather than on a local, and this is the shape that says why no formula over
+/// the function answers for every analysis.
+struct Reaching(usize);
+
+impl Analysis for Reaching {
+    type Value = Vec<bool>;
+    /// One step per site. A site's bit is set once and the union never clears
+    /// it, so the value rises once per site and not at all per local, which is
+    /// the whole reason this analysis is in the suite.
+    fn height(&self, _function: &Function) -> usize {
+        self.0
+    }
+
+    fn on_entry(&self) -> Self::Value {
+        vec![false; self.0]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        for (here, there) in into.iter_mut().zip(from) {
+            *here = *here || *there;
+        }
+    }
+
+    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        if let Element::Assign(operation) = element {
+            value[operation.origin.span().start() as usize] = true;
+        }
+    }
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// An analysis keyed on something the function has more of than locals is not
+/// stopped.
+///
+/// One local, two hundred sites that assign to it, each in its own loop arm.
+/// The walk needs one visit per site and the function has two locals, so any
+/// budget counting locals stops it on its third pass.
+///
+/// Mutation: have `Reaching::height` answer the locals rather than the sites.
+/// The budget becomes three and a correct analysis is stopped as though it
+/// were broken. This is the only test that notices, because every other one
+/// keys on locals.
+#[test]
+fn an_analysis_that_keys_on_more_than_its_locals_is_not_stopped() {
+    const SITES: usize = 200;
+
+    let mut sources = SourceMap::new();
+    let text = "a".repeat(SITES + 8);
+    let file = sources.add_virtual("t.c", &text);
+    let at = Span::new(file, 0, 1);
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let mut function = Function::new(at, int, []);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let picks: Vec<_> = (0..SITES).map(|_| function.reserve_block()).collect();
+    let arms: Vec<_> = (0..SITES).map(|_| function.reserve_block()).collect();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(header, goto(picks[0], vec![]));
+    for site in 0..SITES {
+        let otherwise = if site + 1 < SITES {
+            picks[site + 1]
+        } else {
+            exit
+        };
+        function.fill_block(
+            picks[site],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(1),
+                    then: arms[site],
+                    otherwise,
+                },
+            },
+        );
+        function.fill_block(
+            arms[site],
+            goto(
+                header,
+                vec![Element::Assign(Operation {
+                    place: Place::local(a),
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(Span::new(file, site as u32, site as u32 + 1)),
+                })],
+            ),
+        );
+    }
+    function.fill_block(
+        exit,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Reaching(text.len()), &function, &cfg);
+
+    // Every site reaches the exit: each is on a path that leaves the loop.
+    let at_exit = solution.value(exit).expect("the exit is reachable");
+    assert_eq!(at_exit.iter().filter(|&&reached| reached).count(), SITES);
 }
 
 /// A block the entry cannot reach is answered with nothing, rather than

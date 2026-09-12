@@ -54,6 +54,7 @@ Chosen option: **a trait, and the first arrival is stored rather than joined**.
 ```rust
 pub trait Analysis {
     type Value: Clone + Eq;
+    fn height(&self, function: &Function) -> usize;
     fn on_entry(&self) -> Self::Value;
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
@@ -82,14 +83,14 @@ The function is handed to the transfers rather than left for an analysis to
 hold. An analysis that asks what a place is reaches `TranslationUnit::place_ty`,
 which takes one, and one holding its own could be handed to a `solve` over a
 different function: that compiles and answers about neither. Passing it is what
-makes "there is no fifth thing to be right about" true of the pair and not only
-of the trait.
+makes "nothing outside these five" true of the pair and not only of the trait.
 
-A trait rather than closures because the four pieces have names, a place for the
+A trait rather than closures because the five pieces have names, a place for the
 doc comment that says what each owes, and a compiler that answers when the set
-grows: a fifth method without a default is `error[E0046]` at every
-implementation, while a fifth closure parameter is a silent change of arity at
-every call site that already passes four.
+grows: a method without a default is `error[E0046]` at every implementation,
+while a closure parameter added is a silent change of arity at every call site.
+That is not hypothetical. `height` was added after this record was first
+written, and the compiler told every implementation about it.
 
 **No bottom.** `Solution` answers `Option<&Value>` because a block the entry
 cannot reach has no value and must not be given one, which `Cfg` already decided
@@ -158,9 +159,13 @@ and rewrite all of them on each pass, for a reader that does not exist.
   must-analysis joined against a value nothing produced answers that nothing is
   known, which is what having no identity element buys and the mutation that
   reverses this record.
-* A fifth method on `Analysis` without a default is `error[E0046]` at every
-  implementation, which is what makes the set of questions an analysis answers
-  something the compiler holds rather than a convention.
+* Every method on `Analysis` is `error[E0046]` when an implementation leaves it
+  out, which is what makes the set of questions an analysis answers something
+  the compiler holds rather than a convention. `height` is where that was
+  tested: it landed carrying a default, the default was measured wrong for two
+  of the four analyses the roadmap asks for, and taking the default away moved
+  the failure from a panic in a shipped compiler to a build that does not
+  finish.
 * A value that does not compare equal to itself is `error[E0277]`, and folding
   a successor's value into what a block sends rather than the other way round
   is `error[E0596]`, because what a block sends is bound again before the loop
@@ -171,16 +176,51 @@ Each of the first four was applied and the named tests observed to fail.
 
 ### Consequences
 
-* Good, because an analysis is written by naming a value, a join and two
-  transfers, and there is no fifth thing to be right about.
+* Good, because an analysis is written by naming a height, a value, a join and
+  two transfers, and nothing outside those five is left to be right about.
 * Good, because the solver cannot be handed a value from a block that never
   runs: `Cfg` leaves unreachable blocks out of both sides of `predecessors`, and
   `Solution` leaves them out of its answers.
-* Bad, because termination is the analysis's to answer for and nothing here can
-  check it. A lattice with an infinite ascending chain does not reach a
-  fixpoint, and the failure is a hang rather than a diagnostic. The framework
-  says so and does not bound it, because bounding it means choosing a widening,
-  and a widening chosen before any analysis needs one is a guess.
+* Bad, because termination is the analysis's to answer for and nothing here
+  can check it. A lattice with an infinite ascending chain does not reach a
+  fixpoint. What the framework does about that is stop and say so, with a
+  budget per block, so the failure is a panic naming the analysis rather
+  than a hang naming nothing.
+
+  **A budget is not a widening**, and this record said it was. A widening
+  changes the answer a converging analysis reaches, and choosing one before
+  an analysis needs it is still a guess; a budget changes no answer any
+  fixpoint reaches and decides only what happens when there is none. The
+  first reason is sound and never reached the second.
+
+  **The budget is what the analysis says it needs, not what the function
+  suggests.** Deriving it from the function was tried and is wrong: what
+  bounds the visits is the lattice's height, height is a property of the
+  value's type, and no number read off a function bounds every analysis. An
+  analysis keyed on assignment sites has a height that grows with the code,
+  and one keyed on pairs of places grows faster. Measured: reaching
+  definitions over one local was stopped by a budget counting locals, while
+  converging in well under a second when allowed to.
+
+  So `height` is a fifth method, and it has no default. One was written,
+  answering the locals plus the elements, and it was taken away again
+  before the record was closed. It was short for the ownership lattice
+  [the safety model](../safety-model.md) draws, at every size, because four
+  states per place is about three steps per place where that answers about
+  two per local. It was short without bound for a points-to value, which
+  fills a matrix over places and regions while the answer only grows with
+  the code that fills it. And it could not see a key a terminator
+  introduces, because it counted elements and a call's destination is a
+  terminator's. A default that no analysis it was written for can use is a
+  trap shaped like help, so the fifth method answers `error[E0046]` like
+  the other four. That is not a different mechanism from the one this
+  record chose a trait for; it is that mechanism applied to the method the
+  amendment is about.
+
+  What is left unheld is the declaration itself. Nothing checks that an
+  analysis is as tall as it says. Too low stops a correct analysis, and far
+  enough too high lets a broken one climb long enough to be the hang this
+  was built to replace; both are the same panic and it names the method.
 * Bad, because `Value: Clone` puts a clone on every edge. A bitset per local is
   what the first analyses hold, and a graph is one function wide.
 * Bad, because the `Eq` bound puts a smaller law where a larger one was.
@@ -226,8 +266,8 @@ Each of the first four was applied and the named tests observed to fail.
 ### Closures
 
 * Good, because it adds no type.
-* Bad, because nothing names the four arguments, and a fifth is a silent change
-  of arity rather than `E0046`.
+* Bad, because nothing names the arguments, and one added later is a silent
+  change of arity rather than `E0046`.
 * Bad, because there is nowhere to write what each piece owes, and this project
   puts the local reason next to the decision.
 
