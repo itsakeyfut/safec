@@ -29,7 +29,8 @@ use std::thread;
 use std::time::SystemTime;
 
 use crate::ast::{
-    Ast, Declaration, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId, spell_type,
+    Ast, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId,
+    spell_type,
 };
 use crate::cli::HOST_TRIPLE;
 use crate::diagnostics::render::Renderer;
@@ -43,7 +44,7 @@ use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::ir::TranslationUnit;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
-use safec_ir::source::{FileId, FileName, SourceFile, SourceMap};
+use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::Target;
 use safec_llvm::emit::Refusal;
 
@@ -1063,11 +1064,51 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
             dump_parameters(sources, ast, function.ty, depth + 1, out);
             dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
         }
-        Item::Declaration(declaration) => {
-            dump_declaration(sources, ast, declaration, out);
-            dump_parameters(sources, ast, declaration.ty, depth + 1, out);
+        Item::Declaration { declarators, span } => {
+            dump_declarators(sources, ast, declarators, item.name(), *span, depth, out);
         }
         Item::Error { .. } => out.push('\n'),
+    }
+}
+
+/// Every declarator of one declaration, a line each.
+///
+/// `dump_node` has already written the line the first one goes on, so each one
+/// after it opens a line of its own at the same depth and with the same span.
+/// That is what keeps `int x;` printing exactly what it printed before there
+/// was a list at all, and it is honest about `int a, b;`: both declarators do
+/// begin at the specifiers, which is what [`Declaration::span`] says and why
+/// the two lines carry the same position.
+///
+/// [`Declaration::span`]: crate::ast::Declaration::span
+fn dump_declarators(
+    sources: &SourceMap,
+    ast: &Ast,
+    declarators: &[InitDeclarator],
+    name: &'static str,
+    span: Span,
+    depth: usize,
+    out: &mut String,
+) {
+    if declarators.is_empty() {
+        // `dump_node` has written a prefix and nothing below would end the
+        // line. Both variants say in their doc comments that a list is never
+        // empty, and #125 is the change that would make one: this is the line
+        // it has to find.
+        out.push('\n');
+        return;
+    }
+
+    for (at, declarator) in declarators.iter().enumerate() {
+        if at > 0 {
+            dump_node(sources, name, span, depth, out);
+        }
+
+        dump_declaration(sources, ast, &declarator.declaration, out);
+        dump_parameters(sources, ast, declarator.declaration.ty, depth + 1, out);
+        if let Some(init) = declarator.init {
+            dump_expr(sources, ast, init, depth + 1, out);
+        }
     }
 }
 
@@ -1139,9 +1180,8 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
                 dump_expr(sources, ast, *id, depth + 1, out);
             }
         }
-        Stmt::Declaration(declaration) => {
-            dump_declaration(sources, ast, declaration, out);
-            dump_parameters(sources, ast, declaration.ty, depth + 1, out);
+        Stmt::Declaration { declarators, span } => {
+            dump_declarators(sources, ast, declarators, stmt.name(), *span, depth, out);
         }
         Stmt::Expression { value, .. } => {
             out.push('\n');

@@ -242,35 +242,57 @@ impl Lowering<'_> {
     /// what it truthfully is.
     fn declare(&mut self, diagnostics: &mut DiagnosticSink) {
         for item in self.ast.items() {
-            let (name, ty) = match item {
-                Item::Function(function) => (function.name, function.ty),
-                Item::Declaration(declaration) => match declaration.name {
-                    // A declaration of an object rather than a function is not
-                    // in the IR at all: every place is rooted at a local, so
-                    // there is nothing for a global to be. A use of one is
-                    // reported where it is used, which is where a reader can
-                    // see what it cost.
-                    Some(name) => (name, declaration.ty),
-                    None => continue,
-                },
-                Item::Error { .. } => continue,
-            };
+            match item {
+                Item::Function(function) => {
+                    self.declare_one(function.name, function.ty, true, diagnostics);
+                }
+                Item::Declaration { declarators, .. } => {
+                    for declarator in declarators {
+                        // A declaration of an object rather than a function is
+                        // not in the IR at all: every place is rooted at a
+                        // local, so there is nothing for a global to be. A use
+                        // of one is reported where it is used, which is where a
+                        // reader can see what it cost.
+                        if let Some(name) = declarator.declaration.name {
+                            self.declare_one(name, declarator.declaration.ty, false, diagnostics);
+                        }
+                    }
+                }
+                Item::Error { .. } => {}
+            }
+        }
+    }
 
-            let Type::Function {
-                returns,
-                parameters,
-            } = self.ast.ty(ty)
-            else {
-                // A declaration of an object is the ordinary case here and is
-                // answered where it is used. A *definition* of one is not: C17
-                // 6.9.1 p2 requires the identifier in a function definition to
-                // have a function type, `int (*f)(int) { ... }` does not, and
-                // nothing before this stage checks it. Dropping it in silence
-                // would leave a translation unit missing a function that the
-                // file plainly contains, and the artifact saying `declared`
-                // about a body it can see.
-                if matches!(item, Item::Function(_)) {
-                    diagnostics.report(
+    /// One name out of [`Lowering::declare`]'s walk.
+    ///
+    /// Its own function because one declaration may declare several names and
+    /// each of them is its own function or its own object, so this runs once
+    /// per declarator rather than once per item.
+    ///
+    /// `definition` says whether a body was written. Only an [`Item::Function`]
+    /// carries one, and it decides the diagnostic below.
+    fn declare_one(
+        &mut self,
+        name: Span,
+        ty: TypeId,
+        definition: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let Type::Function {
+            returns,
+            parameters,
+        } = self.ast.ty(ty)
+        else {
+            // A declaration of an object is the ordinary case here and is
+            // answered where it is used. A *definition* of one is not: C17
+            // 6.9.1 p2 requires the identifier in a function definition to
+            // have a function type, `int (*f)(int) { ... }` does not, and
+            // nothing before this stage checks it. Dropping it in silence
+            // would leave a translation unit missing a function that the
+            // file plainly contains, and the artifact saying `declared`
+            // about a body it can see.
+            if definition {
+                diagnostics.report(
                         Diagnostic::error("this defines something that is not a function")
                             .with_code(LOWERING)
                             .with_label(Label::primary(
@@ -281,34 +303,33 @@ impl Lowering<'_> {
                                 "C17 6.9.1 p2 requires the identifier in a function definition to have a function type",
                             ),
                     );
-                    self.refused.insert(self.sources.snippet(name).to_owned());
-                }
-                continue;
-            };
-            let (returns, parameters) = (*returns, parameters.clone());
-            let Some((returns, lowered)) = self.signature(name, returns, &parameters, diagnostics)
-            else {
-                // The signature was reported and there is no honest function to
-                // put here: inventing one would tell a caller a return type
-                // this compiler could not read. What is remembered instead is
-                // the name, so that a call to it says nothing more. The user
-                // has been told once, about the declaration, and a second
-                // diagnostic pointing at an ordinary call would be blaming code
-                // that is fine.
                 self.refused.insert(self.sources.snippet(name).to_owned());
-                continue;
-            };
-
-            // A name declared twice is one function. The first declaration is
-            // the one whose span the IR carries, which is where a reader of a
-            // diagnostic about the callee is pointed.
-            if !self.functions.contains_key(self.sources.snippet(name)) {
-                let id = self
-                    .unit
-                    .push_function(Function::declaration(name, returns, lowered));
-                self.functions
-                    .insert(self.sources.snippet(name).to_owned(), id);
             }
+            return;
+        };
+        let (returns, parameters) = (*returns, parameters.clone());
+        let Some((returns, lowered)) = self.signature(name, returns, &parameters, diagnostics)
+        else {
+            // The signature was reported and there is no honest function to
+            // put here: inventing one would tell a caller a return type
+            // this compiler could not read. What is remembered instead is
+            // the name, so that a call to it says nothing more. The user
+            // has been told once, about the declaration, and a second
+            // diagnostic pointing at an ordinary call would be blaming code
+            // that is fine.
+            self.refused.insert(self.sources.snippet(name).to_owned());
+            return;
+        };
+
+        // A name declared twice is one function. The first declaration is
+        // the one whose span the IR carries, which is where a reader of a
+        // diagnostic about the callee is pointed.
+        if !self.functions.contains_key(self.sources.snippet(name)) {
+            let id = self
+                .unit
+                .push_function(Function::declaration(name, returns, lowered));
+            self.functions
+                .insert(self.sources.snippet(name).to_owned(), id);
         }
     }
 
@@ -595,31 +616,58 @@ impl Lowering<'_> {
                 }
                 builder.end(Terminator::Return);
             }
-            Stmt::Declaration(declaration) => {
-                let (name, ty, span) = (declaration.name, declaration.ty, declaration.span);
-                // A declaration with no name declares nothing to write to, and
-                // one with no initializer writes nothing: `Declaration` carries
-                // no initializer, so a local is made and left alone until
-                // something assigns to it.
-                if let Some(name) = name {
-                    let ty = self.ty(span, ty, diagnostics)?;
-                    let local = builder.function.push_local(ty);
-                    self.locals.insert(name, local);
+            Stmt::Declaration { declarators, .. } => {
+                for declarator in declarators {
+                    let (name, ty, span) = (
+                        declarator.declaration.name,
+                        declarator.declaration.ty,
+                        declarator.declaration.span,
+                    );
+                    // A declaration with no name declares nothing to write to, and
+                    // one with no initializer writes nothing: a local is made and
+                    // left alone until something assigns to it.
+                    if let Some(name) = name {
+                        let ty = self.ty(span, ty, diagnostics)?;
+                        let local = builder.function.push_local(ty);
+                        self.locals.insert(name, local);
 
-                    // Only a scope narrower than the function's own body. The
-                    // first entry is the body, and ADR-0012 says why a local
-                    // that lives as long as the frame needs no marker.
-                    if self.scopes.len() > 1 {
-                        let scope = self.scopes.last_mut().expect("a scope is open");
-                        scope.push(local);
-                        // Generated for the same reason as the closing half:
-                        // the declaration is what this exists because of, and
-                        // is not itself an instruction to begin storage that
-                        // somebody wrote.
-                        builder.element(Element::StorageLive {
-                            local,
-                            origin: Origin::Generated(span),
-                        });
+                        // Only a scope narrower than the function's own body. The
+                        // first entry is the body, and ADR-0012 says why a local
+                        // that lives as long as the frame needs no marker.
+                        if self.scopes.len() > 1 {
+                            let scope = self.scopes.last_mut().expect("a scope is open");
+                            scope.push(local);
+                            // Generated for the same reason as the closing half:
+                            // the declaration is what this exists because of, and
+                            // is not itself an instruction to begin storage that
+                            // somebody wrote.
+                            builder.element(Element::StorageLive {
+                                local,
+                                origin: Origin::Generated(span),
+                            });
+                        }
+
+                        // After `self.locals` has the name, so that the
+                        // initializer of `int a = a;` finds the very thing it is
+                        // initializing. C17 6.2.1 p7 opens a name's scope at the
+                        // end of its declarator, which is before the `=`, and
+                        // `clang` accepts it with a warning rather than an error.
+                        // After `StorageLive` as well, because a write to storage
+                        // that has not begun is what ADR-0012's pair exists to
+                        // make findable.
+                        //
+                        // `Written` and not `Generated`: the source asked for this
+                        // store. Its span is the whole declarator rather than the
+                        // initializer alone, which is what `Stmt::Return` above
+                        // does with the value it writes.
+                        if let Some(init) = declarator.init {
+                            let operand = self.value(builder, init, diagnostics)?;
+                            builder.push(Operation {
+                                place: Place::local(local),
+                                value: Rvalue::Use(operand),
+                                origin: Origin::Written(span),
+                            });
+                        }
                     }
                 }
             }

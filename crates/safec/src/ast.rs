@@ -159,10 +159,34 @@ pub struct Declaration {
     pub name: Option<Span>,
     /// The type the declarator derived.
     pub ty: TypeId,
-    /// The specifiers through the declarator, and through the `;` as well for
-    /// a declaration that carries one. A parameter has no `;` and stops at its
-    /// declarator.
+    /// The specifiers through the declarator, and through its initializer
+    /// where it has one.
+    ///
+    /// The `;` is not in it. One declaration may carry several declarators
+    /// with one `;` between them all, so the `;` belongs to
+    /// [`Item::Declaration`] and [`Stmt::Declaration`] rather than to any one
+    /// of these. A parameter has neither and stops at its declarator.
+    ///
+    /// Every declarator of one declaration therefore begins at the same byte,
+    /// because C17 6.7 gives them one set of specifiers between them. What
+    /// tells two of them apart is [`Declaration::name`].
     pub span: Span,
+}
+
+/// One declarator of a declaration, with the initializer that followed it.
+///
+/// C17 6.7's `init-declarator`. A declaration shares its specifiers across
+/// every declarator and shares nothing else, which is why each one folds its
+/// own derivations onto the base type rather than the declaration deriving
+/// once: `int *p, a[10];` makes a pointer and an array, not two of either.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InitDeclarator {
+    /// The name and the type this declarator derived.
+    pub declaration: Declaration,
+    /// C17 6.7.9's `initializer`, in its `assignment-expression` form only.
+    ///
+    /// A braced initializer is refused by the parser and never reaches here.
+    pub init: Option<ExprId>,
 }
 
 /// An operator with an operand on each side.
@@ -437,7 +461,16 @@ pub enum Stmt {
     /// C17 6.8.2 makes a block-item either a declaration or a statement, and
     /// the two share a list. `clang` does the same, wrapping one in a
     /// `DeclStmt`.
-    Declaration(Declaration),
+    Declaration {
+        /// C17 6.7's `init-declarator-list`, in the order it was written.
+        ///
+        /// Never empty. `declaration-specifiers ;` with no declarator at all
+        /// is valid C that this parser refuses before an `Item` or a `Stmt` is
+        /// built, so nothing downstream has to answer for the empty case.
+        declarators: Vec<InitDeclarator>,
+        /// The specifiers through the `;`.
+        span: Span,
+    },
     /// An expression evaluated for its effect. C17 6.8.3 p1: `expression_opt ;`.
     ///
     /// A null statement is this with nothing in it. C gives it no production of
@@ -533,7 +566,14 @@ pub enum Item {
     ///
     /// Which of the two it is follows from the type, and reading that is the
     /// semantic analysis's. What this says is only that no body was written.
-    Declaration(Declaration),
+    Declaration {
+        /// C17 6.7's `init-declarator-list`, in the order it was written.
+        ///
+        /// Never empty, for the reason [`Stmt::Declaration`] gives.
+        declarators: Vec<InitDeclarator>,
+        /// The specifiers through the `;`.
+        span: Span,
+    },
     /// An item the parser could not read.
     Error {
         /// What it gave up on.
@@ -643,7 +683,7 @@ impl Stmt {
         match self {
             Self::Compound { .. } => "Compound",
             Self::Return { .. } => "Return",
-            Self::Declaration(_) => "Declaration",
+            Self::Declaration { .. } => "Declaration",
             Self::Expression { .. } => "Expression",
             Self::If { .. } => "If",
             Self::While { .. } => "While",
@@ -661,8 +701,8 @@ impl Stmt {
             | Self::If { span, .. }
             | Self::While { span, .. }
             | Self::For { span, .. }
+            | Self::Declaration { span, .. }
             | Self::Error { span } => *span,
-            Self::Declaration(declaration) => declaration.span,
         }
     }
 }
@@ -672,7 +712,7 @@ impl Item {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Function(_) => "Function",
-            Self::Declaration(_) => "Declaration",
+            Self::Declaration { .. } => "Declaration",
             Self::Error { .. } => "Error",
         }
     }
@@ -681,8 +721,7 @@ impl Item {
     pub fn span(&self) -> Span {
         match self {
             Self::Function(function) => function.span,
-            Self::Declaration(declaration) => declaration.span,
-            Self::Error { span } => *span,
+            Self::Declaration { span, .. } | Self::Error { span } => *span,
         }
     }
 }
