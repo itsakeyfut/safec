@@ -1,0 +1,11 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_free_of_either_of_two_locals_names_no_allocation.c:9:5 ]
+   │
+ 8 │     free(r);
+   │     ───┬───  
+   │        ╰───── freed here
+ 9 │     free(r);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

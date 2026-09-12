@@ -711,8 +711,12 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
 /// this fails on that field. The join rather than the fold in `verdict`,
 /// measured: a site is the local a call writes into, so two `malloc`s into one
 /// local are one site and the two spans meet at the join. What guards the same
-/// rule in the fold is the corpus case `a_branch_that_allocates_either_way`,
-/// where they meet across two sites instead.
+/// rule in the fold is the corpus case
+/// `a_free_of_either_of_two_locals_names_no_allocation`, where two locals reach
+/// one free and the two spans meet across two sites instead. That was
+/// `a_branch_that_allocates_either_way` here until a review measured it and
+/// found it holds under `made = from`, because one of its two sites is
+/// `Live(None)` by the time the fold runs and the rule has nothing to do.
 #[test]
 fn a_use_after_two_allocations_names_no_allocation() {
     let (sources, names) = sources();
@@ -817,4 +821,95 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
     );
     assert_eq!(found[0].freed, None);
     assert_eq!(found[0].made, None);
+}
+
+/// Where one site is allocated on two arms, the join names neither.
+///
+/// The `Live` half of [`same`]'s rule, which its `Freed` half is guarded for by
+/// `a_use_after_two_allocations_names_no_allocation`. The frontend cannot write
+/// this: a site is the local a call's result lands in and each call gets its
+/// own temporary, so two allocations reaching one site is a shape only IR built
+/// by hand reaches. The rule answers for it anyway because the type allows it,
+/// and a rule nothing exercises is a rule that is wrong the day something does.
+///
+/// Mutation: in `SiteState::joined`, `(Self::Live(here), Self::Live(_there)) =>
+/// Self::Live(here)`. `made` becomes the first arm's `malloc` and this fails on
+/// that field, with nothing else in the suite noticing.
+#[test]
+fn a_site_allocated_on_two_arms_names_no_allocation() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+
+    let branch = function.reserve_block();
+    let first_arm = function.reserve_block();
+    let second_arm = function.reserve_block();
+    let joined = function.reserve_block();
+    let again = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: first_arm,
+                otherwise: second_arm,
+            },
+        },
+    );
+    // One local, two calls, so one site carrying two origins where they meet.
+    function.fill_block(first_arm, malloc(&callees, held, names.at[0], joined));
+    function.fill_block(second_arm, malloc(&callees, held, names.at[1], joined));
+    function.fill_block(joined, free(&callees, held, names.at[2], again));
+    function.fill_block(again, free(&callees, held, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].freed, Some(names.at[2]));
+    assert_eq!(found[0].made, None, "the two arms do not agree");
+}
+
+/// Freeing a site twice does not lose where it was allocated.
+///
+/// The transfer rewrites a site's state at every free, so the second one reads
+/// the state the first wrote. Taking `made` from a `Freed` as well as from a
+/// `Live` is what keeps the third thing to reach that site able to name the
+/// allocation, and nothing reached a site three times until this.
+///
+/// Mutation: in the `Callee::Frees` arm, `SiteState::Freed { .. } => None`.
+/// The use loses its `allocated here` and this fails on `made`.
+#[test]
+fn a_second_free_keeps_where_the_allocation_was() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let again = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], again));
+    function.fill_block(again, free(&callees, held, names.at[2], dangling));
+    function.fill_block(dangling, read(value, held, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    // The second free is one finding and the read after it is the other.
+    assert_eq!(found.len(), 2, "{found:?}");
+    let used = found
+        .iter()
+        .find(|finding| finding.kind == Kind::UseAfterFree)
+        .expect("the read is reported");
+    assert_eq!(used.at, names.at[3]);
+    assert_eq!(used.made, Some(names.at[0]), "still the `malloc`");
 }

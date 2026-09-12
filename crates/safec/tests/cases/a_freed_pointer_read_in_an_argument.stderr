@@ -1,0 +1,14 @@
+error[SC0402]: this uses a value after it was freed
+   ╭─[ a_freed_pointer_read_in_an_argument.c:7:12 ]
+   │
+ 5 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     return g(*p);
+   │            ──┬──  
+   │              ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
