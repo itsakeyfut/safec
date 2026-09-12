@@ -1,0 +1,57 @@
+Target "x86_64-pc-windows-msvc"
+Function a_branch_that_allocates_either_way.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_branch_that_allocates_either_way.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_branch_that_allocates_either_way.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "void"
+  Local "_7" "void"
+  Block "bb0" entry
+    Call a_branch_that_allocates_either_way.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_branch_that_allocates_either_way.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Branch "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Call a_branch_that_allocates_either_way.c:5:18 "malloc" "bb5"
+      Destination "_4"
+      Constant 8
+  Block "bb3"
+    Goto "bb4"
+  Block "bb4"
+    Call a_branch_that_allocates_either_way.c:6:5 "free" "bb6"
+      Destination "_6"
+      Copy "_2"
+  Block "bb5"
+    Operation a_branch_that_allocates_either_way.c:5:14 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Operation a_branch_that_allocates_either_way.c:5:14 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Goto "bb4"
+  Block "bb6"
+    Call a_branch_that_allocates_either_way.c:7:5 "free" "bb7"
+      Destination "_7"
+      Copy "_2"
+  Block "bb7"
+    Operation a_branch_that_allocates_either_way.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

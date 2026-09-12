@@ -1,0 +1,49 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_replaced_before_it_is_freed.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_allocation_replaced_before_it_is_freed.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_allocation_replaced_before_it_is_freed.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "void"
+  Block "bb0" entry
+    Call an_allocation_replaced_before_it_is_freed.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation an_allocation_replaced_before_it_is_freed.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Call an_allocation_replaced_before_it_is_freed.c:5:5 "free" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Call an_allocation_replaced_before_it_is_freed.c:6:9 "malloc" "bb3"
+      Destination "_4"
+      Constant 8
+  Block "bb3"
+    Operation an_allocation_replaced_before_it_is_freed.c:6:5 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Operation an_allocation_replaced_before_it_is_freed.c:6:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Call an_allocation_replaced_before_it_is_freed.c:7:5 "free" "bb4"
+      Destination "_6"
+      Copy "_1"
+  Block "bb4"
+    Operation an_allocation_replaced_before_it_is_freed.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

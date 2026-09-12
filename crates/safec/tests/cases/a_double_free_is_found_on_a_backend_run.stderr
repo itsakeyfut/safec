@@ -1,0 +1,11 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_double_free_is_found_on_a_backend_run.c:6:5 ]
+   │
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

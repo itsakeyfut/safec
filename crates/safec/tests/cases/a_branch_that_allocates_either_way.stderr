@@ -1,0 +1,11 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_branch_that_allocates_either_way.c:7:5 ]
+   │
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

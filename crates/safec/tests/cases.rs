@@ -39,6 +39,23 @@ macro_rules! cases {
 // The table is written out rather than discovered by walking `cases/`.
 // See ADR-0007 for why, and for what it rejected.
 cases! {
+    // The memory check's cases, kept together because what each one is for is
+    // a row of one table: `docs/safety-model.md`'s three-valued model met by a
+    // program that proves it, one that leaves it unproven, and one that does
+    // neither.
+    a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_value_freed_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_branch_that_allocates_either_way: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    two_allocations_are_freed_once_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_replaced_before_it_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_this_check_cannot_read_between_two_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_double_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
+    an_unproven_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
+    an_unproven_free_is_an_error_under_deny_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    a_double_free_is_found_on_a_backend_run: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

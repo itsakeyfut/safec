@@ -1,0 +1,34 @@
+Target "x86_64-pc-windows-msvc"
+Function a_free_on_one_arm_only.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_free_on_one_arm_only.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_free_on_one_arm_only.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *" parameter
+  Local "_3" "void"
+  Local "_4" "void"
+  Block "bb0" entry
+    Branch "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Call a_free_on_one_arm_only.c:4:14 "free" "bb4"
+      Destination "_3"
+      Copy "_2"
+  Block "bb2"
+    Goto "bb3"
+  Block "bb3"
+    Call a_free_on_one_arm_only.c:5:5 "free" "bb5"
+      Destination "_4"
+      Copy "_2"
+  Block "bb4"
+    Goto "bb3"
+  Block "bb5"
+    Operation a_free_on_one_arm_only.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

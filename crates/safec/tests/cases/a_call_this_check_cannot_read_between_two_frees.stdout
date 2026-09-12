@@ -1,0 +1,34 @@
+Target "x86_64-pc-windows-msvc"
+Function a_call_this_check_cannot_read_between_two_frees.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_call_this_check_cannot_read_between_two_frees.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_call_this_check_cannot_read_between_two_frees.c:3:6 "helper" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_call_this_check_cannot_read_between_two_frees.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Local "_3" "void"
+  Local "_4" "void"
+  Block "bb0" entry
+    Call a_call_this_check_cannot_read_between_two_frees.c:5:5 "free" "bb1"
+      Destination "_2"
+      Copy "_1"
+  Block "bb1"
+    Call a_call_this_check_cannot_read_between_two_frees.c:6:5 "helper" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Call a_call_this_check_cannot_read_between_two_frees.c:7:5 "free" "bb3"
+      Destination "_4"
+      Copy "_1"
+  Block "bb3"
+    Operation a_call_this_check_cannot_read_between_two_frees.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
