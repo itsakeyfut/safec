@@ -1,0 +1,8 @@
+error[SC0203]: a braced initializer is not read yet
+   ╭─[ a_braced_initializer_is_refused.c:1:9 ]
+   │
+ 1 │ int x = {1};
+   │         ┬  
+   │         ╰── only a single expression can initialize a declaration today
+───╯
+  = note: a braced initializer needs designators and nested lists, which arrive with structs and arrays

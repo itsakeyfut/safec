@@ -1,0 +1,6 @@
+Function a_block_declaration_carries_its_initializer.c:1:1 "f" "int (void)"
+  Compound a_block_declaration_carries_its_initializer.c:1:13
+    Declaration a_block_declaration_carries_its_initializer.c:2:5 "x" "int"
+      Number a_block_declaration_carries_its_initializer.c:2:13 "0"
+    Return a_block_declaration_carries_its_initializer.c:3:5
+      Identifier a_block_declaration_carries_its_initializer.c:3:12 "x"

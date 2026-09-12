@@ -1,0 +1,6 @@
+Function an_initializer_can_name_what_it_initializes.c:1:1 "f" "int (void)"
+  Compound an_initializer_can_name_what_it_initializes.c:1:13
+    Declaration an_initializer_can_name_what_it_initializes.c:2:5 "a" "int"
+      Identifier an_initializer_can_name_what_it_initializes.c:2:13 "a"
+    Return an_initializer_can_name_what_it_initializes.c:3:5
+      Identifier an_initializer_can_name_what_it_initializes.c:3:12 "a"
