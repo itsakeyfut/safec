@@ -176,11 +176,21 @@ Each of the first four was applied and the named tests observed to fail.
 * Good, because the solver cannot be handed a value from a block that never
   runs: `Cfg` leaves unreachable blocks out of both sides of `predecessors`, and
   `Solution` leaves them out of its answers.
-* Bad, because termination is the analysis's to answer for and nothing here can
-  check it. A lattice with an infinite ascending chain does not reach a
-  fixpoint, and the failure is a hang rather than a diagnostic. The framework
-  says so and does not bound it, because bounding it means choosing a widening,
-  and a widening chosen before any analysis needs one is a guess.
+* Bad, because termination is the analysis's to answer for and nothing here
+  can check it. A lattice with an infinite ascending chain does not reach a
+  fixpoint. What the framework does about that is stop and say so, with a
+  budget per block derived from the function, so the failure is a panic
+  naming the analysis rather than a hang naming nothing.
+
+  **A budget is not a widening**, and this record said it was. A widening
+  changes the answer a converging analysis reaches, and choosing one before
+  an analysis needs it is still a guess; a budget changes no answer any
+  fixpoint reaches and decides only what happens when there is none. The
+  first reason is sound and never reached the second.
+
+  What is left unheld is the budget's multiplier, which is a guess about how
+  many states one thing an analysis keys on may pass through. Its failure is
+  a panic that says which number to raise.
 * Bad, because `Value: Clone` puts a clone on every edge. A bitset per local is
   what the first analyses hold, and a graph is one function wide.
 * Bad, because the `Eq` bound puts a smaller law where a larger one was.
