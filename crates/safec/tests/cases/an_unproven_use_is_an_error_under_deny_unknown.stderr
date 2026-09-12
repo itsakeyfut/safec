@@ -1,0 +1,9 @@
+error[SC0402]: this may use a value after it was freed
+   ╭─[ an_unproven_use_is_an_error_under_deny_unknown.c:5:5 ]
+   │
+ 5 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── used here, perhaps after the free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation

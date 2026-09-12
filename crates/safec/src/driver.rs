@@ -45,7 +45,7 @@ use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::TranslationUnit;
-use safec_ir::memory::{self, Finding};
+use safec_ir::memory::{self, Finding, Kind};
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::Target;
@@ -73,6 +73,15 @@ const BACKEND: Code = Code::new("SC0801");
 /// which is ADR-0011, and `BACKEND` above is the same arrangement for the same
 /// reason.
 const DOUBLE_FREE: Code = Code::new("SC0401");
+
+/// A value read or written through a pointer after it was freed.
+///
+/// A code of its own rather than `DOUBLE_FREE`'s, because a reader filtering on
+/// one wants the two apart: a double free is a mistake about ownership and this
+/// is a mistake about lifetime, and the programs that produce them are different
+/// programs. `docs/diagnostics.md`'s rule is that a code names a class of
+/// program to search for, and these are two classes.
+const USE_AFTER_FREE: Code = Code::new("SC0402");
 
 /// Everything one run of the compiler produced.
 ///
@@ -599,21 +608,31 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     // which an unproven result does not know, and reusing the word the other
     // diagnostic spends on the *earlier, legitimate* free would have a reader
     // who learned that pair take the suspect for the safe one.
-    let (code, message, label) = match finding.conclusion {
-        Conclusion::Unsafe => (
+    let (code, message, label) = match (finding.kind, finding.conclusion) {
+        (Kind::FreedTwice, Conclusion::Unsafe) => (
             DOUBLE_FREE,
             "this frees a value that was freed already",
             "freed again here",
         ),
-        Conclusion::Unknown => (
+        (Kind::FreedTwice, Conclusion::Unknown) => (
             DOUBLE_FREE,
             "this may free a value that was freed already",
             "may free it again here",
         ),
-        // The check does not answer this and `Diagnostic::concluded` gives
-        // `None` for it, so none of the three is read. Written out rather than
-        // `_` so that a fourth conclusion has to be answered for here.
-        Conclusion::Safe => (DOUBLE_FREE, "nothing", "nothing"),
+        (Kind::UsedAfterFree, Conclusion::Unsafe) => (
+            USE_AFTER_FREE,
+            "this uses a value after it was freed",
+            "used here",
+        ),
+        (Kind::UsedAfterFree, Conclusion::Unknown) => (
+            USE_AFTER_FREE,
+            "this may use a value after it was freed",
+            "used here, perhaps after the free",
+        ),
+        // Neither check answers this and `Diagnostic::concluded` gives `None`
+        // for it, so none of the three is read. Written out rather than `_` so
+        // that a fourth conclusion has to be answered for here.
+        (_, Conclusion::Safe) => (DOUBLE_FREE, "nothing", "nothing"),
     };
 
     let mut diagnostic = Diagnostic::concluded(finding.conclusion, message)?
@@ -621,11 +640,11 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
         .with_safety_level(SafetyLevel::Memory)
         .with_label(Label::primary(finding.at, label));
 
-    // These two mean the same thing under either conclusion, so they share
-    // their words where the primary does not. Each is attached only where the
-    // check knows it: what makes a finding `Unknown` is that the paths or the
-    // sites reaching it disagree, and there is then no single place to point
-    // at.
+    // These two mean the same thing under either conclusion and under either
+    // check, so they share their words where the primary does not. Each is
+    // attached only where the check knows it: what makes a finding `Unknown` is
+    // that the paths or the sites reaching it disagree, and there is then no
+    // single place to point at.
     if let Some(freed) = finding.freed {
         diagnostic = diagnostic.with_label(Label::secondary(freed, "freed here"));
     }

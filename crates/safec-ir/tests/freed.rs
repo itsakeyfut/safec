@@ -1,4 +1,4 @@
-//! The double-free check, against IR built by hand.
+//! The memory check, against IR built by hand.
 //!
 //! `safec_ir::memory` answers a `Finding` rather than a diagnostic so that it
 //! can be read without a frontend, and this is the file that spends that. Every
@@ -14,10 +14,10 @@
 
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
-    Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place, Rvalue,
-    Terminator, TranslationUnit, Ty, TyId,
+    Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
+    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
-use safec_ir::memory::{Finding, check};
+use safec_ir::memory::{Finding, Kind, check};
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -168,6 +168,7 @@ fn a_value_freed_twice_is_unsafe() {
     let found = findings(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::FreedTwice);
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].at, names.at[2]);
     assert_eq!(found[0].freed, Some(names.at[1]));
@@ -464,4 +465,287 @@ fn a_free_that_may_not_be_the_first_is_unproven() {
             .all(|found| found.conclusion == Conclusion::Unknown),
         "{found:?}"
     );
+}
+
+/// `to = *through;`, in a block that falls through to `then`.
+fn read(to: LocalId, through: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Use(Operand::Copy(deref(through))),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// `*through = from;`, in a block that falls through to `then`.
+fn write(through: LocalId, from: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: deref(through),
+            value: Rvalue::Use(Operand::Copy(Place::local(from))),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// `to = &*through;`, in a block that falls through to `then`.
+fn address_of_deref(to: LocalId, through: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Address(deref(through)),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// `*local`, as a place.
+fn deref(local: LocalId) -> Place {
+    Place {
+        local,
+        projection: vec![Projection::Deref],
+    }
+}
+
+/// Reading through a pointer after it was freed is proved unsafe, and reading
+/// through it before is not reported at all.
+///
+/// Both halves in one function because the second is what stops the first from
+/// being met by reporting every dereference: a check that answered `Unsafe` for
+/// any `*p` would pass a test holding only the free half.
+///
+/// Mutation: report a dereference whose sites are all live. The first read is
+/// reported too and the length assertion fails.
+///
+/// Mutation: answer nothing for what an `Rvalue::Use` reads. Nothing is
+/// reported and this fails, which is the direction that matters.
+#[test]
+fn a_read_through_a_freed_pointer_is_unsafe() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let live = function.reserve_block();
+    let release = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
+    function.fill_block(live, read(value, held, names.at[1], release));
+    function.fill_block(release, free(&callees, held, names.at[2], dangling));
+    function.fill_block(dangling, read(value, held, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UsedAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].freed, Some(names.at[2]));
+    assert_eq!(found[0].made, Some(names.at[0]));
+}
+
+/// So is writing through it, which is a different place in the IR.
+///
+/// A read puts the projection in an operand and a write puts it in the
+/// operation's destination, so one rule covering both is two pieces of code,
+/// and a test that only read would leave half of it unguarded. Writing is also
+/// the half that corrupts the heap rather than only observing it.
+///
+/// Mutation: answer nothing for an operation's destination. Nothing is
+/// reported and this fails.
+#[test]
+fn a_write_through_a_freed_pointer_is_unsafe() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], dangling));
+    function.fill_block(dangling, write(held, value, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UsedAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[2]);
+}
+
+/// A dereference of a pointer this check follows no allocation for says
+/// nothing.
+///
+/// The asymmetry with the free half, which answers `Unknown` for the same
+/// silence. A pointer with no allocation behind it is an uninitialised pointer
+/// or one into storage that is not the heap, and both are defects with checks
+/// of their own that do not exist. Warning here would fire on every `*p` whose
+/// pointer came from anywhere this does not follow, which is most of them.
+///
+/// Mutation: answer `Unknown` where a dereferenced place reaches no site, as
+/// the free half does. This warns about a program it knows nothing about and
+/// fails.
+#[test]
+fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, _callees) = a_unit(&names, 0);
+    let value = function.push_local(int);
+    let other = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // Nothing has allocated into `value`, and the function has no parameters,
+    // so it reaches no site at all rather than reaching one that is live.
+    function.fill_block(entry, read(other, value, names.at[0], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// Taking the address of a dereference is not a dereference.
+///
+/// C17 6.5.3.2 p3: where the operand of `&` is the result of a unary `*`,
+/// neither operator is evaluated and the result is as if both were omitted. So
+/// `&*p` reads nothing through `p`, and reporting it would be a use of a freed
+/// value in a program that never touched one.
+///
+/// Mutation: have `Rvalue::Address` answer the place whose address is taken.
+/// This reports a use and fails.
+#[test]
+fn taking_the_address_of_a_dereference_is_not_a_use() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let taken = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let address = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], address));
+    function.fill_block(address, address_of_deref(taken, held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// A use after a free on one path only is suspected rather than proved.
+///
+/// `docs/safety-model.md`'s middle conclusion, on this check: the program may
+/// be correct and this cannot say that it is, so `--deny-unknown` is what turns
+/// it into a refusal.
+///
+/// Mutation: treat a site that is `Unknown` as freed. This becomes an error
+/// about a program the check proved nothing about, which is the false-positive
+/// direction, and fails on the conclusion.
+#[test]
+fn a_use_after_a_free_on_one_path_is_unproven() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let branch = function.reserve_block();
+    let release = function.reserve_block();
+    let joined = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], branch));
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: release,
+                otherwise: joined,
+            },
+        },
+    );
+    function.fill_block(release, free(&callees, held, names.at[1], joined));
+    function.fill_block(joined, read(value, held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[2]);
+    // Neither span is carried, because there is no one free that every
+    // execution reaching here went through, and so no one allocation beside it.
+    assert_eq!(found[0].freed, None);
+    assert_eq!(found[0].made, None);
+}
+
+/// Where a use follows two allocations that were both freed, the free is named
+/// and the allocation is not.
+///
+/// `points_to` is a may-set, so two sites both freed proves the use is unsafe
+/// while proving nothing about which allocation it was. Naming one of them puts
+/// a caret on a line only one path reached, and a caret in the wrong place is
+/// worse than none.
+///
+/// Mutation: in `verdict`, keep the first `made` span rather than collapsing
+/// two that disagree. `made` becomes the first arm's `malloc` and this fails on
+/// that field.
+#[test]
+fn a_use_after_two_allocations_names_no_allocation() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let branch = function.reserve_block();
+    let first_arm = function.reserve_block();
+    let first_free = function.reserve_block();
+    let second_arm = function.reserve_block();
+    let second_free = function.reserve_block();
+    let joined = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: first_arm,
+                otherwise: second_arm,
+            },
+        },
+    );
+    function.fill_block(first_arm, malloc(&callees, held, names.at[0], first_free));
+    function.fill_block(first_free, free(&callees, held, names.at[1], joined));
+    function.fill_block(second_arm, malloc(&callees, held, names.at[2], second_free));
+    function.fill_block(second_free, free(&callees, held, names.at[3], joined));
+    function.fill_block(joined, read(value, held, names.at[4], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].freed, Some(names.at[1]), "the earlier of the two");
+    assert_eq!(found[0].made, None, "the two arms do not agree");
 }

@@ -1,8 +1,14 @@
-//! Whether a program frees one allocation twice.
+//! Whether a program frees one allocation twice, or uses one after it was
+//! freed.
 //!
-//! The first check on [the safety model]'s memory axis, and the first thing
+//! The first checks on [the safety model]'s memory axis, and the first thing
 //! this compiler says about what a C program *does* rather than about how it is
 //! written.
+//!
+//! **Two answers out of one walk.** They read one lattice: what a free does to
+//! a site is what makes a later use of it a defect, so computing the states
+//! twice would be the same computation twice and a second chance for the two
+//! copies to disagree. [`Kind`] is how the caller tells them apart.
 //!
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
@@ -29,7 +35,9 @@
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
-use crate::ir::{Element, FuncId, Function, LocalId, Operand, Rvalue, Terminator, TranslationUnit};
+use crate::ir::{
+    Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit,
+};
 use crate::source::{SourceMap, Span};
 
 /// What this check can read in a callee's name.
@@ -443,6 +451,19 @@ impl Analysis for Allocations<'_> {
     }
 }
 
+/// Which of this module's checks a finding came from.
+///
+/// Two checks reading one solution, so the reader has to be told which. They
+/// take different codes and different words, and the thing a caret lands on is
+/// a call in one and a dereference in the other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    /// `free(p); free(p);`
+    FreedTwice,
+    /// `free(p); *p = 42;`
+    UsedAfterFree,
+}
+
 /// One thing this check concluded, and where.
 ///
 /// Not a diagnostic: this crate cannot see one. What each conclusion costs a
@@ -450,9 +471,15 @@ impl Analysis for Allocations<'_> {
 /// answers it, and ADR-0001 is why there is only one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
+    /// Which check this is.
+    pub kind: Kind,
     /// What that check concluded.
     pub conclusion: Conclusion,
-    /// Where a caret goes: the call that frees.
+    /// Where a caret goes: the call that frees, or the element that reads or
+    /// writes through a freed pointer.
+    ///
+    /// Not the place's own span, which a [`Place`] does not have: the element's
+    /// or the terminator's.
     pub at: Span,
     /// The earliest free reaching here, where the check knows which one it was.
     ///
@@ -507,12 +534,20 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
             let block = function.block(id);
             for element in &block.elements {
+                // Before the transfer, which is what the element does: the
+                // question is what was true where it runs.
+                used(&mut findings, dereferenced_in_element(element), &known);
                 analysis.element(function, element, &mut known);
             }
 
             // Before the terminator's own transfer, which is what turns a live
             // allocation into a freed one: the question is what was true when
             // the call was reached.
+            used(
+                &mut findings,
+                dereferenced_in_terminator(&block.terminator),
+                &known,
+            );
             if let Some(finding) = reported(&analysis, &block.terminator, &known) {
                 findings.push(finding);
             }
@@ -544,10 +579,10 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
 /// What a set of sites says about whatever touched them.
 ///
-/// The fold from many sites to one conclusion. RK-035 in the review knowledge
-/// bank is why it is a type rather than a tuple: a may-analysis's join is
-/// forced to be right by the lattice, and the code that reads the answer is
-/// where the same rule gets lost.
+/// The fold from many sites to one conclusion, and the one place both checks
+/// make it. RK-035 in the review knowledge bank is why there is one: a
+/// may-analysis's join is forced to be right by the lattice, and the code that
+/// reads the answer is where the same rule gets lost.
 struct Verdict {
     conclusion: Conclusion,
     /// The earliest free reaching here, where the conclusion is a proof.
@@ -560,7 +595,8 @@ struct Verdict {
 ///
 /// The caller decides what reaching nothing means, by what it puts in
 /// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
-/// following.
+/// following, and a dereference hands an empty iterator. That asymmetry is the
+/// design rather than an accident, and [`used`] says why.
 fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<Verdict> {
     let mut earliest: Option<Span> = None;
     // Where the allocation came from, kept only while every freed site agrees.
@@ -661,9 +697,143 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
     let verdict = verdict(Allocations::touching(arguments, known), known)?;
 
     Some(Finding {
+        kind: Kind::FreedTwice,
         conclusion: verdict.conclusion,
         at: origin.span(),
         freed: verdict.freed,
         made: verdict.made,
     })
+}
+
+/// Report every dereference at `at` of something that was freed.
+///
+/// **A place this check follows no allocation for says nothing**, which is the
+/// opposite of what a free of one says, and the asymmetry is deliberate. A free
+/// acts on an allocation, so freeing something the check stopped following may
+/// be a second free. A dereference only reads one, and a pointer with no
+/// allocation behind it is an uninitialised pointer or one into storage that is
+/// not the heap: different defects, with checks of their own that do not exist
+/// yet. Answering `Unknown` here would warn on every `*p` whose pointer came
+/// from anywhere this does not follow, which is most of them.
+///
+/// Nothing is lost by it. A pointer written behind this check's back arrives
+/// here as `SiteState::Unknown` rather than as no site at all, because taking a
+/// local's address is what makes its sites unknown.
+fn used(findings: &mut Vec<Finding>, at: Option<(Span, Vec<&Place>)>, known: &Known) {
+    let Some((at, dereferenced)) = at else {
+        return;
+    };
+
+    for place in dereferenced {
+        let sites = known.sites_of(place.local).map(Reached::Site);
+        let Some(verdict) = verdict(sites, known) else {
+            continue;
+        };
+
+        findings.push(Finding {
+            kind: Kind::UsedAfterFree,
+            conclusion: verdict.conclusion,
+            at,
+            freed: verdict.freed,
+            made: verdict.made,
+        });
+    }
+}
+
+/// Where this element runs, and every place it reads or writes through a
+/// pointer there.
+///
+/// Through a pointer, so a projection: an unprojected place is the local itself
+/// and holding a freed pointer is not using it. The span is the element's,
+/// because a [`Place`] has none of its own.
+fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
+    // Every field written out, never `..`: RK-018 in the review knowledge bank
+    // is a field added to a variant that already exists walking past an
+    // exhaustive match.
+    match element {
+        Element::Assign(operation) => {
+            let mut places = projected(&operation.place);
+            places.extend(dereferenced_in_rvalue(&operation.value));
+            Some((operation.origin.span(), places))
+        }
+        // Storage beginning or ending reads nothing through anything.
+        Element::StorageLive {
+            local: _,
+            origin: _,
+        } => None,
+        Element::StorageDead {
+            origin: _,
+            local: _,
+        } => None,
+    }
+}
+
+/// The same, for what a terminator reads.
+fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Place>)> {
+    match terminator {
+        Terminator::Call {
+            callee: _,
+            arguments,
+            destination,
+            then: _,
+            origin,
+        } => {
+            let mut places: Vec<&Place> = arguments.iter().flat_map(dereferenced_in).collect();
+            if let Some(destination) = destination {
+                places.extend(projected(destination));
+            }
+            Some((origin.span(), places))
+        }
+        // **A dereference in a condition is not reported, because there is
+        // nowhere to point.** `Terminator::Branch` carries no `Origin`, and
+        // `Terminator::Call`'s own doc comment says it is the only terminator
+        // that does "because it is the only one a diagnostic has had to name so
+        // far". This is the diagnostic that has had to, and giving `Branch` a
+        // span moves every `--emit safety-ir` expectation with a branch in it,
+        // so it is #141 rather than a line here. A caret in the wrong place is
+        // worse than none: it is the defect this project has had before.
+        Terminator::Branch {
+            condition: _,
+            then: _,
+            otherwise: _,
+        } => None,
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
+    }
+}
+
+/// The same, for what an rvalue reads.
+fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
+    match value {
+        Rvalue::Use(operand) => dereferenced_in(operand),
+        Rvalue::Unary { op: _, operand } => dereferenced_in(operand),
+        Rvalue::Binary { op: _, lhs, rhs } => {
+            let mut places = dereferenced_in(lhs);
+            places.extend(dereferenced_in(rhs));
+            places
+        }
+        // **Taking an address is not a dereference**, even where what is
+        // written looks like one. C17 6.5.3.2 p3: if the operand of `&` is the
+        // result of a unary `*`, "neither that operator nor the `&` operator is
+        // evaluated and the result is as if both were omitted". So `&*p` reads
+        // nothing through `p`, and reporting it would be a use of a freed value
+        // in a program that never touched one.
+        Rvalue::Address(_) => Vec::new(),
+    }
+}
+
+/// The same, for one operand.
+fn dereferenced_in(operand: &Operand) -> Vec<&Place> {
+    match operand {
+        Operand::Copy(place) => projected(place),
+        Operand::Constant(_) => Vec::new(),
+    }
+}
+
+/// The place, where it goes through a projection, and nothing where it does not.
+fn projected(place: &Place) -> Vec<&Place> {
+    if place.projection.is_empty() {
+        Vec::new()
+    } else {
+        vec![place]
+    }
 }
