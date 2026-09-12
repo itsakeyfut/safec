@@ -66,9 +66,12 @@ pub trait Analysis {
     /// [`PartialEq`] because the solver decides whether anything moved by
     /// comparing, rather than by asking the join. That is what removes the
     /// one law this framework used to rest on, and it puts a smaller one in
-    /// its place: the equality has to agree with the fold. A join that
+    /// its place: **the representation has to be canonical.** A join that
     /// rebuilds a value into a different shape with the same meaning never
-    /// compares equal and never converges. See ADR-0016.
+    /// compares equal and never converges, and the ordinary way to write
+    /// that is a union collected through a `HashSet` and back into a `Vec`.
+    /// Measured, on eight sites meeting inside a loop: three lines of
+    /// unremarkable Rust, and the walk does not end. See ADR-0016.
     ///
     /// **A value that carries a span is where the walk stops terminating.**
     /// `docs/safety-model.md` asks a diagnostic to say "p freed here", so the
@@ -90,12 +93,17 @@ pub trait Analysis {
 
     /// Fold `from` into `into`.
     ///
-    /// **It does not answer whether anything moved**, and that is the whole
-    /// of this signature. The solver compares the value against what it was,
-    /// so there is no answer here for an analysis to be wrong about: one that
-    /// folded correctly and reported that it had not would hand back
-    /// something that is not a fixpoint and say nothing about it. See
-    /// ADR-0016.
+    /// **It does not answer whether anything moved.** The solver compares the
+    /// value against what it was, so a join that folded correctly and
+    /// reported that it had not is a mutation nobody can write.
+    ///
+    /// **The answer moved rather than went away**, and it is now
+    /// [`PartialEq::eq`]. An `eq` that ignores part of what this writes gives
+    /// the old failure back: measured with a value holding a lattice element
+    /// and the span a diagnostic would quote, where comparing only the element
+    /// leaves the stored span decided by whichever predecessor arrived last
+    /// and the solver never looks again. Whatever `join` writes, `eq` has to
+    /// see. See ADR-0016.
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
 
     /// What one element of a block does to what is known.
