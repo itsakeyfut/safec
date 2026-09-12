@@ -18,7 +18,7 @@
 //! could report would be one Phase 5 could not be the first to use.
 //!
 //! **Termination belongs to the analysis, and nothing here can check it.** The
-//! walk ends when no [`Analysis::join`] answers that anything changed, so a
+//! walk ends when no [`Analysis::join`] moves a value, so a
 //! lattice whose values can keep rising forever does not end at all, and the
 //! failure is a hang rather than a diagnostic. Bounding it means choosing a
 //! widening, and a widening chosen before any analysis needs one is a guess.
@@ -63,16 +63,35 @@ pub trait Analysis {
     /// consumed the stored value would have nothing to walk from the second
     /// time.
     ///
+    /// [`Eq`] because the solver decides whether anything moved by comparing,
+    /// rather than by asking the join. That is what removes the one law this
+    /// framework used to rest on, and it puts a smaller one in its place:
+    /// **the representation has to be canonical.** A join that rebuilds a
+    /// value into a different shape with the same meaning never compares
+    /// equal and never converges, and the ordinary way to write that is a
+    /// union collected through a `HashSet` and back into a `Vec`. Measured,
+    /// on eight sites meeting inside a loop: three lines of unremarkable
+    /// Rust, and the walk does not end. See ADR-0016.
+    ///
+    /// [`Eq`] rather than [`PartialEq`], because the walk ends when a value
+    /// compares equal to itself and `PartialEq` does not promise that.
+    /// Measured: a value holding an `f64`, with a join that does nothing at
+    /// all, never terminates, because `NAN != NAN`. Under the shape this
+    /// replaced it did terminate, so the bound is what stops the trade this
+    /// signature made from costing a whole class of value its answer.
+    ///
     /// **A value that carries a span is where the walk stops terminating.**
     /// `docs/safety-model.md` asks a diagnostic to say "p freed here", so the
     /// first value a real check carries will hold one, and a span is not a
     /// lattice element: a `join` that keeps whichever one arrived oscillates
     /// forever where two of them meet below a branch inside a loop. Measured,
     /// and it is a hang with no diagnostic and no stack rather than a failure.
-    /// Choose the payload by a rule that cannot depend on which side arrived.
+    /// Choose the payload by a rule that cannot depend on which side arrived,
+    /// and keep it inside the comparison rather than outside: hiding it from
+    /// `eq` ends the walk and is the failure [`Analysis::join`] describes.
     /// ADR-0016 is where it is recorded, and why nothing here bounds the walk
     /// instead.
-    type Value: Clone;
+    type Value: Clone + Eq;
 
     /// What holds where the function starts.
     ///
@@ -81,13 +100,20 @@ pub trait Analysis {
     /// function's entry is the one place that can say so.
     fn on_entry(&self) -> Self::Value;
 
-    /// Fold `from` into `into`, and answer whether `into` moved.
+    /// Fold `from` into `into`.
     ///
-    /// **The answer is what ends the walk.** A join that says nothing changed
-    /// is how the solver learns it has nothing left to do, so one that always
-    /// answers `false` stops the fixpoint after a single pass and one that
-    /// always answers `true` never stops at all.
-    fn join(&self, into: &mut Self::Value, from: &Self::Value) -> bool;
+    /// **It does not answer whether anything moved.** The solver compares the
+    /// value against what it was, so a join that folded correctly and
+    /// reported that it had not is a mutation nobody can write.
+    ///
+    /// **The answer moved rather than went away**, and it is now
+    /// [`PartialEq::eq`]. An `eq` that ignores part of what this writes gives
+    /// the old failure back: measured with a value holding a lattice element
+    /// and the span a diagnostic would quote, where comparing only the element
+    /// leaves the stored span decided by whichever predecessor arrived last
+    /// and the solver never looks again. Whatever `join` writes, `eq` has to
+    /// see. See ADR-0016.
+    fn join(&self, into: &mut Self::Value, from: &Self::Value);
 
     /// What one element of a block does to what is known.
     ///
@@ -214,12 +240,37 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         }
         analysis.terminator(function, &function.block(block).terminator, &mut value);
 
+        // What the block sends, and it is the same for every successor, so it
+        // is bound again here to stop the loop below writing to it. Folding a
+        // successor's value into this one rather than the other way round
+        // compiles while the binding is mutable, because `&mut T` coerces to
+        // `&T`, and it gives the next successor what two paths agree on rather
+        // than what this block sent. Spelled this way that is `error[E0596]`.
+        let value = value;
+
         successors.clear();
         function.block(block).terminator.successors(&mut successors);
 
         for &successor in &successors {
             let changed = match &mut values[successor.index()] {
-                Some(arrived) => analysis.join(arrived, &value),
+                Some(arrived) => {
+                    // Compared rather than asked. What a clone per edge buys
+                    // is that the join has no answer to be wrong about. See
+                    // ADR-0016.
+                    //
+                    // Inverting this comparison fails
+                    // `the_back_edge_changes_the_answer_after_the_loop` and
+                    // hangs `what_a_loop_writes_and_what_comes_before_it_are_answered_apart`:
+                    // a block whose value did not move is pushed again, and
+                    // whether that ends at all depends on the check below
+                    // happening to catch it, which is a property of the graph
+                    // rather than of this line. One failure and one hang,
+                    // measured, so run the suite under a timeout to see
+                    // either.
+                    let before = arrived.clone();
+                    analysis.join(arrived, &value);
+                    *arrived != before
+                }
                 // The first answer to arrive is kept rather than joined, which
                 // is what lets an analysis have no bottom. See ADR-0016.
                 nothing @ None => {
