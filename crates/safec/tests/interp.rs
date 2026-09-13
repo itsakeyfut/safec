@@ -861,3 +861,49 @@ fn negating_the_smallest_int_stops_the_run() {
     };
     assert!(trap.why.contains("32 bits signed cannot hold"), "{trap:?}");
 }
+
+/// Evaluating a place and discarding its value is not a read of that place.
+///
+/// This is the whole reason `Element::Evaluate` exists rather than an
+/// assignment into a temporary. C17 6.8.3 p2 evaluates an expression statement
+/// as a void expression and 6.3.2.2 discards what it yields, so `*q;` follows
+/// the pointer and stops. `x` is never written, and a program that never reads
+/// it is one C defines.
+///
+/// Mutation: lower a discarded dereference as `_t = *q;`, which is the shape
+/// this design rejected, or have the interpreter `load` the location `resolve`
+/// hands back. Either turns this into "a read of a local nothing has written"
+/// and the run stops on a program that is fine.
+#[test]
+fn a_discarded_dereference_is_not_a_read() {
+    let answer =
+        ran("int main(void) {\n    int x;\n    int *q;\n    q = &x;\n    *q;\n    return 0;\n}\n");
+    assert_eq!(answer, Ok(Value::Int(0)));
+}
+
+/// Reaching a place whose scope has ended still stops the run, even where
+/// nothing is read out of it.
+///
+/// C17 6.5.3.2 p4 makes the unary `*` undefined for a pointer that is no longer
+/// valid, and its footnote names an address after the end of its object's
+/// lifetime. Whether anybody wanted the value is not part of that, so the
+/// evaluation asks the two questions `store` asks: whether the frame is still
+/// the frame the pointer was taken in, and whether the local still has storage.
+///
+/// `resolve` answers neither. It checks each frame it loads *through* and hands
+/// back the last location unchecked, which is what `store`'s doc comment says
+/// and what RK-020 in the review knowledge bank is about. An arm that stopped
+/// at `resolve` would be the careless half of the pair a second time.
+///
+/// Mutation: delete the two checks after `resolve` in the `Element::Evaluate`
+/// arm. The run finishes and this fails.
+#[test]
+fn a_discarded_dereference_of_a_dead_local_stops_the_run() {
+    let reached = ran(
+        "int main(void) {\n    int *p;\n    {\n        int x;\n        x = 1;\n        p = &x;\n    }\n    *p;\n    return 0;\n}\n",
+    );
+    let Err(trap) = reached else {
+        panic!("a dereference of a local whose scope has ended: {reached:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
