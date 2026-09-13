@@ -28,7 +28,7 @@ struct Names {
     function: Span,
     /// In the order they appear in the file, so `at[0]` is earlier than `at[1]`
     /// by the rule the join orders spans with.
-    at: [Span; 6],
+    at: [Span; 7],
     /// What a branch's controlling expression is, where one is needed and
     /// nothing asserts on it.
     ///
@@ -50,7 +50,7 @@ struct Names {
 /// places for that ordering to be about anything.
 fn sources() -> (SourceMap, Names) {
     let mut map = SourceMap::new();
-    let file = map.add_virtual("t.c", "free malloc f a b c d e g h\n");
+    let file = map.add_virtual("t.c", "free malloc f a b c d e g h i\n");
 
     let names = Names {
         free: Span::new(file, 0, 4),
@@ -63,6 +63,7 @@ fn sources() -> (SourceMap, Names) {
             Span::new(file, 20, 21),
             Span::new(file, 22, 23),
             Span::new(file, 24, 25),
+            Span::new(file, 28, 29),
         ],
         asked: Span::new(file, 26, 27),
     };
@@ -1024,6 +1025,7 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
         "the evaluation lost nothing"
     );
 }
+
 /// A proof at a caret replaces the suspicion already standing there.
 ///
 /// **Two dereferences of one place can share a caret**, because both operands
@@ -1042,16 +1044,31 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
 /// check is allowed to be silent about, and `docs/c-family.md` asks that
 /// another frontend be able to build this IR with no C frontend present.
 ///
+/// **An unrelated report comes first on purpose.** What `said` carries for a
+/// caret is where in `findings` the report standing there is, which is not the
+/// caret's own position in `said`: anything reported before the pair sits
+/// between the two numbers. The double free of `other` is that anything, and
+/// without it both numbers are zero and taking the wrong one is invisible.
+///
 /// Mutation: have `supersedes` answer `false` for `(Unknown, Unsafe)`. The
 /// conclusion stays `Unknown` and this fails.
+///
+/// Mutation: read the position in `said` rather than the index it carries,
+/// `let index = standing;`. The proof overwrites the double free of `other`
+/// instead of the suspicion, so a finding is destroyed and this fails on the
+/// length.
 #[test]
 fn a_proof_replaces_the_suspicion_at_one_caret() {
     let (sources, names) = sources();
     let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let other = function.push_local(int);
     let held = function.push_local(int);
     let escape = function.push_local(int);
     let value = function.push_local(int);
 
+    let allocate_other = function.reserve_block();
+    let release_other = function.reserve_block();
+    let again = function.reserve_block();
     let allocate = function.reserve_block();
     let escaped = function.reserve_block();
     let suspect = function.reserve_block();
@@ -1059,39 +1076,53 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
     let proof = function.reserve_block();
     let exit = function.reserve_block();
 
-    function.fill_block(allocate, malloc(&callees, held, names.at[0], escaped));
-    function.fill_block(escaped, address_of(escape, held, names.at[1], suspect));
-    function.fill_block(suspect, read(value, held, names.at[2], release));
-    function.fill_block(release, free(&callees, held, names.at[3], proof));
+    // A defect of its own, reported before the pair below and nothing to do
+    // with it. It is here so that the report standing at the pair's caret is
+    // not the first thing in `findings`.
+    function.fill_block(
+        allocate_other,
+        malloc(&callees, other, names.at[0], release_other),
+    );
+    function.fill_block(release_other, free(&callees, other, names.at[1], again));
+    function.fill_block(again, free(&callees, other, names.at[2], allocate));
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[3], escaped));
+    function.fill_block(escaped, address_of(escape, held, names.at[4], suspect));
+    function.fill_block(suspect, read(value, held, names.at[5], release));
+    function.fill_block(release, free(&callees, held, names.at[6], proof));
     // The same span as the unproven read, which is what makes the two one
     // report and is the whole of what this test is about.
-    function.fill_block(proof, read(value, held, names.at[2], exit));
+    function.fill_block(proof, read(value, held, names.at[5], exit));
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
 
-    // Two, because freeing a site nothing can prove anything about is itself a
-    // `DoubleFree` this check cannot rule out. That is correct and is not what
-    // this test is for; asserting on it rather than filtering it away is what
-    // says so.
-    assert_eq!(found.len(), 2, "{found:?}");
+    // Three, and the first has to survive untouched. Freeing a site nothing
+    // can prove anything about is itself a `DoubleFree` this check cannot rule
+    // out, which is the third; that is correct and is not what this test is
+    // for, and asserting on it rather than filtering it away is what says so.
+    assert_eq!(found.len(), 3, "{found:?}");
 
-    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].kind, Kind::DoubleFree, "not the one replaced");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[2]);
+
+    assert_eq!(found[1].kind, Kind::UseAfterFree);
     assert_eq!(
-        found[0].conclusion,
+        found[1].conclusion,
         Conclusion::Unsafe,
         "the proof survives"
     );
-    assert_eq!(found[0].at, names.at[2], "one caret, not two");
-    assert_eq!(found[0].freed, Some(names.at[3]));
+    assert_eq!(found[1].at, names.at[5], "one caret, not two");
+    assert_eq!(found[1].freed, Some(names.at[6]));
     assert_eq!(
-        found[0].made, None,
+        found[1].made, None,
         "the escape lost where the allocation came from"
     );
 
-    assert_eq!(found[1].kind, Kind::DoubleFree);
-    assert_eq!(found[1].conclusion, Conclusion::Unknown);
-    assert_eq!(found[1].at, names.at[3]);
+    assert_eq!(found[2].kind, Kind::DoubleFree);
+    assert_eq!(found[2].conclusion, Conclusion::Unknown);
+    assert_eq!(found[2].at, names.at[6]);
 }
 
 /// A suspicion does not displace the proof already standing at a caret.

@@ -811,30 +811,6 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// boundary that lives only in a comment is one no user can find.
 ///
 /// [`Element::Evaluate`]: crate::ir::Element::Evaluate
-/// Whether a report at a caret replaces the one already standing there.
-///
-/// **A proof replaces a suspicion, and nothing else replaces anything.** Where
-/// two proofs meet at one caret the first stands: both are true of the same
-/// place and there is nothing to choose between them. [`used`] is where a pair
-/// at one caret comes from and why one is collapsed at all.
-///
-/// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
-/// derive `Ord` and should not: its three variants are three answers rather
-/// than three degrees, and `Safe` is not a weaker `Unsafe`. The pairs that
-/// cannot arise say so rather than falling through, because RK-034 in the
-/// review knowledge bank is a fallthrough in this file that was reached by
-/// "proved" and by "gave up" at once and reported the second as the first.
-fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
-    match (standing, new) {
-        (Conclusion::Unknown, Conclusion::Unsafe) => true,
-        (Conclusion::Unknown, Conclusion::Unknown) | (Conclusion::Unsafe, _) => false,
-        // [`verdict`] answers `None` where there is nothing to report, so no
-        // `Finding` carries `Safe` and no verdict reaching here concludes one.
-        (Conclusion::Safe, _) => unreachable!("a finding standing at a caret concluded Safe"),
-        (_, Conclusion::Safe) => unreachable!("a verdict about a dereference concluded Safe"),
-    }
-}
-
 fn used(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
@@ -907,10 +883,43 @@ fn used(
         // proof away and exited 0, which is the silence the paragraph above
         // describes arriving through the other door. [`supersedes`] is the
         // rule, and says why only this direction replaces anything.
+        // The index `said` carries, not the position within `said`: `findings`
+        // holds what every caret in this function has said, so anything
+        // reported between the pair sits between them. Taking the wrong one
+        // overwrites a finding nobody was replacing, and
+        // `a_proof_replaces_the_suspicion_at_one_caret` puts a double free in
+        // front of the pair so that the two indices differ.
         let index = said[standing].2;
         if supersedes(findings[index].conclusion, finding.conclusion) {
             findings[index] = finding;
         }
+    }
+}
+
+/// Whether a report at a caret replaces the one already standing there.
+///
+/// **A proof replaces a suspicion, and nothing else replaces anything.** Where
+/// two proofs meet at one caret the first stands: both are true of the same
+/// place and there is nothing to choose between them. [`used`] is where a pair
+/// at one caret comes from and why one is collapsed at all.
+///
+/// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
+/// derive `Ord` and should not: its three variants are three answers rather
+/// than three degrees, and `Safe` is not a weaker `Unsafe`. The pairs that
+/// cannot arise say so rather than falling through, because RK-034 in the
+/// review knowledge bank is a fallthrough in this file that was reached by
+/// "proved" and by "gave up" at once and reported the second as the first.
+fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
+    match (standing, new) {
+        // First, because a wildcard below would absorb them. [`verdict`]
+        // answers `None` where there is nothing to report, so no `Finding`
+        // carries `Safe` and no verdict reaching here concludes one; written
+        // last, `(Conclusion::Unsafe, _)` answered `(Unsafe, Safe)` in silence
+        // while this said every impossible pair is declared.
+        (Conclusion::Safe, _) => unreachable!("a finding standing at a caret concluded Safe"),
+        (_, Conclusion::Safe) => unreachable!("a verdict about a dereference concluded Safe"),
+        (Conclusion::Unknown, Conclusion::Unsafe) => true,
+        (Conclusion::Unknown, Conclusion::Unknown) | (Conclusion::Unsafe, _) => false,
     }
 }
 
