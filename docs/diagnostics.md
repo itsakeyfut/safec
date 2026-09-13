@@ -72,10 +72,15 @@ through a dangling pointer are two classes of program to look for.
 
 **What `SC0402` not being emitted does not mean.** The check follows a pointer
 through a copy, through pointer arithmetic and into a controlling expression,
-so `q = p; *q`, `p[i]` and `if (*p)` are all read. It does not follow one out of
-another pointer, so `int *p = *pp;` leaves nothing to say about a later `*p`.
-This is written here rather than only beside the code because a boundary a user
-cannot find is one they will discover by being wrong about it, and
+so `q = p; *q`, `p[i]` and `if (*p)` are all read. Two shapes are known not to
+be, and they are a boundary rather than a list of everything outside it. It
+does not follow a pointer read out of another pointer, so `int *p = *pp;`
+leaves nothing to say about a later `*p`. And `*p;` written on its own is an
+expression statement whose value nobody wants, which the lowering drops before
+any check sees it, so the compiler is quiet about a dereference C17 6.5.3.2 p4
+makes undefined; issue #149 is what fixes that, in the frontend rather than
+here. This is written here rather than only beside the code because a boundary
+a user cannot find is one they will discover by being wrong about it, and
 [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that silence
 is the most expensive answer this compiler gives.
 

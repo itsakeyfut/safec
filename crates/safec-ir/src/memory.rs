@@ -777,10 +777,16 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// rather than as no site at all, because taking a local's address is what
 /// makes its sites unknown. Pointer arithmetic is followed for the same reason,
 /// and so is a controlling expression, which needed `Terminator::Branch` to
-/// carry a span before it could be. What is left is a pointer read out of
-/// another pointer, `int *p = *pp;`, which reaches no site and is silence.
-/// `docs/diagnostics.md` says what exit 0 does not mean here, because a
-/// boundary that lives only in a comment is one no user can find.
+/// carry a span before it could be.
+///
+/// **Two shapes are known to be silence, and that is a boundary rather than a
+/// list of everything outside it.** A pointer read out of another pointer,
+/// `int *p = *pp;`, reaches no site. And a dereference nothing put in the IR
+/// cannot be reached at all: `*p;` on its own is an expression statement whose
+/// value nobody wants, and the lowering leaves no element behind for it, which
+/// is #149 and is not this check's to answer. `docs/diagnostics.md` says what
+/// exit 0 does not mean here, because a boundary that lives only in a comment
+/// is one no user can find.
 fn used(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place)>,
