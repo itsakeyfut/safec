@@ -895,8 +895,12 @@ fn a_discarded_dereference_is_not_a_read() {
 /// and what RK-020 in the review knowledge bank is about. An arm that stopped
 /// at `resolve` would be the careless half of the pair a second time.
 ///
-/// Mutation: delete the two checks after `resolve` in the `Element::Evaluate`
-/// arm. The run finishes and this fails.
+/// Mutation: delete the `Slot::Dead` check after `resolve` in the
+/// `Element::Evaluate` arm. The run finishes and this fails. **The other check
+/// is the other test below**, and saying "the two checks" here was wrong: a
+/// review measured it and found that replacing `live` with `at.depth` leaves
+/// this one green, because a scope ending inside one frame never asks which
+/// frame it is.
 #[test]
 fn a_discarded_dereference_of_a_dead_local_stops_the_run() {
     let reached = ran(
@@ -906,4 +910,27 @@ fn a_discarded_dereference_of_a_dead_local_stops_the_run() {
         panic!("a dereference of a local whose scope has ended: {reached:?}");
     };
     assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
+
+/// Reaching a place in a function that has returned stops the run too.
+///
+/// The other half of the pair the `Element::Evaluate` arm asks, and the half a
+/// scope ending inside one frame cannot reach: `live` is what says a depth
+/// holds the frame the pointer was taken in rather than whatever call is at
+/// that depth now. `a_write_through_a_pointer_into_a_returned_function_stops_the_run`
+/// is the same question for a write, and this is the reason that one's pair is
+/// two questions rather than one.
+///
+/// Mutation: `let frame = at.depth;` in place of the `live` call. The run
+/// indexes a frame that is not there and panics rather than trapping, and this
+/// fails on the trap it expected.
+#[test]
+fn a_discarded_dereference_into_a_returned_function_stops_the_run() {
+    let reached = ran("int *leak(void) { int x; int *q; x = 1; q = &x; return q; }
+int main(void) { int *p; p = leak(); *p; return 0; }
+");
+    let Err(trap) = reached else {
+        panic!("a dereference into a frame that has returned: {reached:?}");
+    };
+    assert!(trap.why.contains("has returned"), "{trap:?}");
 }
