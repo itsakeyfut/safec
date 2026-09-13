@@ -861,3 +861,76 @@ fn negating_the_smallest_int_stops_the_run() {
     };
     assert!(trap.why.contains("32 bits signed cannot hold"), "{trap:?}");
 }
+
+/// Evaluating a place and discarding its value is not a read of that place.
+///
+/// This is the whole reason `Element::Evaluate` exists rather than an
+/// assignment into a temporary. C17 6.8.3 p2 evaluates an expression statement
+/// as a void expression and 6.3.2.2 discards what it yields, so `*q;` follows
+/// the pointer and stops. `x` is never written, and a program that never reads
+/// it is one C defines.
+///
+/// Mutation: lower a discarded dereference as `_t = *q;`, which is the shape
+/// this design rejected, or have the interpreter `load` the location `resolve`
+/// hands back. Either turns this into "a read of a local nothing has written"
+/// and the run stops on a program that is fine.
+#[test]
+fn a_discarded_dereference_is_not_a_read() {
+    let answer =
+        ran("int main(void) {\n    int x;\n    int *q;\n    q = &x;\n    *q;\n    return 0;\n}\n");
+    assert_eq!(answer, Ok(Value::Int(0)));
+}
+
+/// Reaching a place whose scope has ended still stops the run, even where
+/// nothing is read out of it.
+///
+/// C17 6.5.3.2 p4 makes the unary `*` undefined for a pointer that is no longer
+/// valid, and its footnote names an address after the end of its object's
+/// lifetime. Whether anybody wanted the value is not part of that, so the
+/// evaluation asks the two questions `store` asks: whether the frame is still
+/// the frame the pointer was taken in, and whether the local still has storage.
+///
+/// `resolve` answers neither. It checks each frame it loads *through* and hands
+/// back the last location unchecked, which is what `store`'s doc comment says
+/// and what RK-020 in the review knowledge bank is about. An arm that stopped
+/// at `resolve` would be the careless half of the pair a second time.
+///
+/// Mutation: delete the `Slot::Dead` check after `resolve` in the
+/// `Element::Evaluate` arm. The run finishes and this fails. **The other check
+/// is the other test below**, and saying "the two checks" here was wrong: a
+/// review measured it and found that replacing `live` with `at.depth` leaves
+/// this one green, because a scope ending inside one frame never asks which
+/// frame it is.
+#[test]
+fn a_discarded_dereference_of_a_dead_local_stops_the_run() {
+    let reached = ran(
+        "int main(void) {\n    int *p;\n    {\n        int x;\n        x = 1;\n        p = &x;\n    }\n    *p;\n    return 0;\n}\n",
+    );
+    let Err(trap) = reached else {
+        panic!("a dereference of a local whose scope has ended: {reached:?}");
+    };
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
+
+/// Reaching a place in a function that has returned stops the run too.
+///
+/// The other half of the pair the `Element::Evaluate` arm asks, and the half a
+/// scope ending inside one frame cannot reach: `live` is what says a depth
+/// holds the frame the pointer was taken in rather than whatever call is at
+/// that depth now. `a_write_through_a_pointer_into_a_returned_function_stops_the_run`
+/// is the same question for a write, and this is the reason that one's pair is
+/// two questions rather than one.
+///
+/// Mutation: `let frame = at.depth;` in place of the `live` call. The run
+/// indexes a frame that is not there and panics rather than trapping, and this
+/// fails on the trap it expected.
+#[test]
+fn a_discarded_dereference_into_a_returned_function_stops_the_run() {
+    let reached = ran("int *leak(void) { int x; int *q; x = 1; q = &x; return q; }
+int main(void) { int *p; p = leak(); *p; return 0; }
+");
+    let Err(trap) = reached else {
+        panic!("a dereference into a frame that has returned: {reached:?}");
+    };
+    assert!(trap.why.contains("has returned"), "{trap:?}");
+}

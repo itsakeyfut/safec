@@ -128,8 +128,11 @@ pub struct Trap {
     pub why: String,
     /// Where the operation was, where the operation had a span.
     ///
-    /// A terminator other than a call carries none, so this is `None` more
-    /// often than a diagnostic would like. What the IR knows is in `ir.rs`.
+    /// Set where the element or terminator that stopped the run carried a
+    /// span, which is where the IR carries one: an operation, an evaluation, a
+    /// storage marker, a call and a branch. A `Goto`, a `Return` and an
+    /// `Abnormal` carry none, so this is `None` more often than a diagnostic
+    /// would like. What the IR knows is in `ir.rs`.
     pub at: Option<Span>,
 }
 
@@ -244,6 +247,23 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                         .map_err(|trap| trap.at(operation.origin.span()))?;
                     store(&mut frames, at, value)
                         .map_err(|trap| trap.at(operation.origin.span()))?;
+                }
+                // **Reached, and not read.** C17 6.3.2.2 discards the
+                // designator a void expression produces, so nothing is loaded
+                // out of the place; `resolve` already loads every pointer on
+                // the way to it, which is the reading C17 6.5.3.2 p4 requires
+                // of the `*` itself.
+                //
+                // Then `reached`, which asks what `resolve` does not.
+                // Reaching a local whose scope has ended is undefined by C17
+                // 6.2.4 p2 whether or not the value is wanted, and an arm that
+                // stopped at `resolve` would be the careless half of a pair
+                // this file has already been bitten by.
+                Element::Evaluate { place, origin } => {
+                    let at =
+                        resolve(&frames, current, place).map_err(|trap| trap.at(origin.span()))?;
+                    reached(&frames, at, "an evaluation of")
+                        .map_err(|trap| trap.at(origin.span()))?;
                 }
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
@@ -647,6 +667,10 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
 /// returned is reported as that rather than as an uninitialised read: a slot
 /// another call is using now holds somebody else's value, and answering it
 /// would be the worst kind of right-looking answer.
+///
+/// The same two questions [`reached`] names, in the same order, and written out
+/// here rather than called because this answers a third thing about the slot
+/// and the three are one `match` the compiler checks.
 fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
     let frame = live(frames, at)?;
     match frames[frame].locals[at.local.index()].clone() {
@@ -662,13 +686,13 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
     }
 }
 
-/// Write a value where a location says, or a stop saying why it cannot be.
+/// Whether a location can be reached at all, whatever is to be done with it.
 ///
-/// The same two questions [`load`] asks, in the same order and for the same
-/// reasons. [`resolve`] checks a frame on each step it loads *through* and not
-/// on the location it hands back, so a write has to ask both itself: whether
-/// the frame the pointer was taken in is still the frame at that depth, and
-/// whether the local still has storage.
+/// **The two questions [`resolve`] does not answer.** It checks a frame on each
+/// step it loads *through* and hands back the location it reached unchecked, so
+/// whoever wants that location asks both itself: whether the frame the pointer
+/// was taken in is still the frame at that depth, and whether the local still
+/// has storage.
 ///
 /// Neither is hypothetical. `int *leak(void) { int x; int *q; q = &x; return
 /// q; } ... *p = 5;` names a depth the stack no longer has, and before this
@@ -676,15 +700,31 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
 /// *p = 1;` names a live frame and a dead slot, and a write let through would
 /// put a value where the next scope at that depth is about to keep one, so the
 /// program that pays for it is not the one that did it.
-fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
+///
+/// `what` is the verb, because reading a place, writing to one and merely
+/// reaching one are three sentences about one location and a reader with a stop
+/// in front of them wants to know which they did.
+///
+/// [`load`] asks the same two and does not call this, which is deliberate: it
+/// answers a third thing about the slot as well, and folding it in would trade
+/// a match arm the compiler checks for a branch nothing could reach. The rule
+/// is stated here and `load` says it is following it.
+fn reached(frames: &[Frame], at: Location, what: &str) -> Result<usize, Trap> {
     let frame = live(frames, at)?;
-    let slot = &mut frames[frame].locals[at.local.index()];
-    if matches!(slot, Slot::Dead) {
-        return Err(Trap::new(
-            "a write to a local whose scope has ended, through a pointer that outlived it",
-        ));
+    if matches!(frames[frame].locals[at.local.index()], Slot::Dead) {
+        return Err(Trap::new(format!(
+            "{what} a local whose scope has ended, through a pointer that outlived it"
+        )));
     }
-    *slot = Slot::Held(value);
+    Ok(frame)
+}
+
+/// Write a value where a location says, or a stop saying why it cannot be.
+///
+/// [`reached`] asks what this has to ask before writing, and says why.
+fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
+    let frame = reached(frames, at, "a write to")?;
+    frames[frame].locals[at.local.index()] = Slot::Held(value);
     Ok(())
 }
 

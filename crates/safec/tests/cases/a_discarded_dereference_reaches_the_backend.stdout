@@ -1,0 +1,14 @@
+target triple = "x86_64-pc-windows-msvc"
+
+define i32 @f(ptr %arg0) {
+entry:
+  %_0 = alloca i32
+  %_1 = alloca ptr
+  store ptr %arg0, ptr %_1
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  %t0 = load i32, ptr %_0
+  ret i32 %t0
+}

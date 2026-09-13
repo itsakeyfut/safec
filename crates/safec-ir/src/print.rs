@@ -254,6 +254,17 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                         dump_place(sources, "Destination", &operation.place, 3, out);
                         dump_rvalue(sources, &operation.value, 3, out);
                     }
+                    // The `Operation` shape without a destination, because
+                    // there is none: the value went nowhere and the place is
+                    // the whole fact. `"Place"` is the label `Rvalue::Address`
+                    // already uses for a place that is not being written to.
+                    Element::Evaluate { place, origin } => {
+                        dump_node(sources, element.name(), origin.span(), 2, out);
+                        write!(out, " {}", origin.name()).expect("writing to a string cannot fail");
+                        out.push('\n');
+
+                        dump_place(sources, "Place", place, 3, out);
+                    }
                     Element::StorageLive { local, origin }
                     | Element::StorageDead { local, origin } => {
                         // The local goes on the kind's own line, the way a

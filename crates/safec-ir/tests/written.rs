@@ -75,6 +75,11 @@ impl Analysis for Written {
         // copy from.
         match element {
             Element::Assign(operation) => value[operation.place.local.index()] = true,
+            // Evaluating a place writes nothing, so nothing has been written.
+            Element::Evaluate {
+                place: _,
+                origin: _,
+            } => {}
             Element::StorageLive { local, origin: _ } => value[local.index()] = false,
             Element::StorageDead { origin: _, local } => value[local.index()] = false,
         }

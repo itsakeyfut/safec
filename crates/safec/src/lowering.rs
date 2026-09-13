@@ -177,6 +177,37 @@ impl Builder {
         self.elements.push(element);
     }
 
+    /// Say that a value nobody wanted was evaluated, where the evaluation is
+    /// the only thing that happened.
+    ///
+    /// C17 6.8.3 p2 evaluates an expression statement as a void expression and
+    /// 6.3.2.2 discards what it yields, and three other places do the same: a
+    /// `for` initialiser, a `for` step, and the left operand of a comma under
+    /// 6.5.17 p2. A cast to `void` is a fourth and cannot be written, because
+    /// the parser does not read a cast; whoever adds one arrives here.
+    ///
+    /// **Only a place reached through a projection.** Anything that needed
+    /// computing left the operation that computed it, and a bare name is left
+    /// alone because no check here would read an element saying it was
+    /// evaluated, not because evaluating one is always defined: 6.3.2.1 p2's
+    /// last sentence makes reading an uninitialised object undefined where its
+    /// address was never taken, and that belongs to an axis with no check.
+    /// What remains is the shape that was silent: `*p;` after a free reported
+    /// nothing at all, because the place went into an operand nobody read
+    /// rather than into an element. [`Element::Evaluate`] carries the rest.
+    fn discarded(&mut self, value: Operand, at: Span) {
+        let Operand::Copy(place) = value else {
+            return;
+        };
+        if place.projection.is_empty() {
+            return;
+        }
+        self.element(Element::Evaluate {
+            place,
+            origin: Origin::Written(at),
+        });
+    }
+
     /// End the current block, and leave none open.
     fn end(&mut self, terminator: Terminator) {
         let block = self.open();
@@ -227,6 +258,15 @@ enum Task {
     FinishPlace(ExprId),
     /// The first operand of a `&&`, `||` or `?:` is done; branch on it.
     Split(ExprId),
+    /// The left operand of a comma is done; say so before the right runs.
+    ///
+    /// Between the two rather than at the end, because what this builds has to
+    /// land where the left operand ran. A comma finishes after its right
+    /// operand, and a right operand can change what the left one said: `*p, p
+    /// = q;` had the element placed after `p` was overwritten, which made a
+    /// proved use of a freed value silent, and `*p, free(p);` had it placed
+    /// after the free, which made defined C an error.
+    Discard(ExprId),
     /// The `then` arm of a `?:` is done; start the `else`.
     Second(ExprId),
     /// The last arm is done; come back together.
@@ -695,7 +735,8 @@ impl Lowering<'_> {
             }
             Stmt::Expression { value, .. } => {
                 if let Some(value) = *value {
-                    self.value(builder, value, diagnostics)?;
+                    let evaluated = self.value(builder, value, diagnostics)?;
+                    builder.discarded(evaluated, self.ast.expr(value).span());
                 }
             }
             Stmt::If {
@@ -777,7 +818,8 @@ impl Lowering<'_> {
             } => {
                 let (initialiser, condition, step, body) = (*initialiser, *condition, *step, *body);
                 if let Some(initialiser) = initialiser {
-                    self.value(builder, initialiser, diagnostics)?;
+                    let evaluated = self.value(builder, initialiser, diagnostics)?;
+                    builder.discarded(evaluated, self.ast.expr(initialiser).span());
                 }
 
                 let header = builder.function.reserve_block();
@@ -806,7 +848,8 @@ impl Lowering<'_> {
                 self.stmt(builder, body, diagnostics)?;
                 if builder.reachable() {
                     if let Some(step) = step {
-                        self.value(builder, step, diagnostics)?;
+                        let evaluated = self.value(builder, step, diagnostics)?;
+                        builder.discarded(evaluated, self.ast.expr(step).span());
                     }
                 }
                 if builder.reachable() {
@@ -858,6 +901,7 @@ impl Lowering<'_> {
                 Task::Split(id) => {
                     self.split(builder, id, &mut tasks, &mut values, diagnostics)?;
                 }
+                Task::Discard(id) => self.discard(builder, id, &mut values),
                 Task::Second(id) => self.second(builder, id, &mut tasks, &mut values),
                 Task::Merge(id) => self.merge(builder, id, &mut values),
             }
@@ -934,9 +978,12 @@ impl Lowering<'_> {
             }
             Expr::Comma { lhs, rhs, .. } => {
                 // 6.5.17 p2: the left is evaluated as a void expression, so its
-                // value is built and dropped rather than not built.
-                tasks.push(Task::Finish(id));
+                // value is built and dropped rather than not built. Dropping it
+                // is [`Task::Discard`]'s, between the two, and there is nothing
+                // left for a `Finish` to do afterwards: the right operand's
+                // value is the comma's and is already where it belongs.
                 tasks.push(Task::Value(*rhs));
+                tasks.push(Task::Discard(id));
                 tasks.push(Task::Value(*lhs));
             }
             // The parser reported whatever made this, and the driver's gate
@@ -1212,15 +1259,13 @@ impl Lowering<'_> {
                 builder.switch(then);
                 values.push(Operand::Copy(Place::local(into)));
             }
-            Expr::Comma { .. } => {
-                let rhs = values.pop().expect("a right operand");
-                values.pop().expect("a left operand");
-                values.push(rhs);
-            }
             // A conditional is answered by `merge` and never asks to finish,
-            // and an `Error` is refused before it can. Both arms are here
-            // because the match is written out rather than wildcarded.
-            Expr::Conditional { .. } | Expr::Error { .. } => {}
+            // an `Error` is refused before it can, and a comma is answered by
+            // `discard` before its right operand is lowered, which leaves that
+            // operand's value already standing as the comma's own. All three
+            // arms are here because the match is written out rather than
+            // wildcarded.
+            Expr::Comma { .. } | Expr::Conditional { .. } | Expr::Error { .. } => {}
         }
 
         Some(())
@@ -1424,6 +1469,32 @@ impl Lowering<'_> {
     }
 
     /// Write the `then` arm of a `?:` and start its `else`.
+    /// The left operand of a comma is done, and nobody wants its value.
+    ///
+    /// C17 6.5.17 p2 evaluates it as a void expression, which is what
+    /// [`Builder::discarded`] records and is the same thing an expression
+    /// statement does. The span is the left operand's own, so `*p, i;`
+    /// underlines `*p` rather than both.
+    ///
+    /// **The other half of a comma is not this precise, and that is #147.**
+    /// `i, *p;` is discarded by the statement, which has the whole comma in
+    /// hand and nothing narrower, so it underlines `i, *p`. Two reviewers
+    /// raised it as one thing: a span that covers more than the sub-expression
+    /// that mattered, which is the same defect #147 records for a controlling
+    /// expression and is settled for all of them there.
+    fn discard(&mut self, builder: &mut Builder, id: ExprId, values: &mut Vec<Operand>) {
+        let Expr::Comma { lhs, .. } = self.ast.expr(id) else {
+            // Only the arm above pushes this, and it pushes it for a comma.
+            // Answering nothing rather than panicking, because what a wrong
+            // task would cost here is one element missing from one block, and
+            // `Expr::Conditional` sets the same precedent one task over.
+            return;
+        };
+        let lhs = *lhs;
+        let value = values.pop().expect("a left operand");
+        builder.discarded(value, self.ast.expr(lhs).span());
+    }
+
     fn second(
         &mut self,
         builder: &mut Builder,
@@ -1674,7 +1745,9 @@ mod tests {
             .iter()
             .filter_map(|element| match element {
                 Element::Assign(operation) => Some(operation),
-                Element::StorageLive { .. } | Element::StorageDead { .. } => None,
+                Element::Evaluate { .. }
+                | Element::StorageLive { .. }
+                | Element::StorageDead { .. } => None,
             })
             .collect()
     }
@@ -1762,7 +1835,7 @@ mod tests {
             .blocks()
             .flat_map(|block| block.elements.iter())
             .filter_map(|element| match element {
-                Element::Assign(_) => None,
+                Element::Assign(_) | Element::Evaluate { .. } => None,
                 Element::StorageLive { local, origin: _ }
                 | Element::StorageDead { local, origin: _ } => {
                     Some((element.name(), local.index()))

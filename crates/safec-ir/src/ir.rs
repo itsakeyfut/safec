@@ -412,7 +412,8 @@ impl Origin {
     }
 }
 
-/// One step of a block: something written, or storage beginning or ending.
+/// One step of a block: something written, something evaluated and thrown
+/// away, or storage beginning or ending.
 ///
 /// Not every step writes a value. An automatic object's storage begins when
 /// control enters the block it belongs to and ends when that block does, and
@@ -431,6 +432,39 @@ impl Origin {
 pub enum Element {
     /// A place, and what is written into it.
     Assign(Operation),
+    /// A place evaluated for its side effects, whose value nobody wanted.
+    ///
+    /// C17 6.8.3 p2 evaluates an expression statement as a void expression and
+    /// 6.3.2.2 discards what it yields. **What it does not do is skip the
+    /// evaluation**, and the evaluation is the whole of what this records:
+    /// 6.5.3.2 p4 makes the unary `*` undefined for an invalid pointer, with a
+    /// footnote naming an address after the end of its object's lifetime among
+    /// them, and nothing about that turns on whether anybody wanted the result.
+    ///
+    /// **Not an [`Self::Assign`] into a temporary**, which would need no new
+    /// kind and no consumer changes at all. An earlier draft argued that C
+    /// performs no read here; that is wrong, and a review caught it. 6.3.2.1
+    /// p2 lists the contexts where an lvalue is not converted and a void
+    /// expression is not among them, and `clang -O0` emits the load, measured.
+    /// What this kind buys is that the reaching is separable from the reading,
+    /// so a consumer can answer for the reaching alone. The interpreter is what
+    /// spends that: its slots model "undefined to read" rather than
+    /// "unspecified value", so reading `int x; int *q = &x; *q;` would stop a
+    /// program C defines.
+    ///
+    /// **Only where the place goes through a projection**, which is a rule
+    /// about what is worth carrying rather than about what C defines.
+    /// Evaluating `p` on its own can be undefined too, by 6.3.2.1 p2's last
+    /// sentence where the object is uninitialised and its address was never
+    /// taken; no check here would read an element saying so, and building one
+    /// anyway re-blesses a third of the corpus's artifacts for a line nothing
+    /// asks about.
+    Evaluate {
+        /// What was evaluated.
+        place: Place,
+        /// Where the expression that was evaluated is written.
+        origin: Origin,
+    },
     /// This local has storage from here on, and nothing in it.
     ///
     /// C17 6.2.4 p6 begins the lifetime at entry into the block rather than at
@@ -469,6 +503,7 @@ impl Element {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Assign(_) => "Operation",
+            Self::Evaluate { .. } => "Evaluate",
             Self::StorageLive { .. } => "StorageLive",
             Self::StorageDead { .. } => "StorageDead",
         }

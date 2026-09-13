@@ -520,6 +520,22 @@ impl Emitter<'_> {
                 self.at = Some(operation.origin.span());
                 self.assign(function, operation, out)
             }
+            // Nothing is written, and in this subset nothing has to be. C
+            // does perform the read, which an earlier comment here denied:
+            // 6.3.2.1 p2 does not except a void expression from lvalue
+            // conversion and `clang -O0` emits the load, measured. It is also
+            // unobservable, so `clang -O2` drops it again, and every type this
+            // backend can hold is in that position.
+            //
+            // `volatile` is where it stops. 6.7.3 p7 requires an expression
+            // referring to such an object to be evaluated strictly, and
+            // `clang -O2` keeps a `load atomic volatile` for `*q;`, measured.
+            // The parser reads no qualifier, so nothing reaching here can be
+            // one yet, and whoever adds the qualifier comes back to this arm.
+            Element::Evaluate {
+                place: _,
+                origin: _,
+            } => Some(()),
             // Nothing is written. LLVM has `llvm.lifetime.start` and `.end` for
             // exactly this, and they buy an optimiser something this backend
             // has no optimiser to give it to, while costing two intrinsic calls

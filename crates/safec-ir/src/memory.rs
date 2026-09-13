@@ -312,6 +312,13 @@ impl Analysis for Allocations<'_> {
         // bank is a field added to a variant that already exists walking past
         // an exhaustive match.
         match element {
+            // Evaluating a place writes nowhere, so no local changes what it
+            // holds and no site changes what is known about it. What this
+            // element is for is read by `dereferenced_in_element` instead.
+            Element::Evaluate {
+                place: _,
+                origin: _,
+            } => {}
             Element::Assign(operation) => {
                 // A write through a projection changes what a pointer points
                 // at rather than which allocation a local holds, and this check
@@ -779,14 +786,23 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// and so is a controlling expression, which needed `Terminator::Branch` to
 /// carry a span before it could be.
 ///
-/// **Two shapes are known to be silence, and that is a boundary rather than a
-/// list of everything outside it.** A pointer read out of another pointer,
-/// `int *p = *pp;`, reaches no site. And a dereference nothing put in the IR
-/// cannot be reached at all: `*p;` on its own is an expression statement whose
-/// value nobody wants, and the lowering leaves no element behind for it, which
-/// is #149 and is not this check's to answer. `docs/diagnostics.md` says what
-/// exit 0 does not mean here, because a boundary that lives only in a comment
-/// is one no user can find.
+/// A place whose value is thrown away is read too, because
+/// [`Element::Evaluate`] exists to say that it was evaluated: `*p;` on its own
+/// used to leave no element at all, so there was nothing here to look at.
+///
+/// **The rule, rather than a list of what falls outside it: a place whose root
+/// reaches no site says nothing, however it came to reach none.** Three ways
+/// are known and a review found the third, which is why this is stated as a
+/// rule now. A pointer read out of another pointer, `int *p = *pp;`, never had
+/// one. A pointer built by taking an address, `int *r = &*p;`, had its
+/// destination cleared, which is #151 and is a lowering that does not apply
+/// C17 6.5.3.2 p3. And a bare name is never given an element at all, so
+/// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
+/// p2 makes undefined and which belongs to an axis with no check.
+/// `docs/diagnostics.md` says what exit 0 does not mean here, because a
+/// boundary that lives only in a comment is one no user can find.
+///
+/// [`Element::Evaluate`]: crate::ir::Element::Evaluate
 fn used(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place)>,
@@ -857,6 +873,11 @@ fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
             places.extend(dereferenced_in_rvalue(&operation.value));
             Some((operation.origin.span(), places))
         }
+        // The element that exists so this can see it. `projected` rather than
+        // the place itself, even though `Element::Evaluate`'s doc says a
+        // producer owes a projection: one rule about what counts as reaching
+        // through a pointer, applied everywhere, beats two that agree today.
+        Element::Evaluate { place, origin } => Some((origin.span(), projected(place))),
         // Storage beginning or ending reads nothing through anything.
         Element::StorageLive {
             local: _,
