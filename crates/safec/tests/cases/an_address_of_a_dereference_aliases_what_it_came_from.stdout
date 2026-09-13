@@ -1,0 +1,46 @@
+Target "x86_64-pc-windows-msvc"
+Function an_address_of_a_dereference_aliases_what_it_came_from.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_address_of_a_dereference_aliases_what_it_came_from.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_address_of_a_dereference_aliases_what_it_came_from.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "void"
+  Local "_5" "int"
+  Block "bb0" entry
+    Call an_address_of_a_dereference_aliases_what_it_came_from.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation an_address_of_a_dereference_aliases_what_it_came_from.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Operation an_address_of_a_dereference_aliases_what_it_came_from.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Call an_address_of_a_dereference_aliases_what_it_came_from.c:6:5 "free" "bb2"
+      Destination "_4"
+      Copy "_1"
+  Block "bb2"
+    Operation an_address_of_a_dereference_aliases_what_it_came_from.c:7:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation an_address_of_a_dereference_aliases_what_it_came_from.c:7:5 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Operation an_address_of_a_dereference_aliases_what_it_came_from.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

@@ -1104,14 +1104,44 @@ impl Lowering<'_> {
                         values.push(Operand::Copy(place));
                     }
                     AstUnOp::AddrOf => {
-                        let place = places.pop().expect("a place");
-                        let into = self.temporary(builder, id, diagnostics)?;
-                        builder.push(Operation {
-                            place: Place::local(into),
-                            value: Rvalue::Address(place),
-                            origin: Origin::Written(span),
-                        });
-                        values.push(Operand::Copy(Place::local(into)));
+                        let mut place = places.pop().expect("a place");
+                        // **`&*E` is `E`, and `&E1[E2]` is `E1 + E2`.** C17
+                        // 6.5.3.2 p3 says that where the operand of `&` is the
+                        // result of a unary `*`, neither operator is evaluated
+                        // and the result is as if both were omitted, and that
+                        // where it is the result of `[]`, the `&` goes and the
+                        // `[]` becomes a `+`.
+                        //
+                        // One rule reaches both, because a subscript is already
+                        // lowered as the addition 6.5.2.1 p2 defines it as: both
+                        // arrive here as a place whose last step is a `Deref`,
+                        // and taking that step off leaves the place whose value
+                        // is the answer. `&c` has no step to take off and is the
+                        // case where an address really is taken.
+                        //
+                        // Without this, `&*p` built an address of what `p`
+                        // reaches, which lost the pointer and made `*&*p;` after
+                        // a free silent; and it tainted `p`'s own allocation,
+                        // which put a "may free it again" warning on a program
+                        // with one `free` in it.
+                        //
+                        // The clause's two exceptions cost nothing here. The
+                        // constraints still apply and `types.rs` is what applies
+                        // them; the result is not an lvalue, and `begin_place`
+                        // has no arm for an address, so `&*p = q;` is refused
+                        // with `SC0304` exactly as it was.
+                        if matches!(place.projection.last(), Some(Projection::Deref)) {
+                            place.projection.pop();
+                            values.push(Operand::Copy(place));
+                        } else {
+                            let into = self.temporary(builder, id, diagnostics)?;
+                            builder.push(Operation {
+                                place: Place::local(into),
+                                value: Rvalue::Address(place),
+                                origin: Origin::Written(span),
+                            });
+                            values.push(Operand::Copy(Place::local(into)));
+                        }
                     }
                     AstUnOp::PreInc | AstUnOp::PreDec | AstUnOp::PostInc | AstUnOp::PostDec => {
                         let place = places.pop().expect("a place");
