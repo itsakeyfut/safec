@@ -1,0 +1,43 @@
+Target "x86_64-pc-windows-msvc"
+Function a_comma_whose_right_operand_replaces_the_pointer.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_comma_whose_right_operand_replaces_the_pointer.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_comma_whose_right_operand_replaces_the_pointer.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "void"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Call a_comma_whose_right_operand_replaces_the_pointer.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_comma_whose_right_operand_replaces_the_pointer.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call a_comma_whose_right_operand_replaces_the_pointer.c:5:5 "free" "bb2"
+      Destination "_4"
+      Copy "_2"
+  Block "bb2"
+    Evaluate a_comma_whose_right_operand_replaces_the_pointer.c:6:5 written
+      Place "_2"
+        Deref
+    Operation a_comma_whose_right_operand_replaces_the_pointer.c:6:9 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_comma_whose_right_operand_replaces_the_pointer.c:6:9 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Operation a_comma_whose_right_operand_replaces_the_pointer.c:7:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

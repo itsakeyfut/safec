@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_comma_that_frees_after_it_reads.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_comma_that_frees_after_it_reads.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_comma_that_frees_after_it_reads.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Block "bb0" entry
+    Call a_comma_that_frees_after_it_reads.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_comma_that_frees_after_it_reads.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Evaluate a_comma_that_frees_after_it_reads.c:5:5 written
+      Place "_1"
+        Deref
+    Call a_comma_that_frees_after_it_reads.c:5:9 "free" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Operation a_comma_that_frees_after_it_reads.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

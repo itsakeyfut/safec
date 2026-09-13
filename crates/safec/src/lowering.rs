@@ -254,6 +254,15 @@ enum Task {
     FinishPlace(ExprId),
     /// The first operand of a `&&`, `||` or `?:` is done; branch on it.
     Split(ExprId),
+    /// The left operand of a comma is done; say so before the right runs.
+    ///
+    /// Between the two rather than at the end, because what this builds has to
+    /// land where the left operand ran. A comma finishes after its right
+    /// operand, and a right operand can change what the left one said: `*p, p
+    /// = q;` had the element placed after `p` was overwritten, which made a
+    /// proved use of a freed value silent, and `*p, free(p);` had it placed
+    /// after the free, which made defined C an error.
+    Discard(ExprId),
     /// The `then` arm of a `?:` is done; start the `else`.
     Second(ExprId),
     /// The last arm is done; come back together.
@@ -888,6 +897,7 @@ impl Lowering<'_> {
                 Task::Split(id) => {
                     self.split(builder, id, &mut tasks, &mut values, diagnostics)?;
                 }
+                Task::Discard(id) => self.discard(builder, id, &mut values),
                 Task::Second(id) => self.second(builder, id, &mut tasks, &mut values),
                 Task::Merge(id) => self.merge(builder, id, &mut values),
             }
@@ -964,9 +974,12 @@ impl Lowering<'_> {
             }
             Expr::Comma { lhs, rhs, .. } => {
                 // 6.5.17 p2: the left is evaluated as a void expression, so its
-                // value is built and dropped rather than not built.
-                tasks.push(Task::Finish(id));
+                // value is built and dropped rather than not built. Dropping it
+                // is [`Task::Discard`]'s, between the two, and there is nothing
+                // left for a `Finish` to do afterwards: the right operand's
+                // value is the comma's and is already where it belongs.
                 tasks.push(Task::Value(*rhs));
+                tasks.push(Task::Discard(id));
                 tasks.push(Task::Value(*lhs));
             }
             // The parser reported whatever made this, and the driver's gate
@@ -1242,22 +1255,13 @@ impl Lowering<'_> {
                 builder.switch(then);
                 values.push(Operand::Copy(Place::local(into)));
             }
-            Expr::Comma { lhs, .. } => {
-                let lhs = *lhs;
-                let rhs = values.pop().expect("a right operand");
-                let discarded = values.pop().expect("a left operand");
-                // C17 6.5.17 p2 evaluates the left as a void expression, which
-                // is the same discarding an expression statement does and the
-                // same thing has to be said about it. The span is the left
-                // operand's own, so `*p, i;` underlines `*p` where a statement
-                // holding the whole comma could only underline both.
-                builder.discarded(discarded, self.ast.expr(lhs).span());
-                values.push(rhs);
-            }
             // A conditional is answered by `merge` and never asks to finish,
-            // and an `Error` is refused before it can. Both arms are here
-            // because the match is written out rather than wildcarded.
-            Expr::Conditional { .. } | Expr::Error { .. } => {}
+            // an `Error` is refused before it can, and a comma is answered by
+            // `discard` before its right operand is lowered, which leaves that
+            // operand's value already standing as the comma's own. All three
+            // arms are here because the match is written out rather than
+            // wildcarded.
+            Expr::Comma { .. } | Expr::Conditional { .. } | Expr::Error { .. } => {}
         }
 
         Some(())
@@ -1461,6 +1465,32 @@ impl Lowering<'_> {
     }
 
     /// Write the `then` arm of a `?:` and start its `else`.
+    /// The left operand of a comma is done, and nobody wants its value.
+    ///
+    /// C17 6.5.17 p2 evaluates it as a void expression, which is what
+    /// [`Builder::discarded`] records and is the same thing an expression
+    /// statement does. The span is the left operand's own, so `*p, i;`
+    /// underlines `*p` rather than both.
+    ///
+    /// **The other half of a comma is not this precise, and that is #147.**
+    /// `i, *p;` is discarded by the statement, which has the whole comma in
+    /// hand and nothing narrower, so it underlines `i, *p`. Two reviewers
+    /// raised it as one thing: a span that covers more than the sub-expression
+    /// that mattered, which is the same defect #147 records for a controlling
+    /// expression and is settled for all of them there.
+    fn discard(&mut self, builder: &mut Builder, id: ExprId, values: &mut Vec<Operand>) {
+        let Expr::Comma { lhs, .. } = self.ast.expr(id) else {
+            // Only the arm above pushes this, and it pushes it for a comma.
+            // Answering nothing rather than panicking, because what a wrong
+            // task would cost here is one element missing from one block, and
+            // `Expr::Conditional` sets the same precedent one task over.
+            return;
+        };
+        let lhs = *lhs;
+        let value = values.pop().expect("a left operand");
+        builder.discarded(value, self.ast.expr(lhs).span());
+    }
+
     fn second(
         &mut self,
         builder: &mut Builder,
