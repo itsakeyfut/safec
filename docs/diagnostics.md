@@ -75,13 +75,13 @@ through a copy, through pointer arithmetic and into a controlling expression,
 so `q = p; *q`, `p[i]`, `if (*p)` and `*p;` are all read: the last of those
 throws its value away, and C17 6.5.3.2 p4 makes the dereference undefined all
 the same. What it does not read is a place it follows no allocation for, and
-that is the rule rather than a list. Three ways to reach one are known: a
-pointer read out of another pointer, `int *p = *pp;`, which never had a site; a
-pointer built with `&`, so `int *r = &*p;` loses one that C17 6.5.3.2 p3 says
-is the same pointer, which is issue #151; and a name with nothing dereferenced,
-so `free(p); p;` is quiet about reading an indeterminate pointer, which is
-undefined by 6.2.4 p2 and belongs to an axis this compiler has no check for
-yet. This is written here rather than only beside the code because a boundary
+that is the rule rather than a list. Two ways to reach one are known: a
+pointer read out of another pointer, `int *p = *pp;`, which never had a site;
+and a name with nothing dereferenced, so `free(p); p;` is quiet about reading
+an indeterminate pointer, which is undefined by 6.2.4 p2 and belongs to an axis
+this compiler has no check for yet. `int *r = &*p;` used to be a third and is
+not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
+pointer, so `r` carries what `p` carried. This is written here rather than only beside the code because a boundary
 a user cannot find is one they will discover by being wrong about it, and
 [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that silence
 is the most expensive answer this compiler gives.

@@ -791,12 +791,11 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// used to leave no element at all, so there was nothing here to look at.
 ///
 /// **The rule, rather than a list of what falls outside it: a place whose root
-/// reaches no site says nothing, however it came to reach none.** Three ways
-/// are known and a review found the third, which is why this is stated as a
-/// rule now. A pointer read out of another pointer, `int *p = *pp;`, never had
-/// one. A pointer built by taking an address, `int *r = &*p;`, had its
-/// destination cleared, which is #151 and is a lowering that does not apply
-/// C17 6.5.3.2 p3. And a bare name is never given an element at all, so
+/// reaches no site says nothing, however it came to reach none.** Two ways are
+/// known, and the third was closed by making the lowering apply C17 6.5.3.2
+/// p3, so `int *r = &*p;` now copies the pointer rather than taking an address
+/// of what it reaches. A pointer read out of another pointer, `int *p = *pp;`,
+/// never had a site. And a bare name is never given an element at all, so
 /// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
 /// p2 makes undefined and which belongs to an axis with no check.
 /// `docs/diagnostics.md` says what exit 0 does not mean here, because a
