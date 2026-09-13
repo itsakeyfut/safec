@@ -859,6 +859,13 @@ fn used(
         // and the pair that should have collapsed was not adjacent for
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
+        //
+        // **Both halves of the key, and a case for each.** Keying on the span
+        // alone collapses `*p = *q;` after two frees into one report, which
+        // `two_pointers_used_after_a_free_on_one_line` fails on. Keying on the
+        // place alone collapses `*p = 1; *p = 2;` after one free into one,
+        // which `one_pointer_used_after_a_free_on_two_lines` fails on. Neither
+        // case reaches the other's mutation, which is why there are two.
         let standing = said
             .iter()
             .position(|(said_at, said_place, _)| *said_at == at && said_place == place);

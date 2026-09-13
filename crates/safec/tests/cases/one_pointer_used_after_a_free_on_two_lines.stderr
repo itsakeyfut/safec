@@ -1,0 +1,29 @@
+error[SC0402]: this uses a value after it was freed
+   ╭─[ one_pointer_used_after_a_free_on_two_lines.c:6:5 ]
+   │
+ 4 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 6 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
+error[SC0402]: this uses a value after it was freed
+   ╭─[ one_pointer_used_after_a_free_on_two_lines.c:7:5 ]
+   │
+ 4 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+   │ 
+ 7 │     *p = 2;
+   │     ───┬──  
+   │        ╰──── used here
+───╯
+  = note: this check belongs to safety level 1
