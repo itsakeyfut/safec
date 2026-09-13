@@ -584,8 +584,12 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
 
-        // Per function, because a span belongs to one of them.
-        let mut said: Vec<(Span, Place)> = Vec::new();
+        // Per function, because a span belongs to one of them. The third
+        // field is where in `findings` the report standing at that caret is,
+        // so that a proof arriving later can replace a suspicion: `findings`
+        // is appended to and assigned into, never removed from or reordered,
+        // until the sort at the end of this function.
+        let mut said: Vec<(Span, Place, usize)> = Vec::new();
 
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
@@ -809,7 +813,7 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// [`Element::Evaluate`]: crate::ir::Element::Evaluate
 fn used(
     findings: &mut Vec<Finding>,
-    said: &mut Vec<(Span, Place)>,
+    said: &mut Vec<(Span, Place, usize)>,
     at: Option<(Span, Vec<&Place>)>,
     known: &Known,
 ) {
@@ -832,20 +836,27 @@ fn used(
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
         //
-        // **The first of a pair wins, whatever either concluded**, which is
-        // wrong where the second proved what the first could not: both
-        // operands of a `||` are written into one temporary at the whole
-        // expression's span, so `*p || (free(p), *p)` after an escape is a
-        // warning and exit 0 where an error was there to be had. That is
-        // #156, and fixing it is a change to what this records rather than to
-        // whether it records.
-        if said.contains(&(at, place.clone())) {
-            continue;
-        }
+        // **Both halves of the key, and a case for each.** Keying on the span
+        // alone collapses `*p = *q;` after two frees into one report, which
+        // `two_pointers_used_after_a_free_on_one_line` fails on. Keying on the
+        // place alone collapses `*p = 1; *p = 2;` after one free into one,
+        // which `one_pointer_used_after_a_free_on_two_lines` fails on. Neither
+        // case reaches the other's mutation, which is why there are two.
+        let standing = said
+            .iter()
+            .position(|(said_at, said_place, _)| *said_at == at && said_place == place);
 
         let sites = known.sites_of(place.local).map(Reached::Site);
         let Some(verdict) = verdict(sites, known) else {
             continue;
+        };
+
+        let finding = Finding {
+            kind: Kind::UseAfterFree,
+            conclusion: verdict.conclusion,
+            at,
+            freed: verdict.freed,
+            made: verdict.made,
         };
 
         // **Recorded where the report is made, and not a line earlier.**
@@ -858,14 +869,57 @@ fn used(
         // expression's span, and `if (*p || (free(p), *p))` was exit 0 with no
         // output: a proved use of a freed value, silent, which is the worst
         // answer `docs/safety-model.md` allows for.
-        said.push((at, place.clone()));
-        findings.push(Finding {
-            kind: Kind::UseAfterFree,
-            conclusion: verdict.conclusion,
-            at,
-            freed: verdict.freed,
-            made: verdict.made,
-        });
+        let Some(standing) = standing else {
+            said.push((at, place.clone(), findings.len()));
+            findings.push(finding);
+            continue;
+        };
+
+        // **A proof replaces the suspicion standing at this caret**, rather
+        // than the first report of a pair winning whatever it concluded.
+        // `int **q = &p; if (*p || (free(p), *p))` reports the first read as
+        // unproven, because taking a local's address is what makes its sites
+        // unknown, and the second read is proved. Keeping the first threw the
+        // proof away and exited 0, which is the silence the paragraph above
+        // describes arriving through the other door. [`supersedes`] is the
+        // rule, and says why only this direction replaces anything.
+        // The index `said` carries, not the position within `said`: `findings`
+        // holds what every caret in this function has said, so anything
+        // reported between the pair sits between them. Taking the wrong one
+        // overwrites a finding nobody was replacing, and
+        // `a_proof_replaces_the_suspicion_at_one_caret` puts a double free in
+        // front of the pair so that the two indices differ.
+        let index = said[standing].2;
+        if supersedes(findings[index].conclusion, finding.conclusion) {
+            findings[index] = finding;
+        }
+    }
+}
+
+/// Whether a report at a caret replaces the one already standing there.
+///
+/// **A proof replaces a suspicion, and nothing else replaces anything.** Where
+/// two proofs meet at one caret the first stands: both are true of the same
+/// place and there is nothing to choose between them. [`used`] is where a pair
+/// at one caret comes from and why one is collapsed at all.
+///
+/// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
+/// derive `Ord` and should not: its three variants are three answers rather
+/// than three degrees, and `Safe` is not a weaker `Unsafe`. The pairs that
+/// cannot arise say so rather than falling through, because RK-034 in the
+/// review knowledge bank is a fallthrough in this file that was reached by
+/// "proved" and by "gave up" at once and reported the second as the first.
+fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
+    match (standing, new) {
+        // First, because a wildcard below would absorb them. [`verdict`]
+        // answers `None` where there is nothing to report, so no `Finding`
+        // carries `Safe` and no verdict reaching here concludes one; written
+        // last, `(Conclusion::Unsafe, _)` answered `(Unsafe, Safe)` in silence
+        // while this said every impossible pair is declared.
+        (Conclusion::Safe, _) => unreachable!("a finding standing at a caret concluded Safe"),
+        (_, Conclusion::Safe) => unreachable!("a verdict about a dereference concluded Safe"),
+        (Conclusion::Unknown, Conclusion::Unsafe) => true,
+        (Conclusion::Unknown, Conclusion::Unknown) | (Conclusion::Unsafe, _) => false,
     }
 }
 

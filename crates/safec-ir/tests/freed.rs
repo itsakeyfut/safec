@@ -28,7 +28,7 @@ struct Names {
     function: Span,
     /// In the order they appear in the file, so `at[0]` is earlier than `at[1]`
     /// by the rule the join orders spans with.
-    at: [Span; 6],
+    at: [Span; 7],
     /// What a branch's controlling expression is, where one is needed and
     /// nothing asserts on it.
     ///
@@ -50,7 +50,7 @@ struct Names {
 /// places for that ordering to be about anything.
 fn sources() -> (SourceMap, Names) {
     let mut map = SourceMap::new();
-    let file = map.add_virtual("t.c", "free malloc f a b c d e g h\n");
+    let file = map.add_virtual("t.c", "free malloc f a b c d e g h i\n");
 
     let names = Names {
         free: Span::new(file, 0, 4),
@@ -63,6 +63,7 @@ fn sources() -> (SourceMap, Names) {
             Span::new(file, 20, 21),
             Span::new(file, 22, 23),
             Span::new(file, 24, 25),
+            Span::new(file, 28, 29),
         ],
         asked: Span::new(file, 26, 27),
     };
@@ -480,6 +481,22 @@ fn write(through: LocalId, from: LocalId, at: Span, then: BlockId) -> Block {
         elements: vec![Element::Assign(Operation {
             place: deref(through),
             value: Rvalue::Use(Operand::Copy(Place::local(from))),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// `to = &of;`, in a block that falls through to `then`.
+///
+/// The one shape that makes a local's sites unknown: anything holding the
+/// address can write a different allocation into it, and this check does not
+/// follow what a pointer points at.
+fn address_of(to: LocalId, of: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Address(Place::local(of)),
             origin: Origin::Written(at),
         })],
         terminator: Terminator::Goto(then),
@@ -1007,4 +1024,147 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
         Some(names.at[0]),
         "the evaluation lost nothing"
     );
+}
+
+/// A proof at a caret replaces the suspicion already standing there.
+///
+/// **Two dereferences of one place can share a caret**, because both operands
+/// of a `&&` or a `||` are written into one temporary at the whole
+/// expression's span, and `used` collapses such a pair into one report. Which
+/// of the two survives is the question: the first read here is unproven,
+/// because taking the local's address made its sites unknown, and the second
+/// is proved, because a `free` writes `Freed` over an unknown site. Keeping
+/// the first was a warning and exit 0 on a use of a freed value this check had
+/// proved.
+///
+/// **Written as IR rather than as C on purpose.** The C that reaches this
+/// today does so because the lowering gives both operands of a `||` the whole
+/// expression's span, and #147 is open to narrow exactly that. A guard a
+/// caret-precision change can retire is not a guard for a rule about what this
+/// check is allowed to be silent about, and `docs/c-family.md` asks that
+/// another frontend be able to build this IR with no C frontend present.
+///
+/// **An unrelated report comes first on purpose.** What `said` carries for a
+/// caret is where in `findings` the report standing there is, which is not the
+/// caret's own position in `said`: anything reported before the pair sits
+/// between the two numbers. The double free of `other` is that anything, and
+/// without it both numbers are zero and taking the wrong one is invisible.
+///
+/// Mutation: have `supersedes` answer `false` for `(Unknown, Unsafe)`. The
+/// conclusion stays `Unknown` and this fails.
+///
+/// Mutation: read the position in `said` rather than the index it carries,
+/// `let index = standing;`. The proof overwrites the double free of `other`
+/// instead of the suspicion, so a finding is destroyed and this fails on the
+/// length.
+#[test]
+fn a_proof_replaces_the_suspicion_at_one_caret() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let other = function.push_local(int);
+    let held = function.push_local(int);
+    let escape = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate_other = function.reserve_block();
+    let release_other = function.reserve_block();
+    let again = function.reserve_block();
+    let allocate = function.reserve_block();
+    let escaped = function.reserve_block();
+    let suspect = function.reserve_block();
+    let release = function.reserve_block();
+    let proof = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // A defect of its own, reported before the pair below and nothing to do
+    // with it. It is here so that the report standing at the pair's caret is
+    // not the first thing in `findings`.
+    function.fill_block(
+        allocate_other,
+        malloc(&callees, other, names.at[0], release_other),
+    );
+    function.fill_block(release_other, free(&callees, other, names.at[1], again));
+    function.fill_block(again, free(&callees, other, names.at[2], allocate));
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[3], escaped));
+    function.fill_block(escaped, address_of(escape, held, names.at[4], suspect));
+    function.fill_block(suspect, read(value, held, names.at[5], release));
+    function.fill_block(release, free(&callees, held, names.at[6], proof));
+    // The same span as the unproven read, which is what makes the two one
+    // report and is the whole of what this test is about.
+    function.fill_block(proof, read(value, held, names.at[5], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    // Three, and the first has to survive untouched. Freeing a site nothing
+    // can prove anything about is itself a `DoubleFree` this check cannot rule
+    // out, which is the third; that is correct and is not what this test is
+    // for, and asserting on it rather than filtering it away is what says so.
+    assert_eq!(found.len(), 3, "{found:?}");
+
+    assert_eq!(found[0].kind, Kind::DoubleFree, "not the one replaced");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[2]);
+
+    assert_eq!(found[1].kind, Kind::UseAfterFree);
+    assert_eq!(
+        found[1].conclusion,
+        Conclusion::Unsafe,
+        "the proof survives"
+    );
+    assert_eq!(found[1].at, names.at[5], "one caret, not two");
+    assert_eq!(found[1].freed, Some(names.at[6]));
+    assert_eq!(
+        found[1].made, None,
+        "the escape lost where the allocation came from"
+    );
+
+    assert_eq!(found[2].kind, Kind::DoubleFree);
+    assert_eq!(found[2].conclusion, Conclusion::Unknown);
+    assert_eq!(found[2].at, names.at[6]);
+}
+
+/// A suspicion does not displace the proof already standing at a caret.
+///
+/// The other direction of the same rule, and the one a collapse gets wrong by
+/// replacing whenever the pair disagrees rather than only when the new report
+/// proves what the standing one could not. RK-038 in the review knowledge bank
+/// is why both are written: a rule that collapses two disagreeing values has
+/// two mutations, and a case that reaches one of them says nothing about the
+/// other.
+///
+/// Mutation: have `supersedes` answer `true` for `(Unsafe, Unknown)`. The
+/// conclusion drops to `Unknown` and the spans it carries go with it, so this
+/// fails three times over.
+#[test]
+fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let escape = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let proof = function.reserve_block();
+    let escaped = function.reserve_block();
+    let suspect = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], proof));
+    function.fill_block(proof, read(value, held, names.at[2], escaped));
+    function.fill_block(escaped, address_of(escape, held, names.at[3], suspect));
+    function.fill_block(suspect, read(value, held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe, "the proof stands");
+    assert_eq!(found[0].at, names.at[2]);
+    assert_eq!(found[0].freed, Some(names.at[1]), "and keeps its spans");
+    assert_eq!(found[0].made, Some(names.at[0]));
 }
