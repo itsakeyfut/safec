@@ -1,13 +1,10 @@
 error[SC0401]: this frees a value that was freed already
-   ╭─[ a_double_free_is_found_on_a_backend_run.c:6:5 ]
+   ╭─[ a_free_of_either_of_two_locals_names_no_allocation.c:9:5 ]
    │
- 4 │     int *p = malloc(4);
-   │              ────┬────  
-   │                  ╰────── allocated here
- 5 │     free(p);
+ 8 │     free(r);
    │     ───┬───  
    │        ╰───── freed here
- 6 │     free(p);
+ 9 │     free(r);
    │     ───┬───  
    │        ╰───── freed again here
 ───╯

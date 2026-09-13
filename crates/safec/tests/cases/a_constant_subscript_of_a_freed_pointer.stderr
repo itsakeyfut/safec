@@ -1,14 +1,14 @@
-error[SC0401]: this frees a value that was freed already
-   ╭─[ a_double_free_is_found_on_a_backend_run.c:6:5 ]
+error[SC0402]: this uses a value after it was freed
+   ╭─[ a_constant_subscript_of_a_freed_pointer.c:6:5 ]
    │
- 4 │     int *p = malloc(4);
+ 4 │     int *p = malloc(8);
    │              ────┬────  
    │                  ╰────── allocated here
  5 │     free(p);
    │     ───┬───  
    │        ╰───── freed here
- 6 │     free(p);
-   │     ───┬───  
-   │        ╰───── freed again here
+ 6 │     p[0] = 42;
+   │     ────┬────  
+   │         ╰────── used here
 ───╯
   = note: this check belongs to safety level 1

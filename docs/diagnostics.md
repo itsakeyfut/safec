@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304` |
-| `SC04xx` | memory | `SC0401` |
+| `SC04xx` | memory | `SC0401`, `SC0402` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -58,10 +58,29 @@ records why the prefix is this one and what was rejected.
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
 the question about, in the order it names them, so they were reserved before
-anything could emit from them. The first of the four now does: `SC0401` is a
-value freed where it may already have been freed, and it is the first code in
-this compiler that says something about what a program does rather than about
+anything could emit from them. The first of the four now does, twice:
+`SC0401` is a value freed where it may already have been freed, and `SC0402` is
+a value used where it may already have been freed. They are the first codes in
+this compiler that say something about what a program does rather than about
 how it is written.
+
+The two are one check answering about two things it found, rather than two
+checks, which is why they arrived one after the other and share every secondary
+label they carry. They take separate codes because a code is the handle a reader
+searches with and a suppression list keys on, and freeing twice and reading
+through a dangling pointer are two classes of program to look for.
+
+**What `SC0402` not being emitted does not mean.** The check follows a pointer
+through a copy and through pointer arithmetic, so `q = p; *q` and `p[i]` are
+both read. It does not follow one out of another pointer, so `int *p = *pp;`
+leaves nothing to say about a later `*p`, and it says nothing about a
+dereference inside a controlling expression, because `Terminator::Branch`
+carries no span to put a caret on and a caret in the wrong place is worse than
+none. So `free(p); if (*p) {}` compiles quietly today, and issue #141 is what
+closes it. This is written here rather than only beside the code because a
+boundary a user cannot find is one they will discover by being wrong about it,
+and [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that
+silence is the most expensive answer this compiler gives.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from
@@ -106,13 +125,15 @@ way the lowering's `SC0304` does.
 The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
 all, so the code is attached where the diagnostic is built.
 
-**`SC0401` is a third kind and is why the count needs a second command.** It is
-built with `Diagnostic::concluded` rather than `Diagnostic::error`, because what
+**`SC0401` and `SC0402` are a third kind and are why the count needs a second
+command.** Both are built by one function, `memory_finding`, with
+`Diagnostic::concluded` rather than `Diagnostic::error`, because what
 a safety check answers is a [conclusion](safety-model.md#safe-unsafe-unknown)
 and the severity follows from it: the same finding is an error or a warning
 depending on what could be proved, so the constructor that decides has to be
-the one that reads the conclusion. It is made in `crates/safec-ir`, which
-cannot see a `Diagnostic` either, and for the same reason as the backend's.
+the one that reads the conclusion. The finding is made in `crates/safec-ir`,
+which cannot see a `Diagnostic` either, and for the same reason as the
+backend's.
 
 **The count is checked by nobody and has been wrong twice.** It said six while
 `driver.rs` built seven, from the change that added a refusal without coming
@@ -129,13 +150,18 @@ A number in prose about code in another file is exactly RK-017's shape, and two
 commands settle this one, which is one more than it used to take:
 
 ```sh
-grep -c "Diagnostic::error"     crates/safec/src/driver.rs   # the twelve
-grep -c "Diagnostic::concluded" crates/safec/src/driver.rs   # what a check answers
+grep -c "Diagnostic::error("     crates/safec/src/driver.rs   # the twelve
+grep -c "Diagnostic::concluded(" crates/safec/src/driver.rs   # what a check answers
 ```
 
 The second exists because a safety check does not build its diagnostic the same
 way, and a count that runs only the first will be wrong again the moment the
 next check lands.
+
+The open parenthesis is not decoration. Without it both commands count the
+prose beside the code as well as the code, and the second went from answering
+one to answering three the moment a comment named the constructor it was
+counting. A command that a comment can move is not settling anything.
 
 ## Where this lives now
 

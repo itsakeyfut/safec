@@ -1,8 +1,14 @@
-//! Whether a program frees one allocation twice.
+//! Whether a program frees one allocation twice, or uses one after it was
+//! freed.
 //!
-//! The first check on [the safety model]'s memory axis, and the first thing
+//! The first checks on [the safety model]'s memory axis, and the first thing
 //! this compiler says about what a C program *does* rather than about how it is
 //! written.
+//!
+//! **Two answers out of one walk.** They read one lattice: what a free does to
+//! a site is what makes a later use of it a defect, so computing the states
+//! twice would be the same computation twice and a second chance for the two
+//! copies to disagree. [`Kind`] is how the caller tells them apart.
 //!
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
@@ -29,7 +35,9 @@
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
-use crate::ir::{Element, FuncId, Function, LocalId, Operand, Rvalue, Terminator, TranslationUnit};
+use crate::ir::{
+    Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit,
+};
 use crate::source::{SourceMap, Span};
 
 /// What this check can read in a callee's name.
@@ -55,8 +63,13 @@ enum Callee {
 /// What is known about the allocation one site stands for.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SiteState {
-    /// Not freed on any path that reaches here.
-    Live,
+    /// Not freed on any path that reaches here, and where it came from.
+    ///
+    /// `None` where this check did not see the allocation happen: a parameter,
+    /// whose allocation is a caller's, and every local nothing has allocated
+    /// into. The diagnostic leaves its `allocated here` label off rather than
+    /// pointing somewhere it guessed.
+    Live(Option<Span>),
     /// Freed, and where the earliest free reaching here is.
     ///
     /// Earliest by position rather than by which path arrived first.
@@ -75,7 +88,12 @@ enum SiteState {
     /// the answer is whichever path the worklist reached last, which is stable
     /// for one program and arbitrary between two that differ only in the order
     /// their blocks were built. `a_join_names_the_earlier_free` is the guard.
-    Freed(Span),
+    Freed {
+        /// Where the allocation came from, on the same terms as [`Self::Live`].
+        made: Option<Span>,
+        /// The earliest free reaching here.
+        freed: Span,
+    },
     /// Freed on one path and not on another, or handed to a call this check
     /// cannot read.
     Unknown,
@@ -85,10 +103,36 @@ impl SiteState {
     /// The two together, which is `Unknown` unless they agree.
     fn joined(self, other: Self) -> Self {
         match (self, other) {
-            (Self::Live, Self::Live) => Self::Live,
-            (Self::Freed(here), Self::Freed(there)) => Self::Freed(earlier(here, there)),
+            (Self::Live(here), Self::Live(there)) => Self::Live(same(here, there)),
+            (
+                Self::Freed {
+                    made: here,
+                    freed: from_here,
+                },
+                Self::Freed {
+                    made: there,
+                    freed: from_there,
+                },
+            ) => Self::Freed {
+                made: same(here, there),
+                freed: earlier(from_here, from_there),
+            },
             _ => Self::Unknown,
         }
+    }
+}
+
+/// Where an allocation came from, where two paths agree about it.
+///
+/// `None` where they do not, which only ever loses what was known and so cannot
+/// cycle. Two paths reaching one site with two different allocations is not a
+/// shape the frontend produces, because a site is the local a call writes into
+/// and each call has its own; the type allows it and so this answers for it
+/// rather than picking one and being wrong on the day something else does.
+fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
+    match (here, there) {
+        (Some(here), Some(there)) if here == there => Some(here),
+        _ => None,
     }
 }
 
@@ -185,7 +229,7 @@ impl Allocations<'_> {
         for argument in arguments {
             let place = match argument {
                 // Not a pointer that went missing. `free(0)` is the case, and
-                // C17 7.22.3.3 p1 makes it do nothing, so it is written on
+                // C17 7.22.3.3 p2 makes it do nothing, so it is written on
                 // purpose and is not something this check lost track of.
                 Operand::Constant(_) => continue,
                 Operand::Copy(place) => place,
@@ -216,8 +260,9 @@ impl Analysis for Allocations<'_> {
         let locals = function.locals().len();
         // Each local's set of sites only grows, so it takes at most one step
         // per site, and a site is a local. Each site's state walks `Live` to
-        // `Freed` to `Unknown`, and its span can only move to an earlier one,
-        // which it can do at most once per site that frees. Generous rather
+        // `Freed` to `Unknown`; its `freed` span can only move to an earlier
+        // one, which it can do at most once per site that frees; and its `made`
+        // span can only fall from `Some` to `None`, once. Generous rather
         // than tight, which is the direction `Analysis::height` says to err in:
         // answering too low stops a correct analysis.
         //
@@ -228,13 +273,16 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals + locals * (locals + 2)
+        locals * locals + locals * (locals + 3)
     }
 
     fn on_entry(&self) -> Self::Value {
         let mut known = Known {
             points_to: vec![vec![false; self.locals]; self.locals],
-            state: vec![SiteState::Live; self.locals],
+            // Nothing has allocated into any of these yet, so none of them can
+            // say where it came from. A parameter stays this way: its
+            // allocation happened somewhere this check cannot see.
+            state: vec![SiteState::Live(None); self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -282,13 +330,57 @@ impl Analysis for Allocations<'_> {
                         value.points_to[destination.index()] =
                             value.points_to[source.local.index()].clone();
                     }
-                    // Arithmetic on a pointer is not followed. C17 6.5.6 keeps
-                    // the result inside the same object, so `p + 1` points at
-                    // what `p` points at, and following it would be right;
-                    // this does not, because the sibling that reports a use of
-                    // a freed value is what would read it and there is no
-                    // caller for the precision yet.
-                    Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Binary { .. } => {
+                    // **Arithmetic on a pointer is followed.** C17 6.5.6 p8
+                    // keeps the result inside the object the operand points
+                    // into, so `p + 1` may hold whatever `p` holds, and `p[i]`
+                    // is that addition: 6.5.2.1 p2 defines `E1[E2]` as
+                    // `(*((E1)+(E2)))`. This arm used to clear the destination
+                    // instead, on the stated ground that nothing read the
+                    // precision yet. Something does now, and until it did the
+                    // cost was invisible: `free(p); p[i] = 42;` was silence
+                    // rather than a diagnostic, which is the worst answer this
+                    // compiler has.
+                    //
+                    // Both operands, and a union rather than a choice. Which
+                    // one is the pointer is a question about types and this
+                    // does not read them; taking both is a may-set growing,
+                    // which is the direction that cannot make a proof out of
+                    // nothing. `q - p` is an integer and picks up both, and
+                    // nothing dereferences an integer.
+                    //
+                    // Read before the write, so `p = p + 1` keeps what `p`
+                    // held rather than clearing it and unioning the result.
+                    //
+                    // **It costs a proof where the index is a local.** A
+                    // parameter is a site, so `p[i]` unions the allocation `p`
+                    // holds with the site `i` is, and a site that is live stops
+                    // the result being proved: `free(p); p[i] = 42;` is a
+                    // warning where `free(p); p[0] = 42;` is an error. The
+                    // types are in the IR and reading them would separate the
+                    // two, which is #143 rather than a line here.
+                    Rvalue::Binary { op: _, lhs, rhs } => {
+                        let mut reached = vec![false; value.points_to.len()];
+                        for operand in [lhs, rhs] {
+                            let Operand::Copy(source) = operand else {
+                                continue;
+                            };
+                            if !source.projection.is_empty() {
+                                continue;
+                            }
+                            for (here, there) in reached
+                                .iter_mut()
+                                .zip(&value.points_to[source.local.index()])
+                            {
+                                *here = *here || *there;
+                            }
+                        }
+                        value.points_to[destination.index()] = reached;
+                    }
+                    // A constant, a read through a projection, or a unary
+                    // operator. None of the three is a pointer this check can
+                    // follow: C17 6.5.3.3 gives unary `+`, `-` and `~`
+                    // arithmetic operands only, and `!` yields an `int`.
+                    Rvalue::Use(_) | Rvalue::Unary { .. } => {
                         value.clear(destination);
                     }
                     // The address of a place is not an allocation this check
@@ -357,7 +449,16 @@ impl Analysis for Allocations<'_> {
         match self.callee(*callee) {
             Callee::Frees => {
                 for site in sites().collect::<Vec<_>>() {
-                    value.state[site] = SiteState::Freed(origin.span());
+                    // Whatever the site was known to have come from survives
+                    // the free: the diagnostic wants to name it.
+                    let made = match value.state[site] {
+                        SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                        SiteState::Unknown => None,
+                    };
+                    value.state[site] = SiteState::Freed {
+                        made,
+                        freed: origin.span(),
+                    };
                 }
             }
             // It does not free what it is passed, which is the whole of why the
@@ -391,8 +492,31 @@ impl Analysis for Allocations<'_> {
         // would report a double free for code that allocates each time round.
         value.clear(place.local);
         value.points_to[place.local.index()][place.local.index()] = true;
-        value.state[place.local.index()] = SiteState::Live;
+        // **The span only where this check saw an allocation.** Every call's
+        // destination is a site, because a call this cannot read may hand back
+        // anything and a site is how that is tracked. But `allocated here` is a
+        // claim, and `void *p = bar();` gives no evidence that `bar` allocated
+        // anything. Naming that line was a caret asserting something nothing
+        // had established, so a site whose call is not `malloc` is `Live(None)`
+        // and the diagnostic leaves the label off.
+        let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
+        value.state[place.local.index()] = SiteState::Live(made);
     }
+}
+
+/// Which of the two things this check answers about a finding is.
+///
+/// One walk over one lattice, so this is not two checks and `docs/diagnostics.md`
+/// says so where it hands the two their codes. What differs is the question:
+/// the codes and the words are different, and the thing a caret lands on is a
+/// call in one and a dereference in the other.
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    /// `free(p); free(p);`
+    DoubleFree,
+    /// `free(p); *p = 42;`
+    UseAfterFree,
 }
 
 /// One thing this check concluded, and where.
@@ -402,15 +526,28 @@ impl Analysis for Allocations<'_> {
 /// answers it, and ADR-0001 is why there is only one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
-    /// What the check concluded about this call.
+    /// Which of the two this is.
+    pub kind: Kind,
+    /// What that check concluded.
     pub conclusion: Conclusion,
-    /// The call that frees, which is where a caret goes.
-    pub at: Span,
-    /// The earlier free, where the check knows which one it was.
+    /// Where a caret goes: the call that frees, or the element that reads or
+    /// writes through a freed pointer.
     ///
-    /// `None` for an `Unknown`: what makes it unknown is that the paths
-    /// reaching here disagree, so there is no single earlier free to point at.
+    /// Not the place's own span, which a [`Place`] does not have: the element's
+    /// or the terminator's.
+    pub at: Span,
+    /// The earliest free reaching here, where the check knows which one it was.
+    ///
+    /// `None` for an `Unknown`: what makes it unknown is that the paths or the
+    /// sites reaching here disagree, so there is no single free to point at.
     pub freed: Option<Span>,
+    /// Where the allocation was made, where this check saw it happen.
+    ///
+    /// `None` for a parameter, whose allocation is a caller's, and for an
+    /// `Unknown` for the reason above. `docs/safety-model.md` asks the
+    /// diagnostic for this line and it is honest to leave it off rather than
+    /// point at an allocation that may not be the one.
+    pub made: Option<Span>,
 }
 
 /// Every double free this unit contains, and every one it cannot rule out.
@@ -440,6 +577,9 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
 
+        // Per function, because a span belongs to one of them.
+        let mut said: Vec<(Span, Place)> = Vec::new();
+
         for &id in cfg.order() {
             // `Cfg::order` holds exactly the reachable blocks and `solve` gives
             // every reachable block a value, so nothing skips here today. It is
@@ -452,12 +592,26 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
             let block = function.block(id);
             for element in &block.elements {
+                // Before the transfer, which is what the element does: the
+                // question is what was true where it runs.
+                used(
+                    &mut findings,
+                    &mut said,
+                    dereferenced_in_element(element),
+                    &known,
+                );
                 analysis.element(function, element, &mut known);
             }
 
             // Before the terminator's own transfer, which is what turns a live
             // allocation into a freed one: the question is what was true when
             // the call was reached.
+            used(
+                &mut findings,
+                &mut said,
+                dereferenced_in_terminator(&block.terminator),
+                &known,
+            );
             if let Some(finding) = reported(&analysis, &block.terminator, &known) {
                 findings.push(finding);
             }
@@ -478,7 +632,104 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     findings
 }
 
-/// What this terminator is worth reporting, if anything.
+/// What a set of sites says about whatever touched them.
+///
+/// The fold from many sites to one conclusion, and the one place either kind
+/// of finding makes it. RK-035 in the review knowledge bank is why there is
+/// one: a
+/// may-analysis's join is forced to be right by the lattice, and the code that
+/// reads the answer is where the same rule gets lost.
+struct Verdict {
+    conclusion: Conclusion,
+    /// The earliest free reaching here, where the conclusion is a proof.
+    freed: Option<Span>,
+    /// Where that allocation came from, where this check saw it happen.
+    made: Option<Span>,
+}
+
+/// What these sites amount to, or nothing where they amount to no report.
+///
+/// The caller decides what reaching nothing means, by what it puts in
+/// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
+/// following, and a dereference hands an empty iterator. That asymmetry is the
+/// design rather than an accident, and [`used`] says why.
+fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<Verdict> {
+    let mut earliest: Option<Span> = None;
+    // Where the allocation came from, kept only while every freed site agrees.
+    // **RK-035 one level down**: proving a double free from one of several
+    // sites is the may-set mistake the fold below is written to avoid, and
+    // naming one of several allocations as *the* one is the same mistake about
+    // a label. `if (c) p = malloc(); else p = malloc();` reaches both, and
+    // pointing at either would be a caret on an allocation the value may not
+    // hold.
+    let mut made: Option<Span> = None;
+    let mut any_freed = false;
+    let mut live = false;
+    let mut unknown = false;
+
+    for entry in reached {
+        let site = match entry {
+            Reached::Site(site) => site,
+            // **Not the same as proving it live.** This is the check having
+            // lost the pointer, and answering nothing about it is the failure
+            // `docs/safety-model.md` is written to prevent rather than the one
+            // it tolerates.
+            Reached::Lost => {
+                unknown = true;
+                continue;
+            }
+        };
+
+        match known.state[site] {
+            SiteState::Live(_) => live = true,
+            SiteState::Freed {
+                made: from,
+                freed: before,
+            } => {
+                made = if any_freed { same(made, from) } else { from };
+                any_freed = true;
+                earliest = Some(match earliest {
+                    Some(already) if earlier(already, before) == already => already,
+                    _ => before,
+                });
+            }
+            SiteState::Unknown => unknown = true,
+        }
+    }
+
+    // **`points_to` is a may-set, so one freed site among several is not a
+    // proof.** `SiteState::joined` already answers `Unknown` where one path
+    // freed a site and another did not; this is the same question across two
+    // sites rather than across two paths, and answering it differently let the
+    // spelling of a program decide whether it was a warning or an error. A
+    // proof needs every site reached to have been freed, and nothing about it
+    // to have been lost.
+    let proved = !live && !unknown;
+
+    match earliest {
+        Some(freed) if proved => Some(Verdict {
+            conclusion: Conclusion::Unsafe,
+            freed: Some(freed),
+            made,
+        }),
+        // Neither span is carried. What makes this unproven is that the sites
+        // or the paths disagree, so there is no one free that every execution
+        // reaching here went through, and no one allocation to name beside it.
+        Some(_) => Some(Verdict {
+            conclusion: Conclusion::Unknown,
+            freed: None,
+            made: None,
+        }),
+        None if unknown => Some(Verdict {
+            conclusion: Conclusion::Unknown,
+            freed: None,
+            made: None,
+        }),
+        None => None,
+    }
+}
+
+/// What this terminator is worth reporting as a free, if anything.
 ///
 /// One finding per call rather than one per site: a local may point at several
 /// allocations where a branch put them there, and two carets on one `free` say
@@ -499,65 +750,174 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         return None;
     }
 
-    // The worst of what the arguments reach. A proved double free outranks one
-    // that could not be ruled out, because the two are a different claim rather
-    // than a different volume: `docs/safety-model.md` gives the first to an
-    // error at every level and leaves the second to `--deny-unknown`.
-    let mut freed: Option<Span> = None;
-    let mut live = false;
-    let mut unknown = false;
+    let verdict = verdict(Allocations::touching(arguments, known), known)?;
 
-    for reached in Allocations::touching(arguments, known) {
-        let site = match reached {
-            Reached::Site(site) => site,
-            // **Not the same as proving it live.** This is the check having
-            // lost the pointer, and answering nothing about it is the failure
-            // `docs/safety-model.md` is written to prevent rather than the one
-            // it tolerates.
-            Reached::Lost => {
-                unknown = true;
-                continue;
-            }
+    Some(Finding {
+        kind: Kind::DoubleFree,
+        conclusion: verdict.conclusion,
+        at: origin.span(),
+        freed: verdict.freed,
+        made: verdict.made,
+    })
+}
+
+/// Report every dereference at `at` of something that was freed.
+///
+/// **A place this check follows no allocation for says nothing**, which is the
+/// opposite of what a free of one says, and the asymmetry is deliberate. A free
+/// acts on an allocation, so freeing something the check stopped following may
+/// be a second free. A dereference only reads one, and a pointer with no
+/// allocation behind it is an uninitialised pointer or one into storage that is
+/// not the heap: different defects, with checks of their own that do not exist
+/// yet. Answering `Unknown` here would warn on every `*p` whose pointer came
+/// from anywhere this does not follow, which is most of them.
+///
+/// **What that silence covers is a boundary rather than a rule.** A pointer
+/// written behind this check's back does arrive here as `SiteState::Unknown`
+/// rather than as no site at all, because taking a local's address is what
+/// makes its sites unknown. Pointer arithmetic is followed for the same reason.
+/// But a pointer read out of another pointer, `int *p = *pp;`, reaches no site
+/// and is silence, and so is a dereference inside a controlling expression,
+/// which is #141. `docs/diagnostics.md` says what exit 0 does not mean here,
+/// because a boundary that lives only in a comment is one no user can find.
+fn used(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place)>,
+    at: Option<(Span, Vec<&Place>)>,
+    known: &Known,
+) {
+    let Some((at, dereferenced)) = at else {
+        return;
+    };
+
+    for place in dereferenced {
+        // **One place at one span said once.** `*p = 42;` lowers to two
+        // operations that both read through `p`, because an assignment is an
+        // expression with a value and the lowering reads the place back into a
+        // temporary. Both are genuine dereferences of one thing and two carets
+        // on one line would say it twice.
+        //
+        // The place and not the finding. Deduplicating finished findings was
+        // wrong in both directions at once, measured: two unproven uses on one
+        // line carry no spans at all, so they were field-identical and one was
+        // thrown away, while `*p = *q;` produced `p`, `q`, `p` in that order
+        // and the pair that should have collapsed was not adjacent for
+        // `Vec::dedup` to see. What decides whether two reports are one report
+        // is which place was dereferenced, and only this knows it.
+        if said.contains(&(at, place.clone())) {
+            continue;
+        }
+        said.push((at, place.clone()));
+
+        let sites = known.sites_of(place.local).map(Reached::Site);
+        let Some(verdict) = verdict(sites, known) else {
+            continue;
         };
 
-        match known.state[site] {
-            SiteState::Live => live = true,
-            SiteState::Freed(before) => {
-                freed = Some(match freed {
-                    Some(already) => earlier(already, before),
-                    None => before,
-                });
-            }
-            SiteState::Unknown => unknown = true,
-        }
+        findings.push(Finding {
+            kind: Kind::UseAfterFree,
+            conclusion: verdict.conclusion,
+            at,
+            freed: verdict.freed,
+            made: verdict.made,
+        });
     }
+}
 
-    // **`points_to` is a may-set, so one freed site among several is not a
-    // proof.** `SiteState::joined` already answers `Unknown` where one path
-    // freed a site and another did not; this is the same question across two
-    // sites rather than across two paths, and answering it differently let the
-    // spelling of a program decide whether it was a warning or an error. A
-    // proof needs every site the argument can reach to have been freed, and
-    // nothing about it to have been lost.
-    let proved = freed.is_some() && !live && !unknown;
-    let suspected = freed.is_some() || unknown;
+/// Where this element runs, and every place it reads or writes through a
+/// pointer there.
+///
+/// Through a pointer, so a projection: an unprojected place is the local itself
+/// and holding a freed pointer is not using it. The span is the element's,
+/// because a [`Place`] has none of its own.
+fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
+    // Every field written out, never `..`: RK-018 in the review knowledge bank
+    // is a field added to a variant that already exists walking past an
+    // exhaustive match.
+    match element {
+        Element::Assign(operation) => {
+            let mut places = projected(&operation.place);
+            places.extend(dereferenced_in_rvalue(&operation.value));
+            Some((operation.origin.span(), places))
+        }
+        // Storage beginning or ending reads nothing through anything.
+        Element::StorageLive {
+            local: _,
+            origin: _,
+        } => None,
+        Element::StorageDead {
+            origin: _,
+            local: _,
+        } => None,
+    }
+}
 
-    match (proved, suspected) {
-        (true, _) => Some(Finding {
-            conclusion: Conclusion::Unsafe,
-            at: origin.span(),
-            freed,
-        }),
-        // `freed` is dropped rather than carried: what makes this unproven is
-        // that the sites or the paths disagree, so there is no one earlier free
-        // that every execution reaching here went through.
-        (false, true) => Some(Finding {
-            conclusion: Conclusion::Unknown,
-            at: origin.span(),
-            freed: None,
-        }),
-        // Every site the argument reaches is live, and none was lost. That is
-        // the only shape this check proves safe, and a proof says nothing.
-        (false, false) => None,
+/// The same, for what a terminator reads.
+fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Place>)> {
+    match terminator {
+        Terminator::Call {
+            callee: _,
+            arguments,
+            destination,
+            then: _,
+            origin,
+        } => {
+            let mut places: Vec<&Place> = arguments.iter().flat_map(dereferenced_in).collect();
+            if let Some(destination) = destination {
+                places.extend(projected(destination));
+            }
+            Some((origin.span(), places))
+        }
+        // **A dereference in a condition is not reported, because there is
+        // nowhere to point.** `Terminator::Branch` carries no `Origin`, and
+        // `Terminator::Call`'s own doc comment says it is the only terminator
+        // that does "because it is the only one a diagnostic has had to name so
+        // far". This is the diagnostic that has had to, and giving `Branch` a
+        // span moves every `--emit safety-ir` expectation with a branch in it,
+        // so it is #141 rather than a line here. A caret in the wrong place is
+        // worse than none: it is the defect this project has had before.
+        Terminator::Branch {
+            condition: _,
+            then: _,
+            otherwise: _,
+        } => None,
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
+    }
+}
+
+/// The same, for what an rvalue reads.
+fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
+    match value {
+        Rvalue::Use(operand) => dereferenced_in(operand),
+        Rvalue::Unary { op: _, operand } => dereferenced_in(operand),
+        Rvalue::Binary { op: _, lhs, rhs } => {
+            let mut places = dereferenced_in(lhs);
+            places.extend(dereferenced_in(rhs));
+            places
+        }
+        // **Taking an address is not a dereference**, even where what is
+        // written looks like one. C17 6.5.3.2 p3: if the operand of `&` is the
+        // result of a unary `*`, "neither that operator nor the `&` operator is
+        // evaluated and the result is as if both were omitted". So `&*p` reads
+        // nothing through `p`, and reporting it would be a use of a freed value
+        // in a program that never touched one.
+        Rvalue::Address(_) => Vec::new(),
+    }
+}
+
+/// The same, for one operand.
+fn dereferenced_in(operand: &Operand) -> Vec<&Place> {
+    match operand {
+        Operand::Copy(place) => projected(place),
+        Operand::Constant(_) => Vec::new(),
+    }
+}
+
+/// The place, where it goes through a projection, and nothing where it does not.
+fn projected(place: &Place) -> Vec<&Place> {
+    if place.projection.is_empty() {
+        Vec::new()
+    } else {
+        vec![place]
     }
 }

@@ -1,6 +1,10 @@
 error[SC0401]: this frees a value that was freed already
    ╭─[ a_value_freed_through_a_copy.c:7:5 ]
    │
+ 4 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
  6 │     free(q);
    │     ───┬───  
    │        ╰───── freed here

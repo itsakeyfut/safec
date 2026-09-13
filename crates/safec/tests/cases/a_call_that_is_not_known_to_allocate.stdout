@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_call_that_is_not_known_to_allocate.c:1:7 "bar" declared
+  Local "_0" "void *" return
+Function a_call_that_is_not_known_to_allocate.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_call_that_is_not_known_to_allocate.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "void *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Local "_4" "void"
+  Block "bb0" entry
+    Call a_call_that_is_not_known_to_allocate.c:4:15 "bar" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_call_that_is_not_known_to_allocate.c:4:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Call a_call_that_is_not_known_to_allocate.c:5:5 "free" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Call a_call_that_is_not_known_to_allocate.c:6:5 "free" "bb3"
+      Destination "_4"
+      Copy "_1"
+  Block "bb3"
+    Operation a_call_that_is_not_known_to_allocate.c:7:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
