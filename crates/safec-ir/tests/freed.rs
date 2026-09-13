@@ -33,9 +33,11 @@ struct Names {
     /// nothing asserts on it.
     ///
     /// `Terminator::Branch` carries a span so that a dereference in a condition
-    /// has somewhere to point. Every condition in this file is a constant, so
-    /// no test here reaches that; the field still has to be filled, and filling
-    /// it with one of `at` would read as if it were under test.
+    /// has somewhere to point. `a_dereference_in_a_condition_is_a_use` is the
+    /// one test that reaches it, and it uses an `at` because it asserts on
+    /// where the caret lands. Everywhere else the condition is a constant and
+    /// the field still has to be filled, and filling it with one of `at` would
+    /// read as if it were under test.
     asked: Span,
 }
 
@@ -136,15 +138,21 @@ fn copy(to: LocalId, from: LocalId, at: Span, then: BlockId) -> Block {
 
 /// A branch on a constant, in a block with nothing else in it.
 ///
-/// The condition is a constant everywhere here because what these tests are
-/// about is where two paths meet rather than what decides which is taken.
-/// `asked` is the span the terminator carries for a diagnostic to point at,
-/// and no test in this file reads it.
+/// The condition is a constant wherever what a test is about is where two
+/// paths meet rather than what decides which is taken, which is every test
+/// here but `a_dereference_in_a_condition_is_a_use`. `asked` is the span the
+/// terminator carries for a diagnostic to point at, and nothing reaching this
+/// builder asserts on it.
 fn branch(then: BlockId, otherwise: BlockId, asked: Span) -> Block {
+    branch_on(Operand::Constant(1), then, otherwise, asked)
+}
+
+/// The same, where what decides is worth writing out.
+fn branch_on(condition: Operand, then: BlockId, otherwise: BlockId, asked: Span) -> Block {
     Block {
         elements: vec![],
         terminator: Terminator::Branch {
-            condition: Operand::Constant(1),
+            condition,
             then,
             otherwise,
             origin: Origin::Written(asked),
@@ -859,4 +867,49 @@ fn a_second_free_keeps_where_the_allocation_was() {
         .expect("the read is reported");
     assert_eq!(used.at, names.at[3]);
     assert_eq!(used.made, Some(names.at[0]), "still the `malloc`");
+}
+
+/// A dereference in a controlling expression is a use, read out of the
+/// terminator rather than out of an element.
+///
+/// The corpus holds this shape written as C, four times over, because four
+/// lowering paths reach it. This holds the half that belongs to this crate: a
+/// condition that is a place with a projection is read from the branch's own
+/// `Origin`, with no frontend between. RK-033 in the review knowledge bank is
+/// why both exist, and a review found this one missing: every other condition
+/// in this file is a constant, so the arm was exercised only through the
+/// corpus, which proves the lowering and the check at once and says which of
+/// them broke only by where the diff lands.
+///
+/// Mutation: answer `None` for a `Branch` in `dereferenced_in_terminator`.
+/// This fails, and so does every corpus case with a dereference in a condition.
+#[test]
+fn a_dereference_in_a_condition_is_a_use() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let decide = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], decide));
+    // Both arms go to the same block: what is under test is the condition, and
+    // where control goes afterwards is not part of it.
+    function.fill_block(
+        decide,
+        branch_on(Operand::Copy(deref(held)), exit, exit, names.at[2]),
+    );
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[2], "the controlling expression");
+    assert_eq!(found[0].freed, Some(names.at[1]));
+    assert_eq!(found[0].made, Some(names.at[0]));
 }

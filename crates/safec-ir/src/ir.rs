@@ -527,12 +527,20 @@ pub enum Terminator {
         /// Where the controlling expression is, so that a diagnostic can point
         /// at it.
         ///
-        /// **The expression that decides, not the statement it belongs to.**
+        /// **The controlling expression, not the statement it belongs to.**
         /// `condition` can be a place read through a pointer, and then it is
         /// the only place in a block that a check has to name: `if (*p)` after
         /// a free has to underline `*p`. Underlining the whole `if` instead
         /// would put a caret on code that is not the defect, which this project
         /// ranks below saying nothing at all.
+        ///
+        /// **The whole controlling expression, and no finer than that.** C17
+        /// 6.5.17 p2 makes a comma expression's value its right operand, so
+        /// `if (c, *p)` underlines `c, *p` where only `*p` decided anything.
+        /// That is wider than it could be and is still the expression rather
+        /// than the statement, which is the failure this field exists to
+        /// prevent; `a_dereference_after_a_comma_in_a_condition` pins what it
+        /// does today and #147 is where it narrows.
         ///
         /// Whoever builds one owes that, and nothing downstream can recover it
         /// from a span that is already too wide. That is why the obligation is

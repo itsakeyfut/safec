@@ -1,0 +1,38 @@
+Target "x86_64-pc-windows-msvc"
+Function a_loop_whose_condition_reads_what_its_body_freed.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_loop_whose_condition_reads_what_its_body_freed.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_loop_whose_condition_reads_what_its_body_freed.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Block "bb0" entry
+    Call a_loop_whose_condition_reads_what_its_body_freed.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_loop_whose_condition_reads_what_its_body_freed.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Goto "bb2"
+  Block "bb2"
+    Branch a_loop_whose_condition_reads_what_its_body_freed.c:5:12 "bb3" "bb4"
+      Copy "_1"
+        Deref
+  Block "bb3"
+    Call a_loop_whose_condition_reads_what_its_body_freed.c:5:18 "free" "bb5"
+      Destination "_3"
+      Copy "_1"
+  Block "bb4"
+    Operation a_loop_whose_condition_reads_what_its_body_freed.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
+  Block "bb5"
+    Goto "bb2"
