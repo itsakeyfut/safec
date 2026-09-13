@@ -1183,7 +1183,9 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
 /// from one finding into none.
 ///
 /// Mutation: drop `unproved` from the call's destination in the terminator's
-/// transfer. The conclusion becomes `Unsafe` and this fails.
+/// transfer. The site stays live, the free is an ordinary one, nothing is
+/// reported at all, and this fails on the length. That direction is the point:
+/// what the rule is holding off here is silence, not a wrong answer.
 #[test]
 fn a_call_into_a_local_whose_address_escaped() {
     let (sources, names) = sources();

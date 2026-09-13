@@ -98,6 +98,14 @@ follow the pointer. `--deny-unknown` is what makes an unproven result fail a
 build, and [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why
 that is the policy's decision rather than the check's.
 
+**One shape is still quiet, and it is not the boundary above.** Where a `free`
+goes through a pointer this check was not following, the allocation that was
+really freed keeps whatever was known about it, so a later use of it is read
+against a site this check believes is live. `int **pp = &p; *pp = q; free(p);
+*q = 1;` says nothing at all about the last line. That is a place with an
+allocation followed, concluded live and wrong, rather than a place with no
+allocation, and it is issue #162.
+
 This is written here rather than only beside the code because a boundary a user
 cannot find is one they will discover by being wrong about it, and
 [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that silence

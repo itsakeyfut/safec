@@ -215,20 +215,44 @@ impl Known {
     /// rather than a silence: a may-set cannot prove anything from one member
     /// and this only ever takes proof away.
     ///
-    /// Three cases hold the three ways it is reached.
-    /// `a_pointer_reassigned_after_its_address_escaped` is the assignment and
-    /// is the program this was written for;
-    /// `an_address_that_escaped_on_one_arm_only` is the join, and fails if
-    /// `escaped` is intersected there rather than unioned;
-    /// `a_call_into_a_local_whose_address_escaped` is a call writing straight
-    /// into the local, which the frontend never builds and another may.
-    fn unproved(&mut self, local: LocalId) {
-        if !self.escaped[local.index()] {
+    /// **What a local is given, and not what is done to what it holds.** A
+    /// `free` writes `SiteState::Freed` over a site whatever the local's
+    /// escape says, so `int **pp = &p; free(p); *pp = q; *p = 1;` is a proved
+    /// `Unsafe` about a program with no defect in it. That is not this rule
+    /// arriving late, it is the escape and the free recorded in one slot and
+    /// overwriting each other; it predates this and is issue #161.
+    ///
+    /// An index rather than a [`LocalId`], because [`Self::settle`] walks the
+    /// rows of a side table and `LocalId` cannot be built from one.
+    fn unproved(&mut self, local: usize) {
+        if !self.escaped[local] {
             return;
         }
 
-        for site in self.sites_of(local).collect::<Vec<_>>() {
-            self.state[site] = SiteState::Unknown;
+        for site in 0..self.points_to[local].len() {
+            if self.points_to[local][site] {
+                self.state[site] = SiteState::Unknown;
+            }
+        }
+    }
+
+    /// [`Self::unproved`] for every local at once.
+    ///
+    /// **A join gives a local sites without assigning to it.** An arm that
+    /// took the address and an arm that allocated meet here, and the merged
+    /// value held an escaped local reaching a site this check had proved live:
+    /// `if (c) { pp = &p; *pp = q; } else { p = malloc(8); } free(q); free(p);`
+    /// was silent at `--deny-unknown --safety strict` on a double free. The
+    /// union of `escaped` alone does not do it, because nothing downstream of
+    /// a join reads the bit unless the local is written again.
+    ///
+    /// **This is why the list of places is closed rather than long.** A value
+    /// changes in `Analysis::on_entry`, `join`, `element` and `terminator` and
+    /// nowhere else, so covering the last three covers every one: nothing has
+    /// escaped where a function starts.
+    fn settle(&mut self) {
+        for local in 0..self.escaped.len() {
+            self.unproved(local);
         }
     }
 }
@@ -298,7 +322,7 @@ impl Analysis for Allocations<'_> {
         // `Freed` to `Unknown`; its `freed` span can only move to an earlier
         // one, which it can do at most once per site that frees; and its `made`
         // span can only fall from `Some` to `None`, once. A local's `escaped`
-        // bit falls from `false` to `true` and never back, once each. Generous
+        // bit goes from `false` to `true` and never back, once each. Generous
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
@@ -362,6 +386,10 @@ impl Analysis for Allocations<'_> {
         for (here, there) in escaped.iter_mut().zip(&from.escaped) {
             *here = *here || *there;
         }
+
+        // And applying it, which the union alone does not do. [`Known::settle`]
+        // says why a join needs this and the assignments do not cover it.
+        into.settle();
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
@@ -463,7 +491,7 @@ impl Analysis for Allocations<'_> {
                     Rvalue::Address(taken) => {
                         value.clear(destination);
                         value.escaped[taken.local.index()] = true;
-                        value.unproved(taken.local);
+                        value.unproved(taken.local.index());
                     }
                 }
 
@@ -474,7 +502,7 @@ impl Analysis for Allocations<'_> {
                 // so the arm that looks like the arithmetic case is reached
                 // through the copy, and a mutation of the arithmetic arm broke
                 // nothing at all. One call cannot be put in the wrong place.
-                value.unproved(destination);
+                value.unproved(destination.index());
             }
             // Storage beginning or ending says nothing about what the local
             // held before, and what it holds now is nothing.
@@ -578,7 +606,7 @@ impl Analysis for Allocations<'_> {
         // call into a fresh temporary and copies it out, so the copy above is
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
-        value.unproved(place.local);
+        value.unproved(place.local.index());
     }
 }
 
