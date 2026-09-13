@@ -486,6 +486,22 @@ fn write(through: LocalId, from: LocalId, at: Span, then: BlockId) -> Block {
     }
 }
 
+/// `to = &of;`, in a block that falls through to `then`.
+///
+/// The one shape that makes a local's sites unknown: anything holding the
+/// address can write a different allocation into it, and this check does not
+/// follow what a pointer points at.
+fn address_of(to: LocalId, of: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Address(Place::local(of)),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
 /// `to = &*through;`, in a block that falls through to `then`.
 fn address_of_deref(to: LocalId, through: LocalId, at: Span, then: BlockId) -> Block {
     Block {
@@ -1007,4 +1023,117 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
         Some(names.at[0]),
         "the evaluation lost nothing"
     );
+}
+/// A proof at a caret replaces the suspicion already standing there.
+///
+/// **Two dereferences of one place can share a caret**, because both operands
+/// of a `&&` or a `||` are written into one temporary at the whole
+/// expression's span, and `used` collapses such a pair into one report. Which
+/// of the two survives is the question: the first read here is unproven,
+/// because taking the local's address made its sites unknown, and the second
+/// is proved, because a `free` writes `Freed` over an unknown site. Keeping
+/// the first was a warning and exit 0 on a use of a freed value this check had
+/// proved.
+///
+/// **Written as IR rather than as C on purpose.** The C that reaches this
+/// today does so because the lowering gives both operands of a `||` the whole
+/// expression's span, and #147 is open to narrow exactly that. A guard a
+/// caret-precision change can retire is not a guard for a rule about what this
+/// check is allowed to be silent about, and `docs/c-family.md` asks that
+/// another frontend be able to build this IR with no C frontend present.
+///
+/// Mutation: have `supersedes` answer `false` for `(Unknown, Unsafe)`. The
+/// conclusion stays `Unknown` and this fails.
+#[test]
+fn a_proof_replaces_the_suspicion_at_one_caret() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let escape = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let escaped = function.reserve_block();
+    let suspect = function.reserve_block();
+    let release = function.reserve_block();
+    let proof = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], escaped));
+    function.fill_block(escaped, address_of(escape, held, names.at[1], suspect));
+    function.fill_block(suspect, read(value, held, names.at[2], release));
+    function.fill_block(release, free(&callees, held, names.at[3], proof));
+    // The same span as the unproven read, which is what makes the two one
+    // report and is the whole of what this test is about.
+    function.fill_block(proof, read(value, held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    // Two, because freeing a site nothing can prove anything about is itself a
+    // `DoubleFree` this check cannot rule out. That is correct and is not what
+    // this test is for; asserting on it rather than filtering it away is what
+    // says so.
+    assert_eq!(found.len(), 2, "{found:?}");
+
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unsafe,
+        "the proof survives"
+    );
+    assert_eq!(found[0].at, names.at[2], "one caret, not two");
+    assert_eq!(found[0].freed, Some(names.at[3]));
+    assert_eq!(
+        found[0].made, None,
+        "the escape lost where the allocation came from"
+    );
+
+    assert_eq!(found[1].kind, Kind::DoubleFree);
+    assert_eq!(found[1].conclusion, Conclusion::Unknown);
+    assert_eq!(found[1].at, names.at[3]);
+}
+
+/// A suspicion does not displace the proof already standing at a caret.
+///
+/// The other direction of the same rule, and the one a collapse gets wrong by
+/// replacing whenever the pair disagrees rather than only when the new report
+/// proves what the standing one could not. RK-038 in the review knowledge bank
+/// is why both are written: a rule that collapses two disagreeing values has
+/// two mutations, and a case that reaches one of them says nothing about the
+/// other.
+///
+/// Mutation: have `supersedes` answer `true` for `(Unsafe, Unknown)`. The
+/// conclusion drops to `Unknown` and the spans it carries go with it, so this
+/// fails three times over.
+#[test]
+fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let escape = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let proof = function.reserve_block();
+    let escaped = function.reserve_block();
+    let suspect = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], proof));
+    function.fill_block(proof, read(value, held, names.at[2], escaped));
+    function.fill_block(escaped, address_of(escape, held, names.at[3], suspect));
+    function.fill_block(suspect, read(value, held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe, "the proof stands");
+    assert_eq!(found[0].at, names.at[2]);
+    assert_eq!(found[0].freed, Some(names.at[1]), "and keeps its spans");
+    assert_eq!(found[0].made, Some(names.at[0]));
 }

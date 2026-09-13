@@ -83,14 +83,16 @@ this compiler has no check for yet. `int *r = &*p;` used to be a third and is
 not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
 pointer, so `r` carries what `p` carried.
 
-Two open defects make it quiet for a reason that is not a boundary at all, and
-they are worth knowing about while they are open. A local assigned to after its
+One open defect makes it quiet for a reason that is not a boundary at all, and
+it is worth knowing about while it is open. A local assigned to after its
 address was taken is followed as though nothing could write through that
 address, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` reads a freed
-pointer in silence, which is issue #155. And where two dereferences of one
-place share a caret, which both operands of a `||` do, the first report keeps
-the caret whatever it concluded, so a proved use after free can come out as the
-warning the unproven one beside it earned, which is issue #156.
+pointer in silence, which is issue #155.
+
+Where two dereferences of one place share a caret, which both operands of a
+`||` do, the two are one report and the **stronger** of them is what it says,
+so a proof is never spent by a suspicion beside it. That was issue #156 and was
+quiet until it was fixed.
 
 This is written here rather than only beside the code because a boundary a user
 cannot find is one they will discover by being wrong about it, and
