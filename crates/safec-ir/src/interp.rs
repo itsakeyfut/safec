@@ -22,9 +22,13 @@
 //! **A pointer is a local in a frame, resolved where the address was taken.**
 //! Every place in this IR is rooted at a local, so there is nothing else for a
 //! pointer to point at until #74, and no heap and no addresses-as-numbers are
-//! needed to run one. Resolving at `&` rather than at each use is what makes
-//! `int *r = &*p; p = &b;` leave `r` pointing where it pointed, which is what C
-//! says and what an aliasing analysis will be checked against.
+//! needed to run one. Resolving at `&` rather than at each use is what makes a
+//! pointer keep pointing where it pointed when something later moves the place
+//! it was taken from, which is what C says and what an aliasing analysis will
+//! be checked against. No C program reaches it any more: the frontend folds
+//! `&*p` away under C17 6.5.3.2 p3, and an address of a bare local cannot be
+//! told apart either way. `a_pointer_built_from_a_dereference_holds_where_it_pointed`
+//! builds the shape by hand, which is the only side that still can.
 //!
 //! **A frame that returns is gone, and a pointer into it says so.** The stack
 //! is a stack: frames are popped, so the depth is what it costs and a run of
@@ -100,9 +104,11 @@ pub enum Value {
     Int(i128),
     /// A pointer to a local of a frame.
     ///
-    /// A resolved place rather than the expression that named one: `&*p` is
-    /// where `p` pointed when the address was taken, and C17 6.5.3.2 p1 makes
-    /// that the object, not the way it was reached.
+    /// A resolved place rather than the expression that named one. C17
+    /// 6.5.3.2 p3 is the clause: `&*p` is `p`, so what a pointer holds is the
+    /// object rather than the way it was reached, and nothing re-reads the
+    /// expression at the use. p1 and p2 are the Constraints and say nothing
+    /// about this.
     Pointer(Location),
 }
 
@@ -761,6 +767,78 @@ mod tests {
     // that go through the lexer, the parser, sema and the lowering before they
     // run are in `safec`'s `tests/interp.rs`, which is the only side that can
     // compile one. ADR-0011 is the boundary they are on opposite sides of.
+
+    /// A pointer holds where it pointed, not the expression that named it.
+    ///
+    /// `r = &*p; p = &b;` and then reading `*r`. An interpreter that kept the
+    /// place rather than the location it resolves to would re-read `p` at the
+    /// use and answer 2, which is `docs/safety-model.md`'s aliasing axis
+    /// answered wrongly and in silence.
+    ///
+    /// **This is built by hand because the C frontend no longer produces it.**
+    /// C17 6.5.3.2 p3 makes `&*p` the same as `p`, so the lowering folds the
+    /// pair away and the only addresses it builds are of unprojected places,
+    /// where keeping the place and resolving it answer alike. The IR still
+    /// expresses an address of a projected place whatever a frontend does
+    /// with it, and `docs/c-family.md` asks that an analysis be "runnable over
+    /// IR built by hand in a test, with no frontend present", so a property of
+    /// the IR belongs where the IR can still be written rather than where one
+    /// frontend happens to reach it. `crates/safec/tests/interp.rs` holds the
+    /// half of the old test that is still about C.
+    ///
+    /// Mutation: resolve only the root local in the `Rvalue::Address` arm,
+    /// `Value::Pointer(resolve(frames, current, &Place::local(place.local))?)`.
+    /// `r` then points at `p` rather than at what `p` points at, and this
+    /// fails.
+    #[test]
+    fn a_pointer_built_from_a_dereference_holds_where_it_pointed() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int main(void);\n");
+        let at = Span::new(file, 4, 8);
+
+        let mut unit = TranslationUnit::new(a_target());
+        let int = unit.push_type(Ty::Int);
+        let pointer = unit.push_type(Ty::Pointer(int));
+
+        let mut main = Function::new(at, int, []);
+        let a = main.push_local(int);
+        let b = main.push_local(int);
+        let p = main.push_local(pointer);
+        let r = main.push_local(pointer);
+
+        let write = |place: Place, value: Rvalue| {
+            Element::Assign(Operation {
+                place,
+                value,
+                origin: Origin::Written(at),
+            })
+        };
+        let through = |local| Place {
+            local,
+            projection: vec![Projection::Deref],
+        };
+
+        main.push_block(Block {
+            elements: vec![
+                write(Place::local(a), Rvalue::Use(Operand::Constant(1))),
+                write(Place::local(b), Rvalue::Use(Operand::Constant(2))),
+                write(Place::local(p), Rvalue::Address(Place::local(a))),
+                // The shape under test: an address of a place that is itself
+                // reached through a pointer.
+                write(Place::local(r), Rvalue::Address(through(p))),
+                write(Place::local(b), Rvalue::Use(Operand::Constant(2))),
+                write(Place::local(p), Rvalue::Address(Place::local(b))),
+                write(
+                    Place::local(main.return_place()),
+                    Rvalue::Use(Operand::Copy(through(r))),
+                ),
+            ],
+            terminator: Terminator::Return,
+        });
+        let id = unit.push_function(main);
+
+        assert_eq!(run(&unit, id, &[]), Ok(Value::Int(1)), "where `p` pointed");
+    }
 
     /// A function built by hand, run with no frontend in it.
     ///

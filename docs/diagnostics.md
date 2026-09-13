@@ -75,14 +75,25 @@ through a copy, through pointer arithmetic and into a controlling expression,
 so `q = p; *q`, `p[i]`, `if (*p)` and `*p;` are all read: the last of those
 throws its value away, and C17 6.5.3.2 p4 makes the dereference undefined all
 the same. What it does not read is a place it follows no allocation for, and
-that is the rule rather than a list. Three ways to reach one are known: a
-pointer read out of another pointer, `int *p = *pp;`, which never had a site; a
-pointer built with `&`, so `int *r = &*p;` loses one that C17 6.5.3.2 p3 says
-is the same pointer, which is issue #151; and a name with nothing dereferenced,
-so `free(p); p;` is quiet about reading an indeterminate pointer, which is
-undefined by 6.2.4 p2 and belongs to an axis this compiler has no check for
-yet. This is written here rather than only beside the code because a boundary
-a user cannot find is one they will discover by being wrong about it, and
+that is the rule rather than a list. Two ways to reach one are known: a
+pointer read out of another pointer, `int *p = *pp;`, which never had a site;
+and a name with nothing dereferenced, so `free(p); p;` is quiet about reading
+an indeterminate pointer, which is undefined by 6.2.4 p2 and belongs to an axis
+this compiler has no check for yet. `int *r = &*p;` used to be a third and is
+not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
+pointer, so `r` carries what `p` carried.
+
+Two open defects make it quiet for a reason that is not a boundary at all, and
+they are worth knowing about while they are open. A local assigned to after its
+address was taken is followed as though nothing could write through that
+address, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` reads a freed
+pointer in silence, which is issue #155. And where two dereferences of one
+place share a caret, which both operands of a `||` do, the first report keeps
+the caret whatever it concluded, so a proved use after free can come out as the
+warning the unproven one beside it earned, which is issue #156.
+
+This is written here rather than only beside the code because a boundary a user
+cannot find is one they will discover by being wrong about it, and
 [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that silence
 is the most expensive answer this compiler gives.
 

@@ -780,23 +780,27 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// from anywhere this does not follow, which is most of them.
 ///
 /// **What that silence covers is a boundary rather than a rule.** A pointer
-/// written behind this check's back does arrive here as `SiteState::Unknown`
+/// written behind this check's back arrives here as `SiteState::Unknown`
 /// rather than as no site at all, because taking a local's address is what
-/// makes its sites unknown. Pointer arithmetic is followed for the same reason,
-/// and so is a controlling expression, which needed `Terminator::Branch` to
-/// carry a span before it could be.
+/// makes its sites unknown. **The sites the local held at that instant, and
+/// not the local**: assigning to it afterwards gives it a fresh site and the
+/// marking is gone, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` is
+/// followed as if nothing could write through `pp`, and reads a freed pointer
+/// at exit 0. That is #155, and it is the transfer in [`Allocations`] rather
+/// than anything here. Pointer arithmetic is followed for the same reason, and
+/// so is a controlling expression, which needed `Terminator::Branch` to carry
+/// a span before it could be.
 ///
 /// A place whose value is thrown away is read too, because
 /// [`Element::Evaluate`] exists to say that it was evaluated: `*p;` on its own
 /// used to leave no element at all, so there was nothing here to look at.
 ///
 /// **The rule, rather than a list of what falls outside it: a place whose root
-/// reaches no site says nothing, however it came to reach none.** Three ways
-/// are known and a review found the third, which is why this is stated as a
-/// rule now. A pointer read out of another pointer, `int *p = *pp;`, never had
-/// one. A pointer built by taking an address, `int *r = &*p;`, had its
-/// destination cleared, which is #151 and is a lowering that does not apply
-/// C17 6.5.3.2 p3. And a bare name is never given an element at all, so
+/// reaches no site says nothing, however it came to reach none.** Two ways are
+/// known, and the third was closed by making the lowering apply C17 6.5.3.2
+/// p3, so `int *r = &*p;` now copies the pointer rather than taking an address
+/// of what it reaches. A pointer read out of another pointer, `int *p = *pp;`,
+/// never had a site. And a bare name is never given an element at all, so
 /// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
 /// p2 makes undefined and which belongs to an axis with no check.
 /// `docs/diagnostics.md` says what exit 0 does not mean here, because a
@@ -827,6 +831,14 @@ fn used(
         // and the pair that should have collapsed was not adjacent for
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
+        //
+        // **The first of a pair wins, whatever either concluded**, which is
+        // wrong where the second proved what the first could not: both
+        // operands of a `||` are written into one temporary at the whole
+        // expression's span, so `*p || (free(p), *p)` after an escape is a
+        // warning and exit 0 where an error was there to be had. That is
+        // #156, and fixing it is a change to what this records rather than to
+        // whether it records.
         if said.contains(&(at, place.clone())) {
             continue;
         }
@@ -933,12 +945,14 @@ fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
             places.extend(dereferenced_in(rhs));
             places
         }
-        // **Taking an address is not a dereference**, even where what is
-        // written looks like one. C17 6.5.3.2 p3: if the operand of `&` is the
-        // result of a unary `*`, "neither that operator nor the `&` operator is
-        // evaluated and the result is as if both were omitted". So `&*p` reads
-        // nothing through `p`, and reporting it would be a use of a freed value
-        // in a program that never touched one.
+        // **Taking an address is not a dereference**, whatever the place
+        // it is taken of looks like. C17 6.5.3.2 p3 is why `&*p` used to be
+        // the example: "neither that operator nor the `&` operator is
+        // evaluated and the result is as if both were omitted". The lowering
+        // applies that clause now, so no C program reaches here with one, and
+        // what does reach here is an address of a place a frontend really
+        // meant to take. Reporting it would be a use of a freed value in a
+        // program that never touched one.
         Rvalue::Address(_) => Vec::new(),
     }
 }

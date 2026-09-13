@@ -245,15 +245,25 @@ fn two_calls_at_one_depth_both_return() {
     assert_eq!(looped, Ok(Value::Int(1000)));
 }
 
-/// A pointer is where it pointed, not the expression that made it.
+/// `&*p` is `p`, and a pointer built from one still points where it pointed.
 ///
-/// C17 6.5.3.2 p1 makes `&*p` the object `p` points at, so changing `p`
-/// afterwards does not move it. An interpreter that kept the expression
-/// answers `b` here, which is the aliasing axis of `docs/safety-model.md`
-/// answered wrongly and in silence.
+/// C17 6.5.3.2 p3: where the operand of `&` is the result of a unary `*`,
+/// neither operator is evaluated and the result is as if both were omitted. So
+/// `r = &*p` copies what `p` holds, and changing `p` afterwards does not move
+/// `r`.
 ///
-/// Mutation: have `Rvalue::Address` keep the place rather than resolve it.
-/// This answers 2 and fails.
+/// **The stronger property this used to hold has moved.** It asserted that a
+/// pointer is a resolved location rather than an expression, and the mutation
+/// it named, having `Rvalue::Address` keep the place rather than resolve it,
+/// reached that through `r = &*p`. The lowering now folds the pair away, so
+/// this program builds no address of a projected place and the mutation
+/// answers the same either way; `a_pointer_built_from_a_dereference_holds_where_it_pointed`
+/// in `crates/safec-ir/src/interp.rs` builds the shape by hand and keeps the
+/// property, which is where it has to live now that no C reaches it.
+///
+/// Mutation: fold the `Deref` off and take the address of what is left, so
+/// `r` holds the address of `p`. This answers a pointer where an `int` was
+/// asked for and fails.
 #[test]
 fn a_pointer_holds_where_it_pointed() {
     let answer = ran(

@@ -620,6 +620,11 @@ fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
 /// `&*p` reads nothing through `p`, and reporting it would be a use of a freed
 /// value in a program that never touched one.
 ///
+/// **The C frontend no longer builds this**, because it applies the same clause
+/// one layer up and folds `&*p` to `p`. The IR still expresses an address of a
+/// projected place, another frontend may build one, and the check has to
+/// answer for it, so the guard stays where the shape can still be written.
+///
 /// Mutation: have `Rvalue::Address` answer the place whose address is taken.
 /// This reports a use and fails.
 #[test]

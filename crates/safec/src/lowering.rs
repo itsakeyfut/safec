@@ -1104,14 +1104,63 @@ impl Lowering<'_> {
                         values.push(Operand::Copy(place));
                     }
                     AstUnOp::AddrOf => {
-                        let place = places.pop().expect("a place");
-                        let into = self.temporary(builder, id, diagnostics)?;
-                        builder.push(Operation {
-                            place: Place::local(into),
-                            value: Rvalue::Address(place),
-                            origin: Origin::Written(span),
-                        });
-                        values.push(Operand::Copy(Place::local(into)));
+                        let mut place = places.pop().expect("a place");
+                        // **`&*E` is `E`, and `&E1[E2]` is `E1 + E2`.** C17
+                        // 6.5.3.2 p3 says that where the operand of `&` is the
+                        // result of a unary `*`, neither operator is evaluated
+                        // and the result is as if both were omitted, and that
+                        // where it is the result of `[]`, the `&` goes and the
+                        // `[]` becomes a `+`.
+                        //
+                        // One rule reaches both, because a subscript is already
+                        // lowered as the addition 6.5.2.1 p2 defines it as: both
+                        // arrive here as a place whose last step is a `Deref`,
+                        // and taking that step off leaves the place whose value
+                        // is the answer. `&c` has no step to take off and is the
+                        // case where an address really is taken.
+                        //
+                        // **A `Deref` rather than any step at all**, and no
+                        // mutation can hold the difference: `Projection` has two
+                        // kinds and nothing outside a test builds an `Index`, so
+                        // the two spellings pick the same places today. The
+                        // clause is what makes it a `Deref`: it excepts a unary
+                        // `*` and a `[]`, and says nothing about a field
+                        // selector, so `&s.f` has to stay an address the day a
+                        // struct can be written.
+                        //
+                        // Without this, `&*p` built an address of what `p`
+                        // reaches, which lost the pointer and made `*&*p;` after
+                        // a free silent; and it tainted `p`'s own allocation,
+                        // which put a "may free it again" warning on a program
+                        // with one `free` in it.
+                        //
+                        // The clause's two exceptions cost nothing here.
+                        // The constraints still apply, and what enforces the
+                        // one on `*` is that `types.rs` works out no type for
+                        // `*x` where `x` is an `int`, so the program never
+                        // reaches this arm; the note it is refused with says
+                        // the gap is this compiler's rather than the
+                        // program's, which is wrong and is #154. And the
+                        // result is not an lvalue: `begin_place` has no arm
+                        // for an address, so `&*p = q;` is refused exactly as
+                        // it was.
+                        //
+                        // **One step, not every step.** `&**pp` is `*pp` and
+                        // not `pp`, so this pops rather than clears, and
+                        // `an_address_of_a_double_dereference` is the case
+                        // that fails if it clears.
+                        if matches!(place.projection.last(), Some(Projection::Deref)) {
+                            place.projection.pop();
+                            values.push(Operand::Copy(place));
+                        } else {
+                            let into = self.temporary(builder, id, diagnostics)?;
+                            builder.push(Operation {
+                                place: Place::local(into),
+                                value: Rvalue::Address(place),
+                                origin: Origin::Written(span),
+                            });
+                            values.push(Operand::Copy(Place::local(into)));
+                        }
                     }
                     AstUnOp::PreInc | AstUnOp::PreDec | AstUnOp::PostInc | AstUnOp::PostDec => {
                         let place = places.pop().expect("a place");
