@@ -808,13 +808,23 @@ fn used(
         if said.contains(&(at, place.clone())) {
             continue;
         }
-        said.push((at, place.clone()));
 
         let sites = known.sites_of(place.local).map(Reached::Site);
         let Some(verdict) = verdict(sites, known) else {
             continue;
         };
 
+        // **Recorded where the report is made, and not a line earlier.**
+        // Marking the place as said when it had only been looked at spent the
+        // right to report it: a dereference this check proved live said
+        // nothing and registered anyway, so a later one of the same place at
+        // the same span was skipped as a repeat of a report that never
+        // happened. Two dereferences do share a span, because both operands of
+        // a `&&` or a `||` are written into one temporary at the whole
+        // expression's span, and `if (*p || (free(p), *p))` was exit 0 with no
+        // output: a proved use of a freed value, silent, which is the worst
+        // answer `docs/safety-model.md` allows for.
+        said.push((at, place.clone()));
         findings.push(Finding {
             kind: Kind::UseAfterFree,
             conclusion: verdict.conclusion,
