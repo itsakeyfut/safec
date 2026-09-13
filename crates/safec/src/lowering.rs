@@ -1119,6 +1119,15 @@ impl Lowering<'_> {
                         // is the answer. `&c` has no step to take off and is the
                         // case where an address really is taken.
                         //
+                        // **A `Deref` rather than any step at all**, and no
+                        // mutation can hold the difference: `Projection` has two
+                        // kinds and nothing outside a test builds an `Index`, so
+                        // the two spellings pick the same places today. The
+                        // clause is what makes it a `Deref`: it excepts a unary
+                        // `*` and a `[]`, and says nothing about a field
+                        // selector, so `&s.f` has to stay an address the day a
+                        // struct can be written.
+                        //
                         // Without this, `&*p` built an address of what `p`
                         // reaches, which lost the pointer and made `*&*p;` after
                         // a free silent; and it tainted `p`'s own allocation,
