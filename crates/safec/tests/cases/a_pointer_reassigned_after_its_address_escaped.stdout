@@ -1,0 +1,86 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_reassigned_after_its_address_escaped.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_reassigned_after_its_address_escaped.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "void *"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "void"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Block "bb0" entry
+    Call a_pointer_reassigned_after_its_address_escaped.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:5:16 written
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:5:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Call a_pointer_reassigned_after_its_address_escaped.c:6:14 "malloc" "bb2"
+      Destination "_6"
+      Constant 4
+  Block "bb2"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:6:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Call a_pointer_reassigned_after_its_address_escaped.c:7:9 "malloc" "bb3"
+      Destination "_7"
+      Constant 8
+  Block "bb3"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:7:5 written
+      Destination "_1"
+      Use
+        Copy "_7"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:7:5 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    Call a_pointer_reassigned_after_its_address_escaped.c:8:5 "free" "bb4"
+      Destination "_9"
+      Copy "_5"
+  Block "bb4"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:9:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_reassigned_after_its_address_escaped.c:9:5 written
+      Destination "_10"
+      Use
+        Copy "_3"
+          Deref
+    Operation a_pointer_reassigned_after_its_address_escaped.c:10:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_reassigned_after_its_address_escaped.c:10:5 written
+      Destination "_11"
+      Use
+        Copy "_1"
+          Deref
+    Operation a_pointer_reassigned_after_its_address_escaped.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

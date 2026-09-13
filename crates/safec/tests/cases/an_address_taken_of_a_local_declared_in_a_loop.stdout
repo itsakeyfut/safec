@@ -1,0 +1,67 @@
+Target "x86_64-pc-windows-msvc"
+Function an_address_taken_of_a_local_declared_in_a_loop.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_address_taken_of_a_local_declared_in_a_loop.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "void"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Goto "bb1"
+  Block "bb1"
+    Branch an_address_taken_of_a_local_declared_in_a_loop.c:4:12 "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:5:9 generated "_2"
+    Call an_address_taken_of_a_local_declared_in_a_loop.c:5:18 "malloc" "bb4"
+      Destination "_3"
+      Constant 4
+  Block "bb3"
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
+  Block "bb4"
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:5:14 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call an_address_taken_of_a_local_declared_in_a_loop.c:6:9 "free" "bb5"
+      Destination "_4"
+      Copy "_2"
+  Block "bb5"
+    StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:7:9 generated "_5"
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:7:20 written
+      Destination "_6"
+      Address
+        Place "_2"
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:7:15 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:8:13 written
+      Destination "_7"
+      Binary "Sub"
+        Copy "_1"
+        Constant 1
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:8:9 written
+      Destination "_1"
+      Use
+        Copy "_7"
+    Operation an_address_taken_of_a_local_declared_in_a_loop.c:8:9 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    StorageDead an_address_taken_of_a_local_declared_in_a_loop.c:9:5 generated "_5"
+    StorageDead an_address_taken_of_a_local_declared_in_a_loop.c:9:5 generated "_2"
+    Goto "bb1"
