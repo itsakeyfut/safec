@@ -167,12 +167,17 @@ pub fn dump_line(kind: &str, depth: usize, out: &mut String) {
 ///
 /// The same line shape as `--emit ast`: a kind, where it is, and whatever that
 /// line alone carries, two spaces of indent per level. What differs is that a
-/// line carries a location only where the IR holds one. A span reaches this
-/// printer in three places, a function's name, an operation's origin and a
-/// call's, and a local, a block and every other terminator have none. Giving
-/// one the span of the function it sits in would be a claim that it is written
-/// there, and `--emit ast`'s whole discipline is that a line says where a thing
-/// actually is.
+/// line carries a location only where the IR holds one. **Every [`Origin`] the
+/// IR carries reaches this printer, and a function's name besides**, which is
+/// the rule rather than a list: an operation, a storage marker, a call and a
+/// branch are located, and a local, a block and a terminator with nothing to
+/// decide are not. It is written as the rule because the list was wrong here
+/// once, saying three places while the storage markers were a fourth, and a
+/// count is a fact about today. Giving a line the span of the function it sits
+/// in would be a claim that it is written there, and `--emit ast`'s whole
+/// discipline is that a line says where a thing actually is.
+///
+/// [`Origin`]: crate::ir::Origin
 ///
 /// **No ids.** A local is `_0`, a block is `bb0`, and a callee is named by its
 /// name rather than by its [`crate::ir::FuncId`], which is an index into a table this
