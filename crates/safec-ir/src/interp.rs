@@ -128,8 +128,11 @@ pub struct Trap {
     pub why: String,
     /// Where the operation was, where the operation had a span.
     ///
-    /// A terminator other than a call carries none, so this is `None` more
-    /// often than a diagnostic would like. What the IR knows is in `ir.rs`.
+    /// Set where the element or terminator that stopped the run carried a
+    /// span, which is where the IR carries one: an operation, an evaluation, a
+    /// storage marker, a call and a branch. A `Goto`, a `Return` and an
+    /// `Abnormal` carry none, so this is `None` more often than a diagnostic
+    /// would like. What the IR knows is in `ir.rs`.
     pub at: Option<Span>,
 }
 

@@ -120,10 +120,15 @@ a temporary outlived.
 
 ### Confirmation
 
-`E0004`, and it was measured rather than argued. Adding a fourth `Element` kind
-stops three places compiling at once: `Element::name` in `crates/safec-ir/src/ir.rs`,
-the element walk in `crates/safec-ir/src/interp.rs`, and `dump_ir`'s in
-`crates/safec-ir/src/print.rs`.
+`E0004`, and it was measured rather than argued. Adding a kind stops every walk
+over an `Element` compiling at once, and the list has grown with the consumers
+rather than with this record: when it was written the kind was the fourth and
+three places stopped, and `Element::Evaluate` arriving as that fourth kind
+measured nine arms across seven files, `crates/safec-ir/src/memory.rs` twice and
+`crates/safec-llvm/src/emit.rs` among them. The claim is that no walk is missed,
+which is a property of there being no `_` arm over `Element` anywhere; a count
+is what it happened to be on the day somebody ran it, and `records.sh` cannot
+check one.
 
 `E0027` for a field, which is the narrower and worse failure RK-018 records.
 Adding a field to `Element::StorageDead` and fixing nothing is `error[E0027]:
