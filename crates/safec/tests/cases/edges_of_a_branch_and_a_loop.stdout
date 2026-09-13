@@ -13,7 +13,7 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
       Binary "Gt"
         Copy "_1"
         Constant 0
-    Branch "bb1" "bb2"
+    Branch edges_of_a_branch_and_a_loop.c:2:9 "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Operation edges_of_a_branch_and_a_loop.c:3:13 written
@@ -35,7 +35,7 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
   Block "bb3"
     Goto "bb4"
   Block "bb4"
-    Branch "bb5" "bb6"
+    Branch edges_of_a_branch_and_a_loop.c:6:12 "bb5" "bb6"
       Copy "_1"
   Block "bb5"
     Operation edges_of_a_branch_and_a_loop.c:7:13 written

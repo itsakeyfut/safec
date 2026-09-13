@@ -148,9 +148,10 @@ pub fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out:
 /// A line that names a kind and nothing about where it is.
 ///
 /// For the parts of the Safety IR that have no span of their own: a local, a
-/// block, and every terminator but a call. The indent lives here rather than in
-/// each caller, so that the two line shapes cannot disagree about what a level
-/// looks like or about what happens past [`DEEPEST_INDENT`].
+/// block, and every terminator but a call and a branch. The indent lives here
+/// rather than in each caller, so that the two line shapes cannot disagree
+/// about what a level looks like or about what happens past
+/// [`DEEPEST_INDENT`].
 pub fn dump_line(kind: &str, depth: usize, out: &mut String) {
     for _ in 0..depth.min(DEEPEST_INDENT) {
         out.push_str("  ");
@@ -381,13 +382,12 @@ fn dump_terminator(
     out: &mut String,
 ) {
     match terminator {
-        Terminator::Call { origin, .. } => {
+        Terminator::Call { origin, .. } | Terminator::Branch { origin, .. } => {
             dump_node(sources, terminator.name(), origin.span(), depth, out);
         }
-        Terminator::Goto(_)
-        | Terminator::Branch { .. }
-        | Terminator::Return
-        | Terminator::Abnormal { .. } => dump_line(terminator.name(), depth, out),
+        Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { .. } => {
+            dump_line(terminator.name(), depth, out)
+        }
     }
 
     match terminator {
@@ -399,6 +399,9 @@ fn dump_terminator(
             condition,
             then,
             otherwise,
+            // Printed above, beside the kind, which is where `Call` puts its
+            // own and where a reader looks for a position.
+            origin: _,
         } => {
             write!(
                 out,

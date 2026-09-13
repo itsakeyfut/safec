@@ -29,6 +29,14 @@ struct Names {
     /// In the order they appear in the file, so `at[0]` is earlier than `at[1]`
     /// by the rule the join orders spans with.
     at: [Span; 6],
+    /// What a branch's controlling expression is, where one is needed and
+    /// nothing asserts on it.
+    ///
+    /// `Terminator::Branch` carries a span so that a dereference in a condition
+    /// has somewhere to point. Every condition in this file is a constant, so
+    /// no test here reaches that; the field still has to be filled, and filling
+    /// it with one of `at` would read as if it were under test.
+    asked: Span,
 }
 
 /// A file whose bytes the check can read a callee's name out of.
@@ -40,7 +48,7 @@ struct Names {
 /// places for that ordering to be about anything.
 fn sources() -> (SourceMap, Names) {
     let mut map = SourceMap::new();
-    let file = map.add_virtual("t.c", "free malloc f a b c d e g\n");
+    let file = map.add_virtual("t.c", "free malloc f a b c d e g h\n");
 
     let names = Names {
         free: Span::new(file, 0, 4),
@@ -54,6 +62,7 @@ fn sources() -> (SourceMap, Names) {
             Span::new(file, 22, 23),
             Span::new(file, 24, 25),
         ],
+        asked: Span::new(file, 26, 27),
     };
 
     (map, names)
@@ -122,6 +131,24 @@ fn copy(to: LocalId, from: LocalId, at: Span, then: BlockId) -> Block {
             origin: Origin::Written(at),
         })],
         terminator: Terminator::Goto(then),
+    }
+}
+
+/// A branch on a constant, in a block with nothing else in it.
+///
+/// The condition is a constant everywhere here because what these tests are
+/// about is where two paths meet rather than what decides which is taken.
+/// `asked` is the span the terminator carries for a diagnostic to point at,
+/// and no test in this file reads it.
+fn branch(then: BlockId, otherwise: BlockId, asked: Span) -> Block {
+    Block {
+        elements: vec![],
+        terminator: Terminator::Branch {
+            condition: Operand::Constant(1),
+            then,
+            otherwise,
+            origin: Origin::Written(asked),
+        },
     }
 }
 
@@ -295,17 +322,7 @@ fn a_join_names_the_earlier_free() {
     let joined = function.reserve_block();
     let exit = function.reserve_block();
 
-    function.fill_block(
-        entry,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: first_arm,
-                otherwise: second_arm,
-            },
-        },
-    );
+    function.fill_block(entry, branch(first_arm, second_arm, names.asked));
     // The later span is on the arm the solver reaches first, so a rule that
     // kept whichever arrived would answer differently from one that orders
     // them. Without that the test would pass under both.
@@ -365,17 +382,7 @@ fn a_free_of_either_of_two_allocations_names_the_earlier() {
     function.fill_block(free_one, free(&callees, one, names.at[2], free_two));
     function.fill_block(free_two, free(&callees, other, names.at[3], pick));
 
-    function.fill_block(
-        pick,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: take_one,
-                otherwise: take_two,
-            },
-        },
-    );
+    function.fill_block(pick, branch(take_one, take_two, names.asked));
     function.fill_block(take_one, copy(held, one, names.at[4], joined));
     function.fill_block(take_two, copy(held, other, names.at[4], joined));
 
@@ -427,30 +434,10 @@ fn a_free_that_may_not_be_the_first_is_unproven() {
             terminator: Terminator::Goto(header),
         },
     );
-    function.fill_block(
-        header,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: first_arm,
-                otherwise: second_arm,
-            },
-        },
-    );
+    function.fill_block(header, branch(first_arm, second_arm, names.asked));
     function.fill_block(first_arm, free(&callees, held, names.at[0], joined));
     function.fill_block(second_arm, free(&callees, held, names.at[1], joined));
-    function.fill_block(
-        joined,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: header,
-                otherwise: exit,
-            },
-        },
-    );
+    function.fill_block(joined, branch(header, exit, names.asked));
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -666,23 +653,13 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
     let value = function.push_local(int);
 
     let allocate = function.reserve_block();
-    let branch = function.reserve_block();
+    let decide = function.reserve_block();
     let release = function.reserve_block();
     let joined = function.reserve_block();
     let exit = function.reserve_block();
 
-    function.fill_block(allocate, malloc(&callees, held, names.at[0], branch));
-    function.fill_block(
-        branch,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: release,
-                otherwise: joined,
-            },
-        },
-    );
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], decide));
+    function.fill_block(decide, branch(release, joined, names.asked));
     function.fill_block(release, free(&callees, held, names.at[1], joined));
     function.fill_block(joined, read(value, held, names.at[2], exit));
     function.fill_block(exit, returns());
@@ -724,7 +701,7 @@ fn a_use_after_two_allocations_names_no_allocation() {
     let held = function.push_local(int);
     let value = function.push_local(int);
 
-    let branch = function.reserve_block();
+    let decide = function.reserve_block();
     let first_arm = function.reserve_block();
     let first_free = function.reserve_block();
     let second_arm = function.reserve_block();
@@ -732,17 +709,7 @@ fn a_use_after_two_allocations_names_no_allocation() {
     let joined = function.reserve_block();
     let exit = function.reserve_block();
 
-    function.fill_block(
-        branch,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: first_arm,
-                otherwise: second_arm,
-            },
-        },
-    );
+    function.fill_block(decide, branch(first_arm, second_arm, names.asked));
     function.fill_block(first_arm, malloc(&callees, held, names.at[0], first_free));
     function.fill_block(first_free, free(&callees, held, names.at[1], joined));
     function.fill_block(second_arm, malloc(&callees, held, names.at[2], second_free));
@@ -782,7 +749,7 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
-    let branch = function.reserve_block();
+    let decide = function.reserve_block();
     let arm = function.reserve_block();
     let from_the_arm = function.reserve_block();
     let otherwise = function.reserve_block();
@@ -790,18 +757,8 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
     let exit = function.reserve_block();
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
-    function.fill_block(release, free(&callees, held, names.at[1], branch));
-    function.fill_block(
-        branch,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: arm,
-                otherwise,
-            },
-        },
-    );
+    function.fill_block(release, free(&callees, held, names.at[1], decide));
+    function.fill_block(decide, branch(arm, otherwise, names.asked));
     // One arm frees the parameter and the other does not, which is what leaves
     // its site `Unknown` where they meet.
     function.fill_block(arm, free(&callees, given, names.at[2], from_the_arm));
@@ -841,24 +798,14 @@ fn a_site_allocated_on_two_arms_names_no_allocation() {
     let (unit, mut function, int, callees) = a_unit(&names, 0);
     let held = function.push_local(int);
 
-    let branch = function.reserve_block();
+    let decide = function.reserve_block();
     let first_arm = function.reserve_block();
     let second_arm = function.reserve_block();
     let joined = function.reserve_block();
     let again = function.reserve_block();
     let exit = function.reserve_block();
 
-    function.fill_block(
-        branch,
-        Block {
-            elements: vec![],
-            terminator: Terminator::Branch {
-                condition: Operand::Constant(1),
-                then: first_arm,
-                otherwise: second_arm,
-            },
-        },
-    );
+    function.fill_block(decide, branch(first_arm, second_arm, names.asked));
     // One local, two calls, so one site carrying two origins where they meet.
     function.fill_block(first_arm, malloc(&callees, held, names.at[0], joined));
     function.fill_block(second_arm, malloc(&callees, held, names.at[1], joined));

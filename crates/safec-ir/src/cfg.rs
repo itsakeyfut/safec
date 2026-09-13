@@ -242,6 +242,7 @@ mod tests {
                     condition: Operand::Constant(0),
                     then: left,
                     otherwise: right,
+                    origin: Origin::Written(span),
                 },
             },
         );
@@ -256,6 +257,7 @@ mod tests {
                     condition: Operand::Constant(0),
                     then: body,
                     otherwise: exit,
+                    origin: Origin::Written(span),
                 },
             },
         );
@@ -339,6 +341,7 @@ mod tests {
                     condition: Operand::Constant(0),
                     then: twice,
                     otherwise: twice,
+                    origin: Origin::Written(span),
                 },
             },
         );

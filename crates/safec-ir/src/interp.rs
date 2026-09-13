@@ -263,6 +263,7 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 condition,
                 then,
                 otherwise,
+                origin: _,
             } => {
                 // C17 6.8.4.1 p2: the substatement runs if the expression
                 // compares unequal to zero. A pointer here is a place, and a

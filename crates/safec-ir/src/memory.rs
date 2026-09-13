@@ -868,18 +868,13 @@ fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Pla
             }
             Some((origin.span(), places))
         }
-        // **A dereference in a condition is not reported, because there is
-        // nowhere to point.** `Terminator::Branch` carries no `Origin`, and
-        // `Terminator::Call`'s own doc comment says it is the only terminator
-        // that does "because it is the only one a diagnostic has had to name so
-        // far". This is the diagnostic that has had to, and giving `Branch` a
-        // span moves every `--emit safety-ir` expectation with a branch in it,
-        // so it is #141 rather than a line here. A caret in the wrong place is
-        // worse than none: it is the defect this project has had before.
+        // The span is here now and nothing reads it yet: that is the next
+        // commit, and this one is about the IR carrying it.
         Terminator::Branch {
             condition: _,
             then: _,
             otherwise: _,
+            origin: _,
         } => None,
         Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
     }

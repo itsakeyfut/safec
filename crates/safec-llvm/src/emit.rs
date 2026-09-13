@@ -590,6 +590,9 @@ impl Emitter<'_> {
                 condition,
                 then,
                 otherwise,
+                // A span, for a diagnostic. LLVM is handed the same branch
+                // whether or not anybody points at the expression behind it.
+                origin: _,
             } => {
                 // The IR's condition is a value and LLVM's is a bit, so this is
                 // `!= 0`, which is what C17 6.8.4.1 p2 says an `if` tests.
