@@ -2076,6 +2076,12 @@ mod tests {
     /// Mutation: write the operand itself into the answer rather than whether
     /// it is non-zero. `3 && 5` becomes five where C17 6.5.13 p3 says one, and
     /// both assertions on the comparison fail.
+    ///
+    /// Mutation: give the branch the right operand's span, or the whole binary
+    /// expression's. The last assertion fails and nothing else in the suite
+    /// does, which is why it is here: this is the one branch the frontend
+    /// builds whose condition is a temporary, so no diagnostic will ever point
+    /// at its span and no corpus artifact holds a short circuit.
     #[test]
     fn a_short_circuit_is_a_branch_and_answers_one_or_zero() {
         let lowered = lowered("int f(int a, int b) {\n    return a && b;\n}\n");
@@ -2117,6 +2123,15 @@ mod tests {
                 rhs: Operand::Constant(0),
             }
         );
+
+        // What decides is the left operand, so that is the expression the
+        // branch names. Written out as the text rather than compared against a
+        // span this test computed, because a test that asks the lowering where
+        // it put something agrees with it however wrong both are.
+        let Terminator::Branch { origin, .. } = blocks[0].terminator else {
+            panic!("{:?}", blocks[0].terminator);
+        };
+        assert_eq!(lowered.sources.snippet(origin.span()), "a");
     }
 
     /// A conditional operator answers what its arm is worth, and not a truth
