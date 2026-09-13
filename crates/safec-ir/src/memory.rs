@@ -780,11 +780,16 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// from anywhere this does not follow, which is most of them.
 ///
 /// **What that silence covers is a boundary rather than a rule.** A pointer
-/// written behind this check's back does arrive here as `SiteState::Unknown`
+/// written behind this check's back arrives here as `SiteState::Unknown`
 /// rather than as no site at all, because taking a local's address is what
-/// makes its sites unknown. Pointer arithmetic is followed for the same reason,
-/// and so is a controlling expression, which needed `Terminator::Branch` to
-/// carry a span before it could be.
+/// makes its sites unknown. **The sites the local held at that instant, and
+/// not the local**: assigning to it afterwards gives it a fresh site and the
+/// marking is gone, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` is
+/// followed as if nothing could write through `pp`, and reads a freed pointer
+/// at exit 0. That is #155, and it is the transfer in [`Allocations`] rather
+/// than anything here. Pointer arithmetic is followed for the same reason, and
+/// so is a controlling expression, which needed `Terminator::Branch` to carry
+/// a span before it could be.
 ///
 /// A place whose value is thrown away is read too, because
 /// [`Element::Evaluate`] exists to say that it was evaluated: `*p;` on its own
@@ -826,6 +831,14 @@ fn used(
         // and the pair that should have collapsed was not adjacent for
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
+        //
+        // **The first of a pair wins, whatever either concluded**, which is
+        // wrong where the second proved what the first could not: both
+        // operands of a `||` are written into one temporary at the whole
+        // expression's span, so `*p || (free(p), *p)` after an escape is a
+        // warning and exit 0 where an error was there to be had. That is
+        // #156, and fixing it is a change to what this records rather than to
+        // whether it records.
         if said.contains(&(at, place.clone())) {
             continue;
         }
