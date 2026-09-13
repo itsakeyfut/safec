@@ -431,6 +431,28 @@ impl Origin {
 pub enum Element {
     /// A place, and what is written into it.
     Assign(Operation),
+    /// A place evaluated for its side effects, whose value nobody wanted.
+    ///
+    /// C17 6.8.3 p2 evaluates an expression statement as a void expression and
+    /// 6.3.2.2 discards the designator, so this is the evaluation without the
+    /// lvalue conversion that would follow it anywhere else. That distinction
+    /// is the whole of why it is not an [`Self::Assign`] into a temporary:
+    /// `int x; int *q = &x; *q;` is a program C defines, and a load would make
+    /// the interpreter stop on it.
+    ///
+    /// **Only where the place goes through a projection**, because that is
+    /// where evaluating one can be undefined: C17 6.5.3.2 p4 for the unary `*`
+    /// on an invalid pointer, 6.5.6 p8 for arithmetic that leaves the object.
+    /// Evaluating a bare name is neither, so `p;` builds nothing rather than
+    /// building an element with no fact in it. Whoever produces an IR owes
+    /// that, and an analysis reading one may take a `place` here as already
+    /// projected.
+    Evaluate {
+        /// What was evaluated.
+        place: Place,
+        /// Where the expression that was evaluated is written.
+        origin: Origin,
+    },
     /// This local has storage from here on, and nothing in it.
     ///
     /// C17 6.2.4 p6 begins the lifetime at entry into the block rather than at
@@ -469,6 +491,7 @@ impl Element {
     pub fn name(&self) -> &'static str {
         match self {
             Self::Assign(_) => "Operation",
+            Self::Evaluate { .. } => "Evaluate",
             Self::StorageLive { .. } => "StorageLive",
             Self::StorageDead { .. } => "StorageDead",
         }

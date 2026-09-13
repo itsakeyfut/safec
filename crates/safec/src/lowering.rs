@@ -1674,7 +1674,9 @@ mod tests {
             .iter()
             .filter_map(|element| match element {
                 Element::Assign(operation) => Some(operation),
-                Element::StorageLive { .. } | Element::StorageDead { .. } => None,
+                Element::Evaluate { .. }
+                | Element::StorageLive { .. }
+                | Element::StorageDead { .. } => None,
             })
             .collect()
     }
@@ -1762,7 +1764,7 @@ mod tests {
             .blocks()
             .flat_map(|block| block.elements.iter())
             .filter_map(|element| match element {
-                Element::Assign(_) => None,
+                Element::Assign(_) | Element::Evaluate { .. } => None,
                 Element::StorageLive { local, origin: _ }
                 | Element::StorageDead { local, origin: _ } => {
                     Some((element.name(), local.index()))

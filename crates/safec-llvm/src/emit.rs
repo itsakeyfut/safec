@@ -520,6 +520,18 @@ impl Emitter<'_> {
                 self.at = Some(operation.origin.span());
                 self.assign(function, operation, out)
             }
+            // Nothing is written, and nothing should be. C17 6.3.2.2 discards
+            // the designator a void expression yields, so `*p;` performs no
+            // load and a backend that emitted one would be generating a read
+            // the program does not contain. The element exists for an analysis
+            // rather than for a machine: what it records is that the pointer
+            // was followed, which the `load` of `p` on the way to `*p` would be
+            // the only machine-visible part of, and no `load` of `p` is needed
+            // either when nothing is done with what it points at.
+            Element::Evaluate {
+                place: _,
+                origin: _,
+            } => Some(()),
             // Nothing is written. LLVM has `llvm.lifetime.start` and `.end` for
             // exactly this, and they buy an optimiser something this backend
             // has no optimiser to give it to, while costing two intrinsic calls

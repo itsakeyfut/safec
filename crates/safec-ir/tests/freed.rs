@@ -913,3 +913,93 @@ fn a_dereference_in_a_condition_is_a_use() {
     assert_eq!(found[0].freed, Some(names.at[1]));
     assert_eq!(found[0].made, Some(names.at[0]));
 }
+
+/// `*local;`, in a block that falls through to `then`.
+fn evaluate(local: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Evaluate {
+            place: deref(local),
+            origin: Origin::Written(at),
+        }],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// A place evaluated for its side effects is a use.
+///
+/// The corpus holds this written as C six times over, because six spellings
+/// reach it. This holds the half that belongs to this crate: an element saying
+/// a place was evaluated is read by the check with no frontend between, and a
+/// corpus case proves the lowering and the check at once and says which of them
+/// broke only by where the diff lands. RK-033 in the review knowledge bank is
+/// why both exist, and a review of the sibling found this half missing.
+///
+/// Mutation: answer `None` for an `Element::Evaluate` in
+/// `dereferenced_in_element`. This fails, and so does every corpus case that
+/// throws a dereference away.
+#[test]
+fn a_place_evaluated_for_nothing_is_a_use() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let discarded = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
+    function.fill_block(release, free(&callees, held, names.at[1], discarded));
+    function.fill_block(discarded, evaluate(held, names.at[2], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[2]);
+    assert_eq!(found[0].freed, Some(names.at[1]));
+    assert_eq!(found[0].made, Some(names.at[0]));
+}
+
+/// Evaluating a place moves no site, so a free after one is still the first.
+///
+/// The transfer answers nothing for this element and that is the answer rather
+/// than an omission: evaluating a place writes nowhere. Nothing else in the
+/// suite reaches the arm, because every other test that builds one is about
+/// what the element is read for rather than about what it does to the lattice.
+///
+/// Mutation: have the transfer clear the sites of the place it evaluates, which
+/// is what an arm written by copying its neighbour would do. The free stops
+/// reaching a site, the double free is not found, and this fails.
+#[test]
+fn evaluating_a_place_leaves_the_lattice_alone() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let discarded = function.reserve_block();
+    let first = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], discarded));
+    function.fill_block(discarded, evaluate(held, names.at[1], first));
+    function.fill_block(first, free(&callees, held, names.at[2], second));
+    function.fill_block(second, free(&callees, held, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].freed, Some(names.at[2]));
+    assert_eq!(
+        found[0].made,
+        Some(names.at[0]),
+        "the evaluation lost nothing"
+    );
+}

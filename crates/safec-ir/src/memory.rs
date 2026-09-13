@@ -312,6 +312,13 @@ impl Analysis for Allocations<'_> {
         // bank is a field added to a variant that already exists walking past
         // an exhaustive match.
         match element {
+            // Evaluating a place writes nowhere, so no local changes what it
+            // holds and no site changes what is known about it. What this
+            // element is for is read by `dereferenced_in_element` instead.
+            Element::Evaluate {
+                place: _,
+                origin: _,
+            } => {}
             Element::Assign(operation) => {
                 // A write through a projection changes what a pointer points
                 // at rather than which allocation a local holds, and this check
@@ -857,6 +864,11 @@ fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
             places.extend(dereferenced_in_rvalue(&operation.value));
             Some((operation.origin.span(), places))
         }
+        // The element that exists so this can see it. `projected` rather than
+        // the place itself, even though `Element::Evaluate`'s doc says a
+        // producer owes a projection: one rule about what counts as reaching
+        // through a pointer, applied everywhere, beats two that agree today.
+        Element::Evaluate { place, origin } => Some((origin.span(), projected(place))),
         // Storage beginning or ending reads nothing through anything.
         Element::StorageLive {
             local: _,

@@ -245,6 +245,29 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     store(&mut frames, at, value)
                         .map_err(|trap| trap.at(operation.origin.span()))?;
                 }
+                // **Reached, and not read.** C17 6.3.2.2 discards the
+                // designator a void expression produces, so nothing is loaded
+                // out of the place; `resolve` already loads every pointer on
+                // the way to it, which is the reading C17 6.5.3.2 p4 requires
+                // of the `*` itself.
+                //
+                // Then the two questions `store`'s doc comment names, because
+                // `resolve` asks them of each frame it loads *through* and not
+                // of the one it hands back. Reaching a local whose scope has
+                // ended is undefined by 6.2.4 p2 whether or not the value is
+                // wanted, and an arm that stopped at `resolve` would be the
+                // careless half of a pair this file has already been bitten by.
+                Element::Evaluate { place, origin } => {
+                    let at =
+                        resolve(&frames, current, place).map_err(|trap| trap.at(origin.span()))?;
+                    let frame = live(&frames, at).map_err(|trap| trap.at(origin.span()))?;
+                    if matches!(frames[frame].locals[at.local.index()], Slot::Dead) {
+                        return Err(Trap::new(
+                            "an evaluation of a place whose scope has ended, through a pointer that outlived it",
+                        )
+                        .at(origin.span()));
+                    }
+                }
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
                 // not a check: whatever the last iteration left is gone.
