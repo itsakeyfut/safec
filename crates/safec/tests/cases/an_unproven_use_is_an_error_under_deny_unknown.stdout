@@ -12,7 +12,7 @@ Function an_unproven_use_is_an_error_under_deny_unknown.c:3:5 "f"
   Local "_3" "void"
   Local "_4" "int"
   Block "bb0" entry
-    Branch "bb1" "bb2"
+    Branch an_unproven_use_is_an_error_under_deny_unknown.c:4:9 "bb1" "bb2"
       Copy "_1"
   Block "bb1"
     Call an_unproven_use_is_an_error_under_deny_unknown.c:4:14 "free" "bb4"

@@ -23,7 +23,7 @@ Function a_branch_that_allocates_either_way.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
-    Branch "bb2" "bb3"
+    Branch a_branch_that_allocates_either_way.c:5:9 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
     Call a_branch_that_allocates_either_way.c:5:18 "malloc" "bb5"

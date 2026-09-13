@@ -98,6 +98,7 @@ impl Analysis for Written {
                 condition: _,
                 then: _,
                 otherwise: _,
+                origin: _,
             }
             | Terminator::Return
             | Terminator::Abnormal { to: _ } => {}
@@ -187,6 +188,7 @@ fn what_a_loop_writes_and_what_comes_before_it_are_answered_apart() {
                 condition: Operand::Constant(1),
                 then: body,
                 otherwise: exit,
+                origin,
             },
         },
     );
@@ -239,6 +241,7 @@ fn the_back_edge_changes_the_answer_after_the_loop() {
                 condition: Operand::Constant(1),
                 then: body,
                 otherwise: exit,
+                origin,
             },
         },
     );
@@ -285,6 +288,7 @@ fn a_local_written_on_one_arm_of_a_branch_is_not_written_after_it() {
                 condition: Operand::Constant(1),
                 then: taken,
                 otherwise: untaken,
+                origin,
             },
         },
     );
@@ -468,6 +472,7 @@ fn what_a_block_sends_reaches_its_own_successors_and_no_others() {
                 condition: Operand::Constant(1),
                 then: keeper,
                 otherwise: killer,
+                origin,
             },
         },
     );
@@ -605,6 +610,7 @@ impl Analysis for Climbing {
 fn an_analysis_that_cannot_converge_is_stopped_and_named() {
     let (_sources, at) = spans();
     let (_unit, mut function, _int) = a_function(at);
+    let origin = Origin::Written(at);
 
     let entry = function.reserve_block();
     let header = function.reserve_block();
@@ -620,6 +626,7 @@ fn an_analysis_that_cannot_converge_is_stopped_and_named() {
                 condition: Operand::Constant(1),
                 then: body,
                 otherwise: exit,
+                origin,
             },
         },
     );
@@ -708,6 +715,7 @@ fn a_function_counting_down() -> (Function, BlockId) {
                     condition: Operand::Constant(1),
                     then: arms[i],
                     otherwise,
+                    origin,
                 },
             },
         );
@@ -890,6 +898,7 @@ fn an_analysis_that_keys_on_more_than_its_locals_is_not_stopped() {
     );
     let int = unit.push_type(Ty::Int);
     let mut function = Function::new(at, int, []);
+    let origin = Origin::Written(at);
     let a = function.push_local(int);
 
     let entry = function.reserve_block();
@@ -914,6 +923,7 @@ fn an_analysis_that_keys_on_more_than_its_locals_is_not_stopped() {
                     condition: Operand::Constant(1),
                     then: arms[site],
                     otherwise,
+                    origin,
                 },
             },
         );

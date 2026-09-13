@@ -524,6 +524,28 @@ pub enum Terminator {
         then: BlockId,
         /// Where a zero condition goes.
         otherwise: BlockId,
+        /// Where the controlling expression is, so that a diagnostic can point
+        /// at it.
+        ///
+        /// **The controlling expression, not the statement it belongs to.**
+        /// `condition` can be a place read through a pointer, and then it is
+        /// the only place in a block that a check has to name: `if (*p)` after
+        /// a free has to underline `*p`. Underlining the whole `if` instead
+        /// would put a caret on code that is not the defect, which this project
+        /// ranks below saying nothing at all.
+        ///
+        /// **The whole controlling expression, and no finer than that.** C17
+        /// 6.5.17 p2 makes a comma expression's value its right operand, so
+        /// `if (c, *p)` underlines `c, *p` where only `*p` decided anything.
+        /// That is wider than it could be and is still the expression rather
+        /// than the statement, which is the failure this field exists to
+        /// prevent; `a_dereference_after_a_comma_in_a_condition` pins what it
+        /// does today and #147 is where it narrows.
+        ///
+        /// Whoever builds one owes that, and nothing downstream can recover it
+        /// from a span that is already too wide. That is why the obligation is
+        /// here and not beside the check that spends it.
+        origin: Origin,
     },
     /// Enter another function, and come back.
     Call {
@@ -543,10 +565,12 @@ pub enum Terminator {
         then: BlockId,
         /// Where this call is, so that a diagnostic can point at it.
         ///
-        /// The only terminator that carries one, because it is the only one a
-        /// diagnostic has had to name so far: `docs/safety-model.md` asks for
-        /// "p freed here", and a free is a call. [`Operation`] carries the same
-        /// field for the same reason, and a call is not an operation.
+        /// One of the two terminators that carry one, and they are the two a
+        /// diagnostic has had to name: `docs/safety-model.md` asks for "p freed
+        /// here" and a free is a call, and [`Self::Branch`] has one because a
+        /// dereference in a controlling expression has nowhere else to point.
+        /// [`Operation`] carries the same field for the same reason, and a call
+        /// is not an operation.
         origin: Origin,
     },
     /// Leave the function. The value is in local 0, which
@@ -599,6 +623,7 @@ impl Terminator {
                 condition: _,
                 then,
                 otherwise,
+                origin: _,
             } => out.extend([*then, *otherwise]),
             Self::Call {
                 callee: _,
@@ -1226,6 +1251,7 @@ mod tests {
                     condition: Operand::Constant(0),
                     then: one,
                     otherwise: two,
+                    origin: Origin::Written(at),
                 },
                 vec![one, two],
             ),
@@ -1479,6 +1505,7 @@ mod tests {
                     condition: Operand::Copy(Place::local(counter)),
                     then: body,
                     otherwise: exit,
+                    origin: Origin::Written(at),
                 },
             },
         );

@@ -34,7 +34,7 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
-    Branch "bb3" "bb4"
+    Branch a_free_of_either_of_two_locals_names_no_allocation.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
     Operation a_free_of_either_of_two_locals_names_no_allocation.c:7:14 written

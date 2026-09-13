@@ -71,16 +71,18 @@ searches with and a suppression list keys on, and freeing twice and reading
 through a dangling pointer are two classes of program to look for.
 
 **What `SC0402` not being emitted does not mean.** The check follows a pointer
-through a copy and through pointer arithmetic, so `q = p; *q` and `p[i]` are
-both read. It does not follow one out of another pointer, so `int *p = *pp;`
-leaves nothing to say about a later `*p`, and it says nothing about a
-dereference inside a controlling expression, because `Terminator::Branch`
-carries no span to put a caret on and a caret in the wrong place is worse than
-none. So `free(p); if (*p) {}` compiles quietly today, and issue #141 is what
-closes it. This is written here rather than only beside the code because a
-boundary a user cannot find is one they will discover by being wrong about it,
-and [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that
-silence is the most expensive answer this compiler gives.
+through a copy, through pointer arithmetic and into a controlling expression,
+so `q = p; *q`, `p[i]` and `if (*p)` are all read. Two shapes are known not to
+be, and they are a boundary rather than a list of everything outside it. It
+does not follow a pointer read out of another pointer, so `int *p = *pp;`
+leaves nothing to say about a later `*p`. And `*p;` written on its own is an
+expression statement whose value nobody wants, which the lowering drops before
+any check sees it, so the compiler is quiet about a dereference C17 6.5.3.2 p4
+makes undefined; issue #149 is what fixes that, in the frontend rather than
+here. This is written here rather than only beside the code because a boundary
+a user cannot find is one they will discover by being wrong about it, and
+[`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that silence
+is the most expensive answer this compiler gives.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from

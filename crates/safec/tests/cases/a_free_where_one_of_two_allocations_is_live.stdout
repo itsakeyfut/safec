@@ -41,7 +41,7 @@ Function a_free_where_one_of_two_allocations_is_live.c:3:5 "f"
       Destination "_7"
       Copy "_2"
   Block "bb3"
-    Branch "bb4" "bb5"
+    Branch a_free_where_one_of_two_allocations_is_live.c:8:9 "bb4" "bb5"
       Copy "_1"
   Block "bb4"
     Operation a_free_where_one_of_two_allocations_is_live.c:8:14 written

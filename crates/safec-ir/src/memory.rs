@@ -775,11 +775,18 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// **What that silence covers is a boundary rather than a rule.** A pointer
 /// written behind this check's back does arrive here as `SiteState::Unknown`
 /// rather than as no site at all, because taking a local's address is what
-/// makes its sites unknown. Pointer arithmetic is followed for the same reason.
-/// But a pointer read out of another pointer, `int *p = *pp;`, reaches no site
-/// and is silence, and so is a dereference inside a controlling expression,
-/// which is #141. `docs/diagnostics.md` says what exit 0 does not mean here,
-/// because a boundary that lives only in a comment is one no user can find.
+/// makes its sites unknown. Pointer arithmetic is followed for the same reason,
+/// and so is a controlling expression, which needed `Terminator::Branch` to
+/// carry a span before it could be.
+///
+/// **Two shapes are known to be silence, and that is a boundary rather than a
+/// list of everything outside it.** A pointer read out of another pointer,
+/// `int *p = *pp;`, reaches no site. And a dereference nothing put in the IR
+/// cannot be reached at all: `*p;` on its own is an expression statement whose
+/// value nobody wants, and the lowering leaves no element behind for it, which
+/// is #149 and is not this check's to answer. `docs/diagnostics.md` says what
+/// exit 0 does not mean here, because a boundary that lives only in a comment
+/// is one no user can find.
 fn used(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place)>,
@@ -807,13 +814,23 @@ fn used(
         if said.contains(&(at, place.clone())) {
             continue;
         }
-        said.push((at, place.clone()));
 
         let sites = known.sites_of(place.local).map(Reached::Site);
         let Some(verdict) = verdict(sites, known) else {
             continue;
         };
 
+        // **Recorded where the report is made, and not a line earlier.**
+        // Marking the place as said when it had only been looked at spent the
+        // right to report it: a dereference this check proved live said
+        // nothing and registered anyway, so a later one of the same place at
+        // the same span was skipped as a repeat of a report that never
+        // happened. Two dereferences do share a span, because both operands of
+        // a `&&` or a `||` are written into one temporary at the whole
+        // expression's span, and `if (*p || (free(p), *p))` was exit 0 with no
+        // output: a proved use of a freed value, silent, which is the worst
+        // answer `docs/safety-model.md` allows for.
+        said.push((at, place.clone()));
         findings.push(Finding {
             kind: Kind::UseAfterFree,
             conclusion: verdict.conclusion,
@@ -868,19 +885,19 @@ fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Pla
             }
             Some((origin.span(), places))
         }
-        // **A dereference in a condition is not reported, because there is
-        // nowhere to point.** `Terminator::Branch` carries no `Origin`, and
-        // `Terminator::Call`'s own doc comment says it is the only terminator
-        // that does "because it is the only one a diagnostic has had to name so
-        // far". This is the diagnostic that has had to, and giving `Branch` a
-        // span moves every `--emit safety-ir` expectation with a branch in it,
-        // so it is #141 rather than a line here. A caret in the wrong place is
-        // worse than none: it is the defect this project has had before.
+        // **A condition is read here and not from an element, because a
+        // condition that is exactly a place never becomes one.** `if (*p + 1)`
+        // computes into a temporary and the `Operation` that does it carries
+        // the dereference; `if (*p)` hands the place straight to the
+        // terminator. Both are one defect and the difference is whether the
+        // expression needed a temporary, which is not something a reader could
+        // predict, so this arm is what makes the answer the same for both.
         Terminator::Branch {
-            condition: _,
+            condition,
             then: _,
             otherwise: _,
-        } => None,
+            origin,
+        } => Some((origin.span(), dereferenced_in(condition))),
         Terminator::Goto(_) | Terminator::Return | Terminator::Abnormal { to: _ } => None,
     }
 }

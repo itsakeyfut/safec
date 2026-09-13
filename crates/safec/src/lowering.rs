@@ -705,6 +705,10 @@ impl Lowering<'_> {
                 ..
             } => {
                 let (condition, then, otherwise) = (*condition, *then, *otherwise);
+                // Before `condition` becomes the operand: `Terminator::Branch`
+                // asks for where the expression that decides is written, and
+                // one line down there is no expression left to ask.
+                let asked = self.ast.expr(condition).span();
                 let condition = self.value(builder, condition, diagnostics)?;
                 let taken = builder.function.reserve_block();
                 let skipped = builder.function.reserve_block();
@@ -713,6 +717,7 @@ impl Lowering<'_> {
                     condition,
                     then: taken,
                     otherwise: skipped,
+                    origin: Origin::Written(asked),
                 });
 
                 builder.switch(taken);
@@ -744,6 +749,7 @@ impl Lowering<'_> {
                 // into the header rather than before it: the back edge at the
                 // end of the body arrives here, above the branch.
                 builder.switch(header);
+                let asked = self.ast.expr(condition).span();
                 let condition = self.value(builder, condition, diagnostics)?;
                 let inside = builder.function.reserve_block();
                 let after = builder.function.reserve_block();
@@ -751,6 +757,7 @@ impl Lowering<'_> {
                     condition,
                     then: inside,
                     otherwise: after,
+                    origin: Origin::Written(asked),
                 });
 
                 builder.switch(inside);
@@ -781,11 +788,13 @@ impl Lowering<'_> {
                 let after = builder.function.reserve_block();
                 match condition {
                     Some(condition) => {
+                        let asked = self.ast.expr(condition).span();
                         let condition = self.value(builder, condition, diagnostics)?;
                         builder.end(Terminator::Branch {
                             condition,
                             then: inside,
                             otherwise: after,
+                            origin: Origin::Written(asked),
                         });
                     }
                     // 6.8.5.3 p2: an absent condition is replaced by a non-zero
@@ -1326,8 +1335,8 @@ impl Lowering<'_> {
         let join = builder.function.reserve_block();
 
         match self.ast.expr(id) {
-            Expr::Binary { op, rhs, span, .. } => {
-                let (op, rhs, span) = (*op, *rhs, *span);
+            Expr::Binary { op, lhs, rhs, span } => {
+                let (op, lhs, rhs, span) = (*op, *lhs, *rhs, *span);
                 // The left operand decides the answer unless the right is
                 // reached, so it is written before the branch and overwritten
                 // after. What is written is whether it is non-zero and not
@@ -1344,10 +1353,18 @@ impl Lowering<'_> {
                     AstBinOp::LogAnd => (second, join),
                     _ => (join, second),
                 };
+                // The left operand, not the whole `a && b`. What this branch
+                // asks is whether the left one was non-zero, so that is the
+                // expression that decides, and the field says the expression
+                // rather than what it is part of. Nothing points here today,
+                // because the condition is a temporary and a temporary has no
+                // projection to dereference, but a field that is only true
+                // where somebody happens to read it is not true.
                 builder.end(Terminator::Branch {
                     condition: Operand::Copy(Place::local(answer)),
                     then,
                     otherwise,
+                    origin: Origin::Written(self.ast.expr(lhs).span()),
                 });
                 builder.switch(second);
 
@@ -1362,14 +1379,19 @@ impl Lowering<'_> {
                 tasks.push(Task::Merge(id));
                 tasks.push(Task::Value(rhs));
             }
-            Expr::Conditional { then, .. } => {
-                let then = *then;
+            Expr::Conditional {
+                condition: asked,
+                then,
+                ..
+            } => {
+                let (asked, then) = (*asked, *then);
                 let taken = builder.function.reserve_block();
                 let otherwise = builder.function.reserve_block();
                 builder.end(Terminator::Branch {
                     condition,
                     then: taken,
                     otherwise,
+                    origin: Origin::Written(self.ast.expr(asked).span()),
                 });
                 builder.switch(taken);
 
@@ -2054,6 +2076,12 @@ mod tests {
     /// Mutation: write the operand itself into the answer rather than whether
     /// it is non-zero. `3 && 5` becomes five where C17 6.5.13 p3 says one, and
     /// both assertions on the comparison fail.
+    ///
+    /// Mutation: give the branch the right operand's span, or the whole binary
+    /// expression's. The last assertion fails and nothing else in the suite
+    /// does, which is why it is here: this is the one branch the frontend
+    /// builds whose condition is a temporary, so no diagnostic will ever point
+    /// at its span and no corpus artifact holds a short circuit.
     #[test]
     fn a_short_circuit_is_a_branch_and_answers_one_or_zero() {
         let lowered = lowered("int f(int a, int b) {\n    return a && b;\n}\n");
@@ -2095,6 +2123,15 @@ mod tests {
                 rhs: Operand::Constant(0),
             }
         );
+
+        // What decides is the left operand, so that is the expression the
+        // branch names. Written out as the text rather than compared against a
+        // span this test computed, because a test that asks the lowering where
+        // it put something agrees with it however wrong both are.
+        let Terminator::Branch { origin, .. } = blocks[0].terminator else {
+            panic!("{:?}", blocks[0].terminator);
+        };
+        assert_eq!(lowered.sources.snippet(origin.span()), "a");
     }
 
     /// A conditional operator answers what its arm is worth, and not a truth

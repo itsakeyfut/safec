@@ -33,10 +33,13 @@ use safec_ir::target::{Extend, Integer, Target};
 pub struct Refusal {
     /// What could not be written, as a sentence a reader can act on.
     pub why: String,
-    /// Where, when the IR knew.
+    /// Where, when this file has one to give.
     ///
-    /// A terminator other than a call carries no span, so this is `None` more
-    /// often than a diagnostic would like. What the IR knows is in `ir.rs`.
+    /// A call's span is the only one a refusal spends, so this is `None` more
+    /// often than a diagnostic would like. A branch carries one too, and it is
+    /// deliberately not read: what a backend refuses is a shape, and the
+    /// expression that decided which way control went is not what it could not
+    /// write. What the IR knows is in `ir.rs`.
     pub at: Option<Span>,
 }
 
@@ -576,8 +579,10 @@ impl Emitter<'_> {
         terminator: &Terminator,
         out: &mut String,
     ) -> Option<()> {
-        // Only a call carries a span, so everything else refuses with nowhere
-        // to point rather than with the last operation's place.
+        // A call is the only terminator whose span a refusal here spends, so
+        // everything else refuses with nowhere to point rather than with the
+        // last operation's place, which would put a caret on innocent code.
+        // A branch has a span as well and `Refusal::at` says why it is not it.
         self.at = None;
 
         match terminator {
@@ -590,6 +595,9 @@ impl Emitter<'_> {
                 condition,
                 then,
                 otherwise,
+                // A span, for a diagnostic. LLVM is handed the same branch
+                // whether or not anybody points at the expression behind it.
+                origin: _,
             } => {
                 // The IR's condition is a value and LLVM's is a bit, so this is
                 // `!= 0`, which is what C17 6.8.4.1 p2 says an `if` tests.
