@@ -83,16 +83,20 @@ this compiler has no check for yet. `int *r = &*p;` used to be a third and is
 not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
 pointer, so `r` carries what `p` carried.
 
-One open defect makes it quiet for a reason that is not a boundary at all, and
-it is worth knowing about while it is open. A local assigned to after its
-address was taken is followed as though nothing could write through that
-address, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` reads a freed
-pointer in silence, which is issue #155.
+Two things that used to make it quiet no longer do, and both are worth knowing
+because the shapes look like they would still be silent. A local whose address
+has been taken stays unproven for the rest of the function, whatever is
+assigned to it afterwards, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;`
+reports rather than saying nothing. And where two dereferences of one place
+share a caret, which both operands of a `||` do, the two are one report and the
+**stronger** of them is what it says, so a proof is never spent by a suspicion
+beside it.
 
-Where two dereferences of one place share a caret, which both operands of a
-`||` do, the two are one report and the **stronger** of them is what it says,
-so a proof is never spent by a suspicion beside it. That was issue #156 and was
-quiet until it was fixed.
+Both report `SC0402` as a warning rather than an error, because neither is
+something this check proved: what it knows is that it stopped being able to
+follow the pointer. `--deny-unknown` is what makes an unproven result fail a
+build, and [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why
+that is the policy's decision rather than the check's.
 
 This is written here rather than only beside the code because a boundary a user
 cannot find is one they will discover by being wrong about it, and

@@ -1,0 +1,9 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_pointer_reassigned_after_its_address_escaped.c:10:5 ]
+    │
+ 10 │     *p = 1;
+    │     ───┬──  
+    │        ╰──── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

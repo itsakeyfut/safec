@@ -181,6 +181,16 @@ struct Known {
     /// Per site, what is known about it. Meaningless for a local nothing points
     /// at, which is most of them.
     state: Vec<SiteState>,
+    /// Per local, whether anything holds its address.
+    ///
+    /// **A property of the local rather than of what it held when the address
+    /// was taken.** Marking only the sites it reached at that instant was
+    /// #155: assigning to the local afterwards gave it a fresh site nothing
+    /// had lost, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` read a
+    /// freed pointer in silence. Whatever an escaped local is given later is
+    /// no more proved than what it held before, because the write that put it
+    /// there is not the only write that can reach it.
+    escaped: Vec<bool>,
 }
 
 impl Known {
@@ -195,6 +205,31 @@ impl Known {
     /// Stop following whatever this local held.
     fn clear(&mut self, local: LocalId) {
         self.points_to[local.index()].fill(false);
+    }
+
+    /// Nothing this local holds is proved, once anything holds its address.
+    ///
+    /// Called wherever a local is *given* something, so that the escape
+    /// outlives the sites it was recorded against. Towards `Unknown` and never
+    /// away from it, which is why getting this wrong costs a false positive
+    /// rather than a silence: a may-set cannot prove anything from one member
+    /// and this only ever takes proof away.
+    ///
+    /// Three cases hold the three ways it is reached.
+    /// `a_pointer_reassigned_after_its_address_escaped` is the assignment and
+    /// is the program this was written for;
+    /// `an_address_that_escaped_on_one_arm_only` is the join, and fails if
+    /// `escaped` is intersected there rather than unioned;
+    /// `a_call_into_a_local_whose_address_escaped` is a call writing straight
+    /// into the local, which the frontend never builds and another may.
+    fn unproved(&mut self, local: LocalId) {
+        if !self.escaped[local.index()] {
+            return;
+        }
+
+        for site in self.sites_of(local).collect::<Vec<_>>() {
+            self.state[site] = SiteState::Unknown;
+        }
     }
 }
 
@@ -262,9 +297,10 @@ impl Analysis for Allocations<'_> {
         // per site, and a site is a local. Each site's state walks `Live` to
         // `Freed` to `Unknown`; its `freed` span can only move to an earlier
         // one, which it can do at most once per site that frees; and its `made`
-        // span can only fall from `Some` to `None`, once. Generous rather
-        // than tight, which is the direction `Analysis::height` says to err in:
-        // answering too low stops a correct analysis.
+        // span can only fall from `Some` to `None`, once. A local's `escaped`
+        // bit falls from `false` to `true` and never back, once each. Generous
+        // rather than tight, which is the direction `Analysis::height` says to
+        // err in: answering too low stops a correct analysis.
         //
         // **Nothing holds this number.** Measured: answering `locals` instead
         // leaves the whole suite passing, because no function here takes more
@@ -273,7 +309,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals + locals * (locals + 3)
+        locals * locals + locals * (locals + 4)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -283,6 +319,9 @@ impl Analysis for Allocations<'_> {
             // say where it came from. A parameter stays this way: its
             // allocation happened somewhere this check cannot see.
             state: vec![SiteState::Live(None); self.locals],
+            // Nothing holds a local's address where a function starts, a
+            // parameter included: what a caller holds is its own local.
+            escaped: vec![false; self.locals],
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -296,14 +335,32 @@ impl Analysis for Allocations<'_> {
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
-        for (here, there) in into.points_to.iter_mut().zip(&from.points_to) {
+        // **Every field named, never `..`.** A lattice value whose join
+        // forgets a field reaches a fixpoint over a value nobody is joining,
+        // and nothing else in the build says so: the field is read, the walk
+        // ends, and the answer is wrong on exactly the programs a join is for.
+        // This is RK-018 in the review knowledge bank one type over, where
+        // `..` let a field walk past a match that was otherwise exhaustive.
+        let Known {
+            points_to,
+            state,
+            escaped,
+        } = into;
+
+        for (here, there) in points_to.iter_mut().zip(&from.points_to) {
             for (here, there) in here.iter_mut().zip(there) {
                 *here = *here || *there;
             }
         }
 
-        for (here, there) in into.state.iter_mut().zip(&from.state) {
+        for (here, there) in state.iter_mut().zip(&from.state) {
             *here = here.joined(*there);
+        }
+
+        // A local whose address escaped on one arm has escaped where the arms
+        // meet: the other arm did not un-take it.
+        for (here, there) in escaped.iter_mut().zip(&from.escaped) {
+            *here = *here || *there;
         }
     }
 
@@ -405,11 +462,19 @@ impl Analysis for Allocations<'_> {
                     // a double free.
                     Rvalue::Address(taken) => {
                         value.clear(destination);
-                        for site in value.sites_of(taken.local).collect::<Vec<_>>() {
-                            value.state[site] = SiteState::Unknown;
-                        }
+                        value.escaped[taken.local.index()] = true;
+                        value.unproved(taken.local);
                     }
                 }
+
+                // **After the match rather than inside it**, so that every arm
+                // is covered and the next one is covered before it is written.
+                // Placed per arm, this was two calls and a hole: `p = r + i;`
+                // lowers to arithmetic into a temporary and a copy out of it,
+                // so the arm that looks like the arithmetic case is reached
+                // through the copy, and a mutation of the arithmetic arm broke
+                // nothing at all. One call cannot be put in the wrong place.
+                value.unproved(destination);
             }
             // Storage beginning or ending says nothing about what the local
             // held before, and what it holds now is nothing.
@@ -508,6 +573,12 @@ impl Analysis for Allocations<'_> {
         // and the diagnostic leaves the label off.
         let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
         value.state[place.local.index()] = SiteState::Live(made);
+        // After the state, because this is what takes it away again. No C
+        // reaches here with an escaped destination: the lowering writes every
+        // call into a fresh temporary and copies it out, so the copy above is
+        // what a C program goes through. Another frontend need not, and
+        // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
+        value.unproved(place.local);
     }
 }
 
@@ -786,14 +857,12 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// **What that silence covers is a boundary rather than a rule.** A pointer
 /// written behind this check's back arrives here as `SiteState::Unknown`
 /// rather than as no site at all, because taking a local's address is what
-/// makes its sites unknown. **The sites the local held at that instant, and
-/// not the local**: assigning to it afterwards gives it a fresh site and the
-/// marking is gone, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;` is
-/// followed as if nothing could write through `pp`, and reads a freed pointer
-/// at exit 0. That is #155, and it is the transfer in [`Allocations`] rather
-/// than anything here. Pointer arithmetic is followed for the same reason, and
-/// so is a controlling expression, which needed `Terminator::Branch` to carry
-/// a span before it could be.
+/// makes its sites unknown, and `Known::escaped` is what keeps them that way
+/// for the rest of the function: `int **pp = &p; p = malloc(8); *pp = q;` used
+/// to hand `p` a fresh site nothing had lost, and reading through it was exit
+/// 0 on a freed pointer. Pointer arithmetic is followed for the same reason,
+/// and so is a controlling expression, which needed `Terminator::Branch` to
+/// carry a span before it could be.
 ///
 /// A place whose value is thrown away is read too, because
 /// [`Element::Evaluate`] exists to say that it was evaluated: `*p;` on its own

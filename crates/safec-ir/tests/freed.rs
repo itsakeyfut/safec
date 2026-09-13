@@ -1168,3 +1168,55 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     assert_eq!(found[0].freed, Some(names.at[1]), "and keeps its spans");
     assert_eq!(found[0].made, Some(names.at[0]));
 }
+/// A call writing straight into a local whose address escaped proves nothing.
+///
+/// **The one place an escape is applied that no C program reaches.** Taking a
+/// local's address makes whatever it is given afterwards unproven, and a local
+/// is given something in three places: a copy, pointer arithmetic, and a
+/// call's destination. The frontend writes every call into a fresh temporary
+/// and copies it out, so a C program always arrives through the copy; the IR
+/// says a call may write anywhere, and `docs/c-family.md` asks that another
+/// frontend be able to build this without the C one present.
+///
+/// The free is what makes the omission visible: a free of an unknown site is
+/// reported, and a free of a live one is not, so dropping the rule turns this
+/// from one finding into none.
+///
+/// Mutation: drop `unproved` from the call's destination in the terminator's
+/// transfer. The conclusion becomes `Unsafe` and this fails.
+#[test]
+fn a_call_into_a_local_whose_address_escaped() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let escape = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let escaped = function.reserve_block();
+    let again = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], escaped));
+    function.fill_block(escaped, address_of(escape, held, names.at[1], again));
+    // Straight into `held`, which is the shape the frontend never builds.
+    function.fill_block(again, malloc(&callees, held, names.at[2], release));
+    function.fill_block(release, free(&callees, held, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    // One free of one allocation, and it is still not something this check can
+    // rule out, because anything holding the address could have put a freed
+    // pointer there between the call and here. Without the escape outliving
+    // the call, the site is live, the free is ordinary, and nothing is
+    // reported at all.
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unknown,
+        "the escape outlived the call that wrote over it"
+    );
+    assert_eq!(found[0].at, names.at[3]);
+}
