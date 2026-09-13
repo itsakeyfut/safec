@@ -779,10 +779,12 @@ mod tests {
     /// C17 6.5.3.2 p3 makes `&*p` the same as `p`, so the lowering folds the
     /// pair away and the only addresses it builds are of unprojected places,
     /// where keeping the place and resolving it answer alike. The IR still
-    /// expresses an address of a projected place and `docs/c-family.md` says
-    /// another frontend has to be able to build one, so the guard moves here
-    /// rather than going. `crates/safec/tests/interp.rs` holds the half of the
-    /// old test that is still about C.
+    /// expresses an address of a projected place whatever a frontend does
+    /// with it, and `docs/c-family.md` asks that an analysis be "runnable over
+    /// IR built by hand in a test, with no frontend present", so a property of
+    /// the IR belongs where the IR can still be written rather than where one
+    /// frontend happens to reach it. `crates/safec/tests/interp.rs` holds the
+    /// half of the old test that is still about C.
     ///
     /// Mutation: resolve only the root local in the `Rvalue::Address` arm,
     /// `Value::Pointer(resolve(frames, current, &Place::local(place.local))?)`.

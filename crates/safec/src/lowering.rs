@@ -1134,11 +1134,21 @@ impl Lowering<'_> {
                         // which put a "may free it again" warning on a program
                         // with one `free` in it.
                         //
-                        // The clause's two exceptions cost nothing here. The
-                        // constraints still apply and `types.rs` is what applies
-                        // them; the result is not an lvalue, and `begin_place`
-                        // has no arm for an address, so `&*p = q;` is refused
-                        // with `SC0304` exactly as it was.
+                        // The clause's two exceptions cost nothing here.
+                        // The constraints still apply, and what enforces the
+                        // one on `*` is that `types.rs` works out no type for
+                        // `*x` where `x` is an `int`, so the program never
+                        // reaches this arm; the note it is refused with says
+                        // the gap is this compiler's rather than the
+                        // program's, which is wrong and is #154. And the
+                        // result is not an lvalue: `begin_place` has no arm
+                        // for an address, so `&*p = q;` is refused exactly as
+                        // it was.
+                        //
+                        // **One step, not every step.** `&**pp` is `*pp` and
+                        // not `pp`, so this pops rather than clears, and
+                        // `an_address_of_a_double_dereference` is the case
+                        // that fails if it clears.
                         if matches!(place.projection.last(), Some(Projection::Deref)) {
                             place.projection.pop();
                             values.push(Operand::Copy(place));

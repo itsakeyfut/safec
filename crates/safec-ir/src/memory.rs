@@ -932,12 +932,14 @@ fn dereferenced_in_rvalue(value: &Rvalue) -> Vec<&Place> {
             places.extend(dereferenced_in(rhs));
             places
         }
-        // **Taking an address is not a dereference**, even where what is
-        // written looks like one. C17 6.5.3.2 p3: if the operand of `&` is the
-        // result of a unary `*`, "neither that operator nor the `&` operator is
-        // evaluated and the result is as if both were omitted". So `&*p` reads
-        // nothing through `p`, and reporting it would be a use of a freed value
-        // in a program that never touched one.
+        // **Taking an address is not a dereference**, whatever the place
+        // it is taken of looks like. C17 6.5.3.2 p3 is why `&*p` used to be
+        // the example: "neither that operator nor the `&` operator is
+        // evaluated and the result is as if both were omitted". The lowering
+        // applies that clause now, so no C program reaches here with one, and
+        // what does reach here is an address of a place a frontend really
+        // meant to take. Reporting it would be a use of a freed value in a
+        // program that never touched one.
         Rvalue::Address(_) => Vec::new(),
     }
 }
