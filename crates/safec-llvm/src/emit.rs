@@ -520,14 +520,18 @@ impl Emitter<'_> {
                 self.at = Some(operation.origin.span());
                 self.assign(function, operation, out)
             }
-            // Nothing is written, and nothing should be. C17 6.3.2.2 discards
-            // the designator a void expression yields, so `*p;` performs no
-            // load and a backend that emitted one would be generating a read
-            // the program does not contain. The element exists for an analysis
-            // rather than for a machine: what it records is that the pointer
-            // was followed, which the `load` of `p` on the way to `*p` would be
-            // the only machine-visible part of, and no `load` of `p` is needed
-            // either when nothing is done with what it points at.
+            // Nothing is written, and in this subset nothing has to be. C
+            // does perform the read, which an earlier comment here denied:
+            // 6.3.2.1 p2 does not except a void expression from lvalue
+            // conversion and `clang -O0` emits the load, measured. It is also
+            // unobservable, so `clang -O2` drops it again, and every type this
+            // backend can hold is in that position.
+            //
+            // `volatile` is where it stops. 6.7.3 p7 requires an expression
+            // referring to such an object to be evaluated strictly, and
+            // `clang -O2` keeps a `load atomic volatile` for `*q;`, measured.
+            // The parser reads no qualifier, so nothing reaching here can be
+            // one yet, and whoever adds the qualifier comes back to this arm.
             Element::Evaluate {
                 place: _,
                 origin: _,

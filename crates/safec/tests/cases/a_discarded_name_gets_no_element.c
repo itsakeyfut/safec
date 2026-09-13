@@ -5,6 +5,7 @@ int f(int i) {
     free(p);
     p;
     i;
+    5;
     i = 1;
     return 0;
 }

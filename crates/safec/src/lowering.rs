@@ -181,16 +181,20 @@ impl Builder {
     /// the only thing that happened.
     ///
     /// C17 6.8.3 p2 evaluates an expression statement as a void expression and
-    /// 6.3.2.2 discards what it yields, and the three other places a value is
-    /// discarded are the same: a `for` initialiser, a `for` step, and the left
-    /// operand of a comma under 6.5.17 p2.
+    /// 6.3.2.2 discards what it yields, and three other places do the same: a
+    /// `for` initialiser, a `for` step, and the left operand of a comma under
+    /// 6.5.17 p2. A cast to `void` is a fourth and cannot be written, because
+    /// the parser does not read a cast; whoever adds one arrives here.
     ///
     /// **Only a place reached through a projection.** Anything that needed
-    /// computing left the operation that computed it, and a bare name left
-    /// nothing because evaluating one cannot be undefined. What remains is the
-    /// shape that was silent: `*p;` after a free reported nothing at all,
-    /// because the place went into an operand nobody read rather than into an
-    /// element. [`Element::Evaluate`] says why it is not a load.
+    /// computing left the operation that computed it, and a bare name is left
+    /// alone because no check here would read an element saying it was
+    /// evaluated, not because evaluating one is always defined: 6.3.2.1 p2's
+    /// last sentence makes reading an uninitialised object undefined where its
+    /// address was never taken, and that belongs to an axis with no check.
+    /// What remains is the shape that was silent: `*p;` after a free reported
+    /// nothing at all, because the place went into an operand nobody read
+    /// rather than into an element. [`Element::Evaluate`] carries the rest.
     fn discarded(&mut self, value: Operand, at: Span) {
         let Operand::Copy(place) = value else {
             return;
