@@ -1,0 +1,40 @@
+Target "x86_64-pc-windows-msvc"
+Function a_discarded_name_is_not_an_evaluation.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_discarded_name_is_not_an_evaluation.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_discarded_name_is_not_an_evaluation.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "void"
+  Local "_5" "int"
+  Block "bb0" entry
+    Call a_discarded_name_is_not_an_evaluation.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_discarded_name_is_not_an_evaluation.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call a_discarded_name_is_not_an_evaluation.c:5:5 "free" "bb2"
+      Destination "_4"
+      Copy "_2"
+  Block "bb2"
+    Operation a_discarded_name_is_not_an_evaluation.c:8:5 written
+      Destination "_1"
+      Use
+        Constant 1
+    Operation a_discarded_name_is_not_an_evaluation.c:8:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Operation a_discarded_name_is_not_an_evaluation.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

@@ -786,14 +786,17 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 /// and so is a controlling expression, which needed `Terminator::Branch` to
 /// carry a span before it could be.
 ///
-/// **Two shapes are known to be silence, and that is a boundary rather than a
+/// A place whose value is thrown away is read too, because
+/// [`Element::Evaluate`] exists to say that it was evaluated: `*p;` on its own
+/// used to leave no element at all, so there was nothing here to look at.
+///
+/// **One shape is known to be silence, and that is a boundary rather than a
 /// list of everything outside it.** A pointer read out of another pointer,
-/// `int *p = *pp;`, reaches no site. And a dereference nothing put in the IR
-/// cannot be reached at all: `*p;` on its own is an expression statement whose
-/// value nobody wants, and the lowering leaves no element behind for it, which
-/// is #149 and is not this check's to answer. `docs/diagnostics.md` says what
-/// exit 0 does not mean here, because a boundary that lives only in a comment
-/// is one no user can find.
+/// `int *p = *pp;`, reaches no site, so a later `*p` has nothing to say about
+/// it. `docs/diagnostics.md` says what exit 0 does not mean here, because a
+/// boundary that lives only in a comment is one no user can find.
+///
+/// [`Element::Evaluate`]: crate::ir::Element::Evaluate
 fn used(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place)>,

@@ -177,6 +177,33 @@ impl Builder {
         self.elements.push(element);
     }
 
+    /// Say that a value nobody wanted was evaluated, where the evaluation is
+    /// the only thing that happened.
+    ///
+    /// C17 6.8.3 p2 evaluates an expression statement as a void expression and
+    /// 6.3.2.2 discards what it yields, and the three other places a value is
+    /// discarded are the same: a `for` initialiser, a `for` step, and the left
+    /// operand of a comma under 6.5.17 p2.
+    ///
+    /// **Only a place reached through a projection.** Anything that needed
+    /// computing left the operation that computed it, and a bare name left
+    /// nothing because evaluating one cannot be undefined. What remains is the
+    /// shape that was silent: `*p;` after a free reported nothing at all,
+    /// because the place went into an operand nobody read rather than into an
+    /// element. [`Element::Evaluate`] says why it is not a load.
+    fn discarded(&mut self, value: Operand, at: Span) {
+        let Operand::Copy(place) = value else {
+            return;
+        };
+        if place.projection.is_empty() {
+            return;
+        }
+        self.element(Element::Evaluate {
+            place,
+            origin: Origin::Written(at),
+        });
+    }
+
     /// End the current block, and leave none open.
     fn end(&mut self, terminator: Terminator) {
         let block = self.open();
@@ -695,7 +722,8 @@ impl Lowering<'_> {
             }
             Stmt::Expression { value, .. } => {
                 if let Some(value) = *value {
-                    self.value(builder, value, diagnostics)?;
+                    let evaluated = self.value(builder, value, diagnostics)?;
+                    builder.discarded(evaluated, self.ast.expr(value).span());
                 }
             }
             Stmt::If {
@@ -777,7 +805,8 @@ impl Lowering<'_> {
             } => {
                 let (initialiser, condition, step, body) = (*initialiser, *condition, *step, *body);
                 if let Some(initialiser) = initialiser {
-                    self.value(builder, initialiser, diagnostics)?;
+                    let evaluated = self.value(builder, initialiser, diagnostics)?;
+                    builder.discarded(evaluated, self.ast.expr(initialiser).span());
                 }
 
                 let header = builder.function.reserve_block();
@@ -806,7 +835,8 @@ impl Lowering<'_> {
                 self.stmt(builder, body, diagnostics)?;
                 if builder.reachable() {
                     if let Some(step) = step {
-                        self.value(builder, step, diagnostics)?;
+                        let evaluated = self.value(builder, step, diagnostics)?;
+                        builder.discarded(evaluated, self.ast.expr(step).span());
                     }
                 }
                 if builder.reachable() {
@@ -1212,9 +1242,16 @@ impl Lowering<'_> {
                 builder.switch(then);
                 values.push(Operand::Copy(Place::local(into)));
             }
-            Expr::Comma { .. } => {
+            Expr::Comma { lhs, .. } => {
+                let lhs = *lhs;
                 let rhs = values.pop().expect("a right operand");
-                values.pop().expect("a left operand");
+                let discarded = values.pop().expect("a left operand");
+                // C17 6.5.17 p2 evaluates the left as a void expression, which
+                // is the same discarding an expression statement does and the
+                // same thing has to be said about it. The span is the left
+                // operand's own, so `*p, i;` underlines `*p` where a statement
+                // holding the whole comma could only underline both.
+                builder.discarded(discarded, self.ast.expr(lhs).span());
                 values.push(rhs);
             }
             // A conditional is answered by `merge` and never asks to finish,
