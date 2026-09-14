@@ -862,10 +862,20 @@ impl Analysis for Allocations<'_> {
                         // one program answering differently is what this is
                         // for. See ADR-0019.
                         //
-                        // `Add` either way round, because 6.5.6 p2 makes
-                        // `0 + pp` as good as `pp + 0` and `0[pp]` is the
-                        // spelling that reaches it. `Sub` only on the right,
-                        // because `0 - pp` is not a pointer.
+                        // `Add` either way round, because 6.5.6 p2's
+                        // constraint does not say which operand is the
+                        // pointer, so `0 + pp` is as good as `pp + 0`. `Sub`
+                        // only on the right, because p3 allows the pointer
+                        // only there, which `types.rs` cites for the same
+                        // reason where it declines to give `1 - p` a type.
+                        //
+                        // **`0[pp]` is standard C and does not reach here**,
+                        // although it is the spelling that makes the left
+                        // case look ordinary. This frontend types a subscript
+                        // from its base and has no rule for the reversed
+                        // spelling, so `0[pp] = q;` is `error[SC0304]` before
+                        // lowering. `*(0 + pp) = q;` is the reachable one and
+                        // is what the case for this half holds.
                         //
                         // `_` rather than the other eleven operators written
                         // out, which this file otherwise avoids: here the

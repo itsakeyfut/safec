@@ -104,8 +104,11 @@ Plus **zero** is that local, which this record first said the other way round
 and #172 corrected. C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, so
 `pp[0] = q;` is `*pp = q;` written differently, and the two spellings of one
 program answered differently for as long as the sentence above was read as
-written. `Add` either way round, because 6.5.6 p2 makes `0 + pp` as good as
-`pp + 0`; `Sub` only on the right, because `0 - pp` is not a pointer.
+written. `Add` either way round, because 6.5.6 p2's constraint does not say which
+operand is the pointer; `Sub` only on the right, because p3 allows the pointer
+only there. `0[pp]` is the spelling that would make the left case look
+ordinary, and this frontend does not type it: the reachable spelling is
+`*(0 + pp)`.
 
 `Analysis::height` gains `locals * locals` for the second square table.
 
