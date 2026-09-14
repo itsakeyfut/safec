@@ -59,6 +59,17 @@ sites an escaped local reaches, at the four places a local is given something
 and again over the merged value in `join`. That is the fact about the heap,
 answered where the heap is asked about.
 
+**A local reaching no site answers nothing, escaped or not.** `used` already
+says nothing about a place it follows no allocation for, however it came to
+follow none, and an address taken is not a reason to break that: a pointer this
+check never had a site for is an indeterminate pointer, a different defect with
+a check of its own that does not exist yet. Answering `Reached::Lost` there
+instead was written first and put `perhaps after the free` on programs that
+free nothing at all, `--deny-unknown` included. This corner is the one a later
+lattice is most likely to get wrong, because the distrust is real and the thing
+to be distrustful about is missing, so it is stated here rather than left to be
+read off the code.
+
 Nothing is added to the lattice value, so `Analysis::height` is unchanged.
 
 ### Confirmation
@@ -66,6 +77,9 @@ Nothing is added to the lattice value, so `Analysis::height` is unchanged.
 Half of the rule is held by the compiler. Reporting takes `&Known` and the
 transfers take `&mut Known`, so spelling `Known::reached_by` as `&mut self` is
 `error[E0596]` at both call sites: a reader cannot quietly become a transfer.
+It is two walls rather than one. `rustc` suggests widening
+`Allocations::touching`'s parameter, and taking that suggestion is
+`error[E0308]` where `reported` calls it holding a `&Known`.
 
 The rest is one named test per rule, each of which fails under the mutation
 beside it and under nothing else. Every one frees or reads through a **second**
@@ -75,7 +89,9 @@ the site marking going.
 
 | Mutation in `crates/safec-ir/src/memory.rs` | Named test that fails |
 |---|---|
-| `reached_by` never pushes `Reached::Lost` | `a_pointer_replaced_through_its_alias_after_a_free`, which goes back to a proved `error[SC0402]`, and `a_pointer_replaced_through_its_own_address`, which goes back to a proved `error[SC0401]`. Both proofs are about a pointer a write through the alias may have replaced first |
+| `reached_by` answers `Reached::Lost` for an escaped local whose set is empty | `a_pointer_written_through_an_alias_the_check_does_not_follow`, which frees nothing and is silent |
+| `reached_by` answers an escaped local's sites as `Reached::Lost` instead of listing them | `a_free_through_an_escaped_local_is_seen_by_a_sharer`, whose proved double free drops to two suspicions |
+| `reached_by` never pushes `Reached::Lost` | `a_pointer_replaced_through_its_alias_after_a_free`, which goes back to a proved `error[SC0402]`, and `a_pointer_replaced_through_its_own_address`, which goes back to a proved `error[SC0401]`, and `an_escaped_local_read_twice_at_one_span`. The first two proofs are about a pointer a write through the alias may have replaced first |
 | drop `unproved` at the `Rvalue::Address` arm | `an_allocation_shared_with_a_local_whose_address_escaped` |
 | drop `unproved` after the `Element::Assign` match | `an_allocation_given_to_an_escaped_local_after_the_escape` |
 | drop `unproved` at the call's destination in `terminator` | `a_call_into_a_local_whose_address_escaped` in `crates/safec-ir/tests/freed.rs` |
@@ -93,6 +109,13 @@ in `crates/safec/tests/cases.rs`, per
 * Good, because the two facts can now move independently. Making the heap fact
   more precise, which is what #162 and #164 are about, no longer risks the
   local fact going with it.
+* Good, because what a local reaches now has exactly one producer. #164 wants a
+  fact about a *set* of allocations that no member carries, and a set-level
+  answer has to **override** the per-member ones, which only one producer can
+  do. With the two readers computing their own answers, adding it to one and not
+  the other builds cleanly and makes a real double free exit 0 in silence: that
+  was measured on a working prototype during review. This shape makes it
+  unwritable.
 * Bad, because a local whose address has been taken can never again be the
   subject of a proved `SC0402`. Every report about it is a warning, and
   `--deny-unknown` is what turns it into a failure.

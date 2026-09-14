@@ -216,15 +216,22 @@ impl Known {
     /// fact about the heap and is written on the sites by [`Known::unproved`].
     /// See ADR-0017.
     ///
-    /// A local reaching no site answers nothing here rather than
-    /// [`Reached::Lost`], because what that means differs between the two
-    /// readers and [`used`] is where the difference is written down.
+    /// **A local reaching no site answers nothing, escaped or not.** [`used`]
+    /// says nothing about a place it follows no allocation for, however it came
+    /// to follow none, and an address taken does not change that: a pointer
+    /// this check never had a site for is an indeterminate pointer, which is a
+    /// different defect with a check of its own that does not exist yet.
+    /// Answering [`Reached::Lost`] here instead put `perhaps after the free` on
+    /// `int *p; int **pp = &p; *pp = malloc(4); *p = 1;`, which frees nothing
+    /// at all, and made `--deny-unknown` unusable on the output-parameter
+    /// idiom. [`Allocations::touching`] wants the opposite answer for an empty
+    /// set and writes its own, which is why the rule is not written here.
     ///
     /// [`escaped`]: Known::escaped
     fn reached_by(&self, local: LocalId) -> Vec<Reached> {
         let mut reached: Vec<Reached> = self.sites_of(local).map(Reached::Site).collect();
 
-        if self.escaped[local.index()] {
+        if self.escaped[local.index()] && !reached.is_empty() {
             reached.push(Reached::Lost);
         }
 
