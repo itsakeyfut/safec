@@ -102,9 +102,11 @@ a proved use after free about an allocation nothing had freed.
 An offset of zero never reaches this rule.
 [ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds it
 away when the IR is built, so `pp[0]` and `*pp` are one shape before anything
-reads them. This record said the rule was about arithmetic and #172 found the
-reason is about arithmetic that *moves* the pointer; the difference is real and
-it belongs one layer down, not here.
+reads them. **The rule in this check is still about arithmetic and not about
+which arithmetic**: every `Rvalue::Binary` drops the edge, a zero offset
+included, because nothing here can tell one offset from another. What #172 found
+is that the *reason* is about arithmetic that moves the pointer, and the layer
+that can act on the difference is the one that builds the IR.
 
 `Analysis::height` gains `locals * locals` for the second square table.
 
@@ -159,11 +161,9 @@ this method and what ADR-0018 says about the last field added.
   costs. A file of loops writing through a pointer went from 4.5 s to 10.2 s at
   47 lines and from 75 s to 140 s at 87, which is the growth issue #173 is
   about arriving one spelling earlier rather than a new one.
-* Bad, because a zero offset that is not written as the token `0` still stops
-  the edge: `*(pp + -0) = q;` and `*(pp + (1 - 1)) = q;` are silent where
-  `pp[0] = q;` reports, because the fold ADR-0021 does reads the operand and not
-  the value. The spelling still decides; there are fewer spellings it decides
-  against.
+* Bad, because the spelling still decides, for the spellings the fold does not
+  reach. ADR-0021 owns that cost and measures it; it is not repeated here,
+  because one fact written into two records is two facts to disagree.
 * Bad, because the value doubled in size. It is two square tables of bytes now,
   `blocks * locals * (2 * locals + 49)`, which is 2.8 GB and six seconds on a
   489-line function against 1.5 GB and three before. A loop full of writes
