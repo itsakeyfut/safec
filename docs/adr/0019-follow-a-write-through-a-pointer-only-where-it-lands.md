@@ -93,11 +93,19 @@ first answer and not by this one.
 in this crate is, and what a missed arm would mean here is that a write silently
 carries nothing, which is a silence rather than a build error.
 
-**The edge stops at pointer arithmetic.** C17 6.5.6 p8 keeps the result of
-`p + 1` inside the object `p` points into, which is why the *allocation* travels
-through the arithmetic arm. A local's address plus one is not that local, so the
-edge does not: `pp[1] = q;` is an out of bounds write, and following it reported
-a proved use after free about an allocation nothing had freed.
+**The edge stops at arithmetic that moves the pointer.** C17 6.5.6 p8 keeps the
+result of `p + 1` inside the object `p` points into, which is why the
+*allocation* travels through the arithmetic arm. A local's address plus one is
+not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
+and following it reported a proved use after free about an allocation nothing
+had freed.
+
+Plus **zero** is that local, which this record first said the other way round
+and #172 corrected. C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, so
+`pp[0] = q;` is `*pp = q;` written differently, and the two spellings of one
+program answered differently for as long as the sentence above was read as
+written. `Add` either way round, because 6.5.6 p2 makes `0 + pp` as good as
+`pp + 0`; `Sub` only on the right, because `0 - pp` is not a pointer.
 
 `Analysis::height` gains `locals * locals` for the second square table.
 
@@ -114,7 +122,10 @@ whole workspace suite run with `--no-fail-fast`, and the file restored.
 | the write unproves the target, as a direct assignment does | `a_write_through_an_alias_leaves_a_sharer_s_proof_alone` and `a_write_through_an_alias_keeps_what_it_carried_proved`, whose proved reports drop to suspicions, and three cases whose diagnostics lose the `allocated here` label |
 | a write this check cannot follow carries every allocation instead of none | `a_write_through_an_alias_that_carries_no_allocation` |
 | a variant added to `Rvalue` | does not compile: `error[E0004]` here and at four other readers |
-| the edge survives pointer arithmetic | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains a proved `error[SC0402]` about an allocation nothing freed |
+| the edge survives arithmetic whatever the offset | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains a proved `error[SC0402]` about an allocation nothing freed |
+| the edge stops at arithmetic whatever the offset | `a_subscript_write_is_the_write_it_is_defined_as`, `a_write_through_a_pointer_plus_zero_on_the_left` and `a_write_through_a_pointer_minus_zero`, which lose the report their `*pp` twin keeps |
+| the zero is looked for on one side of `Add` only | one of the first two above, depending which side |
+| `Sub` is not answered for, or takes its zero on the left | `a_write_through_a_pointer_minus_zero` |
 | `Held::union` does not union the edge | `an_address_taken_on_one_arm_is_written_through_after_the_join` |
 | a field added to `Held` | does not compile: `error[E0063]` in `Held::none` and `error[E0027]` in `Held::clear` and `Held::union` |
 
@@ -142,12 +153,9 @@ this method and what ADR-0018 says about the last field added.
   its old name said this check did not follow it. That answer comes from
   ADR-0017's rule for an escaped local, not from this one; what this record
   changed is that the local now reaches a site, so the rule applies to it.
-* Bad, because `pp[0] = q;` is still silent while `*pp = q;` reports, and C17
-  6.5.2.1 p2 makes them the same program. The subscript lowers to arithmetic
-  into a temporary, and the edge deliberately does not survive arithmetic, so
-  the temporary has no target. The discriminating fact is in the IR, since the
-  operand is the constant zero; reading it is work this record does not do and
-  an issue names.
+* ~~Bad, because `pp[0] = q;` is still silent while `*pp = q;` reports.~~ Fixed
+  by #172, which reads the constant zero the IR was already carrying. The
+  Decision Outcome above says what the rule is now.
 * Bad, because the value doubled in size. It is two square tables of bytes now,
   `blocks * locals * (2 * locals + 49)`, which is 2.8 GB and six seconds on a
   489-line function against 1.5 GB and three before. A loop full of writes

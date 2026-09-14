@@ -36,7 +36,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    BinOp, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit,
 };
 use crate::source::{SourceMap, Span};
@@ -835,7 +835,7 @@ impl Analysis for Allocations<'_> {
                     // warning where `free(p); p[0] = 42;` is an error. The
                     // types are in the IR and reading them would separate the
                     // two, which is #143 rather than a line here.
-                    Rvalue::Binary { op: _, lhs, rhs } => {
+                    Rvalue::Binary { op, lhs, rhs } => {
                         let mut reached = Held::none(value.points_to.len());
                         for operand in [lhs, rhs] {
                             let Operand::Copy(source) = operand else {
@@ -846,16 +846,45 @@ impl Analysis for Allocations<'_> {
                             }
                             reached.union(&value.points_to[source.local.index()]);
                         }
-                        // **The sites travel and the edge does not.** C17
-                        // 6.5.6 p8 keeps the result inside the object the
-                        // operand points into, which is why the allocation
-                        // comes along. A local's address plus one is not that
-                        // local, so `*(pp + 1) = q;` must not be read as a
-                        // write to what `pp` points at: it is an out of bounds
-                        // write, and following it here reported a proved use
-                        // after free about an allocation nothing had freed.
-                        // See ADR-0019.
-                        reached.writes_to.fill(false);
+                        // **The sites travel, and the edge travels only where
+                        // the pointer does not move.** C17 6.5.6 p8 keeps the
+                        // result inside the object the operand points into,
+                        // which is why the allocation always comes along. A
+                        // local's address plus *one* is not that local, so
+                        // `*(pp + 1) = q;` must not be read as a write to what
+                        // `pp` points at; it is an out of bounds write, and
+                        // following it reported a proved use after free about
+                        // an allocation nothing had freed.
+                        //
+                        // Plus **zero** is that local. C17 6.5.2.1 p2 defines
+                        // `E1[E2]` as `(*((E1)+(E2)))`, so `pp[0] = q;` is
+                        // `*pp = q;` written differently, and two spellings of
+                        // one program answering differently is what this is
+                        // for. See ADR-0019.
+                        //
+                        // `Add` either way round, because 6.5.6 p2 makes
+                        // `0 + pp` as good as `pp + 0` and `0[pp]` is the
+                        // spelling that reaches it. `Sub` only on the right,
+                        // because `0 - pp` is not a pointer.
+                        //
+                        // `_` rather than the other eleven operators written
+                        // out, which this file otherwise avoids: here the
+                        // default is the conservative answer, so an operator
+                        // added later keeps the behaviour this arm had before
+                        // ADR-0019 rather than gaining a claim nobody made for
+                        // it.
+                        let same_pointer = match op {
+                            BinOp::Add => {
+                                matches!(lhs, Operand::Constant(0))
+                                    || matches!(rhs, Operand::Constant(0))
+                            }
+                            BinOp::Sub => matches!(rhs, Operand::Constant(0)),
+                            _ => false,
+                        };
+
+                        if !same_pointer {
+                            reached.writes_to.fill(false);
+                        }
                         value.points_to[destination.index()] = reached;
                     }
                     // A constant, a read through a projection, or a unary
