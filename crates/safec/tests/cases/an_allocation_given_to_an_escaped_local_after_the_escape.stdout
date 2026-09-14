@@ -1,0 +1,50 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_given_to_an_escaped_local_after_the_escape.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_allocation_given_to_an_escaped_local_after_the_escape.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_allocation_given_to_an_escaped_local_after_the_escape.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int **"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int *"
+  Local "_7" "void"
+  Block "bb0" entry
+    Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:5:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call an_allocation_given_to_an_escaped_local_after_the_escape.c:6:14 "malloc" "bb1"
+      Destination "_5"
+      Constant 8
+  Block "bb1"
+    Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:6:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:7:5 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:7:5 written
+      Destination "_6"
+      Use
+        Copy "_1"
+    Call an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 "free" "bb2"
+      Destination "_7"
+      Copy "_4"
+  Block "bb2"
+    Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

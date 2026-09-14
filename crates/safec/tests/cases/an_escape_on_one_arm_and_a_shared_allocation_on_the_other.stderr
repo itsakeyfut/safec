@@ -1,0 +1,9 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:8:5 ]
+   │
+ 8 │     free(q);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

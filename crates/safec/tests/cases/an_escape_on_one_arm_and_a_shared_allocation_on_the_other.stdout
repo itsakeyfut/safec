@@ -1,0 +1,68 @@
+Target "x86_64-pc-windows-msvc"
+Function an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "int *"
+  Local "_10" "void"
+  Block "bb0" entry
+    Branch an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:19 written
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:14 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:14 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Goto "bb3"
+  Block "bb2"
+    Call an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:36 "malloc" "bb4"
+      Destination "_7"
+      Constant 4
+  Block "bb3"
+    Call an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:8:5 "free" "bb5"
+      Destination "_10"
+      Copy "_3"
+  Block "bb4"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:32 written
+      Destination "_2"
+      Use
+        Copy "_7"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:32 written
+      Destination "_8"
+      Use
+        Copy "_2"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:47 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:47 written
+      Destination "_9"
+      Use
+        Copy "_3"
+    Goto "bb3"
+  Block "bb5"
+    Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
