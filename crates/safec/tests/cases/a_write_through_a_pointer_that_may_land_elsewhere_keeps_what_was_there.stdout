@@ -1,0 +1,100 @@
+Target "x86_64-pc-windows-msvc"
+Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "void *"
+  Local "_8" "int **"
+  Local "_9" "int **"
+  Local "_10" "int **"
+  Local "_11" "int **"
+  Local "_12" "int *"
+  Local "_13" "void"
+  Local "_14" "int"
+  Block "bb0" entry
+    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:14 "malloc" "bb2"
+      Destination "_7"
+      Constant 8
+  Block "bb2"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:8:16 written
+      Destination "_9"
+      Address
+        Place "_5"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:8:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Branch a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 "bb3" "bb4"
+      Copy "_1"
+  Block "bb3"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:19 written
+      Destination "_10"
+      Address
+        Place "_4"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:14 written
+      Destination "_8"
+      Use
+        Copy "_10"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:14 written
+      Destination "_11"
+      Use
+        Copy "_8"
+    Goto "bb5"
+  Block "bb4"
+    Goto "bb5"
+  Block "bb5"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:10:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:10:5 written
+      Destination "_12"
+      Use
+        Copy "_8"
+          Deref
+    Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 "free" "bb6"
+      Destination "_13"
+      Copy "_4"
+  Block "bb6"
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:12:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 1
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:12:5 written
+      Destination "_14"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
