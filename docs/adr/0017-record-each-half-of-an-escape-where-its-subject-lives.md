@@ -89,7 +89,7 @@ the site marking going.
 
 | Mutation in `crates/safec-ir/src/memory.rs` | Named test that fails |
 |---|---|
-| `reached_by` answers `Reached::Lost` for an escaped local whose set is empty | `a_pointer_written_through_an_alias_the_check_does_not_follow`, which frees nothing and is silent |
+| `reached_by` answers `Reached::Lost` for an escaped local whose set is empty | `an_escaped_local_that_reaches_no_site_at_all`, which frees nothing and is silent. It replaced an earlier case that wrote through the alias, which [ADR-0019](./0019-follow-a-write-through-a-pointer-only-where-it-lands.md) made this check follow, so the local stopped reaching no site |
 | `reached_by` answers an escaped local's sites as `Reached::Lost` instead of listing them | `a_free_through_an_escaped_local_is_seen_by_a_sharer`, whose proved double free drops to two suspicions |
 | `reached_by` never pushes `Reached::Lost` | `a_pointer_replaced_through_its_alias_after_a_free`, which goes back to a proved `error[SC0402]`, and `a_pointer_replaced_through_its_own_address`, which goes back to a proved `error[SC0401]`, and `an_escaped_local_read_twice_at_one_span`. The first two proofs are about a pointer a write through the alias may have replaced first |
 | drop `unproved` at the `Rvalue::Address` arm | `an_allocation_shared_with_a_local_whose_address_escaped` |
