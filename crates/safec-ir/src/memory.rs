@@ -168,16 +168,70 @@ enum Reached {
     Lost,
 }
 
-/// Which allocations each local may hold, and what is known about each.
+/// What one local may hold.
+///
+/// A struct rather than the bare bit vector this was, so that what a local
+/// holds is one thing with a name rather than a row somebody has to know is a
+/// row. Nothing about the answers changes here.
 #[derive(Clone, PartialEq, Eq)]
-struct Known {
-    /// Per local, a bit per site it may point at. A site is a local, so this is
-    /// square in the locals.
+struct Held {
+    /// A bit per site. A site is a local, so this is square in the locals.
     ///
     /// `Vec<bool>` rather than a packed bitset: this crate takes no
     /// dependencies, and a byte per local per local is nothing at the sizes
     /// one function reaches.
-    points_to: Vec<Vec<bool>>,
+    sites: Vec<bool>,
+}
+
+impl Held {
+    /// A local holding nothing, in a function with this many sites.
+    fn none(sites: usize) -> Self {
+        Held {
+            sites: vec![false; sites],
+        }
+    }
+
+    /// Also hold this site.
+    fn hold(&mut self, site: usize) {
+        self.sites[site] = true;
+    }
+
+    /// Whether this site is one of the ones held.
+    fn holds(&self, site: usize) -> bool {
+        self.sites[site]
+    }
+
+    /// Every site held, in order.
+    fn sites(&self) -> impl Iterator<Item = usize> + '_ {
+        self.sites
+            .iter()
+            .enumerate()
+            .filter_map(|(site, held)| held.then_some(site))
+    }
+
+    /// Hold nothing.
+    fn clear(&mut self) {
+        // Every field named, never `..`: a field added here and missed is a
+        // fact that survives an assignment, which is RK-018's shape one type
+        // over.
+        let Held { sites } = self;
+        sites.fill(false);
+    }
+
+    /// Also hold everything that one holds.
+    fn union(&mut self, other: &Held) {
+        let Held { sites } = self;
+        for (here, there) in sites.iter_mut().zip(&other.sites) {
+            *here = *here || *there;
+        }
+    }
+}
+
+/// Which allocations each local may hold, and what is known about each.
+#[derive(Clone, PartialEq, Eq)]
+struct Known {
+    /// Per local, what it may hold.
+    points_to: Vec<Held>,
     /// Per site, what is known about it. Meaningless for a local nothing points
     /// at, which is most of them.
     state: Vec<SiteState>,
@@ -196,15 +250,12 @@ struct Known {
 impl Known {
     /// Every site this local may point at.
     fn sites_of(&self, local: LocalId) -> impl Iterator<Item = usize> + '_ {
-        self.points_to[local.index()]
-            .iter()
-            .enumerate()
-            .filter_map(|(site, points)| points.then_some(site))
+        self.points_to[local.index()].sites()
     }
 
     /// Stop following whatever this local held.
     fn clear(&mut self, local: LocalId) {
-        self.points_to[local.index()].fill(false);
+        self.points_to[local.index()].clear();
     }
 
     /// Every site this local may hold, and whether it may hold more.
@@ -265,8 +316,11 @@ impl Known {
             return;
         }
 
-        for site in 0..self.points_to[local].len() {
-            if self.points_to[local][site] {
+        // By index over the sites rather than over what this local holds,
+        // because the walk writes `state` while it reads `points_to`. `state`
+        // is per site and a site is a local, so its length is the roster.
+        for site in 0..self.state.len() {
+            if self.points_to[local].holds(site) {
                 self.state[site] = SiteState::Unknown;
             }
         }
@@ -374,7 +428,7 @@ impl Analysis for Allocations<'_> {
 
     fn on_entry(&self) -> Self::Value {
         let mut known = Known {
-            points_to: vec![vec![false; self.locals]; self.locals],
+            points_to: vec![Held::none(self.locals); self.locals],
             // Nothing has allocated into any of these yet, so none of them can
             // say where it came from. A parameter stays this way: its
             // allocation happened somewhere this check cannot see.
@@ -388,7 +442,7 @@ impl Analysis for Allocations<'_> {
         // function can free and did not make. The module comment says why one
         // has to be a site of its own.
         for &parameter in &self.parameters {
-            known.points_to[parameter.index()][parameter.index()] = true;
+            known.points_to[parameter.index()].hold(parameter.index());
         }
 
         known
@@ -408,9 +462,7 @@ impl Analysis for Allocations<'_> {
         } = into;
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            for (here, there) in here.iter_mut().zip(there) {
-                *here = *here || *there;
-            }
+            here.union(there);
         }
 
         for (here, there) in state.iter_mut().zip(&from.state) {
@@ -487,7 +539,7 @@ impl Analysis for Allocations<'_> {
                     // types are in the IR and reading them would separate the
                     // two, which is #143 rather than a line here.
                     Rvalue::Binary { op: _, lhs, rhs } => {
-                        let mut reached = vec![false; value.points_to.len()];
+                        let mut reached = Held::none(value.points_to.len());
                         for operand in [lhs, rhs] {
                             let Operand::Copy(source) = operand else {
                                 continue;
@@ -495,12 +547,7 @@ impl Analysis for Allocations<'_> {
                             if !source.projection.is_empty() {
                                 continue;
                             }
-                            for (here, there) in reached
-                                .iter_mut()
-                                .zip(&value.points_to[source.local.index()])
-                            {
-                                *here = *here || *there;
-                            }
+                            reached.union(&value.points_to[source.local.index()]);
                         }
                         value.points_to[destination.index()] = reached;
                     }
@@ -627,7 +674,8 @@ impl Analysis for Allocations<'_> {
         // is a second allocation, and carrying the first one's `Freed` across
         // would report a double free for code that allocates each time round.
         value.clear(place.local);
-        value.points_to[place.local.index()][place.local.index()] = true;
+        let site = place.local.index();
+        value.points_to[site].hold(site);
         // **The span only where this check saw an allocation.** Every call's
         // destination is a site, because a call this cannot read may hand back
         // anything and a site is how that is tracked. But `allocated here` is a
@@ -636,13 +684,13 @@ impl Analysis for Allocations<'_> {
         // had established, so a site whose call is not `malloc` is `Live(None)`
         // and the diagnostic leaves the label off.
         let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
-        value.state[place.local.index()] = SiteState::Live(made);
+        value.state[site] = SiteState::Live(made);
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
         // call into a fresh temporary and copies it out, so the copy above is
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
-        value.unproved(place.local.index());
+        value.unproved(site);
     }
 }
 
