@@ -206,13 +206,14 @@ struct Held {
     /// dependencies, and a byte per pair is what an ordinary function costs.
     ///
     /// **It is square in the locals and there are two of these**, so the value
-    /// is `blocks * locals * (2 * locals + 49)` bytes and the lowering makes
-    /// about two and a half locals per line of C. Measured: a 489-line
-    /// function costs 2.8 GB and six seconds, against 1.5 GB and three before
-    /// [`Held::writes_to`] was added. A packed bitset is the answer when a
-    /// third square field arrives or when somebody hits this on real code;
-    /// until then the number is here so that it is a decision rather than a
-    /// discovery.
+    /// is `blocks * locals * (2 * locals + 72)` bytes, where 72 is
+    /// `size_of::<Held>()` measured rather than counted, and the lowering makes
+    /// about two and a half locals per line of C. A 489-line function costs
+    /// around 2.8 GB and six seconds, against 1.5 GB and three before
+    /// [`Held::writes_to`] was added; the field beside it costs about one per
+    /// cent more. A packed bitset is the answer when a third square field
+    /// arrives or when somebody hits this on real code; until then the number
+    /// is here so that it is a decision rather than a discovery.
     sites: Vec<bool>,
     /// Whether this local may hold an allocation this check can no longer
     /// name, because the site that named it was handed to a second one.
@@ -749,9 +750,19 @@ impl Analysis for Allocations<'_> {
                         // A constant, a read through a projection, a unary
                         // operator, an address. None is a pointer this check
                         // follows to an allocation, so the target is given
-                        // nothing **and keeps what it held**: a write this
-                        // check cannot follow is not evidence that the old
-                        // contents are gone.
+                        // nothing: a write this check cannot follow is not
+                        // evidence that the old contents are gone.
+                        //
+                        // **It keeps the sites it held and not the proof that
+                        // its set was freed.** `Held::union` is the lattice's
+                        // join and it intersects that field, which is right
+                        // where two paths meet and wrong here, where nothing
+                        // met: unioning `Held::none()` into a target clears a
+                        // fact that a may-write cannot have undone.
+                        // `free(p); p = p + 0; free(p);` loses its proof that
+                        // way. The direction is towards `Unknown`, so it costs
+                        // a proof rather than a silence, and separating the two
+                        // uses of `union` is its own issue.
                         Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
                             Held::none(value.points_to.len())
                         }

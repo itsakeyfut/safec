@@ -114,9 +114,16 @@ and ADR-0018 and ADR-0019 say of the last two fields.
   thing the three later lattices will each need.
 * Bad, because a copy taken **before** the free does not carry the fact.
   `int *q = p; free(p); free(q);` over a two-site `p` was a proved error and is
-  now a warning. The table keyed by the set would keep it; it needs a canonical
-  form or `PartialEq` is unstable and the fixpoint may not settle, which is
-  ADR-0016's row 5 against this option's row 4. An issue names the shape.
+  now a warning. So does `free(p); p = p + 0; free(p);`, for a different reason:
+  `Held::union` is the lattice's join and also the accumulator three arms build
+  a value with, and intersecting a proof against `Held::none()` clears it.
+  Separating those two uses is its own issue.
+* Bad, because one of the three cases below is a may-set in the lattice and not
+  in the program. `int **pp = &p; *pp = q;` writes through a pointer with one
+  target, unconditionally, so `p` **must** be `q` afterwards; the two-element
+  set is manufactured by ADR-0019's deliberate union, and this rule reads it as
+  real ambiguity. What would recover that proof is a strong update where the
+  target is certain, which ADR-0019 considered and rejected.
 * Bad, because the proofs given up are wider than the program this issue was
   filed about. Anything that touches a member of a set after the set was freed
   is a suspicion now, including
@@ -142,8 +149,18 @@ and ADR-0018 and ADR-0019 say of the last two fields.
 
 * Good, because the set is the key, so a copy taken before the free is covered.
 * Bad, because a list of sets needs a canonical order or the value's `PartialEq`
-  is unstable, and an unstable equality in a fixpoint is a build that does not
-  stop rather than an answer somebody can read.
+  is unstable. **That argument is weaker than it looked when this was written**,
+  and the review that followed measured it: a sorted insert is three lines, and
+  a lattice that does not converge is not a build that does not stop but the
+  panic naming `Analysis::height` that
+  [ADR-0016](./0016-an-analysis-is-a-trait-and-an-unreached-block-has-no-value.md)
+  put there for exactly this, which is row 3 rather than row 5.
+* Good, and measured after this record was written rather than before: a working
+  prototype is about forty-five lines, leaves the whole suite green, costs
+  nothing per local so the peak stays where it was, and recovers both of the
+  proofs the chosen option gives up. Nobody has shown it converges in general,
+  which is why this record was not reopened on the spot; the issue that revisits
+  it starts from these numbers rather than from the paragraph above them.
 
 ### Write `Unknown` on every member and record nothing
 
