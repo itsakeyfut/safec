@@ -1,0 +1,11 @@
+error[SC0402]: this uses a value after it was freed
+   ╭─[ a_dereference_after_a_may_set_was_freed.c:9:5 ]
+   │
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 9 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── used here
+───╯
+  = note: this check belongs to safety level 1

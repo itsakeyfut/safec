@@ -100,7 +100,7 @@ workspace suite run with `--no-fail-fast`, the file restored.
 | `Known::reached_by` returns as soon as it has answered the set fact | `a_may_set_freed_then_written_through_an_alias`, which becomes a proved double free although something holding the local's address may have put a fresh pointer there between the two frees |
 | `Held::union` joins the proof by union rather than intersection | `a_free_of_a_may_set_on_one_arm_only`, which becomes a proved error on a path that never freed |
 | `Held::clear` keeps the fact | `a_local_given_nothing_forgets_the_set_it_freed`. It has to be a local given a *constant*: `p = malloc(8);` is a copy out of a temporary, and the copy replaces the whole row rather than clearing it, so it hides this |
-| the rule fires on a single site as well | thirty-eight cases, which is every proved double free and use after free in the corpus |
+| the rule fires on a single site as well | every proved double free and use after free this check makes, in the corpus and in `crates/safec-ir/tests/freed.rs` alike. The count is not the claim and is not written here: RK-028 in the review knowledge bank is the entry about why |
 | a variant added to `Reached`, or a field to `Held` | does not compile: `error[E0004]` at `verdict`, `error[E0063]` and `error[E0027]` at `Held` |
 
 `Analysis::height` is held by nothing here either, as ADR-0016 says of the method
@@ -117,6 +117,13 @@ and ADR-0018 and ADR-0019 say of the last two fields.
   now a warning. The table keyed by the set would keep it; it needs a canonical
   form or `PartialEq` is unstable and the fixpoint may not settle, which is
   ADR-0016's row 5 against this option's row 4. An issue names the shape.
+* Bad, because the proofs given up are wider than the program this issue was
+  filed about. Anything that touches a member of a set after the set was freed
+  is a suspicion now, including
+  `if (c) { p = a; } else { p = b; } free(p); free(a); free(b);`, which is a
+  double free on **every** path and exits 0 by default. Two warnings are still
+  printed and `--deny-unknown` still exits 1, so it is not a silence; what went
+  is a proof this check was not entitled to make one member at a time.
 * Bad, because the three cases ADR-0019 added drop from `error[SC0402]` to
   `warning[SC0402]`. That record predicted it and called it the right
   direction: the proof they carried rested on the rule this one calls wrong.
