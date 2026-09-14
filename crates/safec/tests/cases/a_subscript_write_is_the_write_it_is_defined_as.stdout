@@ -1,0 +1,72 @@
+Target "x86_64-pc-windows-msvc"
+Function a_subscript_write_is_the_write_it_is_defined_as.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_subscript_write_is_the_write_it_is_defined_as.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_subscript_write_is_the_write_it_is_defined_as.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "void"
+  Local "_9" "int"
+  Block "bb0" entry
+    Call a_subscript_write_is_the_write_it_is_defined_as.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Call a_subscript_write_is_the_write_it_is_defined_as.c:5:14 "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:6:16 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:6:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:7:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:7:5 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Call a_subscript_write_is_the_write_it_is_defined_as.c:8:5 "free" "bb3"
+      Destination "_8"
+      Copy "_1"
+  Block "bb3"
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:9:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:9:5 written
+      Destination "_9"
+      Use
+        Copy "_3"
+          Deref
+    Operation a_subscript_write_is_the_write_it_is_defined_as.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

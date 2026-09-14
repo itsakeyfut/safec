@@ -10,8 +10,7 @@ Function a_constant_subscript_of_a_freed_pointer.c:3:5 "f"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "void"
-  Local "_4" "int *"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     Call a_constant_subscript_of_a_freed_pointer.c:4:14 "malloc" "bb1"
       Destination "_2"
@@ -26,19 +25,14 @@ Function a_constant_subscript_of_a_freed_pointer.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Operation a_constant_subscript_of_a_freed_pointer.c:6:5 written
-      Destination "_4"
-      Binary "Add"
-        Copy "_1"
-        Constant 0
-    Operation a_constant_subscript_of_a_freed_pointer.c:6:5 written
-      Destination "_4"
+      Destination "_1"
         Deref
       Use
         Constant 42
     Operation a_constant_subscript_of_a_freed_pointer.c:6:5 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_4"
+        Copy "_1"
           Deref
     Operation a_constant_subscript_of_a_freed_pointer.c:7:5 written
       Destination "_0"

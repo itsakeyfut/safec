@@ -10,7 +10,6 @@ Function a_discarded_subscript_after_a_free.c:3:5 "f"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "void"
-  Local "_4" "int *"
   Block "bb0" entry
     Call a_discarded_subscript_after_a_free.c:4:14 "malloc" "bb1"
       Destination "_2"
@@ -24,13 +23,8 @@ Function a_discarded_subscript_after_a_free.c:3:5 "f"
       Destination "_3"
       Copy "_1"
   Block "bb2"
-    Operation a_discarded_subscript_after_a_free.c:6:5 written
-      Destination "_4"
-      Binary "Add"
-        Copy "_1"
-        Constant 0
     Evaluate a_discarded_subscript_after_a_free.c:6:5 written
-      Place "_4"
+      Place "_1"
         Deref
     Operation a_discarded_subscript_after_a_free.c:7:5 written
       Destination "_0"

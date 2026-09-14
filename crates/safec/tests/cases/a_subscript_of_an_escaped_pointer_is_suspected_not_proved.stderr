@@ -1,0 +1,18 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ a_subscript_of_an_escaped_pointer_is_suspected_not_proved.c:6:5 ]
+   │
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
+warning[SC0402]: this may use a value after it was freed
+   ╭─[ a_subscript_of_an_escaped_pointer_is_suspected_not_proved.c:7:5 ]
+   │
+ 7 │     p[0] = 42;
+   │     ────┬────  
+   │         ╰────── used here, perhaps after the free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

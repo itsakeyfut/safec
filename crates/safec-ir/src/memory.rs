@@ -735,7 +735,10 @@ impl Analysis for Allocations<'_> {
                         // The arithmetic written straight into the place, which
                         // no C reaches for the reason above and another
                         // frontend may. Both operands, for the reason the arm
-                        // above gives.
+                        // above gives, and the same question about the edge:
+                        // this asked none of it until review built the shape by
+                        // hand, and carried an edge through `qq + 7` that the
+                        // arm one level up had just been taught to drop.
                         Rvalue::Binary { op: _, lhs, rhs } => {
                             let mut reached = Held::none(value.points_to.len());
                             for operand in [lhs, rhs] {
@@ -745,6 +748,9 @@ impl Analysis for Allocations<'_> {
                                     }
                                 }
                             }
+
+                            reached.writes_to.fill(false);
+
                             reached
                         }
                         // A constant, a read through a projection, a unary
@@ -846,15 +852,18 @@ impl Analysis for Allocations<'_> {
                             }
                             reached.union(&value.points_to[source.local.index()]);
                         }
-                        // **The sites travel and the edge does not.** C17
-                        // 6.5.6 p8 keeps the result inside the object the
-                        // operand points into, which is why the allocation
-                        // comes along. A local's address plus one is not that
-                        // local, so `*(pp + 1) = q;` must not be read as a
-                        // write to what `pp` points at: it is an out of bounds
-                        // write, and following it here reported a proved use
-                        // after free about an allocation nothing had freed.
-                        // See ADR-0019.
+                        // **The sites travel and the edge does not.** C17 6.5.6
+                        // p8 keeps the result inside the object the operand
+                        // points into, which is why the allocation comes along.
+                        // A local's address plus one is not that local, so
+                        // `*(pp + 1) = q;` must not be read as a write to what
+                        // `pp` points at: it is an out of bounds write, and
+                        // following it here reported a proved use after free
+                        // about an allocation nothing had freed. See ADR-0019.
+                        //
+                        // Plus zero never arrives: the lowering folds it, so the
+                        // two spellings of one C expression are one shape before
+                        // anything reads them. See ADR-0021.
                         reached.writes_to.fill(false);
                         value.points_to[destination.index()] = reached;
                     }

@@ -170,6 +170,29 @@ arrow at build time. A safety-IR crate that does not depend on the frontend
 cannot grow a dependency on it by accident, and the reversal is a build failure
 rather than a review comment.
 
+### The arrow points at the IR, so the IR is where a normalisation belongs
+
+An analysis not knowing which frontend produced the IR is a claim about the
+**IR**, not only about the crate graph: whatever a frontend does, what arrives
+has to be the same thing. So where two C spellings would otherwise arrive as two
+shapes, the normalisation is the frontend's to perform and the IR's to require.
+
+There is one such requirement today.
+[ADR-0021](adr/0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds a
+zero pointer offset away, so **no `Rvalue::Binary` in a well-formed safety IR
+adds or subtracts a literal zero from a pointer**. C17 6.5.2.1 p2 makes `E[0]`
+and `*E` one expression and this keeps them one shape.
+
+A frontend that does not fold gets silence rather than a diagnostic, and this is
+measured rather than feared: hand-built IR for
+`t = pp + 0; *t = q; free(q); *p = 1;` produces no finding at all, where the
+folded shape of the same program produces one. Nothing enforces the requirement
+at the boundary, which is why it is written here, in the document a frontend
+author reads, rather than only in the record of the change that introduced it.
+`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` in
+`crates/safec-ir/tests/freed.rs` holds the boundary so that closing it later
+fails a named test rather than passing quietly.
+
 That is the same discipline the accepted records already use:
 [ADR-0003](adr/0003-pass-the-source-map-to-each-render-call.md) is confirmed by
 `E0502` and [ADR-0004](adr/0004-resolve-the-strictest-level-where-the-policy-is-built.md)

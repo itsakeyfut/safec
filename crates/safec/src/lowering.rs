@@ -588,6 +588,48 @@ impl Lowering<'_> {
         Some(ty)
     }
 
+    /// The operand an additive operation yields when it moves the pointer
+    /// nowhere.
+    ///
+    /// **Only where the result is a pointer**, which is the whole of why this
+    /// belongs here. The fold exists because `E[0]` and `*E` are one C
+    /// expression, and that is a statement about pointers; an integer `c + 0`
+    /// is not two spellings of anything, so folding it would be an
+    /// optimisation this compiler does not do, and it would drop a promotion
+    /// the IR shows the reader. It would not drop a value: measured, the
+    /// backend converts every operand where it is consumed, so `c + 0` folded
+    /// and unfolded emit the same answer. See ADR-0021.
+    ///
+    /// C17 6.5.6 p8 is the paragraph: adding an integer to a pointer yields a
+    /// pointer to the element that far along, `(P)+N` and `N+(P)` alike, so at
+    /// zero it is a pointer to the same element. That is Semantics and it is
+    /// what makes this a fold rather than a guess. The Constraints beside it
+    /// answer a different question and are cited where that question is asked:
+    /// p3 allows the pointer only on the left of a `-`, which is why `0 - E`
+    /// is not here, and `types.rs` cites the same paragraph where it declines
+    /// to give `1 - p` a type. Reading one of those for the other is a habit
+    /// rather than an accident: RK-042 in the review knowledge bank is the
+    /// same mistake caught in 6.5.3.2.
+    fn unmoved(ty: Ty, op: BinOp, lhs: &Operand, rhs: &Operand) -> Option<Operand> {
+        if !matches!(ty, Ty::Pointer(_)) {
+            return None;
+        }
+
+        // Which operand is the pointer is read off which side holds the
+        // literal, and that is sound only because an `Operand::Constant` is
+        // always an `int`: `Expr::Number` is the one thing that builds one and
+        // `types.rs` gives it `int`. A cast or a string literal would break
+        // that, and `((int *)0)[n]` would fold to `n`, which is a wrong
+        // **value** rather than a wrong report. Neither is implemented; when
+        // one is, this decides by the operand's type instead.
+        match op {
+            BinOp::Add if matches!(rhs, Operand::Constant(0)) => Some(lhs.clone()),
+            BinOp::Add if matches!(lhs, Operand::Constant(0)) => Some(rhs.clone()),
+            BinOp::Sub if matches!(rhs, Operand::Constant(0)) => Some(lhs.clone()),
+            _ => None,
+        }
+    }
+
     /// The IR type of an expression, or a report that it has none.
     fn ty_of(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TyId> {
         let ty = self.typed(id, diagnostics)?;
@@ -1230,13 +1272,20 @@ impl Lowering<'_> {
                 let rhs = values.pop().expect("a right operand");
                 let lhs = values.pop().expect("a left operand");
                 let op = binary(op).expect("`&&` and `||` are branches, not operators");
-                let into = self.temporary(builder, id, diagnostics)?;
-                builder.push(Operation {
-                    place: Place::local(into),
-                    value: Rvalue::Binary { op, lhs, rhs },
-                    origin: Origin::Written(span),
-                });
-                values.push(Operand::Copy(Place::local(into)));
+                let ty = self.ty_of(id, diagnostics)?;
+
+                match Self::unmoved(self.unit.ty(ty), op, &lhs, &rhs) {
+                    Some(unmoved) => values.push(unmoved),
+                    None => {
+                        let into = builder.function.push_local(ty);
+                        builder.push(Operation {
+                            place: Place::local(into),
+                            value: Rvalue::Binary { op, lhs, rhs },
+                            origin: Origin::Written(span),
+                        });
+                        values.push(Operand::Copy(Place::local(into)));
+                    }
+                }
             }
             Expr::Assign { op, span, .. } => {
                 let (op, span) = (*op, *span);
@@ -1350,22 +1399,36 @@ impl Lowering<'_> {
                 let pointer = values.pop().expect("a base");
                 // Of the base's type rather than the subscript's: what is
                 // worked out here is the address, and the subscript is what
-                // that address reaches.
-                let addressed = self.temporary(builder, base, diagnostics)?;
+                // that address reaches. Asked once, because asking twice
+                // reports twice when there is no type to give.
+                let addressed = self.ty_of(base, diagnostics)?;
 
-                builder.push(Operation {
-                    place: Place::local(addressed),
-                    value: Rvalue::Binary {
-                        op: BinOp::Add,
-                        lhs: pointer,
-                        rhs: offset,
-                    },
-                    origin: Origin::Written(span),
-                });
-                places.push(Place {
-                    local: addressed,
-                    projection: vec![Projection::Deref],
-                });
+                // `E[0]` is `*E`, so it is built as `*E` is: one C expression
+                // is one shape in the IR, which the sentence above this arm has
+                // asked for since it was written. See ADR-0021.
+                match Self::unmoved(self.unit.ty(addressed), BinOp::Add, &pointer, &offset) {
+                    Some(pointer) => {
+                        let mut place = self.pointed_at(base, pointer, diagnostics)?;
+                        place.projection.push(Projection::Deref);
+                        places.push(place);
+                    }
+                    None => {
+                        let addressed = builder.function.push_local(addressed);
+                        builder.push(Operation {
+                            place: Place::local(addressed),
+                            value: Rvalue::Binary {
+                                op: BinOp::Add,
+                                lhs: pointer,
+                                rhs: offset,
+                            },
+                            origin: Origin::Written(span),
+                        });
+                        places.push(Place {
+                            local: addressed,
+                            projection: vec![Projection::Deref],
+                        });
+                    }
+                }
             }
             // Nothing else schedules a `FinishPlace`, and the kinds are written
             // out rather than wildcarded because the cost of being wrong is

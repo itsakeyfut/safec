@@ -341,6 +341,15 @@ pub enum Rvalue {
         operand: Operand,
     },
     /// Two operands under an operator.
+    ///
+    /// **A well-formed safety IR does not add or subtract a literal zero from
+    /// a pointer here.** `E[0]` and `*E` are one C expression, and an analysis
+    /// that met them as two shapes would answer differently about one program;
+    /// the fold belongs to whoever builds the IR, which is ADR-0021. Nothing
+    /// checks it at this boundary, so `docs/c-family.md` carries what a
+    /// frontend owes and `an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`
+    /// in `crates/safec-ir/tests/freed.rs` holds what is lost when it is not
+    /// paid.
     Binary {
         /// Which operator.
         op: BinOp,
