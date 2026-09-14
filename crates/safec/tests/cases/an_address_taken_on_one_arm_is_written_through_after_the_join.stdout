@@ -1,0 +1,89 @@
+Target "x86_64-pc-windows-msvc"
+Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "int *"
+  Local "_10" "void"
+  Local "_11" "int"
+  Block "bb0" entry
+    Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:5:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 8
+  Block "bb2"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:6:11 written
+      Destination "_6"
+      Use
+        Constant 0
+    Branch an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 "bb3" "bb4"
+      Copy "_1"
+  Block "bb3"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:19 written
+      Destination "_7"
+      Address
+        Place "_2"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:14 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:14 written
+      Destination "_8"
+      Use
+        Copy "_6"
+    Goto "bb5"
+  Block "bb4"
+    Goto "bb5"
+  Block "bb5"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:8:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_4"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:8:5 written
+      Destination "_9"
+      Use
+        Copy "_6"
+          Deref
+    Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:9:5 "free" "bb6"
+      Destination "_10"
+      Copy "_2"
+  Block "bb6"
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:10:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:10:5 written
+      Destination "_11"
+      Use
+        Copy "_4"
+          Deref
+    Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

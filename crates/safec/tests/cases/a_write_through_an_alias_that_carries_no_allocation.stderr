@@ -1,0 +1,9 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ a_write_through_an_alias_that_carries_no_allocation.c:8:5 ]
+   │
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

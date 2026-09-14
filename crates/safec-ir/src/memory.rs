@@ -36,7 +36,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit,
+    Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    TranslationUnit,
 };
 use crate::source::{SourceMap, Span};
 
@@ -193,12 +194,32 @@ struct Held {
     /// A bit per site. A site is a local, so this is square in the locals.
     ///
     /// `Vec<bool>` rather than a packed bitset: this crate takes no
-    /// dependencies, and a byte per local per local is nothing at the sizes
-    /// one function reaches.
+    /// dependencies, and a byte per pair is what an ordinary function costs.
+    ///
+    /// **It is square in the locals and there are two of these**, so the value
+    /// is `blocks * locals * (2 * locals + 49)` bytes and the lowering makes
+    /// about two and a half locals per line of C. Measured: a 489-line
+    /// function costs 2.8 GB and six seconds, against 1.5 GB and three before
+    /// [`Held::writes_to`] was added. A packed bitset is the answer when a
+    /// third square field arrives or when somebody hits this on real code;
+    /// until then the number is here so that it is a decision rather than a
+    /// discovery.
     sites: Vec<bool>,
     /// Whether this local may hold an allocation this check can no longer
     /// name, because the site that named it was handed to a second one.
     lost: bool,
+    /// Per local, whether a write **through** this one may land in it.
+    ///
+    /// The edge `Known::escaped` is the shadow of. That field says a local's
+    /// address is held by something; this says by whom, which is what a write
+    /// through a pointer needs in order to be followed rather than feared. See
+    /// ADR-0019.
+    ///
+    /// It is here rather than beside `escaped` because an assignment destroys
+    /// it: `pp = 0;` ends what a write through `pp` can reach, while the fact
+    /// that `p`'s address escaped outlives anything done to `pp`. That is
+    /// ADR-0018's rule for what this struct holds.
+    writes_to: Vec<bool>,
 }
 
 impl Held {
@@ -207,6 +228,7 @@ impl Held {
         Held {
             sites: vec![false; sites],
             lost: false,
+            writes_to: vec![false; sites],
         }
     }
 
@@ -234,18 +256,30 @@ impl Held {
         // Every field named, never `..`: a field added here and missed is a
         // fact that survives an assignment, which is RK-018's shape one type
         // over.
-        let Held { sites, lost } = self;
+        let Held {
+            sites,
+            lost,
+            writes_to,
+        } = self;
         sites.fill(false);
         *lost = false;
+        writes_to.fill(false);
     }
 
     /// Also hold everything that one holds.
     fn union(&mut self, other: &Held) {
-        let Held { sites, lost } = self;
+        let Held {
+            sites,
+            lost,
+            writes_to,
+        } = self;
         for (here, there) in sites.iter_mut().zip(&other.sites) {
             *here = *here || *there;
         }
         *lost = *lost || other.lost;
+        for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
+            *here = *here || *there;
+        }
     }
 
     /// Stop pointing at a site that now names something else.
@@ -309,10 +343,18 @@ impl Known {
     /// this check never had a site for is an indeterminate pointer, which is a
     /// different defect with a check of its own that does not exist yet.
     /// Answering [`Reached::Lost`] here instead put `perhaps after the free` on
-    /// `int *p; int **pp = &p; *pp = malloc(4); *p = 1;`, which frees nothing
-    /// at all, and made `--deny-unknown` unusable on the output-parameter
-    /// idiom. [`Allocations::touching`] wants the opposite answer for an empty
-    /// set and writes its own, which is why the rule is not written here.
+    /// a program that frees nothing at all, and made `--deny-unknown` unusable
+    /// on the output-parameter idiom. `an_escaped_local_that_reaches_no_site_at_all`
+    /// is that program and is the guard.
+    ///
+    /// It used to be `int *p; int **pp = &p; *pp = malloc(4); *p = 1;`, which
+    /// ADR-0019 made this check follow: `p` now reaches the site the write put
+    /// there, so the rule above no longer covers it and the escape reports it
+    /// anyway. The cost that rule was written to avoid is paid on that program
+    /// regardless, by a route that knows what it is talking about.
+    ///
+    /// [`Allocations::touching`] wants the opposite answer for an empty set and
+    /// writes its own, which is why the rule is not written here.
     ///
     /// [`escaped`]: Known::escaped
     fn reached_by(&self, local: LocalId) -> Vec<Reached> {
@@ -338,6 +380,17 @@ impl Known {
         }
 
         reached
+    }
+
+    /// Every local a write through this one may land in.
+    ///
+    /// Empty means this check does not know where such a write goes, which is
+    /// not the same as knowing it goes nowhere. ADR-0019 records why the answer
+    /// to not knowing is to do nothing.
+    fn written_through(&self, local: LocalId) -> Vec<usize> {
+        (0..self.points_to.len())
+            .filter(|target| self.points_to[local.index()].writes_to[*target])
+            .collect()
     }
 
     /// Hand this site to a new allocation.
@@ -494,7 +547,9 @@ impl Analysis for Allocations<'_> {
         // one, which it can do at most once per site that frees; and its `made`
         // span can only fall from `Some` to `None`, once. A local's `escaped`
         // bit goes from `false` to `true` and never back, once each, and its
-        // `lost` bit costs one more of the same.
+        // `lost` bit costs one more of the same. Each local's set of locals a
+        // write through it may reach is a second square table that only grows,
+        // so it takes at most one step per pair.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -512,7 +567,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals + locals * (locals + 5)
+        locals * locals * 2 + locals * (locals + 5)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -582,9 +637,98 @@ impl Analysis for Allocations<'_> {
                 origin: _,
             } => {}
             Element::Assign(operation) => {
-                // A write through a projection changes what a pointer points
-                // at rather than which allocation a local holds, and this check
-                // follows locals.
+                // **A write through a pointer, where this check knows where it
+                // lands.** `*pp = q` is what makes `p` hold `q`'s allocation,
+                // and until it was followed the free that came after it was
+                // read against an allocation nobody had written there:
+                // `int **pp = &p; *pp = q; free(p); *q = 1;` said nothing at
+                // all about the last line. See ADR-0019, which also records
+                // why not knowing where the write lands is answered by doing
+                // nothing.
+                //
+                // Exactly one `Deref` and nothing deeper. The edge recorded at
+                // `Rvalue::Address` is one step, and reading it as two would
+                // be inventing the second.
+                if operation.place.projection.as_slice() == [Projection::Deref] {
+                    let targets = value.written_through(operation.place.local);
+                    if targets.is_empty() {
+                        return;
+                    }
+
+                    // **A union rather than a replacement**, because a pointer
+                    // that may point at one local is not a pointer that must:
+                    // two arms of a branch can leave `pp` with one target each
+                    // and neither is certain here. Replacing would erase a
+                    // value nothing wrote over, which is a silence rather than
+                    // a false positive.
+                    //
+                    // **A `match` rather than an `if let`, so a fifth kind of
+                    // rvalue has to answer here too.** Every other reader of
+                    // `Rvalue` in this crate is exhaustive and `error[E0004]`
+                    // is what asks them; this one was the exception, and what
+                    // a missed arm would mean is that a write through a
+                    // pointer silently carries nothing, which is a silence
+                    // rather than a build error. RK-018 is the same spelling
+                    // one type over.
+                    let written = match &operation.value {
+                        // `*pp = q + 1;` arrives here as a copy, not as the
+                        // arithmetic: the lowering puts the addition in a
+                        // temporary and copies it out, and the arm above has
+                        // already given that temporary `q`'s sites.
+                        Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
+                            value.points_to[source.local.index()].clone()
+                        }
+                        // The arithmetic written straight into the place, which
+                        // no C reaches for the reason above and another
+                        // frontend may. Both operands, for the reason the arm
+                        // above gives.
+                        Rvalue::Binary { op: _, lhs, rhs } => {
+                            let mut reached = Held::none(value.points_to.len());
+                            for operand in [lhs, rhs] {
+                                if let Operand::Copy(source) = operand {
+                                    if source.projection.is_empty() {
+                                        reached.union(&value.points_to[source.local.index()]);
+                                    }
+                                }
+                            }
+                            reached
+                        }
+                        // A constant, a read through a projection, a unary
+                        // operator, an address. None is a pointer this check
+                        // follows to an allocation, so the target is given
+                        // nothing **and keeps what it held**: a write this
+                        // check cannot follow is not evidence that the old
+                        // contents are gone.
+                        Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
+                            Held::none(value.points_to.len())
+                        }
+                    };
+
+                    // **The union and nothing else.** A write through an alias
+                    // does not unprove what the target held, which #155's rule
+                    // for a direct assignment would suggest it should. The
+                    // difference is whose fact is at stake: `unproved` writes
+                    // on the *sites*, which are shared, so doing it here wiped
+                    // a `Freed` that a second local holding the same allocation
+                    // had proved. `free(p); *pp = 0; *p = 1;` went from a
+                    // proved use after free to a suspicion, and exit 1 to exit
+                    // 0, with the write carrying nothing at all.
+                    //
+                    // Nothing is lost by leaving it out. The target's address
+                    // was taken, so ADR-0017 answers `Reached::Lost` for it
+                    // wherever a report is made, and `Known::settle` applies
+                    // the heap half over the merged value at every join. See
+                    // ADR-0019.
+                    for target in targets {
+                        value.points_to[target].union(&written);
+                    }
+
+                    return;
+                }
+
+                // A write through any other projection changes what a pointer
+                // points at rather than which allocation a local holds, and
+                // this check follows locals.
                 if !operation.place.projection.is_empty() {
                     return;
                 }
@@ -638,6 +782,16 @@ impl Analysis for Allocations<'_> {
                             }
                             reached.union(&value.points_to[source.local.index()]);
                         }
+                        // **The sites travel and the edge does not.** C17
+                        // 6.5.6 p8 keeps the result inside the object the
+                        // operand points into, which is why the allocation
+                        // comes along. A local's address plus one is not that
+                        // local, so `*(pp + 1) = q;` must not be read as a
+                        // write to what `pp` points at: it is an out of bounds
+                        // write, and following it here reported a proved use
+                        // after free about an allocation nothing had freed.
+                        // See ADR-0019.
+                        reached.writes_to.fill(false);
                         value.points_to[destination.index()] = reached;
                     }
                     // A constant, a read through a projection, or a unary
@@ -662,6 +816,12 @@ impl Analysis for Allocations<'_> {
                     // a double free.
                     Rvalue::Address(taken) => {
                         value.clear(destination);
+                        // **The edge and the bit, and both are needed.** The
+                        // bit outlives everything done to this destination and
+                        // is what keeps an escaped local unproved; the edge
+                        // dies with the destination and is what lets a write
+                        // through it be followed. See ADR-0019.
+                        value.points_to[destination.index()].writes_to[taken.local.index()] = true;
                         value.escaped[taken.local.index()] = true;
                         value.unproved(taken.local.index());
                     }

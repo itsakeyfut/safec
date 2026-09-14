@@ -1,0 +1,37 @@
+Target "x86_64-pc-windows-msvc"
+Function an_escaped_local_that_reaches_no_site_at_all.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_escaped_local_that_reaches_no_site_at_all.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_escaped_local_that_reaches_no_site_at_all.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int **"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation an_escaped_local_that_reaches_no_site_at_all.c:5:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation an_escaped_local_that_reaches_no_site_at_all.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Operation an_escaped_local_that_reaches_no_site_at_all.c:6:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation an_escaped_local_that_reaches_no_site_at_all.c:6:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Operation an_escaped_local_that_reaches_no_site_at_all.c:7:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
