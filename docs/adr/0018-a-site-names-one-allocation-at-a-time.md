@@ -99,12 +99,21 @@ failed and nothing else did.
 | `Held::lose` sets `lost` and keeps the bit | `a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved`, whose last `free` gains a warning because the old holder's free wrote `Freed` onto the new allocation's site, and `a_double_free_across_a_loop_names_the_free_that_is_wrong` |
 | `Held::clear` leaves `lost` set | `a_local_given_something_fresh_forgets_what_it_lost` |
 | `Known::reached_by` does not read `lost` | `a_pointer_saved_across_a_loop_that_allocates_again` and `a_copy_of_a_local_that_lost_its_allocation_lost_it_too` |
+| `Known::reached_by` reads `lost` only when the local reaches no site | `a_local_that_kept_one_allocation_and_lost_another`, which goes silent. That program has no defect in it: what it holds is that a local keeping one allocation and losing the name of another is unproven about the second, and a local can be both |
 | `Held::union` does not union `lost` | the same two, which is the back edge rather than the assignment |
 | **the rejected option in place of this one**, marking the site rather than the local | all six, and `a_loop_that_allocates_and_frees_each_turn_is_proved` is the one that matters: it gains a `warning[SC0401]` on a loop with no defect in it |
 
 A field added to `Held` is `error[E0063]` in `Held::none` and `error[E0027]` in
 `Held::clear` and `Held::union`, which both destructure it. That is what holds
 the two halves together rather than a test.
+
+The same question is asked of a field added to `Known`, which is the one that
+matters for the issues still open against this check: `Known::reborn`
+destructures, so a fact filed against a site has to answer for what happens when
+the site starts naming a different allocation. Without it, a field added to
+`Known` compiles and the whole suite passes while the fact survives into an
+allocation it was never about. Measured: three errors, at `Known::on_entry`,
+`Allocations::join` and `Known::reborn`.
 
 **`Analysis::height` is not held by anything, and this record says so rather
 than implying otherwise.** Leaving the number at what it was before the new bit
@@ -120,8 +129,26 @@ naming it.
 * Good, because the check stays silent on a loop that allocates and frees each
   turn. That program was checked against every option before one was chosen.
 * Bad, because a local that held a reused site is unprovable from that point
-  until it is given something fresh, whatever it actually holds. The loop above
-  reports its read as a suspicion, not as the proof it could be.
+  until it is given something fresh, whatever it actually holds. **A report
+  that was an `error` can become a `warning`, and a build that used to fail can
+  pass.** `while (c) { p = malloc(8); free(p); free(x); x = p; c = c - 1; }` is
+  a real double free that exits 1 before this record and 0 after it, and
+  `--deny-unknown` is what gets it back. What the old answer was reading is
+  worth knowing: it proved the free by looking at the state of the allocation
+  the site names *now*, which happened to be freed too. It was right about that
+  program by arithmetic rather than by knowledge, and the honest answer to a
+  name this check no longer has is that it does not know.
+* Bad, because it adds a producer to a shape that already reads badly: a loop
+  that allocates each turn and keeps the previous pointer reports `SC0402` on
+  the read, in a translation unit containing no `free` at all, because a local
+  holding something this check cannot name is a local it cannot prove anything
+  about. **This is not new and this record is not the place to fix it.** The
+  same sentence comes out of `int *p = malloc(4); helper(p); *p = 1;` on the
+  commit before this one, for the same reason: an `Unknown` conclusion is
+  worded as a use after free whether or not a free exists. The check's
+  conclusions have three values and this diagnostic's wording has two, and
+  where those do not meet is `docs/diagnostics.md`'s question rather than this
+  record's.
 * Bad, because the number of allocations a loop makes is still invisible. This
   records that one site may have named several allocations; it does not let the
   check say anything about how many or in what order.

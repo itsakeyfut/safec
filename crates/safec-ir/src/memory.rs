@@ -180,6 +180,14 @@ enum Reached {
 /// anything else clears both. Kept apart they have to be kept in step by hand
 /// in every arm of [`Allocations::element`], and forgetting one is a silence
 /// rather than a build error. See ADR-0018.
+///
+/// **What lives here is what an assignment destroys.** Giving a local a fresh
+/// value replaces everything in this struct, which is why [`Held::clear`] can
+/// answer for a field without being told what it means. A fact that outlives
+/// an assignment does not belong here however much it looks like one:
+/// [`Known::escaped`] is per local and stays on [`Known`] for exactly that
+/// reason, and putting it here would answer `false` after `p = q;` and undo
+/// #155.
 #[derive(Clone, PartialEq, Eq)]
 struct Held {
     /// A bit per site. A site is a local, so this is square in the locals.
@@ -205,11 +213,6 @@ impl Held {
     /// Also hold this site.
     fn hold(&mut self, site: usize) {
         self.sites[site] = true;
-    }
-
-    /// Whether this site is one of the ones held.
-    fn holds(&self, site: usize) -> bool {
-        self.sites[site]
     }
 
     /// Every site held, in order.
@@ -315,19 +318,61 @@ impl Known {
     fn reached_by(&self, local: LocalId) -> Vec<Reached> {
         let mut reached: Vec<Reached> = self.sites_of(local).map(Reached::Site).collect();
 
-        // **An empty set answers here, unlike the escape below.** This local
-        // had a site and lost the name for it, which is what [`Reached::Lost`]
-        // is for; the escape's empty case is a local that never had one, which
-        // is an indeterminate pointer and a different defect. See ADR-0018.
-        if self.points_to[local.index()].lost {
-            reached.push(Reached::Lost);
-        }
-
-        if self.escaped[local.index()] && !reached.is_empty() {
+        // **Two facts, one answer, and the emptiness condition belongs to only
+        // one of them.** A local that *had* a site and lost the name for it is
+        // holding something unnameable whether or not it holds anything else,
+        // which is what [`Reached::Lost`] is for and is ADR-0018. A local whose
+        // address escaped is distrusted only about the sites it has: reaching
+        // none of them makes it a pointer this check never followed, and
+        // answering here put `perhaps after the free` on programs that free
+        // nothing at all, which is ADR-0017.
+        //
+        // One `push` rather than two conditions, because two would answer
+        // `Lost` twice for a local that is both. That is inert, since
+        // [`verdict`] reads `Lost` as a flag, and a reader should not have to
+        // work that out.
+        if self.points_to[local.index()].lost
+            || (self.escaped[local.index()] && !reached.is_empty())
+        {
             reached.push(Reached::Lost);
         }
 
         reached
+    }
+
+    /// Hand this site to a new allocation.
+    ///
+    /// **A site names one allocation at a time, and this is where it stops
+    /// naming the last one.** A site is a local, so a loop through the same
+    /// call files each allocation it makes under one name. Every other local
+    /// that still pointed here was following the allocation an earlier turn
+    /// made, and `state` below is about the one this call just made: handing
+    /// them that proof reported the wrong line and was silent about the right
+    /// one. See ADR-0018, which has the program.
+    ///
+    /// The destination is excluded because the caller has already rebuilt its
+    /// row, and the site it holds now is this allocation rather than the one
+    /// being displaced.
+    ///
+    /// **Every field named, never `..`.** A fact filed against a site is a
+    /// fact about whatever the site named when it was written, so a field
+    /// added to [`Known`] has to answer here for what happens when the site
+    /// starts naming something else. `error[E0027]` is what asks, and RK-018
+    /// is the same spelling one type over.
+    fn reborn(&mut self, site: usize, made: Option<Span>) {
+        let Known {
+            points_to,
+            state,
+            escaped: _,
+        } = self;
+
+        for (other, held) in points_to.iter_mut().enumerate() {
+            if other != site {
+                held.lose(site);
+            }
+        }
+
+        state[site] = SiteState::Live(made);
     }
 
     /// Nothing this local holds is proved, once anything holds its address.
@@ -357,13 +402,8 @@ impl Known {
             return;
         }
 
-        // By index over the sites rather than over what this local holds,
-        // because the walk writes `state` while it reads `points_to`. `state`
-        // is per site and a site is a local, so its length is the roster.
-        for site in 0..self.state.len() {
-            if self.points_to[local].holds(site) {
-                self.state[site] = SiteState::Unknown;
-            }
+        for site in self.points_to[local].sites() {
+            self.state[site] = SiteState::Unknown;
         }
     }
 
@@ -453,9 +493,15 @@ impl Analysis for Allocations<'_> {
         // `Freed` to `Unknown`; its `freed` span can only move to an earlier
         // one, which it can do at most once per site that frees; and its `made`
         // span can only fall from `Some` to `None`, once. A local's `escaped`
-        // bit goes from `false` to `true` and never back, once each, and so
-        // does its `lost` bit, which a join unions and only a fresh assignment
-        // clears. Generous
+        // bit goes from `false` to `true` and never back, once each, and its
+        // `lost` bit costs one more of the same.
+        //
+        // **The bit is not monotone in the transfer, and does not have to be.**
+        // `Held::clear` puts it back at every fresh assignment. What this
+        // number bounds is how often a *block's entry value* can move, and an
+        // entry value moves only through `join`, which unions. A transfer that
+        // takes facts away inside a block cannot make the entry value descend,
+        // so it cannot make the solver oscillate. Generous
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
@@ -726,24 +772,8 @@ impl Analysis for Allocations<'_> {
         // anything. Naming that line was a caret asserting something nothing
         // had established, so a site whose call is not `malloc` is `Live(None)`
         // and the diagnostic leaves the label off.
-        // **A site names one allocation at a time, and this is where it stops
-        // naming the last one.** Every other local that still pointed here was
-        // following the allocation the previous turn of a loop made, and the
-        // state written below is about the one this call just made. Handing
-        // them that proof reported the wrong line and was silent about the
-        // right one: see ADR-0018, which has the program.
-        //
-        // The destination is excluded because its row was rebuilt two lines
-        // above, and the site it holds now is this allocation rather than the
-        // one being displaced.
-        for other in 0..value.points_to.len() {
-            if other != site {
-                value.points_to[other].lose(site);
-            }
-        }
-
         let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
-        value.state[site] = SiteState::Live(made);
+        value.reborn(site, made);
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
         // call into a fresh temporary and copies it out, so the copy above is

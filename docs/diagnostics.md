@@ -110,11 +110,14 @@ it. [ADR-0017](adr/0017-record-each-half-of-an-escape-where-its-subject-lives.md
 records where each half of what an escape means is kept, and why the half about
 the allocations those locals hold is kept separately from it.
 
-Both report `SC0402` as a warning rather than an error, because neither is
-something this check proved: what it knows is that it stopped being able to
-follow the pointer. `--deny-unknown` is what makes an unproven result fail a
-build, and [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why
-that is the policy's decision rather than the check's.
+The first and the third report `SC0402` as a warning rather than an error,
+because neither is something this check proved: what it knows is that it
+stopped being able to follow the pointer. The second is the one rule of the
+three that can leave an `error` standing, because what it decides is which of
+two reports at one caret survives rather than what either of them concluded.
+`--deny-unknown` is what makes an unproven result fail a build, and
+[ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why that is
+the policy's decision rather than the check's.
 
 **One shape is still quiet, and it is not the boundary above.** Where a `free`
 goes through a pointer this check was not following, the allocation that was
