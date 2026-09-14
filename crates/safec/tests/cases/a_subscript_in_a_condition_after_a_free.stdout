@@ -10,7 +10,6 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "void"
-  Local "_4" "int *"
   Block "bb0" entry
     Call a_subscript_in_a_condition_after_a_free.c:4:14 "malloc" "bb1"
       Destination "_2"
@@ -24,13 +23,8 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
       Destination "_3"
       Copy "_1"
   Block "bb2"
-    Operation a_subscript_in_a_condition_after_a_free.c:6:9 written
-      Destination "_4"
-      Binary "Add"
-        Copy "_1"
-        Constant 0
     Branch a_subscript_in_a_condition_after_a_free.c:6:9 "bb3" "bb4"
-      Copy "_4"
+      Copy "_1"
         Deref
   Block "bb3"
     Operation a_subscript_in_a_condition_after_a_free.c:6:17 written

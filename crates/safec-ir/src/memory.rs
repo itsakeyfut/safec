@@ -36,7 +36,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit,
 };
 use crate::source::{SourceMap, Span};
@@ -327,53 +327,6 @@ impl Held {
             self.lost = true;
         }
     }
-}
-
-/// Whether an arithmetic operation leaves the pointer where it was.
-///
-/// **What travels through arithmetic and what does not.** C17 6.5.6 p8 keeps
-/// the result of `p + 1` inside the object `p` points into, so the
-/// *allocation* always comes along. The edge saying which local a write
-/// through a pointer lands in does not: a local's address plus one is not that
-/// local, and following `pp[1] = q;` reported a proved use after free about an
-/// allocation nothing had freed. Plus **zero** is that local, and C17 6.5.2.1
-/// p2 defines `E1[E2]` as `(*((E1)+(E2)))`, so `pp[0] = q;` is `*pp = q;`
-/// written differently and has to get the same answer. See ADR-0019.
-///
-/// `Add` either way round, because 6.5.6 p2's constraint does not say which
-/// operand is the pointer. `Sub` only on the right, because p3 allows the
-/// pointer only there, which `types.rs` cites for the same reason where it
-/// declines to give `1 - p` a type.
-///
-/// **This reads the operand, not the value.** `*(pp + -0) = q;` and
-/// `*(pp + (1 - 1)) = q;` are zero offsets that are not the token zero, and
-/// the edge stops at both. That is the old silence rather than a new one, and
-/// ADR-0019's Consequences say so.
-///
-/// **`0[pp]` is standard C and does not reach here**, although it is the
-/// spelling that makes the left case look ordinary: this frontend types a
-/// subscript from its base and has no rule for the reversed spelling, so
-/// `0[pp] = q;` is `error[SC0304]` before lowering. `*(0 + pp) = q;` is the
-/// reachable one.
-///
-/// `_` rather than the rest of the operators written out, which every other
-/// read of an IR enum in this file does: here the default keeps the behaviour
-/// these arms had before ADR-0019, so an operator added later gains no claim
-/// nobody made for it.
-///
-/// A function with two callers rather than a rule written twice. It was
-/// written twice, and review found the two had already drifted: one dropped
-/// the edge for every operator, and the other, which no C program reaches and
-/// another frontend will, kept it for all of them and reported a proved use
-/// after free about a place nothing had written to.
-fn moves_the_pointer(op: &BinOp, lhs: &Operand, rhs: &Operand) -> bool {
-    let unmoved = match op {
-        BinOp::Add => matches!(lhs, Operand::Constant(0)) || matches!(rhs, Operand::Constant(0)),
-        BinOp::Sub => matches!(rhs, Operand::Constant(0)),
-        _ => false,
-    };
-
-    !unmoved
 }
 
 /// Which allocations each local may hold, and what is known about each.
@@ -786,7 +739,7 @@ impl Analysis for Allocations<'_> {
                         // this asked none of it until review built the shape by
                         // hand, and carried an edge through `qq + 7` that the
                         // arm one level up had just been taught to drop.
-                        Rvalue::Binary { op, lhs, rhs } => {
+                        Rvalue::Binary { op: _, lhs, rhs } => {
                             let mut reached = Held::none(value.points_to.len());
                             for operand in [lhs, rhs] {
                                 if let Operand::Copy(source) = operand {
@@ -796,9 +749,7 @@ impl Analysis for Allocations<'_> {
                                 }
                             }
 
-                            if moves_the_pointer(op, lhs, rhs) {
-                                reached.writes_to.fill(false);
-                            }
+                            reached.writes_to.fill(false);
 
                             reached
                         }
@@ -890,7 +841,7 @@ impl Analysis for Allocations<'_> {
                     // warning where `free(p); p[0] = 42;` is an error. The
                     // types are in the IR and reading them would separate the
                     // two, which is #143 rather than a line here.
-                    Rvalue::Binary { op, lhs, rhs } => {
+                    Rvalue::Binary { op: _, lhs, rhs } => {
                         let mut reached = Held::none(value.points_to.len());
                         for operand in [lhs, rhs] {
                             let Operand::Copy(source) = operand else {
@@ -901,12 +852,19 @@ impl Analysis for Allocations<'_> {
                             }
                             reached.union(&value.points_to[source.local.index()]);
                         }
-                        // The sites travel and the edge travels only where the
-                        // pointer does not move, which [`moves_the_pointer`] is
-                        // and says why.
-                        if moves_the_pointer(op, lhs, rhs) {
-                            reached.writes_to.fill(false);
-                        }
+                        // **The sites travel and the edge does not.** C17 6.5.6
+                        // p8 keeps the result inside the object the operand
+                        // points into, which is why the allocation comes along.
+                        // A local's address plus one is not that local, so
+                        // `*(pp + 1) = q;` must not be read as a write to what
+                        // `pp` points at: it is an out of bounds write, and
+                        // following it here reported a proved use after free
+                        // about an allocation nothing had freed. See ADR-0019.
+                        //
+                        // Plus zero never arrives: the lowering folds it, so the
+                        // two spellings of one C expression are one shape before
+                        // anything reads them. See ADR-0021.
+                        reached.writes_to.fill(false);
                         value.points_to[destination.index()] = reached;
                     }
                     // A constant, a read through a projection, or a unary

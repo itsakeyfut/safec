@@ -13,10 +13,9 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
   Local "_4" "void *"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "void"
-  Local "_10" "int"
+  Local "_7" "int *"
+  Local "_8" "void"
+  Local "_9" "int"
   Block "bb0" entry
     Call a_write_through_a_pointer_minus_zero.c:4:14 "malloc" "bb1"
       Destination "_2"
@@ -42,23 +41,18 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_6"
-    Operation a_write_through_a_pointer_minus_zero.c:7:7 written
-      Destination "_7"
-      Binary "Sub"
-        Copy "_5"
-        Constant 0
     Operation a_write_through_a_pointer_minus_zero.c:7:5 written
-      Destination "_7"
+      Destination "_5"
         Deref
       Use
         Copy "_3"
     Operation a_write_through_a_pointer_minus_zero.c:7:5 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_7"
+        Copy "_5"
           Deref
     Call a_write_through_a_pointer_minus_zero.c:8:5 "free" "bb3"
-      Destination "_9"
+      Destination "_8"
       Copy "_1"
   Block "bb3"
     Operation a_write_through_a_pointer_minus_zero.c:9:5 written
@@ -67,7 +61,7 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Use
         Constant 1
     Operation a_write_through_a_pointer_minus_zero.c:9:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
           Deref

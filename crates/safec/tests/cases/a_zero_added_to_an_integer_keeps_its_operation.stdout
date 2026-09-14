@@ -1,0 +1,16 @@
+Target "x86_64-pc-windows-msvc"
+Function a_zero_added_to_an_integer_keeps_its_operation.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "char" parameter
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_zero_added_to_an_integer_keeps_its_operation.c:2:12 written
+      Destination "_2"
+      Binary "Add"
+        Copy "_1"
+        Constant 0
+    Operation a_zero_added_to_an_integer_keeps_its_operation.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Return
