@@ -125,7 +125,13 @@ this method and what ADR-0018 says about the last field added.
 ### Consequences
 
 * Good, because the headline silence is closed: the program in #162 is
-  `error[SC0402]` and exit 1.
+  reported on its last line, where it used to say nothing at all. It was
+  `error[SC0402]` and exit 1 when this record landed and is `warning[SC0402]`
+  and exit 0 since
+  [ADR-0020](./0020-a-free-of-a-may-set-is-a-fact-about-the-set.md), which is
+  the last bullet of this section arriving: the proof rested on a free over a
+  two-site may-set marking both members freed, and that rule was wrong.
+  `--deny-unknown` still exits 1.
 * Good, because two corpus programs that contain a real double free through an
   alias are now suspected at both frees rather than one.
 * Bad, because `*pp = q` with no `&` in sight is still silent, deliberately.

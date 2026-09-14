@@ -1,0 +1,79 @@
+Target "x86_64-pc-windows-msvc"
+Function a_free_of_a_may_set_on_one_arm_only.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_free_of_a_may_set_on_one_arm_only.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "void"
+  Local "_10" "void"
+  Block "bb0" entry
+    Call a_free_of_a_may_set_on_one_arm_only.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Call a_free_of_a_may_set_on_one_arm_only.c:5:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 4
+  Block "bb2"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Branch a_free_of_a_may_set_on_one_arm_only.c:7:9 "bb3" "bb4"
+      Copy "_1"
+  Block "bb3"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:7:14 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:7:14 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Goto "bb5"
+  Block "bb4"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:7:30 written
+      Destination "_6"
+      Use
+        Copy "_4"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:7:30 written
+      Destination "_8"
+      Use
+        Copy "_6"
+    Goto "bb5"
+  Block "bb5"
+    Branch a_free_of_a_may_set_on_one_arm_only.c:8:9 "bb6" "bb7"
+      Copy "_1"
+  Block "bb6"
+    Call a_free_of_a_may_set_on_one_arm_only.c:8:14 "free" "bb9"
+      Destination "_9"
+      Copy "_6"
+  Block "bb7"
+    Goto "bb8"
+  Block "bb8"
+    Call a_free_of_a_may_set_on_one_arm_only.c:9:5 "free" "bb10"
+      Destination "_10"
+      Copy "_6"
+  Block "bb9"
+    Goto "bb8"
+  Block "bb10"
+    Operation a_free_of_a_may_set_on_one_arm_only.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

@@ -7,18 +7,12 @@ warning[SC0401]: this may free a value that was freed already
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
-error[SC0402]: this uses a value after it was freed
+warning[SC0402]: this may use a value after it was freed
     ╭─[ an_address_taken_on_one_arm_is_written_through_after_the_join.c:10:5 ]
     │
-  5 │     int *q = malloc(8);
-    │              ────┬────  
-    │                  ╰────── allocated here
-    │ 
-  9 │     free(p);
-    │     ───┬───  
-    │        ╰───── freed here
  10 │     *q = 1;
     │     ───┬──  
-    │        ╰──── used here
+    │        ╰──── used here, perhaps after the free
 ────╯
   = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
