@@ -92,6 +92,15 @@ share a caret, which both operands of a `||` do, the two are one report and the
 **stronger** of them is what it says, so a proof is never spent by a suspicion
 beside it.
 
+**What the first of those costs is the proof.** A read of a local whose address
+has been taken is reported as a warning however clear the free beside it looks,
+because a write through the alias may have replaced the pointer between the
+two. `int **pp = &p; free(p); *pp = q; *p = 1;` is the case, and it used to be
+an `error`: a proof this check did not have, about a program with no defect in
+it. [ADR-0017](adr/0017-record-each-half-of-an-escape-where-its-subject-lives.md)
+records where each half of what an escape means is kept, and why the half about
+the allocations those locals hold is kept separately from it.
+
 Both report `SC0402` as a warning rather than an error, because neither is
 something this check proved: what it knows is that it stopped being able to
 follow the pointer. `--deny-unknown` is what makes an unproven result fail a
