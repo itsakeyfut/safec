@@ -155,6 +155,21 @@ this method and what ADR-0018 says about the last field added.
   its old name said this check did not follow it. That answer comes from
   ADR-0017's rule for an escaped local, not from this one; what this record
   changed is that the local now reaches a site, so the rule applies to it.
+* Bad, because a build that failed can now pass. Following more writes widens
+  more may-sets, so a report that was a proof becomes a suspicion and the
+  default run exits 0. Measured over four hundred generated programs: six moved
+  from exit 1 to exit 0 and none moved the other way, and three of the proofs
+  lost were about programs with no defect in them. `--deny-unknown` exits 1 on
+  all of them.
+* Bad, because the subscript spelling now costs what the dereference spelling
+  costs. A file of loops writing through a pointer went from 4.5 s to 10.2 s at
+  47 lines and from 75 s to 140 s at 87, which is the growth issue #173 is
+  about arriving one spelling earlier rather than a new one.
+* The `_` arm of the operator match is held by nothing, the way
+  `Analysis::height` is. Making it answer `true` for every operator leaves the
+  whole suite passing, because no C program types a pointer into any binary
+  operator but `+` and `-`. The comment beside it says what it is for; no test
+  says it.
 * Bad, because the rule reads the **operand** and not the value. A zero
   offset spelled any other way stops the edge: `*(pp + -0) = q;` and
   `*(pp + (1 - 1)) = q;` are both silent where `pp[0] = q;` reports. The
