@@ -950,6 +950,15 @@ impl Analysis for Allocations<'_> {
                         // A constant frees nothing and a projection names a
                         // place this check does not follow, which is what
                         // `Allocations::touching` already said about both.
+                        //
+                        // **No program reaches the second of those, and it is
+                        // here anyway.** `free` takes one argument, and an
+                        // argument with a projection reaches no site at all,
+                        // so this branch is not entered. What it would cost if
+                        // that changed is a proof recorded against the pointer
+                        // rather than against what it points at, which is the
+                        // false proof this whole rule is against. Measured: no
+                        // mutation of this line breaks anything.
                         let Operand::Copy(place) = argument else {
                             continue;
                         };
