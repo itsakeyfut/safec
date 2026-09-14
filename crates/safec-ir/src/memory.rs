@@ -207,6 +207,37 @@ impl Known {
         self.points_to[local.index()].fill(false);
     }
 
+    /// Every site this local may hold, and whether it may hold more.
+    ///
+    /// The one question both readers ask, so that what a free touches and what
+    /// a dereference reads cannot disagree. [`escaped`] says the set may be
+    /// stale, which is a fact about this check's knowledge of one local and is
+    /// answered here; what an escape does to the allocations themselves is a
+    /// fact about the heap and is written on the sites by [`Known::unproved`].
+    /// See ADR-0017.
+    ///
+    /// **A local reaching no site answers nothing, escaped or not.** [`used`]
+    /// says nothing about a place it follows no allocation for, however it came
+    /// to follow none, and an address taken does not change that: a pointer
+    /// this check never had a site for is an indeterminate pointer, which is a
+    /// different defect with a check of its own that does not exist yet.
+    /// Answering [`Reached::Lost`] here instead put `perhaps after the free` on
+    /// `int *p; int **pp = &p; *pp = malloc(4); *p = 1;`, which frees nothing
+    /// at all, and made `--deny-unknown` unusable on the output-parameter
+    /// idiom. [`Allocations::touching`] wants the opposite answer for an empty
+    /// set and writes its own, which is why the rule is not written here.
+    ///
+    /// [`escaped`]: Known::escaped
+    fn reached_by(&self, local: LocalId) -> Vec<Reached> {
+        let mut reached: Vec<Reached> = self.sites_of(local).map(Reached::Site).collect();
+
+        if self.escaped[local.index()] && !reached.is_empty() {
+            reached.push(Reached::Lost);
+        }
+
+        reached
+    }
+
     /// Nothing this local holds is proved, once anything holds its address.
     ///
     /// Called wherever a local is *given* something, so that the escape
@@ -221,6 +252,11 @@ impl Known {
     /// `Unsafe` about a program with no defect in it. That is not this rule
     /// arriving late, it is the escape and the free recorded in one slot and
     /// overwriting each other; it predates this and is issue #161.
+    ///
+    /// **This is only half of what an escape means, and the half about the
+    /// heap.** What it means about the local's own set is answered at the
+    /// report by [`Self::reached_by`], which is why nothing here is about
+    /// whether the escaped local itself can be trusted. See ADR-0017.
     ///
     /// An index rather than a [`LocalId`], because [`Self::settle`] walks the
     /// rows of a side table and `LocalId` cannot be built from one.
@@ -302,7 +338,7 @@ impl Allocations<'_> {
             }
 
             let before = reached.len();
-            reached.extend(known.sites_of(place.local).map(Reached::Site));
+            reached.extend(known.reached_by(place.local));
             if reached.len() == before {
                 reached.push(Reached::Lost);
             }
@@ -943,8 +979,7 @@ fn used(
             .iter()
             .position(|(said_at, said_place, _)| *said_at == at && said_place == place);
 
-        let sites = known.sites_of(place.local).map(Reached::Site);
-        let Some(verdict) = verdict(sites, known) else {
+        let Some(verdict) = verdict(known.reached_by(place.local), known) else {
             continue;
         };
 

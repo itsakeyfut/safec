@@ -39,6 +39,11 @@ struct Names {
     /// the field still has to be filled, and filling it with one of `at` would
     /// read as if it were under test.
     asked: Span,
+    /// A callee that is neither `free` nor `malloc`.
+    ///
+    /// What it is called does not matter beyond not being one of those two,
+    /// and that is the whole of what makes it opaque to this check.
+    helper: Span,
 }
 
 /// A file whose bytes the check can read a callee's name out of.
@@ -47,10 +52,11 @@ struct Names {
 /// name span covers, so a test that wants one has to put the word in a file.
 /// The single letters after them are call sites: `Origin` carries a span, and
 /// the rule that ends the walk orders them, so two frees have to be in two
-/// places for that ordering to be about anything.
+/// places for that ordering to be about anything. `helper` is last because
+/// adding a word anywhere else moves every span after it.
 fn sources() -> (SourceMap, Names) {
     let mut map = SourceMap::new();
-    let file = map.add_virtual("t.c", "free malloc f a b c d e g h i\n");
+    let file = map.add_virtual("t.c", "free malloc f a b c d e g h i helper\n");
 
     let names = Names {
         free: Span::new(file, 0, 4),
@@ -66,6 +72,7 @@ fn sources() -> (SourceMap, Names) {
             Span::new(file, 28, 29),
         ],
         asked: Span::new(file, 26, 27),
+        helper: Span::new(file, 30, 36),
     };
 
     (map, names)
@@ -74,6 +81,7 @@ fn sources() -> (SourceMap, Names) {
 struct Callees {
     free: FuncId,
     malloc: FuncId,
+    helper: FuncId,
 }
 
 /// A unit, the function under test, its `int`, and the callees it can name.
@@ -87,6 +95,7 @@ fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, TyId,
     let callees = Callees {
         free: unit.push_function(Function::declaration(names.free, void, [int])),
         malloc: unit.push_function(Function::declaration(names.malloc, int, [])),
+        helper: unit.push_function(Function::declaration(names.helper, void, [int])),
     };
 
     let function = Function::new(names.function, int, vec![int; parameters]);
@@ -119,6 +128,26 @@ fn malloc(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
             callee: callees.malloc,
             arguments: vec![],
             destination: Some(Place::local(local)),
+            then,
+            origin: Origin::Written(at),
+        },
+    }
+}
+
+/// `helper(local);`, ending the block.
+///
+/// A call this check cannot read, which is how a test makes what a local holds
+/// unproven without taking the local's address. The two are not
+/// interchangeable: an address taken is a standing fact about the local, so
+/// `Known::reached_by` answers `Reached::Lost` for it ever after, while a call
+/// marks the sites it was handed and nothing else.
+fn helper(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![],
+        terminator: Terminator::Call {
+            callee: callees.helper,
+            arguments: vec![Operand::Copy(Place::local(local))],
+            destination: None,
             then,
             origin: Origin::Written(at),
         },
@@ -1032,10 +1061,16 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
 /// of a `&&` or a `||` are written into one temporary at the whole
 /// expression's span, and `used` collapses such a pair into one report. Which
 /// of the two survives is the question: the first read here is unproven,
-/// because taking the local's address made its sites unknown, and the second
-/// is proved, because a `free` writes `Freed` over an unknown site. Keeping
-/// the first was a warning and exit 0 on a use of a freed value this check had
-/// proved.
+/// because a call this check cannot read was handed the pointer and may have
+/// freed it, and the second is proved, because a `free` writes `Freed` over an
+/// unknown site. Keeping the first was a warning and exit 0 on a use of a freed
+/// value this check had proved.
+///
+/// **The call is what makes the first read unproven, and an address taken
+/// would not do.** It was written that way until `Known::reached_by` landed:
+/// an address taken is a standing fact about the local, so both reads answer
+/// `Reached::Lost` and there is no proof left to replace the suspicion with.
+/// A call marks the sites it was handed, and a later `free` writes over them.
 ///
 /// **Written as IR rather than as C on purpose.** The C that reaches this
 /// today does so because the lowering gives both operands of a `||` the whole
@@ -1063,14 +1098,13 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
     let (unit, mut function, int, callees) = a_unit(&names, 0);
     let other = function.push_local(int);
     let held = function.push_local(int);
-    let escape = function.push_local(int);
     let value = function.push_local(int);
 
     let allocate_other = function.reserve_block();
     let release_other = function.reserve_block();
     let again = function.reserve_block();
     let allocate = function.reserve_block();
-    let escaped = function.reserve_block();
+    let handed = function.reserve_block();
     let suspect = function.reserve_block();
     let release = function.reserve_block();
     let proof = function.reserve_block();
@@ -1086,8 +1120,8 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
     function.fill_block(release_other, free(&callees, other, names.at[1], again));
     function.fill_block(again, free(&callees, other, names.at[2], allocate));
 
-    function.fill_block(allocate, malloc(&callees, held, names.at[3], escaped));
-    function.fill_block(escaped, address_of(escape, held, names.at[4], suspect));
+    function.fill_block(allocate, malloc(&callees, held, names.at[3], handed));
+    function.fill_block(handed, helper(&callees, held, names.at[4], suspect));
     function.fill_block(suspect, read(value, held, names.at[5], release));
     function.fill_block(release, free(&callees, held, names.at[6], proof));
     // The same span as the unproven read, which is what makes the two one
@@ -1117,7 +1151,7 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
     assert_eq!(found[1].freed, Some(names.at[6]));
     assert_eq!(
         found[1].made, None,
-        "the escape lost where the allocation came from"
+        "the call lost where the allocation came from"
     );
 
     assert_eq!(found[2].kind, Kind::DoubleFree);
@@ -1182,28 +1216,39 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
 /// reported, and a free of a live one is not, so dropping the rule turns this
 /// from one finding into none.
 ///
+/// **Freed through a second local that shares the allocation**, because
+/// freeing `held` itself would prove nothing about this rule. `held`'s address
+/// escaped, so `Known::reached_by` answers `Reached::Lost` for it however the
+/// sites are marked, and the report would stand with the rule deleted. What
+/// the rule is about is the allocation rather than the local, and only a
+/// holder that did not escape can ask about the allocation alone.
+///
 /// Mutation: drop `unproved` from the call's destination in the terminator's
-/// transfer. The site stays live, the free is an ordinary one, nothing is
-/// reported at all, and this fails on the length. That direction is the point:
-/// what the rule is holding off here is silence, not a wrong answer.
+/// transfer. The site stays live, the free through `shared` is an ordinary
+/// one, nothing is reported at all, and this fails on the length. That
+/// direction is the point: what the rule is holding off here is silence, not a
+/// wrong answer.
 #[test]
 fn a_call_into_a_local_whose_address_escaped() {
     let (sources, names) = sources();
     let (unit, mut function, int, callees) = a_unit(&names, 0);
     let held = function.push_local(int);
     let escape = function.push_local(int);
+    let shared = function.push_local(int);
 
     let allocate = function.reserve_block();
     let escaped = function.reserve_block();
     let again = function.reserve_block();
+    let share = function.reserve_block();
     let release = function.reserve_block();
     let exit = function.reserve_block();
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], escaped));
     function.fill_block(escaped, address_of(escape, held, names.at[1], again));
     // Straight into `held`, which is the shape the frontend never builds.
-    function.fill_block(again, malloc(&callees, held, names.at[2], release));
-    function.fill_block(release, free(&callees, held, names.at[3], exit));
+    function.fill_block(again, malloc(&callees, held, names.at[2], share));
+    function.fill_block(share, copy(shared, held, names.at[3], release));
+    function.fill_block(release, free(&callees, shared, names.at[4], exit));
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -1220,5 +1265,5 @@ fn a_call_into_a_local_whose_address_escaped() {
         Conclusion::Unknown,
         "the escape outlived the call that wrote over it"
     );
-    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].at, names.at[4]);
 }
