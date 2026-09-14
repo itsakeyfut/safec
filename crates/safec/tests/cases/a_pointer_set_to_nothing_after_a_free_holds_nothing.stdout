@@ -1,0 +1,44 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Local "_4" "int *"
+  Local "_5" "void"
+  Block "bb0" entry
+    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 "free" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Operation a_pointer_set_to_nothing_after_a_free_holds_nothing.c:6:5 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation a_pointer_set_to_nothing_after_a_free_holds_nothing.c:6:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+    Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 "free" "bb3"
+      Destination "_5"
+      Copy "_1"
+  Block "bb3"
+    Operation a_pointer_set_to_nothing_after_a_free_holds_nothing.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

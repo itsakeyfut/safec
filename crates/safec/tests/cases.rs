@@ -68,6 +68,7 @@ cases! {
     a_double_free_across_a_loop_names_the_free_that_is_wrong: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_given_something_fresh_forgets_what_it_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_set_to_nothing_after_a_free_holds_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_escaped_local_read_twice_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
