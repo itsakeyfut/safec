@@ -1,0 +1,9 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:21 ]
+   │
+ 8 │         if (keep) { free(keep); }
+   │                     ─────┬────  
+   │                          ╰────── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

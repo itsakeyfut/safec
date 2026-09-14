@@ -1,0 +1,58 @@
+Target "x86_64-pc-windows-msvc"
+Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "void"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Goto "bb1"
+  Block "bb1"
+    Branch a_loop_that_allocates_and_frees_each_turn_is_proved.c:5:12 "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Call a_loop_that_allocates_and_frees_each_turn_is_proved.c:6:13 "malloc" "bb4"
+      Destination "_3"
+      Constant 8
+  Block "bb3"
+    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
+  Block "bb4"
+    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:6:9 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:6:9 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Call a_loop_that_allocates_and_frees_each_turn_is_proved.c:7:9 "free" "bb5"
+      Destination "_5"
+      Copy "_2"
+  Block "bb5"
+    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:13 written
+      Destination "_6"
+      Binary "Sub"
+        Copy "_1"
+        Constant 1
+    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:9 written
+      Destination "_1"
+      Use
+        Copy "_6"
+    Operation a_loop_that_allocates_and_frees_each_turn_is_proved.c:8:9 written
+      Destination "_7"
+      Use
+        Copy "_1"
+    Goto "bb1"
