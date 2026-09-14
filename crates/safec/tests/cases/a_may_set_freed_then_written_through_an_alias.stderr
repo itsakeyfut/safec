@@ -1,0 +1,9 @@
+warning[SC0401]: this may free a value that was freed already
+    ╭─[ a_may_set_freed_then_written_through_an_alias.c:12:5 ]
+    │
+ 12 │     free(p);
+    │     ───┬───  
+    │        ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

@@ -62,12 +62,19 @@ several allocations as *the* one is the same may-set mistake about a label.
 A free reaching exactly one site keeps the rule it had. That is why every
 single-allocation program in the corpus is unchanged.
 
-**The set fact replaces what the members say; it does not join them.** This is
+**The set fact replaces what the members say, and answering it is not the end of the question.** This is
 the part worth the record. The members were just marked `Unknown` by the same
 rule, `verdict` proves nothing while anything is unknown, so answering both
 folds that `Unknown` in beside the proof and the proof goes. Written the other
 way first and measured: `a_branch_that_allocates_either_way` dropped to a
 warning, which is the rule eating the marking it had made one step earlier.
+
+Replacing is not returning, and the first version did both. The rules after it
+are about this local too: a set it freed says nothing about whether something
+holding its address has put a different pointer there since. Skipping them made
+`free(p); opaque(&p); free(p);` over a two-site `p` a proved double free, which
+is the false proof this record exists to stop, arriving through the door it had
+just opened.
 
 **It is joined by intersection, where every other field beside it is joined by
 union.** The rest of `Held` holds may-facts, which grow where paths meet. This
@@ -90,6 +97,7 @@ workspace suite run with `--no-fail-fast`, the file restored.
 | a may-set free marks every member `Freed` again | `a_free_of_one_of_two_allocations_by_name`, on the severity, and three cases that gain back a proof they should not have |
 | the members stop being provable and nothing is recorded on the local | `a_branch_that_allocates_either_way` and `a_free_of_either_of_two_locals_names_no_allocation`, both on the severity: this is the "give up" answer the option below rejects |
 | `Known::reached_by` answers the set fact **beside** the members rather than instead of them | the same two, for the reason above |
+| `Known::reached_by` returns as soon as it has answered the set fact | `a_may_set_freed_then_written_through_an_alias`, which becomes a proved double free although something holding the local's address may have put a fresh pointer there between the two frees |
 | `Held::union` joins the proof by union rather than intersection | `a_free_of_a_may_set_on_one_arm_only`, which becomes a proved error on a path that never freed |
 | `Held::clear` keeps the fact | `a_local_given_nothing_forgets_the_set_it_freed`. It has to be a local given a *constant*: `p = malloc(8);` is a copy out of a temporary, and the copy replaces the whole row rather than clearing it, so it hides this |
 | the rule fires on a single site as well | thirty-eight cases, which is every proved double free and use after free in the corpus |

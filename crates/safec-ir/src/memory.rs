@@ -411,10 +411,17 @@ impl Known {
         // unknown to prove anything, so the proof goes. Written the other way
         // first and measured: `a_branch_that_allocates_either_way` dropped to a
         // warning, which is the rule eating the marking it made. See ADR-0020.
+        //
+        // **It replaces, and it does not return.** The rules below are about
+        // this local too and they still apply: a set this local freed says
+        // nothing about whether something else has written a different pointer
+        // into it since. Returning here made `free(p); opaque(&p); free(p);`
+        // over a two-site `p` a proved double free, which is the false proof
+        // this rule exists to stop, arriving through a door it had just
+        // opened.
         if let Some(freed) = self.points_to[local.index()].freed {
             reached.clear();
             reached.push(Reached::SetFreed(freed));
-            return reached;
         }
 
         if self.points_to[local.index()].lost
