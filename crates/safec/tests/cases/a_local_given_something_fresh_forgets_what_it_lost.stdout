@@ -1,0 +1,99 @@
+Target "x86_64-pc-windows-msvc"
+Function a_local_given_something_fresh_forgets_what_it_lost.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_local_given_something_fresh_forgets_what_it_lost.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "void"
+  Local "_10" "int"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:5:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Goto "bb1"
+  Block "bb1"
+    Branch a_local_given_something_fresh_forgets_what_it_lost.c:6:12 "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Call a_local_given_something_fresh_forgets_what_it_lost.c:7:13 "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb3"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:16:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return
+  Block "bb4"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:7:9 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:7:9 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Branch a_local_given_something_fresh_forgets_what_it_lost.c:8:13 "bb5" "bb6"
+      Copy "_3"
+  Block "bb5"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:9:13 written
+      Destination "_3"
+      Use
+        Constant 0
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:9:13 written
+      Destination "_6"
+      Use
+        Copy "_3"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:10:13 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:10:13 written
+      Destination "_7"
+      Use
+        Copy "_3"
+          Deref
+    Goto "bb7"
+  Block "bb6"
+    Goto "bb7"
+  Block "bb7"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:12:9 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:12:9 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Call a_local_given_something_fresh_forgets_what_it_lost.c:13:9 "free" "bb8"
+      Destination "_9"
+      Copy "_2"
+  Block "bb8"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:14:13 written
+      Destination "_10"
+      Binary "Sub"
+        Copy "_1"
+        Constant 1
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:14:9 written
+      Destination "_1"
+      Use
+        Copy "_10"
+    Operation a_local_given_something_fresh_forgets_what_it_lost.c:14:9 written
+      Destination "_11"
+      Use
+        Copy "_1"
+    Goto "bb1"

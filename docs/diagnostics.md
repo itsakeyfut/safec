@@ -83,14 +83,23 @@ this compiler has no check for yet. `int *r = &*p;` used to be a third and is
 not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
 pointer, so `r` carries what `p` carried.
 
-Two things that used to make it quiet no longer do, and both are worth knowing
-because the shapes look like they would still be silent. A local whose address
-has been taken stays unproven for the rest of the function, whatever is
+Three things that used to make it quiet no longer do, and all three are worth
+knowing because the shapes look like they would still be silent. A local whose
+address has been taken stays unproven for the rest of the function, whatever is
 assigned to it afterwards, so `int **pp = &p; p = malloc(8); *pp = q; *p = 1;`
-reports rather than saying nothing. And where two dereferences of one place
-share a caret, which both operands of a `||` do, the two are one report and the
+reports rather than saying nothing. Where two dereferences of one place share a
+caret, which both operands of a `||` do, the two are one report and the
 **stronger** of them is what it says, so a proof is never spent by a suspicion
-beside it.
+beside it. And a local that saved a pointer across a turn of a loop is read
+against the allocation it holds rather than the one the loop made next.
+
+That last one is worth a sentence more, because what it used to do was not only
+be quiet. A site is named by a local, so a loop that allocates every turn files
+each allocation under one name, and whoever still holds the previous one is
+holding something this check can no longer name. Before
+[ADR-0018](adr/0018-a-site-names-one-allocation-at-a-time.md) a `free` of the
+saved pointer produced nothing while the `free` beside it with nothing wrong
+with it carried the warning.
 
 **What the first of those costs is the proof.** A read of a local whose address
 has been taken is reported as a warning however clear the free beside it looks,
@@ -101,11 +110,14 @@ it. [ADR-0017](adr/0017-record-each-half-of-an-escape-where-its-subject-lives.md
 records where each half of what an escape means is kept, and why the half about
 the allocations those locals hold is kept separately from it.
 
-Both report `SC0402` as a warning rather than an error, because neither is
-something this check proved: what it knows is that it stopped being able to
-follow the pointer. `--deny-unknown` is what makes an unproven result fail a
-build, and [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why
-that is the policy's decision rather than the check's.
+The first and the third report `SC0402` as a warning rather than an error,
+because neither is something this check proved: what it knows is that it
+stopped being able to follow the pointer. The second is the one rule of the
+three that can leave an `error` standing, because what it decides is which of
+two reports at one caret survives rather than what either of them concluded.
+`--deny-unknown` is what makes an unproven result fail a build, and
+[ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why that is
+the policy's decision rather than the check's.
 
 **One shape is still quiet, and it is not the boundary above.** Where a `free`
 goes through a pointer this check was not following, the allocation that was

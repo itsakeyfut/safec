@@ -1,0 +1,88 @@
+Target "x86_64-pc-windows-msvc"
+Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "void"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "void"
+  Block "bb0" entry
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:4:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:5:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Goto "bb1"
+  Block "bb1"
+    Branch a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:6:12 "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:13 "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb3"
+    Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:12:5 "free" "bb9"
+      Destination "_10"
+      Copy "_2"
+  Block "bb4"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:9 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:9 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Branch a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 "bb5" "bb6"
+      Copy "_3"
+  Block "bb5"
+    Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:21 "free" "bb8"
+      Destination "_6"
+      Copy "_3"
+  Block "bb6"
+    Goto "bb7"
+  Block "bb7"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:9:9 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:9:9 written
+      Destination "_7"
+      Use
+        Copy "_3"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:13 written
+      Destination "_8"
+      Binary "Sub"
+        Copy "_1"
+        Constant 1
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:9 written
+      Destination "_1"
+      Use
+        Copy "_8"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:10:9 written
+      Destination "_9"
+      Use
+        Copy "_1"
+    Goto "bb1"
+  Block "bb8"
+    Goto "bb7"
+  Block "bb9"
+    Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Return

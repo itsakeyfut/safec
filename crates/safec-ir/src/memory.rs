@@ -165,19 +165,109 @@ enum Reached {
     Site(usize),
     /// A pointer this check was not following: one written through a
     /// projection, or a local whose sites it had and lost.
+    ///
+    /// The second half was prose until ADR-0018 gave it a producer. A site is
+    /// named by a local, so a loop that allocates every turn hands one site to
+    /// one allocation after another, and whoever still held the last one is
+    /// holding something this check can no longer name.
     Lost,
+}
+
+/// What one local may hold.
+///
+/// A struct rather than the bit vector this was, because the two halves travel
+/// together everywhere: a copy writes both, arithmetic unions both, and
+/// anything else clears both. Kept apart they have to be kept in step by hand
+/// in every arm of [`Allocations::element`], and forgetting one is a silence
+/// rather than a build error. See ADR-0018.
+///
+/// **What lives here is what an assignment destroys.** Giving a local a fresh
+/// value replaces everything in this struct, which is why [`Held::clear`] can
+/// answer for a field without being told what it means. A fact that outlives
+/// an assignment does not belong here however much it looks like one:
+/// [`Known::escaped`] is per local and stays on [`Known`] for exactly that
+/// reason, and putting it here would answer `false` after `p = q;` and undo
+/// #155.
+#[derive(Clone, PartialEq, Eq)]
+struct Held {
+    /// A bit per site. A site is a local, so this is square in the locals.
+    ///
+    /// `Vec<bool>` rather than a packed bitset: this crate takes no
+    /// dependencies, and a byte per local per local is nothing at the sizes
+    /// one function reaches.
+    sites: Vec<bool>,
+    /// Whether this local may hold an allocation this check can no longer
+    /// name, because the site that named it was handed to a second one.
+    lost: bool,
+}
+
+impl Held {
+    /// A local holding nothing, in a function with this many sites.
+    fn none(sites: usize) -> Self {
+        Held {
+            sites: vec![false; sites],
+            lost: false,
+        }
+    }
+
+    /// Also hold this site.
+    fn hold(&mut self, site: usize) {
+        self.sites[site] = true;
+    }
+
+    /// Every site held, in order.
+    fn sites(&self) -> impl Iterator<Item = usize> + '_ {
+        self.sites
+            .iter()
+            .enumerate()
+            .filter_map(|(site, held)| held.then_some(site))
+    }
+
+    /// Hold nothing, and hold nothing unnameable either.
+    ///
+    /// What a local is *given* replaces what it held, so a name it had lost
+    /// goes with the rest. Keeping it would outlive the thing it was about:
+    /// `keep = 0;` after `keep` lost its allocation would still answer
+    /// [`Reached::Lost`] for every read, and a null dereference belongs to an
+    /// axis this check has none for.
+    fn clear(&mut self) {
+        // Every field named, never `..`: a field added here and missed is a
+        // fact that survives an assignment, which is RK-018's shape one type
+        // over.
+        let Held { sites, lost } = self;
+        sites.fill(false);
+        *lost = false;
+    }
+
+    /// Also hold everything that one holds.
+    fn union(&mut self, other: &Held) {
+        let Held { sites, lost } = self;
+        for (here, there) in sites.iter_mut().zip(&other.sites) {
+            *here = *here || *there;
+        }
+        *lost = *lost || other.lost;
+    }
+
+    /// Stop pointing at a site that now names something else.
+    ///
+    /// **Not [`Held::clear`], and the difference is the whole of ADR-0018.**
+    /// The name is gone and what was held is not, so a local that reached one
+    /// site now reaches none *and says so*. Clearing instead would leave it
+    /// reaching nothing with nothing to say, and a read through it would be a
+    /// silence.
+    fn lose(&mut self, site: usize) {
+        if self.sites[site] {
+            self.sites[site] = false;
+            self.lost = true;
+        }
+    }
 }
 
 /// Which allocations each local may hold, and what is known about each.
 #[derive(Clone, PartialEq, Eq)]
 struct Known {
-    /// Per local, a bit per site it may point at. A site is a local, so this is
-    /// square in the locals.
-    ///
-    /// `Vec<bool>` rather than a packed bitset: this crate takes no
-    /// dependencies, and a byte per local per local is nothing at the sizes
-    /// one function reaches.
-    points_to: Vec<Vec<bool>>,
+    /// Per local, what it may hold.
+    points_to: Vec<Held>,
     /// Per site, what is known about it. Meaningless for a local nothing points
     /// at, which is most of them.
     state: Vec<SiteState>,
@@ -196,15 +286,12 @@ struct Known {
 impl Known {
     /// Every site this local may point at.
     fn sites_of(&self, local: LocalId) -> impl Iterator<Item = usize> + '_ {
-        self.points_to[local.index()]
-            .iter()
-            .enumerate()
-            .filter_map(|(site, points)| points.then_some(site))
+        self.points_to[local.index()].sites()
     }
 
     /// Stop following whatever this local held.
     fn clear(&mut self, local: LocalId) {
-        self.points_to[local.index()].fill(false);
+        self.points_to[local.index()].clear();
     }
 
     /// Every site this local may hold, and whether it may hold more.
@@ -231,11 +318,61 @@ impl Known {
     fn reached_by(&self, local: LocalId) -> Vec<Reached> {
         let mut reached: Vec<Reached> = self.sites_of(local).map(Reached::Site).collect();
 
-        if self.escaped[local.index()] && !reached.is_empty() {
+        // **Two facts, one answer, and the emptiness condition belongs to only
+        // one of them.** A local that *had* a site and lost the name for it is
+        // holding something unnameable whether or not it holds anything else,
+        // which is what [`Reached::Lost`] is for and is ADR-0018. A local whose
+        // address escaped is distrusted only about the sites it has: reaching
+        // none of them makes it a pointer this check never followed, and
+        // answering here put `perhaps after the free` on programs that free
+        // nothing at all, which is ADR-0017.
+        //
+        // One `push` rather than two conditions, because two would answer
+        // `Lost` twice for a local that is both. That is inert, since
+        // [`verdict`] reads `Lost` as a flag, and a reader should not have to
+        // work that out.
+        if self.points_to[local.index()].lost
+            || (self.escaped[local.index()] && !reached.is_empty())
+        {
             reached.push(Reached::Lost);
         }
 
         reached
+    }
+
+    /// Hand this site to a new allocation.
+    ///
+    /// **A site names one allocation at a time, and this is where it stops
+    /// naming the last one.** A site is a local, so a loop through the same
+    /// call files each allocation it makes under one name. Every other local
+    /// that still pointed here was following the allocation an earlier turn
+    /// made, and `state` below is about the one this call just made: handing
+    /// them that proof reported the wrong line and was silent about the right
+    /// one. See ADR-0018, which has the program.
+    ///
+    /// The destination is excluded because the caller has already rebuilt its
+    /// row, and the site it holds now is this allocation rather than the one
+    /// being displaced.
+    ///
+    /// **Every field named, never `..`.** A fact filed against a site is a
+    /// fact about whatever the site named when it was written, so a field
+    /// added to [`Known`] has to answer here for what happens when the site
+    /// starts naming something else. `error[E0027]` is what asks, and RK-018
+    /// is the same spelling one type over.
+    fn reborn(&mut self, site: usize, made: Option<Span>) {
+        let Known {
+            points_to,
+            state,
+            escaped: _,
+        } = self;
+
+        for (other, held) in points_to.iter_mut().enumerate() {
+            if other != site {
+                held.lose(site);
+            }
+        }
+
+        state[site] = SiteState::Live(made);
     }
 
     /// Nothing this local holds is proved, once anything holds its address.
@@ -265,10 +402,8 @@ impl Known {
             return;
         }
 
-        for site in 0..self.points_to[local].len() {
-            if self.points_to[local][site] {
-                self.state[site] = SiteState::Unknown;
-            }
+        for site in self.points_to[local].sites() {
+            self.state[site] = SiteState::Unknown;
         }
     }
 
@@ -358,7 +493,15 @@ impl Analysis for Allocations<'_> {
         // `Freed` to `Unknown`; its `freed` span can only move to an earlier
         // one, which it can do at most once per site that frees; and its `made`
         // span can only fall from `Some` to `None`, once. A local's `escaped`
-        // bit goes from `false` to `true` and never back, once each. Generous
+        // bit goes from `false` to `true` and never back, once each, and its
+        // `lost` bit costs one more of the same.
+        //
+        // **The bit is not monotone in the transfer, and does not have to be.**
+        // `Held::clear` puts it back at every fresh assignment. What this
+        // number bounds is how often a *block's entry value* can move, and an
+        // entry value moves only through `join`, which unions. A transfer that
+        // takes facts away inside a block cannot make the entry value descend,
+        // so it cannot make the solver oscillate. Generous
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
@@ -369,12 +512,12 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals + locals * (locals + 4)
+        locals * locals + locals * (locals + 5)
     }
 
     fn on_entry(&self) -> Self::Value {
         let mut known = Known {
-            points_to: vec![vec![false; self.locals]; self.locals],
+            points_to: vec![Held::none(self.locals); self.locals],
             // Nothing has allocated into any of these yet, so none of them can
             // say where it came from. A parameter stays this way: its
             // allocation happened somewhere this check cannot see.
@@ -388,7 +531,7 @@ impl Analysis for Allocations<'_> {
         // function can free and did not make. The module comment says why one
         // has to be a site of its own.
         for &parameter in &self.parameters {
-            known.points_to[parameter.index()][parameter.index()] = true;
+            known.points_to[parameter.index()].hold(parameter.index());
         }
 
         known
@@ -408,9 +551,7 @@ impl Analysis for Allocations<'_> {
         } = into;
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            for (here, there) in here.iter_mut().zip(there) {
-                *here = *here || *there;
-            }
+            here.union(there);
         }
 
         for (here, there) in state.iter_mut().zip(&from.state) {
@@ -487,7 +628,7 @@ impl Analysis for Allocations<'_> {
                     // types are in the IR and reading them would separate the
                     // two, which is #143 rather than a line here.
                     Rvalue::Binary { op: _, lhs, rhs } => {
-                        let mut reached = vec![false; value.points_to.len()];
+                        let mut reached = Held::none(value.points_to.len());
                         for operand in [lhs, rhs] {
                             let Operand::Copy(source) = operand else {
                                 continue;
@@ -495,12 +636,7 @@ impl Analysis for Allocations<'_> {
                             if !source.projection.is_empty() {
                                 continue;
                             }
-                            for (here, there) in reached
-                                .iter_mut()
-                                .zip(&value.points_to[source.local.index()])
-                            {
-                                *here = *here || *there;
-                            }
+                            reached.union(&value.points_to[source.local.index()]);
                         }
                         value.points_to[destination.index()] = reached;
                     }
@@ -627,7 +763,8 @@ impl Analysis for Allocations<'_> {
         // is a second allocation, and carrying the first one's `Freed` across
         // would report a double free for code that allocates each time round.
         value.clear(place.local);
-        value.points_to[place.local.index()][place.local.index()] = true;
+        let site = place.local.index();
+        value.points_to[site].hold(site);
         // **The span only where this check saw an allocation.** Every call's
         // destination is a site, because a call this cannot read may hand back
         // anything and a site is how that is tracked. But `allocated here` is a
@@ -636,13 +773,13 @@ impl Analysis for Allocations<'_> {
         // had established, so a site whose call is not `malloc` is `Live(None)`
         // and the diagnostic leaves the label off.
         let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
-        value.state[place.local.index()] = SiteState::Live(made);
+        value.reborn(site, made);
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
         // call into a fresh temporary and copies it out, so the copy above is
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
-        value.unproved(place.local.index());
+        value.unproved(site);
     }
 }
 
