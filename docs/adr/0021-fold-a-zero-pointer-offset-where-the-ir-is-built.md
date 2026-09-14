@@ -35,9 +35,9 @@ nobody had made deliberately.
   layer below meant to give.
 * Three more lattices are to be written against this IR. Each would meet the
   same question, and what they would copy is a condition rather than a rule.
-* An integer operand is promoted before an arithmetic operation. Folding one
-  away would skip a conversion the IR models, and what that costs is a **value**
-  rather than a report.
+* Nothing asks for the integer case. `E + 0` on an `int` is dead arithmetic
+  and folding it would be an optimisation, which this compiler does not do and
+  has no reason to start doing in the lowering.
 
 ## Considered Options
 
@@ -60,20 +60,38 @@ pointer to the element that far along, `(P)+N` and `N+(P)` alike, so at zero it
 is a pointer to the same element. That is Semantics, which is what a fold needs.
 The Constraints beside it answer who may write what, and are cited where that
 question is asked: p3 allows the pointer only on the left of a `-`, which is why
-`0 - E` is not folded and why `types.rs` declines to give `1 - p` a type. RK-042
-in the review knowledge bank is the entry about reading one of those for the
-other, and it was written after a reviewer did.
+`0 - E` is not folded and why `types.rs` declines to give `1 - p` a type.
+Reading one of those for the other is a habit rather than an accident, and it
+happened twice while this change was being made: RK-042 in the review knowledge
+bank is the same mistake caught in 6.5.3.2, about a different program.
 
-**Only where the result is a pointer.** A pointer is not promoted, so the
-conversion question does not arise for the case this is for. An integer's does:
-`char c; c + 0;` is an addition at `int` after a conversion, and folding it to
-`c` would hand a `char` to whoever expected the promoted value. Nothing in the
-suite would catch that, which is the reason it is excluded by construction
-rather than by test.
+**Only where the result is a pointer, and not because the value would break.**
+The obvious reason is the wrong one and it was measured rather than assumed:
+`int f(char c) { return c + 0; }` built with the type test removed emits
+`sext i8 %t0 to i32` and stores that, because `crates/safec-llvm/src/emit.rs`
+converts every operand at the point it is consumed rather than relying on an
+`Rvalue::Binary` having promoted it first. Compiled and run, `f(-5)` exits `-5`
+either way. So folding the integer case would **not** hand anyone a `char`
+today.
+
+What the restriction buys is a rule with one subject. The fold exists because
+`E[0]` and `*E` are one C expression, which is a statement about pointers; an
+integer `c + 0` is not two spellings of anything, so folding it would be an
+optimisation with no motivation and a promotion this IR models for the reader
+to lose. The line is drawn where the reason runs out, which is also the only
+place it can be drawn without a value-level argument nobody has.
 
 **The IR print changes and that is the point.** `--emit safety-ir` is an
 interface, and it now prints one shape where C has one expression. Six blessed
 expectations move, none of them a diagnostic.
+
+**The backend gained a spelling, which the corpus could not see.** `pp[0] = 0;`
+under `--emit llvm-ir` was `error[SC0801]`, because the backend cannot write
+pointer arithmetic and the subscript built some. It now emits, because there is
+no arithmetic left to refuse, and that is correct rather than hidden: `pp[0]` is
+`*pp` and `*pp` always emitted. It is a real change and no corpus case reached
+it, so `a_zero_subscript_reaches_the_backend` is added to hold it. `pp[1]` is
+still `SC0801`, which is the gap this does not close.
 
 ### Confirmation
 
@@ -82,8 +100,8 @@ workspace suite run with `--no-fail-fast`, the file restored.
 
 | Mutation | Named test that fails |
 |---|---|
-| `unmoved` always answers `None` | `a_subscript_write_is_the_write_it_is_defined_as`, `a_write_through_a_pointer_plus_zero_on_the_left` and `a_write_through_a_pointer_minus_zero` on their diagnostics, and `a_constant_subscript_of_a_freed_pointer`, `a_discarded_subscript_after_a_free` and `a_subscript_in_a_condition_after_a_free` on their IR |
-| `unmoved` stops asking whether the result is a pointer | `a_zero_added_to_an_integer_keeps_its_operation`, whose `char` addition loses the operation it is defined to perform. That is the one guard here whose absence costs a value rather than a report |
+| `unmoved` always answers `None` | `a_subscript_write_is_the_write_it_is_defined_as`, `a_write_through_a_pointer_plus_zero_on_the_left` and `a_write_through_a_pointer_minus_zero` on their diagnostics, and `a_constant_subscript_of_a_freed_pointer`, `a_discarded_subscript_after_a_free` and `a_subscript_in_a_condition_after_a_free` on their IR, and `a_zero_subscript_reaches_the_backend`, which goes back to `error[SC0801]` |
+| `unmoved` stops asking whether the result is a pointer | `a_zero_added_to_an_integer_keeps_its_operation`, whose `char` addition loses the operation it is defined to perform. It guards the IR's shape and not a computed value: the same program compiled and run answers the same under the mutation |
 | `Expr::Subscript` asks about its own type rather than the base's | the three subscript cases above, whose IR keeps the addition, because a subscript's type is what the address reaches and not the address |
 | `Add` reads the zero on one side only | `a_subscript_write_is_the_write_it_is_defined_as` or `a_write_through_a_pointer_plus_zero_on_the_left`, depending which side |
 | `Sub` is not answered for, or takes its zero on the left | `a_write_through_a_pointer_minus_zero` |
@@ -91,10 +109,24 @@ workspace suite run with `--no-fail-fast`, the file restored.
 **Every diagnostic in the corpus is byte-identical to what the rejected option
 produced.** That is the measurement this record rests on: the fold and the check
 answer the same, and only one of them leaves the next three lattices something
-to copy.
+to copy. It is a comparison against the other implementation of this change and
+not against what shipped before it, which is the next section.
 
 ### Consequences
 
+* Bad, because a build that failed now passes, and this is the headline cost.
+  `int *p = malloc(8); int **pp = &p; free(p); p[0] = 42;` was `error[SC0402]`
+  and exit 1 and is `warning[SC0402]` and exit 0.
+  `a_subscript_of_an_escaped_pointer_is_suspected_not_proved` is that program
+  and `a_constant_subscript_of_a_freed_pointer` is the same one without the
+  `&p`, which still proves. Two of six hundred generated programs moved, both
+  this way and none the other. **The direction is right even though it is
+  down.** `*p` in that program was never proved, because
+  [ADR-0017](./0017-record-each-half-of-an-escape-where-its-subject-lives.md) keeps a
+  local whose address was taken out of a proof, and the subscript reached one
+  only by arriving as a shape that rule did not meet. Aligning two spellings has
+  to pick one answer, and the answer a rule already gives beats the one that
+  came from evading it. `--deny-unknown` exits 1 on it.
 * Good, because four spellings of one write now agree, and the rule that makes
   them agree is one sentence in the layer that already promised it.
 * Good, because `crates/safec-ir/src/memory.rs` gets smaller rather than larger.
@@ -102,10 +134,25 @@ to copy.
   review found it written twice, are both gone.
 * Bad, because a zero offset that is not the token `0` is not folded.
   `*(pp + -0)` and `*(pp + (1 - 1))` keep their addition and are read as moving
-  the pointer. This reads the operand, not the value, and a constant folder that
-  read values would be a different promise.
-* Bad, because the lowering now normalises, which it did not before. What it
-  folds is three shapes and the list is in one function; `E * 1`, `E - E` and
+  the pointer, and the cost is **a silence under every flag**: measured, such a
+  program is exit 0 with no output at `--safety strict --deny-unknown` where its
+  `pp[0]` twin exits 1. This reads the operand, not the value, and a constant
+  folder that read values would be a different promise. What bounds the class is
+  that the frontend refuses most of the other spellings: a hexadecimal or long
+  constant, a character constant and a cast are each `SC0304` or `SC0201`
+  today, and an array type is refused outright, so what is left is `-0`,
+  `n - n` and `0 * k`. **The boundary is the operand and not the value**, and
+  crossing it needs a constant evaluator, which the frontend does not have:
+  `types.rs` and `ast.rs` each say in as many words that they do not evaluate a
+  constant expression. So the trigger for reopening this is not a second
+  complaint about a spelling, it is Phase 9's `#if`, which brings the evaluator
+  in for its own reasons.
+* Bad, because a check now rests on a normalisation rather than on something it
+  verified. `docs/c-family.md` carries what that costs and who has to keep it.
+* Bad, because the lowering normalises more than it did. It already dropped
+  unary `+` outright, where the same promotion argument applies, so the first
+  fold is not this one; what changes is that there is now a list. What it holds
+  is three shapes and it is in one function; `E * 1`, `E - E` and
   constant propagation are not on it and each would be its own decision.
 * What would reverse this: an analysis that needs to see the addition a
   subscript performs. None does today, and the one that might, #143's reading of
@@ -124,10 +171,11 @@ to copy.
 ### Fold in the lowering, whatever the type
 
 * Good, because it is four lines shorter and needs no type at hand.
-* Bad, because it folds `c + 0` for a `char`, where C converts before it adds.
-  Nothing in the suite holds the conversion, so the failure would be a wrong
-  value with no test to say so, which is worse than anything this issue was
-  about.
+* Bad, because it folds `c + 0` for a `char`, where C converts before it adds,
+  and the IR stops showing the conversion. Measured, the emitted value is
+  unchanged, so what is lost is the reader's view of the promotion rather than
+  the answer. It is also a fold with no reason behind it: nothing spells an
+  integer addition of zero two ways.
 
 ### Read the constant in the memory check
 
