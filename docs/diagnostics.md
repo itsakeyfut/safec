@@ -64,6 +64,15 @@ a value used where it may already have been freed. They are the first codes in
 this compiler that say something about what a program does rather than about
 how it is written.
 
+**Either can be a proof or a suspicion, and freeing more than one allocation
+at once is where the difference is easiest to misread.** A local that may hold
+either of two allocations frees exactly one of them, so freeing one of the two
+afterwards by name is a warning: this check cannot say which member went.
+Freeing the *same* local twice stays an error, because whichever member it
+held, it held the same one both times.
+[ADR-0020](adr/0020-a-free-of-a-may-set-is-a-fact-about-the-set.md) records
+why those are different answers and what it cost to give them the same one.
+
 The two are one check answering about two things it found, rather than two
 checks, which is why they arrived one after the other and share every secondary
 label they carry. They take separate codes because a code is the handle a reader
