@@ -164,6 +164,15 @@ fn earlier(here: Span, there: Span) -> Span {
 enum Reached {
     /// A site the argument may hold.
     Site(usize),
+    /// The set this local names had one member freed, and which one is not
+    /// known.
+    ///
+    /// **A proof, not a shrug.** [`Reached::Lost`] beside it is this check
+    /// having given up; this is something it worked out and can act on: freeing
+    /// the same local again frees the same member, whichever member that was.
+    /// The two are separate variants for the reason the enum exists at all.
+    /// See ADR-0020.
+    SetFreed(Span),
     /// A pointer this check was not following: one written through a
     /// projection, or a local whose sites it had and lost.
     ///
@@ -208,6 +217,15 @@ struct Held {
     /// Whether this local may hold an allocation this check can no longer
     /// name, because the site that named it was handed to a second one.
     lost: bool,
+    /// Where the allocation this local held was freed, when the free could not
+    /// say which member of the set it was.
+    ///
+    /// A free of a local reaching two sites frees exactly one of them, and
+    /// writing `Freed` on both said each was certainly freed: a later free of
+    /// one by name became a proved double free about a program with no defect
+    /// on one path. What is true is a fact about the **set**, and the local
+    /// that named the set is the only place it fits. See ADR-0020.
+    freed: Option<Span>,
     /// Per local, whether a write **through** this one may land in it.
     ///
     /// The edge `Known::escaped` is the shadow of. That field says a local's
@@ -228,6 +246,7 @@ impl Held {
         Held {
             sites: vec![false; sites],
             lost: false,
+            freed: None,
             writes_to: vec![false; sites],
         }
     }
@@ -259,10 +278,12 @@ impl Held {
         let Held {
             sites,
             lost,
+            freed,
             writes_to,
         } = self;
         sites.fill(false);
         *lost = false;
+        *freed = None;
         writes_to.fill(false);
     }
 
@@ -271,12 +292,22 @@ impl Held {
         let Held {
             sites,
             lost,
+            freed,
             writes_to,
         } = self;
         for (here, there) in sites.iter_mut().zip(&other.sites) {
             *here = *here || *there;
         }
         *lost = *lost || other.lost;
+        // **An intersection, where every other field here is a union.** The
+        // rest of this struct holds may-facts, which grow where paths meet.
+        // This one is a proof, and a path that did not free proves nothing:
+        // joining it the way its neighbours join would report a proved double
+        // free on `if (c) { free(p); } free(p);`. See ADR-0020.
+        *freed = match (*freed, other.freed) {
+            (Some(here), Some(there)) => Some(earlier(here, there)),
+            _ => None,
+        };
         for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
             *here = *here || *there;
         }
@@ -373,6 +404,19 @@ impl Known {
         // `Lost` twice for a local that is both. That is inert, since
         // [`verdict`] reads `Lost` as a flag, and a reader should not have to
         // work that out.
+        // **It replaces the members rather than joining them.** What is known
+        // is about the set, and its members were each left `SiteState::Unknown`
+        // by the free that could not say which one it took. Answering both
+        // folds one of those in beside the proof, and `verdict` needs nothing
+        // unknown to prove anything, so the proof goes. Written the other way
+        // first and measured: `a_branch_that_allocates_either_way` dropped to a
+        // warning, which is the rule eating the marking it made. See ADR-0020.
+        if let Some(freed) = self.points_to[local.index()].freed {
+            reached.clear();
+            reached.push(Reached::SetFreed(freed));
+            return reached;
+        }
+
         if self.points_to[local.index()].lost
             || (self.escaped[local.index()] && !reached.is_empty())
         {
@@ -549,7 +593,9 @@ impl Analysis for Allocations<'_> {
         // bit goes from `false` to `true` and never back, once each, and its
         // `lost` bit costs one more of the same. Each local's set of locals a
         // write through it may reach is a second square table that only grows,
-        // so it takes at most one step per pair.
+        // so it takes at most one step per pair. Where the set it named was
+        // freed goes from `None` to `Some` once per local and a join only takes
+        // it away, so it costs one more step each.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -567,7 +613,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 2 + locals * (locals + 5)
+        locals * locals * 2 + locals * (locals + 6)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -874,13 +920,48 @@ impl Analysis for Allocations<'_> {
         let sites = || {
             touched.iter().filter_map(|reached| match reached {
                 Reached::Site(site) => Some(*site),
-                Reached::Lost => None,
+                // Neither names a site to write on: one is a fact about a set
+                // and the other is this check having lost the pointer.
+                Reached::SetFreed(_) | Reached::Lost => None,
             })
         };
 
         match self.callee(*callee) {
             Callee::Frees => {
-                for site in sites().collect::<Vec<_>>() {
+                let reached: Vec<usize> = sites().collect();
+
+                // **A may-set is not a must-set, and this is where the two used
+                // to be confused.** Freeing a local that may hold either of two
+                // allocations frees exactly one of them; writing `Freed` on
+                // both claimed each was certainly freed, and a later free of
+                // one of them by name was then a proved double free about a
+                // program that frees each exactly once on one of its paths.
+                //
+                // So nothing is written on the members. They stop being
+                // provable, and the fact that one of them went is recorded on
+                // the local that named the set, which is the only thing in this
+                // lattice that names a set. See ADR-0020.
+                if reached.len() > 1 {
+                    for site in &reached {
+                        value.state[*site] = SiteState::Unknown;
+                    }
+
+                    for argument in arguments {
+                        // A constant frees nothing and a projection names a
+                        // place this check does not follow, which is what
+                        // `Allocations::touching` already said about both.
+                        let Operand::Copy(place) = argument else {
+                            continue;
+                        };
+                        if place.projection.is_empty() {
+                            value.points_to[place.local.index()].freed = Some(origin.span());
+                        }
+                    }
+
+                    return;
+                }
+
+                for site in reached {
                     // Whatever the site was known to have come from survives
                     // the free: the diagnostic wants to name it.
                     let made = match value.state[site] {
@@ -1117,6 +1198,18 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
             // lost the pointer, and answering nothing about it is the failure
             // `docs/safety-model.md` is written to prevent rather than the one
             // it tolerates.
+            // A proof about the set: freeing it again takes the same member,
+            // whichever it was. It carries no `made`, because naming one of
+            // several allocations as the one that was freed is the may-set
+            // mistake this whole rule is against.
+            Reached::SetFreed(freed) => {
+                any_freed = true;
+                earliest = Some(match earliest {
+                    Some(already) if earlier(already, freed) == already => already,
+                    _ => freed,
+                });
+                continue;
+            }
             Reached::Lost => {
                 unknown = true;
                 continue;
