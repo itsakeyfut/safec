@@ -5,64 +5,62 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:1:7 "malloc" declared
 Function an_unproven_read_and_a_freed_one_at_one_span.c:2:6 "free" declared
   Local "_0" "void" return
   Local "_1" "void *" parameter
-Function an_unproven_read_and_a_freed_one_at_one_span.c:3:5 "f"
+Function an_unproven_read_and_a_freed_one_at_one_span.c:3:6 "helper" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "int **"
-  Local "_4" "int **"
-  Local "_5" "int"
-  Local "_6" "void"
+  Local "_3" "void"
+  Local "_4" "int"
+  Local "_5" "void"
   Block "bb0" entry
-    Call an_unproven_read_and_a_freed_one_at_one_span.c:4:14 "malloc" "bb1"
+    Call an_unproven_read_and_a_freed_one_at_one_span.c:5:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
   Block "bb1"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:4:10 written
+    Operation an_unproven_read_and_a_freed_one_at_one_span.c:5:10 written
       Destination "_1"
       Use
         Copy "_2"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:5:15 written
-      Destination "_4"
-      Address
-        Place "_1"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:5:11 written
+    Call an_unproven_read_and_a_freed_one_at_one_span.c:6:5 "helper" "bb2"
       Destination "_3"
-      Use
-        Copy "_4"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:6:9 written
-      Destination "_5"
-      Binary "Ne"
-        Copy "_1"
-          Deref
-        Constant 0
-    Branch an_unproven_read_and_a_freed_one_at_one_span.c:6:9 "bb2" "bb3"
-      Copy "_5"
-  Block "bb2"
-    Branch an_unproven_read_and_a_freed_one_at_one_span.c:6:9 "bb5" "bb6"
-      Copy "_5"
-  Block "bb3"
-    Call an_unproven_read_and_a_freed_one_at_one_span.c:6:16 "free" "bb4"
-      Destination "_6"
       Copy "_1"
-  Block "bb4"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:6:9 written
-      Destination "_5"
+  Block "bb2"
+    Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:9 written
+      Destination "_4"
       Binary "Ne"
         Copy "_1"
           Deref
         Constant 0
-    Goto "bb2"
+    Branch an_unproven_read_and_a_freed_one_at_one_span.c:7:9 "bb3" "bb4"
+      Copy "_4"
+  Block "bb3"
+    Branch an_unproven_read_and_a_freed_one_at_one_span.c:7:9 "bb6" "bb7"
+      Copy "_4"
+  Block "bb4"
+    Call an_unproven_read_and_a_freed_one_at_one_span.c:7:16 "free" "bb5"
+      Destination "_5"
+      Copy "_1"
   Block "bb5"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:6:32 written
+    Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:9 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_1"
+          Deref
+        Constant 0
+    Goto "bb3"
+  Block "bb6"
+    Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:32 written
       Destination "_0"
       Use
         Constant 1
     Return
-  Block "bb6"
-    Goto "bb7"
   Block "bb7"
-    Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:5 written
+    Goto "bb8"
+  Block "bb8"
+    Operation an_unproven_read_and_a_freed_one_at_one_span.c:8:5 written
       Destination "_0"
       Use
         Constant 0
