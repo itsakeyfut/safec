@@ -93,21 +93,18 @@ first answer and not by this one.
 in this crate is, and what a missed arm would mean here is that a write silently
 carries nothing, which is a silence rather than a build error.
 
-**The edge stops at arithmetic that moves the pointer.** C17 6.5.6 p8 keeps the
-result of `p + 1` inside the object `p` points into, which is why the
-*allocation* travels through the arithmetic arm. A local's address plus one is
-not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
-and following it reported a proved use after free about an allocation nothing
-had freed.
+**The edge stops at pointer arithmetic.** C17 6.5.6 p8 keeps the result of
+`p + 1` inside the object `p` points into, which is why the *allocation* travels
+through the arithmetic arm. A local's address plus one is not that local, so the
+edge does not: `pp[1] = q;` is an out of bounds write, and following it reported
+a proved use after free about an allocation nothing had freed.
 
-Plus **zero** is that local. C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, so
-`pp[0] = q;` is `*pp = q;` written differently, and the two spellings of one
-program answered differently for as long as the sentence above was read as
-written. `Add` either way round, because 6.5.6 p2's constraint does not say which
-operand is the pointer; `Sub` only on the right, because p3 allows the pointer
-only there. `0[pp]` is the spelling that would make the left case look
-ordinary, and this frontend does not type it: the reachable spelling is
-`*(0 + pp)`.
+An offset of zero never reaches this rule.
+[ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds it
+away when the IR is built, so `pp[0]` and `*pp` are one shape before anything
+reads them. This record said the rule was about arithmetic and #172 found the
+reason is about arithmetic that *moves* the pointer; the difference is real and
+it belongs one layer down, not here.
 
 `Analysis::height` gains `locals * locals` for the second square table.
 
@@ -124,10 +121,7 @@ whole workspace suite run with `--no-fail-fast`, and the file restored.
 | the write unproves the target, as a direct assignment does | `a_write_through_an_alias_leaves_a_sharer_s_proof_alone` and `a_write_through_an_alias_keeps_what_it_carried_proved`, whose proved reports drop to suspicions, and three cases whose diagnostics lose the `allocated here` label |
 | a write this check cannot follow carries every allocation instead of none | `a_write_through_an_alias_that_carries_no_allocation` |
 | a variant added to `Rvalue` | does not compile: `error[E0004]` here and at four other readers |
-| the edge survives arithmetic whatever the offset | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains a proved `error[SC0402]` about an allocation nothing freed |
-| the edge stops at arithmetic whatever the offset | `a_subscript_write_is_the_write_it_is_defined_as`, `a_write_through_a_pointer_plus_zero_on_the_left` and `a_write_through_a_pointer_minus_zero`, which lose the report their `*pp` twin keeps |
-| the zero is looked for on one side of `Add` only | one of the first two above, depending which side |
-| `Sub` is not answered for, or takes its zero on the left | `a_write_through_a_pointer_minus_zero` |
+| the edge survives pointer arithmetic | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains a proved `error[SC0402]` about an allocation nothing freed |
 | `Held::union` does not union the edge | `an_address_taken_on_one_arm_is_written_through_after_the_join` |
 | a field added to `Held` | does not compile: `error[E0063]` in `Held::none` and `error[E0027]` in `Held::clear` and `Held::union` |
 
@@ -165,16 +159,11 @@ this method and what ADR-0018 says about the last field added.
   costs. A file of loops writing through a pointer went from 4.5 s to 10.2 s at
   47 lines and from 75 s to 140 s at 87, which is the growth issue #173 is
   about arriving one spelling earlier rather than a new one.
-* The `_` arm of the operator match is held by nothing, the way
-  `Analysis::height` is. Making it answer `true` for every operator leaves the
-  whole suite passing, because no C program types a pointer into any binary
-  operator but `+` and `-`. The comment beside it says what it is for; no test
-  says it.
-* Bad, because the rule reads the **operand** and not the value. A zero
-  offset spelled any other way stops the edge: `*(pp + -0) = q;` and
-  `*(pp + (1 - 1)) = q;` are both silent where `pp[0] = q;` reports. The
-  spelling still decides, and what #172 did was grow the set of spellings
-  that work rather than close the silence.
+* Bad, because a zero offset that is not written as the token `0` still stops
+  the edge: `*(pp + -0) = q;` and `*(pp + (1 - 1)) = q;` are silent where
+  `pp[0] = q;` reports, because the fold ADR-0021 does reads the operand and not
+  the value. The spelling still decides; there are fewer spellings it decides
+  against.
 * Bad, because the value doubled in size. It is two square tables of bytes now,
   `blocks * locals * (2 * locals + 49)`, which is 2.8 GB and six seconds on a
   489-line function against 1.5 GB and three before. A loop full of writes
