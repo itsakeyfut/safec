@@ -1,0 +1,16 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_write_through_an_alias_keeps_what_it_carried_proved.c:9:5 ]
+   │
+ 4 │     int *a = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 7 │     free(a);
+   │     ───┬───  
+   │        ╰───── freed here
+   │ 
+ 9 │     free(a);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

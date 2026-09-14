@@ -124,7 +124,11 @@ in `crates/safec/tests/cases.rs`, per
   at all unless a second local shares the allocation. That is why the tests are
   shaped the way they are, and why this record says so.
 * What would reverse this: a relation saying *which* local an alias may write
-  to, rather than a bit saying that one exists. Then the heap fact could be
+  to, rather than a bit saying that one exists. That relation was built by
+  [ADR-0019](./0019-follow-a-write-through-a-pointer-only-where-it-lands.md)
+  and this decision was **not** reversed: the edge answers where a write
+  lands and the bit answers that the local cannot be trusted afterwards, and
+  they are kept apart. Narrowing the heap fact with the edge is still open. Then the heap fact could be
   narrowed to the allocations actually reachable through that alias, and the
   local fact would still be read where it is read now.
 
