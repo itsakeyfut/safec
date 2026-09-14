@@ -100,8 +100,7 @@ not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
 and following it reported a proved use after free about an allocation nothing
 had freed.
 
-Plus **zero** is that local, which this record first said the other way round
-and #172 corrected. C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, so
+Plus **zero** is that local. C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, so
 `pp[0] = q;` is `*pp = q;` written differently, and the two spellings of one
 program answered differently for as long as the sentence above was read as
 written. `Add` either way round, because 6.5.6 p2's constraint does not say which
@@ -156,9 +155,11 @@ this method and what ADR-0018 says about the last field added.
   its old name said this check did not follow it. That answer comes from
   ADR-0017's rule for an escaped local, not from this one; what this record
   changed is that the local now reaches a site, so the rule applies to it.
-* ~~Bad, because `pp[0] = q;` is still silent while `*pp = q;` reports.~~ Fixed
-  by #172, which reads the constant zero the IR was already carrying. The
-  Decision Outcome above says what the rule is now.
+* Bad, because the rule reads the **operand** and not the value. A zero
+  offset spelled any other way stops the edge: `*(pp + -0) = q;` and
+  `*(pp + (1 - 1)) = q;` are both silent where `pp[0] = q;` reports. The
+  spelling still decides, and what #172 did was grow the set of spellings
+  that work rather than close the silence.
 * Bad, because the value doubled in size. It is two square tables of bytes now,
   `blocks * locals * (2 * locals + 49)`, which is 2.8 GB and six seconds on a
   489-line function against 1.5 GB and three before. A loop full of writes

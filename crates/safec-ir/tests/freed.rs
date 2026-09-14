@@ -14,7 +14,7 @@
 
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
-    Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
+    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use safec_ir::memory::{Finding, Kind, check};
@@ -1202,6 +1202,90 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     assert_eq!(found[0].freed, Some(names.at[1]), "and keeps its spans");
     assert_eq!(found[0].made, Some(names.at[0]));
 }
+/// `*through = from + by;`, ending the block.
+///
+/// The arithmetic written straight into a place, which the C frontend never
+/// builds: it puts the addition in a temporary and copies it out, so the write
+/// it emits is a copy. `docs/c-family.md` asks that another frontend be able to
+/// build this IR, and this is the shape one would.
+fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: deref(through),
+            value: Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(from)),
+                rhs: Operand::Constant(by),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// An offset that moves the pointer does not carry where a write through it
+/// lands.
+///
+/// **The one place this question is asked that no C program reaches.** `*pp =
+/// qq + 7;` puts a pointer seven past `z` into `p`, so a later write through
+/// `p` does not land in `z`. The arm that answers this carried the edge
+/// through any arithmetic at all, while the arm one level up had just been
+/// taught to drop it, and the two disagreeing was invisible because only a
+/// hand-built IR reaches this one.
+///
+/// **Observed through `q` rather than through `z`.** `z` had its address
+/// taken, so ADR-0017 answers `Reached::Lost` for it wherever a report is
+/// made and it can never be the subject of a proof; a test that asked about
+/// `z` could not tell the two answers apart. `q` escaped nowhere, so what it
+/// holds is provable, and carrying the edge is what would put `q`'s
+/// allocation into `z` for `free(z)` to take.
+///
+/// Mutation: drop the `moves_the_pointer` call from the `Rvalue::Binary` arm
+/// of the `written` match in `Allocations::element`. `free(z)` then frees
+/// what `q` holds, the read through `q` is a proved use after free, and this
+/// fails on the kind.
+#[test]
+fn an_offset_that_moves_the_pointer_carries_no_edge() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let z = function.push_local(int);
+    let p = function.push_local(int);
+    let q = function.push_local(int);
+    let pp = function.push_local(int);
+    let qq = function.push_local(int);
+    let value = function.push_local(int);
+
+    let hold = function.reserve_block();
+    let alias = function.reserve_block();
+    let offset = function.reserve_block();
+    let allocate = function.reserve_block();
+    let store = function.reserve_block();
+    let release = function.reserve_block();
+    let after = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(hold, address_of(qq, z, names.at[0], alias));
+    function.fill_block(alias, address_of(pp, p, names.at[1], offset));
+    // Seven past `z`, which is not `z`.
+    function.fill_block(offset, offset_into(pp, qq, 7, names.at[2], allocate));
+    function.fill_block(allocate, malloc(&callees, q, names.at[3], store));
+    function.fill_block(store, write(p, q, names.at[4], release));
+    function.fill_block(release, free(&callees, z, names.at[5], after));
+    function.fill_block(after, read(value, q, names.at[6], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    // One finding, and which one is the whole of this test. `free(z)` frees
+    // something this check was not following, which it cannot rule out; what
+    // it must not do is free the allocation `q` holds, because nothing put
+    // that allocation in `z`.
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree, "not a use after free");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[5]);
+}
+
 /// A call writing straight into a local whose address escaped proves nothing.
 ///
 /// **The one place an escape is applied that no C program reaches.** Taking a
