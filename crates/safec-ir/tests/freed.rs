@@ -1202,6 +1202,84 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     assert_eq!(found[0].freed, Some(names.at[1]), "and keeps its spans");
     assert_eq!(found[0].made, Some(names.at[0]));
 }
+/// `to = from + by;`, in a block that falls through to `then`.
+///
+/// The addition in a local of its own, which is the shape the C frontend
+/// builds for a subscript whose offset is not zero. At zero it builds nothing:
+/// see [`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`].
+fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(from)),
+                rhs: Operand::Constant(by),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// An offset of zero that survived into the IR is a shape this check does not
+/// follow.
+///
+/// **A boundary, not a goal.** The program below is a use after free and this
+/// answers nothing about it, under every flag. What makes that tolerable is
+/// that no IR the C frontend builds has this shape: ADR-0021 folds a zero
+/// pointer offset away where the IR is built, so `pp[0]` and `*pp` arrive as
+/// one shape and this arrives from nowhere. `docs/c-family.md` is where that
+/// obligation is written down, because the reader who needs it is whoever
+/// writes the second frontend.
+///
+/// This is here so the boundary has a name. A frontend that stops folding, or
+/// a check taught to read the zero, fails a named test rather than passing
+/// quietly, and whoever deletes it has to say which of those two they did.
+///
+/// Mutation: none from inside this file. What it holds is the absence of a
+/// rule rather than a rule. The fold it rests on is guarded in the corpus, by
+/// `a_subscript_write_is_the_write_it_is_defined_as` for the pointer case and
+/// `a_zero_added_to_an_integer_keeps_its_operation` for the type test, and
+/// this test is what fails if that fold is ever moved back in here.
+#[test]
+fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let p = function.push_local(int);
+    let q = function.push_local(int);
+    let pp = function.push_local(int);
+    let stepped = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let alias = function.reserve_block();
+    let unfolded = function.reserve_block();
+    let store = function.reserve_block();
+    let release = function.reserve_block();
+    let after = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, q, names.at[0], alias));
+    function.fill_block(alias, address_of(pp, p, names.at[1], unfolded));
+    // The addition the lowering folds away, written out.
+    function.fill_block(unfolded, stepped_by(stepped, pp, 0, names.at[2], store));
+    function.fill_block(store, write(stepped, q, names.at[3], release));
+    function.fill_block(release, free(&callees, q, names.at[4], after));
+    function.fill_block(after, read(value, p, names.at[5], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    // Nothing at all. The write through `stepped` is not followed, so nothing
+    // records that `p` holds what `q` held, and the read after the free asks
+    // about an allocation this check is not carrying. Written `*pp = q;`, the
+    // same program is one `UseAfterFree`, unproven because `p`'s address
+    // escaped and ADR-0017 keeps it out of a proof. Unproven is still an error
+    // under `--deny-unknown`; this is silence under every flag.
+    assert!(found.is_empty(), "{found:?}");
+}
+
 /// `*through = from + by;`, ending the block.
 ///
 /// The arithmetic written straight into a place, which the C frontend never
@@ -1233,6 +1311,12 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 /// taught to drop it, and the two disagreeing was invisible because only a
 /// hand-built IR reaches this one.
 ///
+/// **The check does not tell one offset from another.** Every
+/// `Rvalue::Binary` drops the edge, a zero included; this name says what its
+/// own program does, not what the rule distinguishes. Where the distinction
+/// lives is the lowering, and what is lost without it is
+/// [`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`].
+///
 /// **Observed through `q` rather than through `z`.** `z` had its address
 /// taken, so ADR-0017 answers `Reached::Lost` for it wherever a report is
 /// made and it can never be the subject of a proof; a test that asked about
@@ -1240,10 +1324,10 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 /// holds is provable, and carrying the edge is what would put `q`'s
 /// allocation into `z` for `free(z)` to take.
 ///
-/// Mutation: drop the `moves_the_pointer` call from the `Rvalue::Binary` arm
-/// of the `written` match in `Allocations::element`. `free(z)` then frees
-/// what `q` holds, the read through `q` is a proved use after free, and this
-/// fails on the kind.
+/// Mutation: drop the `reached.writes_to.fill(false);` from the
+/// `Rvalue::Binary` arm of the `written` match in `Allocations::element`.
+/// `free(z)` then frees what `q` holds, the read through `q` is a proved use
+/// after free, and this fails on the kind.
 #[test]
 fn an_offset_that_moves_the_pointer_carries_no_edge() {
     let (sources, names) = sources();
