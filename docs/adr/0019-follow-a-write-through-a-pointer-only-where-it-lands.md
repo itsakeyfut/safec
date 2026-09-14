@@ -60,7 +60,8 @@ it stays on `Known`; the edge dies with an assignment to that pointer, which is
 why ADR-0018's rule puts it in `Held`.
 
 `Element::Assign` whose place is exactly one `Deref` unions the written value
-into every local the pointer may write to, and marks each of them unproved.
+into every local the pointer may write to, and does nothing else to them. The
+paragraph below on what it does not do is the one that was measured hardest.
 
 **Doing nothing when the target is unknown is the decision, not an omission.**
 `*pp = q` where no `&` was ever seen for `pp` leaves the silence exactly as it
