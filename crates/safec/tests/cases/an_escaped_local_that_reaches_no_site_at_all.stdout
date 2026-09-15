@@ -20,6 +20,7 @@ Function an_escaped_local_that_reaches_no_site_at_all.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced an_escaped_local_that_reaches_no_site_at_all.c:5:16 generated
     Operation an_escaped_local_that_reaches_no_site_at_all.c:6:5 written
       Destination "_1"
         Deref
@@ -30,8 +31,10 @@ Function an_escaped_local_that_reaches_no_site_at_all.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced an_escaped_local_that_reaches_no_site_at_all.c:6:5 generated
     Operation an_escaped_local_that_reaches_no_site_at_all.c:7:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_escaped_local_that_reaches_no_site_at_all.c:7:12 generated
     Return

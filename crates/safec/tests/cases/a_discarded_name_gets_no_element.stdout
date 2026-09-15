@@ -21,10 +21,15 @@ Function a_discarded_name_gets_no_element.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_discarded_name_gets_no_element.c:4:14 generated
     Call a_discarded_name_gets_no_element.c:5:5 "free" "bb2"
       Destination "_4"
       Copy "_2"
   Block "bb2"
+    Sequenced a_discarded_name_gets_no_element.c:5:5 generated
+    Sequenced a_discarded_name_gets_no_element.c:6:5 generated
+    Sequenced a_discarded_name_gets_no_element.c:7:5 generated
+    Sequenced a_discarded_name_gets_no_element.c:8:5 generated
     Operation a_discarded_name_gets_no_element.c:9:5 written
       Destination "_1"
       Use
@@ -33,8 +38,10 @@ Function a_discarded_name_gets_no_element.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_1"
+    Sequenced a_discarded_name_gets_no_element.c:9:5 generated
     Operation a_discarded_name_gets_no_element.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_discarded_name_gets_no_element.c:10:12 generated
     Return

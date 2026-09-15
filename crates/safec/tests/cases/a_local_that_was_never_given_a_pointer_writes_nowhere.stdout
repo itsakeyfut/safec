@@ -22,6 +22,7 @@ Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_local_that_was_never_given_a_pointer_writes_nowhere.c:4:14 generated
     Operation a_local_that_was_never_given_a_pointer_writes_nowhere.c:6:5 written
       Destination "_1"
         Deref
@@ -32,12 +33,15 @@ Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced a_local_that_was_never_given_a_pointer_writes_nowhere.c:6:5 generated
     Call a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 "free" "bb2"
       Destination "_6"
       Copy "_4"
   Block "bb2"
+    Sequenced a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 generated
     Operation a_local_that_was_never_given_a_pointer_writes_nowhere.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_local_that_was_never_given_a_pointer_writes_nowhere.c:8:12 generated
     Return

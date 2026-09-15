@@ -12,6 +12,7 @@ Function an_unproven_free_is_silent_at_safety_off.c:3:5 "f"
   Local "_3" "void"
   Local "_4" "void"
   Block "bb0" entry
+    Sequenced an_unproven_free_is_silent_at_safety_off.c:4:9 generated
     Branch an_unproven_free_is_silent_at_safety_off.c:4:9 "bb1" "bb2"
       Copy "_1"
   Block "bb1"
@@ -25,10 +26,13 @@ Function an_unproven_free_is_silent_at_safety_off.c:3:5 "f"
       Destination "_4"
       Copy "_2"
   Block "bb4"
+    Sequenced an_unproven_free_is_silent_at_safety_off.c:4:14 generated
     Goto "bb3"
   Block "bb5"
+    Sequenced an_unproven_free_is_silent_at_safety_off.c:5:5 generated
     Operation an_unproven_free_is_silent_at_safety_off.c:6:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_unproven_free_is_silent_at_safety_off.c:6:12 generated
     Return

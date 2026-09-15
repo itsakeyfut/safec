@@ -22,6 +22,7 @@ Function a_free_through_a_pointer_the_check_does_not_follow.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:4:14 generated
     Operation a_free_through_a_pointer_the_check_does_not_follow.c:5:16 written
       Destination "_4"
       Address
@@ -30,17 +31,21 @@ Function a_free_through_a_pointer_the_check_does_not_follow.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:5:16 generated
     Call a_free_through_a_pointer_the_check_does_not_follow.c:6:5 "free" "bb2"
       Destination "_5"
       Copy "_1"
   Block "bb2"
+    Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:6:5 generated
     Call a_free_through_a_pointer_the_check_does_not_follow.c:7:5 "free" "bb3"
       Destination "_6"
       Copy "_3"
         Deref
   Block "bb3"
+    Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:7:5 generated
     Operation a_free_through_a_pointer_the_check_does_not_follow.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:8:12 generated
     Return

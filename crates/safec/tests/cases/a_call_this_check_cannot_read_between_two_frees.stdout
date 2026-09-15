@@ -19,16 +19,20 @@ Function a_call_this_check_cannot_read_between_two_frees.c:4:5 "f"
       Destination "_2"
       Copy "_1"
   Block "bb1"
+    Sequenced a_call_this_check_cannot_read_between_two_frees.c:5:5 generated
     Call a_call_this_check_cannot_read_between_two_frees.c:6:5 "helper" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_call_this_check_cannot_read_between_two_frees.c:6:5 generated
     Call a_call_this_check_cannot_read_between_two_frees.c:7:5 "free" "bb3"
       Destination "_4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_call_this_check_cannot_read_between_two_frees.c:7:5 generated
     Operation a_call_this_check_cannot_read_between_two_frees.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_call_this_check_cannot_read_between_two_frees.c:8:12 generated
     Return

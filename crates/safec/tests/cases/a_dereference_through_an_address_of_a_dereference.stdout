@@ -19,15 +19,19 @@ Function a_dereference_through_an_address_of_a_dereference.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_dereference_through_an_address_of_a_dereference.c:4:14 generated
     Call a_dereference_through_an_address_of_a_dereference.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_dereference_through_an_address_of_a_dereference.c:5:5 generated
     Evaluate a_dereference_through_an_address_of_a_dereference.c:6:5 written
       Place "_1"
         Deref
+    Sequenced a_dereference_through_an_address_of_a_dereference.c:6:5 generated
     Operation a_dereference_through_an_address_of_a_dereference.c:7:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_dereference_through_an_address_of_a_dereference.c:7:12 generated
     Return

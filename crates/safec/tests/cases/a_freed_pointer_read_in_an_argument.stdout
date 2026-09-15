@@ -23,10 +23,12 @@ Function a_freed_pointer_read_in_an_argument.c:4:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_freed_pointer_read_in_an_argument.c:5:14 generated
     Call a_freed_pointer_read_in_an_argument.c:6:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_freed_pointer_read_in_an_argument.c:6:5 generated
     Call a_freed_pointer_read_in_an_argument.c:7:12 "g" "bb3"
       Destination "_4"
       Copy "_1"
@@ -36,4 +38,5 @@ Function a_freed_pointer_read_in_an_argument.c:4:5 "f"
       Destination "_0"
       Use
         Copy "_4"
+    Sequenced a_freed_pointer_read_in_an_argument.c:7:12 generated
     Return

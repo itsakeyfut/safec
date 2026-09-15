@@ -73,6 +73,7 @@ pub fn lower(
         functions: HashMap::new(),
         refused: HashSet::new(),
         pending: HashMap::new(),
+        top_level: false,
     };
 
     lowering.declare(diagnostics);
@@ -126,6 +127,19 @@ struct Lowering<'a> {
     /// of the loop in [`Lowering::value`] rather than two lines of one
     /// function.
     pending: HashMap<ExprId, Pending>,
+    /// Whether a sequence point reached from here sequences the whole of the
+    /// full expression being lowered.
+    ///
+    /// C17 6.5 p3 leaves the operands of most operators unsequenced, so a
+    /// sequence point inside one of them says nothing about the others:
+    /// `*p + (free(p), 0)` has a comma, and 6.5.17 p2 sequences the free
+    /// before the `0`, but neither is ordered against the read of `*p`.
+    /// Recording that comma as an [`Element::Sequenced`] would tell every
+    /// analysis that the free happens first, which C has not said.
+    ///
+    /// True at the root of a full expression, and kept only through the
+    /// operands C sequences. See ADR-0022, and [`sequences`] for the list.
+    top_level: bool,
 }
 
 /// A branch a value is waiting on.
@@ -175,6 +189,16 @@ impl Builder {
     fn element(&mut self, element: Element) {
         self.open();
         self.elements.push(element);
+    }
+
+    /// Say that nothing before here can happen after anything following it.
+    ///
+    /// `Generated`, because nobody writes an element: the `;` or the `,` or
+    /// the `&&` is what this exists because of, and `span` is that construct.
+    fn sequenced(&mut self, span: Span) {
+        self.element(Element::Sequenced {
+            origin: Origin::Generated(span),
+        });
     }
 
     /// Say that a value nobody wanted was evaluated, where the evaluation is
@@ -271,6 +295,43 @@ enum Task {
     Second(ExprId),
     /// The last arm is done; come back together.
     Merge(ExprId),
+    /// Put [`Lowering::top_level`] back to what it was before this node.
+    ///
+    /// Pushed before a node's own tasks, so it is popped after all of them.
+    /// A field rather than a value threaded through every task because the
+    /// question is about where the walk is, and only three of the tasks ask
+    /// it.
+    Restore(bool),
+}
+
+/// Whether C sequences the operands of this node against each other.
+///
+/// The complete list, from C17 Annex C: the comma operator (6.5.17 p2), `&&`
+/// (6.5.13 p4), `||` (6.5.14 p4) and the conditional operator (6.5.15 p4).
+/// Annex C's fifth entry is the sequence point between a call's arguments and
+/// the call itself (6.5.2.2 p10), which the IR expresses by putting the
+/// argument operations before the call terminator and which therefore is not
+/// this question.
+///
+/// **Everything else answers false, including a node with one operand.** A
+/// sequence point inside `-(free(p), *p)` does order those two, because there
+/// is nothing else in the expression for them to be unordered against, and
+/// answering false there costs a proof. What it buys is that this function is
+/// Annex C's list and nothing beside it: a rule that says `false` too often
+/// makes a warning out of an error, and one that says `true` once too often
+/// hands an analysis a proof C does not license.
+fn sequences(expr: &Expr) -> bool {
+    match expr {
+        Expr::Comma { .. } | Expr::Conditional { .. } => true,
+        Expr::Binary { op, .. } => matches!(op, AstBinOp::LogAnd | AstBinOp::LogOr),
+        Expr::Number { .. }
+        | Expr::Identifier { .. }
+        | Expr::Unary { .. }
+        | Expr::Assign { .. }
+        | Expr::Call { .. }
+        | Expr::Subscript { .. }
+        | Expr::Error { .. } => false,
+    }
 }
 
 impl Lowering<'_> {
@@ -703,6 +764,7 @@ impl Lowering<'_> {
                         value: Rvalue::Use(operand),
                         origin: Origin::Written(span),
                     });
+                    builder.sequenced(self.ast.expr(value).span());
                 }
                 builder.end(Terminator::Return);
             }
@@ -771,6 +833,10 @@ impl Lowering<'_> {
                                     span.end(),
                                 )),
                             });
+                            // One per declarator that has an initializer:
+                            // `int a = f(), b = g();` is two full expressions
+                            // and the `;` is not what separates them.
+                            builder.sequenced(self.ast.expr(init).span());
                         }
                     }
                 }
@@ -778,7 +844,9 @@ impl Lowering<'_> {
             Stmt::Expression { value, .. } => {
                 if let Some(value) = *value {
                     let evaluated = self.value(builder, value, diagnostics)?;
-                    builder.discarded(evaluated, self.ast.expr(value).span());
+                    let at = self.ast.expr(value).span();
+                    builder.discarded(evaluated, at);
+                    builder.sequenced(at);
                 }
             }
             Stmt::If {
@@ -793,6 +861,7 @@ impl Lowering<'_> {
                 // one line down there is no expression left to ask.
                 let asked = self.ast.expr(condition).span();
                 let condition = self.value(builder, condition, diagnostics)?;
+                builder.sequenced(asked);
                 let taken = builder.function.reserve_block();
                 let skipped = builder.function.reserve_block();
                 let join = builder.function.reserve_block();
@@ -834,6 +903,7 @@ impl Lowering<'_> {
                 builder.switch(header);
                 let asked = self.ast.expr(condition).span();
                 let condition = self.value(builder, condition, diagnostics)?;
+                builder.sequenced(asked);
                 let inside = builder.function.reserve_block();
                 let after = builder.function.reserve_block();
                 builder.end(Terminator::Branch {
@@ -861,7 +931,9 @@ impl Lowering<'_> {
                 let (initialiser, condition, step, body) = (*initialiser, *condition, *step, *body);
                 if let Some(initialiser) = initialiser {
                     let evaluated = self.value(builder, initialiser, diagnostics)?;
-                    builder.discarded(evaluated, self.ast.expr(initialiser).span());
+                    let at = self.ast.expr(initialiser).span();
+                    builder.discarded(evaluated, at);
+                    builder.sequenced(at);
                 }
 
                 let header = builder.function.reserve_block();
@@ -874,6 +946,7 @@ impl Lowering<'_> {
                     Some(condition) => {
                         let asked = self.ast.expr(condition).span();
                         let condition = self.value(builder, condition, diagnostics)?;
+                        builder.sequenced(asked);
                         builder.end(Terminator::Branch {
                             condition,
                             then: inside,
@@ -891,7 +964,9 @@ impl Lowering<'_> {
                 if builder.reachable() {
                     if let Some(step) = step {
                         let evaluated = self.value(builder, step, diagnostics)?;
-                        builder.discarded(evaluated, self.ast.expr(step).span());
+                        let at = self.ast.expr(step).span();
+                        builder.discarded(evaluated, at);
+                        builder.sequenced(at);
                     }
                 }
                 if builder.reachable() {
@@ -922,6 +997,13 @@ impl Lowering<'_> {
         root: ExprId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Operand> {
+        // Set here rather than restored, so that an expression abandoned
+        // half-way by a type error cannot leave the next one reading a flag
+        // the walk that set it never finished with. Every caller of this is a
+        // full expression: Annex C's list and `lower_stmt`'s arms are the same
+        // eight places.
+        self.top_level = true;
+
         let mut tasks = vec![Task::Value(root)];
         let mut values: Vec<Operand> = Vec::new();
         let mut places: Vec<Place> = Vec::new();
@@ -946,6 +1028,7 @@ impl Lowering<'_> {
                 Task::Discard(id) => self.discard(builder, id, &mut values),
                 Task::Second(id) => self.second(builder, id, &mut tasks, &mut values),
                 Task::Merge(id) => self.merge(builder, id, &mut values),
+                Task::Restore(top_level) => self.top_level = top_level,
             }
         }
 
@@ -961,6 +1044,16 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         self.typed(id, diagnostics)?;
+
+        // Below a node C leaves unsequenced, a sequence point orders that
+        // node's own parts and nothing beside them. Pushed before the arm's
+        // own tasks so that it is popped after every one of them, which is
+        // what makes it the node's operands this covers and not its
+        // successors.
+        if self.top_level && !sequences(self.ast.expr(id)) {
+            tasks.push(Task::Restore(true));
+            self.top_level = false;
+        }
 
         match self.ast.expr(id) {
             Expr::Number { span } => {
@@ -1047,6 +1140,16 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         self.typed(id, diagnostics)?;
+
+        // Below a node C leaves unsequenced, a sequence point orders that
+        // node's own parts and nothing beside them. Pushed before the arm's
+        // own tasks so that it is popped after every one of them, which is
+        // what makes it the node's operands this covers and not its
+        // successors.
+        if self.top_level && !sequences(self.ast.expr(id)) {
+            tasks.push(Task::Restore(true));
+            self.top_level = false;
+        }
 
         match self.ast.expr(id) {
             Expr::Identifier { .. } => {
@@ -1524,6 +1627,13 @@ impl Lowering<'_> {
                     origin: Origin::Written(self.ast.expr(lhs).span()),
                 });
                 builder.switch(second);
+                // C17 6.5.13 p4 and 6.5.14 p4: if the right operand is
+                // evaluated, a sequence point separates it from the left. This
+                // block is the one it is evaluated in, so the head of it is
+                // where that point falls.
+                if self.top_level {
+                    builder.sequenced(self.ast.expr(lhs).span());
+                }
 
                 self.pending.insert(
                     id,
@@ -1551,6 +1661,13 @@ impl Lowering<'_> {
                     origin: Origin::Written(self.ast.expr(asked).span()),
                 });
                 builder.switch(taken);
+                // C17 6.5.15 p4: between the first operand and whichever of
+                // the other two is evaluated. Both arms get one, here and in
+                // [`Lowering::second`], because either may be the one that
+                // runs.
+                if self.top_level {
+                    builder.sequenced(self.ast.expr(asked).span());
+                }
 
                 self.pending.insert(
                     id,
@@ -1604,7 +1721,16 @@ impl Lowering<'_> {
         };
         let lhs = *lhs;
         let value = values.pop().expect("a left operand");
-        builder.discarded(value, self.ast.expr(lhs).span());
+        let lhs = self.ast.expr(lhs).span();
+        builder.discarded(value, lhs);
+
+        // C17 6.5.17 p2. RK-040 is why this is a task between the operands
+        // rather than something the comma builds when it finishes: an element
+        // built where a node finishes lands after everything the node
+        // contains, and what this one says is about what came before it.
+        if self.top_level {
+            builder.sequenced(lhs);
+        }
     }
 
     fn second(
@@ -1615,12 +1741,15 @@ impl Lowering<'_> {
         values: &mut Vec<Operand>,
     ) {
         let Expr::Conditional {
-            otherwise, span, ..
+            condition,
+            otherwise,
+            span,
+            ..
         } = self.ast.expr(id)
         else {
             return;
         };
-        let (otherwise, span) = (*otherwise, *span);
+        let (condition, otherwise, span) = (*condition, *otherwise, *span);
         let pending = &self.pending[&id];
         let (answer, join, start) = (pending.answer, pending.join, pending.otherwise);
 
@@ -1632,6 +1761,11 @@ impl Lowering<'_> {
         });
         builder.end(Terminator::Goto(join));
         builder.switch(start.expect("a `?:` reserves its second arm"));
+        // The other half of 6.5.15 p4, for the arm taken when the condition
+        // was zero. [`Lowering::split`] has the first.
+        if self.top_level {
+            builder.sequenced(self.ast.expr(condition).span());
+        }
 
         tasks.push(Task::Merge(id));
         tasks.push(Task::Value(otherwise));
@@ -1957,6 +2091,80 @@ mod tests {
             .collect()
     }
 
+    /// Where every element sits, as a kind per element, function-wide.
+    ///
+    /// Kinds and not spans, because what these tests are about is what falls
+    /// between what. A span would say the same thing in a form that moves
+    /// whenever a word in the program does.
+    fn kinds(function: &Function) -> Vec<&'static str> {
+        function
+            .blocks()
+            .flat_map(|block| block.elements.iter().map(Element::name))
+            .collect()
+    }
+
+    /// A comma at the top of a full expression is a sequence point.
+    ///
+    /// C17 6.5.17 p2 puts one between its operands, and nothing encloses this
+    /// one, so the free on the left happens before the write on the right and
+    /// the IR says so. A check reading it may prove a use after free here.
+    ///
+    /// Mutation: make `sequences` answer `false` for `Expr::Comma`. The marker
+    /// moves to the end of the statement, after the write, and this fails on
+    /// the order.
+    #[test]
+    fn a_comma_at_the_top_of_a_full_expression_is_a_sequence_point() {
+        let lowered = lowered(
+            "void *malloc(int n);\nvoid free(void *p);\n\nint f(void) {\n    int *p = malloc(4);\n    free(p), *p = 42;\n    return 0;\n}\n",
+        );
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let blocks: Vec<_> = f.blocks().collect();
+
+        // The free ends its block, so the comma's own sequence point is the
+        // first thing in the next one and the write follows it.
+        let Terminator::Call { .. } = &blocks[1].terminator else {
+            panic!("{:?}", blocks[1].terminator);
+        };
+        assert_eq!(blocks[2].elements[0].name(), "Sequenced");
+    }
+
+    /// A comma inside an operand C leaves unsequenced is not one.
+    ///
+    /// `*p + (free(p), 0)` has a comma, and 6.5.17 p2 does sequence the free
+    /// before the `0`. It does not sequence it against the read of `*p`, which
+    /// is the other operand of the `+` and which 6.5 p3 leaves unordered
+    /// against both. Recording it would tell a check the free happens first,
+    /// and the check would prove a use after free in a program C defines under
+    /// one of the orders it allows.
+    ///
+    /// **This is the direction that matters.** The mutation below does not
+    /// make the compiler quieter; it makes it certain about something C has
+    /// not decided.
+    ///
+    /// Mutation: drop the `if self.top_level` guard in `Lowering::discard`.
+    /// A `Sequenced` appears between the call and the addition that reads
+    /// `*p`, and this fails on the first kind in that block.
+    #[test]
+    fn a_comma_inside_an_unsequenced_operand_is_not_one() {
+        let lowered = lowered(
+            "void *malloc(int n);\nvoid free(void *p);\n\nint f(void) {\n    int *p = malloc(4);\n    int x = *p + (free(p), 0);\n    return x;\n}\n",
+        );
+        assert_eq!(codes(&lowered), Vec::<String>::new());
+
+        let f = function(&lowered, "f");
+        let blocks: Vec<_> = f.blocks().collect();
+
+        let Terminator::Call { .. } = &blocks[1].terminator else {
+            panic!("{:?}", blocks[1].terminator);
+        };
+        // The addition that reads `*p`, with nothing between it and the free.
+        assert_eq!(blocks[2].elements[0].name(), "Operation");
+        // And the statement's own end is still recorded, after both.
+        assert!(kinds(f).contains(&"Sequenced"), "{:?}", kinds(f));
+    }
+
     /// Two programs that differ in one pair of braces are two IRs.
     ///
     /// This is the whole point of the markers. Before them the two below were
@@ -2056,10 +2264,12 @@ mod tests {
             .blocks()
             .enumerate()
             .filter(|(_, block)| {
-                block
-                    .elements
-                    .iter()
-                    .any(|element| !matches!(element, Element::Assign(_)))
+                block.elements.iter().any(|element| {
+                    matches!(
+                        element,
+                        Element::StorageLive { .. } | Element::StorageDead { .. }
+                    )
+                })
             })
             .map(|(index, _)| index)
             .collect();

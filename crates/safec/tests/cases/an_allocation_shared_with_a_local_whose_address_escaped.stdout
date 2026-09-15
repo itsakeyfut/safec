@@ -22,10 +22,12 @@ Function an_allocation_shared_with_a_local_whose_address_escaped.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:4:14 generated
     Operation an_allocation_shared_with_a_local_whose_address_escaped.c:5:10 written
       Destination "_3"
       Use
         Copy "_1"
+    Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:5:14 generated
     Operation an_allocation_shared_with_a_local_whose_address_escaped.c:6:16 written
       Destination "_5"
       Address
@@ -34,12 +36,15 @@ Function an_allocation_shared_with_a_local_whose_address_escaped.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:6:16 generated
     Call an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 "free" "bb2"
       Destination "_6"
       Copy "_3"
   Block "bb2"
+    Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 generated
     Operation an_allocation_shared_with_a_local_whose_address_escaped.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_allocation_shared_with_a_local_whose_address_escaped.c:8:12 generated
     Return

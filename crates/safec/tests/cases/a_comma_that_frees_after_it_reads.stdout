@@ -19,15 +19,19 @@ Function a_comma_that_frees_after_it_reads.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_comma_that_frees_after_it_reads.c:4:14 generated
     Evaluate a_comma_that_frees_after_it_reads.c:5:5 written
       Place "_1"
         Deref
+    Sequenced a_comma_that_frees_after_it_reads.c:5:5 generated
     Call a_comma_that_frees_after_it_reads.c:5:9 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_comma_that_frees_after_it_reads.c:5:5 generated
     Operation a_comma_that_frees_after_it_reads.c:6:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_comma_that_frees_after_it_reads.c:6:12 generated
     Return

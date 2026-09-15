@@ -9,9 +9,11 @@ Function an_address_of_a_double_dereference.c:1:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced an_address_of_a_double_dereference.c:2:14 generated
     Operation an_address_of_a_double_dereference.c:3:5 written
       Destination "_0"
       Use
         Copy "_2"
           Deref
+    Sequenced an_address_of_a_double_dereference.c:3:12 generated
     Return

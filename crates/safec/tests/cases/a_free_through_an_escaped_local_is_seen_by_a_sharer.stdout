@@ -23,10 +23,12 @@ Function a_free_through_an_escaped_local_is_seen_by_a_sharer.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_free_through_an_escaped_local_is_seen_by_a_sharer.c:4:14 generated
     Operation a_free_through_an_escaped_local_is_seen_by_a_sharer.c:5:10 written
       Destination "_3"
       Use
         Copy "_1"
+    Sequenced a_free_through_an_escaped_local_is_seen_by_a_sharer.c:5:14 generated
     Operation a_free_through_an_escaped_local_is_seen_by_a_sharer.c:6:16 written
       Destination "_5"
       Address
@@ -35,16 +37,20 @@ Function a_free_through_an_escaped_local_is_seen_by_a_sharer.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced a_free_through_an_escaped_local_is_seen_by_a_sharer.c:6:16 generated
     Call a_free_through_an_escaped_local_is_seen_by_a_sharer.c:7:5 "free" "bb2"
       Destination "_6"
       Copy "_1"
   Block "bb2"
+    Sequenced a_free_through_an_escaped_local_is_seen_by_a_sharer.c:7:5 generated
     Call a_free_through_an_escaped_local_is_seen_by_a_sharer.c:8:5 "free" "bb3"
       Destination "_7"
       Copy "_3"
   Block "bb3"
+    Sequenced a_free_through_an_escaped_local_is_seen_by_a_sharer.c:8:5 generated
     Operation a_free_through_an_escaped_local_is_seen_by_a_sharer.c:9:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_free_through_an_escaped_local_is_seen_by_a_sharer.c:9:12 generated
     Return

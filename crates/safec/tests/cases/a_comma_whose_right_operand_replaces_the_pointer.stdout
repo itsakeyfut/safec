@@ -21,13 +21,16 @@ Function a_comma_whose_right_operand_replaces_the_pointer.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_comma_whose_right_operand_replaces_the_pointer.c:4:14 generated
     Call a_comma_whose_right_operand_replaces_the_pointer.c:5:5 "free" "bb2"
       Destination "_4"
       Copy "_2"
   Block "bb2"
+    Sequenced a_comma_whose_right_operand_replaces_the_pointer.c:5:5 generated
     Evaluate a_comma_whose_right_operand_replaces_the_pointer.c:6:5 written
       Place "_2"
         Deref
+    Sequenced a_comma_whose_right_operand_replaces_the_pointer.c:6:5 generated
     Operation a_comma_whose_right_operand_replaces_the_pointer.c:6:9 written
       Destination "_2"
       Use
@@ -36,8 +39,10 @@ Function a_comma_whose_right_operand_replaces_the_pointer.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_2"
+    Sequenced a_comma_whose_right_operand_replaces_the_pointer.c:6:5 generated
     Operation a_comma_whose_right_operand_replaces_the_pointer.c:7:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_comma_whose_right_operand_replaces_the_pointer.c:7:12 generated
     Return

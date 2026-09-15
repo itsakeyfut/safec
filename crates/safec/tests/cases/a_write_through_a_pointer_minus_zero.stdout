@@ -25,6 +25,7 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_write_through_a_pointer_minus_zero.c:4:14 generated
     Call a_write_through_a_pointer_minus_zero.c:5:14 "malloc" "bb2"
       Destination "_4"
       Constant 8
@@ -33,6 +34,7 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced a_write_through_a_pointer_minus_zero.c:5:14 generated
     Operation a_write_through_a_pointer_minus_zero.c:6:16 written
       Destination "_6"
       Address
@@ -41,6 +43,7 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_6"
+    Sequenced a_write_through_a_pointer_minus_zero.c:6:16 generated
     Operation a_write_through_a_pointer_minus_zero.c:7:5 written
       Destination "_5"
         Deref
@@ -51,10 +54,12 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Use
         Copy "_5"
           Deref
+    Sequenced a_write_through_a_pointer_minus_zero.c:7:5 generated
     Call a_write_through_a_pointer_minus_zero.c:8:5 "free" "bb3"
       Destination "_8"
       Copy "_1"
   Block "bb3"
+    Sequenced a_write_through_a_pointer_minus_zero.c:8:5 generated
     Operation a_write_through_a_pointer_minus_zero.c:9:5 written
       Destination "_3"
         Deref
@@ -65,8 +70,10 @@ Function a_write_through_a_pointer_minus_zero.c:3:5 "f"
       Use
         Copy "_3"
           Deref
+    Sequenced a_write_through_a_pointer_minus_zero.c:9:5 generated
     Operation a_write_through_a_pointer_minus_zero.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_write_through_a_pointer_minus_zero.c:10:12 generated
     Return

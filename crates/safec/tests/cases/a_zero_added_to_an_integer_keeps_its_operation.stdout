@@ -13,4 +13,5 @@ Function a_zero_added_to_an_integer_keeps_its_operation.c:1:5 "f"
       Destination "_0"
       Use
         Copy "_2"
+    Sequenced a_zero_added_to_an_integer_keeps_its_operation.c:2:12 generated
     Return

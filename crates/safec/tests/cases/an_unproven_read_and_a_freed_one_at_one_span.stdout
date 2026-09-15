@@ -24,10 +24,12 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:5:14 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:6:5 "helper" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:6:5 generated
     Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:9 written
       Destination "_4"
       Binary "Ne"
@@ -37,13 +39,16 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
     Branch an_unproven_read_and_a_freed_one_at_one_span.c:7:9 "bb3" "bb4"
       Copy "_4"
   Block "bb3"
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:9 generated
     Branch an_unproven_read_and_a_freed_one_at_one_span.c:7:9 "bb6" "bb7"
       Copy "_4"
   Block "bb4"
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:9 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:7:16 "free" "bb5"
       Destination "_5"
       Copy "_1"
   Block "bb5"
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:16 generated
     Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:9 written
       Destination "_4"
       Binary "Ne"
@@ -56,6 +61,7 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
       Destination "_0"
       Use
         Constant 1
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:39 generated
     Return
   Block "bb7"
     Goto "bb8"
@@ -64,4 +70,5 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:8:12 generated
     Return

@@ -21,10 +21,12 @@ Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:4:14 generated
     Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:5:5 generated
     Operation a_pointer_set_to_nothing_after_a_free_holds_nothing.c:6:5 written
       Destination "_1"
       Use
@@ -33,12 +35,15 @@ Function a_pointer_set_to_nothing_after_a_free_holds_nothing.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_1"
+    Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:6:5 generated
     Call a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 "free" "bb3"
       Destination "_5"
       Copy "_1"
   Block "bb3"
+    Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 generated
     Operation a_pointer_set_to_nothing_after_a_free_holds_nothing.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_pointer_set_to_nothing_after_a_free_holds_nothing.c:8:12 generated
     Return

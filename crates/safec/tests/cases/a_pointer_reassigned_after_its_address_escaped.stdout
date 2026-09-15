@@ -27,6 +27,7 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:4:14 generated
     Operation a_pointer_reassigned_after_its_address_escaped.c:5:16 written
       Destination "_4"
       Address
@@ -35,6 +36,7 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:5:16 generated
     Call a_pointer_reassigned_after_its_address_escaped.c:6:14 "malloc" "bb2"
       Destination "_6"
       Constant 4
@@ -43,6 +45,7 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_6"
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:6:14 generated
     Call a_pointer_reassigned_after_its_address_escaped.c:7:9 "malloc" "bb3"
       Destination "_7"
       Constant 8
@@ -55,10 +58,12 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Destination "_8"
       Use
         Copy "_1"
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:7:5 generated
     Call a_pointer_reassigned_after_its_address_escaped.c:8:5 "free" "bb4"
       Destination "_9"
       Copy "_5"
   Block "bb4"
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:8:5 generated
     Operation a_pointer_reassigned_after_its_address_escaped.c:9:5 written
       Destination "_3"
         Deref
@@ -69,6 +74,7 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Use
         Copy "_3"
           Deref
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:9:5 generated
     Operation a_pointer_reassigned_after_its_address_escaped.c:10:5 written
       Destination "_1"
         Deref
@@ -79,8 +85,10 @@ Function a_pointer_reassigned_after_its_address_escaped.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:10:5 generated
     Operation a_pointer_reassigned_after_its_address_escaped.c:11:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_pointer_reassigned_after_its_address_escaped.c:11:12 generated
     Return

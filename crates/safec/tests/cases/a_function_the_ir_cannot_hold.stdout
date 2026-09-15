@@ -6,4 +6,5 @@ Function a_function_the_ir_cannot_hold.c:3:5 "f"
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_function_the_ir_cannot_hold.c:4:12 generated
     Return

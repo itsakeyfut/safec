@@ -19,10 +19,13 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_subscript_in_a_condition_after_a_free.c:4:14 generated
     Call a_subscript_in_a_condition_after_a_free.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_subscript_in_a_condition_after_a_free.c:5:5 generated
+    Sequenced a_subscript_in_a_condition_after_a_free.c:6:9 generated
     Branch a_subscript_in_a_condition_after_a_free.c:6:9 "bb3" "bb4"
       Copy "_1"
         Deref
@@ -31,6 +34,7 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
       Destination "_0"
       Use
         Constant 1
+    Sequenced a_subscript_in_a_condition_after_a_free.c:6:24 generated
     Return
   Block "bb4"
     Goto "bb5"
@@ -39,4 +43,5 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_subscript_in_a_condition_after_a_free.c:7:12 generated
     Return

@@ -19,6 +19,7 @@ Function a_scope_that_opens_and_closes.c:1:5 "outlives"
       Destination "_4"
       Use
         Copy "_2"
+    Sequenced a_scope_that_opens_and_closes.c:8:9 generated
     Operation a_scope_that_opens_and_closes.c:9:9 written
       Destination "_3"
       Use
@@ -27,6 +28,7 @@ Function a_scope_that_opens_and_closes.c:1:5 "outlives"
       Destination "_5"
       Use
         Copy "_3"
+    Sequenced a_scope_that_opens_and_closes.c:9:9 generated
     Operation a_scope_that_opens_and_closes.c:10:13 written
       Destination "_6"
       Address
@@ -39,6 +41,7 @@ Function a_scope_that_opens_and_closes.c:1:5 "outlives"
       Destination "_7"
       Use
         Copy "_1"
+    Sequenced a_scope_that_opens_and_closes.c:10:9 generated
     StorageDead a_scope_that_opens_and_closes.c:11:5 generated "_3"
     StorageDead a_scope_that_opens_and_closes.c:11:5 generated "_2"
     Operation a_scope_that_opens_and_closes.c:13:5 written
@@ -46,4 +49,5 @@ Function a_scope_that_opens_and_closes.c:1:5 "outlives"
       Use
         Copy "_1"
           Deref
+    Sequenced a_scope_that_opens_and_closes.c:13:12 generated
     Return

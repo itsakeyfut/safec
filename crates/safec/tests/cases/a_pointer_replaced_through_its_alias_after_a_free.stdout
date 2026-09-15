@@ -25,6 +25,7 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:4:14 generated
     Call a_pointer_replaced_through_its_alias_after_a_free.c:5:14 "malloc" "bb2"
       Destination "_4"
       Constant 8
@@ -33,6 +34,7 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:5:14 generated
     Operation a_pointer_replaced_through_its_alias_after_a_free.c:6:16 written
       Destination "_6"
       Address
@@ -41,10 +43,12 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Destination "_5"
       Use
         Copy "_6"
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:6:16 generated
     Call a_pointer_replaced_through_its_alias_after_a_free.c:7:5 "free" "bb3"
       Destination "_7"
       Copy "_1"
   Block "bb3"
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:7:5 generated
     Operation a_pointer_replaced_through_its_alias_after_a_free.c:8:5 written
       Destination "_5"
         Deref
@@ -55,6 +59,7 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Use
         Copy "_5"
           Deref
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:8:5 generated
     Operation a_pointer_replaced_through_its_alias_after_a_free.c:9:5 written
       Destination "_1"
         Deref
@@ -65,8 +70,10 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:9:5 generated
     Operation a_pointer_replaced_through_its_alias_after_a_free.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:10:12 generated
     Return
