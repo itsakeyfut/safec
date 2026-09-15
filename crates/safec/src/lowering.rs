@@ -194,7 +194,11 @@ impl Builder {
     /// Say that nothing before here can happen after anything following it.
     ///
     /// `Generated`, because nobody writes an element: the `;` or the `,` or
-    /// the `&&` is what this exists because of, and `span` is that construct.
+    /// the `&&` is what this exists because of.
+    ///
+    /// `span` is the expression the point falls **after** and not that
+    /// operator's own, which the tree does not carry. See [`Element::Sequenced`]
+    /// for what that costs a reader of the artifact.
     fn sequenced(&mut self, span: Span) {
         self.element(Element::Sequenced {
             origin: Origin::Generated(span),
@@ -1044,14 +1048,19 @@ impl Lowering<'_> {
     /// rather than whatever follows the node.
     ///
     /// **Two callers, and one of them cannot reach it with the flag set.**
-    /// `begin_place` only ever meets an identifier, a dereference, a subscript
-    /// or a number, and none of those sequences, so a place walk is always
-    /// entered from a node that has already answered this. Measured: deleting
-    /// the call from there breaks no named test. It is called anyway, because
-    /// one rule asked in two places is one function rather than two copies,
-    /// and RK-052 in the review knowledge bank is what the two copies cost
-    /// last time. A C++ adapter with a sequencing operator that yields an
-    /// lvalue makes the call live without anybody having to notice.
+    /// Every task that asks for a place is pushed by a node that does not
+    /// sequence: `&`, `++`, `--`, an assignment, a subscript, a dereference.
+    /// Each of those has already run this and set the flag false, so a place
+    /// walk is always entered below one. `begin_place` does meet a comma or a
+    /// conditional, through `&(a, b)` and its like, and refuses them as naming
+    /// no place; it is not that they never arrive. Measured: deleting the call
+    /// from there breaks no named test.
+    ///
+    /// It is called anyway, because one rule asked in two places is one
+    /// function rather than two copies, and RK-052 in the review knowledge bank
+    /// is what the two copies cost last time. A C++ adapter with a sequencing
+    /// operator that yields an lvalue makes the call live without anybody
+    /// having to notice.
     fn descend(&mut self, id: ExprId, tasks: &mut Vec<Task>) {
         if self.top_level && !sequences(self.ast.expr(id)) {
             tasks.push(Task::Restore(true));

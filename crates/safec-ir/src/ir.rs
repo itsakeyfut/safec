@@ -515,8 +515,23 @@ pub enum Element {
     /// hands every analysis a proof the standard does not license**, which is
     /// the failure `docs/safety-model.md` is written to prevent, so the bias
     /// when building one is towards emitting fewer.
+    ///
+    /// **It says what is ordered and not what is unordered.** A consumer
+    /// walking forwards learns that everything behind this is sequenced before
+    /// everything ahead of it; it learns nothing about two things it has not
+    /// reached yet. Answering "are these two unsequenced" needs more than this
+    /// element, and #177 is what that costs today.
     Sequenced {
-        /// Where the construct that sequences is written.
+        /// The expression this point falls **after**, rather than the operator
+        /// that put it there.
+        ///
+        /// `free(p), *p = 42;` answers the span of `free(p)` and not the
+        /// comma's, because the tree has no span for an operator token: an
+        /// `Expr::Comma` carries one span covering both operands and the comma
+        /// between them. Two markers in one block can therefore print the same
+        /// position and mean different points, which the artifact for
+        /// `a_comma_sequences_a_free_before_a_use` shows. Whoever wants a
+        /// `sequenced here` label is who has to add the operator's own span.
         origin: Origin,
     },
 }

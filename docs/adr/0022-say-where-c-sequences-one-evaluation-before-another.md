@@ -43,9 +43,10 @@ this compiler can do.
   downstream can recover it**. By the time an analysis runs, the tree is gone
   and the block order is all that is left.
 * Every analysis after this one meets the same question. A move unsequenced with
-  a read is Phase 7's version of this, and a borrow unsequenced with a write is
-  Phase 6's. Answering it once in the IR is the difference between one rule and
-  four copies of it.
+  a read and a borrow unsequenced with a write are both Phase 7's version of it;
+  Phase 6's is a reference unsequenced with whatever ends the lifetime it points
+  into. Answering it once in the IR is the difference between one rule and four
+  copies of it.
 * The failure to avoid is a **proof**, so the bias has to be towards saying
   less. A missing sequence point is a report that is a warning where it could
   have been an error, which is row 4. A sequence point claimed where C gives
@@ -170,6 +171,16 @@ the rule narrows nothing that was already right.
   That is slack being spent rather than a bound re-derived, and the number is
   still held by nothing. ADR-0016, ADR-0018, ADR-0019 and ADR-0020 each say the
   last part and it is still true.
+* Bad, because this answers the forward half of the question and the record
+  should not be read as answering the whole of it. A marker says that what came
+  before it is sequenced before what comes after; it cannot say that two things
+  are unsequenced, because the check meets them one at a time and only ever
+  looks back. So a use the walk meets **before** the free is not compared with
+  it at all: `int x = g(*p) + (free(p), 0);` is silent under every flag where
+  `int x = (free(p), 0) + g(*p);` reports. That is #177, it is not new, and
+  `an_unsequenced_use_the_check_meets_first_is_not_reported` holds the silence
+  so that closing it fails a named test. Phase 6 and 7 meet the same question
+  and get the same half.
 * Bad, because a program whose free and use really are unsequenced loses its
   error at the default level. That is the point, and `--deny-unknown` is what
   gets it back.
