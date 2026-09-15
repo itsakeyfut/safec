@@ -646,7 +646,12 @@ impl Analysis for Allocations<'_> {
         // write through it may reach is a second square table that only grows,
         // so it takes at most one step per pair. Where the set it named was
         // freed goes from `None` to `Some` once per local and a join only takes
-        // it away, so it costs one more step each.
+        // it away, so it costs one more step each. Whether a free has been
+        // sequenced is one bit per site: the transfer sets it and only a join
+        // takes it back, which a join can do once, so it is one more step per
+        // site and the number below is not changed for it. That is slack being
+        // spent rather than a bound being re-derived, and the paragraph below
+        // is why that is acceptable here.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
