@@ -648,6 +648,17 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     if let Some(freed) = finding.freed {
         diagnostic = diagnostic.with_label(Label::secondary(freed, "freed here"));
     }
+    // **Why this one is unproven, because it is not the usual why.** Every
+    // other `Unknown` here is the check having lost something; this is the
+    // check having worked out that C has not decided. Without the note a
+    // reader sees two carets and a warning and has no way to tell which of the
+    // two it is, and the second is not something more analysis would fix. See
+    // ADR-0022.
+    if finding.unsequenced {
+        diagnostic = diagnostic.with_note(
+            "C17 6.5 p3 leaves these unsequenced, so one order frees first and the other does not",
+        );
+    }
     if let Some(made) = finding.made {
         diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
     }

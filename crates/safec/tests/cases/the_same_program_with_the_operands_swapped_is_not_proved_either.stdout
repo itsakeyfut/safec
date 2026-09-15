@@ -1,0 +1,45 @@
+Target "x86_64-pc-windows-msvc"
+Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void"
+  Local "_5" "int"
+  Block "bb0" entry
+    Call the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 generated
+    Call the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:14 "free" "bb2"
+      Destination "_4"
+      Copy "_1"
+  Block "bb2"
+    Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:14 written
+      Destination "_5"
+      Binary "Add"
+        Constant 0
+        Copy "_1"
+          Deref
+    Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:9 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Sequenced the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:14 generated
+    Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced the_same_program_with_the_operands_swapped_is_not_proved_either.c:6:12 generated
+    Return

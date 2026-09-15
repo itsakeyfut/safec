@@ -48,6 +48,23 @@ cases! {
     a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_branch_that_allocates_either_way: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_value_used_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same free and the same use, in one full expression with nothing
+    // ordering them. C17 6.5 p3 leaves the operands of `+` unsequenced, so one
+    // allowed order reads `*p` first and the program is defined; which order an
+    // implementation picks is unspecified and this compiler does not get to
+    // choose. The pair is written both ways round because the answer must not
+    // turn on which side the free is written: it used to, and what decided was
+    // that ADR-0010 makes a call end a block. See ADR-0022.
+    an_unsequenced_free_and_use_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    the_same_program_with_the_operands_swapped_is_not_proved_either: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The four constructs that do order their operands, one case each, because
+    // C17 Annex C names four and a list implemented three-quarters of the way
+    // leaves a reader asking which quarter. 6.5.17 p2, 6.5.13 p4, 6.5.14 p4 and
+    // 6.5.15 p4 in that order, and each is a proof rather than a suspicion.
+    a_comma_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_logical_and_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_logical_or_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

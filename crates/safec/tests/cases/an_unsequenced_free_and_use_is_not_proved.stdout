@@ -1,0 +1,45 @@
+Target "x86_64-pc-windows-msvc"
+Function an_unsequenced_free_and_use_is_not_proved.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_unsequenced_free_and_use_is_not_proved.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_unsequenced_free_and_use_is_not_proved.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void"
+  Local "_5" "int"
+  Block "bb0" entry
+    Call an_unsequenced_free_and_use_is_not_proved.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation an_unsequenced_free_and_use_is_not_proved.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced an_unsequenced_free_and_use_is_not_proved.c:4:14 generated
+    Call an_unsequenced_free_and_use_is_not_proved.c:5:19 "free" "bb2"
+      Destination "_4"
+      Copy "_1"
+  Block "bb2"
+    Operation an_unsequenced_free_and_use_is_not_proved.c:5:13 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_1"
+          Deref
+        Constant 0
+    Operation an_unsequenced_free_and_use_is_not_proved.c:5:9 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Sequenced an_unsequenced_free_and_use_is_not_proved.c:5:13 generated
+    Operation an_unsequenced_free_and_use_is_not_proved.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced an_unsequenced_free_and_use_is_not_proved.c:6:12 generated
+    Return
