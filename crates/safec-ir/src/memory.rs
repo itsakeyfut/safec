@@ -1078,10 +1078,24 @@ impl Analysis for Allocations<'_> {
                         SiteState::Live(made) | SiteState::Freed { made, .. } => made,
                         SiteState::Unknown => None,
                     };
-                    value.state[site] = SiteState::Freed {
-                        made,
-                        freed: Freeing::new(origin.span()),
+                    // **A free already ordered before here is the one to
+                    // keep.** It is what proves anything about what follows,
+                    // and it is what the diagnostic has to point at for the
+                    // proof to be readable: `free(p); x = (free(p), 0) + *p;`
+                    // is a proved use after free because of the first line,
+                    // and replacing it with the second would name a free that
+                    // is in the same unsequenced expression as the use and
+                    // leave the reader with two carets that prove nothing.
+                    // Without this the second free took the proof away with
+                    // it, which review measured. See ADR-0022.
+                    //
+                    // It is also the earliest, which is what this variant's
+                    // own doc comment has always said it holds.
+                    let freed = match value.state[site] {
+                        SiteState::Freed { freed, .. } if freed.sequenced => freed,
+                        _ => Freeing::new(origin.span()),
                     };
+                    value.state[site] = SiteState::Freed { made, freed };
                 }
             }
             // It does not free what it is passed, which is the whole of why the
@@ -1302,7 +1316,11 @@ struct Verdict {
 /// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
 /// following, and a dereference hands an empty iterator. That asymmetry is the
 /// design rather than an accident, and [`used`] says why.
-fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<Verdict> {
+fn verdict(
+    kind: Kind,
+    reached: impl IntoIterator<Item = Reached>,
+    known: &Known,
+) -> Option<Verdict> {
     // The earliest free reaching here, and whether C has sequenced **every**
     // free that reaches here. [`Freeing::joined`] is both rules, because
     // folding over the sites reached at one point wants exactly what folding
@@ -1319,6 +1337,12 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
     let mut any_freed = false;
     let mut live = false;
     let mut unknown = false;
+    // Whether more than one free was folded in. The span below is the earliest
+    // of them and the flag beside it is the conjunction, so where they differ
+    // the span can be a free this check *has* seen sequenced while the flag is
+    // false because another was not. Saying "the order is what is open" about
+    // that pair would point two carets at two evaluations C does order.
+    let mut several = false;
 
     for entry in reached {
         let site = match entry {
@@ -1332,6 +1356,7 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
             // several allocations as the one that was freed is the may-set
             // mistake this whole rule is against.
             Reached::SetFreed(freed) => {
+                several |= any_freed;
                 any_freed = true;
                 earliest = Some(match earliest {
                     Some(already) => already.joined(freed),
@@ -1352,6 +1377,7 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
                 freed: before,
             } => {
                 made = if any_freed { same(made, from) } else { from };
+                several |= any_freed;
                 any_freed = true;
                 earliest = Some(match earliest {
                     Some(already) => already.joined(before),
@@ -1376,8 +1402,20 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
     // "gave up" at once reports the second as the first.
     let settled = !live && !unknown;
 
+    // **A double free does not turn on which ran first.** Two frees of one
+    // allocation are a double free in either order, so there is nothing for a
+    // sequence point to settle and asking for one turned `(free(p), 0) +
+    // (free(p), 0)` from an error into a warning. Issue #142 said so in as many
+    // words and this check did it anyway until review measured it. A use is the
+    // other way round: one allowed order reads freed storage and another does
+    // not, which is the whole of what this field is for.
+    let ordered = match kind {
+        Kind::DoubleFree => true,
+        Kind::UseAfterFree => earliest.is_some_and(|freed| freed.sequenced),
+    };
+
     match earliest {
-        Some(freed) if settled && freed.sequenced => Some(Verdict {
+        Some(freed) if settled && ordered => Some(Verdict {
             conclusion: Conclusion::Unsafe,
             freed: Some(freed.at),
             made,
@@ -1385,10 +1423,9 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
         }),
         // **Unproven, and the free is still named.** What is open here is only
         // the order: the sites agree, nothing was lost, and there is exactly
-        // one free to point at. C17 6.5 p3 is what has not decided, and a
-        // reader given two carets and that sentence can see the shape of it.
-        // See ADR-0022.
-        Some(freed) if settled => Some(Verdict {
+        // one free to point at. A reader given two carets and the note beside
+        // them can see the shape of it. See ADR-0022.
+        Some(freed) if settled && !several => Some(Verdict {
             conclusion: Conclusion::Unknown,
             freed: Some(freed.at),
             made,
@@ -1434,7 +1471,11 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         return None;
     }
 
-    let verdict = verdict(Allocations::touching(arguments, known), known)?;
+    let verdict = verdict(
+        Kind::DoubleFree,
+        Allocations::touching(arguments, known),
+        known,
+    )?;
 
     Some(Finding {
         kind: Kind::DoubleFree,
@@ -1518,7 +1559,8 @@ fn used(
             .iter()
             .position(|(said_at, said_place, _)| *said_at == at && said_place == place);
 
-        let Some(verdict) = verdict(known.reached_by(place.local), known) else {
+        let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
+        else {
             continue;
         };
 

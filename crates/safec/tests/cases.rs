@@ -65,6 +65,29 @@ cases! {
     an_unsequenced_free_and_use_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     the_same_program_with_the_operands_swapped_is_not_proved_either: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_unsequenced_use_the_check_meets_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Three shapes where asking for a sequence point would be asking the
+    // wrong question, each of which review found this check getting wrong.
+    // A double free runs both frees whichever order C picks, so 6.5 p3
+    // settles nothing about it and the proof stands. A free already ordered
+    // before an expression proves a use inside that expression, and stays the
+    // one to name, however the frees inside it are ordered. And where several
+    // frees are folded into one answer, the earliest span and the conjunction
+    // of their orders can come from different frees, so the caret that would
+    // say `freed here` is dropped rather than paired with a note about a free
+    // it is not pointing at.
+    a_double_free_in_one_expression_does_not_turn_on_the_order: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_already_sequenced_is_the_one_a_later_free_keeps: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_may_set_where_one_free_is_sequenced_and_one_is_not: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A sequencing operator below something C leaves unsequenced orders its
+    // own parts and nothing outside them, so none of these three is a proof.
+    // One case per operator, because the guard is written once per operator
+    // and review measured that removing any one of them leaves the suite
+    // green: the comma's was held, and `&&`, `||`, `?:` and a call's
+    // arguments were not. Each mutation makes the compiler **certain** about
+    // an order C has not chosen, which is the direction that matters.
+    a_comma_inside_a_call_argument_orders_nothing_outside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The four constructs that do order their operands, one case each, because
     // C17 Annex C names four and a list implemented three-quarters of the way
     // leaves a reader asking which quarter. 6.5.17 p2, 6.5.13 p4, 6.5.14 p4 and

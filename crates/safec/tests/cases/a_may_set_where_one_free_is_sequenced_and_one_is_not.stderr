@@ -1,0 +1,9 @@
+warning[SC0402]: this may use a value after it was freed
+   ╭─[ a_may_set_where_one_free_is_sequenced_and_one_is_not.c:8:13 ]
+   │
+ 8 │     int x = *r + (free(b), 0);
+   │             ────────┬───────  
+   │                     ╰───────── used here, perhaps after the free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

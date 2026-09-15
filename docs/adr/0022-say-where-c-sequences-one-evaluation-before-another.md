@@ -74,12 +74,14 @@ Sequenced {
 ```
 
 It is emitted **at a sequence point that no unsequenced operator encloses**.
-C17 Annex C is the complete list of sequence points and the four that matter
-here are the end of a full expression (6.8 p4), and the operators `,`
-(6.5.17 p2), `&&` (6.5.13 p4), `||` (6.5.14 p4) and `?:` (6.5.15 p4). The fifth
-entry, the sequence point between a call's arguments and the call itself
-(6.5.2.2 p10), needs nothing: the IR already places the argument operations
-before the call terminator.
+C17 Annex C is the complete list of sequence points, and the ones this frontend
+can reach are the end of a full expression (6.8 p4) and the operators `,`
+(6.5.17 p2), `&&` (6.5.13 p4), `||` (6.5.14 p4) and `?:` (6.5.15 p4). Annex C's
+first entry, between a call's arguments and the call itself (6.5.2.2 p10), needs
+nothing: the IR already places the argument operations before the call
+terminator. What it does **not** say is that a call's arguments are ordered
+against each other, and they are not, which is why a sequencing operator inside
+one of them records nothing.
 
 **The enclosure test is the whole of the difficulty.** `*p + (free(p), 0)`
 contains a comma, and the comma is a sequence point; emitting one for it would
@@ -109,9 +111,22 @@ kind, and a field is what `..` walks past without a word. `print.rs`,
 each stopped compiling until they said what this means to them, which is the
 property ADR-0012 bought for the storage markers and is the same argument.
 
+**A double free does not ask for one.** Two frees of one allocation are a
+double free whichever order runs, so there is nothing for a sequence point to
+settle, and asking for one turned `(free(p), 0) + (free(p), 0)` from an error
+into a warning. #142's own body said so and the first implementation did it
+anyway; `verdict` now takes the `Kind` and only a use asks about the order.
+
+**A free already ordered before here is the one to keep.** A second free at a
+site replaced the first, and with it the fact that the first was sequenced, so
+`free(p); x = (free(p), 0) + *p;` lost a proof it had before this change. What
+survives is the earlier, sequenced free, which is also what `SiteState::Freed`'s
+doc comment has always said it holds and what the diagnostic has to point at for
+the proof to be readable.
+
 **What the check does with it.** A free stops being a span and becomes a
-`Freeing`: the span, and whether C has ordered it before what follows. A proof
-needs the second half. `Freeing::joined` takes the earlier span and the
+`Freeing`: the span, and whether C has ordered it before what follows. A use
+asks for the second half. `Freeing::joined` takes the earlier span and the
 **conjunction** of the flags, because a path that arrived with the order still
 open is a path on which this is not a proof.
 
@@ -124,38 +139,71 @@ turns out to carry two things.
 **An unproven report that still names its free.** The existing `Unknown` drops
 both spans because what makes it unknown is that the paths or the sites
 disagree, so there is no one free to point at. Here there is exactly one, and
-the reason is different in kind: C has not said which order runs. RK-034 is the
-entry about a match arm that means "proved" and "gave up" at once, and
-collapsing these two kinds of doubt into one is that mistake at the report. So
-the finding keeps its `freed here` caret and carries a note saying what leaves
-it open.
+the reason is different in kind: nothing this check can see orders the free
+first. RK-034 is the entry about a match arm that means "proved" and "gave up"
+at once, and collapsing these two kinds of doubt into one is that mistake at the
+report. So the finding keeps its `freed here` caret and carries a note saying
+what leaves it open.
+
+**Exactly one**, and the fold counts. Several frees meeting at one report give
+the earliest span and the conjunction of their orders, which can come from two
+different frees: the caret would then point at a free this check *has* seen
+sequenced while the note says the order is open. Where more than one was folded
+the span is dropped and the report is the ordinary spanless `Unknown`.
+
+**The note says what this check found, not what C decided.** They are not the
+same: in `x = (free(p), *p)` C17 6.5.17 p2 settles the order and this check
+still records nothing, which is #178. It cites 6.5.2.2 p10 rather than 6.5 p3,
+because p3 leaves subexpressions unsequenced and unsequenced evaluations may
+interleave; what gives a call one order or the other is p10's indeterminate
+sequencing, and a free is a call.
 
 ### Confirmation
 
-`error[E0004]` at `print.rs`, `interp.rs`, `emit.rs`, `memory.rs` and the two
-hand-built analyses in `crates/safec-ir/tests/` if the kind is removed, and
-`error[E0063]` at `Freeing::new` and `Freeing::joined` if a field is added to
-the pair a free carries.
+`error[E0004]` at every reader of `Element` if the kind is removed:
+`print.rs`, `interp.rs`, `emit.rs`, `memory.rs`, the hand-built analysis in
+`crates/safec-ir/tests/written.rs` and two helpers in `lowering.rs`'s own
+tests. `error[E0063]` at `Freeing::new` and `Freeing::joined` if a field is
+added to the pair a free carries, and `error[E0004]` at `verdict` if a variant
+is added to `Kind`, which is what says a third check has to answer whether its
+question turns on the order.
 
 Each mutation applied on its own, the whole workspace suite run with
 `--no-fail-fast`, the tree restored.
 
 | Mutation | Named test that fails |
 |---|---|
-| `Builder::sequenced` builds nothing | every proved double free and use after free this check makes, in the corpus and in `crates/safec-ir/tests/freed.rs` alike, because a free nothing has sequenced is never a proof |
+| `Builder::sequenced` builds nothing | every proved double free and use after free this check makes, in the corpus and in `freed.rs` alike |
 | the check does not read the kind | the same set, from the other side |
-| the comma's marker stops asking what encloses it | `an_unsequenced_free_and_use_is_not_proved`, `the_same_program_with_the_operands_swapped_is_not_proved_either` and `a_comma_inside_an_unsequenced_operand_is_not_one`, and nothing else. **This is the row that matters**: the mutation does not make the compiler quieter, it makes it certain about something C has not decided |
-| `sequences` answers `false` for a comma | `a_comma_at_the_top_of_a_full_expression_is_a_sequence_point` |
-| the comma's marker is dropped | `a_comma_sequences_a_free_before_a_use` |
-| `&&` and `||`'s marker is dropped | `a_logical_and_sequences_a_free_before_a_use` and `a_logical_or_sequences_a_free_before_a_use` |
-| `?:`'s markers are dropped | `a_conditional_sequences_a_free_before_a_use` |
-| `Freeing::joined` answers `self.sequenced || other.sequenced` | `a_free_sequenced_on_one_arm_only_is_not_a_proof`, and nothing else |
+| `sequences` answers `false` for a comma | `a_comma_at_the_top_of_a_full_expression_is_a_sequence_point` and the corpus cases whose markers move |
+| the marker for `,`, for `&&` and `\|\|`, or for `?:` is dropped | `a_comma_sequences_a_free_before_a_use`, `a_logical_and_sequences_a_free_before_a_use` with `a_logical_or_...`, and `a_conditional_sequences_a_free_before_a_use` |
+
+Those hold that the markers are emitted. The rows below are the ones that
+matter, because each mutation makes this compiler **certain** about an order C
+has not chosen rather than quiet about one it has.
+
+| Mutation | Named test that fails |
+|---|---|
+| the comma's marker stops asking what encloses it | `an_unsequenced_free_and_use_is_not_proved`, `the_same_program_with_the_operands_swapped_is_not_proved_either` and `a_comma_inside_an_unsequenced_operand_is_not_one` |
+| `sequences` answers `true` for a call | `a_comma_inside_a_call_argument_orders_nothing_outside_it` |
+| `&&` and `\|\|`'s marker stops asking | `a_logical_and_inside_an_unsequenced_operand_orders_nothing` |
+| `?:`'s markers stop asking | `a_conditional_inside_an_unsequenced_operand_orders_nothing` |
+| `Freeing::new` starts sequenced | the four above and three beside them |
+| `Freeing::joined` takes the stronger flag | `a_free_sequenced_on_one_arm_only_is_not_a_proof` and `a_may_set_where_one_free_is_sequenced_and_one_is_not` |
+| `Freeing::joined` keeps its own span rather than the earlier | the first of those, and `a_use_after_two_allocations_names_no_allocation` |
+
+And three where asking about the order was the wrong question, each of which
+this change got wrong until review measured it against the binary it replaced.
+
+| Mutation | Named test that fails |
+|---|---|
+| a double free asks for a sequence point too | `a_double_free_in_one_expression_does_not_turn_on_the_order`, which goes from an error to a warning |
+| a later free replaces one already sequenced | `a_free_already_sequenced_is_the_one_a_later_free_keeps`, which loses a proof it had before this change |
+| the fold keeps the `freed here` caret where several frees met | `a_may_set_where_one_free_is_sequenced_and_one_is_not`, which points a caret at a free this check did see sequenced |
 
 `a_value_used_after_it_was_freed` is the two-statement program that has to stay
-proved, and it was in the corpus before this. No case in the corpus changed its
-answer: every program in it frees in a statement of its own, which is what says
-the rule narrows nothing that was already right.
-
+proved, and it was in the corpus before this. No case that was in the corpus
+before changed its answer: every one of them frees in a statement of its own.
 ### Consequences
 
 * Good, because the IR now says which parts of its own order are C's and which
@@ -171,6 +219,16 @@ the rule narrows nothing that was already right.
   That is slack being spent rather than a bound re-derived, and the number is
   still held by nothing. ADR-0016, ADR-0018, ADR-0019 and ADR-0020 each say the
   last part and it is still true.
+* Bad, because the enclosure rule gives up a proof wherever a sequencing
+  operator sits below something C leaves unsequenced, which is **much wider
+  than one operand**. `int x = (free(p), *p);` is an error and
+  `x = (free(p), *p);` is a warning, because an initializer is a full
+  expression and an assignment's operands are unsequenced by 6.5.16 p3. Two
+  spellings of one statement, two answers, which is the thing
+  `docs/c-family.md` asks a frontend to normalise one section above where this
+  is written down. `a_logical_and_inside_an_unsequenced_operand_orders_nothing`
+  and the two cases beside it hold the current answer, and #178 is the issue.
+  Every one of these is row 4 and `--deny-unknown` reports all of them.
 * Bad, because this answers the forward half of the question and the record
   should not be read as answering the whole of it. A marker says that what came
   before it is sequenced before what comes after; it cannot say that two things

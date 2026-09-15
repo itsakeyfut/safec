@@ -310,12 +310,13 @@ enum Task {
 
 /// Whether C sequences the operands of this node against each other.
 ///
-/// The complete list, from C17 Annex C: the comma operator (6.5.17 p2), `&&`
+/// The operators C17 Annex C lists: the comma operator (6.5.17 p2), `&&`
 /// (6.5.13 p4), `||` (6.5.14 p4) and the conditional operator (6.5.15 p4).
-/// Annex C's fifth entry is the sequence point between a call's arguments and
+/// Annex C's first entry is the sequence point between a call's arguments and
 /// the call itself (6.5.2.2 p10), which the IR expresses by putting the
 /// argument operations before the call terminator and which therefore is not
-/// this question.
+/// this question; a call's arguments are unsequenced against *each other*,
+/// which is why `Expr::Call` answers false here.
 ///
 /// **Everything else answers false, including a node with one operand.** A
 /// sequence point inside `-(free(p), *p)` does order those two, because there

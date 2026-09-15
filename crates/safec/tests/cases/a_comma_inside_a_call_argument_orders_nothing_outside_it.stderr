@@ -1,14 +1,14 @@
 warning[SC0402]: this may use a value after it was freed
-   ╭─[ an_unsequenced_free_and_use_is_not_proved.c:5:13 ]
+   ╭─[ a_comma_inside_a_call_argument_orders_nothing_outside_it.c:6:13 ]
    │
- 4 │     int *p = malloc(4);
+ 5 │     int *p = malloc(4);
    │              ────┬────  
    │                  ╰────── allocated here
- 5 │     int x = *p + (free(p), 0);
-   │             ────────┬┬──────  
-   │                     ╰───────── used here, perhaps after the free
-   │                      │        
-   │                      ╰──────── freed here
+ 6 │     int x = g((free(p), 0), *p);
+   │             ──────┬──┬─────────  
+   │                   ╰────────────── freed here
+   │                      │           
+   │                      ╰─────────── used here, perhaps after the free
 ───╯
   = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
   = note: this check belongs to safety level 1
