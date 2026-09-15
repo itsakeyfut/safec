@@ -24,10 +24,12 @@ Function a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:4:14 generated
     Operation a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:5:10 written
       Destination "_3"
       Use
         Copy "_1"
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:5:14 generated
     Operation a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:6:16 written
       Destination "_5"
       Address
@@ -36,10 +38,12 @@ Function a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:6:16 generated
     Call a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:7:5 "free" "bb2"
       Destination "_6"
       Copy "_1"
   Block "bb2"
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:7:5 generated
     Operation a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:8:5 written
       Destination "_4"
         Deref
@@ -50,6 +54,7 @@ Function a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:3:5 "f"
       Use
         Copy "_4"
           Deref
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:8:5 generated
     Operation a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:9:5 written
       Destination "_1"
         Deref
@@ -60,8 +65,10 @@ Function a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:9:5 generated
     Operation a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_write_through_an_alias_leaves_a_sharer_s_proof_alone.c:10:12 generated
     Return

@@ -23,6 +23,7 @@ Function two_pointers_used_after_a_free_on_one_line.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced two_pointers_used_after_a_free_on_one_line.c:4:14 generated
     Call two_pointers_used_after_a_free_on_one_line.c:5:14 "malloc" "bb2"
       Destination "_4"
       Constant 4
@@ -31,14 +32,17 @@ Function two_pointers_used_after_a_free_on_one_line.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced two_pointers_used_after_a_free_on_one_line.c:5:14 generated
     Call two_pointers_used_after_a_free_on_one_line.c:6:5 "free" "bb3"
       Destination "_5"
       Copy "_1"
   Block "bb3"
+    Sequenced two_pointers_used_after_a_free_on_one_line.c:6:5 generated
     Call two_pointers_used_after_a_free_on_one_line.c:7:5 "free" "bb4"
       Destination "_6"
       Copy "_3"
   Block "bb4"
+    Sequenced two_pointers_used_after_a_free_on_one_line.c:7:5 generated
     Operation two_pointers_used_after_a_free_on_one_line.c:8:5 written
       Destination "_1"
         Deref
@@ -50,8 +54,10 @@ Function two_pointers_used_after_a_free_on_one_line.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced two_pointers_used_after_a_free_on_one_line.c:8:5 generated
     Operation two_pointers_used_after_a_free_on_one_line.c:9:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced two_pointers_used_after_a_free_on_one_line.c:9:12 generated
     Return

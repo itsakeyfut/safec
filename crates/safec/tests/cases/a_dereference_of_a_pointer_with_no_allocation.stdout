@@ -10,6 +10,7 @@ Function a_dereference_of_a_pointer_with_no_allocation.c:1:5 "f"
       Destination "_1"
       Use
         Constant 1
+    Sequenced a_dereference_of_a_pointer_with_no_allocation.c:2:13 generated
     Operation a_dereference_of_a_pointer_with_no_allocation.c:3:14 written
       Destination "_3"
       Address
@@ -18,6 +19,7 @@ Function a_dereference_of_a_pointer_with_no_allocation.c:1:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_dereference_of_a_pointer_with_no_allocation.c:3:14 generated
     Operation a_dereference_of_a_pointer_with_no_allocation.c:4:5 written
       Destination "_2"
         Deref
@@ -28,8 +30,10 @@ Function a_dereference_of_a_pointer_with_no_allocation.c:1:5 "f"
       Use
         Copy "_2"
           Deref
+    Sequenced a_dereference_of_a_pointer_with_no_allocation.c:4:5 generated
     Operation a_dereference_of_a_pointer_with_no_allocation.c:5:5 written
       Destination "_0"
       Use
         Copy "_1"
+    Sequenced a_dereference_of_a_pointer_with_no_allocation.c:5:12 generated
     Return

@@ -21,10 +21,12 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced one_pointer_used_after_a_free_on_two_lines.c:4:14 generated
     Call one_pointer_used_after_a_free_on_two_lines.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced one_pointer_used_after_a_free_on_two_lines.c:5:5 generated
     Operation one_pointer_used_after_a_free_on_two_lines.c:6:5 written
       Destination "_1"
         Deref
@@ -35,6 +37,7 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced one_pointer_used_after_a_free_on_two_lines.c:6:5 generated
     Operation one_pointer_used_after_a_free_on_two_lines.c:7:5 written
       Destination "_1"
         Deref
@@ -45,8 +48,10 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced one_pointer_used_after_a_free_on_two_lines.c:7:5 generated
     Operation one_pointer_used_after_a_free_on_two_lines.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced one_pointer_used_after_a_free_on_two_lines.c:8:12 generated
     Return

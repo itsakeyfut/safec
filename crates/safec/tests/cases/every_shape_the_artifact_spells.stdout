@@ -68,6 +68,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_8"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:8:5 generated
     Operation every_shape_the_artifact_spells.c:9:9 written
       Destination "_9"
       Binary "Div"
@@ -81,6 +82,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_10"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:9:5 generated
     Operation every_shape_the_artifact_spells.c:10:9 written
       Destination "_11"
       Binary "Rem"
@@ -94,6 +96,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_12"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:10:5 generated
     Operation every_shape_the_artifact_spells.c:11:9 written
       Destination "_13"
       Binary "Add"
@@ -107,6 +110,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_14"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:11:5 generated
     Operation every_shape_the_artifact_spells.c:12:9 written
       Destination "_15"
       Binary "Sub"
@@ -120,6 +124,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_16"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:12:5 generated
     Operation every_shape_the_artifact_spells.c:13:9 written
       Destination "_17"
       Binary "Shl"
@@ -133,6 +138,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_18"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:13:5 generated
     Operation every_shape_the_artifact_spells.c:14:9 written
       Destination "_19"
       Binary "Shr"
@@ -146,6 +152,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_20"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:14:5 generated
     Operation every_shape_the_artifact_spells.c:15:9 written
       Destination "_21"
       Binary "Lt"
@@ -159,6 +166,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_22"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:15:5 generated
     Operation every_shape_the_artifact_spells.c:16:9 written
       Destination "_23"
       Binary "Gt"
@@ -172,6 +180,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_24"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:16:5 generated
     Operation every_shape_the_artifact_spells.c:17:9 written
       Destination "_25"
       Binary "Le"
@@ -185,6 +194,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_26"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:17:5 generated
     Operation every_shape_the_artifact_spells.c:18:9 written
       Destination "_27"
       Binary "Ge"
@@ -198,6 +208,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_28"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:18:5 generated
     Operation every_shape_the_artifact_spells.c:19:9 written
       Destination "_29"
       Binary "Eq"
@@ -211,6 +222,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_30"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:19:5 generated
     Operation every_shape_the_artifact_spells.c:20:9 written
       Destination "_31"
       Binary "Ne"
@@ -224,6 +236,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_32"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:20:5 generated
     Operation every_shape_the_artifact_spells.c:21:9 written
       Destination "_33"
       Binary "BitAnd"
@@ -237,6 +250,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_34"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:21:5 generated
     Operation every_shape_the_artifact_spells.c:22:9 written
       Destination "_35"
       Binary "BitXor"
@@ -250,6 +264,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_36"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:22:5 generated
     Operation every_shape_the_artifact_spells.c:23:9 written
       Destination "_37"
       Binary "BitOr"
@@ -263,6 +278,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_38"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:23:5 generated
     Operation every_shape_the_artifact_spells.c:24:9 written
       Destination "_39"
       Unary "Neg"
@@ -275,6 +291,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_40"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:24:5 generated
     Operation every_shape_the_artifact_spells.c:25:9 written
       Destination "_41"
       Unary "Not"
@@ -287,6 +304,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_42"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:25:5 generated
     Operation every_shape_the_artifact_spells.c:26:9 written
       Destination "_43"
       Unary "BitNot"
@@ -299,6 +317,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_44"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:26:5 generated
     Operation every_shape_the_artifact_spells.c:27:5 written
       Destination "_5"
       Use
@@ -307,6 +326,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_45"
       Use
         Copy "_5"
+    Sequenced every_shape_the_artifact_spells.c:27:5 generated
     Operation every_shape_the_artifact_spells.c:28:9 written
       Destination "_46"
       Address
@@ -319,6 +339,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_47"
       Use
         Copy "_6"
+    Sequenced every_shape_the_artifact_spells.c:28:5 generated
     Operation every_shape_the_artifact_spells.c:29:5 written
       Destination "_4"
         Deref
@@ -331,6 +352,7 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
         Copy "_4"
           Deref
             Deref
+    Sequenced every_shape_the_artifact_spells.c:29:5 generated
     Operation every_shape_the_artifact_spells.c:30:5 written
       Destination "_3"
       Use
@@ -339,10 +361,12 @@ Function every_shape_the_artifact_spells.c:4:5 "every"
       Destination "_49"
       Use
         Copy "_3"
+    Sequenced every_shape_the_artifact_spells.c:30:5 generated
     Operation every_shape_the_artifact_spells.c:31:5 written
       Destination "_0"
       Use
         Copy "_4"
           Deref
             Deref
+    Sequenced every_shape_the_artifact_spells.c:31:12 generated
     Return

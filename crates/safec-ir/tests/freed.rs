@@ -197,6 +197,31 @@ fn returns() -> Block {
     }
 }
 
+/// The same block, with a sequence point in front of it.
+///
+/// Every free in these programs is its own full expression, so C17 6.8 p4
+/// puts a sequence point between it and whatever comes next, and the C
+/// frontend emits an [`Element::Sequenced`] at the head of the block the call
+/// flows into. A free this check has not seen sequenced is not yet a proof,
+/// because C17 6.5 p3 leaves the rest of a full expression unordered against
+/// the call; see ADR-0022.
+///
+/// **So an IR built without these gets suspicions where it would have had
+/// proofs.** That is the bias working rather than failing: `docs/c-family.md`
+/// asks that another frontend be able to build this IR, and one that forgets
+/// where C sequences should lose its certainty rather than keep it. Only the
+/// boundary after a free is modelled here, because what these tests are about
+/// is what a free is worth.
+fn after_the_statement(at: Span, mut block: Block) -> Block {
+    block.elements.insert(
+        0,
+        Element::Sequenced {
+            origin: Origin::Generated(at),
+        },
+    );
+    block
+}
+
 /// What the check concluded about one function.
 fn findings(mut unit: TranslationUnit, sources: &SourceMap, function: Function) -> Vec<Finding> {
     unit.push_function(function);
@@ -227,8 +252,11 @@ fn a_value_freed_twice_is_unsafe() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], first));
     function.fill_block(first, free(&callees, held, names.at[1], second));
-    function.fill_block(second, free(&callees, held, names.at[2], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        second,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -266,8 +294,11 @@ fn a_value_freed_through_a_copy_is_unsafe() {
     function.fill_block(allocate, malloc(&callees, held, names.at[0], aliased));
     function.fill_block(aliased, copy(alias, held, names.at[1], first));
     function.fill_block(first, free(&callees, alias, names.at[2], second));
-    function.fill_block(second, free(&callees, held, names.at[3], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        second,
+        after_the_statement(names.at[2], free(&callees, held, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -296,8 +327,11 @@ fn a_parameter_is_an_allocation_site() {
     let exit = function.reserve_block();
 
     function.fill_block(first, free(&callees, held, names.at[0], second));
-    function.fill_block(second, free(&callees, held, names.at[1], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        second,
+        after_the_statement(names.at[0], free(&callees, held, names.at[1], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[1], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -330,8 +364,11 @@ fn two_allocations_are_two_sites() {
     function.fill_block(one, malloc(&callees, first_held, names.at[0], two));
     function.fill_block(two, malloc(&callees, second_held, names.at[1], free_one));
     function.fill_block(free_one, free(&callees, first_held, names.at[2], free_two));
-    function.fill_block(free_two, free(&callees, second_held, names.at[3], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        free_two,
+        after_the_statement(names.at[2], free(&callees, second_held, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -366,8 +403,11 @@ fn a_join_names_the_earlier_free() {
     // them. Without that the test would pass under both.
     function.fill_block(first_arm, free(&callees, held, names.at[1], joined));
     function.fill_block(second_arm, free(&callees, held, names.at[0], joined));
-    function.fill_block(joined, free(&callees, held, names.at[2], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        joined,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -418,14 +458,20 @@ fn a_free_of_either_of_two_allocations_names_the_earlier() {
     );
     function.fill_block(allocate_two, malloc(&callees, other, names.at[1], free_one));
     function.fill_block(free_one, free(&callees, one, names.at[2], free_two));
-    function.fill_block(free_two, free(&callees, other, names.at[3], pick));
+    function.fill_block(
+        free_two,
+        after_the_statement(names.at[2], free(&callees, other, names.at[3], pick)),
+    );
 
-    function.fill_block(pick, branch(take_one, take_two, names.asked));
+    function.fill_block(
+        pick,
+        after_the_statement(names.at[3], branch(take_one, take_two, names.asked)),
+    );
     function.fill_block(take_one, copy(held, one, names.at[4], joined));
     function.fill_block(take_two, copy(held, other, names.at[4], joined));
 
     function.fill_block(joined, free(&callees, held, names.at[5], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(exit, after_the_statement(names.at[5], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -475,7 +521,10 @@ fn a_free_that_may_not_be_the_first_is_unproven() {
     function.fill_block(header, branch(first_arm, second_arm, names.asked));
     function.fill_block(first_arm, free(&callees, held, names.at[0], joined));
     function.fill_block(second_arm, free(&callees, held, names.at[1], joined));
-    function.fill_block(joined, branch(header, exit, names.asked));
+    function.fill_block(
+        joined,
+        after_the_statement(names.at[0], branch(header, exit, names.asked)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -580,7 +629,10 @@ fn a_read_through_a_freed_pointer_is_unsafe() {
     function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
     function.fill_block(live, read(value, held, names.at[1], release));
     function.fill_block(release, free(&callees, held, names.at[2], dangling));
-    function.fill_block(dangling, read(value, held, names.at[3], exit));
+    function.fill_block(
+        dangling,
+        after_the_statement(names.at[2], read(value, held, names.at[3], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -616,7 +668,10 @@ fn a_write_through_a_freed_pointer_is_unsafe() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
     function.fill_block(release, free(&callees, held, names.at[1], dangling));
-    function.fill_block(dangling, write(held, value, names.at[2], exit));
+    function.fill_block(
+        dangling,
+        after_the_statement(names.at[1], write(held, value, names.at[2], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -687,7 +742,13 @@ fn taking_the_address_of_a_dereference_is_not_a_use() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
     function.fill_block(release, free(&callees, held, names.at[1], address));
-    function.fill_block(address, address_of_deref(taken, held, names.at[2], exit));
+    function.fill_block(
+        address,
+        after_the_statement(
+            names.at[1],
+            address_of_deref(taken, held, names.at[2], exit),
+        ),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -720,7 +781,10 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
     function.fill_block(allocate, malloc(&callees, held, names.at[0], decide));
     function.fill_block(decide, branch(release, joined, names.asked));
     function.fill_block(release, free(&callees, held, names.at[1], joined));
-    function.fill_block(joined, read(value, held, names.at[2], exit));
+    function.fill_block(
+        joined,
+        after_the_statement(names.at[1], read(value, held, names.at[2], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -773,7 +837,10 @@ fn a_use_after_two_allocations_names_no_allocation() {
     function.fill_block(first_free, free(&callees, held, names.at[1], joined));
     function.fill_block(second_arm, malloc(&callees, held, names.at[2], second_free));
     function.fill_block(second_free, free(&callees, held, names.at[3], joined));
-    function.fill_block(joined, read(value, held, names.at[4], exit));
+    function.fill_block(
+        joined,
+        after_the_statement(names.at[1], read(value, held, names.at[4], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -817,14 +884,20 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
     function.fill_block(release, free(&callees, held, names.at[1], decide));
-    function.fill_block(decide, branch(arm, otherwise, names.asked));
+    function.fill_block(
+        decide,
+        after_the_statement(names.at[1], branch(arm, otherwise, names.asked)),
+    );
     // One arm frees the parameter and the other does not, which is what leaves
     // its site `Unknown` where they meet.
     function.fill_block(arm, free(&callees, given, names.at[2], from_the_arm));
-    function.fill_block(from_the_arm, copy(either, given, names.at[3], joined));
+    function.fill_block(
+        from_the_arm,
+        after_the_statement(names.at[2], copy(either, given, names.at[3], joined)),
+    );
     function.fill_block(otherwise, copy(either, held, names.at[4], joined));
     function.fill_block(joined, free(&callees, either, names.at[5], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(exit, after_the_statement(names.at[5], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -869,8 +942,11 @@ fn a_site_allocated_on_two_arms_names_no_allocation() {
     function.fill_block(first_arm, malloc(&callees, held, names.at[0], joined));
     function.fill_block(second_arm, malloc(&callees, held, names.at[1], joined));
     function.fill_block(joined, free(&callees, held, names.at[2], again));
-    function.fill_block(again, free(&callees, held, names.at[3], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        again,
+        after_the_statement(names.at[2], free(&callees, held, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -904,8 +980,14 @@ fn a_second_free_keeps_where_the_allocation_was() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
     function.fill_block(release, free(&callees, held, names.at[1], again));
-    function.fill_block(again, free(&callees, held, names.at[2], dangling));
-    function.fill_block(dangling, read(value, held, names.at[3], exit));
+    function.fill_block(
+        again,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], dangling)),
+    );
+    function.fill_block(
+        dangling,
+        after_the_statement(names.at[2], read(value, held, names.at[3], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -951,7 +1033,10 @@ fn a_dereference_in_a_condition_is_a_use() {
     // where control goes afterwards is not part of it.
     function.fill_block(
         decide,
-        branch_on(Operand::Copy(deref(held)), exit, exit, names.at[2]),
+        after_the_statement(
+            names.at[1],
+            branch_on(Operand::Copy(deref(held)), exit, exit, names.at[2]),
+        ),
     );
     function.fill_block(exit, returns());
 
@@ -1001,7 +1086,10 @@ fn a_place_evaluated_for_nothing_is_a_use() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
     function.fill_block(release, free(&callees, held, names.at[1], discarded));
-    function.fill_block(discarded, evaluate(held, names.at[2], exit));
+    function.fill_block(
+        discarded,
+        after_the_statement(names.at[1], evaluate(held, names.at[2], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -1039,8 +1127,11 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
     function.fill_block(allocate, malloc(&callees, held, names.at[0], discarded));
     function.fill_block(discarded, evaluate(held, names.at[1], first));
     function.fill_block(first, free(&callees, held, names.at[2], second));
-    function.fill_block(second, free(&callees, held, names.at[3], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(
+        second,
+        after_the_statement(names.at[2], free(&callees, held, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
     let found = findings(unit, &sources, function);
 
@@ -1118,15 +1209,24 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
         malloc(&callees, other, names.at[0], release_other),
     );
     function.fill_block(release_other, free(&callees, other, names.at[1], again));
-    function.fill_block(again, free(&callees, other, names.at[2], allocate));
+    function.fill_block(
+        again,
+        after_the_statement(names.at[1], free(&callees, other, names.at[2], allocate)),
+    );
 
-    function.fill_block(allocate, malloc(&callees, held, names.at[3], handed));
+    function.fill_block(
+        allocate,
+        after_the_statement(names.at[2], malloc(&callees, held, names.at[3], handed)),
+    );
     function.fill_block(handed, helper(&callees, held, names.at[4], suspect));
     function.fill_block(suspect, read(value, held, names.at[5], release));
     function.fill_block(release, free(&callees, held, names.at[6], proof));
     // The same span as the unproven read, which is what makes the two one
     // report and is the whole of what this test is about.
-    function.fill_block(proof, read(value, held, names.at[5], exit));
+    function.fill_block(
+        proof,
+        after_the_statement(names.at[6], read(value, held, names.at[5], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -1188,7 +1288,10 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], release));
     function.fill_block(release, free(&callees, held, names.at[1], proof));
-    function.fill_block(proof, read(value, held, names.at[2], escaped));
+    function.fill_block(
+        proof,
+        after_the_statement(names.at[1], read(value, held, names.at[2], escaped)),
+    );
     function.fill_block(escaped, address_of(escape, held, names.at[3], suspect));
     function.fill_block(suspect, read(value, held, names.at[2], exit));
     function.fill_block(exit, returns());
@@ -1266,7 +1369,10 @@ fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
     function.fill_block(unfolded, stepped_by(stepped, pp, 0, names.at[2], store));
     function.fill_block(store, write(stepped, q, names.at[3], release));
     function.fill_block(release, free(&callees, q, names.at[4], after));
-    function.fill_block(after, read(value, p, names.at[5], exit));
+    function.fill_block(
+        after,
+        after_the_statement(names.at[4], read(value, p, names.at[5], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -1355,7 +1461,10 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
     function.fill_block(allocate, malloc(&callees, q, names.at[3], store));
     function.fill_block(store, write(p, q, names.at[4], release));
     function.fill_block(release, free(&callees, z, names.at[5], after));
-    function.fill_block(after, read(value, q, names.at[6], exit));
+    function.fill_block(
+        after,
+        after_the_statement(names.at[5], read(value, q, names.at[6], exit)),
+    );
     function.fill_block(exit, returns());
 
     let found = findings(unit, &sources, function);
@@ -1368,6 +1477,78 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
     assert_eq!(found[0].kind, Kind::DoubleFree, "not a use after free");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
     assert_eq!(found[0].at, names.at[5]);
+}
+
+/// Nothing, in a block that falls through to `then`.
+///
+/// So that [`after_the_statement`] has somewhere to put a sequence point that
+/// is the only thing in its block, which is what one arm of a branch needs in
+/// order to differ from the other in that alone.
+fn nothing(then: BlockId) -> Block {
+    Block {
+        elements: vec![],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// A free sequenced on one arm and not on the other is not a proof.
+///
+/// **The one place the join of two frees is asked this, and no C program
+/// reaches it.** The frontend ends every full expression with a sequence
+/// point, so a free always meets one before any branch can join two of them,
+/// and the two flags always agree by the time they meet. The IR allows them to
+/// differ and `docs/c-family.md` asks that another frontend be able to build
+/// it, so the rule is answered here rather than left to the arm nobody
+/// exercises.
+///
+/// A path that reached here with the order still open is a path on which this
+/// is not a proof, so the conjunction is the only answer that keeps the
+/// weaker path's doubt. RK-044 is the entry: an invariant on a lattice value
+/// has to hold after the join, and a flag that grew on one side would be a
+/// proof assembled out of two halves neither of which had one.
+///
+/// Mutation: make `Freeing::joined` answer `self.sequenced || other.sequenced`.
+/// The read becomes a proved use after free and this fails on the conclusion.
+#[test]
+fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let decide = function.reserve_block();
+    let left = function.reserve_block();
+    let sequenced = function.reserve_block();
+    let right = function.reserve_block();
+    let open = function.reserve_block();
+    let join = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], decide));
+    function.fill_block(decide, branch(left, right, names.asked));
+
+    // One arm ends the full expression its free is in, the way the frontend
+    // does.
+    function.fill_block(left, free(&callees, held, names.at[1], sequenced));
+    function.fill_block(sequenced, after_the_statement(names.at[1], nothing(join)));
+
+    // The other does not, which is the only difference between them.
+    function.fill_block(right, free(&callees, held, names.at[2], open));
+    function.fill_block(open, nothing(join));
+
+    function.fill_block(join, read(value, held, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = findings(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert!(found[0].unsequenced, "the order is what is open");
+    // The earlier of the two, which is the rule the span half of the join
+    // keeps while the flag half takes the weaker answer.
+    assert_eq!(found[0].freed, Some(names.at[1]));
 }
 
 /// A call writing straight into a local whose address escaped proves nothing.
@@ -1417,7 +1598,7 @@ fn a_call_into_a_local_whose_address_escaped() {
     function.fill_block(again, malloc(&callees, held, names.at[2], share));
     function.fill_block(share, copy(shared, held, names.at[3], release));
     function.fill_block(release, free(&callees, shared, names.at[4], exit));
-    function.fill_block(exit, returns());
+    function.fill_block(exit, after_the_statement(names.at[4], returns()));
 
     let found = findings(unit, &sources, function);
 

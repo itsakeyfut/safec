@@ -27,6 +27,7 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:4:14 generated
     Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 8
@@ -35,10 +36,13 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:5:14 generated
     Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:6:11 written
       Destination "_6"
       Use
         Constant 0
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:6:16 generated
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 generated
     Branch an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
@@ -54,6 +58,7 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Destination "_8"
       Use
         Copy "_6"
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:14 generated
     Goto "bb5"
   Block "bb4"
     Goto "bb5"
@@ -68,10 +73,12 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Use
         Copy "_6"
           Deref
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:8:5 generated
     Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:9:5 "free" "bb6"
       Destination "_10"
       Copy "_2"
   Block "bb6"
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:9:5 generated
     Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:10:5 written
       Destination "_4"
         Deref
@@ -82,8 +89,10 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Use
         Copy "_4"
           Deref
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:10:5 generated
     Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:11:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:11:12 generated
     Return

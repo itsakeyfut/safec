@@ -648,6 +648,29 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     if let Some(freed) = finding.freed {
         diagnostic = diagnostic.with_label(Label::secondary(freed, "freed here"));
     }
+    // **Why this one is unproven, because it is not the usual why.** Every
+    // other `Unknown` here is the check having lost something; this is the
+    // check having found nothing that orders the free first. Without the note
+    // a reader sees two carets and a warning and has no way to tell which of
+    // the two it is, and neither is something more of the same analysis would
+    // fix. See ADR-0022.
+    //
+    // **It says what this check found and not what C decided**, because the
+    // two are not the same: the order really is open in `*p + (free(p), 0)`,
+    // and in `x = (free(p), *p)` C17 6.5.17 p2 settles it while this check
+    // still records nothing, which is #178. A note claiming C left those
+    // unsequenced would be false about the second.
+    //
+    // 6.5.2.2 p10 rather than 6.5 p3, which the first draft of this cited: p3
+    // leaves subexpressions *unsequenced*, and unsequenced evaluations may
+    // interleave. What makes a call one order or the other is p10's
+    // indeterminate sequencing, and a free is a call.
+    if finding.unsequenced {
+        diagnostic = diagnostic.with_note(
+            "C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its \
+             expression, and this check found nothing here that orders the free before this",
+        );
+    }
     if let Some(made) = finding.made {
         diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
     }

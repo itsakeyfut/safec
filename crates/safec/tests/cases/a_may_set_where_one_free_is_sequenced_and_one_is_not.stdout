@@ -1,0 +1,87 @@
+Target "x86_64-pc-windows-msvc"
+Function a_may_set_where_one_free_is_sequenced_and_one_is_not.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_may_set_where_one_free_is_sequenced_and_one_is_not.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_may_set_where_one_free_is_sequenced_and_one_is_not.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "void"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Local "_10" "void"
+  Local "_11" "int"
+  Block "bb0" entry
+    Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:4:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:4:14 generated
+    Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:5:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 4
+  Block "bb2"
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:5:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:5:14 generated
+    Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:6:5 "free" "bb3"
+      Destination "_6"
+      Copy "_2"
+  Block "bb3"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:6:5 generated
+    Branch a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:14 "bb5" "bb6"
+      Copy "_1"
+  Block "bb4"
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:14 generated
+    Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:8:19 "free" "bb7"
+      Destination "_10"
+      Copy "_4"
+  Block "bb5"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:14 generated
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:14 written
+      Destination "_8"
+      Use
+        Copy "_2"
+    Goto "bb4"
+  Block "bb6"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:14 generated
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:7:14 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Goto "bb4"
+  Block "bb7"
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:8:13 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_7"
+          Deref
+        Constant 0
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:8:9 written
+      Destination "_9"
+      Use
+        Copy "_11"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:8:13 generated
+    Operation a_may_set_where_one_free_is_sequenced_and_one_is_not.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+    Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:9:12 generated
+    Return

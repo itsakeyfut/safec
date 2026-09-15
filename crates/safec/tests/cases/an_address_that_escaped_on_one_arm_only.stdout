@@ -25,6 +25,8 @@ Function an_address_that_escaped_on_one_arm_only.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced an_address_that_escaped_on_one_arm_only.c:4:14 generated
+    Sequenced an_address_that_escaped_on_one_arm_only.c:6:9 generated
     Branch an_address_that_escaped_on_one_arm_only.c:6:9 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
@@ -40,6 +42,7 @@ Function an_address_that_escaped_on_one_arm_only.c:3:5 "f"
       Destination "_6"
       Use
         Copy "_4"
+    Sequenced an_address_that_escaped_on_one_arm_only.c:6:14 generated
     Goto "bb4"
   Block "bb3"
     Goto "bb4"
@@ -56,12 +59,15 @@ Function an_address_that_escaped_on_one_arm_only.c:3:5 "f"
       Destination "_8"
       Use
         Copy "_2"
+    Sequenced an_address_that_escaped_on_one_arm_only.c:7:5 generated
     Call an_address_that_escaped_on_one_arm_only.c:8:5 "free" "bb6"
       Destination "_9"
       Copy "_2"
   Block "bb6"
+    Sequenced an_address_that_escaped_on_one_arm_only.c:8:5 generated
     Operation an_address_that_escaped_on_one_arm_only.c:9:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_address_that_escaped_on_one_arm_only.c:9:12 generated
     Return

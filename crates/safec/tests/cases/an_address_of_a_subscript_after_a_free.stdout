@@ -22,6 +22,7 @@ Function an_address_of_a_subscript_after_a_free.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced an_address_of_a_subscript_after_a_free.c:4:14 generated
     Operation an_address_of_a_subscript_after_a_free.c:5:15 written
       Destination "_4"
       Binary "Add"
@@ -31,10 +32,12 @@ Function an_address_of_a_subscript_after_a_free.c:3:5 "f"
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced an_address_of_a_subscript_after_a_free.c:5:14 generated
     Call an_address_of_a_subscript_after_a_free.c:6:5 "free" "bb2"
       Destination "_5"
       Copy "_1"
   Block "bb2"
+    Sequenced an_address_of_a_subscript_after_a_free.c:6:5 generated
     Operation an_address_of_a_subscript_after_a_free.c:7:5 written
       Destination "_3"
         Deref
@@ -45,8 +48,10 @@ Function an_address_of_a_subscript_after_a_free.c:3:5 "f"
       Use
         Copy "_3"
           Deref
+    Sequenced an_address_of_a_subscript_after_a_free.c:7:5 generated
     Operation an_address_of_a_subscript_after_a_free.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_address_of_a_subscript_after_a_free.c:8:12 generated
     Return

@@ -26,6 +26,7 @@ Function a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:4:14 generated
     Operation a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:5:16 written
       Destination "_5"
       Address
@@ -34,6 +35,7 @@ Function a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:5:16 generated
     Call a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:6:14 "malloc" "bb2"
       Destination "_7"
       Constant 8
@@ -42,6 +44,7 @@ Function a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:3:5 "f"
       Destination "_6"
       Use
         Copy "_7"
+    Sequenced a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:6:14 generated
     Operation a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:7:9 written
       Destination "_8"
       Binary "Add"
@@ -55,6 +58,7 @@ Function a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:3:5 "f"
       Destination "_9"
       Use
         Copy "_2"
+    Sequenced a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:7:5 generated
     Operation a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:8:5 written
       Destination "_2"
         Deref
@@ -65,8 +69,10 @@ Function a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:3:5 "f"
       Use
         Copy "_2"
           Deref
+    Sequenced a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:8:5 generated
     Operation a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:9:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:9:12 generated
     Return

@@ -14,6 +14,7 @@ Function the_mvp_lowers_to_blocks_and_edges.c:1:5 "add"
       Destination "_0"
       Use
         Copy "_3"
+    Sequenced the_mvp_lowers_to_blocks_and_edges.c:2:12 generated
     Return
 Function the_mvp_lowers_to_blocks_and_edges.c:5:5 "main"
   Local "_0" "int" return
@@ -32,4 +33,5 @@ Function the_mvp_lowers_to_blocks_and_edges.c:5:5 "main"
       Destination "_0"
       Use
         Copy "_1"
+    Sequenced the_mvp_lowers_to_blocks_and_edges.c:6:12 generated
     Return

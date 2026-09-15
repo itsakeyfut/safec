@@ -22,12 +22,15 @@ Function a_discarded_dereference_in_a_for_step_after_a_free.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:4:14 generated
     Call a_discarded_dereference_in_a_for_step_after_a_free.c:5:5 "free" "bb2"
       Destination "_4"
       Copy "_2"
   Block "bb2"
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:5:5 generated
     Goto "bb3"
   Block "bb3"
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:12 generated
     Branch a_discarded_dereference_in_a_for_step_after_a_free.c:6:12 "bb4" "bb5"
       Copy "_1"
   Block "bb4"
@@ -44,13 +47,16 @@ Function a_discarded_dereference_in_a_for_step_after_a_free.c:3:5 "f"
       Destination "_6"
       Use
         Copy "_1"
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:21 generated
     Evaluate a_discarded_dereference_in_a_for_step_after_a_free.c:6:15 written
       Place "_2"
         Deref
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:15 generated
     Goto "bb3"
   Block "bb5"
     Operation a_discarded_dereference_in_a_for_step_after_a_free.c:7:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:7:12 generated
     Return

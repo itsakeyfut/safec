@@ -177,7 +177,26 @@ An analysis not knowing which frontend produced the IR is a claim about the
 has to be the same thing. So where two C spellings would otherwise arrive as two
 shapes, the normalisation is the frontend's to perform and the IR's to require.
 
-There is one such requirement today.
+There are two such requirements today.
+
+[ADR-0022](adr/0022-say-where-c-sequences-one-evaluation-before-another.md) asks
+a frontend to say **where C sequences one evaluation before another**, as an
+`Element::Sequenced`. A block's element list is a total order and C gives a
+partial one, so without this an analysis reading the list as sequencing believes
+whichever order the frontend happened to emit. C17 Annex C is the complete list
+of sequence points and the requirement is to emit one for each that no
+unsequenced operator encloses, which is the whole of the difficulty: `*p +
+(free(p), 0)` contains a comma, and recording it would tell an analysis that the
+free happens before the read of `*p`, which C has not decided.
+
+**What an omission costs here is a proof and not a silence**, which is the
+opposite of the requirement below and is deliberate. A free the memory check has
+not seen sequenced is never a proof, so an adapter that emits none gets
+suspicions where it would have had certainties: annoying, and never wrong about
+safety. `crates/safec-ir/tests/freed.rs` models the boundary its programs have,
+in `after_the_statement`, and says there what an IR without them answers.
+
+There is one more such requirement today.
 [ADR-0021](adr/0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds a
 zero pointer offset away, so **no `Rvalue::Binary` in a well-formed safety IR
 adds or subtracts a literal zero from a pointer**. C17 6.5.2.1 p2 makes `E[0]`

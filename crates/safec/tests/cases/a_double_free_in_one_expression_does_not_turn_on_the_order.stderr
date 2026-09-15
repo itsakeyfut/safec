@@ -1,0 +1,13 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:29 ]
+   │
+ 4 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 5 │     int x = (free(p), 0) + (free(p), 0);
+   │              ───┬───        ───┬───  
+   │                 ╰──────────────────── freed here
+   │                                │     
+   │                                ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1

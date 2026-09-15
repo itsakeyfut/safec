@@ -1,0 +1,58 @@
+Target "x86_64-pc-windows-msvc"
+Function a_conditional_sequences_a_free_before_a_use.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_conditional_sequences_a_free_before_a_use.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_conditional_sequences_a_free_before_a_use.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void"
+  Local "_5" "int"
+  Block "bb0" entry
+    Call a_conditional_sequences_a_free_before_a_use.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_conditional_sequences_a_free_before_a_use.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_conditional_sequences_a_free_before_a_use.c:4:14 generated
+    Call a_conditional_sequences_a_free_before_a_use.c:5:14 "free" "bb2"
+      Destination "_4"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_conditional_sequences_a_free_before_a_use.c:5:14 generated
+    Branch a_conditional_sequences_a_free_before_a_use.c:5:14 "bb4" "bb5"
+      Constant 1
+  Block "bb3"
+    Operation a_conditional_sequences_a_free_before_a_use.c:5:9 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Sequenced a_conditional_sequences_a_free_before_a_use.c:5:14 generated
+    Operation a_conditional_sequences_a_free_before_a_use.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_conditional_sequences_a_free_before_a_use.c:6:12 generated
+    Return
+  Block "bb4"
+    Sequenced a_conditional_sequences_a_free_before_a_use.c:5:14 generated
+    Operation a_conditional_sequences_a_free_before_a_use.c:5:14 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Goto "bb3"
+  Block "bb5"
+    Sequenced a_conditional_sequences_a_free_before_a_use.c:5:14 generated
+    Operation a_conditional_sequences_a_free_before_a_use.c:5:14 written
+      Destination "_5"
+      Use
+        Constant 0
+    Goto "bb3"

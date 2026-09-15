@@ -20,16 +20,20 @@ Function a_value_freed_twice.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_value_freed_twice.c:4:14 generated
     Call a_value_freed_twice.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_value_freed_twice.c:5:5 generated
     Call a_value_freed_twice.c:6:5 "free" "bb3"
       Destination "_4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_value_freed_twice.c:6:5 generated
     Operation a_value_freed_twice.c:7:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_value_freed_twice.c:7:12 generated
     Return

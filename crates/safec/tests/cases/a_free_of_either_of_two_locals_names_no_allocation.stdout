@@ -26,6 +26,7 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:4:14 generated
     Call a_free_of_either_of_two_locals_names_no_allocation.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 8
@@ -34,6 +35,8 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:5:14 generated
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:7:9 generated
     Branch a_free_of_either_of_two_locals_names_no_allocation.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
@@ -45,6 +48,7 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
       Destination "_7"
       Use
         Copy "_6"
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:7:14 generated
     Goto "bb5"
   Block "bb4"
     Operation a_free_of_either_of_two_locals_names_no_allocation.c:7:30 written
@@ -55,18 +59,22 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
       Destination "_8"
       Use
         Copy "_6"
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:7:30 generated
     Goto "bb5"
   Block "bb5"
     Call a_free_of_either_of_two_locals_names_no_allocation.c:8:5 "free" "bb6"
       Destination "_9"
       Copy "_6"
   Block "bb6"
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:8:5 generated
     Call a_free_of_either_of_two_locals_names_no_allocation.c:9:5 "free" "bb7"
       Destination "_10"
       Copy "_6"
   Block "bb7"
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:9:5 generated
     Operation a_free_of_either_of_two_locals_names_no_allocation.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:10:12 generated
     Return

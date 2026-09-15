@@ -48,6 +48,54 @@ cases! {
     a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_branch_that_allocates_either_way: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_value_used_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same free and the same use, in one full expression with nothing
+    // ordering them. C17 6.5 p3 leaves the operands of `+` unsequenced, so one
+    // allowed order reads `*p` first and the program is defined; which order an
+    // implementation picks is unspecified and this compiler does not get to
+    // choose. The pair is written both ways round because the answer used to
+    // turn on which side the free was written, and what decided was that
+    // ADR-0010 makes a call end a block. See ADR-0022.
+    //
+    // **The third is the boundary, and it is silent.** A use the check meets
+    // before it meets the free is never asked about it: this walks forwards
+    // and a free only marks what comes after it. `*p` on its own is not read
+    // until the addition is built, which is after the call, so the pair above
+    // report; put the use inside a call and it is read first and nothing is
+    // said at all. That is not what this change introduced and is #177.
+    an_unsequenced_free_and_use_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    the_same_program_with_the_operands_swapped_is_not_proved_either: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_unsequenced_use_the_check_meets_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Three shapes where asking for a sequence point would be asking the
+    // wrong question, each of which review found this check getting wrong.
+    // A double free runs both frees whichever order C picks, so 6.5 p3
+    // settles nothing about it and the proof stands. A free already ordered
+    // before an expression proves a use inside that expression, and stays the
+    // one to name, however the frees inside it are ordered. And where several
+    // frees are folded into one answer, the earliest span and the conjunction
+    // of their orders can come from different frees, so the caret that would
+    // say `freed here` is dropped rather than paired with a note about a free
+    // it is not pointing at.
+    a_double_free_in_one_expression_does_not_turn_on_the_order: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_already_sequenced_is_the_one_a_later_free_keeps: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_may_set_where_one_free_is_sequenced_and_one_is_not: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A sequencing operator below something C leaves unsequenced orders its
+    // own parts and nothing outside them, so none of these three is a proof.
+    // One case per operator, because the guard is written once per operator
+    // and review measured that removing any one of them leaves the suite
+    // green: the comma's was held, and `&&`, `||`, `?:` and a call's
+    // arguments were not. Each mutation makes the compiler **certain** about
+    // an order C has not chosen, which is the direction that matters.
+    a_comma_inside_a_call_argument_orders_nothing_outside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The four constructs that do order their operands, one case each, because
+    // C17 Annex C names four and a list implemented three-quarters of the way
+    // leaves a reader asking which quarter. 6.5.17 p2, 6.5.13 p4, 6.5.14 p4 and
+    // 6.5.15 p4 in that order, and each is a proof rather than a suspicion.
+    a_comma_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_logical_and_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_logical_or_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

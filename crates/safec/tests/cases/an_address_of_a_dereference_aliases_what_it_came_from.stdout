@@ -21,14 +21,17 @@ Function an_address_of_a_dereference_aliases_what_it_came_from.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced an_address_of_a_dereference_aliases_what_it_came_from.c:4:14 generated
     Operation an_address_of_a_dereference_aliases_what_it_came_from.c:5:10 written
       Destination "_3"
       Use
         Copy "_1"
+    Sequenced an_address_of_a_dereference_aliases_what_it_came_from.c:5:14 generated
     Call an_address_of_a_dereference_aliases_what_it_came_from.c:6:5 "free" "bb2"
       Destination "_4"
       Copy "_1"
   Block "bb2"
+    Sequenced an_address_of_a_dereference_aliases_what_it_came_from.c:6:5 generated
     Operation an_address_of_a_dereference_aliases_what_it_came_from.c:7:5 written
       Destination "_3"
         Deref
@@ -39,8 +42,10 @@ Function an_address_of_a_dereference_aliases_what_it_came_from.c:3:5 "f"
       Use
         Copy "_3"
           Deref
+    Sequenced an_address_of_a_dereference_aliases_what_it_came_from.c:7:5 generated
     Operation an_address_of_a_dereference_aliases_what_it_came_from.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced an_address_of_a_dereference_aliases_what_it_came_from.c:8:12 generated
     Return

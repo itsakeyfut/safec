@@ -1,0 +1,63 @@
+Target "x86_64-pc-windows-msvc"
+Function a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "void"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Call a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:4:14 "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:4:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:4:14 generated
+    Call a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:19 "free" "bb2"
+      Destination "_6"
+      Copy "_3"
+  Block "bb2"
+    Operation a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:19 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_2"
+        Constant 0
+    Branch a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:19 "bb4" "bb3"
+      Copy "_7"
+  Block "bb3"
+    Operation a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:13 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_1"
+        Copy "_7"
+    Operation a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:9 written
+      Destination "_5"
+      Use
+        Copy "_8"
+    Sequenced a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:13 generated
+    Operation a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:6:12 generated
+    Return
+  Block "bb4"
+    Operation a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:5:19 written
+      Destination "_7"
+      Binary "Ne"
+        Copy "_3"
+          Deref
+        Constant 0
+    Goto "bb3"

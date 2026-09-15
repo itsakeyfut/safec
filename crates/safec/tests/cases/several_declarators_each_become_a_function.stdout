@@ -28,4 +28,5 @@ Function several_declarators_each_become_a_function.c:2:5 "main"
       Destination "_0"
       Use
         Copy "_3"
+    Sequenced several_declarators_each_become_a_function.c:3:12 generated
     Return

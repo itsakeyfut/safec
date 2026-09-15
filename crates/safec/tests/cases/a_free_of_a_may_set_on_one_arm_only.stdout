@@ -26,6 +26,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:4:14 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -34,6 +35,8 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Destination "_4"
       Use
         Copy "_5"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:5:14 generated
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:9 generated
     Branch a_free_of_a_may_set_on_one_arm_only.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
@@ -45,6 +48,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Destination "_7"
       Use
         Copy "_6"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:14 generated
     Goto "bb5"
   Block "bb4"
     Operation a_free_of_a_may_set_on_one_arm_only.c:7:30 written
@@ -55,8 +59,10 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Destination "_8"
       Use
         Copy "_6"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:30 generated
     Goto "bb5"
   Block "bb5"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
     Branch a_free_of_a_may_set_on_one_arm_only.c:8:9 "bb6" "bb7"
       Copy "_1"
   Block "bb6"
@@ -70,10 +76,13 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Destination "_10"
       Copy "_6"
   Block "bb9"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:14 generated
     Goto "bb8"
   Block "bb10"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:9:5 generated
     Operation a_free_of_a_may_set_on_one_arm_only.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:10:12 generated
     Return

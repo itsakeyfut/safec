@@ -26,6 +26,7 @@ Function a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:3:5 "
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:4:14 generated
     Call a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:5:14 "malloc" "bb2"
       Destination "_4"
       Constant 8
@@ -34,6 +35,7 @@ Function a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:3:5 "
       Destination "_3"
       Use
         Copy "_4"
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:5:14 generated
     Operation a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:6:16 written
       Destination "_6"
       Address
@@ -42,6 +44,7 @@ Function a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:3:5 "
       Destination "_5"
       Use
         Copy "_6"
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:6:16 generated
     Operation a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:7:5 written
       Destination "_7"
       Binary "Add"
@@ -57,10 +60,12 @@ Function a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:3:5 "
       Use
         Copy "_7"
           Deref
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:7:5 generated
     Call a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:8:5 "free" "bb3"
       Destination "_9"
       Copy "_1"
   Block "bb3"
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:8:5 generated
     Operation a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:9:5 written
       Destination "_3"
         Deref
@@ -71,8 +76,10 @@ Function a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:3:5 "
       Use
         Copy "_3"
           Deref
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:9:5 generated
     Operation a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:10:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_write_through_an_address_plus_one_is_not_a_write_to_the_local.c:10:12 generated
     Return

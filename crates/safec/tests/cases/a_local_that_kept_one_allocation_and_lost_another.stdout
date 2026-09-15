@@ -28,12 +28,15 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:4:14 generated
     Operation a_local_that_kept_one_allocation_and_lost_another.c:6:10 written
       Destination "_5"
       Use
         Copy "_2"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:6:17 generated
     Goto "bb2"
   Block "bb2"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:7:12 generated
     Branch a_local_that_kept_one_allocation_and_lost_another.c:7:12 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
@@ -51,10 +54,12 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Use
         Copy "_5"
           Deref
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:12:5 generated
     Operation a_local_that_kept_one_allocation_and_lost_another.c:13:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:13:12 generated
     Return
   Block "bb5"
     Operation a_local_that_kept_one_allocation_and_lost_another.c:8:9 written
@@ -65,11 +70,13 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Destination "_7"
       Use
         Copy "_4"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:8:9 generated
     Operation a_local_that_kept_one_allocation_and_lost_another.c:9:13 written
       Destination "_8"
       Binary "Gt"
         Copy "_1"
         Constant 1
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:9:13 generated
     Branch a_local_that_kept_one_allocation_and_lost_another.c:9:13 "bb6" "bb7"
       Copy "_8"
   Block "bb6"
@@ -81,6 +88,7 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Destination "_9"
       Use
         Copy "_5"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:9:22 generated
     Goto "bb8"
   Block "bb7"
     Goto "bb8"
@@ -98,4 +106,5 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Destination "_11"
       Use
         Copy "_1"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:10:9 generated
     Goto "bb2"

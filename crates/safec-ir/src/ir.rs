@@ -501,6 +501,39 @@ pub enum Element {
         /// Whose storage.
         local: LocalId,
     },
+    /// Everything before this is sequenced before everything after it.
+    ///
+    /// **A block's element list is a total order and C gives a partial one.**
+    /// The order two elements appear in says which one this frontend chose to
+    /// emit first, and that is not the same claim as C17 6.5 p3's, which leaves
+    /// the operands of most operators unsequenced. This is where the two
+    /// coincide: nothing before it can happen after anything following it.
+    ///
+    /// C17 Annex C is the complete list of sequence points and ADR-0022 is
+    /// which of them this is emitted for and why the enclosure rule is the
+    /// whole of the difficulty. **A frontend that emits one where C gives none
+    /// hands every analysis a proof the standard does not license**, which is
+    /// the failure `docs/safety-model.md` is written to prevent, so the bias
+    /// when building one is towards emitting fewer.
+    ///
+    /// **It says what is ordered and not what is unordered.** A consumer
+    /// walking forwards learns that everything behind this is sequenced before
+    /// everything ahead of it; it learns nothing about two things it has not
+    /// reached yet. Answering "are these two unsequenced" needs more than this
+    /// element, and #177 is what that costs today.
+    Sequenced {
+        /// The expression this point falls **after**, rather than the operator
+        /// that put it there.
+        ///
+        /// `free(p), *p = 42;` answers the span of `free(p)` and not the
+        /// comma's, because the tree has no span for an operator token: an
+        /// `Expr::Comma` carries one span covering both operands and the comma
+        /// between them. Two markers in one block can therefore print the same
+        /// position and mean different points, which the artifact for
+        /// `a_comma_sequences_a_free_before_a_use` shows. Whoever wants a
+        /// `sequenced here` label is who has to add the operator's own span.
+        origin: Origin,
+    },
 }
 
 impl Element {
@@ -515,6 +548,7 @@ impl Element {
             Self::Evaluate { .. } => "Evaluate",
             Self::StorageLive { .. } => "StorageLive",
             Self::StorageDead { .. } => "StorageDead",
+            Self::Sequenced { .. } => "Sequenced",
         }
     }
 }

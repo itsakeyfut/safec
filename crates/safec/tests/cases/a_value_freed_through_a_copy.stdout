@@ -21,20 +21,25 @@ Function a_value_freed_through_a_copy.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_value_freed_through_a_copy.c:4:14 generated
     Operation a_value_freed_through_a_copy.c:5:10 written
       Destination "_3"
       Use
         Copy "_1"
+    Sequenced a_value_freed_through_a_copy.c:5:14 generated
     Call a_value_freed_through_a_copy.c:6:5 "free" "bb2"
       Destination "_4"
       Copy "_3"
   Block "bb2"
+    Sequenced a_value_freed_through_a_copy.c:6:5 generated
     Call a_value_freed_through_a_copy.c:7:5 "free" "bb3"
       Destination "_5"
       Copy "_1"
   Block "bb3"
+    Sequenced a_value_freed_through_a_copy.c:7:5 generated
     Operation a_value_freed_through_a_copy.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_value_freed_through_a_copy.c:8:12 generated
     Return

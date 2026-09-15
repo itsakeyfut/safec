@@ -9,10 +9,12 @@ Function several_declarators_each_become_a_local.c:1:5 "f"
       Destination "_1"
       Use
         Constant 1
+    Sequenced several_declarators_each_become_a_local.c:2:13 generated
     Operation several_declarators_each_become_a_local.c:2:16 written
       Destination "_2"
       Use
         Constant 2
+    Sequenced several_declarators_each_become_a_local.c:2:20 generated
     Operation several_declarators_each_become_a_local.c:3:12 written
       Destination "_3"
       Binary "Add"
@@ -22,4 +24,5 @@ Function several_declarators_each_become_a_local.c:1:5 "f"
       Destination "_0"
       Use
         Copy "_3"
+    Sequenced several_declarators_each_become_a_local.c:3:12 generated
     Return

@@ -22,6 +22,7 @@ Function a_pointer_written_through_an_alias_this_check_follows.c:3:5 "f"
       Destination "_2"
       Use
         Copy "_3"
+    Sequenced a_pointer_written_through_an_alias_this_check_follows.c:5:16 generated
     Call a_pointer_written_through_an_alias_this_check_follows.c:6:11 "malloc" "bb1"
       Destination "_4"
       Constant 4
@@ -36,6 +37,7 @@ Function a_pointer_written_through_an_alias_this_check_follows.c:3:5 "f"
       Use
         Copy "_2"
           Deref
+    Sequenced a_pointer_written_through_an_alias_this_check_follows.c:6:5 generated
     Operation a_pointer_written_through_an_alias_this_check_follows.c:7:5 written
       Destination "_1"
         Deref
@@ -46,8 +48,10 @@ Function a_pointer_written_through_an_alias_this_check_follows.c:3:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced a_pointer_written_through_an_alias_this_check_follows.c:7:5 generated
     Operation a_pointer_written_through_an_alias_this_check_follows.c:8:5 written
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_pointer_written_through_an_alias_this_check_follows.c:8:12 generated
     Return

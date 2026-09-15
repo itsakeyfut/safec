@@ -7,8 +7,10 @@ Function an_initializer_becomes_a_store.c:1:5 "f"
       Destination "_1"
       Use
         Constant 7
+    Sequenced an_initializer_becomes_a_store.c:2:13 generated
     Operation an_initializer_becomes_a_store.c:3:5 written
       Destination "_0"
       Use
         Copy "_1"
+    Sequenced an_initializer_becomes_a_store.c:3:12 generated
     Return

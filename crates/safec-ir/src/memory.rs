@@ -61,6 +61,48 @@ enum Callee {
     Opaque,
 }
 
+/// A free, and whether C has ordered it before what comes after it.
+///
+/// **The two halves travel together or the second is forgotten.** A span alone
+/// was what this carried, and the check read the order the lowering emitted as
+/// though C had chosen it: `int x = *p + (free(p), 0);` was a proved use after
+/// free, and so was its mirror, because ADR-0010 makes a call end a block and
+/// the rest of the expression lands in the next one whichever side it is
+/// written on. See ADR-0022.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Freeing {
+    /// Where the free is.
+    at: Span,
+    /// Whether an [`Element::Sequenced`] has passed since.
+    ///
+    /// False until one has. C17 6.5 p3 leaves the rest of the full expression
+    /// unsequenced with the call, so which happens first is C's to choose and
+    /// nothing here is yet a proof.
+    sequenced: bool,
+}
+
+impl Freeing {
+    /// A free nothing has sequenced yet.
+    fn new(at: Span) -> Self {
+        Freeing {
+            at,
+            sequenced: false,
+        }
+    }
+
+    /// The two together, where two paths meet.
+    ///
+    /// The earlier span, because that is which free the diagnostic names, and
+    /// the **conjunction** of the flags, because a path that reached here with
+    /// the order still open is a path on which this is not a proof.
+    fn joined(self, other: Self) -> Self {
+        Freeing {
+            at: earlier(self.at, other.at),
+            sequenced: self.sequenced && other.sequenced,
+        }
+    }
+}
+
 /// What is known about the allocation one site stands for.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SiteState {
@@ -92,8 +134,8 @@ enum SiteState {
     Freed {
         /// Where the allocation came from, on the same terms as [`Self::Live`].
         made: Option<Span>,
-        /// The earliest free reaching here.
-        freed: Span,
+        /// The earliest free reaching here, and whether C has sequenced it.
+        freed: Freeing,
     },
     /// Freed on one path and not on another, or handed to a call this check
     /// cannot read.
@@ -116,7 +158,7 @@ impl SiteState {
                 },
             ) => Self::Freed {
                 made: same(here, there),
-                freed: earlier(from_here, from_there),
+                freed: from_here.joined(from_there),
             },
             _ => Self::Unknown,
         }
@@ -165,14 +207,15 @@ enum Reached {
     /// A site the argument may hold.
     Site(usize),
     /// The set this local names had one member freed, and which one is not
-    /// known.
+    /// known. Whether C has sequenced that free travels with it, for the reason
+    /// [`Freeing`] gives.
     ///
     /// **A proof, not a shrug.** [`Reached::Lost`] beside it is this check
     /// having given up; this is something it worked out and can act on: freeing
     /// the same local again frees the same member, whichever member that was.
     /// The two are separate variants for the reason the enum exists at all.
     /// See ADR-0020.
-    SetFreed(Span),
+    SetFreed(Freeing),
     /// A pointer this check was not following: one written through a
     /// projection, or a local whose sites it had and lost.
     ///
@@ -226,7 +269,7 @@ struct Held {
     /// one by name became a proved double free about a program with no defect
     /// on one path. What is true is a fact about the **set**, and the local
     /// that named the set is the only place it fits. See ADR-0020.
-    freed: Option<Span>,
+    freed: Option<Freeing>,
     /// Per local, whether a write **through** this one may land in it.
     ///
     /// The edge `Known::escaped` is the shadow of. That field says a local's
@@ -306,7 +349,7 @@ impl Held {
         // joining it the way its neighbours join would report a proved double
         // free on `if (c) { free(p); } free(p);`. See ADR-0020.
         *freed = match (*freed, other.freed) {
-            (Some(here), Some(there)) => Some(earlier(here, there)),
+            (Some(here), Some(there)) => Some(here.joined(there)),
             _ => None,
         };
         for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
@@ -603,7 +646,12 @@ impl Analysis for Allocations<'_> {
         // write through it may reach is a second square table that only grows,
         // so it takes at most one step per pair. Where the set it named was
         // freed goes from `None` to `Some` once per local and a join only takes
-        // it away, so it costs one more step each.
+        // it away, so it costs one more step each. Whether a free has been
+        // sequenced is one bit per site: the transfer sets it and only a join
+        // takes it back, which a join can do once, so it is one more step per
+        // site and the number below is not changed for it. That is slack being
+        // spent rather than a bound being re-derived, and the paragraph below
+        // is why that is acceptable here.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -690,6 +738,25 @@ impl Analysis for Allocations<'_> {
                 place: _,
                 origin: _,
             } => {}
+            // **Every free reaching here is now ordered before everything
+            // that follows.** No value moves, so no local's set changes; what
+            // changes is that a free this check was holding open can be acted
+            // on. See ADR-0022.
+            Element::Sequenced { origin: _ } => {
+                for state in &mut value.state {
+                    if let SiteState::Freed { freed, .. } = state {
+                        freed.sequenced = true;
+                    }
+                }
+                // The same fact about a free of a may-set, which ADR-0020
+                // records on the local that named the set rather than on its
+                // members. One rule, applied to both places a free is written.
+                for held in &mut value.points_to {
+                    if let Some(freed) = &mut held.freed {
+                        freed.sequenced = true;
+                    }
+                }
+            }
             Element::Assign(operation) => {
                 // **A write through a pointer, where this check knows where it
                 // lands.** `*pp = q` is what makes `p` hold `q`'s allocation,
@@ -996,7 +1063,8 @@ impl Analysis for Allocations<'_> {
                             continue;
                         };
                         if place.projection.is_empty() {
-                            value.points_to[place.local.index()].freed = Some(origin.span());
+                            value.points_to[place.local.index()].freed =
+                                Some(Freeing::new(origin.span()));
                         }
                     }
 
@@ -1010,10 +1078,24 @@ impl Analysis for Allocations<'_> {
                         SiteState::Live(made) | SiteState::Freed { made, .. } => made,
                         SiteState::Unknown => None,
                     };
-                    value.state[site] = SiteState::Freed {
-                        made,
-                        freed: origin.span(),
+                    // **A free already ordered before here is the one to
+                    // keep.** It is what proves anything about what follows,
+                    // and it is what the diagnostic has to point at for the
+                    // proof to be readable: `free(p); x = (free(p), 0) + *p;`
+                    // is a proved use after free because of the first line,
+                    // and replacing it with the second would name a free that
+                    // is in the same unsequenced expression as the use and
+                    // leave the reader with two carets that prove nothing.
+                    // Without this the second free took the proof away with
+                    // it, which review measured. See ADR-0022.
+                    //
+                    // It is also the earliest, which is what this variant's
+                    // own doc comment has always said it holds.
+                    let freed = match value.state[site] {
+                        SiteState::Freed { freed, .. } if freed.sequenced => freed,
+                        _ => Freeing::new(origin.span()),
                     };
+                    value.state[site] = SiteState::Freed { made, freed };
                 }
             }
             // It does not free what it is passed, which is the whole of why the
@@ -1100,8 +1182,10 @@ pub struct Finding {
     pub at: Span,
     /// The earliest free reaching here, where the check knows which one it was.
     ///
-    /// `None` for an `Unknown`: what makes it unknown is that the paths or the
-    /// sites reaching here disagree, so there is no single free to point at.
+    /// `None` for most `Unknown`s: what usually makes one unknown is that the
+    /// paths or the sites reaching here disagree, so there is no single free to
+    /// point at. [`Self::unsequenced`] is the exception, where there is one and
+    /// what is open is the order.
     pub freed: Option<Span>,
     /// Where the allocation was made, where this check saw it happen.
     ///
@@ -1110,6 +1194,16 @@ pub struct Finding {
     /// diagnostic for this line and it is honest to leave it off rather than
     /// point at an allocation that may not be the one.
     pub made: Option<Span>,
+    /// Whether what leaves this unproven is that C has not said which order
+    /// runs.
+    ///
+    /// The free and the use are in one full expression with nothing sequencing
+    /// them, so one allowed order frees first and another does not, and which
+    /// an implementation picks is unspecified. Every other unproven finding is
+    /// this check having lost something; this one is the check having worked
+    /// out that there is nothing to find. Never true beside
+    /// [`Conclusion::Unsafe`]. See ADR-0022.
+    pub unsequenced: bool,
 }
 
 /// Every double free this unit contains, and every one it cannot rule out.
@@ -1207,10 +1301,13 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 /// reads the answer is where the same rule gets lost.
 struct Verdict {
     conclusion: Conclusion,
-    /// The earliest free reaching here, where the conclusion is a proof.
+    /// The earliest free reaching here, where there is one to name.
     freed: Option<Span>,
     /// Where that allocation came from, where this check saw it happen.
     made: Option<Span>,
+    /// Whether what leaves this unproven is that C has not said which order
+    /// runs. Never true beside [`Conclusion::Unsafe`].
+    unsequenced: bool,
 }
 
 /// What these sites amount to, or nothing where they amount to no report.
@@ -1219,8 +1316,16 @@ struct Verdict {
 /// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
 /// following, and a dereference hands an empty iterator. That asymmetry is the
 /// design rather than an accident, and [`used`] says why.
-fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<Verdict> {
-    let mut earliest: Option<Span> = None;
+fn verdict(
+    kind: Kind,
+    reached: impl IntoIterator<Item = Reached>,
+    known: &Known,
+) -> Option<Verdict> {
+    // The earliest free reaching here, and whether C has sequenced **every**
+    // free that reaches here. [`Freeing::joined`] is both rules, because
+    // folding over the sites reached at one point wants exactly what folding
+    // over two paths wants: the earlier span, and the conjunction.
+    let mut earliest: Option<Freeing> = None;
     // Where the allocation came from, kept only while every freed site agrees.
     // **RK-035 one level down**: proving a double free from one of several
     // sites is the may-set mistake the fold below is written to avoid, and
@@ -1232,6 +1337,12 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
     let mut any_freed = false;
     let mut live = false;
     let mut unknown = false;
+    // Whether more than one free was folded in. The span below is the earliest
+    // of them and the flag beside it is the conjunction, so where they differ
+    // the span can be a free this check *has* seen sequenced while the flag is
+    // false because another was not. Saying "the order is what is open" about
+    // that pair would point two carets at two evaluations C does order.
+    let mut several = false;
 
     for entry in reached {
         let site = match entry {
@@ -1245,10 +1356,11 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
             // several allocations as the one that was freed is the may-set
             // mistake this whole rule is against.
             Reached::SetFreed(freed) => {
+                several |= any_freed;
                 any_freed = true;
                 earliest = Some(match earliest {
-                    Some(already) if earlier(already, freed) == already => already,
-                    _ => freed,
+                    Some(already) => already.joined(freed),
+                    None => freed,
                 });
                 continue;
             }
@@ -1265,10 +1377,11 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
                 freed: before,
             } => {
                 made = if any_freed { same(made, from) } else { from };
+                several |= any_freed;
                 any_freed = true;
                 earliest = Some(match earliest {
-                    Some(already) if earlier(already, before) == already => already,
-                    _ => before,
+                    Some(already) => already.joined(before),
+                    None => before,
                 });
             }
             SiteState::Unknown => unknown = true,
@@ -1282,13 +1395,41 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
     // spelling of a program decide whether it was a warning or an error. A
     // proof needs every site reached to have been freed, and nothing about it
     // to have been lost.
-    let proved = !live && !unknown;
+    // Every site reached was freed and nothing about them was lost. That is
+    // the whole of what this check can work out from the states; whether C has
+    // put the free first is a separate question with a separate answer, and
+    // running them together is RK-034's shape: one test meaning "proved" and
+    // "gave up" at once reports the second as the first.
+    let settled = !live && !unknown;
+
+    // **A double free does not turn on which ran first.** Two frees of one
+    // allocation are a double free in either order, so there is nothing for a
+    // sequence point to settle and asking for one turned `(free(p), 0) +
+    // (free(p), 0)` from an error into a warning. Issue #142 said so in as many
+    // words and this check did it anyway until review measured it. A use is the
+    // other way round: one allowed order reads freed storage and another does
+    // not, which is the whole of what this field is for.
+    let ordered = match kind {
+        Kind::DoubleFree => true,
+        Kind::UseAfterFree => earliest.is_some_and(|freed| freed.sequenced),
+    };
 
     match earliest {
-        Some(freed) if proved => Some(Verdict {
+        Some(freed) if settled && ordered => Some(Verdict {
             conclusion: Conclusion::Unsafe,
-            freed: Some(freed),
+            freed: Some(freed.at),
             made,
+            unsequenced: false,
+        }),
+        // **Unproven, and the free is still named.** What is open here is only
+        // the order: the sites agree, nothing was lost, and there is exactly
+        // one free to point at. A reader given two carets and the note beside
+        // them can see the shape of it. See ADR-0022.
+        Some(freed) if settled && !several => Some(Verdict {
+            conclusion: Conclusion::Unknown,
+            freed: Some(freed.at),
+            made,
+            unsequenced: true,
         }),
         // Neither span is carried. What makes this unproven is that the sites
         // or the paths disagree, so there is no one free that every execution
@@ -1297,11 +1438,13 @@ fn verdict(reached: impl IntoIterator<Item = Reached>, known: &Known) -> Option<
             conclusion: Conclusion::Unknown,
             freed: None,
             made: None,
+            unsequenced: false,
         }),
         None if unknown => Some(Verdict {
             conclusion: Conclusion::Unknown,
             freed: None,
             made: None,
+            unsequenced: false,
         }),
         None => None,
     }
@@ -1328,7 +1471,11 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         return None;
     }
 
-    let verdict = verdict(Allocations::touching(arguments, known), known)?;
+    let verdict = verdict(
+        Kind::DoubleFree,
+        Allocations::touching(arguments, known),
+        known,
+    )?;
 
     Some(Finding {
         kind: Kind::DoubleFree,
@@ -1336,6 +1483,7 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         at: origin.span(),
         freed: verdict.freed,
         made: verdict.made,
+        unsequenced: verdict.unsequenced,
     })
 }
 
@@ -1411,7 +1559,8 @@ fn used(
             .iter()
             .position(|(said_at, said_place, _)| *said_at == at && said_place == place);
 
-        let Some(verdict) = verdict(known.reached_by(place.local), known) else {
+        let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
+        else {
             continue;
         };
 
@@ -1421,6 +1570,7 @@ fn used(
             at,
             freed: verdict.freed,
             made: verdict.made,
+            unsequenced: verdict.unsequenced,
         };
 
         // **Recorded where the report is made, and not a line earlier.**
@@ -1508,7 +1658,9 @@ fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
         // producer owes a projection: one rule about what counts as reaching
         // through a pointer, applied everywhere, beats two that agree today.
         Element::Evaluate { place, origin } => Some((origin.span(), projected(place))),
-        // Storage beginning or ending reads nothing through anything.
+        // Neither a sequence point nor storage beginning or ending reads
+        // anything through anything.
+        Element::Sequenced { origin: _ } => None,
         Element::StorageLive {
             local: _,
             origin: _,

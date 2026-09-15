@@ -16,6 +16,7 @@ Function places_a_pointer_reaches.c:1:5 "f"
       Use
         Copy "_1"
           Deref
+    Sequenced places_a_pointer_reaches.c:2:5 generated
     Operation places_a_pointer_reaches.c:3:12 written
       Destination "_4"
       Binary "Add"
@@ -26,4 +27,5 @@ Function places_a_pointer_reaches.c:1:5 "f"
       Use
         Copy "_4"
           Deref
+    Sequenced places_a_pointer_reaches.c:3:12 generated
     Return

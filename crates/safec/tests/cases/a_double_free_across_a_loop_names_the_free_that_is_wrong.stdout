@@ -24,8 +24,10 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Destination "_4"
       Use
         Constant 0
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:6:17 generated
     Goto "bb1"
   Block "bb1"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:7:12 generated
     Branch a_double_free_across_a_loop_names_the_free_that_is_wrong.c:7:12 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
@@ -37,6 +39,7 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Destination "_0"
       Use
         Constant 0
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:17:12 generated
     Return
   Block "bb4"
     Operation a_double_free_across_a_loop_names_the_free_that_is_wrong.c:8:9 written
@@ -47,6 +50,8 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Destination "_6"
       Use
         Copy "_2"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:8:9 generated
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 generated
     Branch a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 "bb5" "bb6"
       Copy "_4"
   Block "bb5"
@@ -64,6 +69,7 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Destination "_8"
       Use
         Copy "_3"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:12:9 generated
     Operation a_double_free_across_a_loop_names_the_free_that_is_wrong.c:13:9 written
       Destination "_4"
       Use
@@ -72,12 +78,15 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Destination "_9"
       Use
         Copy "_4"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:13:9 generated
     Call a_double_free_across_a_loop_names_the_free_that_is_wrong.c:14:9 "free" "bb9"
       Destination "_10"
       Copy "_2"
   Block "bb8"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 generated
     Goto "bb7"
   Block "bb9"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:14:9 generated
     Operation a_double_free_across_a_loop_names_the_free_that_is_wrong.c:15:13 written
       Destination "_11"
       Binary "Sub"
@@ -91,4 +100,5 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Destination "_12"
       Use
         Copy "_1"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:15:9 generated
     Goto "bb1"

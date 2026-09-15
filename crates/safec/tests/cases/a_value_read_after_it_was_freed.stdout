@@ -20,17 +20,21 @@ Function a_value_read_after_it_was_freed.c:3:5 "f"
       Destination "_1"
       Use
         Copy "_2"
+    Sequenced a_value_read_after_it_was_freed.c:4:14 generated
     Call a_value_read_after_it_was_freed.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_value_read_after_it_was_freed.c:5:5 generated
     Operation a_value_read_after_it_was_freed.c:6:9 written
       Destination "_4"
       Use
         Copy "_1"
           Deref
+    Sequenced a_value_read_after_it_was_freed.c:6:13 generated
     Operation a_value_read_after_it_was_freed.c:7:5 written
       Destination "_0"
       Use
         Copy "_4"
+    Sequenced a_value_read_after_it_was_freed.c:7:12 generated
     Return
