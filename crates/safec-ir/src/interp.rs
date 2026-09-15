@@ -271,6 +271,13 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     reached(&frames, at, "an evaluation of")
                         .map_err(|trap| trap.at(origin.span()))?;
                 }
+                // **Nothing runs.** A sequence point is a fact about the
+                // order two evaluations may happen in, and this interpreter
+                // performs one order: it reads the elements as written. So
+                // there is nothing to do here and nothing to check, and a
+                // frontend whose markers were all wrong would run identically.
+                // What reads them is a check, not a run.
+                Element::Sequenced { origin: _ } => {}
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
                 // not a check: whatever the last iteration left is gone.

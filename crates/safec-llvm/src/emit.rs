@@ -536,6 +536,13 @@ impl Emitter<'_> {
                 place: _,
                 origin: _,
             } => Some(()),
+            // Nothing is written, and nothing has to be. A sequence point is a
+            // constraint on the orders an implementation may choose, and this
+            // backend hands LLVM the one order the element list already spells
+            // out. Emitting an ordering barrier for it would forbid
+            // rearrangements C permits, which is slower code for no defined
+            // program's benefit.
+            Element::Sequenced { origin: _ } => Some(()),
             // Nothing is written. LLVM has `llvm.lifetime.start` and `.end` for
             // exactly this, and they buy an optimiser something this backend
             // has no optimiser to give it to, while costing two intrinsic calls

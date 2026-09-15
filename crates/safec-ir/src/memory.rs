@@ -690,6 +690,8 @@ impl Analysis for Allocations<'_> {
                 place: _,
                 origin: _,
             } => {}
+            // No value moves, so no local's set changes.
+            Element::Sequenced { origin: _ } => {}
             Element::Assign(operation) => {
                 // **A write through a pointer, where this check knows where it
                 // lands.** `*pp = q` is what makes `p` hold `q`'s allocation,
@@ -1508,7 +1510,9 @@ fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
         // producer owes a projection: one rule about what counts as reaching
         // through a pointer, applied everywhere, beats two that agree today.
         Element::Evaluate { place, origin } => Some((origin.span(), projected(place))),
-        // Storage beginning or ending reads nothing through anything.
+        // Neither a sequence point nor storage beginning or ending reads
+        // anything through anything.
+        Element::Sequenced { origin: _ } => None,
         Element::StorageLive {
             local: _,
             origin: _,

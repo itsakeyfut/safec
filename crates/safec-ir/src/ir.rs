@@ -501,6 +501,24 @@ pub enum Element {
         /// Whose storage.
         local: LocalId,
     },
+    /// Everything before this is sequenced before everything after it.
+    ///
+    /// **A block's element list is a total order and C gives a partial one.**
+    /// The order two elements appear in says which one this frontend chose to
+    /// emit first, and that is not the same claim as C17 6.5 p3's, which leaves
+    /// the operands of most operators unsequenced. This is where the two
+    /// coincide: nothing before it can happen after anything following it.
+    ///
+    /// C17 Annex C is the complete list of sequence points and ADR-0022 is
+    /// which of them this is emitted for and why the enclosure rule is the
+    /// whole of the difficulty. **A frontend that emits one where C gives none
+    /// hands every analysis a proof the standard does not license**, which is
+    /// the failure `docs/safety-model.md` is written to prevent, so the bias
+    /// when building one is towards emitting fewer.
+    Sequenced {
+        /// Where the construct that sequences is written.
+        origin: Origin,
+    },
 }
 
 impl Element {
@@ -515,6 +533,7 @@ impl Element {
             Self::Evaluate { .. } => "Evaluate",
             Self::StorageLive { .. } => "StorageLive",
             Self::StorageDead { .. } => "StorageDead",
+            Self::Sequenced { .. } => "Sequenced",
         }
     }
 }

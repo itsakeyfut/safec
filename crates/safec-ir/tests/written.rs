@@ -80,6 +80,8 @@ impl Analysis for Written {
                 place: _,
                 origin: _,
             } => {}
+            // A sequence point writes nothing either.
+            Element::Sequenced { origin: _ } => {}
             Element::StorageLive { local, origin: _ } => value[local.index()] = false,
             Element::StorageDead { origin: _, local } => value[local.index()] = false,
         }
