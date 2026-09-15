@@ -1035,6 +1035,30 @@ impl Lowering<'_> {
         Some(values.pop().expect("a value for the root"))
     }
 
+    /// Step below a node C leaves unsequenced, if this is one.
+    ///
+    /// A sequence point below such a node orders that node's own parts and
+    /// nothing beside them, so [`Lowering::top_level`] goes false for its
+    /// operands. The task is pushed before the arm's own, so it is popped
+    /// after every one of them: that is what makes this cover the operands
+    /// rather than whatever follows the node.
+    ///
+    /// **Two callers, and one of them cannot reach it with the flag set.**
+    /// `begin_place` only ever meets an identifier, a dereference, a subscript
+    /// or a number, and none of those sequences, so a place walk is always
+    /// entered from a node that has already answered this. Measured: deleting
+    /// the call from there breaks no named test. It is called anyway, because
+    /// one rule asked in two places is one function rather than two copies,
+    /// and RK-052 in the review knowledge bank is what the two copies cost
+    /// last time. A C++ adapter with a sequencing operator that yields an
+    /// lvalue makes the call live without anybody having to notice.
+    fn descend(&mut self, id: ExprId, tasks: &mut Vec<Task>) {
+        if self.top_level && !sequences(self.ast.expr(id)) {
+            tasks.push(Task::Restore(true));
+            self.top_level = false;
+        }
+    }
+
     /// Push what an expression needs before its value can be built.
     fn begin_value(
         &mut self,
@@ -1045,15 +1069,7 @@ impl Lowering<'_> {
     ) -> Option<()> {
         self.typed(id, diagnostics)?;
 
-        // Below a node C leaves unsequenced, a sequence point orders that
-        // node's own parts and nothing beside them. Pushed before the arm's
-        // own tasks so that it is popped after every one of them, which is
-        // what makes it the node's operands this covers and not its
-        // successors.
-        if self.top_level && !sequences(self.ast.expr(id)) {
-            tasks.push(Task::Restore(true));
-            self.top_level = false;
-        }
+        self.descend(id, tasks);
 
         match self.ast.expr(id) {
             Expr::Number { span } => {
@@ -1141,15 +1157,7 @@ impl Lowering<'_> {
     ) -> Option<()> {
         self.typed(id, diagnostics)?;
 
-        // Below a node C leaves unsequenced, a sequence point orders that
-        // node's own parts and nothing beside them. Pushed before the arm's
-        // own tasks so that it is popped after every one of them, which is
-        // what makes it the node's operands this covers and not its
-        // successors.
-        if self.top_level && !sequences(self.ast.expr(id)) {
-            tasks.push(Task::Restore(true));
-            self.top_level = false;
-        }
+        self.descend(id, tasks);
 
         match self.ast.expr(id) {
             Expr::Identifier { .. } => {
