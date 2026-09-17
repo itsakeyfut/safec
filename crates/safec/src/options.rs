@@ -150,11 +150,30 @@ impl EmitKind {
     /// program with a function deleted from it, newer than the source it came
     /// from.
     ///
+    /// **LLVM IR is one of those**, and the sentence above is true of it word
+    /// for word: `clang out.ll -o prog` compiles the file, and a run whose
+    /// backend refused a function writes one with that function reduced to a
+    /// declaration. It answered `true` here until #144, where the missing-input
+    /// reason was measured against it and does not reach: [`Self::spans_inputs`]
+    /// answers `false` for this kind, so a run over several inputs is refused
+    /// before one of them can be missing.
+    ///
+    /// **Asked of the file and not of the stream.** `--emit llvm-ir` with no
+    /// `-o` still writes its module to the artifact stream on a run that
+    /// failed, and it is the only build product that can reach one, because the
+    /// other two derive a filename when nobody names a path. What this rule is
+    /// about is a file a build system reads as finished and newer than its
+    /// source, and a compiler writing to a stream is not making one; a `>` that
+    /// turns it into a file is the caller's. What that keeps is a way to read
+    /// the IR of a program this compiler proved unsafe, which is what somebody
+    /// debugging the backend wants and which `--safety off` is the other way to
+    /// get.
+    ///
     /// Exhaustive for the reason [`Self::spans_inputs`] gives.
     pub fn survives_an_error(self) -> bool {
         match self {
-            Self::Tokens | Self::Ast | Self::SafetyIr | Self::LlvmIr => true,
-            Self::Object | Self::Executable => false,
+            Self::Tokens | Self::Ast | Self::SafetyIr => true,
+            Self::LlvmIr | Self::Object | Self::Executable => false,
         }
     }
 }
