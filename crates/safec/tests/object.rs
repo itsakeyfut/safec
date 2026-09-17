@@ -606,9 +606,19 @@ fn a_clang_that_cannot_be_run_does_not_blame_the_module() {
 /// fails on the exit code rather than passing quietly, which is the right way
 /// round.
 ///
-/// Mutation: drop `EmitKind::survives_an_error` from the write rule in
-/// `run_compiler`, leaving only the empty case. The object is written and this
-/// fails.
+/// **No single mutation makes this fail, and that is the finding rather than a
+/// gap.** Two rules stop the file independently: the `said_something` check in
+/// the `Emitted::Object` arm of `compile` gives up before anything is
+/// assembled, and `EmitKind::survives_an_error` answers `false` for this kind
+/// at the write rule. Drop either alone and the other still stops it.
+///
+/// Mutation: both at once. Remove the `said_something` check *and* answer
+/// `true` from `survives_an_error` for `Object`. The object is written and this
+/// fails, along with `a_unit_the_frontend_reported_on_never_reaches_clang`,
+/// which is held by the same pair.
+///
+/// This comment named the second of those alone until #144 applied it and
+/// watched nothing happen.
 #[test]
 fn a_run_that_reported_an_error_leaves_no_object() {
     if !clang_or_skip("what a failed run leaves behind") {
@@ -995,8 +1005,19 @@ fn linking_for_another_machine_says_what_it_needs() {
 /// links, and a program with a function deleted from it is worse on disk than
 /// absent.
 ///
-/// Mutation: answer `true` from `survives_an_error` for `Executable`. The
-/// program is written and this fails.
+/// **No single mutation makes this fail**, the way its object-shaped twin
+/// above is not reached by one either. `finish` returns before it links when
+/// the run reported, so `bytes` is empty and the write rule's empty half stops
+/// the file; `EmitKind::survives_an_error` answers `false` for this kind and
+/// stops it again. Either alone leaves the other standing.
+///
+/// Mutation: both at once. Remove `finish`'s `has_errors` early return *and*
+/// answer `true` from `survives_an_error` for `Executable`. This fails, with
+/// `a_unit_the_frontend_reported_on_never_reaches_clang` and
+/// `a_program_from_several_inputs_is_all_of_them_or_none` beside it.
+///
+/// This comment named the second of those alone until #144 applied it and
+/// watched the whole suite stay green.
 #[test]
 fn a_run_that_reported_an_error_leaves_no_program() {
     if !clang_or_skip("what a failed link leaves behind") {
