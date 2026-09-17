@@ -1569,47 +1569,45 @@ pub fn run_compiler(
             let unfinished = compiled.diagnostics.has_errors()
                 && (emitted.is_empty() || !options.emit.survives_an_error());
             if !unfinished {
-                // Only a file this run created is this run's to take away, and
-                // a path this run could not ask about is not one it created as
-                // far as anyone here can tell. `Path::exists` answers `false`
-                // for both, and the difference between them is somebody's file.
-                // Nothing holds that difference: a test of it needs a path this
-                // process cannot ask about, which it cannot arrange for itself.
-                let ours = path.try_exists().is_ok_and(|there| !there);
+                // Only a file this run wrote is this run's to take away, and
+                // what decides that is whether the open succeeded. `fs::write`
+                // is `File::create` followed by `write_all` and answers one
+                // `Err` for both, so asking the question means writing the two
+                // out: the open is where a read-only file refuses, with nothing
+                // of ours on disk and what is there still the user's, and after
+                // the open the file has been truncated to nothing, so whatever
+                // is there is this run's wreckage whoever created it.
+                //
+                // Asking beforehand whether the path existed answers the wrong
+                // one of those. A write that fails partway through a file that
+                // was already there is then left behind, which is a zero-byte
+                // artifact newer than every source: exactly the thing the rule
+                // above exists to avoid, arrived at through the other door.
+                let written = fs::File::create(path)
+                    .map_err(|error| (false, error))
+                    .and_then(|mut file| {
+                        // A program that was written and could not be made
+                        // runnable is a build product too: the run is about to
+                        // fail and there is a file on disk, newer than the
+                        // source, that a build system reads as finished.
+                        file.write_all(emitted)
+                            .and_then(|()| make_runnable(path, options.emit.is_a_program()))
+                            .map_err(|error| (true, error))
+                    });
 
-                let written = match fs::write(path, emitted) {
-                    // Nothing of ours reached the disk, so what is at this path
-                    // is the user's unless this run made it: removing a
-                    // directory entry needs permission over the directory and
-                    // writing needs it over the file, so a read-only file is one
-                    // this compiler can delete and cannot write. A write that
-                    // failed partway through a file this run did create is the
-                    // other side of that, and is a build product.
-                    Err(error) => {
-                        if ours {
-                            let _ = fs::remove_file(path);
-                        }
-                        Err(error)
-                    }
-                    // A program that was written and could not be made runnable
-                    // is the state the rule above exists to avoid, arrived at
-                    // from the other side: the run is about to fail and there
-                    // is a build product on disk, newer than the source. Taking
-                    // it away is best effort, because whatever stopped the mode
-                    // being set can stop this too, and the diagnostic is the
-                    // same either way.
+                if let Err((ours, error)) = written {
+                    // Best effort, because whatever stopped the write can stop
+                    // this too, and the diagnostic is the same either way.
                     //
-                    // Nothing guards this half. After a successful `fs::write`
-                    // the file belongs to this process, so `make_runnable`
-                    // cannot be made to fail from a test without `unsafe` or a
-                    // second user, and #181 records that rather than leaving the
-                    // silence to be read as coverage.
-                    Ok(()) => make_runnable(path, options.emit.is_a_program()).inspect_err(|_| {
+                    // Nothing guards the taking away. A test can refuse the
+                    // open, and one does; it cannot make a write or a
+                    // `set_permissions` fail on a file this process has just
+                    // created and owns, which would take `unsafe` or a second
+                    // user. #181 records that rather than leaving the silence to
+                    // be read as coverage.
+                    if ours {
                         let _ = fs::remove_file(path);
-                    }),
-                };
-
-                if let Err(error) = written {
+                    }
                     compiled.diagnostics.report(write_failure(path, &error));
                 }
             }
@@ -2683,21 +2681,24 @@ mod tests {
     /// The other way of not writing, and the one the compiler used to answer by
     /// deleting. A read-only file is one this compiler can delete and cannot
     /// write, because removing a directory entry needs permission over the
-    /// directory and writing needs it over the file, so the write fails having
-    /// put nothing of ours on disk and what is there is what the user put
-    /// there. `Permissions::set_readonly` is the one spelling both platforms
-    /// have, and `fs::remove_file` takes a read-only file away on Windows as
-    /// well, measured, so `TempFile` still clears up after this.
+    /// directory and writing needs it over the file, so the open refuses with
+    /// nothing of ours on disk and what is there is what the user put there.
+    /// `Permissions::set_readonly` is the one spelling both platforms have, and
+    /// `fs::remove_file` takes a read-only file away on Windows as well,
+    /// measured, so `TempFile` still clears up after this.
     ///
     /// `cannot write` is asserted rather than assumed. On a machine where the
     /// write succeeds anyway, root on Unix being the one that happens, this
     /// fails rather than passing over a setup that did not take.
     ///
-    /// Mutation: take the file away on any write failure again. This fails
-    /// where it reads the file back, on `NotFound` rather than on the contents,
-    /// and it is the only test in the workspace that fails. The other half of
-    /// the rule, that a program written and not made runnable is taken away, is
-    /// guarded by nothing and says so where it is written.
+    /// This is the refused open. The other side of the rule, a failure after
+    /// the open, is what takes the file away, and nothing holds it: it wants a
+    /// write that fails on a file this process has just created and owns.
+    ///
+    /// Mutation: take the file away on any failure again, by answering `true`
+    /// where the open is mapped to `false`. This fails where it reads the file
+    /// back, on `NotFound` rather than on the contents, and it is the only test
+    /// in the workspace that fails.
     #[test]
     fn a_read_only_output_file_is_still_there_after_a_run_that_could_not_write_it() {
         let file = TempFile::new("safec_driver_output_read_only.c", "int x;\n");
