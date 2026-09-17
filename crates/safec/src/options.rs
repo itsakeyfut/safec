@@ -158,6 +158,23 @@ impl EmitKind {
     /// answers `false` for this kind, so a run over several inputs is refused
     /// before one of them can be missing.
     ///
+    /// **Only the kinds above and `LlvmIr` reach this.** `Object` and
+    /// `Executable` are on the false side and the write rule never consults
+    /// them: the object arm of `compile` gives up before it assembles anything
+    /// a run that reported, and `finish` returns before it links, so both
+    /// artifacts are already empty and the write rule's other half is what
+    /// stops the file. `LlvmIr` is the first member of this side that the rule
+    /// decides anything about, because its module is built whatever happened.
+    /// Measured, by moving each arm across on its own and watching the suite:
+    /// only `Tokens`, `LlvmIr` and, once #144 added a case for it, `SafetyIr`
+    /// change an answer.
+    ///
+    /// **`Ast` is held by nothing**, and says the same as `SafetyIr` for the
+    /// same reason. One case holds the rule and a second differing in one word
+    /// would be a test of the corpus rather than of this. What is left for that
+    /// arm is `error[E0004]`, which makes somebody answer for a kind and, as
+    /// RK-015 in the review knowledge bank puts it, nothing more than that.
+    ///
     /// **Asked of the file and not of the stream.** `--emit llvm-ir` with no
     /// `-o` still writes its module to the artifact stream on a run that
     /// failed, and it is the only build product that can reach one, because the

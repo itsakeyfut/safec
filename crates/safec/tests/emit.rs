@@ -55,6 +55,45 @@ fn llvm_ir_to(path: &Path, case: &str) -> std::process::Output {
         .expect("the compiler binary was built for this test")
 }
 
+/// A dump keeps what it could read when one input could not be read.
+///
+/// The other side of the same rule, and the reason it has one: a user who
+/// asked for the safety IR of three programs and gave one that is not there
+/// wants the two that are. This is the scenario `survives_an_error`'s doc
+/// comment names, and nothing held it until #144 moved a kind across and made
+/// the split carry the meaning.
+///
+/// Two inputs rather than one, because one bad input produces an empty
+/// artifact and the write rule's other half stops that before this rule is
+/// asked. Measured: `--emit safety-ir -o out ok.c bad.c` exits 1 and writes,
+/// `--emit safety-ir -o out bad.c` exits 1 and writes nothing.
+///
+/// Mutation: answer `false` from `EmitKind::survives_an_error` for `SafetyIr`.
+/// Nothing is written and this fails on the file being absent.
+#[test]
+fn a_dump_keeps_what_it_could_read() {
+    let path = artifact_path("partial.ir");
+    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+        .args(["--color", "never", "--emit", "safety-ir"])
+        .args(["--target", "x86_64-pc-windows-msvc"])
+        .arg("-o")
+        .arg(&path)
+        .arg(test_file("cases/a_value_freed_twice.c"))
+        .arg(test_file("cases/there_is_no_such_program.c"))
+        .output()
+        .expect("the compiler binary was built for this test");
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    let kept = std::fs::read_to_string(&path)
+        .expect("the input that could be read is still in the artifact");
+    let _ = std::fs::remove_file(&path);
+    assert!(
+        kept.contains("a_value_freed_twice"),
+        "the dump lost the input it could read: {kept}"
+    );
+}
+
 /// A run that proved a program unsafe leaves no LLVM IR behind.
 ///
 /// `clang out.ll -o prog` compiles what this would otherwise write, so it is a
