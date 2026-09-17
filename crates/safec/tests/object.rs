@@ -1005,8 +1005,19 @@ fn linking_for_another_machine_says_what_it_needs() {
 /// links, and a program with a function deleted from it is worse on disk than
 /// absent.
 ///
-/// Mutation: answer `true` from `survives_an_error` for `Executable`. The
-/// program is written and this fails.
+/// **No single mutation makes this fail**, the way its object-shaped twin
+/// above is not reached by one either. `finish` returns before it links when
+/// the run reported, so `bytes` is empty and the write rule's empty half stops
+/// the file; `EmitKind::survives_an_error` answers `false` for this kind and
+/// stops it again. Either alone leaves the other standing.
+///
+/// Mutation: both at once. Remove `finish`'s `has_errors` early return *and*
+/// answer `true` from `survives_an_error` for `Executable`. This fails, with
+/// `a_unit_the_frontend_reported_on_never_reaches_clang` and
+/// `a_program_from_several_inputs_is_all_of_them_or_none` beside it.
+///
+/// This comment named the second of those alone until #144 applied it and
+/// watched the whole suite stay green.
 #[test]
 fn a_run_that_reported_an_error_leaves_no_program() {
     if !clang_or_skip("what a failed link leaves behind") {

@@ -116,6 +116,42 @@ fn a_proved_unsafe_run_leaves_no_llvm_ir() {
     );
 }
 
+/// And it leaves what was already there exactly as it was.
+///
+/// **The scenario the issue is about, which the two tests around it do not
+/// reach.** Both of those ask for a path with nothing at it, so what they hold
+/// is that no file appears. What #144 describes is a file *newer than its
+/// source* that a build system reads as finished, and the way a user meets
+/// that is a previous good build sitting at the path. Truncating it would
+/// leave a zero-byte artifact newer than everything, which is worse than
+/// either outcome the others rule out.
+///
+/// Mutation: answer `true` from `EmitKind::survives_an_error` for `LlvmIr`.
+/// The module replaces the previous build and this fails on the contents.
+#[test]
+fn a_proved_unsafe_run_leaves_what_was_already_there() {
+    let path = artifact_path("previous_build.ll");
+    std::fs::write(
+        &path,
+        "the last good build
+",
+    )
+    .expect("the temporary file can be written");
+
+    let output = llvm_ir_to(&path, "a_value_freed_twice");
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    let kept = std::fs::read_to_string(&path).expect("the previous build is still there");
+    let _ = std::fs::remove_file(&path);
+    assert_eq!(
+        kept,
+        "the last good build
+",
+        "a run that failed replaced the artifact a run that succeeded had left"
+    );
+}
+
 /// So does a run whose backend refused a function.
 ///
 /// **The one that says which rule this is.** `survives_an_error`'s doc comment
