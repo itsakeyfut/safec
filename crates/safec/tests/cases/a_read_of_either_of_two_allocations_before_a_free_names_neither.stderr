@@ -1,7 +1,7 @@
 warning[SC0402]: this may use a value after it was freed
-   ╭─[ a_read_of_either_of_two_allocations_before_a_free_names_neither.c:7:13 ]
+   ╭─[ a_read_of_either_of_two_allocations_before_a_free_names_neither.c:9:13 ]
    │
- 7 │     int x = g(*p) + (free(p), 0);
+ 9 │     int x = g(*p) + (free(p), 0);
    │             ──┬──    ───┬───  
    │               ╰─────────────── used here, perhaps after the free
    │                         │     
