@@ -30,7 +30,6 @@ Function a_live_read_and_a_freed_one_at_one_span.c:3:5 "f"
     Branch a_live_read_and_a_freed_one_at_one_span.c:5:9 "bb2" "bb3"
       Copy "_3"
   Block "bb2"
-    Sequenced a_live_read_and_a_freed_one_at_one_span.c:5:9 generated
     Branch a_live_read_and_a_freed_one_at_one_span.c:5:9 "bb5" "bb6"
       Copy "_3"
   Block "bb3"
@@ -48,6 +47,7 @@ Function a_live_read_and_a_freed_one_at_one_span.c:3:5 "f"
         Constant 0
     Goto "bb2"
   Block "bb5"
+    Sequenced a_live_read_and_a_freed_one_at_one_span.c:5:9 generated
     Operation a_live_read_and_a_freed_one_at_one_span.c:5:32 written
       Destination "_0"
       Use
@@ -55,6 +55,7 @@ Function a_live_read_and_a_freed_one_at_one_span.c:3:5 "f"
     Sequenced a_live_read_and_a_freed_one_at_one_span.c:5:39 generated
     Return
   Block "bb6"
+    Sequenced a_live_read_and_a_freed_one_at_one_span.c:5:9 generated
     Goto "bb7"
   Block "bb7"
     Operation a_live_read_and_a_freed_one_at_one_span.c:6:5 written

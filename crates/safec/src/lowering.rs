@@ -262,6 +262,41 @@ impl Builder {
         self.block = Some(block);
     }
 
+    /// Begin a block a branch leads to, with the sequence point the expression
+    /// that decided ended at.
+    ///
+    /// **After the branch and not before it, because the branch is what reads
+    /// the controlling expression.** `if (*p)` needs no temporary, so the
+    /// dereference is carried by [`Terminator::Branch`] itself; a marker
+    /// written before the terminator then sits on the wrong side of the read it
+    /// is about, and nothing says the read happens before the body. C17
+    /// 6.8.4.1 p2 and 6.8.5 p1 make a controlling expression a full expression
+    /// and 6.8 p4 puts the sequence point at its end, which is after that
+    /// evaluation.
+    ///
+    /// Every arm, because both of them follow it: an `if` with no `else` still
+    /// has the edge that skips the body, and a loop's exit is as much after the
+    /// condition as its body is.
+    ///
+    /// `&&`, `||` and `?:` reach the same position through
+    /// [`Lowering::split`] and [`Lowering::second`], which ask
+    /// [`Lowering::top_level`] first because C leaves theirs unordered against
+    /// whatever encloses them. A statement's controlling expression is a full
+    /// expression whatever it is written inside, so there is nothing to ask.
+    ///
+    /// `None` is a `for` with no condition, which 6.8.5.3 p2 replaces by a
+    /// constant: there is no expression, so there is no point at the end of
+    /// one. It is spelled here rather than at that one caller so that what a
+    /// branch's arm begins with is answered in one place.
+    ///
+    /// [`Lowering::top_level`]: Lowering::top_level
+    fn entering(&mut self, block: BlockId, asked: Option<Span>) {
+        self.switch(block);
+        if let Some(asked) = asked {
+            self.sequenced(asked);
+        }
+    }
+
     /// Whether control can still arrive at what comes next.
     fn reachable(&self) -> bool {
         self.block.is_some()
@@ -866,7 +901,6 @@ impl Lowering<'_> {
                 // one line down there is no expression left to ask.
                 let asked = self.ast.expr(condition).span();
                 let condition = self.value(builder, condition, diagnostics)?;
-                builder.sequenced(asked);
                 let taken = builder.function.reserve_block();
                 let skipped = builder.function.reserve_block();
                 let join = builder.function.reserve_block();
@@ -877,7 +911,7 @@ impl Lowering<'_> {
                     origin: Origin::Written(asked),
                 });
 
-                builder.switch(taken);
+                builder.entering(taken, Some(asked));
                 self.stmt(builder, then, diagnostics)?;
                 if builder.reachable() {
                     builder.end(Terminator::Goto(join));
@@ -885,7 +919,7 @@ impl Lowering<'_> {
 
                 // An `if` with no `else` still has an edge that skips the body,
                 // and it is the same edge as an empty `else`.
-                builder.switch(skipped);
+                builder.entering(skipped, Some(asked));
                 if let Some(otherwise) = otherwise {
                     self.stmt(builder, otherwise, diagnostics)?;
                 }
@@ -908,7 +942,6 @@ impl Lowering<'_> {
                 builder.switch(header);
                 let asked = self.ast.expr(condition).span();
                 let condition = self.value(builder, condition, diagnostics)?;
-                builder.sequenced(asked);
                 let inside = builder.function.reserve_block();
                 let after = builder.function.reserve_block();
                 builder.end(Terminator::Branch {
@@ -918,13 +951,13 @@ impl Lowering<'_> {
                     origin: Origin::Written(asked),
                 });
 
-                builder.switch(inside);
+                builder.entering(inside, Some(asked));
                 self.stmt(builder, body, diagnostics)?;
                 if builder.reachable() {
                     builder.end(Terminator::Goto(header));
                 }
 
-                builder.switch(after);
+                builder.entering(after, Some(asked));
             }
             Stmt::For {
                 initialiser,
@@ -947,11 +980,14 @@ impl Lowering<'_> {
 
                 let inside = builder.function.reserve_block();
                 let after = builder.function.reserve_block();
+                // Read before the match so that both blocks below can ask for
+                // it: an absent condition is an absent sequence point, which
+                // is what `Builder::entering` answers `None` for.
+                let asked = condition.map(|condition| self.ast.expr(condition).span());
                 match condition {
                     Some(condition) => {
-                        let asked = self.ast.expr(condition).span();
+                        let asked = asked.expect("a condition carries a span");
                         let condition = self.value(builder, condition, diagnostics)?;
-                        builder.sequenced(asked);
                         builder.end(Terminator::Branch {
                             condition,
                             then: inside,
@@ -964,7 +1000,7 @@ impl Lowering<'_> {
                     None => builder.end(Terminator::Goto(inside)),
                 }
 
-                builder.switch(inside);
+                builder.entering(inside, asked);
                 self.stmt(builder, body, diagnostics)?;
                 if builder.reachable() {
                     if let Some(step) = step {
@@ -978,7 +1014,7 @@ impl Lowering<'_> {
                     builder.end(Terminator::Goto(header));
                 }
 
-                builder.switch(after);
+                builder.entering(after, asked);
             }
             // The driver hands this stage a tree nothing reported about, so a
             // node the parser gave up on cannot be here. Reporting it would be

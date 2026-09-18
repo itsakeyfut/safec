@@ -25,11 +25,11 @@ Function a_dereference_in_a_condition_after_a_free.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_dereference_in_a_condition_after_a_free.c:5:5 generated
-    Sequenced a_dereference_in_a_condition_after_a_free.c:6:9 generated
     Branch a_dereference_in_a_condition_after_a_free.c:6:9 "bb3" "bb4"
       Copy "_1"
         Deref
   Block "bb3"
+    Sequenced a_dereference_in_a_condition_after_a_free.c:6:9 generated
     Operation a_dereference_in_a_condition_after_a_free.c:6:15 written
       Destination "_0"
       Use
@@ -37,6 +37,7 @@ Function a_dereference_in_a_condition_after_a_free.c:3:5 "f"
     Sequenced a_dereference_in_a_condition_after_a_free.c:6:22 generated
     Return
   Block "bb4"
+    Sequenced a_dereference_in_a_condition_after_a_free.c:6:9 generated
     Goto "bb5"
   Block "bb5"
     Operation a_dereference_in_a_condition_after_a_free.c:7:5 written

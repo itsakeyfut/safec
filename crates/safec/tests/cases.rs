@@ -65,6 +65,14 @@ cases! {
     an_unsequenced_free_and_use_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     the_same_program_with_the_operands_swapped_is_not_proved_either: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_unsequenced_use_the_check_meets_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A controlling expression that is exactly a dereference is read by the
+    // branch itself, because it needs no temporary, so the sequence point at
+    // the end of it belongs after the branch and not before. C17 6.8.4.1 p2
+    // and 6.8 p4, and both arms: the body and the edge that skips it are each
+    // after the condition.
+    a_condition_read_through_a_pointer_is_sequenced_before_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Three shapes where asking for a sequence point would be asking the
     // wrong question, each of which review found this check getting wrong.
     // A double free runs both frees whichever order C picks, so 6.5 p3

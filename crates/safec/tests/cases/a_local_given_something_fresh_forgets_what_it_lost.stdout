@@ -26,14 +26,15 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:5:17 generated
     Goto "bb1"
   Block "bb1"
-    Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:6:12 generated
     Branch a_local_given_something_fresh_forgets_what_it_lost.c:6:12 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:6:12 generated
     Call a_local_given_something_fresh_forgets_what_it_lost.c:7:13 "malloc" "bb4"
       Destination "_4"
       Constant 8
   Block "bb3"
+    Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:6:12 generated
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:16:5 written
       Destination "_0"
       Use
@@ -50,10 +51,10 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:7:9 generated
-    Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:8:13 generated
     Branch a_local_given_something_fresh_forgets_what_it_lost.c:8:13 "bb5" "bb6"
       Copy "_3"
   Block "bb5"
+    Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:8:13 generated
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:9:13 written
       Destination "_3"
       Use
@@ -76,6 +77,7 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:10:13 generated
     Goto "bb7"
   Block "bb6"
+    Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:8:13 generated
     Goto "bb7"
   Block "bb7"
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:12:9 written

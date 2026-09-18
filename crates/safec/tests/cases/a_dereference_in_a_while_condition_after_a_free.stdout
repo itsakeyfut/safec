@@ -27,11 +27,11 @@ Function a_dereference_in_a_while_condition_after_a_free.c:3:5 "f"
     Sequenced a_dereference_in_a_while_condition_after_a_free.c:5:5 generated
     Goto "bb3"
   Block "bb3"
-    Sequenced a_dereference_in_a_while_condition_after_a_free.c:6:12 generated
     Branch a_dereference_in_a_while_condition_after_a_free.c:6:12 "bb4" "bb5"
       Copy "_1"
         Deref
   Block "bb4"
+    Sequenced a_dereference_in_a_while_condition_after_a_free.c:6:12 generated
     Operation a_dereference_in_a_while_condition_after_a_free.c:6:18 written
       Destination "_0"
       Use
@@ -39,6 +39,7 @@ Function a_dereference_in_a_while_condition_after_a_free.c:3:5 "f"
     Sequenced a_dereference_in_a_while_condition_after_a_free.c:6:25 generated
     Return
   Block "bb5"
+    Sequenced a_dereference_in_a_while_condition_after_a_free.c:6:12 generated
     Operation a_dereference_in_a_while_condition_after_a_free.c:7:5 written
       Destination "_0"
       Use

@@ -36,10 +36,10 @@ Function a_free_of_one_of_two_allocations_by_name.c:3:5 "f"
       Use
         Copy "_5"
     Sequenced a_free_of_one_of_two_allocations_by_name.c:5:14 generated
-    Sequenced a_free_of_one_of_two_allocations_by_name.c:7:9 generated
     Branch a_free_of_one_of_two_allocations_by_name.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_free_of_one_of_two_allocations_by_name.c:7:9 generated
     Operation a_free_of_one_of_two_allocations_by_name.c:7:14 written
       Destination "_6"
       Use
@@ -51,6 +51,7 @@ Function a_free_of_one_of_two_allocations_by_name.c:3:5 "f"
     Sequenced a_free_of_one_of_two_allocations_by_name.c:7:14 generated
     Goto "bb5"
   Block "bb4"
+    Sequenced a_free_of_one_of_two_allocations_by_name.c:7:9 generated
     Operation a_free_of_one_of_two_allocations_by_name.c:7:30 written
       Destination "_6"
       Use

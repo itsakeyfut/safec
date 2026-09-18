@@ -18,15 +18,16 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
-    Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:4:12 generated
     Branch an_address_taken_of_a_local_declared_in_a_loop.c:4:12 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
+    Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:4:12 generated
     StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:5:9 generated "_2"
     Call an_address_taken_of_a_local_declared_in_a_loop.c:5:18 "malloc" "bb4"
       Destination "_3"
       Constant 4
   Block "bb3"
+    Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:4:12 generated
     Operation an_address_taken_of_a_local_declared_in_a_loop.c:10:5 written
       Destination "_0"
       Use

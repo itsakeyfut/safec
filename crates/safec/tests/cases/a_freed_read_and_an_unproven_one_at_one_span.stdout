@@ -38,7 +38,6 @@ Function a_freed_read_and_an_unproven_one_at_one_span.c:3:5 "f"
     Branch a_freed_read_and_an_unproven_one_at_one_span.c:7:9 "bb3" "bb4"
       Copy "_5"
   Block "bb3"
-    Sequenced a_freed_read_and_an_unproven_one_at_one_span.c:7:9 generated
     Branch a_freed_read_and_an_unproven_one_at_one_span.c:7:9 "bb5" "bb6"
       Copy "_5"
   Block "bb4"
@@ -64,6 +63,7 @@ Function a_freed_read_and_an_unproven_one_at_one_span.c:3:5 "f"
         Constant 0
     Goto "bb3"
   Block "bb5"
+    Sequenced a_freed_read_and_an_unproven_one_at_one_span.c:7:9 generated
     Operation a_freed_read_and_an_unproven_one_at_one_span.c:7:31 written
       Destination "_0"
       Use
@@ -71,6 +71,7 @@ Function a_freed_read_and_an_unproven_one_at_one_span.c:3:5 "f"
     Sequenced a_freed_read_and_an_unproven_one_at_one_span.c:7:38 generated
     Return
   Block "bb6"
+    Sequenced a_freed_read_and_an_unproven_one_at_one_span.c:7:9 generated
     Goto "bb7"
   Block "bb7"
     Operation a_freed_read_and_an_unproven_one_at_one_span.c:8:5 written

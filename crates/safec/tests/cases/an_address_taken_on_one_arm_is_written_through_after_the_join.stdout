@@ -42,10 +42,10 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Use
         Constant 0
     Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:6:16 generated
-    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 generated
     Branch an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 generated
     Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:19 written
       Destination "_7"
       Address
@@ -61,6 +61,7 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
     Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:14 generated
     Goto "bb5"
   Block "bb4"
+    Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:7:9 generated
     Goto "bb5"
   Block "bb5"
     Operation an_address_taken_on_one_arm_is_written_through_after_the_join.c:8:5 written

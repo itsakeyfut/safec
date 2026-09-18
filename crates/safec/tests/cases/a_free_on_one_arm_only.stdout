@@ -12,14 +12,15 @@ Function a_free_on_one_arm_only.c:3:5 "f"
   Local "_3" "void"
   Local "_4" "void"
   Block "bb0" entry
-    Sequenced a_free_on_one_arm_only.c:4:9 generated
     Branch a_free_on_one_arm_only.c:4:9 "bb1" "bb2"
       Copy "_1"
   Block "bb1"
+    Sequenced a_free_on_one_arm_only.c:4:9 generated
     Call a_free_on_one_arm_only.c:4:14 "free" "bb4"
       Destination "_3"
       Copy "_2"
   Block "bb2"
+    Sequenced a_free_on_one_arm_only.c:4:9 generated
     Goto "bb3"
   Block "bb3"
     Call a_free_on_one_arm_only.c:5:5 "free" "bb5"
