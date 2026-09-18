@@ -41,7 +41,6 @@ Function an_escaped_local_read_twice_at_one_span.c:3:5 "f"
     Branch an_escaped_local_read_twice_at_one_span.c:6:9 "bb2" "bb3"
       Copy "_5"
   Block "bb2"
-    Sequenced an_escaped_local_read_twice_at_one_span.c:6:9 generated
     Branch an_escaped_local_read_twice_at_one_span.c:6:9 "bb5" "bb6"
       Copy "_5"
   Block "bb3"
@@ -59,6 +58,7 @@ Function an_escaped_local_read_twice_at_one_span.c:3:5 "f"
         Constant 0
     Goto "bb2"
   Block "bb5"
+    Sequenced an_escaped_local_read_twice_at_one_span.c:6:9 generated
     Operation an_escaped_local_read_twice_at_one_span.c:6:32 written
       Destination "_0"
       Use
@@ -66,6 +66,7 @@ Function an_escaped_local_read_twice_at_one_span.c:3:5 "f"
     Sequenced an_escaped_local_read_twice_at_one_span.c:6:39 generated
     Return
   Block "bb6"
+    Sequenced an_escaped_local_read_twice_at_one_span.c:6:9 generated
     Goto "bb7"
   Block "bb7"
     Operation an_escaped_local_read_twice_at_one_span.c:7:5 written

@@ -36,14 +36,15 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
     Sequenced a_local_that_kept_one_allocation_and_lost_another.c:6:17 generated
     Goto "bb2"
   Block "bb2"
-    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:7:12 generated
     Branch a_local_that_kept_one_allocation_and_lost_another.c:7:12 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:7:12 generated
     Call a_local_that_kept_one_allocation_and_lost_another.c:8:13 "malloc" "bb5"
       Destination "_6"
       Constant 8
   Block "bb4"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:7:12 generated
     Operation a_local_that_kept_one_allocation_and_lost_another.c:12:5 written
       Destination "_5"
         Deref
@@ -76,10 +77,10 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
       Binary "Gt"
         Copy "_1"
         Constant 1
-    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:9:13 generated
     Branch a_local_that_kept_one_allocation_and_lost_another.c:9:13 "bb6" "bb7"
       Copy "_8"
   Block "bb6"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:9:13 generated
     Operation a_local_that_kept_one_allocation_and_lost_another.c:9:22 written
       Destination "_5"
       Use
@@ -91,6 +92,7 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
     Sequenced a_local_that_kept_one_allocation_and_lost_another.c:9:22 generated
     Goto "bb8"
   Block "bb7"
+    Sequenced a_local_that_kept_one_allocation_and_lost_another.c:9:13 generated
     Goto "bb8"
   Block "bb8"
     Operation a_local_that_kept_one_allocation_and_lost_another.c:10:13 written

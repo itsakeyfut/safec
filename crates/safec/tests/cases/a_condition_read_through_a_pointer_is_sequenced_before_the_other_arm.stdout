@@ -1,0 +1,43 @@
+Target "x86_64-pc-windows-msvc"
+Function a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Block "bb0" entry
+    Call a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:4:14 generated
+    Branch a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 "bb2" "bb3"
+      Copy "_1"
+        Deref
+  Block "bb2"
+    Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 generated
+    Call a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:24 "free" "bb5"
+      Destination "_3"
+      Copy "_1"
+  Block "bb4"
+    Operation a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:6:12 generated
+    Return
+  Block "bb5"
+    Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:24 generated
+    Goto "bb4"

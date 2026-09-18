@@ -229,16 +229,17 @@ before changed its answer: every one of them frees in a statement of its own.
   is written down. `a_logical_and_inside_an_unsequenced_operand_orders_nothing`
   and the two cases beside it hold the current answer, and #178 is the issue.
   Every one of these is row 4 and `--deny-unknown` reports all of them.
-* Bad, because this answers the forward half of the question and the record
-  should not be read as answering the whole of it. A marker says that what came
-  before it is sequenced before what comes after; it cannot say that two things
-  are unsequenced, because the check meets them one at a time and only ever
-  looks back. So a use the walk meets **before** the free is not compared with
-  it at all: `int x = g(*p) + (free(p), 0);` is silent under every flag where
-  `int x = (free(p), 0) + g(*p);` reports. That is #177, it is not new, and
-  `an_unsequenced_use_the_check_meets_first_is_not_reported` holds the silence
-  so that closing it fails a named test. Phase 6 and 7 meet the same question
-  and get the same half.
+* This answers the forward half of the question and the record should not be
+  read as answering the whole of it. A marker says that what came before it is
+  sequenced before what comes after; it cannot say that two things are
+  unsequenced, because the check meets them one at a time and only ever looks
+  back. So a use the walk met **before** the free was not compared with it at
+  all: `int x = g(*p) + (free(p), 0);` was silent under every flag where
+  `int x = (free(p), 0) + g(*p);` reported. That was #177, and
+  [ADR-0023](./0023-carry-a-read-forwards-to-the-free-it-is-unordered-against.md)
+  is the other half: the read is carried forwards to meet the free instead of
+  the free looking back for it, and this element is what bounds how far. The
+  marker's meaning is unchanged and is now read from both sides.
 * Bad, because a program whose free and use really are unsequenced loses its
   error at the default level. That is the point, and `--deny-unknown` is what
   gets it back.

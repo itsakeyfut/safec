@@ -36,10 +36,10 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Use
         Copy "_5"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:5:14 generated
-    Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:9 generated
     Branch a_free_of_a_may_set_on_one_arm_only.c:7:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:9 generated
     Operation a_free_of_a_may_set_on_one_arm_only.c:7:14 written
       Destination "_6"
       Use
@@ -51,6 +51,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:14 generated
     Goto "bb5"
   Block "bb4"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:9 generated
     Operation a_free_of_a_may_set_on_one_arm_only.c:7:30 written
       Destination "_6"
       Use
@@ -62,14 +63,15 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:7:30 generated
     Goto "bb5"
   Block "bb5"
-    Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
     Branch a_free_of_a_may_set_on_one_arm_only.c:8:9 "bb6" "bb7"
       Copy "_1"
   Block "bb6"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:8:14 "free" "bb9"
       Destination "_9"
       Copy "_6"
   Block "bb7"
+    Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
     Goto "bb8"
   Block "bb8"
     Call a_free_of_a_may_set_on_one_arm_only.c:9:5 "free" "bb10"

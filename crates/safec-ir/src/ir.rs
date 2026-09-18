@@ -79,7 +79,10 @@ pub struct TyId(u32);
 pub struct BlockId(u32);
 
 /// Which local, within one [`Function`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+///
+/// [`Ord`] for the reason [`Place`] gives, because a place is ordered by this
+/// first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalId(u32);
 
 impl FuncId {
@@ -145,9 +148,11 @@ pub enum Ty {
 /// takes to reach what is being read or written: `*p` is one [`Deref`], and
 /// `a[i]` is one [`Index`]. A field selector joins them when structs do.
 ///
+/// [`Ord`] for the reason [`Place`] gives.
+///
 /// [`Deref`]: Projection::Deref
 /// [`Index`]: Projection::Index
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Projection {
     /// What the pointer points at.
     Deref,
@@ -169,7 +174,15 @@ pub enum Projection {
 /// [`Eq`] and [`Hash`] because a dataflow analysis keys its lattice on a place
 /// rather than on a local: `p` and `*p` have separate states and a side table
 /// indexed by [`LocalId`] has one slot for both.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+///
+/// **[`Ord`] so that a lattice value holding one can be canonical, and for no
+/// other reason.** [`crate::dataflow::Analysis::Value`] decides whether the
+/// walk has ended by comparing, so a value that holds the same facts in two
+/// arrangements never compares equal and never converges, which ADR-0016
+/// measured as a hang. A set of places is kept sorted to stop that, and this is
+/// what sorts it. One place is not more or less than another in any sense the
+/// language has, and nothing should read the order as meaning anything.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Place {
     /// Where it starts.
     pub local: LocalId,
@@ -212,7 +225,9 @@ impl Place {
 }
 
 /// What an operation reads.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+///
+/// [`Ord`] for the reason [`Place`] gives, because a projection can hold one.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Operand {
     /// The value held in a place.
     ///
@@ -519,8 +534,18 @@ pub enum Element {
     /// **It says what is ordered and not what is unordered.** A consumer
     /// walking forwards learns that everything behind this is sequenced before
     /// everything ahead of it; it learns nothing about two things it has not
-    /// reached yet. Answering "are these two unsequenced" needs more than this
-    /// element, and #177 is what that costs today.
+    /// reached yet. Answering "are these two unsequenced" is therefore the
+    /// consumer's to arrange: the memory check carries what it has read since
+    /// the last one of these forwards to meet whatever frees it, which is
+    /// ADR-0023. This element is what bounds how far.
+    ///
+    /// **So a frontend that emits too few is louder rather than quieter, in
+    /// both directions.** One missing where C gives one leaves a free
+    /// unsequenced, which is a suspicion where there would have been a proof,
+    /// and it leaves a read carried further forward than it should be, which is
+    /// a suspicion where there would have been nothing. Neither is a claim
+    /// about safety that the standard does not license, which is the bias the
+    /// paragraph above asks for.
     Sequenced {
         /// The expression this point falls **after**, rather than the operator
         /// that put it there.

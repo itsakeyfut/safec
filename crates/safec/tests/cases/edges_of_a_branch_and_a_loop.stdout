@@ -13,10 +13,10 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
       Binary "Gt"
         Copy "_1"
         Constant 0
-    Sequenced edges_of_a_branch_and_a_loop.c:2:9 generated
     Branch edges_of_a_branch_and_a_loop.c:2:9 "bb1" "bb2"
       Copy "_2"
   Block "bb1"
+    Sequenced edges_of_a_branch_and_a_loop.c:2:9 generated
     Operation edges_of_a_branch_and_a_loop.c:3:13 written
       Destination "_3"
       Binary "Sub"
@@ -33,14 +33,15 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
     Sequenced edges_of_a_branch_and_a_loop.c:3:9 generated
     Goto "bb3"
   Block "bb2"
+    Sequenced edges_of_a_branch_and_a_loop.c:2:9 generated
     Goto "bb3"
   Block "bb3"
     Goto "bb4"
   Block "bb4"
-    Sequenced edges_of_a_branch_and_a_loop.c:6:12 generated
     Branch edges_of_a_branch_and_a_loop.c:6:12 "bb5" "bb6"
       Copy "_1"
   Block "bb5"
+    Sequenced edges_of_a_branch_and_a_loop.c:6:12 generated
     Operation edges_of_a_branch_and_a_loop.c:7:13 written
       Destination "_5"
       Binary "Add"
@@ -57,6 +58,7 @@ Function edges_of_a_branch_and_a_loop.c:1:5 "f"
     Sequenced edges_of_a_branch_and_a_loop.c:7:9 generated
     Goto "bb4"
   Block "bb6"
+    Sequenced edges_of_a_branch_and_a_loop.c:6:12 generated
     Operation edges_of_a_branch_and_a_loop.c:10:5 written
       Destination "_0"
       Use

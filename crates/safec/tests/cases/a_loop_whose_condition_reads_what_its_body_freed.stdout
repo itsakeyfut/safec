@@ -22,15 +22,16 @@ Function a_loop_whose_condition_reads_what_its_body_freed.c:3:5 "f"
     Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:4:14 generated
     Goto "bb2"
   Block "bb2"
-    Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:5:12 generated
     Branch a_loop_whose_condition_reads_what_its_body_freed.c:5:12 "bb3" "bb4"
       Copy "_1"
         Deref
   Block "bb3"
+    Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:5:12 generated
     Call a_loop_whose_condition_reads_what_its_body_freed.c:5:18 "free" "bb5"
       Destination "_3"
       Copy "_1"
   Block "bb4"
+    Sequenced a_loop_whose_condition_reads_what_its_body_freed.c:5:12 generated
     Operation a_loop_whose_condition_reads_what_its_body_freed.c:6:5 written
       Destination "_0"
       Use

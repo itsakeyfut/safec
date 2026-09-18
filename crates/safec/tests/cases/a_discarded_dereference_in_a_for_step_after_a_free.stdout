@@ -30,10 +30,10 @@ Function a_discarded_dereference_in_a_for_step_after_a_free.c:3:5 "f"
     Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:5:5 generated
     Goto "bb3"
   Block "bb3"
-    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:12 generated
     Branch a_discarded_dereference_in_a_for_step_after_a_free.c:6:12 "bb4" "bb5"
       Copy "_1"
   Block "bb4"
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:12 generated
     Operation a_discarded_dereference_in_a_for_step_after_a_free.c:6:25 written
       Destination "_5"
       Binary "Sub"
@@ -54,6 +54,7 @@ Function a_discarded_dereference_in_a_for_step_after_a_free.c:3:5 "f"
     Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:15 generated
     Goto "bb3"
   Block "bb5"
+    Sequenced a_discarded_dereference_in_a_for_step_after_a_free.c:6:12 generated
     Operation a_discarded_dereference_in_a_for_step_after_a_free.c:7:5 written
       Destination "_0"
       Use

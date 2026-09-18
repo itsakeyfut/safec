@@ -30,14 +30,15 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:5:17 generated
     Goto "bb1"
   Block "bb1"
-    Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:6:12 generated
     Branch a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:6:12 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:6:12 generated
     Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:13 "malloc" "bb4"
       Destination "_4"
       Constant 8
   Block "bb3"
+    Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:6:12 generated
     Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:12:5 "free" "bb9"
       Destination "_10"
       Copy "_2"
@@ -51,14 +52,15 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
       Use
         Copy "_2"
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:7:9 generated
-    Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 generated
     Branch a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 "bb5" "bb6"
       Copy "_3"
   Block "bb5"
+    Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 generated
     Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:21 "free" "bb8"
       Destination "_6"
       Copy "_3"
   Block "bb6"
+    Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 generated
     Goto "bb7"
   Block "bb7"
     Operation a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:9:9 written

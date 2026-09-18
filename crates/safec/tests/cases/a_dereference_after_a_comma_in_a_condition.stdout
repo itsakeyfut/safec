@@ -27,11 +27,11 @@ Function a_dereference_after_a_comma_in_a_condition.c:3:5 "f"
   Block "bb2"
     Sequenced a_dereference_after_a_comma_in_a_condition.c:5:5 generated
     Sequenced a_dereference_after_a_comma_in_a_condition.c:6:9 generated
-    Sequenced a_dereference_after_a_comma_in_a_condition.c:6:9 generated
     Branch a_dereference_after_a_comma_in_a_condition.c:6:9 "bb3" "bb4"
       Copy "_2"
         Deref
   Block "bb3"
+    Sequenced a_dereference_after_a_comma_in_a_condition.c:6:9 generated
     Operation a_dereference_after_a_comma_in_a_condition.c:6:18 written
       Destination "_0"
       Use
@@ -39,6 +39,7 @@ Function a_dereference_after_a_comma_in_a_condition.c:3:5 "f"
     Sequenced a_dereference_after_a_comma_in_a_condition.c:6:25 generated
     Return
   Block "bb4"
+    Sequenced a_dereference_after_a_comma_in_a_condition.c:6:9 generated
     Goto "bb5"
   Block "bb5"
     Operation a_dereference_after_a_comma_in_a_condition.c:7:5 written

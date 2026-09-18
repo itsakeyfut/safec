@@ -56,15 +56,56 @@ cases! {
     // turn on which side the free was written, and what decided was that
     // ADR-0010 makes a call end a block. See ADR-0022.
     //
-    // **The third is the boundary, and it is silent.** A use the check meets
-    // before it meets the free is never asked about it: this walks forwards
-    // and a free only marks what comes after it. `*p` on its own is not read
-    // until the addition is built, which is after the call, so the pair above
-    // report; put the use inside a call and it is read first and nothing is
-    // said at all. That is not what this change introduced and is #177.
+    // **The third is the same program with the use read first**, which the
+    // walk meets before it meets the free. A forward walk only looks back, so
+    // that half is answered by carrying the read forwards to the free instead:
+    // see ADR-0023. `*p` on its own is not read until the addition is built,
+    // which is after the call, so the pair above are answered by the free
+    // marking what follows it; put the use inside a call and it is read first
+    // and the read is what waits.
     an_unsequenced_free_and_use_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     the_same_program_with_the_operands_swapped_is_not_proved_either: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    an_unsequenced_use_the_check_meets_first_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_unsequenced_use_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same, for the two reads an *element* carries rather than a call or a
+    // branch: writing through the pointer, and evaluating a place for no reason
+    // but the evaluation. Neither is reached by any case above, whose reads are
+    // all carried by a terminator, so without these the element half of the
+    // recording can be deleted with the suite green. Measured, which is how
+    // they came to be here.
+    a_write_through_a_pointer_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_discarded_read_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the two edges of that: a read of something this free is not about,
+    // and a read that cannot have happened on the path the free is on. The
+    // first says the sites are compared rather than the spans, and the second
+    // says the reads are carried along the graph's edges rather than along the
+    // order the blocks were written in.
+    a_use_of_another_pointer_before_a_free_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the read that has to cross a merge to reach the free at all: it is
+    // inside one arm of a `?:` that the free is outside of, so nothing but the
+    // join carries it. The case above puts the two on opposite arms and asks
+    // for silence; this one puts the read on an arm and the free after the
+    // merge and asks for a report, which is the only shape where losing the
+    // join's union of the carried reads is a silence rather than a noise.
+    a_read_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And what the report is allowed to *name*. The read may have gone through
+    // either allocation, so `allocated here` would be a caret on one of two
+    // lines with nothing to choose between them, which is RK-035's may-set
+    // mistake made about a label rather than about a proof. Its `.stderr` has
+    // no such caret, and folding the two with anything but `same` puts one
+    // back.
+    a_read_of_either_of_two_allocations_before_a_free_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A controlling expression that is exactly a dereference is read by the
+    // branch itself, because it needs no temporary, so the sequence point at
+    // the end of it belongs after the branch and not before. C17 6.8 p4, and
+    // both arms: the body and the edge that skips it are each after the
+    // condition. The third has nothing ordering it, because a `?:`
+    // below a `+` is enclosed by something C leaves unsequenced, so that one
+    // reports.
+    a_condition_read_through_a_pointer_is_sequenced_before_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Three shapes where asking for a sequence point would be asking the
     // wrong question, each of which review found this check getting wrong.
     // A double free runs both frees whichever order C picks, so 6.5 p3

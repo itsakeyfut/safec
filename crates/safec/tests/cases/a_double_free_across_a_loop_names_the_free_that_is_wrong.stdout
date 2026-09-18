@@ -27,14 +27,15 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
     Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:6:17 generated
     Goto "bb1"
   Block "bb1"
-    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:7:12 generated
     Branch a_double_free_across_a_loop_names_the_free_that_is_wrong.c:7:12 "bb2" "bb3"
       Copy "_1"
   Block "bb2"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:7:12 generated
     Call a_double_free_across_a_loop_names_the_free_that_is_wrong.c:8:13 "malloc" "bb4"
       Destination "_5"
       Constant 8
   Block "bb3"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:7:12 generated
     Operation a_double_free_across_a_loop_names_the_free_that_is_wrong.c:17:5 written
       Destination "_0"
       Use
@@ -51,14 +52,15 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:8:9 generated
-    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 generated
     Branch a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 "bb5" "bb6"
       Copy "_4"
   Block "bb5"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 generated
     Call a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 "free" "bb8"
       Destination "_7"
       Copy "_3"
   Block "bb6"
+    Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 generated
     Goto "bb7"
   Block "bb7"
     Operation a_double_free_across_a_loop_names_the_free_that_is_wrong.c:12:9 written

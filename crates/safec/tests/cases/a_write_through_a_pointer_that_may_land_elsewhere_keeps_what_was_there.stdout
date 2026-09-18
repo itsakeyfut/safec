@@ -54,10 +54,10 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
       Use
         Copy "_9"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:8:16 generated
-    Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 generated
     Branch a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 generated
     Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:19 written
       Destination "_10"
       Address
@@ -73,6 +73,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:14 generated
     Goto "bb5"
   Block "bb4"
+    Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:9:9 generated
     Goto "bb5"
   Block "bb5"
     Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:10:5 written

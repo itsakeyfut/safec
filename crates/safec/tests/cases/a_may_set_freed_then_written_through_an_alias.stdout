@@ -42,10 +42,10 @@ Function a_may_set_freed_then_written_through_an_alias.c:4:5 "f"
       Use
         Copy "_5"
     Sequenced a_may_set_freed_then_written_through_an_alias.c:6:14 generated
-    Sequenced a_may_set_freed_then_written_through_an_alias.c:8:9 generated
     Branch a_may_set_freed_then_written_through_an_alias.c:8:9 "bb3" "bb4"
       Copy "_1"
   Block "bb3"
+    Sequenced a_may_set_freed_then_written_through_an_alias.c:8:9 generated
     Operation a_may_set_freed_then_written_through_an_alias.c:8:14 written
       Destination "_6"
       Use
@@ -57,6 +57,7 @@ Function a_may_set_freed_then_written_through_an_alias.c:4:5 "f"
     Sequenced a_may_set_freed_then_written_through_an_alias.c:8:14 generated
     Goto "bb5"
   Block "bb4"
+    Sequenced a_may_set_freed_then_written_through_an_alias.c:8:9 generated
     Operation a_may_set_freed_then_written_through_an_alias.c:8:30 written
       Destination "_6"
       Use

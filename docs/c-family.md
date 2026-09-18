@@ -196,6 +196,24 @@ suspicions where it would have had certainties: annoying, and never wrong about
 safety. `crates/safec-ir/tests/freed.rs` models the boundary its programs have,
 in `after_the_statement`, and says there what an IR without them answers.
 
+**The same element bounds the question asked in the other direction**, which
+[ADR-0023](adr/0023-carry-a-read-forwards-to-the-free-it-is-unordered-against.md)
+added: a read is carried forwards until one of these, so that a free later in the
+same full expression is compared with it. An omission costs a suspicion here too,
+because a read nothing has ordered is carried further than it should be rather
+than dropped. So the bias holds whichever way the question is asked, and a
+frontend that emits too few markers is louder rather than quieter.
+
+**It also costs time, which is the half a producer will not guess.** What the
+marker bounds is a set carried in the lattice value, so without one the set is
+per function rather than per full expression and is cloned into every block the
+solver visits. Measured, on generated straight-line functions with the C
+frontend's markers disabled: 1.2 s becomes 9.5 s at 908 lines and 8.0 s becomes
+38 s at 1508 lines. That moves the failure from a report somebody can read to a
+wait with nothing to read, which
+[`CLAUDE.md`](../CLAUDE.md) ranks lower, so "annoying and never wrong about
+safety" is true of the answer and not of the run.
+
 There is one more such requirement today.
 [ADR-0021](adr/0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds a
 zero pointer offset away, so **no `Rvalue::Binary` in a well-formed safety IR

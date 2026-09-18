@@ -32,10 +32,10 @@ Function a_discarded_dereference_in_a_for_initialiser_after_a_free.c:3:5 "f"
     Sequenced a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:10 generated
     Goto "bb3"
   Block "bb3"
-    Sequenced a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:14 generated
     Branch a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:14 "bb4" "bb5"
       Copy "_1"
   Block "bb4"
+    Sequenced a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:14 generated
     Operation a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:21 written
       Destination "_0"
       Use
@@ -43,6 +43,7 @@ Function a_discarded_dereference_in_a_for_initialiser_after_a_free.c:3:5 "f"
     Sequenced a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:28 generated
     Return
   Block "bb5"
+    Sequenced a_discarded_dereference_in_a_for_initialiser_after_a_free.c:6:14 generated
     Operation a_discarded_dereference_in_a_for_initialiser_after_a_free.c:7:5 written
       Destination "_0"
       Use

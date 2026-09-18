@@ -12,14 +12,15 @@ Function an_unproven_free_is_an_error_under_deny_unknown.c:3:5 "f"
   Local "_3" "void"
   Local "_4" "void"
   Block "bb0" entry
-    Sequenced an_unproven_free_is_an_error_under_deny_unknown.c:4:9 generated
     Branch an_unproven_free_is_an_error_under_deny_unknown.c:4:9 "bb1" "bb2"
       Copy "_1"
   Block "bb1"
+    Sequenced an_unproven_free_is_an_error_under_deny_unknown.c:4:9 generated
     Call an_unproven_free_is_an_error_under_deny_unknown.c:4:14 "free" "bb4"
       Destination "_3"
       Copy "_2"
   Block "bb2"
+    Sequenced an_unproven_free_is_an_error_under_deny_unknown.c:4:9 generated
     Goto "bb3"
   Block "bb3"
     Call an_unproven_free_is_an_error_under_deny_unknown.c:5:5 "free" "bb5"

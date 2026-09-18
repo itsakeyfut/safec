@@ -11,6 +11,15 @@
 //! analyses, a transfer that depends on which edge was taken, and a value per
 //! program point are all real and none of them is asked for yet.
 //!
+//! **The first thing that wanted a backward one did not get it, and the reason
+//! is the third of those rather than the first.** The memory check had to ask
+//! whether a free comes later in the same unsequenced expression, which reads
+//! backwards; a backward transfer here would be handed no block and no
+//! position, so it could not ask the forward answer what that free's argument
+//! reaches, and the two omissions have to be lifted together or neither. What
+//! it did instead was carry the fact forwards in its own value, which is
+//! ADR-0023.
+//!
 //! **Nothing here reports.** `docs/roadmap.md` makes Phase 5 the first phase
 //! that says anything about a C program. Nothing in this module builds a
 //! [`crate::analysis::Conclusion`], and it could not build a diagnostic even if
