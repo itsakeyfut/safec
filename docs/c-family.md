@@ -196,6 +196,14 @@ suspicions where it would have had certainties: annoying, and never wrong about
 safety. `crates/safec-ir/tests/freed.rs` models the boundary its programs have,
 in `after_the_statement`, and says there what an IR without them answers.
 
+**The same element bounds the question asked in the other direction**, which
+[ADR-0023](adr/0023-carry-a-read-forwards-to-the-free-it-is-unordered-against.md)
+added: a read is carried forwards until one of these, so that a free later in the
+same full expression is compared with it. An omission costs a suspicion here too,
+because a read nothing has ordered is carried further than it should be rather
+than dropped. So the bias holds whichever way the question is asked, and a
+frontend that emits too few markers is louder rather than quieter.
+
 There is one more such requirement today.
 [ADR-0021](adr/0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds a
 zero pointer offset away, so **no `Rvalue::Binary` in a well-formed safety IR

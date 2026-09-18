@@ -209,9 +209,14 @@ fn returns() -> Block {
 /// **So an IR built without these gets suspicions where it would have had
 /// proofs.** That is the bias working rather than failing: `docs/c-family.md`
 /// asks that another frontend be able to build this IR, and one that forgets
-/// where C sequences should lose its certainty rather than keep it. Only the
-/// boundary after a free is modelled here, because what these tests are about
-/// is what a free is worth.
+/// where C sequences should lose its certainty rather than keep it.
+///
+/// **The boundary *before* a free counts too, and it did not used to.** A read
+/// with no marker between it and a later free is a read that free is unordered
+/// against, so it is carried forwards and reported unproven, which is ADR-0023
+/// and is the same bias seen from the other side. A program whose read is in a
+/// statement of its own therefore needs one here as well, and a test that
+/// leaves it out is asking about an IR where C has ordered nothing.
 fn after_the_statement(at: Span, mut block: Block) -> Block {
     block.elements.insert(
         0,
@@ -628,7 +633,14 @@ fn a_read_through_a_freed_pointer_is_unsafe() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
     function.fill_block(live, read(value, held, names.at[1], release));
-    function.fill_block(release, free(&callees, held, names.at[2], dangling));
+    // The read is a statement of its own, so C17 6.8 p4 orders it before the
+    // free and this says so. Without it the free is unordered against the read
+    // above and reports it unproven, which is the right answer to an IR that
+    // has not said where C sequences and the wrong subject for this test.
+    function.fill_block(
+        release,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], dangling)),
+    );
     function.fill_block(
         dangling,
         after_the_statement(names.at[2], read(value, held, names.at[3], exit)),
@@ -1104,16 +1116,18 @@ fn a_place_evaluated_for_nothing_is_a_use() {
 
 /// Evaluating a place moves no site, so a free after one is still the first.
 ///
-/// The transfer answers nothing for this element and that is the answer rather
-/// than an omission: evaluating a place writes nowhere. Nothing else in the
-/// suite reaches the arm, because every other test that builds one is about
-/// what the element is read for rather than about what it does to the lattice.
+/// The transfer moves nothing for this element and that is the answer rather
+/// than an omission: evaluating a place writes nowhere. What it does do is
+/// record the read, which every element does and which the marker below orders
+/// before the frees. Nothing else in the suite reaches the arm, because every
+/// other test that builds one is about what the element is read for rather than
+/// about what it does to the sites.
 ///
 /// Mutation: have the transfer clear the sites of the place it evaluates, which
 /// is what an arm written by copying its neighbour would do. The free stops
 /// reaching a site, the double free is not found, and this fails.
 #[test]
-fn evaluating_a_place_leaves_the_lattice_alone() {
+fn evaluating_a_place_moves_no_site() {
     let (sources, names) = sources();
     let (unit, mut function, int, callees) = a_unit(&names, 0);
     let held = function.push_local(int);
@@ -1126,7 +1140,13 @@ fn evaluating_a_place_leaves_the_lattice_alone() {
 
     function.fill_block(allocate, malloc(&callees, held, names.at[0], discarded));
     function.fill_block(discarded, evaluate(held, names.at[1], first));
-    function.fill_block(first, free(&callees, held, names.at[2], second));
+    // `*p;` is a statement, so the read is ordered before the first free. See
+    // `after_the_statement`, whose doc comment says what leaving it out asks
+    // about instead.
+    function.fill_block(
+        first,
+        after_the_statement(names.at[1], free(&callees, held, names.at[2], second)),
+    );
     function.fill_block(
         second,
         after_the_statement(names.at[2], free(&callees, held, names.at[3], exit)),
@@ -1615,4 +1635,48 @@ fn a_call_into_a_local_whose_address_escaped() {
         "the escape outlived the call that wrote over it"
     );
     assert_eq!(found[0].at, names.at[4]);
+}
+
+/// A read of what a site used to name is not a read of what it names now.
+///
+/// **No C program reaches this and a frontend can build it.** A site is the
+/// local a call writes into, and the lowering gives every call a fresh
+/// temporary, so two allocations in one full expression are two sites; here
+/// they are one, which is what makes the read above the second call name a
+/// site the second call has taken over. Left standing, the free below would be
+/// reported against a read of an allocation it has nothing to do with, and the
+/// caret would sit on a line that read something else.
+///
+/// Nothing separates the read from the free, so the reads carried forwards are
+/// what this is about: with the rule the entry names a site that is gone and is
+/// dropped with it, and the free is an ordinary first free of a live
+/// allocation.
+///
+/// Mutation: leave `Known::pending` alone in `Known::reborn`. The read is still
+/// carried, the free meets it, and an unproven use after free is reported that
+/// no execution can perform, so the count below is 1 and this fails.
+#[test]
+fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let live = function.reserve_block();
+    let again = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
+    function.fill_block(live, read(value, held, names.at[1], again));
+    // The same local, so the same site: this is where it stops naming the
+    // allocation the read above went through.
+    function.fill_block(again, malloc(&callees, held, names.at[2], release));
+    function.fill_block(release, free(&callees, held, names.at[3], exit));
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = findings(unit, &sources, function);
+
+    assert!(found.is_empty(), "{found:?}");
 }

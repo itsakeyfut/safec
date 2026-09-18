@@ -193,6 +193,17 @@ fn earlier(here: Span, there: Span) -> Span {
     }
 }
 
+/// A span as something a sort can order, which [`Span`] is not.
+///
+/// The end as well as the start, because two elements can carry one position:
+/// both operands of a `&&` are written into one temporary at the whole
+/// expression's span, and a key that cannot tell two entries apart is a key
+/// that lets them be held in either order. The file first, for [`earlier`]'s
+/// reason.
+fn ordered(at: Span) -> (usize, u32, u32) {
+    (at.file().index(), at.start(), at.end())
+}
+
 /// What one argument of a call reaches.
 ///
 /// The two are not the same answer and were once the same silence. A `free`
@@ -372,6 +383,36 @@ impl Held {
     }
 }
 
+/// A dereference this walk has met since the last sequence point.
+///
+/// **The other half of ADR-0022, which this one is ADR-0023 for.** An
+/// [`Element::Sequenced`] says what is ordered and a forward walk only ever
+/// looks back, so a free can be compared with the reads behind it and never
+/// with the ones ahead. `int x = g(*p) + (free(p), 0);` read `*p` first and was
+/// silent under every flag where its mirror reported. What closes it is
+/// carrying the read forwards instead of looking backwards for it: everything
+/// met since the last marker is still unordered against whatever comes next in
+/// the same full expression.
+///
+/// **The sites are resolved where the use is and not where the free is.**
+/// `x = *p + (p = q, free(p), 0)` reads one allocation and frees another, and
+/// asking at the free would answer about the wrong one. That is a silence
+/// rather than a false positive, which is the direction this check cannot
+/// afford.
+#[derive(Clone, PartialEq, Eq)]
+struct Pending {
+    /// The element's span, which is where `used here` goes.
+    at: Span,
+    /// What was dereferenced. Half the key [`used`] collapses two reports on,
+    /// and kept here so that a report made from the free reaches the same
+    /// answer as one made at the use.
+    place: Place,
+    /// Which allocations it may have read.
+    ///
+    /// Sorted, for [`Known::pending`]'s reason.
+    sites: Vec<usize>,
+}
+
 /// Which allocations each local may hold, and what is known about each.
 #[derive(Clone, PartialEq, Eq)]
 struct Known {
@@ -390,6 +431,15 @@ struct Known {
     /// no more proved than what it held before, because the write that put it
     /// there is not the only write that can reach it.
     escaped: Vec<bool>,
+    /// What has been read through a pointer since the last sequence point.
+    ///
+    /// **Sorted by [`ordered`] and then by the place, with one entry per pair,
+    /// because a lattice value has to be canonical.**
+    /// [`crate::dataflow::Analysis::Value`] decides whether the walk has ended
+    /// by comparing, so a value holding the same facts in two arrangements
+    /// never compares equal and never converges. ADR-0016 measured that as a
+    /// hang, and [`Place`] carries the `Ord` this sorts by for no other reason.
+    pending: Vec<Pending>,
 }
 
 impl Known {
@@ -477,6 +527,62 @@ impl Known {
         reached
     }
 
+    /// Record that this place was read through, where the read reaches an
+    /// allocation.
+    ///
+    /// **A place reaching no site records nothing**, which is [`used`]'s answer
+    /// to an empty set and not [`Allocations::touching`]'s. A dereference of a
+    /// pointer this check never followed is an indeterminate pointer rather
+    /// than a free it lost, and recording it would put `perhaps after the free`
+    /// on every `*p` whose pointer came from anywhere unmodelled, the moment
+    /// the function frees anything. RK-049 in the review knowledge bank is the
+    /// entry, and the two readers of one enumeration are the design.
+    ///
+    /// The sites arrive ascending, because [`Held::sites`] walks a row of a
+    /// table in order, and stay that way.
+    ///
+    /// It takes what [`dereferenced_in_element`] answers rather than one place,
+    /// so that what the walk carries forwards and what [`used`] reports on are
+    /// decided by one function with two callers. RK-052 in the review knowledge
+    /// bank is one rule written in two places drifting apart inside the change
+    /// that touches one of them.
+    fn met(&mut self, read: Option<(Span, Vec<&Place>)>) {
+        let Some((at, dereferenced)) = read else {
+            return;
+        };
+
+        for place in dereferenced {
+            self.meeting(at, place);
+        }
+    }
+
+    /// One place of one element, for [`Self::met`].
+    fn meeting(&mut self, at: Span, place: &Place) {
+        let sites: Vec<usize> = named(&self.reached_by(place.local)).collect();
+
+        if sites.is_empty() {
+            return;
+        }
+
+        let key = (ordered(at), place);
+        match self
+            .pending
+            .binary_search_by(|entry| (ordered(entry.at), &entry.place).cmp(&key))
+        {
+            // One entry per pair: `*p = *p;` reads through one place twice at
+            // one span, and two entries would be one report said twice.
+            Ok(found) => absorb(&mut self.pending[found].sites, &sites),
+            Err(index) => self.pending.insert(
+                index,
+                Pending {
+                    at,
+                    place: place.clone(),
+                    sites,
+                },
+            ),
+        }
+    }
+
     /// Every local a write through this one may land in.
     ///
     /// Empty means this check does not know where such a write goes, which is
@@ -512,6 +618,7 @@ impl Known {
             points_to,
             state,
             escaped: _,
+            pending,
         } = self;
 
         for (other, held) in points_to.iter_mut().enumerate() {
@@ -521,6 +628,19 @@ impl Known {
         }
 
         state[site] = SiteState::Live(made);
+
+        // **A read of the allocation this site used to name is not a read of
+        // the one it names now.** Left standing, a free of the new allocation
+        // later in the same full expression would be reported against a read
+        // of the old one, which is a caret on a line that read something else.
+        // No C program reaches this, because two calls in one full expression
+        // are two call sites and a site is the local a call writes into; a
+        // frontend whose calls share one can, and this is the answer
+        // `error[E0027]` asked for when the field was added.
+        for entry in pending.iter_mut() {
+            entry.sites.retain(|held| *held != site);
+        }
+        pending.retain(|entry| !entry.sites.is_empty());
     }
 
     /// Nothing this local holds is proved, once anything holds its address.
@@ -574,6 +694,38 @@ impl Known {
             self.unproved(local);
         }
     }
+}
+
+/// The sites out of everything a place or an argument reached.
+///
+/// **One fold with three callers, because the three have to agree.** It is what
+/// a free writes `Freed` on, what a read carries forwards as the allocations it
+/// may have touched, and what the two are compared against when the order
+/// between them is open. A free that wrote on a set this did not answer, or a
+/// read that carried one, would be a report about an allocation the other half
+/// never considered. RK-052 in the review knowledge bank is one rule written in
+/// two places drifting apart.
+///
+/// Neither of the other two variants names a site: one is a fact about a set,
+/// which ADR-0020 records on the local rather than on its members, and the
+/// other is this check having lost the pointer.
+fn named(reached: &[Reached]) -> impl Iterator<Item = usize> + '_ {
+    reached.iter().filter_map(|reached| match reached {
+        Reached::Site(site) => Some(*site),
+        Reached::SetFreed(_) | Reached::Lost => None,
+    })
+}
+
+/// Fold one sorted set of sites into another.
+///
+/// Sorted and deduplicated by rebuilding rather than by a merge, because the
+/// arrangement is what [`crate::dataflow::Analysis::Value`] compares and a set
+/// of at most a handful of small integers is not worth two cursors and an
+/// invariant to get wrong. See [`Known::pending`].
+fn absorb(into: &mut Vec<usize>, from: &[usize]) {
+    into.extend_from_slice(from);
+    into.sort_unstable();
+    into.dedup();
 }
 
 /// The analysis: where an allocation is, and whether it has been freed.
@@ -662,6 +814,18 @@ impl Analysis for Allocations<'_> {
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
+        // **What has been read since the last sequence point is a set of
+        // positions, so it is counted in positions rather than in locals.** A
+        // block's entry value can gain one entry per place read at one element
+        // or terminator of the function, and each entry's set of sites can gain
+        // one site per local. The same paragraph above applies to it: the
+        // transfer empties it at every marker and only a join makes an entry
+        // value grow.
+        let positions: usize = function
+            .blocks()
+            .map(|block| block.elements.len() + 1)
+            .sum();
+
         // **Nothing holds this number.** Measured: answering `locals` instead
         // leaves the whole suite passing, because no function here takes more
         // visits to a block than it has locals, and building one that did
@@ -669,7 +833,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 2 + locals * (locals + 6)
+        locals * locals * 2 + locals * (locals + 6) + positions * (locals + 1)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -682,6 +846,9 @@ impl Analysis for Allocations<'_> {
             // Nothing holds a local's address where a function starts, a
             // parameter included: what a caller holds is its own local.
             escaped: vec![false; self.locals],
+            // Nothing has been read yet, so there is nothing a free could be
+            // unordered against.
+            pending: Vec::new(),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -705,6 +872,7 @@ impl Analysis for Allocations<'_> {
             points_to,
             state,
             escaped,
+            pending,
         } = into;
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
@@ -721,19 +889,43 @@ impl Analysis for Allocations<'_> {
             *here = *here || *there;
         }
 
+        // **A union, because a read on either arm is a read some execution
+        // performed.** What this costs when it is wrong is a report about a
+        // read that did not happen, which is row 4; the other direction loses
+        // the read that did. The arms themselves do not meet before their
+        // join, which is what keeps a read on one arm from being reported
+        // against a free on the other: each arm is walked from the value that
+        // reached it and not from this one.
+        for entry in &from.pending {
+            let key = (ordered(entry.at), &entry.place);
+            match pending.binary_search_by(|held| (ordered(held.at), &held.place).cmp(&key)) {
+                Ok(found) => absorb(&mut pending[found].sites, &entry.sites),
+                Err(index) => pending.insert(index, entry.clone()),
+            }
+        }
+
         // And applying it, which the union alone does not do. [`Known::settle`]
         // says why a join needs this and the assignments do not cover it.
         into.settle();
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        // **Before the arms, and before any of them can return.** What is read
+        // here is read where this element runs, against what held before it,
+        // which is the same question `check` asks one line earlier and has to
+        // get the same answer to. The `Deref` arm below returns early when it
+        // cannot follow the write, and RK-051 in the review knowledge bank is a
+        // rule skipped by exactly that.
+        value.met(dereferenced_in_element(element));
+
         // Every field written out, never `..`: RK-018 in the review knowledge
         // bank is a field added to a variant that already exists walking past
         // an exhaustive match.
         match element {
             // Evaluating a place writes nowhere, so no local changes what it
-            // holds and no site changes what is known about it. What this
-            // element is for is read by `dereferenced_in_element` instead.
+            // holds and no site changes what is known about it. What it reads
+            // is not nothing, and `Known::met` above has already taken it: this
+            // element exists so that `*p;` on its own can be seen at all.
             Element::Evaluate {
                 place: _,
                 origin: _,
@@ -756,6 +948,12 @@ impl Analysis for Allocations<'_> {
                         freed.sequenced = true;
                     }
                 }
+                // **And every read behind this is now ordered before whatever
+                // frees ahead of it**, so there is nothing left for a later
+                // free to be unordered against. The same element answering both
+                // directions is the point: one marker, one meaning, read from
+                // each side. See ADR-0023.
+                value.pending.clear();
             }
             Element::Assign(operation) => {
                 // **A write through a pointer, where this check knows where it
@@ -984,6 +1182,13 @@ impl Analysis for Allocations<'_> {
     }
 
     fn terminator(&self, _function: &Function, terminator: &Terminator, value: &mut Self::Value) {
+        // Before the `let ... else` below, which returns for every terminator
+        // that is not a call. A `Terminator::Branch` reads its condition and a
+        // condition that is exactly a place never becomes an element, so
+        // leaving it to the arm that handles calls would be silent about
+        // `(*p ? 1 : 0) + (free(p), 0)`.
+        value.met(dereferenced_in_terminator(terminator));
+
         let Terminator::Call {
             callee,
             arguments,
@@ -1011,14 +1216,7 @@ impl Analysis for Allocations<'_> {
         // following, which is a fact about the report rather than about the
         // lattice.
         let touched = Self::touching(arguments, value);
-        let sites = || {
-            touched.iter().filter_map(|reached| match reached {
-                Reached::Site(site) => Some(*site),
-                // Neither names a site to write on: one is a fact about a set
-                // and the other is this check having lost the pointer.
-                Reached::SetFreed(_) | Reached::Lost => None,
-            })
-        };
+        let sites = || named(&touched);
 
         match self.callee(*callee) {
             Callee::Frees => {
@@ -1275,6 +1473,19 @@ pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             if let Some(finding) = reported(&analysis, &block.terminator, &known) {
                 findings.push(finding);
             }
+            // After the free's own finding, which is the one whose caret is
+            // here: what this adds are reports about carets further back, and a
+            // reader meets them in the order the sort at the end puts them in
+            // rather than the order they were made. Still before the transfer,
+            // because what it asks about is what had been read when the call
+            // was reached.
+            used_before(
+                &mut findings,
+                &mut said,
+                &analysis,
+                &block.terminator,
+                &known,
+            );
         }
     }
 
@@ -1549,64 +1760,178 @@ fn used(
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
         //
-        // **Both halves of the key, and a case for each.** Keying on the span
-        // alone collapses `*p = *q;` after two frees into one report, which
-        // `two_pointers_used_after_a_free_on_one_line` fails on. Keying on the
-        // place alone collapses `*p = 1; *p = 2;` after one free into one,
-        // which `one_pointer_used_after_a_free_on_two_lines` fails on. Neither
-        // case reaches the other's mutation, which is why there are two.
-        let standing = said
-            .iter()
-            .position(|(said_at, said_place, _)| *said_at == at && said_place == place);
-
         let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
         else {
             continue;
         };
 
-        let finding = Finding {
-            kind: Kind::UseAfterFree,
-            conclusion: verdict.conclusion,
-            at,
-            freed: verdict.freed,
-            made: verdict.made,
-            unsequenced: verdict.unsequenced,
-        };
+        say(
+            findings,
+            said,
+            place,
+            Finding {
+                kind: Kind::UseAfterFree,
+                conclusion: verdict.conclusion,
+                at,
+                freed: verdict.freed,
+                made: verdict.made,
+                unsequenced: verdict.unsequenced,
+            },
+        );
+    }
+}
 
-        // **Recorded where the report is made, and not a line earlier.**
-        // Marking the place as said when it had only been looked at spent the
-        // right to report it: a dereference this check proved live said
-        // nothing and registered anyway, so a later one of the same place at
-        // the same span was skipped as a repeat of a report that never
-        // happened. Two dereferences do share a span, because both operands of
-        // a `&&` or a `||` are written into one temporary at the whole
-        // expression's span, and `if (*p || (free(p), *p))` was exit 0 with no
-        // output: a proved use of a freed value, silent, which is the worst
-        // answer `docs/safety-model.md` allows for.
-        let Some(standing) = standing else {
-            said.push((at, place.clone(), findings.len()));
-            findings.push(finding);
+/// Put this finding at its caret, or leave the one already standing there.
+///
+/// **Both halves of the key, and a case for each.** Keying on the span alone
+/// collapses `*p = *q;` after two frees into one report, which
+/// `two_pointers_used_after_a_free_on_one_line` fails on. Keying on the place
+/// alone collapses `*p = 1; *p = 2;` after one free into one, which
+/// `one_pointer_used_after_a_free_on_two_lines` fails on. Neither case reaches
+/// the other's mutation, which is why there are two.
+///
+/// **Recorded where the report is made, and not a line earlier.** Marking the
+/// place as said when it had only been looked at spent the right to report it:
+/// a dereference this check proved live said nothing and registered anyway, so
+/// a later one of the same place at the same span was skipped as a repeat of a
+/// report that never happened. Two dereferences do share a span, because both
+/// operands of a `&&` or a `||` are written into one temporary at the whole
+/// expression's span, and `if (*p || (free(p), *p))` was exit 0 with no output:
+/// a proved use of a freed value, silent, which is the worst answer
+/// `docs/safety-model.md` allows for. A function rather than the tail of
+/// [`used`] because [`used_before`] reaches the same caret from the other
+/// direction, and two copies of this rule would be two answers to which report
+/// stands.
+///
+/// **A proof replaces the suspicion standing at this caret**, rather than the
+/// first report of a pair winning whatever it concluded.
+/// `int **q = &p; if (*p || (free(p), *p))` reports the first read as unproven,
+/// because taking a local's address is what makes its sites unknown, and the
+/// second read is proved. Keeping the first threw the proof away and exited 0,
+/// which is the silence the paragraph above describes arriving through the
+/// other door. [`supersedes`] is the rule, and says why only this direction
+/// replaces anything.
+///
+/// The index `said` carries, not the position within `said`: `findings` holds
+/// what every caret in this function has said, so anything reported between the
+/// pair sits between them. Taking the wrong one overwrites a finding nobody was
+/// replacing, and `a_proof_replaces_the_suspicion_at_one_caret` puts a double
+/// free in front of the pair so that the two indices differ.
+fn say(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    place: &Place,
+    finding: Finding,
+) {
+    let standing = said
+        .iter()
+        .position(|(said_at, said_place, _)| *said_at == finding.at && said_place == place);
+
+    let Some(standing) = standing else {
+        said.push((finding.at, place.clone(), findings.len()));
+        findings.push(finding);
+        return;
+    };
+
+    let index = said[standing].2;
+    if supersedes(findings[index].conclusion, finding.conclusion) {
+        findings[index] = finding;
+    }
+}
+
+/// Report every read behind this free that it may be about, where nothing
+/// orders the two.
+///
+/// **The half a forward walk cannot see, arriving from the other side.** A read
+/// the walk meets before the free is never asked about it, because a free marks
+/// only what follows; carrying the read forwards to the free asks the same
+/// question at the only point where both are in hand. `Element::Sequenced` is
+/// what says a read is behind rather than beside, and clearing
+/// [`Known::pending`] is where that happens. See ADR-0023.
+///
+/// **Always unproven, and that is the shape rather than a caution.** The read
+/// and the free are in one full expression with nothing sequencing them, so one
+/// allowed order reads freed storage and another does not, and which an
+/// implementation picks is unspecified. There is no program this can be right
+/// to call `Unsafe` about, so the worst it can do when it is wrong is a report
+/// about a read that was ordered after all.
+///
+/// **It does not go through [`verdict`].** That answers what a set of sites is
+/// worth *now*, and now is before the free, where every one of them is still
+/// live: it answers `None` here, correctly, to a different question. RK-055 in
+/// the review knowledge bank is one judgement point inheriting a rule written
+/// for the other question, which is the mistake in the other direction.
+fn used_before(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return;
+    };
+
+    // Only a `free`. A call this check cannot read may free what it was passed
+    // and the same asymmetry is there, wider: `h(p) + g(*p)` reports today and
+    // `g(*p) + h(p)` does not. That is issue #184 and not this rule, because
+    // what it costs is every dereference beside an opaque call rather than
+    // beside a free.
+    if analysis.callee(*callee) != Callee::Frees {
+        return;
+    }
+
+    let touched = Allocations::touching(arguments, known);
+    let taken: Vec<usize> = named(&touched).collect();
+
+    for read in &known.pending {
+        let both: Vec<usize> = read
+            .sites
+            .iter()
+            .copied()
+            .filter(|site| taken.contains(site))
+            .collect();
+
+        if both.is_empty() {
             continue;
-        };
-
-        // **A proof replaces the suspicion standing at this caret**, rather
-        // than the first report of a pair winning whatever it concluded.
-        // `int **q = &p; if (*p || (free(p), *p))` reports the first read as
-        // unproven, because taking a local's address is what makes its sites
-        // unknown, and the second read is proved. Keeping the first threw the
-        // proof away and exited 0, which is the silence the paragraph above
-        // describes arriving through the other door. [`supersedes`] is the
-        // rule, and says why only this direction replaces anything.
-        // The index `said` carries, not the position within `said`: `findings`
-        // holds what every caret in this function has said, so anything
-        // reported between the pair sits between them. Taking the wrong one
-        // overwrites a finding nobody was replacing, and
-        // `a_proof_replaces_the_suspicion_at_one_caret` puts a double free in
-        // front of the pair so that the two indices differ.
-        let index = said[standing].2;
-        if supersedes(findings[index].conclusion, finding.conclusion) {
-            findings[index] = finding;
         }
+
+        // **Only while every allocation they have in common agrees**, which is
+        // `verdict`'s rule about `made` and is here for its reason: naming one
+        // of several allocations as *the* one is the may-set mistake about a
+        // label. RK-035 is the entry and `allocated here` is the claim.
+        let mut made = None;
+        for (index, site) in both.iter().enumerate() {
+            let from = match known.state[*site] {
+                SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                SiteState::Unknown => None,
+            };
+            made = if index == 0 { from } else { same(made, from) };
+        }
+
+        say(
+            findings,
+            said,
+            &read.place,
+            Finding {
+                kind: Kind::UseAfterFree,
+                conclusion: Conclusion::Unknown,
+                at: read.at,
+                // Exactly one free, which is this one: the reads are carried to
+                // each free separately, so there is nothing folded here and
+                // nothing for the caret to be wrong about.
+                freed: Some(origin.span()),
+                made,
+                unsequenced: true,
+            },
+        );
     }
 }
 

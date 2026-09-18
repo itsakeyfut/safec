@@ -272,7 +272,7 @@ impl Builder {
     /// is about, and nothing says the read happens before the body. C17
     /// 6.8.4.1 p2 and 6.8.5 p1 make a controlling expression a full expression
     /// and 6.8 p4 puts the sequence point at its end, which is after that
-    /// evaluation.
+    /// evaluation. See ADR-0023.
     ///
     /// Every arm, because both of them follow it: an `if` with no `else` still
     /// has the edge that skips the body, and a loop's exit is as much after the
