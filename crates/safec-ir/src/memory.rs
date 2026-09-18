@@ -32,6 +32,8 @@
 //!
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
@@ -193,15 +195,9 @@ fn earlier(here: Span, there: Span) -> Span {
     }
 }
 
-/// A span as something a sort can order, which [`Span`] is not.
-///
-/// The end as well as the start, because two elements can carry one position:
-/// both operands of a `&&` are written into one temporary at the whole
-/// expression's span, and a key that cannot tell two entries apart is a key
-/// that lets them be held in either order. The file first, for [`earlier`]'s
-/// reason.
-fn ordered(at: Span) -> (usize, u32, u32) {
-    (at.file().index(), at.start(), at.end())
+/// What one read is filed under. See [`Read`].
+fn read(at: Span, place: &Place) -> Read {
+    (at.file().index(), at.start(), at.end(), place.clone())
 }
 
 /// What one argument of a call reaches.
@@ -402,16 +398,24 @@ impl Held {
 #[derive(Clone, PartialEq, Eq)]
 struct Pending {
     /// The element's span, which is where `used here` goes.
-    at: Span,
-    /// What was dereferenced. Half the key [`used`] collapses two reports on,
-    /// and kept here so that a report made from the free reaches the same
-    /// answer as one made at the use.
-    place: Place,
-    /// Which allocations it may have read.
     ///
-    /// Sorted, for [`Known::pending`]'s reason.
-    sites: Vec<usize>,
+    /// Kept beside the key rather than in it, because a [`Span`] cannot be
+    /// rebuilt from the position the key holds.
+    at: Span,
+    /// Which allocations it may have read.
+    sites: BTreeSet<usize>,
 }
+
+/// What one of them is filed under: where the read is, and what it read
+/// through.
+///
+/// A position rather than the [`Span`] itself, because the map has to order its
+/// keys and a span is not ordered. The file first, for [`earlier`]'s reason,
+/// and the end as well as the start because two elements can carry one
+/// position: both operands of a `&&` are written into one temporary at the
+/// whole expression's span, and a key that cannot tell two reads apart reports
+/// one of them and not the other.
+type Read = (usize, u32, u32, Place);
 
 /// Which allocations each local may hold, and what is known about each.
 #[derive(Clone, PartialEq, Eq)]
@@ -433,13 +437,16 @@ struct Known {
     escaped: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
-    /// **Sorted by [`ordered`] and then by the place, with one entry per pair,
-    /// because a lattice value has to be canonical.**
+    /// **Ordered containers because a lattice value has to be canonical, and
+    /// the type is what holds that rather than a rule somebody maintains.**
     /// [`crate::dataflow::Analysis::Value`] decides whether the walk has ended
     /// by comparing, so a value holding the same facts in two arrangements
     /// never compares equal and never converges. ADR-0016 measured that as a
-    /// hang, and [`Place`] carries the `Ord` this sorts by for no other reason.
-    pending: Vec<Pending>,
+    /// hang. Written as sorted vectors this needed four rules kept in step by
+    /// hand, and a mutation of each left the whole suite green: a map and a set
+    /// have no arrangement to get wrong. [`Place`] carries the `Ord` the map
+    /// orders by for no other reason. See ADR-0023.
+    pending: BTreeMap<Read, Pending>,
 }
 
 impl Known {
@@ -530,13 +537,14 @@ impl Known {
     /// Record that this place was read through, where the read reaches an
     /// allocation.
     ///
-    /// **A place reaching no site records nothing**, which is [`used`]'s answer
-    /// to an empty set and not [`Allocations::touching`]'s. A dereference of a
-    /// pointer this check never followed is an indeterminate pointer rather
-    /// than a free it lost, and recording it would put `perhaps after the free`
-    /// on every `*p` whose pointer came from anywhere unmodelled, the moment
-    /// the function frees anything. RK-049 in the review knowledge bank is the
-    /// entry, and the two readers of one enumeration are the design.
+    /// **A place reaching no site records nothing, and that is a size rather
+    /// than a rule.** Measured: recording one anyway changes no answer, because
+    /// what [`used_before`] compares is sites and an entry with none can never
+    /// meet a free's. So this is skipped to keep the value small, and the
+    /// asymmetry RK-049 is about is held by the comparison rather than by this
+    /// line: a dereference of a pointer this check never followed says nothing
+    /// here for the same reason it says nothing in [`used`], which is that
+    /// there is no allocation to say it about.
     ///
     /// The sites arrive ascending, because [`Held::sites`] walks a row of a
     /// table in order, and stay that way.
@@ -558,29 +566,22 @@ impl Known {
 
     /// One place of one element, for [`Self::met`].
     fn meeting(&mut self, at: Span, place: &Place) {
-        let sites: Vec<usize> = named(&self.reached_by(place.local)).collect();
+        let sites: BTreeSet<usize> = named(&self.reached_by(place.local)).collect();
 
         if sites.is_empty() {
             return;
         }
 
-        let key = (ordered(at), place);
-        match self
-            .pending
-            .binary_search_by(|entry| (ordered(entry.at), &entry.place).cmp(&key))
-        {
-            // One entry per pair: `*p = *p;` reads through one place twice at
-            // one span, and two entries would be one report said twice.
-            Ok(found) => absorb(&mut self.pending[found].sites, &sites),
-            Err(index) => self.pending.insert(
-                index,
-                Pending {
-                    at,
-                    place: place.clone(),
-                    sites,
-                },
-            ),
-        }
+        // One entry per key: `*p = *p;` reads through one place twice at one
+        // span, and two entries would be one report said twice.
+        self.pending
+            .entry(read(at, place))
+            .or_insert(Pending {
+                at,
+                sites: BTreeSet::new(),
+            })
+            .sites
+            .extend(sites);
     }
 
     /// Every local a write through this one may land in.
@@ -637,10 +638,10 @@ impl Known {
         // are two call sites and a site is the local a call writes into; a
         // frontend whose calls share one can, and this is the answer
         // `error[E0027]` asked for when the field was added.
-        for entry in pending.iter_mut() {
-            entry.sites.retain(|held| *held != site);
+        for entry in pending.values_mut() {
+            entry.sites.remove(&site);
         }
-        pending.retain(|entry| !entry.sites.is_empty());
+        pending.retain(|_, entry| !entry.sites.is_empty());
     }
 
     /// Nothing this local holds is proved, once anything holds its address.
@@ -714,18 +715,6 @@ fn named(reached: &[Reached]) -> impl Iterator<Item = usize> + '_ {
         Reached::Site(site) => Some(*site),
         Reached::SetFreed(_) | Reached::Lost => None,
     })
-}
-
-/// Fold one sorted set of sites into another.
-///
-/// Sorted and deduplicated by rebuilding rather than by a merge, because the
-/// arrangement is what [`crate::dataflow::Analysis::Value`] compares and a set
-/// of at most a handful of small integers is not worth two cursors and an
-/// invariant to get wrong. See [`Known::pending`].
-fn absorb(into: &mut Vec<usize>, from: &[usize]) {
-    into.extend_from_slice(from);
-    into.sort_unstable();
-    into.dedup();
 }
 
 /// The analysis: where an allocation is, and whether it has been freed.
@@ -848,7 +837,7 @@ impl Analysis for Allocations<'_> {
             escaped: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
-            pending: Vec::new(),
+            pending: BTreeMap::new(),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -896,12 +885,15 @@ impl Analysis for Allocations<'_> {
         // join, which is what keeps a read on one arm from being reported
         // against a free on the other: each arm is walked from the value that
         // reached it and not from this one.
-        for entry in &from.pending {
-            let key = (ordered(entry.at), &entry.place);
-            match pending.binary_search_by(|held| (ordered(held.at), &held.place).cmp(&key)) {
-                Ok(found) => absorb(&mut pending[found].sites, &entry.sites),
-                Err(index) => pending.insert(index, entry.clone()),
-            }
+        for (key, entry) in &from.pending {
+            pending
+                .entry(key.clone())
+                .or_insert(Pending {
+                    at: entry.at,
+                    sites: BTreeSet::new(),
+                })
+                .sites
+                .extend(&entry.sites);
         }
 
         // And applying it, which the union alone does not do. [`Known::settle`]
@@ -910,12 +902,19 @@ impl Analysis for Allocations<'_> {
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
-        // **Before the arms, and before any of them can return.** What is read
-        // here is read where this element runs, against what held before it,
-        // which is the same question `check` asks one line earlier and has to
-        // get the same answer to. The `Deref` arm below returns early when it
-        // cannot follow the write, and RK-051 in the review knowledge bank is a
-        // rule skipped by exactly that.
+        // What is read here is read where this element runs, against what held
+        // before it, which is the same question `check` asks one line earlier
+        // and has to get the same answer to.
+        //
+        // **Before the arms, so that no arm's early return can skip it, and
+        // nothing observes that today.** Measured: moving it below the match
+        // changes no answer, because the one arm that returns early is the
+        // write through a pointer, and this frontend reads an assignment's
+        // value back into a temporary, so the read is recorded by that element
+        // instead. That is a property of one lowering rather than of the IR,
+        // and RK-051 in the review knowledge bank is a rule skipped by exactly
+        // such a return. Written first because the order is free and the
+        // alternative is guarded by nothing.
         value.met(dereferenced_in_element(element));
 
         // Every field written out, never `..`: RK-018 in the review knowledge
@@ -1891,7 +1890,7 @@ fn used_before(
     let touched = Allocations::touching(arguments, known);
     let taken: Vec<usize> = named(&touched).collect();
 
-    for read in &known.pending {
+    for ((.., place), read) in &known.pending {
         let both: Vec<usize> = read
             .sites
             .iter()
@@ -1919,7 +1918,7 @@ fn used_before(
         say(
             findings,
             said,
-            &read.place,
+            place,
             Finding {
                 kind: Kind::UseAfterFree,
                 conclusion: Conclusion::Unknown,

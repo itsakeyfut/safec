@@ -65,15 +65,27 @@ not is how wide the report is.
 Chosen option: **a field on the memory lattice**.
 
 ```rust
+/// Where the read is, and what it read through.
+type Read = (usize, u32, u32, Place);
+
 struct Pending {
     /// The element's span, which is where `used here` goes.
     at: Span,
-    /// What was dereferenced, which is half the key `used` collapses on.
-    place: Place,
     /// Which allocations it may have read, resolved here.
-    sites: Vec<usize>,
+    sites: BTreeSet<usize>,
 }
 ```
+
+`Known::pending` is a `BTreeMap<Read, Pending>`. **Ordered containers because a
+lattice value has to be canonical, and because the type is a better place for
+that than a rule somebody maintains.** It was written first as a sorted `Vec`
+with four rules kept in step by hand: the merge sorts, the merge deduplicates,
+an insertion goes at its ordered position, and the key carries the end of a span
+as well as its start. A mutation of each of the first three left the whole suite
+green, because reaching them means building a program for the bound rather than
+for the check. A map and a set have no arrangement to get wrong, so three of the
+four stopped being rules. The fourth is a rule about which two reads are one
+read and is discussed under Confirmation.
 
 `Known::pending` holds them, `Known::met` records one at every element and every
 terminator, the `Element::Sequenced` arm empties it, and `used_before` reports
@@ -141,11 +153,22 @@ Each mutation below applied on its own, the whole workspace suite run with
 
 | Mutation | Named test that fails |
 |---|---|
-| nothing is recorded, at either transfer | `an_unsequenced_use_the_check_meets_first_is_reported` and `a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported`, which go back to silent |
-| the terminator's transfer records nothing | the same two: a `?:` condition is read by the branch and the first case's use is read by a call |
-| the report concludes `Unsafe` | the same two, whose `.stderr` carries a warning and would carry an error |
+| the element transfer records nothing | `a_write_through_a_pointer_the_check_meets_first_is_reported` and `a_discarded_read_the_check_meets_first_is_reported` |
+| the terminator transfer records nothing | `an_unsequenced_use_the_check_meets_first_is_reported`, `a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported` and `a_read_of_either_of_two_allocations_before_a_free_names_neither` |
+| a report from this concludes `Unsafe` | the same three, whose `.stderr` carries a warning and would carry an error |
 | the sites are not compared, so every read behind a free is reported | `a_use_of_another_pointer_before_a_free_is_not_reported` |
+| `made` keeps the first rather than folding it with `same` | `a_read_of_either_of_two_allocations_before_a_free_names_neither`, which gains an `allocated here` naming one of two |
 | `Known::reborn` leaves `pending` alone | `a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free` in `crates/safec-ir/tests/freed.rs`, which no C program reaches and a frontend can build |
+| the key drops the place, so one span is one read | `a_proof_replaces_the_suspicion_at_one_caret` |
+| `say` keys on the span alone | `two_pointers_used_after_a_free_on_one_line` |
+
+**The two transfers needed a case each and nobody would have guessed which.**
+Deleting both recordings at once fails two cases, so the pair looked guarded;
+deleting only the element half left the whole suite green, because every read the
+corpus reported on until then was carried by a call's argument or a branch's
+condition. RK-039 in the review knowledge bank is a mutation that measures at
+both ends, and this is the shape it warns about: a mutation of the pair says
+nothing about either half.
 
 The rows above are this record's own. The two below are the marker's, and each
 makes the compiler report a use after free in a program C defines, which is a
@@ -153,20 +176,36 @@ false positive rather than a false proof and is row 4.
 
 | Mutation | Named test that fails |
 |---|---|
-| an arm does not begin with the sequence point | `a_condition_read_through_a_pointer_is_sequenced_before_the_body` and `..._before_the_loop_exits`, and thirty-one artifacts whose markers move |
+| an arm does not begin with the sequence point | `a_condition_read_through_a_pointer_is_sequenced_before_the_body` and `..._before_the_loop_exits`, and the artifacts whose markers move |
 | only the taken arm of an `if` begins with it | `a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm`, on its `.stderr`: measured, the mutated compiler warns about `if (*p) { } else { free(p); }` |
+| a `for` with no condition asks for a marker anyway | `lowering::tests::a_for_loop_asks_before_each_turn_and_steps_after_each_body`, which is where that `None` is reached: the corpus cases with such a loop stop at `--emit ast` |
 
 `a_comma_that_frees_after_it_reads` is the case that says the clearing is real:
 dropping `value.pending.clear()` makes it report a program C17 6.5.17 p2 defines,
-and it fails together with the two condition cases and the two hand-built
+and it fails together with the three condition cases and the two hand-built
 programs in `freed.rs` that read before they free.
 
+**Three things here are held by nothing, and saying which is the point of this
+section.**
+
 `a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached` is held by
-no mutation of a line, and this says so rather than claiming otherwise. What
-makes it silent is that the reads travel in a lattice value along the graph's
-edges, so an arm is walked from what reached it and not from what the other arm
-did; breaking that means moving the field out of the lattice, which is a design
-rather than an edit.
+no mutation of a line. What makes it silent is that the reads travel in a lattice
+value along the graph's edges, so an arm is walked from what reached it and not
+from what the other arm did; breaking that means moving the field out of the
+lattice, which is a design rather than an edit.
+
+The end of a span in the key is what keeps two reads at two elements that begin
+at one column from collapsing into one report. Dropping it from the key leaves
+the whole suite green: no program in the corpus has such a pair reaching a free
+unordered. What it would cost is one of the two reports, which is a suspicion
+lost rather than a proof invented.
+
+Recording the read **before** the transfer's arms, so that no early return can
+skip it, is guarded by nothing either. Measured: moving it below the match
+changes no answer, because the one arm that returns early is the write through a
+pointer and this frontend reads an assignment's value back into a temporary, so
+the read is recorded by that second element instead. It is written first because
+the order is free and the alternative rests on a property of one lowering.
 
 `Analysis::height` is held by nothing, as ADR-0016, ADR-0018, ADR-0019, ADR-0020
 and ADR-0022 each say. Answering too low is a panic naming the method.
@@ -186,9 +225,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   worth of reads rather than a function's, but #173 is already open about what
   this analysis costs on a loop and this does not help it.
 * Bad, because `Place` now derives `Ord`, which is a claim the domain does not
-  make. Its doc comment says the order exists so that a set of them can be
-  canonical and means nothing else; a reader who sorts places for any other
-  reason is reading the derive as permission.
+  make. Its doc comment says the order exists so that a map can be keyed on one
+  and means nothing else; a reader who sorts places for any other reason is
+  reading the derive as permission.
 * Bad, because thirty-two blessed artifacts gain or move a line, and the change
   is mechanical: `SAFEC_BLESS=1` makes them and a reviewer skims past them to
   find the one `.stderr` that matters.
@@ -209,8 +248,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   it is for: an arm's reads do not reach the other arm's free.
 * Good, because nothing in `dataflow.rs` or the IR changes.
 * Bad, because the value grows, and a value carrying spans is where ADR-0016
-  measured a walk that does not end. It is a sorted set rather than a slot,
-  which is why it converges, and `Place: Ord` is the price.
+  measured a walk that does not end. What converges is a set rather than a slot
+  that keeps whichever arrived, and `Place: Ord` is the price of the container
+  that holds the arrangement for us.
 
 ### A backward analysis
 
