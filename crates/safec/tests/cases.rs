@@ -81,6 +81,13 @@ cases! {
     // order the blocks were written in.
     a_use_of_another_pointer_before_a_free_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the read that has to cross a merge to reach the free at all: it is
+    // inside one arm of a `?:` that the free is outside of, so nothing but the
+    // join carries it. The case above puts the two on opposite arms and asks
+    // for silence; this one puts the read on an arm and the free after the
+    // merge and asks for a report, which is the only shape where losing the
+    // join's union of the carried reads is a silence rather than a noise.
+    a_read_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And what the report is allowed to *name*. The read may have gone through
     // either allocation, so `allocated here` would be a caret on one of two
     // lines with nothing to choose between them, which is RK-035's may-set
@@ -90,9 +97,9 @@ cases! {
     a_read_of_either_of_two_allocations_before_a_free_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A controlling expression that is exactly a dereference is read by the
     // branch itself, because it needs no temporary, so the sequence point at
-    // the end of it belongs after the branch and not before. C17 6.8.4.1 p2
-    // and 6.8 p4, and both arms: the body and the edge that skips it are each
-    // after the condition. The third has nothing ordering it, because a `?:`
+    // the end of it belongs after the branch and not before. C17 6.8 p4, and
+    // both arms: the body and the edge that skips it are each after the
+    // condition. The third has nothing ordering it, because a `?:`
     // below a `+` is enclosed by something C leaves unsequenced, so that one
     // reports.
     a_condition_read_through_a_pointer_is_sequenced_before_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

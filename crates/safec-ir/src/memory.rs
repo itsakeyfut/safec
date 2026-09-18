@@ -195,8 +195,8 @@ fn earlier(here: Span, there: Span) -> Span {
     }
 }
 
-/// What one read is filed under. See [`Read`].
-fn read(at: Span, place: &Place) -> Read {
+/// What one read is filed under. See [`ReadKey`].
+fn read_key(at: Span, place: &Place) -> ReadKey {
     (at.file().index(), at.start(), at.end(), place.clone())
 }
 
@@ -396,7 +396,7 @@ impl Held {
 /// rather than a false positive, which is the direction this check cannot
 /// afford.
 #[derive(Clone, PartialEq, Eq)]
-struct Pending {
+struct PendingRead {
     /// The element's span, which is where `used here` goes.
     ///
     /// Kept beside the key rather than in it, because a [`Span`] cannot be
@@ -410,12 +410,20 @@ struct Pending {
 /// through.
 ///
 /// A position rather than the [`Span`] itself, because the map has to order its
-/// keys and a span is not ordered. The file first, for [`earlier`]'s reason,
-/// and the end as well as the start because two elements can carry one
-/// position: both operands of a `&&` are written into one temporary at the
-/// whole expression's span, and a key that cannot tell two reads apart reports
-/// one of them and not the other.
-type Read = (usize, u32, u32, Place);
+/// keys and a span is not ordered. The file is the first part of it for
+/// [`earlier`]'s reason.
+///
+/// **The place is the fourth part because this is the pair a report is
+/// collapsed on**, and [`say`] says what each half of it costs when it goes.
+/// Two reads at one span through one place are one report; two reads at one
+/// span through two places are two.
+///
+/// The end as well as the start, so that two elements beginning at one column
+/// and covering different extents are two reads rather than one. Nothing
+/// reaches that today and ADR-0023 says so: dropping the end leaves the whole
+/// suite green, and what it would cost is one of two reports rather than a
+/// wrong one.
+type ReadKey = (usize, u32, u32, Place);
 
 /// Which allocations each local may hold, and what is known about each.
 #[derive(Clone, PartialEq, Eq)]
@@ -446,7 +454,7 @@ struct Known {
     /// hand, and a mutation of each left the whole suite green: a map and a set
     /// have no arrangement to get wrong. [`Place`] carries the `Ord` the map
     /// orders by for no other reason. See ADR-0023.
-    pending: BTreeMap<Read, Pending>,
+    pending: BTreeMap<ReadKey, PendingRead>,
 }
 
 impl Known {
@@ -575,8 +583,8 @@ impl Known {
         // One entry per key: `*p = *p;` reads through one place twice at one
         // span, and two entries would be one report said twice.
         self.pending
-            .entry(read(at, place))
-            .or_insert(Pending {
+            .entry(read_key(at, place))
+            .or_insert(PendingRead {
                 at,
                 sites: BTreeSet::new(),
             })
@@ -888,7 +896,7 @@ impl Analysis for Allocations<'_> {
         for (key, entry) in &from.pending {
             pending
                 .entry(key.clone())
-                .or_insert(Pending {
+                .or_insert(PendingRead {
                     at: entry.at,
                     sites: BTreeSet::new(),
                 })

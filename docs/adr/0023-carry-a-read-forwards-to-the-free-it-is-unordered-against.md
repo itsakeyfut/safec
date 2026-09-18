@@ -66,9 +66,9 @@ Chosen option: **a field on the memory lattice**.
 
 ```rust
 /// Where the read is, and what it read through.
-type Read = (usize, u32, u32, Place);
+type ReadKey = (usize, u32, u32, Place);
 
-struct Pending {
+struct PendingRead {
     /// The element's span, which is where `used here` goes.
     at: Span,
     /// Which allocations it may have read, resolved here.
@@ -76,7 +76,7 @@ struct Pending {
 }
 ```
 
-`Known::pending` is a `BTreeMap<Read, Pending>`. **Ordered containers because a
+`Known::pending` is a `BTreeMap<ReadKey, PendingRead>`. **Ordered containers because a
 lattice value has to be canonical, and because the type is a better place for
 that than a rule somebody maintains.** It was written first as a sorted `Vec`
 with four rules kept in step by hand: the merge sorts, the merge deduplicates,
@@ -120,13 +120,13 @@ changed and no string was added.
 
 `if (*p)` needs no temporary, so the dereference is carried by
 `Terminator::Branch` itself, and the marker the lowering emitted for the
-controlling expression sat **before** that terminator. C17 6.8.4.1 p2 and 6.8 p1
-make a controlling expression a full expression and 6.8 p4 puts the sequence
-point at its end, which is after the evaluation the terminator performs, so the
-position was wrong and had been inert: only a free asks about a marker and no
-branch frees.
+controlling expression sat **before** that terminator. C17 6.8 p4 lists a
+controlling expression among the full expressions and puts a sequence point at
+the end of one, and the end of an expression is after the evaluation the
+terminator performs, so the position was wrong and had been inert: only a free
+asks about a marker and no branch frees.
 
-Carrying reads forwards is what makes it stop being inert, so `Builder::entering`
+Carrying reads forwards is what makes it stop being inert, so `Builder::enter`
 now begins each arm of a statement's branch with it, which is where
 `Lowering::split` and `Lowering::second` already put the ones for `&&`, `||` and
 `?:`. `a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported`
@@ -137,7 +137,7 @@ no marker, and has to report.
 **Both arms**, because both follow the condition: an `if` with no `else` still
 has the edge that skips the body, and a loop's exit is as much after the
 condition as its body is. `for` with no condition has no controlling expression
-and no marker, which is `entering`'s `None`.
+and no marker, which is `enter`'s `None`.
 
 ### Confirmation
 
@@ -234,6 +234,25 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
 * Bad, because the same asymmetry for a call this check cannot read is still
   there. It is issue #184, and what it costs is every dereference beside an
   opaque call rather than beside a free, which is a different decision.
+* **Bad, because #178 got wider and this is where that is written down.**
+  ADR-0022's enclosure rule suppresses the marker for a `,`, `&&`, `||` or `?:`
+  below anything C leaves unsequenced, and `=` is such a parent under C17
+  6.5.16 p3. Until now that cost a proof in one direction only. Now it costs a
+  suspicion in the other as well: measured, `int x = (*p, free(p), 0);` is
+  silent and `x = (*p, free(p), 0);` is `error[SC0402]` under `--deny-unknown`,
+  which is one expression written two ways and answered two ways, and C17
+  6.5.17 p2 settles the order in both. Every one of these is row 4. The record
+  that owns the rule is ADR-0022 and the issue is #178; what is new is the
+  surface, not the rule.
+* **Bad, because the sequence point between a call's arguments and the call is
+  not expressed to this direction at all.** C17 6.5.2.2 p10's first sentence
+  orders a call's own argument evaluation before the call, and ADR-0022 says
+  the IR expresses that by position, which was true while only a free looked
+  backwards. A read carried forwards is not stopped by a position, so
+  `void f(int *p) { free(p + *p); }` is reported although C defines it, and the
+  note the report prints cites the very clause that refutes it. Measured, and
+  `clang -std=c17 -pedantic-errors` accepts the program. It is row 4 and it is
+  issue #185.
 * What would reverse this: a value per program point and a backward direction in
   `dataflow.rs`, which ADR-0016 lists as unasked-for and which would let the
   question be answered where it is asked rather than carried to where it can be.
@@ -282,7 +301,7 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
 
 * `Known::pending` and `used_before` in
   [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs), and
-  `Builder::entering` in
+  `Builder::enter` in
   [`crates/safec/src/lowering.rs`](../../crates/safec/src/lowering.rs).
 * C17 Annex C is the complete list of sequence points; 6.5 p3 is what makes
   everything not on it unsequenced, and 6.5.2.2 p10 is what a call is answered
