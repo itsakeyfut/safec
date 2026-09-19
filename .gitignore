@@ -20,3 +20,6 @@ a.out
 /CLAUDE.md
 /.claude/
 /TODO.md
+
+# Local command shortcuts, kept per developer rather than shared
+/justfile
