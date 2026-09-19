@@ -1478,8 +1478,8 @@ pub struct Finding {
     ///
     /// `None` for most `Unknown`s: what usually makes one unknown is that the
     /// paths or the sites reaching here disagree, so there is no single free to
-    /// point at. [`Self::unsequenced`] is the exception, where there is one and
-    /// what is open is the order.
+    /// point at. [`Unproven::Unsequenced`] is the exception, where there is one
+    /// and what is open is the order.
     pub freed: Option<Span>,
     /// Where the allocation was made, where this check saw it happen.
     ///
@@ -1488,16 +1488,45 @@ pub struct Finding {
     /// diagnostic for this line and it is honest to leave it off rather than
     /// point at an allocation that may not be the one.
     pub made: Option<Span>,
-    /// Whether what leaves this unproven is that C has not said which order
-    /// runs.
+    /// Why this could not be proven, and `None` where it was.
     ///
-    /// The free and the use are in one full expression with nothing sequencing
-    /// them, so one allowed order frees first and another does not, and which
-    /// an implementation picks is unspecified. Every other unproven finding is
-    /// this check having lost something; this one is the check having worked
-    /// out that there is nothing to find. Never true beside
-    /// [`Conclusion::Unsafe`]. See ADR-0022.
-    pub unsequenced: bool,
+    /// One reason rather than a flag per reason. The words a reader is given
+    /// differ by reason, so this is what chooses them, and two flags beside
+    /// each other would have combinations that mean nothing with only a doc
+    /// comment to say so. `Some` exactly where [`Self::conclusion`] is
+    /// [`Conclusion::Unknown`].
+    pub unproven: Option<Unproven>,
+}
+
+/// Why a finding could not be proven.
+///
+/// **Three reasons and not two, because one of them is about this check and
+/// the other two are about the program.** A reader told a value may have been
+/// freed already is being told something was established somewhere; where this
+/// check lost the pointer, nothing was, and saying it anyway is a claim about
+/// a program that nobody worked out. Which words each reason gets is
+/// `memory_finding`'s in `safec`, for the reason [`Finding`] gives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Unproven {
+    /// The paths or the sites reaching here disagree about a site that really
+    /// was freed, or a call this check cannot read was handed one and may have
+    /// freed it. There is a free to suspect, and no single one to point at.
+    Disagreement,
+    /// This check stopped following the pointer, so nothing here established a
+    /// free at all.
+    ///
+    /// `Reached::Lost` with nothing else contributing. The two producers are
+    /// `Known::reached_by`'s: a local that held a site and lost the name for
+    /// it, which is ADR-0018, and one whose address escaped, which is
+    /// ADR-0017. Neither says a free happened; both say this check can no
+    /// longer say what the pointer points at.
+    ///
+    /// Those two are private, so they are named here rather than linked: a
+    /// link out of a public item to one of them is
+    /// `rustdoc::private_intra_doc_links`, which this crate denies.
+    Untracked,
+    /// C has not said which order runs. See ADR-0022.
+    Unsequenced,
 }
 
 /// Every double free this unit contains, and every one it cannot rule out.
@@ -1612,9 +1641,9 @@ struct Verdict {
     freed: Option<Span>,
     /// Where that allocation came from, where this check saw it happen.
     made: Option<Span>,
-    /// Whether what leaves this unproven is that C has not said which order
-    /// runs. Never true beside [`Conclusion::Unsafe`].
-    unsequenced: bool,
+    /// Why this could not be proven, and `None` where it was. Carried through
+    /// to [`Finding::unproven`] unchanged.
+    unproven: Option<Unproven>,
 }
 
 /// What these sites amount to, or nothing where they amount to no report.
@@ -1644,6 +1673,13 @@ fn verdict(
     let mut any_freed = false;
     let mut live = false;
     let mut unknown = false;
+    // Kept apart from `unknown` because they are unproven for opposite
+    // reasons, and the words a reader is given turn on which. A site the paths
+    // disagree about was freed on one of them, and a site an opaque call was
+    // handed may have been freed by it; a pointer this check lost says nothing
+    // about any free anywhere. Counting both as one flag is what put
+    // `may free it again here` on a program with one free in it.
+    let mut lost = false;
     // Whether more than one free was folded in. The span below is the earliest
     // of them and the flag beside it is the conjunction, so where they differ
     // the span can be a free this check *has* seen sequenced while the flag is
@@ -1654,10 +1690,6 @@ fn verdict(
     for entry in reached {
         let site = match entry {
             Reached::Site(site) => site,
-            // **Not the same as proving it live.** This is the check having
-            // lost the pointer, and answering nothing about it is the failure
-            // `docs/safety-model.md` is written to prevent rather than the one
-            // it tolerates.
             // A proof about the set: freeing it again takes the same member,
             // whichever it was. It carries no `made`, because naming one of
             // several allocations as the one that was freed is the may-set
@@ -1671,8 +1703,12 @@ fn verdict(
                 });
                 continue;
             }
+            // **Not the same as proving it live.** This is the check having
+            // lost the pointer, and answering nothing about it is the failure
+            // `docs/safety-model.md` is written to prevent rather than the one
+            // it tolerates.
             Reached::Lost => {
-                unknown = true;
+                lost = true;
                 continue;
             }
         };
@@ -1707,7 +1743,7 @@ fn verdict(
     // put the free first is a separate question with a separate answer, and
     // running them together is RK-034's shape: one test meaning "proved" and
     // "gave up" at once reports the second as the first.
-    let settled = !live && !unknown;
+    let settled = !live && !unknown && !lost;
 
     // **A double free does not turn on which ran first.** Two frees of one
     // allocation are a double free in either order, so there is nothing for a
@@ -1726,7 +1762,7 @@ fn verdict(
             conclusion: Conclusion::Unsafe,
             freed: Some(freed.at),
             made,
-            unsequenced: false,
+            unproven: None,
         }),
         // **Unproven, and the free is still named.** What is open here is only
         // the order: the sites agree, nothing was lost, and there is exactly
@@ -1736,7 +1772,7 @@ fn verdict(
             conclusion: Conclusion::Unknown,
             freed: Some(freed.at),
             made,
-            unsequenced: true,
+            unproven: Some(Unproven::Unsequenced),
         }),
         // Neither span is carried. What makes this unproven is that the sites
         // or the paths disagree, so there is no one free that every execution
@@ -1745,13 +1781,24 @@ fn verdict(
             conclusion: Conclusion::Unknown,
             freed: None,
             made: None,
-            unsequenced: false,
+            unproven: Some(Unproven::Disagreement),
+        }),
+        // **Nothing established a free at all**, so nothing here may say one
+        // happened. This check lost the pointer and no site it reached says
+        // otherwise, which is what `!unknown` is doing: a site the paths
+        // disagree about, and a site an opaque call was handed, are each a
+        // free worth suspecting, and the arm below is right about them.
+        None if lost && !unknown => Some(Verdict {
+            conclusion: Conclusion::Unknown,
+            freed: None,
+            made: None,
+            unproven: Some(Unproven::Untracked),
         }),
         None if unknown => Some(Verdict {
             conclusion: Conclusion::Unknown,
             freed: None,
             made: None,
-            unsequenced: false,
+            unproven: Some(Unproven::Disagreement),
         }),
         None => None,
     }
@@ -1790,7 +1837,7 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         at: origin.span(),
         freed: verdict.freed,
         made: verdict.made,
-        unsequenced: verdict.unsequenced,
+        unproven: verdict.unproven,
     })
 }
 
@@ -1871,7 +1918,7 @@ fn used(
                 at,
                 freed: verdict.freed,
                 made: verdict.made,
-                unsequenced: verdict.unsequenced,
+                unproven: verdict.unproven,
             },
         );
     }
@@ -2025,7 +2072,7 @@ fn used_before(
                 // nothing for the caret to be wrong about.
                 freed: Some(origin.span()),
                 made,
-                unsequenced: true,
+                unproven: Some(Unproven::Unsequenced),
             },
         );
     }
