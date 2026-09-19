@@ -127,6 +127,18 @@ to it. The index rather than the destination, because
 purpose, so a `BlockId` cannot tell those two arms apart. `docs/roadmap.md` puts
 nullability in Phase 5, which is the caller this was measured for.
 
+**It also takes the block control is leaving, and that was found after it
+landed.** The index and the terminator answer `if (p)` and nothing else. Every
+other spelling of the same test puts the comparison in an element: `if (p != 0)`
+lowers to a `Binary` written to a temporary and a copy of that temporary in the
+`Branch`, so the condition an analysis has to read is three lines above the
+terminator it is handed and there was no way to name the block holding it. The
+block is what reaches it, and it is the leaving end rather than the arriving one
+because the index already names the arriving one. It is not a `BlockId` in place
+of the terminator: the two would then be a pair that can disagree, and the guard
+on their agreeing is a test rather than the compiler, which is what
+`the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` holds today.
+
 **What it cost, measured when it landed rather than when it was deferred.** The
 prediction here was a defaulted method and three lines of the solver, with every
 test in the crate passing unchanged. The second half held: nothing that existed
@@ -205,6 +217,12 @@ and rewrite all of them on each pass, for a reader that does not exist.
   `error[E0046]`, at `memory.rs`'s `Allocations` before the test suite is
   reached, which is what makes "an analysis that does not implement it is
   unaffected" a claim the compiler holds rather than one this record asserts.
+* Handing `Analysis::edge` the entry block's id rather than the block control
+  is leaving fails
+  `the_block_an_edge_leaves_is_the_one_whose_elements_it_can_read`, which is
+  the only test that reads an element through it. An implementation that takes
+  the block and answers from the terminator alone fails the same one, and that
+  is the half that says the argument is load-bearing rather than present.
 * Swapping `then` and `otherwise` in `Terminator::successors` fails every test
   that reads the order rather than the set. That is a wide set and reaches
   another crate, because the lowering builds its arms in that order too:
