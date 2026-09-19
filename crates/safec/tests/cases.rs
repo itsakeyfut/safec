@@ -158,6 +158,14 @@ cases! {
     a_free_of_a_may_set_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_given_nothing_forgets_the_set_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_may_set_freed_then_written_through_an_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a proof about a may-set survives when a value is built from its
+    // operands, which is the half of `Held` that is not a may-fact. It carries
+    // while the set does not grow, so an offset keeps it and an offset by
+    // something that is itself a site does not: `i` is a parameter, so `q + i`
+    // reaches `i`'s site too, and a set that has gained a site nothing freed
+    // cannot support a proof about the one that was. See ADR-0024.
+    a_free_after_an_offset_that_kept_the_set_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_offset_that_grew_the_set_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_after_a_may_set_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_while_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

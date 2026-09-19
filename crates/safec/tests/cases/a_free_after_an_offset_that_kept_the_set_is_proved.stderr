@@ -1,0 +1,12 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_free_after_an_offset_that_kept_the_set_is_proved.c:8:5 ]
+   │
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+   │ 
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
