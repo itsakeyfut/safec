@@ -1372,6 +1372,12 @@ fn the_terminator_an_edge_is_walked_with_is_the_one_that_named_it() {
 /// Mutation: answer from the terminator's operand rather than the element the
 /// block resolves it to. Both arms are answered `Copy`, and this fails. That
 /// is the half that says the argument is load-bearing rather than present.
+///
+/// Mutation: search the block forwards rather than backwards, by dropping
+/// `rev` from `Resolving::edge`. The earlier write to the condition's local is
+/// resolved instead, both arms are answered `Use`, and this fails. The block
+/// writes that local twice for no other reason: what a branch reads is the
+/// last write before it, and with one write nothing holds the direction.
 #[test]
 fn the_block_an_edge_leaves_is_the_one_whose_elements_it_can_read() {
     let (_sources, at) = spans();
@@ -1391,15 +1397,25 @@ fn the_block_an_edge_leaves_is_the_one_whose_elements_it_can_read() {
     function.fill_block(
         branch,
         Block {
-            elements: vec![Element::Assign(Operation {
-                place: Place::local(condition),
-                value: Rvalue::Binary {
-                    op: BinOp::Ne,
-                    lhs: Operand::Copy(Place::local(pointer)),
-                    rhs: Operand::Constant(0),
-                },
-                origin,
-            })],
+            elements: vec![
+                // An earlier write to the same local, so that the direction
+                // the block is searched in is something an answer depends on.
+                // A search that runs forwards resolves this one.
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Use(Operand::Constant(0)),
+                    origin,
+                }),
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(pointer)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin,
+                }),
+            ],
             terminator: Terminator::Branch {
                 condition: Operand::Copy(Place::local(condition)),
                 then: taken,
