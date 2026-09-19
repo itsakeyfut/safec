@@ -166,13 +166,14 @@ cases! {
     // cannot support a proof about the one that was. See ADR-0024.
     a_free_after_an_offset_that_kept_the_set_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_offset_that_grew_the_set_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // The same offset written with a local rather than a constant, which is
-    // what reaches the arm where the accumulator keeps a proof it already has.
-    // A constant is not an operand this walk copies from, so the pair above
-    // call the accumulator once each and only ever adopt; `n` holds nothing, so
-    // the second call adds no site and the proof has to survive it. Measured:
-    // without this, deleting that arm breaks nothing.
-    an_offset_by_a_local_that_holds_nothing_keeps_the_set: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same offset written with a local rather than a constant, which loses
+    // the proof however little that local holds. This check does not read
+    // types, so a local holding no site is an `int` and a pointer whose
+    // allocation it lost at the same time: `p + n` and `base + ok` with `base`
+    // read out of another pointer are one shape here. Keeping the proof for the
+    // first keeps it for the second, which is a certainty about a value nothing
+    // followed, so neither keeps it.
+    an_offset_by_a_local_loses_the_proof_whatever_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the may-fact beside the proof. A local that lost the name for what it
     // held says so, and arithmetic on it builds a pointer that has lost it too.
     // ADR-0018 holds that for a copy and nothing held it for arithmetic, so the

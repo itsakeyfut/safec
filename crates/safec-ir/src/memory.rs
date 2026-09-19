@@ -390,17 +390,6 @@ impl Held {
     /// Asking afterwards answers that nothing ever grows, which is the same
     /// mistake spelled as an ordering.
     fn accumulated(&mut self, other: &Held) {
-        let grows = other
-            .sites
-            .iter()
-            .zip(&self.sites)
-            .any(|(there, here)| *there && !*here);
-        let shrinks = self
-            .sites
-            .iter()
-            .zip(&other.sites)
-            .any(|(here, there)| *here && !*there);
-
         let Held {
             sites,
             lost,
@@ -408,23 +397,16 @@ impl Held {
             writes_to,
         } = self;
 
-        // **Symmetric, so the answer does not turn on which operand the walk
-        // reached first.** `p = i + q` and `p = q + i` are one expression.
-        // `shrinks` is also what carries the seed: a value built from
-        // [`Held::none`] holds no site at all, so the first operand's set is
-        // the whole of the result so far and its proof is still about it.
-        //
-        // **Nothing observes the first arm**, and it is what the sentence above
-        // promises: reaching it needs two operands that each carry a proof and
-        // name the same set, which takes two frees of one may-set and the first
-        // of them reports. Deleting it breaks nothing and leaves the surviving
-        // span decided by which operand came first. Measured.
-        *freed = match (*freed, other.freed) {
-            (Some(here), Some(there)) if !grows && !shrinks => Some(here.joined(there)),
-            (Some(here), _) if !grows => Some(here),
-            (_, Some(there)) if !shrinks => Some(there),
-            _ => None,
-        };
+        // **A second operand takes the proof with it.** What
+        // [`Self::freed`] is worth is that freeing this local again takes the
+        // same member, and an expression built out of two operands is not that
+        // local offset: it may be the *other* operand's value. This check does
+        // not read types, so a local holding no site is an integer and a
+        // pointer whose allocation it lost at the same time, and `base + ok`
+        // with `base` read out of another pointer is `p + n` with `n` an `int`.
+        // Keeping the proof for one keeps it for both, and one of them is a
+        // certainty about a value nothing here has followed. See ADR-0024.
+        *freed = None;
 
         // The three may-facts, which grow wherever anything meets. The edge is
         // the one nothing observes here: both callers that build a value out of
@@ -782,6 +764,43 @@ impl Known {
     }
 }
 
+/// What the operands of a binary operation build.
+///
+/// **The proof survives only where nothing else contributed.** One followed
+/// operand and a constant is `p + 1`: the result is that operand offset, and
+/// C17 6.5.6 p8 keeps it inside the same object, so the set the proof is about
+/// is the set the result names. Two followed operands is an expression whose
+/// value may be either of them, and [`Held::accumulated`] drops the proof for
+/// the reason written there.
+///
+/// One function with two callers, because the same question is asked where a
+/// value is assigned and where one is written through a pointer, and RK-052 in
+/// the review knowledge bank is one rule in two places drifting apart inside
+/// the change that touches one of them.
+fn built_from(operands: [&Operand; 2], value: &Known) -> Held {
+    let followed: Vec<usize> = operands
+        .iter()
+        .filter_map(|operand| match operand {
+            // A constant is not a value this check follows, and neither is a
+            // read through a projection: `*pp + 1` reaches whatever `pp` points
+            // at, which is a place rather than a local.
+            Operand::Copy(source) if source.projection.is_empty() => Some(source.local.index()),
+            _ => None,
+        })
+        .collect();
+
+    let mut reached = Held::none(value.points_to.len());
+    for &source in &followed {
+        reached.accumulated(&value.points_to[source]);
+    }
+
+    if let [one] = followed[..] {
+        reached.freed = value.points_to[one].freed;
+    }
+
+    reached
+}
+
 /// The sites out of everything a place or an argument reached.
 ///
 /// **One fold with three callers, because the three have to agree.** It is what
@@ -1089,17 +1108,8 @@ impl Analysis for Allocations<'_> {
                         // hand, and carried an edge through `qq + 7` that the
                         // arm one level up had just been taught to drop.
                         Rvalue::Binary { op: _, lhs, rhs } => {
-                            let mut reached = Held::none(value.points_to.len());
-                            for operand in [lhs, rhs] {
-                                if let Operand::Copy(source) = operand {
-                                    if source.projection.is_empty() {
-                                        reached.accumulated(&value.points_to[source.local.index()]);
-                                    }
-                                }
-                            }
-
+                            let mut reached = built_from([lhs, rhs], value);
                             reached.writes_to.fill(false);
-
                             reached
                         }
                         // A constant, a read through a projection, a unary
@@ -1202,16 +1212,7 @@ impl Analysis for Allocations<'_> {
                     // types are in the IR and reading them would separate the
                     // two, which is #143 rather than a line here.
                     Rvalue::Binary { op: _, lhs, rhs } => {
-                        let mut reached = Held::none(value.points_to.len());
-                        for operand in [lhs, rhs] {
-                            let Operand::Copy(source) = operand else {
-                                continue;
-                            };
-                            if !source.projection.is_empty() {
-                                continue;
-                            }
-                            reached.accumulated(&value.points_to[source.local.index()]);
-                        }
+                        let mut reached = built_from([lhs, rhs], value);
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
                         // points into, which is why the allocation comes along.

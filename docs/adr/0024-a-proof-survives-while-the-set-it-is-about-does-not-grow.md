@@ -76,13 +76,32 @@ caller says which it means.
 | `accumulated` | the two `Rvalue::Binary` arms of `Allocations::element` | survives while the set does not grow |
 
 ```rust
-*freed = match (*freed, other.freed) {
-    (Some(here), Some(there)) if !grows && !shrinks => Some(here.joined(there)),
-    (Some(here), _) if !grows => Some(here),
-    (_, Some(there)) if !shrinks => Some(there),
-    _ => None,
-};
+// `Held::accumulated`
+*freed = None;
+
+// `built_from`, where the operands of a binary operation are folded
+if let [one] = followed[..] {
+    reached.freed = value.points_to[one].freed;
+}
 ```
+
+**The proof is carried by the fold and not by the combining method**, which is
+where this record was first wrong. Written as a rule inside `accumulated` the
+condition was "the set does not grow", and a review found that it cannot tell
+the fold's empty seed from a real operand that holds no site. This check does not
+read types, so a local holding nothing is an `int` and a pointer whose allocation
+it lost at the same time:
+
+```c
+int ok = (q != 0);      /* the whole of q's `Held` travels: 6.5's operands are not typed here */
+int *base = *spare;     /* a pointer this check follows no allocation for */
+int *slot = base + ok;  /* proved use after free, measured, where `main` says "perhaps" */
+```
+
+`slot` may be `base` offset, and `base` was never freed. Keeping the proof for
+`p + n` with `n` an `int` keeps it for that, because the two are one shape here.
+So the proof survives only where **nothing else contributed**: one followed
+operand and a constant, which C17 6.5.6 p8 keeps inside the same object.
 
 **A union of the present ones invents a proof, and it is the reading a reader
 arrives at first.** What `Held::freed` is worth is not that *some* member of the
@@ -111,21 +130,19 @@ error[SC0401]: this frees a value that was freed already
 
 `i` is a parameter and a parameter is a site, so the accumulator reaches `i`'s
 site as well as `q`'s two. `p` may hold the one nothing freed. That report is a
-proof this check cannot make, which is row 6 of `CLAUDE.md`'s list, and it is
-the reason the rule reads `sites` at all.
+proof this check cannot make. `CLAUDE.md` puts a false positive on row 4, not on
+row 6: the reader can see it and `docs/safety-model.md` reserves row 6 for a
+silence. What makes it worth a decision anyway is that `Unsafe` is what that
+document reserves for something established, so a wrong one spends the word.
 
-**Symmetric, and read before the union.** `grows` and `shrinks` are computed
-before anything is merged, because afterwards every site is `self`'s and the
-answer is that nothing ever grows. Both directions are asked so that
-`p = i + q` and `p = q + i` are one expression; `shrinks` is also what carries
-the seed, since a value built from `Held::none()` holds no site at all, so the
-first operand's set is the whole of the result so far and its proof is still
-about it.
+**Symmetric, because it counts operands rather than folding them.** `p = i + q`
+and `p = q + i` are one expression and answer the same, and neither keeps the
+proof, because each has two followed operands.
 
-**A field-wise algebra cannot be the answer, and that is why there is no trait.**
-The rule reads one field to decide another. A type per field, each carrying its
-own `join` and `accumulate`, is the shape this looked like it wanted and it
-cannot see across fields. What the compiler holds instead is that both methods
+**A field-wise algebra is not the answer, and that is why there is no trait.**
+The proof's rule is not about the two values being combined at all; it is about
+how many operands the expression had, which only the fold knows. A type per
+field, each carrying its own `join` and `accumulate`, cannot see that. What the compiler holds instead is that both methods
 destructure every field with no `..`, so a fact added to `Held` is
 `error[E0027]` in each and has to say what it means in both. RK-018 in the
 review knowledge bank is that spelling.
@@ -142,34 +159,34 @@ confident one.
 
 ### Confirmation
 
-`error[E0027]` at `Held::joined` and `Held::accumulated` if a field is added to
-`Held`, which is what asks a new fact to say what it means in each role. The
-same addition is `error[E0063]` at `Held::none` and `error[E0027]` at
-`Held::clear`, which ADR-0018 already records.
+`error[E0027]` at `Held::joined`, at `Held::accumulated` and at the `Deref` arm
+of `Allocations::element` if a field is added to `Held`, which is what asks a new
+fact to say what it means in **each of the three roles**. The same addition is
+`error[E0063]` at `Held::none` and `error[E0027]` at `Held::clear`, which
+ADR-0018 already records.
+
+The third of those is spelled as a destructure rather than as an assignment, and
+it is worth saying why: written as `value.points_to[target].freed = None;` the
+same addition asked four questions rather than five, and the site this record
+names as the one the accumulator's rule is *wrong* for was the site that answered
+none. Measured both ways.
 
 Each mutation below applied on its own, the whole workspace suite run with
 `--no-fail-fast`, the tree restored, and the failure read rather than predicted.
 
 | Mutation | Named test that fails |
 |---|---|
-| `accumulated` joins the proof the way `joined` does, or the arm that adopts the other side goes | `a_free_after_an_offset_that_kept_the_set_is_proved`, which drops to a warning |
-| the arm that keeps a proof `self` already has goes | `an_offset_by_a_local_that_holds_nothing_keeps_the_set`. A constant is not an operand the walk copies from, so the case above calls the accumulator once and only ever adopts; it takes a local to reach the second call |
-| `accumulated` takes the proof from whichever side has one | `an_offset_that_grew_the_set_is_not_proved`, which becomes a proof about a set that grew |
-| `accumulated` reads `grows` and `shrinks` after the union rather than before | the same, because afterwards nothing ever grows |
+| `built_from` does not restore the proof for a sole operand | `a_free_after_an_offset_that_kept_the_set_is_proved`, which drops to a warning |
+| `built_from` restores the proof whenever any operand carries one | `an_offset_by_a_local_loses_the_proof_whatever_the_local_holds` and `an_offset_that_grew_the_set_is_not_proved`, each of which becomes a certainty about a value nothing followed |
 | `accumulated` does not union `lost` | `a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation`, which goes silent. A free cannot hold it, because an argument reaching nothing answers `Reached::Lost` anyway; a dereference can, because that one says nothing about a place it follows no allocation for |
 | `accumulated` does not union `sites` | eleven, across the corpus |
 | `joined` accumulates the proof rather than intersecting it, at the method or at its one caller | `a_free_of_a_may_set_on_one_arm_only`, a proved error on a path that never freed |
 
-The second and third rows are the ones that matter: each makes this compiler
-**certain** about a program it cannot prove.
+The second row is the one that matters: it makes this compiler **certain** about
+a program it cannot prove, which is what the first shape of this rule did and
+what a review measured.
 
-**Three things are held by nothing and this says which.**
-
-The first arm of `accumulated`, where both sides carry a proof about one set, is
-what makes the method symmetric, and reaching it needs two operands that each
-carry one and name the same set: two frees of one may-set, the first of which
-reports. Deleting it leaves the answer to the arm below and the surviving span
-decided by which operand came first.
+**Two things are held by nothing and this says which.**
 
 The union of `writes_to` in `accumulated` is dead for both callers that build a
 value out of operands, because each empties that field on the next line under
@@ -217,8 +234,10 @@ it is a proof about a pointer the write may have replaced.
 
 * Good, because it reads like the may-facts beside it and needs no cross-field
   condition.
-* Bad, because it is measured row 6: `free(q); p = q + i; free(p);` becomes a
-  proved double free about a set that has grown by a site nothing freed.
+* Bad, because it is measured to fabricate a proof: `free(q); p = q + i; free(p);`
+  becomes a proved double free about a set that has grown by a site nothing
+  freed. Row 4 rather than row 6, and still the word `Unsafe` spent on something
+  nothing established.
 
 ### Two methods, and the accumulator keeps clearing the proof
 
