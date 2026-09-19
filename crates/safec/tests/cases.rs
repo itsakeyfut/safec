@@ -158,6 +158,28 @@ cases! {
     a_free_of_a_may_set_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_given_nothing_forgets_the_set_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_may_set_freed_then_written_through_an_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a proof about a may-set survives when a value is built from its
+    // operands, which is the half of `Held` that is not a may-fact. It carries
+    // while the set does not grow, so an offset keeps it and an offset by
+    // something that is itself a site does not: `i` is a parameter, so `q + i`
+    // reaches `i`'s site too, and a set that has gained a site nothing freed
+    // cannot support a proof about the one that was. See ADR-0024.
+    a_free_after_an_offset_that_kept_the_set_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_offset_that_grew_the_set_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same offset written with a local rather than a constant, which loses
+    // the proof however little that local holds. This check does not read
+    // types, so a local holding no site is an `int` and a pointer whose
+    // allocation it lost at the same time: `p + n` and `base + ok` with `base`
+    // read out of another pointer are one shape here. Keeping the proof for the
+    // first keeps it for the second, which is a certainty about a value nothing
+    // followed, so neither keeps it.
+    an_offset_by_a_local_loses_the_proof_whatever_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the may-fact beside the proof. A local that lost the name for what it
+    // held says so, and arithmetic on it builds a pointer that has lost it too.
+    // ADR-0018 holds that for a copy and nothing held it for arithmetic, so the
+    // union the accumulator does of that bit could be deleted with the suite
+    // green.
+    a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_after_a_may_set_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_while_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

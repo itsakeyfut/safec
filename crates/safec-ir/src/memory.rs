@@ -338,8 +338,19 @@ impl Held {
         writes_to.fill(false);
     }
 
-    /// Also hold everything that one holds.
-    fn union(&mut self, other: &Held) {
+    /// Also hold everything that one holds, where two paths meet.
+    ///
+    /// **The lattice's join, and one of two algebras this struct has.**
+    /// [`Self::accumulated`] is the other, and they differ on exactly one
+    /// field. Splitting them is ADR-0024; what made one method wrong for both
+    /// is that [`Held::none`] is the identity for three of these fields and the
+    /// zero for the fourth, so building a value up from nothing cleared a proof
+    /// every time.
+    fn joined(&mut self, other: &Held) {
+        // Every field named, never `..`, in this method and in its neighbour
+        // alike: a field added to this struct is `error[E0027]` in both and has
+        // to say what it means in each. RK-018 is the spelling and ADR-0024 is
+        // why there are two places to answer.
         let Held {
             sites,
             lost,
@@ -359,6 +370,54 @@ impl Held {
             (Some(here), Some(there)) => Some(here.joined(there)),
             _ => None,
         };
+        for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
+            *here = *here || *there;
+        }
+    }
+
+    /// Also hold everything that one holds, where a value is being built from
+    /// the operands that produced it.
+    ///
+    /// **The proof survives while the set does not grow.** [`Self::freed`] says
+    /// the set this local named had one member freed, and what that is worth is
+    /// that freeing the local again takes the same member. A set that has
+    /// gained a site nothing freed no longer supports it: with `i` a parameter,
+    /// and so a site, `free(q); p = q + i; free(p);` reaches `i`'s site as well
+    /// as `q`'s, and answering proved there is a proof this check cannot make.
+    /// Measured, and it is the reading a reader arrives at first. See ADR-0024.
+    ///
+    /// **Read before the union, because after it every site is `self`'s.**
+    /// Asking afterwards answers that nothing ever grows, which is the same
+    /// mistake spelled as an ordering.
+    fn accumulated(&mut self, other: &Held) {
+        let Held {
+            sites,
+            lost,
+            freed,
+            writes_to,
+        } = self;
+
+        // **A second operand takes the proof with it.** What
+        // [`Self::freed`] is worth is that freeing this local again takes the
+        // same member, and an expression built out of two operands is not that
+        // local offset: it may be the *other* operand's value. This check does
+        // not read types, so a local holding no site is an integer and a
+        // pointer whose allocation it lost at the same time, and `base + ok`
+        // with `base` read out of another pointer is `p + n` with `n` an `int`.
+        // Keeping the proof for one keeps it for both, and one of them is a
+        // certainty about a value nothing here has followed. See ADR-0024.
+        *freed = None;
+
+        // The three may-facts, which grow wherever anything meets. The edge is
+        // the one nothing observes here: both callers that build a value out of
+        // operands empty it on the next line, because C17 6.5.6 p8 keeps a
+        // pointer's arithmetic inside the object and a local's address plus one
+        // is not that local. See ADR-0019, and the two `writes_to.fill(false)`
+        // lines in `Allocations::element`.
+        for (here, there) in sites.iter_mut().zip(&other.sites) {
+            *here = *here || *there;
+        }
+        *lost = *lost || other.lost;
         for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
             *here = *here || *there;
         }
@@ -705,6 +764,43 @@ impl Known {
     }
 }
 
+/// What the operands of a binary operation build.
+///
+/// **The proof survives only where nothing else contributed.** One followed
+/// operand and a constant is `p + 1`: the result is that operand offset, and
+/// C17 6.5.6 p8 keeps it inside the same object, so the set the proof is about
+/// is the set the result names. Two followed operands is an expression whose
+/// value may be either of them, and [`Held::accumulated`] drops the proof for
+/// the reason written there.
+///
+/// One function with two callers, because the same question is asked where a
+/// value is assigned and where one is written through a pointer, and RK-052 in
+/// the review knowledge bank is one rule in two places drifting apart inside
+/// the change that touches one of them.
+fn built_from(operands: [&Operand; 2], value: &Known) -> Held {
+    let followed: Vec<usize> = operands
+        .iter()
+        .filter_map(|operand| match operand {
+            // A constant is not a value this check follows, and neither is a
+            // read through a projection: `*pp + 1` reaches whatever `pp` points
+            // at, which is a place rather than a local.
+            Operand::Copy(source) if source.projection.is_empty() => Some(source.local.index()),
+            _ => None,
+        })
+        .collect();
+
+    let mut reached = Held::none(value.points_to.len());
+    for &source in &followed {
+        reached.accumulated(&value.points_to[source]);
+    }
+
+    if let [one] = followed[..] {
+        reached.freed = value.points_to[one].freed;
+    }
+
+    reached
+}
+
 /// The sites out of everything a place or an argument reached.
 ///
 /// **One fold with three callers, because the three have to agree.** It is what
@@ -873,7 +969,7 @@ impl Analysis for Allocations<'_> {
         } = into;
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
-            here.union(there);
+            here.joined(there);
         }
 
         for (here, there) in state.iter_mut().zip(&from.state) {
@@ -1012,17 +1108,8 @@ impl Analysis for Allocations<'_> {
                         // hand, and carried an edge through `qq + 7` that the
                         // arm one level up had just been taught to drop.
                         Rvalue::Binary { op: _, lhs, rhs } => {
-                            let mut reached = Held::none(value.points_to.len());
-                            for operand in [lhs, rhs] {
-                                if let Operand::Copy(source) = operand {
-                                    if source.projection.is_empty() {
-                                        reached.union(&value.points_to[source.local.index()]);
-                                    }
-                                }
-                            }
-
+                            let mut reached = built_from([lhs, rhs], value);
                             reached.writes_to.fill(false);
-
                             reached
                         }
                         // A constant, a read through a projection, a unary
@@ -1030,17 +1117,6 @@ impl Analysis for Allocations<'_> {
                         // follows to an allocation, so the target is given
                         // nothing: a write this check cannot follow is not
                         // evidence that the old contents are gone.
-                        //
-                        // **It keeps the sites it held and not the proof that
-                        // its set was freed.** `Held::union` is the lattice's
-                        // join and it intersects that field, which is right
-                        // where two paths meet and wrong here, where nothing
-                        // met: unioning `Held::none()` into a target clears a
-                        // fact that a may-write cannot have undone.
-                        // `free(p); p = p + 0; free(p);` loses its proof that
-                        // way. The direction is towards `Unknown`, so it costs
-                        // a proof rather than a silence, and separating the two
-                        // uses of `union` is its own issue.
                         Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
                             Held::none(value.points_to.len())
                         }
@@ -1062,7 +1138,29 @@ impl Analysis for Allocations<'_> {
                     // the heap half over the merged value at every join. See
                     // ADR-0019.
                     for target in targets {
-                        value.points_to[target].union(&written);
+                        value.points_to[target].accumulated(&written);
+                        // **The proof goes, whatever the accumulator would
+                        // say about it.** [`Held::accumulated`] keeps it while
+                        // the set does not grow, which is right where an
+                        // expression is built from its operands and wrong
+                        // here: this write may have replaced the pointer, and
+                        // then freeing the target again is not a second free
+                        // of anything. The sites stay because keeping them is
+                        // the conservative direction for a use after free; the
+                        // proof goes because keeping *it* is the confident
+                        // one. See ADR-0024.
+                        //
+                        // **No program observes this, and it is here anyway.**
+                        // `writes_to` is written only where an address is
+                        // taken, so a target of a write through a pointer has
+                        // always escaped, and ADR-0017 answers `Reached::Lost`
+                        // for an escaped local wherever a report is made: the
+                        // answer is `Unknown` whatever this field says.
+                        // Measured, and the narrow claim is the true one:
+                        // removing this line breaks nothing today. What it
+                        // would cost if the escape stopped covering it is a
+                        // proof about a pointer this write may have replaced.
+                        value.points_to[target].freed = None;
                     }
 
                     return;
@@ -1114,16 +1212,7 @@ impl Analysis for Allocations<'_> {
                     // types are in the IR and reading them would separate the
                     // two, which is #143 rather than a line here.
                     Rvalue::Binary { op: _, lhs, rhs } => {
-                        let mut reached = Held::none(value.points_to.len());
-                        for operand in [lhs, rhs] {
-                            let Operand::Copy(source) = operand else {
-                                continue;
-                            };
-                            if !source.projection.is_empty() {
-                                continue;
-                            }
-                            reached.union(&value.points_to[source.local.index()]);
-                        }
+                        let mut reached = built_from([lhs, rhs], value);
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
                         // points into, which is why the allocation comes along.

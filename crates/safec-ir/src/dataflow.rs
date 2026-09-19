@@ -151,6 +151,15 @@ pub trait Analysis {
     /// value against what it was, so a join that folded correctly and
     /// reported that it had not is a mutation nobody can write.
     ///
+    /// **A value with a proof in it has two algebras, and one method for both
+    /// is the trap.** Three of `docs/safety-model.md`'s four axes are still to
+    /// be written against this trait, and each will carry may-facts beside
+    /// something proven. Those combine one way where two paths meet and another
+    /// where a value is built out of its operands, and the empty value is the
+    /// identity for the first kind and the zero for the second, so an
+    /// accumulator that starts from nothing clears every proof it touches.
+    /// ADR-0024 is where that was found and what it cost.
+    ///
     /// **The answer moved rather than went away**, and it is now
     /// [`PartialEq::eq`]. An `eq` that ignores part of what this writes gives
     /// the old failure back: measured with a value holding a lattice element
