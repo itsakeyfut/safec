@@ -79,6 +79,24 @@ label they carry. They take separate codes because a code is the handle a reader
 searches with and a suppression list keys on, and freeing twice and reading
 through a dangling pointer are two classes of program to look for.
 
+**A suspicion says what was established, and where nothing was it says so.**
+There are three reasons either code can go out unproven, and two of them have a
+free behind them: a site the paths or the sites reaching a caret disagree
+about was really freed on one of them, and a site handed to a call this check
+cannot read may have been freed by that callee. Those read `this may free a
+value that was freed already` and `this may use a value after it was freed`,
+and a reader is being told there is something to suspect.
+
+The third is this check having stopped following the pointer, and there the
+same words would assert a first free that nothing worked out. A program with
+one `free` in it, and a program with none, both used to get them. So those read
+`this frees a pointer this check stopped following` and `this uses a pointer
+this check stopped following`, which are the only diagnostics here that name
+the analysis rather than the program, because the analysis is the whole of what
+happened. The code does not change: the reader who greps `SC0401` is looking
+for everything this check said about freeing, and where it gave up is part of
+that.
+
 **What `SC0402` not being emitted does not mean.** The check follows a pointer
 through a copy, through pointer arithmetic and into a controlling expression,
 so `q = p; *q`, `p[i]`, `if (*p)` and `*p;` are all read: the last of those

@@ -217,6 +217,26 @@ cases! {
     a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_call_this_check_cannot_read_between_two_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_through_a_pointer_the_check_does_not_follow: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Three programs with one `free` each, and the boundary between two
+    // reasons a report can be unproven. In the first two nothing established a
+    // free at all, so the diagnostic says what this check lost rather than
+    // that the value may have been freed already: `p` was given a constant and
+    // holds no site, and `*pp` is a pointer this check follows locals rather
+    // than the targets of. The third reaches the same caret with a site an
+    // opaque call was handed, where `helper` may really have freed it, and it
+    // keeps the older words. It is the only case whose suspicion rests on
+    // nothing but the callee: every other program that keeps those words has
+    // a `free` in it that this check saw. Answering `Unproven::Untracked`
+    // where the sites disagree fails it, along with everything else that
+    // keeps them.
+    //
+    // Measured, on the two mutations that send the first two the other way:
+    // answering `Unproven::Disagreement` where this check lost the pointer,
+    // and reporting nothing there at all, each fail those two and the eleven
+    // cases whose text this issue changed, and nothing else in the suite.
+    a_free_of_a_pointer_that_never_held_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_read_out_of_another_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_alias_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

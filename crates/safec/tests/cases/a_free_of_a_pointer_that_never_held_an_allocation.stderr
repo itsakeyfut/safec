@@ -1,0 +1,9 @@
+warning[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_free_of_a_pointer_that_never_held_an_allocation.c:4:5 ]
+   │
+ 4 │     free(p);
+   │     ───┬───  
+   │        ╰───── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

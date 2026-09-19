@@ -1,0 +1,9 @@
+warning[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_free_read_out_of_another_pointer.c:3:5 ]
+   │
+ 3 │     free(*pp);
+   │     ────┬────  
+   │         ╰────── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
