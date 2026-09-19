@@ -1,9 +1,9 @@
 warning[SC0401]: this frees a pointer this check stopped following
-   ╭─[ a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 ]
+   ╭─[ a_free_read_out_of_another_pointer.c:3:5 ]
    │
- 7 │     free(z);
-   │     ───┬───  
-   │        ╰───── this check cannot say what this points at
+ 3 │     free(*pp);
+   │     ────┬────  
+   │         ╰────── this check cannot say what this points at
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error

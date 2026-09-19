@@ -17,7 +17,7 @@ use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
-use safec_ir::memory::{Finding, Kind, check};
+use safec_ir::memory::{Finding, Kind, Unproven, check};
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -1565,7 +1565,11 @@ fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
-    assert!(found[0].unsequenced, "the order is what is open");
+    assert_eq!(
+        found[0].unproven,
+        Some(Unproven::Unsequenced),
+        "the order is what is open"
+    );
     // The earlier of the two, which is the rule the span half of the join
     // keeps while the flag half takes the weaker answer.
     assert_eq!(found[0].freed, Some(names.at[1]));

@@ -45,7 +45,7 @@ use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::TranslationUnit;
-use safec_ir::memory::{self, Finding, Kind};
+use safec_ir::memory::{self, Finding, Kind, Unproven};
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::Target;
@@ -608,23 +608,58 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     // which an unproven result does not know, and reusing the word the other
     // diagnostic spends on the *earlier, legitimate* free would have a reader
     // who learned that pair take the suspect for the safe one.
-    let (code, message, label) = match (finding.kind, finding.conclusion) {
-        (Kind::DoubleFree, Conclusion::Unsafe) => (
+    //
+    // **A reason names the analysis where the analysis is all there is.**
+    // `Unproven::Lost` is this check having stopped following the
+    // pointer, so nothing about the *program* was established and there is
+    // nothing about the program to say. Giving those the words below put
+    // `may free it again here` on a file with one `free` in it, and
+    // `used here, perhaps after the free` on one with none. The other two
+    // reasons each have a free behind them: a site the paths disagree about
+    // was freed on one of them, and a site an opaque call was handed may have
+    // been freed by it.
+    //
+    // The reason is not read beside `Unsafe`, where there is nothing
+    // unproven, and each `Unknown` row names every reason rather than taking
+    // `_`, so that a fourth cannot fall into a row written before it existed.
+    // That is RK-034 in the review knowledge bank read forwards, and RK-015 is
+    // its limit: `E0004` makes somebody write an arm and does not make the arm
+    // right.
+    let (code, message, label) = match (finding.kind, finding.conclusion, finding.unproven) {
+        (Kind::DoubleFree, Conclusion::Unsafe, _) => (
             DOUBLE_FREE,
             "this frees a value that was freed already",
             "freed again here",
         ),
-        (Kind::DoubleFree, Conclusion::Unknown) => (
+        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
+            DOUBLE_FREE,
+            "this frees a pointer this check stopped following",
+            "this check cannot say what this points at",
+        ),
+        (
+            Kind::DoubleFree,
+            Conclusion::Unknown,
+            Some(Unproven::Disagreement | Unproven::Unsequenced) | None,
+        ) => (
             DOUBLE_FREE,
             "this may free a value that was freed already",
             "may free it again here",
         ),
-        (Kind::UseAfterFree, Conclusion::Unsafe) => (
+        (Kind::UseAfterFree, Conclusion::Unsafe, _) => (
             USE_AFTER_FREE,
             "this uses a value after it was freed",
             "used here",
         ),
-        (Kind::UseAfterFree, Conclusion::Unknown) => (
+        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
+            USE_AFTER_FREE,
+            "this uses a pointer this check stopped following",
+            "this check cannot say what this points at",
+        ),
+        (
+            Kind::UseAfterFree,
+            Conclusion::Unknown,
+            Some(Unproven::Disagreement | Unproven::Unsequenced) | None,
+        ) => (
             USE_AFTER_FREE,
             "this may use a value after it was freed",
             "used here, perhaps after the free",
@@ -632,7 +667,7 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the three is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
-        (_, Conclusion::Safe) => (DOUBLE_FREE, "nothing", "nothing"),
+        (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing", "nothing"),
     };
 
     let mut diagnostic = Diagnostic::concluded(finding.conclusion, message)?
@@ -665,7 +700,7 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     // leaves subexpressions *unsequenced*, and unsequenced evaluations may
     // interleave. What makes a call one order or the other is p10's
     // indeterminate sequencing, and a free is a call.
-    if finding.unsequenced {
+    if finding.unproven == Some(Unproven::Unsequenced) {
         diagnostic = diagnostic.with_note(
             "C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its \
              expression, and this check found nothing here that orders the free before this",

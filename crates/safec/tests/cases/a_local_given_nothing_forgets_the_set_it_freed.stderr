@@ -1,9 +1,9 @@
-warning[SC0401]: this may free a value that was freed already
+warning[SC0401]: this frees a pointer this check stopped following
     ╭─[ a_local_given_nothing_forgets_the_set_it_freed.c:10:5 ]
     │
  10 │     free(p);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this check cannot say what this points at
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
