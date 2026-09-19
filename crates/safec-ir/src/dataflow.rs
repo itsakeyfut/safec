@@ -197,21 +197,31 @@ pub trait Analysis {
     /// block sends, so what it writes reaches that successor and nothing else.
     ///
     /// **The edge is named by its index into the list
-    /// [`Terminator::successors`] fills**, so `then` is 0 and `otherwise` is 1,
-    /// and that order is an interface rather than an implementation detail:
-    /// `every_terminator_says_where_control_can_go` is what holds it. The index
-    /// rather than the destination, because `Branch { then: b, otherwise: b }`
-    /// is two edges and [`Cfg`] keeps it that way on purpose, so a [`BlockId`]
-    /// cannot tell those two arms apart. See ADR-0016.
+    /// [`Terminator::successors`] fills**, so a [`Terminator::Branch`]'s `then`
+    /// is 0 and its `otherwise` is 1, and that order is an interface rather
+    /// than an implementation detail: `every_terminator_says_where_control_can_go`
+    /// is what holds it. The index rather than the destination, because
+    /// `Branch { then: b, otherwise: b }` is two edges and [`Cfg`] keeps it
+    /// that way on purpose, so a [`BlockId`] cannot tell those two arms apart.
+    /// See ADR-0016.
     ///
-    /// **This refines and cannot prune.** An analysis that has proved an arm
-    /// is never taken still has that arm walked with what it knows, because the
-    /// alternative is that [`Solution::value`] answers `None` both for a block
-    /// the entry cannot reach and for one an analysis decided nothing reaches,
-    /// and a check reading that as "nobody runs this" would go silent about
-    /// code. Walking an arm that cannot run costs a report that names code no
-    /// execution reaches; the other costs silence, which
-    /// `docs/safety-model.md` calls the worse of the two.
+    /// **Match the terminator before reading the index.** This is called for
+    /// every edge and not only a branch's, so a [`Terminator::Goto`]'s one edge
+    /// is index 0 as well, and an implementation spelled `match index { 0 =>
+    /// ... }` would refine a straight jump as though a condition had been
+    /// tested and nothing would say so. The index means something only inside a
+    /// kind: the name says which question was asked, the index says which
+    /// answer this edge is. It is called for every edge on purpose, so that the
+    /// day [`Terminator::Call`] gains an edge for a callee that does not return
+    /// normally, the rule an analysis was written against does not change.
+    /// `an_edge_is_walked_after_the_terminator_that_named_it` pins the `Goto`
+    /// case.
+    ///
+    /// **This refines and cannot prune.** An analysis that has proved an arm is
+    /// never taken still has that arm walked with what it knows: there is no
+    /// way to say from here that an edge is not taken, and that is deliberate
+    /// rather than missing. What it buys is that [`Solution::value`]'s `None`
+    /// keeps meaning one thing. See ADR-0016.
     ///
     /// **Defaulted, unlike the five above, because answering nothing is
     /// correct here.** An analysis that reads no condition is not wrong to tell
@@ -224,10 +234,10 @@ pub trait Analysis {
         &self,
         function: &Function,
         terminator: &Terminator,
-        successor: usize,
+        index: usize,
         value: &mut Self::Value,
     ) {
-        let _ = (function, terminator, successor, value);
+        let _ = (function, terminator, index, value);
     }
 }
 
@@ -241,6 +251,13 @@ pub trait Analysis {
 /// than *somewhere in this block*. That works only because those take `&self`
 /// and are reachable by whoever asked, so hiding them inside the solver would
 /// take the per-point answer away from every check without failing a test.
+///
+/// **A replay stops at the terminator, and [`Analysis::edge`] is not part of
+/// it.** Every point a replay can name is inside one block, and an edge is
+/// between two, so a caller that kept walking would hold a value that belongs
+/// to no point in the block it started from. What a successor was told is
+/// [`Self::value`] of that successor, which is what the solver stored after
+/// the edge had its say.
 #[derive(Debug)]
 pub struct Solution<V> {
     /// What holds where each block starts, indexed by [`BlockId::index`].
@@ -381,9 +398,11 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         function.block(block).terminator.successors(&mut successors);
 
         for (index, &successor) in successors.iter().enumerate() {
-            // The clone is what the edge is allowed to write to, and it is
+            // This clone is what the edge is allowed to write to, and it is
             // per edge rather than per block because that is the whole of what
-            // this buys: two arms of one branch are told different things.
+            // this buys: two arms of one branch are told different things. It
+            // is not the clone the comparison below makes, which is of what
+            // had already arrived at the successor.
             //
             // The index is the position in `successors`, which is the order
             // `Terminator::successors` pushed, and `Analysis::edge` is written

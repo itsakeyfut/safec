@@ -1349,11 +1349,13 @@ mod tests {
     /// **The order is asserted, not only the set**, because
     /// `dataflow::Analysis::edge` names an edge by its index into this list.
     /// Mutation: have the `Branch` arm push `otherwise` before `then`. This
-    /// fails, and so does every test that reads the order rather than the set:
-    /// `a_loop_is_built_by_reserving_the_block_it_jumps_back_to` here, and
+    /// fails, and so does every test that reads the order rather than the set,
+    /// which is a wider set than it looks and reaches the `safec` crate,
+    /// because the lowering builds an `if`'s arms in this order too.
     /// `each_arm_of_a_branch_is_told_something_different` in
-    /// `crates/safec-ir/tests/written.rs`, which is the one that says what the
-    /// order costs to get wrong.
+    /// `crates/safec-ir/tests/written.rs` is the one worth following from
+    /// here, because it is the one that says what an analysis loses when the
+    /// order moves.
     ///
     /// Mutation: add a terminator kind. `Terminator::successors` stops
     /// compiling with `error[E0004]`, and so does every other walk over one,

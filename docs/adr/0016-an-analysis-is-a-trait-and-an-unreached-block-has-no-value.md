@@ -59,8 +59,9 @@ pub trait Analysis {
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
     fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value);
-    // Added when Phase 5's null check arrived, and the only one with a body
-    // here: an analysis that tells both arms the same thing need not answer it.
+    // Added ahead of Phase 5's null check, which is the caller it exists for
+    // and has not landed. The only one with a body here: an analysis that
+    // tells both arms the same thing need not answer it.
     fn edge(&self, function: &Function, terminator: &Terminator, successor: usize, value: &mut Self::Value) {}
 }
 ```
@@ -192,23 +193,26 @@ and rewrite all of them on each pass, for a reader that does not exist.
   finish.
 * Handing `Analysis::edge` the index `0` for every successor, or calling it once
   and folding the one result into every successor, fails every test whose answer
-  depends on two edges out of one block being told apart:
-  `each_arm_of_a_branch_is_told_something_different` and
-  `one_block_reached_by_both_arms_is_told_along_both_edges`. Running it before
-  the terminator rather than after fails every test that solves `Arrived`, which
-  is what `an_edge_is_walked_after_the_terminator_that_named_it` is named for.
-  Handing it the terminator of a block other than the one control is leaving
-  fails `the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` alone.
-  Taking the default off it is `error[E0046]` at `Written`, which is what makes
-  "an analysis that does not implement it is unaffected" a claim the compiler
-  holds rather than one this record asserts.
+  depends on two edges out of one block being told apart.
+  `each_arm_of_a_branch_is_told_something_different` is the one named for that.
+  Running it before the terminator rather than after fails every test that
+  solves `Arrived`, which is what
+  `an_edge_is_walked_after_the_terminator_that_named_it` is named for. Handing
+  it the terminator of a block other than the one control is leaving fails
+  `the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` alone, and
+  that one is the narrowest of them, which is why it is the guard on the
+  argument rather than on the walk. Taking the default off it is
+  `error[E0046]`, at `memory.rs`'s `Allocations` before the test suite is
+  reached, which is what makes "an analysis that does not implement it is
+  unaffected" a claim the compiler holds rather than one this record asserts.
 * Swapping `then` and `otherwise` in `Terminator::successors` fails every test
-  that reads the order rather than the set:
-  `every_terminator_says_where_control_can_go`,
-  `a_loop_is_built_by_reserving_the_block_it_jumps_back_to` and
-  `each_arm_of_a_branch_is_told_something_different`. The order is what an index
-  handed to `edge` means, so it is an interface rather than an ordering nobody
-  looks at, and the last of those is where that is said.
+  that reads the order rather than the set. That is a wide set and reaches
+  another crate, because the lowering builds its arms in that order too:
+  `every_terminator_says_where_control_can_go` is the one that asserts the
+  order as such, and `each_arm_of_a_branch_is_told_something_different` is the
+  one that says what an analysis loses when it moves. The order is what an
+  index handed to `edge` means, which is what makes it an interface rather than
+  an ordering nobody looks at.
 * A value that does not compare equal to itself is `error[E0277]`, and folding
   a successor's value into what a block sends rather than the other way round
   is `error[E0596]`, because what a block sends is bound again before the loop

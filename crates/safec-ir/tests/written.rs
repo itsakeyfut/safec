@@ -139,7 +139,8 @@ impl Analysis for Arrived {
     type Value = Vec<String>;
 
     /// One step per block, which is enough for a graph with no back edge: a
-    /// trace gains a character per block it passes through.
+    /// block is walked once and the trace it sends grows once, however many
+    /// characters that adds.
     fn height(&self, function: &Function) -> usize {
         function.blocks().len()
     }
@@ -174,7 +175,7 @@ impl Analysis for Arrived {
         &self,
         _function: &Function,
         terminator: &Terminator,
-        successor: usize,
+        index: usize,
         value: &mut Self::Value,
     ) {
         let kind = terminator
@@ -184,7 +185,7 @@ impl Analysis for Arrived {
             .expect("a terminator's name is not empty");
         for trace in value.iter_mut() {
             trace.push(kind);
-            trace.push_str(&successor.to_string());
+            trace.push_str(&index.to_string());
         }
     }
 }
