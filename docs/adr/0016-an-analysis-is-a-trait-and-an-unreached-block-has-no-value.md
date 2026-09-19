@@ -195,10 +195,13 @@ and rewrite all of them on each pass, for a reader that does not exist.
   depends on two edges out of one block being told apart:
   `each_arm_of_a_branch_is_told_something_different` and
   `one_block_reached_by_both_arms_is_told_along_both_edges`. Running it before
-  the terminator rather than after fails those two and
-  `an_edge_is_walked_after_the_terminator_that_named_it`. Taking the default off
-  it is `error[E0046]` at `Written`, which is what makes "an analysis that does
-  not implement it is unaffected" a claim the compiler holds.
+  the terminator rather than after fails every test that solves `Arrived`, which
+  is what `an_edge_is_walked_after_the_terminator_that_named_it` is named for.
+  Handing it the terminator of a block other than the one control is leaving
+  fails `the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` alone.
+  Taking the default off it is `error[E0046]` at `Written`, which is what makes
+  "an analysis that does not implement it is unaffected" a claim the compiler
+  holds rather than one this record asserts.
 * Swapping `then` and `otherwise` in `Terminator::successors` fails every test
   that reads the order rather than the set:
   `every_terminator_says_where_control_can_go`,
