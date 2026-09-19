@@ -31,7 +31,7 @@ use safec_ir::cfg::Cfg;
 use safec_ir::dataflow::{Analysis, solve};
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
-    Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -262,12 +262,24 @@ impl Analysis for Resolving {
         // it. This is what the block is for: the condition names the local
         // that holds the answer and says nothing about the comparison that
         // produced it.
+        //
+        // A store through a projection stops the walk, whatever local it
+        // names. `int *q = &c; *q = 1;` writes `c` through `q`, so the
+        // element's place is `q` dereferenced and nothing about it mentions
+        // `c` at all: which local such a store lands in is a question about
+        // what `q` holds, and this walk cannot ask it. Giving up is the only
+        // answer available, and stepping over it would resolve a comparison
+        // the program has already overwritten. That is the rule
+        // `Analysis::edge` states, and the reason it states it.
         let resolved = function
             .block(block)
             .elements
             .iter()
             .rev()
             .find_map(|element| match element {
+                Element::Assign(operation) if !operation.place.projection.is_empty() => {
+                    Some("none")
+                }
                 Element::Assign(operation) if operation.place == *condition => {
                     match operation.value {
                         Rvalue::Binary { op, .. } => Some(op.name()),
@@ -1432,4 +1444,146 @@ fn the_block_an_edge_leaves_is_the_one_whose_elements_it_can_read() {
 
     assert_eq!(solution.value(taken), Some(&vec!["Ne0".to_string()]));
     assert_eq!(solution.value(untaken), Some(&vec!["Ne1".to_string()]));
+}
+
+/// The walk through the block can find nothing, and the analysis then says
+/// the same thing to both arms.
+///
+/// A short-circuited condition is the shape: `if (p != 0 && q != 0)` lowers to
+/// a block whose terminator branches on a local that the arms wrote before
+/// jumping there, so that block has no element writing it at all. The graph
+/// here is that shape by hand, with the write in the block before the branch.
+///
+/// This is the case `Analysis::edge`'s doc comment gives the rule for, and
+/// what holds the rule is that a fixture which resolved this would have to
+/// have looked somewhere it was not handed.
+///
+/// Mutation: search every block of the function rather than the one `edge`
+/// was handed, by walking `function.blocks()` in `Resolving::edge`. The write
+/// in the entry block is found, both arms are answered `Ne`, and this fails.
+#[test]
+fn a_condition_no_element_of_the_block_wrote_is_resolved_by_nothing() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+
+    let pointer = function.push_local(int);
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let branch = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        goto(
+            branch,
+            vec![Element::Assign(Operation {
+                place: Place::local(condition),
+                value: Rvalue::Binary {
+                    op: BinOp::Ne,
+                    lhs: Operand::Copy(Place::local(pointer)),
+                    rhs: Operand::Constant(0),
+                },
+                origin,
+            })],
+        ),
+    );
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin,
+            },
+        },
+    );
+    function.fill_block(taken, returns());
+    function.fill_block(untaken, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Resolving, &function, &cfg);
+
+    assert_eq!(solution.value(taken), Some(&vec!["none0".to_string()]));
+    assert_eq!(solution.value(untaken), Some(&vec!["none1".to_string()]));
+}
+
+/// A store through a pointer stops the walk, because nothing in the element
+/// says which local it lands in.
+///
+/// `int c = p != 0; int *q = &c; *q = 1; if (c)` is the shape this compiler
+/// emits, and the store's place is `q` dereferenced: it mentions `c` nowhere.
+/// A walk that steps over it resolves the comparison above and reports that
+/// the branch tested `p != 0`, so an analysis built that way refines `p` on an
+/// arm the program can reach with `p` null. That is `safec` quiet about
+/// something it did not prove, which `docs/safety-model.md` calls the worst
+/// answer available.
+///
+/// Mutation: drop the arm that gives up on a projection, leaving the walk to
+/// match only the condition's whole place. The comparison above the store is
+/// resolved, both arms are answered `Ne`, and this fails.
+#[test]
+fn a_store_through_a_pointer_stops_the_walk_that_resolves_a_condition() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+
+    let pointer = function.push_local(int);
+    let condition = function.push_local(int);
+    let through = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let branch = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+
+    function.fill_block(entry, goto(branch, vec![]));
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(pointer)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin,
+                }),
+                Element::Assign(Operation {
+                    place: Place::local(through),
+                    value: Rvalue::Address(Place::local(condition)),
+                    origin,
+                }),
+                // `*q = 1`. The place names `q`, not `c`.
+                Element::Assign(Operation {
+                    place: Place {
+                        local: through,
+                        projection: vec![Projection::Deref],
+                    },
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin,
+                }),
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin,
+            },
+        },
+    );
+    function.fill_block(taken, returns());
+    function.fill_block(untaken, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Resolving, &function, &cfg);
+
+    assert_eq!(solution.value(taken), Some(&vec!["none0".to_string()]));
+    assert_eq!(solution.value(untaken), Some(&vec!["none1".to_string()]));
 }
