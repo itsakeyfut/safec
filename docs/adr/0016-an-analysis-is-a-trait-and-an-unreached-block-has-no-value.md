@@ -290,7 +290,13 @@ Each of the first four was applied and the named tests observed to fail.
 * Bad, because a block's value is cloned once per outgoing edge, where it used
   to be shared. That is what saying something different on two edges costs, and
   it is paid by every analysis including the ones that say the same thing on
-  both.
+  both. Measured on the memory check, release, over 400 blocks each holding a
+  `malloc`, an `if` and a `free`: about 15% slower than sharing one value, 54
+  seconds against 62. Reusing one buffer across the edges with `clone_from`,
+  which is the obvious repair, was measured at 65 seconds and is therefore not
+  one. The numbers belong to one machine and one input and will not survive
+  either changing; what they are here for is that the shape of the answer does,
+  and the obvious repair being slower is the part worth not rediscovering.
 * What would have reversed this: an analysis that has to say something different
   on two edges out of one branch, which is the first thing
   [the safety model](../safety-model.md)'s null-pointer case wants, and which
