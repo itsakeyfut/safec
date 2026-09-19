@@ -854,6 +854,18 @@ impl Allocations<'_> {
                 // Not a pointer that went missing. `free(0)` is the case, and
                 // C17 7.22.3.3 p2 makes it do nothing, so it is written on
                 // purpose and is not something this check lost track of.
+                //
+                // **The arm is wider than the clause**, which covers the null
+                // pointer and makes every other address undefined. `free(17)`
+                // is skipped here too and this check says nothing about it.
+                // What keeps that from mattering is not this line: C17
+                // 6.5.2.2 p2 makes the call a constraint violation, so a
+                // conforming implementation has to diagnose it before any
+                // analysis runs, and the reason this one does not is the
+                // missing assignment-constraint check that #154 is about.
+                // `a_free_of_a_null_constant` pins the half the clause
+                // supports; the other half is held by nobody here and is not
+                // this check's to hold.
                 Operand::Constant(_) => continue,
                 Operand::Copy(place) => place,
             };
@@ -1521,16 +1533,21 @@ pub enum Unproven {
     /// This check stopped following the pointer, so nothing here established a
     /// free at all.
     ///
-    /// `Reached::Lost` with nothing else contributing. The two producers are
-    /// `Known::reached_by`'s: a local that held a site and lost the name for
-    /// it, which is ADR-0018, and one whose address escaped, which is
-    /// ADR-0017. Neither says a free happened; both say this check can no
-    /// longer say what the pointer points at.
+    /// `Reached::Lost` with nothing else contributing, and it takes the same
+    /// word as that variant because it is the same fact reaching the reader.
+    /// There are four producers and they sit in two functions, which is worth
+    /// writing out because two of them are the ones a reader meets first.
+    /// `Known::reached_by` answers it for a local that held a site and lost
+    /// the name for it, which is ADR-0018, and for one whose address escaped,
+    /// which is ADR-0017. `Allocations::touching` answers it for an argument
+    /// written through a projection, `free(*pp)`, and for one whose local
+    /// reaches no site at all. None of the four says a free happened; each
+    /// says this check can no longer say what the pointer points at.
     ///
-    /// Those two are private, so they are named here rather than linked: a
-    /// link out of a public item to one of them is
+    /// Those are private, so they are named here rather than linked: a link
+    /// out of a public item to one of them is
     /// `rustdoc::private_intra_doc_links`, which this crate denies.
-    Untracked,
+    Lost,
     /// C has not said which order runs. See ADR-0022.
     Unsequenced,
 }
@@ -1798,7 +1815,7 @@ fn verdict(
             conclusion: Conclusion::Unknown,
             freed: None,
             made: None,
-            unproven: Some(Unproven::Untracked),
+            unproven: Some(Unproven::Lost),
         }),
         None if unknown => Some(Verdict {
             conclusion: Conclusion::Unknown,

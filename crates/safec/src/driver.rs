@@ -610,7 +610,7 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
     // who learned that pair take the suspect for the safe one.
     //
     // **A reason names the analysis where the analysis is all there is.**
-    // `Unproven::Untracked` is this check having stopped following the
+    // `Unproven::Lost` is this check having stopped following the
     // pointer, so nothing about the *program* was established and there is
     // nothing about the program to say. Giving those the words below put
     // `may free it again here` on a file with one `free` in it, and
@@ -631,7 +631,7 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
             "this frees a value that was freed already",
             "freed again here",
         ),
-        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Untracked)) => (
+        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
             DOUBLE_FREE,
             "this frees a pointer this check stopped following",
             "this check cannot say what this points at",
@@ -650,7 +650,7 @@ fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
             "this uses a value after it was freed",
             "used here",
         ),
-        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Untracked)) => (
+        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
             USE_AFTER_FREE,
             "this uses a pointer this check stopped following",
             "this check cannot say what this points at",

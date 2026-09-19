@@ -226,7 +226,7 @@ cases! {
     // opaque call was handed, where `helper` may really have freed it, and it
     // keeps the older words. It is the only case whose suspicion rests on
     // nothing but the callee: every other program that keeps those words has
-    // a `free` in it that this check saw. Answering `Unproven::Untracked`
+    // a `free` in it that this check saw. Answering `Unproven::Lost`
     // where the sites disagree fails it, along with everything else that
     // keeps them.
     //
@@ -240,10 +240,14 @@ cases! {
     // And the one this check is meant to say nothing about at all. C17
     // 7.22.3.3 p2: "If `ptr` is a null pointer, no action occurs." So a null
     // constant handed to `free` is written on purpose and is not a pointer
-    // this check lost, which is the rule `Allocations::touching` states and
-    // which nothing held until this case: making a constant argument answer
-    // `Reached::Lost` puts a warning on a program C defines, and fails this
-    // case and nothing else in the suite.
+    // this check lost. Nothing held that until this case: making a constant
+    // argument answer `Reached::Lost` puts a warning on a program C defines,
+    // and fails this case and nothing else in the suite.
+    //
+    // It pins the null half only. `Allocations::touching` skips every
+    // constant, and the clause above supports it for this one, so `free(17)`
+    // stays silent and this case does not say otherwise. The comment on that
+    // arm says where the other half belongs.
     a_free_of_a_null_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
