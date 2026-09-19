@@ -1495,6 +1495,12 @@ pub struct Finding {
     /// each other would have combinations that mean nothing with only a doc
     /// comment to say so. `Some` exactly where [`Self::conclusion`] is
     /// [`Conclusion::Unknown`].
+    ///
+    /// **That last sentence is held by nothing.** Every `Verdict` is built
+    /// in one function and every [`Finding`] out of a `Verdict`, so the two
+    /// fields agree by being written together rather than by a rule anything
+    /// checks. A mutation cannot show it either: the arm that would answer for
+    /// a reason beside a proof is unreachable.
     pub unproven: Option<Unproven>,
 }
 

@@ -237,6 +237,14 @@ cases! {
     a_free_of_a_pointer_that_never_held_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_read_out_of_another_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the one this check is meant to say nothing about at all. C17
+    // 7.22.3.3 p2: "If `ptr` is a null pointer, no action occurs." So a null
+    // constant handed to `free` is written on purpose and is not a pointer
+    // this check lost, which is the rule `Allocations::touching` states and
+    // which nothing held until this case: making a constant argument answer
+    // `Reached::Lost` puts a warning on a program C defines, and fails this
+    // case and nothing else in the suite.
+    a_free_of_a_null_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_alias_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
