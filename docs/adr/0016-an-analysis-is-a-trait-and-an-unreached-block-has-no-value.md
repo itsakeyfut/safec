@@ -62,7 +62,7 @@ pub trait Analysis {
     // Added ahead of Phase 5's null check, which is the caller it exists for
     // and has not landed. The only one with a body here: an analysis that
     // tells both arms the same thing need not answer it.
-    fn edge(&self, function: &Function, terminator: &Terminator, successor: usize, value: &mut Self::Value) {}
+    fn edge(&self, function: &Function, block: BlockId, terminator: &Terminator, index: usize, value: &mut Self::Value) {}
 }
 ```
 
@@ -134,10 +134,20 @@ lowers to a `Binary` written to a temporary and a copy of that temporary in the
 `Branch`, so the condition an analysis has to read is three lines above the
 terminator it is handed and there was no way to name the block holding it. The
 block is what reaches it, and it is the leaving end rather than the arriving one
-because the index already names the arriving one. It is not a `BlockId` in place
-of the terminator: the two would then be a pair that can disagree, and the guard
-on their agreeing is a test rather than the compiler, which is what
-`the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` holds today.
+because the index already names the arriving one.
+
+**The terminator was kept beside it, and that is the weaker half of this.**
+`solve` passes `&function.block(block).terminator`, so the second argument is a
+function of the first, and the two are now a pair a future caller can hand over
+disagreeing. Passing the block alone would make that unspellable, which is a
+compile error where this is a test, and `CLAUDE.md` ranks the first above the
+second. What was bought instead is that
+`the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` keeps guarding
+what it was written to guard, and that no existing implementation of the method
+moved. Those are real and they are smaller. Revisit this the first time a second
+caller of `edge` exists: `memory.rs`'s replay is already a second caller of
+`element` and `terminator`, so a per-edge report is the shape that would make
+the pair something more than a convention.
 
 **What it cost, measured when it landed rather than when it was deferred.** The
 prediction here was a defaulted method and three lines of the solver, with every
