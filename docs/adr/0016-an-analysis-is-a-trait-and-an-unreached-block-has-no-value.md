@@ -59,6 +59,9 @@ pub trait Analysis {
     fn join(&self, into: &mut Self::Value, from: &Self::Value);
     fn element(&self, function: &Function, element: &Element, value: &mut Self::Value);
     fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value);
+    // Added when Phase 5's null check arrived, and the only one with a body
+    // here: an analysis that tells both arms the same thing need not answer it.
+    fn edge(&self, function: &Function, terminator: &Terminator, successor: usize, value: &mut Self::Value) {}
 }
 ```
 
@@ -83,9 +86,10 @@ The function is handed to the transfers rather than left for an analysis to
 hold. An analysis that asks what a place is reaches `TranslationUnit::place_ty`,
 which takes one, and one holding its own could be handed to a `solve` over a
 different function: that compiles and answers about neither. Passing it is what
-makes "nothing outside these five" true of the pair and not only of the trait.
+makes "nothing outside these methods" true of the pair and not only of
+the trait.
 
-A trait rather than closures because the five pieces have names, a place for the
+A trait rather than closures because the pieces have names, a place for the
 doc comment that says what each owes, and a compiler that answers when the set
 grows: a method without a default is `error[E0046]` at every implementation,
 while a closure parameter added is a silent change of arity at every call site.
@@ -110,16 +114,36 @@ facts. Had the entry been the lattice's bottom it would have been one constant
 per analysis, and that driver could not be written without a second mechanism.
 
 **Forward only, and one value per outgoing edge.** The transfer runs over a
-block's elements and then its terminator, and the result is joined into every
-successor. Two things are left out, and they cost differently.
+block's elements and then its terminator, and what that leaves is joined into
+every successor. Two things were left out, they cost differently, and one of
+them has since landed.
 
-Refining `p` to non-null on the taken arm of a branch is not built. It is a
-defaulted method taking the successor's *index*, and three lines of the solver:
-measured, with every test in the crate passing unchanged. The index rather than
-the destination, because `Branch { then: b, otherwise: b }` is two edges and
-`Cfg` keeps it that way on purpose. `docs/roadmap.md` puts nullability in Phase
-5, so the first caller who wants this is the next phase rather than a distant
-one, and that is the reason to have measured the cost rather than guessed it.
+Refining `p` to non-null on the taken arm of a branch was not built, and now is.
+It is `Analysis::edge`, a defaulted method taking the successor's *index*, and
+the solver clones what a block sends once per outgoing edge and hands each clone
+to it. The index rather than the destination, because
+`Branch { then: b, otherwise: b }` is two edges and `Cfg` keeps it that way on
+purpose, so a `BlockId` cannot tell those two arms apart. `docs/roadmap.md` puts
+nullability in Phase 5, which is the caller this was measured for.
+
+**What it cost, measured when it landed rather than when it was deferred.** The
+prediction here was a defaulted method and three lines of the solver, with every
+test in the crate passing unchanged. The second half held: nothing that existed
+moved. The first half was short by the clone. The value a block sends can no
+longer be shared by every successor, so where the solver passed one `&value` to
+each join it now clones per edge, on top of the clone the comparison already
+makes. `Terminator::successors`' push order became an interface at the same
+time, because an index means nothing without one, and that is a sentence in a
+doc comment and an assertion in a test rather than a line of code.
+
+**The method refines and cannot prune.** An analysis that has proved an arm is
+never taken still has that arm walked. Letting `edge` drop an edge was rejected
+on what it does to `Solution::value`: `None` would mean both a block the entry
+cannot reach and a block an analysis decided nothing reaches, and a check
+reading that as "nobody runs this" would go silent about code, which is the
+failure this project ranks last. Walking an arm that cannot run costs a report
+naming code no execution reaches, which is the row above. Reversing that is this
+method's signature and nothing else.
 
 A backward analysis is not a defaulted method. It needs a second entry point,
 and `on_entry` and `Solution::entry` both come to mean the other end of a block
@@ -166,6 +190,22 @@ and rewrite all of them on each pass, for a reader that does not exist.
   of the four analyses the roadmap asks for, and taking the default away moved
   the failure from a panic in a shipped compiler to a build that does not
   finish.
+* Handing `Analysis::edge` the index `0` for every successor, or calling it once
+  and folding the one result into every successor, fails every test whose answer
+  depends on two edges out of one block being told apart:
+  `each_arm_of_a_branch_is_told_something_different` and
+  `one_block_reached_by_both_arms_is_told_along_both_edges`. Running it before
+  the terminator rather than after fails those two and
+  `an_edge_is_walked_after_the_terminator_that_named_it`. Taking the default off
+  it is `error[E0046]` at `Written`, which is what makes "an analysis that does
+  not implement it is unaffected" a claim the compiler holds.
+* Swapping `then` and `otherwise` in `Terminator::successors` fails every test
+  that reads the order rather than the set:
+  `every_terminator_says_where_control_can_go`,
+  `a_loop_is_built_by_reserving_the_block_it_jumps_back_to` and
+  `each_arm_of_a_branch_is_told_something_different`. The order is what an index
+  handed to `edge` means, so it is an interface rather than an ordering nobody
+  looks at, and the last of those is where that is said.
 * A value that does not compare equal to itself is `error[E0277]`, and folding
   a successor's value into what a block sends rather than the other way round
   is `error[E0596]`, because what a block sends is bound again before the loop
@@ -177,7 +217,8 @@ Each of the first four was applied and the named tests observed to fail.
 ### Consequences
 
 * Good, because an analysis is written by naming a height, a value, a join and
-  two transfers, and nothing outside those five is left to be right about.
+  two transfers, and nothing outside those five is left to be right about. A
+  sixth was added later and answers itself where an analysis says nothing.
 * Good, because the solver cannot be handed a value from a block that never
   runs: `Cfg` leaves unreachable blocks out of both sides of `predecessors`, and
   `Solution` leaves them out of its answers.
@@ -239,12 +280,18 @@ Each of the first four was applied and the named tests observed to fail.
   arriving one oscillates where two move sites meet below a branch inside a
   loop. Measured as a hang rather than a failure. Choosing the payload stably is
   one line and nothing says to.
-* What would reverse this: an analysis that has to say something different on
-  two edges out of one branch, which is the first thing
-  [the safety model](../safety-model.md)'s null-pointer case will want, and
-  which `docs/roadmap.md` puts in Phase 5. That is a defaulted method rather
-  than a new shape, and if it turns out that the fact has to be split per edge
-  everywhere, this record is the one to supersede.
+* Bad, because a block's value is cloned once per outgoing edge, where it used
+  to be shared. That is what saying something different on two edges costs, and
+  it is paid by every analysis including the ones that say the same thing on
+  both.
+* What would have reversed this: an analysis that has to say something different
+  on two edges out of one branch, which is the first thing
+  [the safety model](../safety-model.md)'s null-pointer case wants, and which
+  `docs/roadmap.md` puts in Phase 5. **It arrived and did not reverse this**: it
+  was a defaulted method and not a new shape, and the fact is refined per edge
+  rather than split per edge, so the value is still one per block entry and
+  everything above still holds. This record is the one to supersede on the day
+  an analysis needs the fact itself to live on the edge.
 
 ## Pros and Cons of the Options
 
