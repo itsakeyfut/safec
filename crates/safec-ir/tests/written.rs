@@ -165,14 +165,25 @@ impl Analysis for Arrived {
         }
     }
 
+    /// The terminator's first letter and then the edge's index, so that a
+    /// trace says which ending sent it and which way out it took. Recording
+    /// the index alone would leave the `terminator` argument unread, and an
+    /// argument no analysis reads is one the solver could get wrong without
+    /// anything saying so.
     fn edge(
         &self,
         _function: &Function,
-        _terminator: &Terminator,
+        terminator: &Terminator,
         successor: usize,
         value: &mut Self::Value,
     ) {
+        let kind = terminator
+            .name()
+            .chars()
+            .next()
+            .expect("a terminator's name is not empty");
         for trace in value.iter_mut() {
+            trace.push(kind);
             trace.push_str(&successor.to_string());
         }
     }
@@ -1081,8 +1092,10 @@ fn a_block_nothing_reaches_has_no_answer() {
 /// needs: the taken arm knows something the untaken one does not.
 ///
 /// Mutation: hand `edge` the index `0` for every successor. The untaken arm is
-/// answered `T0` and this fails. Mutation: call `edge` once and fold the one
-/// result into every successor. The same, and for the same reason.
+/// answered `TB0` and this fails. Mutation: call `edge` once and fold the one
+/// result into every successor. The same, and for the same reason. Mutation:
+/// refine one buffer in place rather than a copy per edge. The untaken arm is
+/// told what the taken arm was told as well, and this fails.
 ///
 /// Mutation: push `otherwise` before `then` in `Terminator::successors`. The
 /// two arms swap answers and this fails, which is the half of that order's
@@ -1116,8 +1129,8 @@ fn each_arm_of_a_branch_is_told_something_different() {
     let cfg = Cfg::of(&function);
     let solution = solve(&Arrived, &function, &cfg);
 
-    assert_eq!(solution.value(taken), Some(&vec!["T0".to_string()]));
-    assert_eq!(solution.value(untaken), Some(&vec!["T1".to_string()]));
+    assert_eq!(solution.value(taken), Some(&vec!["TB0".to_string()]));
+    assert_eq!(solution.value(untaken), Some(&vec!["TB1".to_string()]));
 }
 
 /// A block both arms of a branch reach is told along both edges.
@@ -1128,7 +1141,7 @@ fn each_arm_of_a_branch_is_told_something_different() {
 /// could not tell the caller which arm it was on.
 ///
 /// Mutation: hand `edge` the index `0` for every successor. `b` is answered
-/// `T0` alone and this fails. Mutation: call `edge` once and fold the one
+/// `TB0` alone and this fails. Mutation: call `edge` once and fold the one
 /// result into every successor. The same.
 #[test]
 fn one_block_reached_by_both_arms_is_told_along_both_edges() {
@@ -1158,7 +1171,7 @@ fn one_block_reached_by_both_arms_is_told_along_both_edges() {
 
     assert_eq!(
         solution.value(both),
-        Some(&vec!["T0".to_string(), "T1".to_string()])
+        Some(&vec!["TB0".to_string(), "TB1".to_string()])
     );
 }
 
@@ -1170,7 +1183,15 @@ fn one_block_reached_by_both_arms_is_told_along_both_edges() {
 /// `edge` would be handed the value the block had before its own ending ran.
 ///
 /// Mutation: run `edge` before `terminator`. The block after the `Goto` is
-/// answered `0T` and this fails, as do both branch tests above.
+/// answered `G0T` and this fails, as does every other test that solves
+/// `Arrived`.
+///
+/// **It is also the guard on `edge` running for an edge a branch did not
+/// make.** Mutation: call `edge` only where a block has more than one
+/// successor. A `Goto`'s one edge is then never refined, and this fails along
+/// with `the_terminator_an_edge_is_walked_with_is_the_one_that_named_it`,
+/// which are the two tests that walk one. Calling it everywhere is what keeps
+/// the rule one rule, on the day `Terminator::Call` grows a second edge.
 #[test]
 fn an_edge_is_walked_after_the_terminator_that_named_it() {
     let (_sources, at) = spans();
@@ -1185,5 +1206,52 @@ fn an_edge_is_walked_after_the_terminator_that_named_it() {
     let cfg = Cfg::of(&function);
     let solution = solve(&Arrived, &function, &cfg);
 
-    assert_eq!(solution.value(after), Some(&vec!["T0".to_string()]));
+    assert_eq!(solution.value(after), Some(&vec!["TG0".to_string()]));
+}
+
+/// The terminator `edge` is handed is the one that named the edge.
+///
+/// `edge` is where a null check reads `if (p)`, so the terminator it is given
+/// has to be the ending of the block control is leaving. Handed a different
+/// one, an analysis would refine on a condition that belongs to somewhere
+/// else, and nothing about the edge's index would look wrong.
+///
+/// The branch here is deliberately not the entry block, because the entry's
+/// ending is the one a solver would most plausibly reach for by accident.
+///
+/// Mutation: hand `Analysis::edge` the entry block's terminator rather than
+/// this block's. The branch is answered `TG0` and `TG1`, and this fails.
+#[test]
+fn the_terminator_an_edge_is_walked_with_is_the_one_that_named_it() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, _int) = a_function(at);
+    let origin = Origin::Written(at);
+
+    let entry = function.reserve_block();
+    let branch = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+
+    function.fill_block(entry, goto(branch, vec![]));
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: taken,
+                otherwise: untaken,
+                origin,
+            },
+        },
+    );
+    function.fill_block(taken, returns());
+    function.fill_block(untaken, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Arrived, &function, &cfg);
+
+    assert_eq!(solution.value(branch), Some(&vec!["TG0".to_string()]));
+    assert_eq!(solution.value(taken), Some(&vec!["TG0TB0".to_string()]));
+    assert_eq!(solution.value(untaken), Some(&vec!["TG0TB1".to_string()]));
 }
