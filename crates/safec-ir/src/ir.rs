@@ -713,6 +713,15 @@ impl Terminator {
     /// is `error[E0004]` here and in every other walk. That is ADR-0010's
     /// confirmation.
     ///
+    /// **The order is an interface.** `dataflow::Analysis::edge` names an edge
+    /// by its index into this list, so a `Branch`'s `then` is 0 and its
+    /// `otherwise` is 1, and swapping the two here changes what every analysis
+    /// written against it means without changing a line of that analysis. An
+    /// analysis that refines the wrong arm is one that can be silent about the
+    /// arm it was meant to prove something about.
+    /// `every_terminator_says_where_control_can_go` asserts the order for
+    /// exactly that reason.
+    ///
     /// The fields are written out too, and `..` is deliberately not used. A
     /// second edge on a kind that already exists is the likelier growth than a
     /// new kind: an unwinding call keeps `then` and gains somewhere to go when
@@ -1336,6 +1345,17 @@ mod tests {
     /// The expected lists are written out rather than derived, for the reason
     /// RK-001 gives: a table built the way the code builds one compares the
     /// code with itself.
+    ///
+    /// **The order is asserted, not only the set**, because
+    /// `dataflow::Analysis::edge` names an edge by its index into this list.
+    /// Mutation: have the `Branch` arm push `otherwise` before `then`. This
+    /// fails, and so does every test that reads the order rather than the set,
+    /// which is a wider set than it looks and reaches the `safec` crate,
+    /// because the lowering builds an `if`'s arms in this order too.
+    /// `each_arm_of_a_branch_is_told_something_different` in
+    /// `crates/safec-ir/tests/written.rs` is the one worth following from
+    /// here, because it is the one that says what an analysis loses when the
+    /// order moves.
     ///
     /// Mutation: add a terminator kind. `Terminator::successors` stops
     /// compiling with `error[E0004]`, and so does every other walk over one,

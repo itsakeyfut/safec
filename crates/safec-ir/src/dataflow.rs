@@ -7,12 +7,14 @@
 //!
 //! Every analysis `docs/roadmap.md` puts in Phases 5 through 8 is this shape,
 //! which is why it is here once rather than four times slightly differently.
-//! See [ADR-0016] for what was chosen and what was left out: backward
-//! analyses, a transfer that depends on which edge was taken, and a value per
-//! program point are all real and none of them is asked for yet.
+//! See [ADR-0016] for what was chosen and what was left out: a backward
+//! analysis and a value per program point are both real and neither is asked
+//! for yet. A transfer that depends on which edge was taken was left out with
+//! them and has landed, because the null check `docs/roadmap.md` puts in Phase
+//! 5 is the caller that record said would want it: [`Analysis::edge`].
 //!
 //! **The first thing that wanted a backward one did not get it, and the reason
-//! is the third of those rather than the first.** The memory check had to ask
+//! is the second of those rather than the first.** The memory check had to ask
 //! whether a free comes later in the same unsequenced expression, which reads
 //! backwards; a backward transfer here would be handed no block and no
 //! position, so it could not ask the forward answer what that free's argument
@@ -59,11 +61,13 @@ use crate::ir::{BlockId, Element, Function, Terminator};
 /// What an analysis is: a height, a value, a join, and what the program does
 /// to it.
 ///
-/// Implementing this is the whole of writing one, and **none of the five has a
-/// default**, which is deliberate: a method without one is `error[E0046]` at
-/// every implementation, so what an analysis owes is held by the compiler
-/// rather than by a convention somebody remembers. [`Analysis::height`] says
-/// why that mattered enough to take a default away again. See ADR-0016.
+/// Implementing this is the whole of writing one, and **none of the five an
+/// analysis is asked for has a default**, which is deliberate: a method without
+/// one is `error[E0046]` at every implementation, so what an analysis owes is
+/// held by the compiler rather than by a convention somebody remembers.
+/// [`Analysis::height`] says why that mattered enough to take a default away
+/// again. [`Analysis::edge`] is the sixth and does have one, and says there why
+/// answering nothing is correct in that one place. See ADR-0016.
 ///
 /// **There is no bottom.** A block nothing has reached yet holds no value at
 /// all, so the first answer to arrive is kept as it is and only the second is
@@ -179,12 +183,62 @@ pub trait Analysis {
 
     /// What the end of a block does to what is known.
     ///
-    /// The same value then reaches every successor. Saying something different
-    /// on the taken and untaken arms of a branch is what a null check wants,
-    /// and `docs/roadmap.md` puts nullability in Phase 5, which is the next
-    /// one. It is not built: ADR-0016 says what it would cost, and it was
-    /// measured at a defaulted method and three lines of the solver.
+    /// What this writes is what every successor is told, before
+    /// [`Analysis::edge`] gets to say something different to one of them. So a
+    /// fact that holds whichever way control went belongs here, and one that
+    /// depends on which arm was taken belongs there.
     fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value);
+
+    /// What one outgoing edge does to what the block sends.
+    ///
+    /// `p` is not null on the arm an `if (p)` took and is null on the other, so
+    /// a null check has to say two things where [`Analysis::terminator`] can
+    /// say one. This runs after that one, once per edge, on a copy of what the
+    /// block sends, so what it writes reaches that successor and nothing else.
+    ///
+    /// **The edge is named by its index into the list
+    /// [`Terminator::successors`] fills**, so a [`Terminator::Branch`]'s `then`
+    /// is 0 and its `otherwise` is 1, and that order is an interface rather
+    /// than an implementation detail: `every_terminator_says_where_control_can_go`
+    /// is what holds it. The index rather than the destination, because
+    /// `Branch { then: b, otherwise: b }` is two edges and [`Cfg`] keeps it
+    /// that way on purpose, so a [`BlockId`] cannot tell those two arms apart.
+    /// See ADR-0016.
+    ///
+    /// **Match the terminator before reading the index.** This is called for
+    /// every edge and not only a branch's, so a [`Terminator::Goto`]'s one edge
+    /// is index 0 as well, and an implementation spelled `match index { 0 =>
+    /// ... }` would refine a straight jump as though a condition had been
+    /// tested and nothing would say so. The index means something only inside a
+    /// kind: the name says which question was asked, the index says which
+    /// answer this edge is. It is called for every edge on purpose, so that the
+    /// day [`Terminator::Call`] gains an edge for a callee that does not return
+    /// normally, the rule an analysis was written against does not change.
+    /// `an_edge_is_walked_after_the_terminator_that_named_it` pins the `Goto`
+    /// case.
+    ///
+    /// **This refines and cannot prune.** An analysis that has proved an arm is
+    /// never taken still has that arm walked with what it knows: there is no
+    /// way to say from here that an edge is not taken, and that is deliberate
+    /// rather than missing. What it buys is that [`Solution::value`]'s `None`
+    /// keeps meaning one thing. See ADR-0016.
+    ///
+    /// **Defaulted, unlike the five above, because answering nothing is
+    /// correct here.** An analysis that reads no condition is not wrong to tell
+    /// both arms the same thing, only less precise, so there is nothing for
+    /// `error[E0046]` to hold an author to. That is the question to ask of any
+    /// default: not whether it is a reasonable guess, but whether the callers
+    /// it exists for can use it. [`Analysis::height`] is the case where the
+    /// answer was no.
+    fn edge(
+        &self,
+        function: &Function,
+        terminator: &Terminator,
+        index: usize,
+        value: &mut Self::Value,
+    ) {
+        let _ = (function, terminator, index, value);
+    }
 }
 
 /// What an analysis concluded, one value per block.
@@ -197,6 +251,13 @@ pub trait Analysis {
 /// than *somewhere in this block*. That works only because those take `&self`
 /// and are reachable by whoever asked, so hiding them inside the solver would
 /// take the per-point answer away from every check without failing a test.
+///
+/// **A replay stops at the terminator, and [`Analysis::edge`] is not part of
+/// it.** Every point a replay can name is inside one block, and an edge is
+/// between two, so a caller that kept walking would hold a value that belongs
+/// to no point in the block it started from. What a successor was told is
+/// [`Self::value`] of that successor, which is what the solver stored after
+/// the edge had its say.
 #[derive(Debug)]
 pub struct Solution<V> {
     /// What holds where each block starts, indexed by [`BlockId::index`].
@@ -244,7 +305,9 @@ impl<V> Solution<V> {
 /// filter.
 ///
 /// A block is walked from its entry value: every element in the order it is
-/// written, then the terminator, and the result is joined into every successor.
+/// written, then the terminator, and then [`Analysis::edge`] once per outgoing
+/// edge, each on its own copy of what the block sends. What that leaves is
+/// joined into that one successor.
 /// A successor whose value moved goes back on the list, which is what makes a
 /// loop converge rather than being answered from whatever reached it first.
 ///
@@ -320,18 +383,39 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         }
         analysis.terminator(function, &function.block(block).terminator, &mut value);
 
-        // What the block sends, and it is the same for every successor, so it
-        // is bound again here to stop the loop below writing to it. Folding a
-        // successor's value into this one rather than the other way round
-        // compiles while the binding is mutable, because `&mut T` coerces to
-        // `&T`, and it gives the next successor what two paths agree on rather
-        // than what this block sent. Spelled this way that is `error[E0596]`.
+        // What the block sends, before any edge has been told anything
+        // different. It is bound again here to stop the loop below writing to
+        // it, which now guards two mistakes rather than one: refining this
+        // value in place would hand every later successor the first one's
+        // refinement, and folding a successor's value into this one rather
+        // than the other way round would give the next successor what two
+        // paths agree on rather than what this block sent. Either compiles
+        // while the binding is mutable, because `&mut T` coerces to `&T`.
+        // Spelled this way both are `error[E0596]`.
         let value = value;
 
         successors.clear();
         function.block(block).terminator.successors(&mut successors);
 
-        for &successor in &successors {
+        for (index, &successor) in successors.iter().enumerate() {
+            // This clone is what the edge is allowed to write to, and it is
+            // per edge rather than per block because that is the whole of what
+            // this buys: two arms of one branch are told different things. It
+            // is not the clone the comparison below makes, which is of what
+            // had already arrived at the successor.
+            //
+            // The index is the position in `successors`, which is the order
+            // `Terminator::successors` pushed, and `Analysis::edge` is written
+            // against that order.
+            let mut sent = value.clone();
+            analysis.edge(
+                function,
+                &function.block(block).terminator,
+                index,
+                &mut sent,
+            );
+            let value = sent;
+
             let changed = match &mut values[successor.index()] {
                 Some(arrived) => {
                     // Compared rather than asked. What a clone per edge buys
