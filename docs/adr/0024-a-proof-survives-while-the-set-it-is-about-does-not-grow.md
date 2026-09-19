@@ -152,15 +152,30 @@ Each mutation below applied on its own, the whole workspace suite run with
 
 | Mutation | Named test that fails |
 |---|---|
-| `accumulated` joins the proof the way `joined` does | `a_free_after_an_offset_that_kept_the_set_is_proved`, which drops to a warning |
+| `accumulated` joins the proof the way `joined` does, or the arm that adopts the other side goes | `a_free_after_an_offset_that_kept_the_set_is_proved`, which drops to a warning |
+| the arm that keeps a proof `self` already has goes | `an_offset_by_a_local_that_holds_nothing_keeps_the_set`. A constant is not an operand the walk copies from, so the case above calls the accumulator once and only ever adopts; it takes a local to reach the second call |
 | `accumulated` takes the proof from whichever side has one | `an_offset_that_grew_the_set_is_not_proved`, which becomes a proof about a set that grew |
 | `accumulated` reads `grows` and `shrinks` after the union rather than before | the same, because afterwards nothing ever grows |
-| `joined` accumulates the proof rather than intersecting it | `a_free_of_a_may_set_on_one_arm_only`, a proved error on a path that never freed |
+| `accumulated` does not union `lost` | `a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation`, which goes silent. A free cannot hold it, because an argument reaching nothing answers `Reached::Lost` anyway; a dereference can, because that one says nothing about a place it follows no allocation for |
+| `accumulated` does not union `sites` | eleven, across the corpus |
+| `joined` accumulates the proof rather than intersecting it, at the method or at its one caller | `a_free_of_a_may_set_on_one_arm_only`, a proved error on a path that never freed |
 
 The second and third rows are the ones that matter: each makes this compiler
 **certain** about a program it cannot prove.
 
-**Dropping the proof at the write through a pointer is held by nothing, and this
+**Three things are held by nothing and this says which.**
+
+The first arm of `accumulated`, where both sides carry a proof about one set, is
+what makes the method symmetric, and reaching it needs two operands that each
+carry one and name the same set: two frees of one may-set, the first of which
+reports. Deleting it leaves the answer to the arm below and the surviving span
+decided by which operand came first.
+
+The union of `writes_to` in `accumulated` is dead for both callers that build a
+value out of operands, because each empties that field on the next line under
+ADR-0019. Only the write through a pointer reads it.
+
+**Dropping the proof at the write through a pointer is the third, and this
 says so rather than implying otherwise.** Measured: removing that line leaves
 the whole suite green. `Held::writes_to` is written only where an address is
 taken, so a target of such a write has always escaped, and

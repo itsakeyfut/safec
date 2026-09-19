@@ -413,6 +413,12 @@ impl Held {
         // `shrinks` is also what carries the seed: a value built from
         // [`Held::none`] holds no site at all, so the first operand's set is
         // the whole of the result so far and its proof is still about it.
+        //
+        // **Nothing observes the first arm**, and it is what the sentence above
+        // promises: reaching it needs two operands that each carry a proof and
+        // name the same set, which takes two frees of one may-set and the first
+        // of them reports. Deleting it breaks nothing and leaves the surviving
+        // span decided by which operand came first. Measured.
         *freed = match (*freed, other.freed) {
             (Some(here), Some(there)) if !grows && !shrinks => Some(here.joined(there)),
             (Some(here), _) if !grows => Some(here),
@@ -420,7 +426,12 @@ impl Held {
             _ => None,
         };
 
-        // The three may-facts, which grow wherever anything meets.
+        // The three may-facts, which grow wherever anything meets. The edge is
+        // the one nothing observes here: both callers that build a value out of
+        // operands empty it on the next line, because C17 6.5.6 p8 keeps a
+        // pointer's arithmetic inside the object and a local's address plus one
+        // is not that local. See ADR-0019, and the two `writes_to.fill(false)`
+        // lines in `Allocations::element`.
         for (here, there) in sites.iter_mut().zip(&other.sites) {
             *here = *here || *there;
         }

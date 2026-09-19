@@ -166,6 +166,19 @@ cases! {
     // cannot support a proof about the one that was. See ADR-0024.
     a_free_after_an_offset_that_kept_the_set_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_offset_that_grew_the_set_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same offset written with a local rather than a constant, which is
+    // what reaches the arm where the accumulator keeps a proof it already has.
+    // A constant is not an operand this walk copies from, so the pair above
+    // call the accumulator once each and only ever adopt; `n` holds nothing, so
+    // the second call adds no site and the proof has to survive it. Measured:
+    // without this, deleting that arm breaks nothing.
+    an_offset_by_a_local_that_holds_nothing_keeps_the_set: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the may-fact beside the proof. A local that lost the name for what it
+    // held says so, and arithmetic on it builds a pointer that has lost it too.
+    // ADR-0018 holds that for a copy and nothing held it for arithmetic, so the
+    // union the accumulator does of that bit could be deleted with the suite
+    // green.
+    a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_after_a_may_set_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_while_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
