@@ -217,6 +217,18 @@ pub trait Analysis {
     /// `an_edge_is_walked_after_the_terminator_that_named_it` pins the `Goto`
     /// case.
     ///
+    /// **`block` is the block control is leaving, not the one this edge
+    /// reaches.** `index` already names the successor, so without that sentence
+    /// this is one method holding both ends of an edge with nothing saying
+    /// which is which. What the leaving end buys is the only thing a
+    /// [`Terminator::Branch`] does not carry: its condition is an
+    /// [`crate::ir::Operand`], so `if (p != 0)` arrives here as a copy of a
+    /// local and the `Binary` that computed that local is an element of this
+    /// block. Reaching it is `function.block(block).elements`, walked
+    /// backwards. Without the block an analysis can refine on `if (p)` and on
+    /// nothing else, because that is the one spelling whose condition is the
+    /// place itself.
+    ///
     /// **This refines and cannot prune.** An analysis that has proved an arm is
     /// never taken still has that arm walked with what it knows: there is no
     /// way to say from here that an edge is not taken, and that is deliberate
@@ -233,11 +245,12 @@ pub trait Analysis {
     fn edge(
         &self,
         function: &Function,
+        block: BlockId,
         terminator: &Terminator,
         index: usize,
         value: &mut Self::Value,
     ) {
-        let _ = (function, terminator, index, value);
+        let _ = (function, block, terminator, index, value);
     }
 }
 
@@ -406,10 +419,14 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
             //
             // The index is the position in `successors`, which is the order
             // `Terminator::successors` pushed, and `Analysis::edge` is written
-            // against that order.
+            // against that order. The block handed over is `block` and not
+            // `successor`: both are in scope here, and the one whose elements
+            // an analysis reads to resolve the condition is the one being
+            // left.
             let mut sent = value.clone();
             analysis.edge(
                 function,
+                block,
                 &function.block(block).terminator,
                 index,
                 &mut sent,

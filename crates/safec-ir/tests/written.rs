@@ -30,8 +30,8 @@
 use safec_ir::cfg::Cfg;
 use safec_ir::dataflow::{Analysis, solve};
 use safec_ir::ir::{
-    Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place, Rvalue,
-    Terminator, TranslationUnit, Ty, TyId,
+    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
+    Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -171,9 +171,15 @@ impl Analysis for Arrived {
     /// the index alone would leave the `terminator` argument unread, and an
     /// argument no analysis reads is one the solver could get wrong without
     /// anything saying so.
+    ///
+    /// The block is the argument this one leaves unread, and `Resolving`
+    /// below is where it is read: what a trace can be wrong about is the
+    /// ending and the way out, and widening this to the block as well would
+    /// move four tests that are about those two.
     fn edge(
         &self,
         _function: &Function,
+        _block: BlockId,
         terminator: &Terminator,
         index: usize,
         value: &mut Self::Value,
@@ -185,6 +191,95 @@ impl Analysis for Arrived {
             .expect("a terminator's name is not empty");
         for trace in value.iter_mut() {
             trace.push(kind);
+            trace.push_str(&index.to_string());
+        }
+    }
+}
+
+/// What a branch's condition was computed by, read through the block the edge
+/// leaves.
+///
+/// The third analysis in this file, and the one that reads `Analysis::edge`'s
+/// `block`. `Arrived` above reads the terminator and the index, and neither
+/// can tell a wrong block from a right one; this can, which is the whole of
+/// why it exists.
+///
+/// **A trace rather than a lattice, and no top**, for `Arrived`'s reasons: it
+/// is only asked about the acyclic graph below, and nothing here is a claim
+/// about a fixpoint.
+struct Resolving;
+
+impl Analysis for Resolving {
+    type Value = Vec<String>;
+
+    /// One step per block, which is enough for a graph with no back edge.
+    fn height(&self, function: &Function) -> usize {
+        function.blocks().len()
+    }
+
+    /// One empty trace, for the reason `Arrived::on_entry` gives.
+    fn on_entry(&self) -> Self::Value {
+        vec![String::new()]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        into.extend(from.iter().cloned());
+        into.sort();
+        into.dedup();
+    }
+
+    fn element(&self, _function: &Function, _element: &Element, _value: &mut Self::Value) {}
+
+    /// Nothing, deliberately: every character in a trace of this analysis was
+    /// written by `edge`, so an expectation below is about that method alone.
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+
+    /// The operator the condition's local was computed with, and then the
+    /// edge's index.
+    ///
+    /// The terminator is matched before the index is read, which is the rule
+    /// `Analysis::edge` states: a `Goto`'s one edge is index 0 as well, and
+    /// reading the index there would refine a straight jump as though a
+    /// condition had been tested.
+    fn edge(
+        &self,
+        function: &Function,
+        block: BlockId,
+        terminator: &Terminator,
+        index: usize,
+        value: &mut Self::Value,
+    ) {
+        let Terminator::Branch {
+            condition: Operand::Copy(condition),
+            ..
+        } = terminator
+        else {
+            return;
+        };
+
+        // Backwards, because the write a branch reads is the last one before
+        // it. This is what the block is for: the condition names the local
+        // that holds the answer and says nothing about the comparison that
+        // produced it.
+        let resolved = function
+            .block(block)
+            .elements
+            .iter()
+            .rev()
+            .find_map(|element| match element {
+                Element::Assign(operation) if operation.place == *condition => {
+                    match operation.value {
+                        Rvalue::Binary { op, .. } => Some(op.name()),
+                        _ => Some(operation.value.name()),
+                    }
+                }
+                _ => None,
+            })
+            .unwrap_or("none");
+
+        for trace in value.iter_mut() {
+            trace.push_str(resolved);
             trace.push_str(&index.to_string());
         }
     }
@@ -1255,4 +1350,70 @@ fn the_terminator_an_edge_is_walked_with_is_the_one_that_named_it() {
     assert_eq!(solution.value(branch), Some(&vec!["TG0".to_string()]));
     assert_eq!(solution.value(taken), Some(&vec!["TG0TB0".to_string()]));
     assert_eq!(solution.value(untaken), Some(&vec!["TG0TB1".to_string()]));
+}
+
+/// An analysis can read, from inside `edge`, the element that computed the
+/// local a branch's condition copies.
+///
+/// `if (p != 0)` lowers to a `Binary` in the block and a copy of its
+/// destination in the `Branch`, so the condition a null check has to read is
+/// never the one it is handed. The block is what reaches it, and this is the
+/// test that says the solver hands over the right one.
+///
+/// The branch is deliberately not the entry block and the entry writes a
+/// different local, because the entry's is the id a solver would most
+/// plausibly reach for by accident and a graph where both answer the same
+/// thing would not notice.
+///
+/// Mutation: hand `Analysis::edge` `function.entry()` rather than the block
+/// control is leaving. The entry has no write to the condition's local, so
+/// both arms are answered `none` and this fails.
+///
+/// Mutation: answer from the terminator's operand rather than the element the
+/// block resolves it to. Both arms are answered `Copy`, and this fails. That
+/// is the half that says the argument is load-bearing rather than present.
+#[test]
+fn the_block_an_edge_leaves_is_the_one_whose_elements_it_can_read() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+
+    let pointer = function.push_local(int);
+    let condition = function.push_local(int);
+    let other = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let branch = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+
+    function.fill_block(entry, goto(branch, vec![write(other, origin)]));
+    function.fill_block(
+        branch,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(condition),
+                value: Rvalue::Binary {
+                    op: BinOp::Ne,
+                    lhs: Operand::Copy(Place::local(pointer)),
+                    rhs: Operand::Constant(0),
+                },
+                origin,
+            })],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin,
+            },
+        },
+    );
+    function.fill_block(taken, returns());
+    function.fill_block(untaken, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Resolving, &function, &cfg);
+
+    assert_eq!(solution.value(taken), Some(&vec!["Ne0".to_string()]));
+    assert_eq!(solution.value(untaken), Some(&vec!["Ne1".to_string()]));
 }
