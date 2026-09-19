@@ -113,6 +113,71 @@ impl Analysis for Written {
     }
 }
 
+/// What each block was told, and along which edge it was told it.
+///
+/// The second analysis in this file, and the one that implements
+/// `Analysis::edge`. `Written` deliberately does not, which is what holds the
+/// claim that the default is usable: five methods and it compiles.
+///
+/// **A trace rather than a lattice.** The three things `edge` has to be right
+/// about are which edge was walked, how many times, and in what order, and a
+/// value that records all three is the smallest thing that can be wrong about
+/// all three. A value spelled as a lattice element would answer the first and
+/// lose the other two in the join.
+///
+/// **It has no top, and that is why it is only asked about the acyclic graphs
+/// below.** A trace grows with the length of a path, so a back edge would make
+/// it climb forever and the solver's budget would stop it. Nothing here is a
+/// claim about a fixpoint: `Written` holds all of those, and RK-027 is the
+/// reason that division matters.
+struct Arrived;
+
+impl Analysis for Arrived {
+    /// Every trace that reached this block, sorted and deduplicated, because
+    /// `Analysis::Value` asks for a canonical representation and a union that
+    /// kept arrival order would never compare equal to itself.
+    type Value = Vec<String>;
+
+    /// One step per block, which is enough for a graph with no back edge: a
+    /// trace gains a character per block it passes through.
+    fn height(&self, function: &Function) -> usize {
+        function.blocks().len()
+    }
+
+    /// One empty trace, rather than none. A value holding nothing would have
+    /// nothing for the transfers below to write to, and every block would be
+    /// answered empty however control got there.
+    fn on_entry(&self) -> Self::Value {
+        vec![String::new()]
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        into.extend(from.iter().cloned());
+        into.sort();
+        into.dedup();
+    }
+
+    fn element(&self, _function: &Function, _element: &Element, _value: &mut Self::Value) {}
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, value: &mut Self::Value) {
+        for trace in value.iter_mut() {
+            trace.push('T');
+        }
+    }
+
+    fn edge(
+        &self,
+        _function: &Function,
+        _terminator: &Terminator,
+        successor: usize,
+        value: &mut Self::Value,
+    ) {
+        for trace in value.iter_mut() {
+            trace.push_str(&successor.to_string());
+        }
+    }
+}
+
 fn spans() -> (SourceMap, Span) {
     let mut sources = SourceMap::new();
     let file = sources.add_virtual("t.c", "int f(void) { return 1; }\n");
@@ -152,6 +217,13 @@ fn goto(to: BlockId, elements: Vec<Element>) -> Block {
     Block {
         elements,
         terminator: Terminator::Goto(to),
+    }
+}
+
+fn returns() -> Block {
+    Block {
+        elements: vec![],
+        terminator: Terminator::Return,
     }
 }
 
@@ -1001,4 +1073,117 @@ fn a_block_nothing_reaches_has_no_answer() {
 
     assert_eq!(solution.value(entry), Some(&vec![false, false]));
     assert_eq!(solution.value(stranded), None);
+}
+
+/// Two arms of one branch are told different things.
+///
+/// The whole of what `Analysis::edge` buys, and the shape `if (p) { *p = 1; }`
+/// needs: the taken arm knows something the untaken one does not.
+///
+/// Mutation: hand `edge` the index `0` for every successor. The untaken arm is
+/// answered `T0` and this fails. Mutation: call `edge` once and fold the one
+/// result into every successor. The same, and for the same reason.
+///
+/// Mutation: push `otherwise` before `then` in `Terminator::successors`. The
+/// two arms swap answers and this fails, which is the half of that order's
+/// guard that says what getting it wrong costs an analysis: a refinement
+/// meant for the arm an `if (p)` took would land on the arm where `p` is null.
+#[test]
+fn each_arm_of_a_branch_is_told_something_different() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, _int) = a_function(at);
+    let origin = Origin::Written(at);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: taken,
+                otherwise: untaken,
+                origin,
+            },
+        },
+    );
+    function.fill_block(taken, returns());
+    function.fill_block(untaken, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Arrived, &function, &cfg);
+
+    assert_eq!(solution.value(taken), Some(&vec!["T0".to_string()]));
+    assert_eq!(solution.value(untaken), Some(&vec!["T1".to_string()]));
+}
+
+/// A block both arms of a branch reach is told along both edges.
+///
+/// `Branch { then: b, otherwise: b }` is two edges to one block, which `Cfg`
+/// keeps as two on purpose, and it is the case that decides `edge` is handed an
+/// index rather than a destination: a `BlockId` would be the same `b` twice and
+/// could not tell the caller which arm it was on.
+///
+/// Mutation: hand `edge` the index `0` for every successor. `b` is answered
+/// `T0` alone and this fails. Mutation: call `edge` once and fold the one
+/// result into every successor. The same.
+#[test]
+fn one_block_reached_by_both_arms_is_told_along_both_edges() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, _int) = a_function(at);
+    let origin = Origin::Written(at);
+
+    let entry = function.reserve_block();
+    let both = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: both,
+                otherwise: both,
+                origin,
+            },
+        },
+    );
+    function.fill_block(both, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Arrived, &function, &cfg);
+
+    assert_eq!(
+        solution.value(both),
+        Some(&vec!["T0".to_string(), "T1".to_string()])
+    );
+}
+
+/// An edge is walked after the terminator that named it.
+///
+/// The order is part of the interface rather than an accident of the solver:
+/// `edge` refines what the terminator concluded, so an analysis that writes in
+/// `terminator` and reads in `edge` is a thing somebody can write. Reversed,
+/// `edge` would be handed the value the block had before its own ending ran.
+///
+/// Mutation: run `edge` before `terminator`. The block after the `Goto` is
+/// answered `0T` and this fails, as do both branch tests above.
+#[test]
+fn an_edge_is_walked_after_the_terminator_that_named_it() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, _int) = a_function(at);
+
+    let entry = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(entry, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Arrived, &function, &cfg);
+
+    assert_eq!(solution.value(after), Some(&vec!["T0".to_string()]));
 }
