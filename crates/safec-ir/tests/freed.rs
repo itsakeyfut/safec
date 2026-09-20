@@ -1645,6 +1645,64 @@ fn a_call_into_a_local_whose_address_escaped() {
     assert_eq!(found[0].at, names.at[4]);
 }
 
+/// A call written through a pointer gives the pointer nothing.
+///
+/// **The neighbouring shape, and the frontend builds this one no more than it
+/// builds the one above.** A call's destination is a `Place`, so the IR lets
+/// it carry a projection; the lowering writes every call into a fresh
+/// temporary and copies it out, so `*pp = malloc(4);` arrives as a call into a
+/// local and a separate assignment through the pointer. What the guard says is
+/// that the local a projection starts from is not what the call wrote to, and
+/// handing it the allocation would name the pointer as the thing that was
+/// allocated.
+///
+/// The free is what makes the omission visible, for the reason the test above
+/// gives: with the guard the pointer reaches no site and ADR-0017 answers
+/// `Reached::Lost`, so the free is reported; without it the pointer holds a
+/// live allocation and a first free of one is reported by nobody.
+///
+/// Mutation: remove the `if !place.projection.is_empty() { return; }` above
+/// the call's destination in the terminator's transfer. Nothing is reported
+/// and this fails on the length, which is the direction that matters: it is
+/// the check going quiet.
+#[test]
+fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let pointer = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // Written out rather than built by `malloc`, which writes into a
+    // `Place::local`. A second builder taking a projection would have this one
+    // caller.
+    function.fill_block(
+        allocate,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Call {
+                callee: callees.malloc,
+                arguments: vec![],
+                destination: Some(Place {
+                    local: pointer,
+                    projection: vec![Projection::Deref],
+                }),
+                then: release,
+                origin: Origin::Written(names.at[0]),
+            },
+        },
+    );
+    function.fill_block(release, free(&callees, pointer, names.at[1], exit));
+    function.fill_block(exit, after_the_statement(names.at[1], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].unproven, Some(Unproven::Lost));
+}
+
 /// A read of what a site used to name is not a read of what it names now.
 ///
 /// **No C program reaches this and a frontend can build it.** A site is the
