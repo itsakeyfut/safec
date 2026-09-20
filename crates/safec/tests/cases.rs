@@ -209,6 +209,25 @@ cases! {
     a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_call_that_is_not_known_to_allocate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other half of reading the callee's name: a call that allocates is
+    // also a call that does not touch what it was handed, and the case above
+    // says nothing about that.
+    //
+    // **`malloc` is declared taking a pointer, and that is the case rather
+    // than an accident of it.** This check recognises an allocation by the
+    // name and never by the type, so the declaration is free to take whatever
+    // reaches a site, and in this subset only a pointer does. Written with
+    // C's own prototype the call does not type-check: `clang -std=c17
+    // -pedantic-errors` reports `incompatible pointer to integer conversion`
+    // for `malloc(q)` against `int`. It accepts this one with
+    // `-Wincompatible-library-redeclaration`, which every case here declaring
+    // `malloc` already draws.
+    //
+    // Mutation: have `Callee::Allocates` poison its arguments as
+    // `Callee::Opaque` does. The site `q` holds becomes `Unknown` at the
+    // middle call and this fails on its `.stderr`, which gains a
+    // `warning[SC0401]` on the first free.
+    an_allocating_call_leaves_its_argument_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_constant_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The same program with `&p` in it, which is the pair that says the fold
@@ -343,6 +362,26 @@ cases! {
     an_escape_on_one_arm_and_an_allocation_on_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_escape_on_one_arm_and_a_shared_allocation_on_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_address_taken_of_a_local_declared_in_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The storage pair ADR-0012 emits, read by the memory check rather than by
+    // the lowering that writes it. A local declared inside a loop is given
+    // fresh storage each time round, and the only path from its `StorageDead`
+    // back to it is the back edge, so this is the one shape where the previous
+    // iteration's facts can still be standing.
+    //
+    // **The write before the assignment is what makes it visible.**
+    // `Known::clear` clears the local's edge to its sites and not the sites
+    // themselves, so a stale `Freed` can only be observed by a read that
+    // happens before the local is given anything. `*p` on an indeterminate
+    // pointer is a defect with a check of its own that does not exist yet, and
+    // when that check lands this case will have something to say about it: the
+    // program is chosen for a read this compiler currently answers nothing
+    // about, which is RK-010's shape.
+    //
+    // Mutation: both the `StorageLive` and the `StorageDead` arm of
+    // `Allocations::element` to no-ops. The free from the previous iteration
+    // arrives at the write and this fails on its `.stderr`, which gains a
+    // `warning[SC0402]` beside the null one.
+    a_scope_reentered_forgets_what_its_local_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_where_one_of_two_allocations_is_live: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_double_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     an_unproven_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
