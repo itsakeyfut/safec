@@ -324,6 +324,15 @@ impl Analysis for Nullability<'_> {
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        // Before the assignment below, for the reason `Self::terminator` gives
+        // about a call's destination: a dereference is a fact about the value
+        // the local held when it ran, and the assignment is what replaces that
+        // value. `pp = *pp;` is the shape that tells them apart, and with this
+        // the other way round the fact about the old pointer was written over
+        // the answer about the new one, leaving `pp` proved non-null when
+        // nothing at all was known about what it now holds.
+        met(dereferenced_in_element(element), value);
+
         // Every field written out, never `..`: RK-018 in the review knowledge
         // bank is a field added to a variant that already exists walking past
         // an exhaustive match.
@@ -349,8 +358,6 @@ impl Analysis for Nullability<'_> {
             Element::StorageLive { local, origin: _ } => value[local.index()] = Nullness::Unknown,
             Element::StorageDead { origin: _, local } => value[local.index()] = Nullness::Unknown,
         }
-
-        met(dereferenced_in_element(element), value);
     }
 
     fn terminator(&self, _function: &Function, terminator: &Terminator, value: &mut Self::Value) {

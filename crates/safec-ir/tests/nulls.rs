@@ -242,3 +242,68 @@ fn storage_beginning_or_ending_leaves_a_pointer_holding_nothing_known() {
     assert_eq!(found[1].conclusion, Conclusion::Unknown);
     assert_eq!(found[1].at, names.at[3]);
 }
+
+/// A local assigned from its own dereference keeps nothing the dereference
+/// established about the pointer it used to hold.
+///
+/// `pp = *pp;` is the shape, and `p = p->next;` is what it will be written as
+/// once this compiler has structs. The dereference says the *old* pointer was
+/// not null; the assignment then puts a different pointer there, and nothing is
+/// known about that one. An analysis that applied the two the other way round
+/// would answer the question about the new value with a fact about the old one
+/// and go quiet about the next dereference.
+///
+/// **This compiler's own frontend cannot produce it**, because a pointer whose
+/// dereference has its own type needs a struct and `Ty` has none. The lowering
+/// builds the shape regardless, which is the half that matters: `pp = *pp;`
+/// reaches `--emit safety-ir` as this IR and is refused by the type checker
+/// beside it.
+///
+/// Mutation: move `met` in `Nullability::element` back below the match, so the
+/// dereference is applied after the assignment. `pp` is left proved non-null,
+/// the second dereference is reported by nothing, and this fails with one
+/// finding where it expects two.
+#[test]
+fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
+    let mut function = Function::new(names.function, int, vec![pointer_to_pointer]);
+
+    let pp = function.parameters().next().expect("a first parameter");
+
+    let entry = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                // `pp = *pp;`
+                Element::Assign(Operation {
+                    place: Place::local(pp),
+                    value: Rvalue::Use(Operand::Copy(Place {
+                        local: pp,
+                        projection: vec![Projection::Deref],
+                    })),
+                    origin: Origin::Written(names.at[0]),
+                }),
+                write_through(pp, names.at[1]),
+            ],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 2, "{found:?}");
+    // The parameter, which nothing has said anything about.
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[0]);
+    // What it was assigned from, which is a different pointer.
+    assert_eq!(found[1].conclusion, Conclusion::Unknown);
+    assert_eq!(found[1].at, names.at[1]);
+}
