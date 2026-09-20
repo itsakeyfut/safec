@@ -1688,3 +1688,58 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
 
     assert!(found.is_empty(), "{found:?}");
 }
+
+/// A read in a call's own argument, with no marker, is a suspicion this check
+/// keeps.
+///
+/// **A boundary, not a goal.** `free(p + *p)` is a program C defines: C17
+/// 6.5.2.2 p10's first sentence puts a sequence point after the arguments and
+/// before the call, so the read is ordered before the free and there is
+/// nothing to report. This answers `Unknown` about it, because the IR below
+/// says nothing about that point.
+///
+/// ADR-0026 is what the C frontend emits so that it does:
+/// `Element::ArgumentsEvaluated`, between the argument operations and the
+/// call. `docs/c-family.md` is where the obligation is written down, because
+/// the reader who needs it is whoever writes the second frontend, and this is
+/// here so the boundary has a name. The direction is the tolerable one, a
+/// suspicion rather than a proof, which is the same bias
+/// [`after_the_statement`] documents for the other marker.
+///
+/// Mutation: emit an `Element::ArgumentsEvaluated` before the call, which is
+/// what the frontend does. Nothing is reported and this fails, which is the
+/// half that says the element is what the answer turns on.
+#[test]
+fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let argument = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], argument));
+
+    // The read and the free in one block with nothing between them, which is
+    // the shape `free(p + *p)` has: the argument is computed by an element and
+    // handed to the call that ends the block.
+    let mut evaluated = free(&callees, held, names.at[2], exit);
+    evaluated.elements = read(value, held, names.at[1], exit).elements;
+    function.fill_block(argument, evaluated);
+
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[1], "the read, not the call");
+    assert_eq!(
+        found[0].unproven,
+        Some(Unproven::Unsequenced),
+        "and what is open is the order C in fact settled"
+    );
+}
