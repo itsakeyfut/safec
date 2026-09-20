@@ -239,8 +239,9 @@ way the lowering's `SC0304` does.
 The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
 all, so the code is attached where the diagnostic is built.
 
-**`SC0401` and `SC0402` are a third kind and are why the count needs a second
-command.** Both are built by one function, `memory_finding`, with
+**The safety checks' codes are a third kind and are why the count needs a
+second command.** `SC0401` and `SC0402` are built by `memory_finding` and
+`SC0403` by `nullability_finding`, each with
 `Diagnostic::concluded` rather than `Diagnostic::error`, because what
 a safety check answers is a [conclusion](safety-model.md#safe-unsafe-unknown)
 and the severity follows from it: the same finding is an error or a warning
