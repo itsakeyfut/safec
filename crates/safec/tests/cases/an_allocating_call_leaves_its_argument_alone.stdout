@@ -1,0 +1,49 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocating_call_leaves_its_argument_alone.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int *" parameter
+Function an_allocating_call_leaves_its_argument_alone.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_allocating_call_leaves_its_argument_alone.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void *"
+  Local "_4" "void"
+  Local "_5" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:4:14 generated
+    Call an_allocating_call_leaves_its_argument_alone.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 0
+  Block "bb1"
+    Operation an_allocating_call_leaves_its_argument_alone.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced an_allocating_call_leaves_its_argument_alone.c:4:14 generated
+    ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:5:5 generated
+    Call an_allocating_call_leaves_its_argument_alone.c:5:5 "malloc" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced an_allocating_call_leaves_its_argument_alone.c:5:5 generated
+    ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:6:5 generated
+    Call an_allocating_call_leaves_its_argument_alone.c:6:5 "free" "bb3"
+      Destination "_4"
+      Copy "_1"
+  Block "bb3"
+    Sequenced an_allocating_call_leaves_its_argument_alone.c:6:5 generated
+    ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:7:5 generated
+    Call an_allocating_call_leaves_its_argument_alone.c:7:5 "free" "bb4"
+      Destination "_5"
+      Copy "_1"
+  Block "bb4"
+    Sequenced an_allocating_call_leaves_its_argument_alone.c:7:5 generated
+    Operation an_allocating_call_leaves_its_argument_alone.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocating_call_leaves_its_argument_alone.c:8:12 generated
+    Return

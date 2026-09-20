@@ -209,6 +209,25 @@ cases! {
     a_use_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_call_that_is_not_known_to_allocate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other half of reading the callee's name: a call that allocates is
+    // also a call that does not touch what it was handed, and the case above
+    // says nothing about that.
+    //
+    // **`malloc` is declared taking a pointer, and that is the case rather
+    // than an accident of it.** This check recognises an allocation by the
+    // name and never by the type, so the declaration is free to take whatever
+    // reaches a site, and in this subset only a pointer does. Written with
+    // C's own prototype the call does not type-check: `clang -std=c17
+    // -pedantic-errors` reports `incompatible pointer to integer conversion`
+    // for `malloc(q)` against `int`. It accepts this one with
+    // `-Wincompatible-library-redeclaration`, which every case here declaring
+    // `malloc` already draws.
+    //
+    // Mutation: have `Callee::Allocates` poison its arguments as
+    // `Callee::Opaque` does. The site `q` holds becomes `Unknown` at the
+    // middle call and this fails on its `.stderr`, which gains a
+    // `warning[SC0401]` on the first free.
+    an_allocating_call_leaves_its_argument_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_constant_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The same program with `&p` in it, which is the pair that says the fold

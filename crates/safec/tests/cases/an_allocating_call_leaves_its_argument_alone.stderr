@@ -1,0 +1,15 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ an_allocating_call_leaves_its_argument_alone.c:7:5 ]
+   │
+ 4 │     int *q = malloc(0);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 6 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     free(q);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
