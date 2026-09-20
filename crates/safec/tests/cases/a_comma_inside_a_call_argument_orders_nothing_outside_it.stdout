@@ -17,6 +17,7 @@ Function a_comma_inside_a_call_argument_orders_nothing_outside_it.c:4:5 "f"
   Local "_4" "void"
   Local "_5" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_comma_inside_a_call_argument_orders_nothing_outside_it.c:5:14 generated
     Call a_comma_inside_a_call_argument_orders_nothing_outside_it.c:5:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -30,6 +31,7 @@ Function a_comma_inside_a_call_argument_orders_nothing_outside_it.c:4:5 "f"
       Destination "_4"
       Copy "_1"
   Block "bb2"
+    ArgumentsEvaluated a_comma_inside_a_call_argument_orders_nothing_outside_it.c:6:13 generated
     Call a_comma_inside_a_call_argument_orders_nothing_outside_it.c:6:13 "g" "bb3"
       Destination "_5"
       Constant 0

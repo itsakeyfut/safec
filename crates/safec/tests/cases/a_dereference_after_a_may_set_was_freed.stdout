@@ -18,6 +18,7 @@ Function a_dereference_after_a_may_set_was_freed.c:3:5 "f"
   Local "_9" "void"
   Local "_10" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_dereference_after_a_may_set_was_freed.c:4:14 generated
     Call a_dereference_after_a_may_set_was_freed.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -27,6 +28,7 @@ Function a_dereference_after_a_may_set_was_freed.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_dereference_after_a_may_set_was_freed.c:4:14 generated
+    ArgumentsEvaluated a_dereference_after_a_may_set_was_freed.c:5:14 generated
     Call a_dereference_after_a_may_set_was_freed.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -63,6 +65,7 @@ Function a_dereference_after_a_may_set_was_freed.c:3:5 "f"
     Sequenced a_dereference_after_a_may_set_was_freed.c:7:30 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated a_dereference_after_a_may_set_was_freed.c:8:5 generated
     Call a_dereference_after_a_may_set_was_freed.c:8:5 "free" "bb6"
       Destination "_9"
       Copy "_6"

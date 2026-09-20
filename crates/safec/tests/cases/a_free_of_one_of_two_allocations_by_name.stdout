@@ -18,6 +18,7 @@ Function a_free_of_one_of_two_allocations_by_name.c:3:5 "f"
   Local "_9" "void"
   Local "_10" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_of_one_of_two_allocations_by_name.c:4:14 generated
     Call a_free_of_one_of_two_allocations_by_name.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -27,6 +28,7 @@ Function a_free_of_one_of_two_allocations_by_name.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_free_of_one_of_two_allocations_by_name.c:4:14 generated
+    ArgumentsEvaluated a_free_of_one_of_two_allocations_by_name.c:5:14 generated
     Call a_free_of_one_of_two_allocations_by_name.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -63,11 +65,13 @@ Function a_free_of_one_of_two_allocations_by_name.c:3:5 "f"
     Sequenced a_free_of_one_of_two_allocations_by_name.c:7:30 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated a_free_of_one_of_two_allocations_by_name.c:8:5 generated
     Call a_free_of_one_of_two_allocations_by_name.c:8:5 "free" "bb6"
       Destination "_9"
       Copy "_6"
   Block "bb6"
     Sequenced a_free_of_one_of_two_allocations_by_name.c:8:5 generated
+    ArgumentsEvaluated a_free_of_one_of_two_allocations_by_name.c:9:5 generated
     Call a_free_of_one_of_two_allocations_by_name.c:9:5 "free" "bb7"
       Destination "_10"
       Copy "_2"

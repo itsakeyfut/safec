@@ -268,8 +268,11 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                     // No local and no place: the whole fact is that this is
                     // here. Printed so that a marker in the wrong place is
                     // something a corpus case shows rather than something only
-                    // a reader of the lowering could find.
-                    Element::Sequenced { origin } => {
+                    // a reader of the lowering could find. Both markers print
+                    // the same shape and are told apart by `Element::name`,
+                    // which matters because `free(p + *p);` puts one of each at
+                    // the same span and they license different things.
+                    Element::Sequenced { origin } | Element::ArgumentsEvaluated { origin } => {
                         dump_node(sources, element.name(), origin.span(), 2, out);
                         write!(out, " {}", origin.name()).expect("writing to a string cannot fail");
                         out.push('\n');

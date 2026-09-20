@@ -24,6 +24,7 @@ Function the_mvp_lowers_to_blocks_and_edges.c:5:5 "main"
       Destination "_0"
       Use
         Constant 0
+    ArgumentsEvaluated the_mvp_lowers_to_blocks_and_edges.c:6:12 generated
     Call the_mvp_lowers_to_blocks_and_edges.c:6:12 "add" "bb1"
       Destination "_1"
       Constant 1

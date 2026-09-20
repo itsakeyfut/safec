@@ -12,6 +12,7 @@ Function a_free_of_a_pointer_that_never_held_an_allocation.c:2:5 "f"
       Use
         Constant 0
     Sequenced a_free_of_a_pointer_that_never_held_an_allocation.c:3:14 generated
+    ArgumentsEvaluated a_free_of_a_pointer_that_never_held_an_allocation.c:4:5 generated
     Call a_free_of_a_pointer_that_never_held_an_allocation.c:4:5 "free" "bb1"
       Destination "_2"
       Copy "_1"

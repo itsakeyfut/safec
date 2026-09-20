@@ -276,8 +276,9 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 // performs one order: it reads the elements as written. So
                 // there is nothing to do here and nothing to check, and a
                 // frontend whose markers were all wrong would run identically.
-                // What reads them is a check, not a run.
-                Element::Sequenced { origin: _ } => {}
+                // What reads them is a check, not a run. Both markers, because
+                // both are a fact about an order and this runs exactly one.
+                Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {}
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
                 // not a check: whatever the last iteration left is gone.

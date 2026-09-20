@@ -87,6 +87,7 @@ Function a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:12:9 generated
+    ArgumentsEvaluated a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:13:9 generated
     Call a_copy_of_a_local_that_lost_its_allocation_lost_it_too.c:13:9 "free" "bb8"
       Destination "_9"
       Copy "_2"

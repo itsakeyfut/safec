@@ -1070,6 +1070,17 @@ impl Analysis for Allocations<'_> {
                 // each side. See ADR-0023.
                 value.pending.clear();
             }
+            // **Every read behind this is ordered before the call that
+            // follows**, which is the half of the marker above that this one
+            // says. C17 6.5.2.2 p10's first sentence orders a call's arguments
+            // before the call unconditionally, so `free(p + *p)` is a program C
+            // defines and was reported until this element existed.
+            //
+            // The other half is left alone, and the element's own doc comment
+            // is where the reason is: concluding it here proved a use after
+            // free about `g((free(p), 0), *p)`, whose two arguments C leaves
+            // unsequenced. See ADR-0026.
+            Element::ArgumentsEvaluated { origin: _ } => value.pending.clear(),
             Element::Assign(operation) => {
                 // **A write through a pointer, where this check knows where it
                 // lands.** `*pp = q` is what makes `p` hold `q`'s allocation,
@@ -2149,9 +2160,9 @@ pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&P
         // producer owes a projection: one rule about what counts as reaching
         // through a pointer, applied everywhere, beats two that agree today.
         Element::Evaluate { place, origin } => Some((origin.span(), projected(place))),
-        // Neither a sequence point nor storage beginning or ending reads
-        // anything through anything.
-        Element::Sequenced { origin: _ } => None,
+        // Neither marker, nor storage beginning or ending, reads anything
+        // through anything.
+        Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
         Element::StorageLive {
             local: _,
             origin: _,

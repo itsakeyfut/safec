@@ -13,6 +13,7 @@ Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:3:5 "
   Local "_4" "void"
   Local "_5" "int"
   Block "bb0" entry
+    ArgumentsEvaluated the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 generated
     Call the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4

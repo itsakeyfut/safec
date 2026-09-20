@@ -16,6 +16,7 @@ Function a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
   Local "_7" "int"
   Local "_8" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:4:14 generated
     Call a_logical_and_inside_an_unsequenced_operand_orders_nothing.c:4:14 "malloc" "bb1"
       Destination "_4"
       Constant 4

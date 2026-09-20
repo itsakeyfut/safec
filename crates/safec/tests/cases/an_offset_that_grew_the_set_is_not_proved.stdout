@@ -18,6 +18,7 @@ Function an_offset_that_grew_the_set_is_not_proved.c:3:5 "f"
   Local "_9" "int *"
   Local "_10" "void"
   Block "bb0" entry
+    ArgumentsEvaluated an_offset_that_grew_the_set_is_not_proved.c:4:14 generated
     Call an_offset_that_grew_the_set_is_not_proved.c:4:14 "malloc" "bb1"
       Destination "_4"
       Constant 4
@@ -38,6 +39,7 @@ Function an_offset_that_grew_the_set_is_not_proved.c:3:5 "f"
     Sequenced an_offset_that_grew_the_set_is_not_proved.c:5:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated an_offset_that_grew_the_set_is_not_proved.c:6:5 generated
     Call an_offset_that_grew_the_set_is_not_proved.c:6:5 "free" "bb6"
       Destination "_7"
       Copy "_3"
@@ -64,6 +66,7 @@ Function an_offset_that_grew_the_set_is_not_proved.c:3:5 "f"
       Use
         Copy "_9"
     Sequenced an_offset_that_grew_the_set_is_not_proved.c:7:14 generated
+    ArgumentsEvaluated an_offset_that_grew_the_set_is_not_proved.c:8:5 generated
     Call an_offset_that_grew_the_set_is_not_proved.c:8:5 "free" "bb7"
       Destination "_10"
       Copy "_8"

@@ -177,7 +177,7 @@ An analysis not knowing which frontend produced the IR is a claim about the
 has to be the same thing. So where two C spellings would otherwise arrive as two
 shapes, the normalisation is the frontend's to perform and the IR's to require.
 
-There are two such requirements today.
+There are three such requirements today.
 
 [ADR-0022](adr/0022-say-where-c-sequences-one-evaluation-before-another.md) asks
 a frontend to say **where C sequences one evaluation before another**, as an
@@ -213,6 +213,21 @@ frontend's markers disabled: 1.2 s becomes 9.5 s at 908 lines and 8.0 s becomes
 wait with nothing to read, which
 [`CLAUDE.md`](../CLAUDE.md) ranks lower, so "annoying and never wrong about
 safety" is true of the answer and not of the run.
+
+[ADR-0026](adr/0026-say-that-a-call-s-arguments-have-been-evaluated.md) asks for
+the one point the paragraphs above do not cover, as an
+`Element::ArgumentsEvaluated`: C17 6.5.2.2 p10's first sentence puts a sequence
+point after a call's arguments and before the call, and the IR expressed that by
+position until a consumer arrived that travels forwards. The enclosure rule is
+the same one, asked about the call rather than about the point.
+
+**It says less than the element above, and a producer owes only the less.** A
+read behind it is ordered before what follows; nothing is concluded about a free
+behind it, because a call keeps argument reads in its own operands and a
+consumer judges those after an element written before the terminator. A frontend
+that emits none gets `free(p + *p)` reported, which is a suspicion about a
+program C defines, so the bias is the same as above: too few markers is louder
+rather than quieter.
 
 There is one more such requirement today.
 [ADR-0021](adr/0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds a

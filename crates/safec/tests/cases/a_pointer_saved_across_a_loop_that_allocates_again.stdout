@@ -79,6 +79,7 @@ Function a_pointer_saved_across_a_loop_that_allocates_again.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_pointer_saved_across_a_loop_that_allocates_again.c:11:9 generated
+    ArgumentsEvaluated a_pointer_saved_across_a_loop_that_allocates_again.c:12:9 generated
     Call a_pointer_saved_across_a_loop_that_allocates_again.c:12:9 "free" "bb8"
       Destination "_8"
       Copy "_2"

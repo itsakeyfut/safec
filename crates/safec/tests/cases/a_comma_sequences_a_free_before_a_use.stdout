@@ -12,6 +12,7 @@ Function a_comma_sequences_a_free_before_a_use.c:3:5 "f"
   Local "_3" "void"
   Local "_4" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_comma_sequences_a_free_before_a_use.c:4:14 generated
     Call a_comma_sequences_a_free_before_a_use.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -21,6 +22,7 @@ Function a_comma_sequences_a_free_before_a_use.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_comma_sequences_a_free_before_a_use.c:4:14 generated
+    ArgumentsEvaluated a_comma_sequences_a_free_before_a_use.c:5:5 generated
     Call a_comma_sequences_a_free_before_a_use.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"

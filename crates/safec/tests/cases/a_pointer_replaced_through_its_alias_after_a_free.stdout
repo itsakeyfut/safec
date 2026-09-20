@@ -17,6 +17,7 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
   Local "_8" "int *"
   Local "_9" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_pointer_replaced_through_its_alias_after_a_free.c:4:14 generated
     Call a_pointer_replaced_through_its_alias_after_a_free.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -26,6 +27,7 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:4:14 generated
+    ArgumentsEvaluated a_pointer_replaced_through_its_alias_after_a_free.c:5:14 generated
     Call a_pointer_replaced_through_its_alias_after_a_free.c:5:14 "malloc" "bb2"
       Destination "_4"
       Constant 8
@@ -44,6 +46,7 @@ Function a_pointer_replaced_through_its_alias_after_a_free.c:3:5 "f"
       Use
         Copy "_6"
     Sequenced a_pointer_replaced_through_its_alias_after_a_free.c:6:16 generated
+    ArgumentsEvaluated a_pointer_replaced_through_its_alias_after_a_free.c:7:5 generated
     Call a_pointer_replaced_through_its_alias_after_a_free.c:7:5 "free" "bb3"
       Destination "_7"
       Copy "_1"

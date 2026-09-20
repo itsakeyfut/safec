@@ -95,6 +95,31 @@ cases! {
     // no such caret, and folding the two with anything but `same` puts one
     // back.
     a_read_of_either_of_two_allocations_before_a_free_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the read the free's *own* argument evaluation performed, which C17
+    // 6.5.2.2 p10's first sentence orders before the call unconditionally. The
+    // carried read has to stop at that point like it stops at any other, so
+    // neither of these gets an `SC0402`; the `SC0403` each still carries is the
+    // nullability check answering a different question. The second reaches the
+    // same place through a nested call, which is the spelling where the read is
+    // further from the free than an operand of it.
+    //
+    // The first writes through `p` before the free so that the program is one
+    // C defines: reading an allocation nobody wrote to is 7.22.3.4 p2's
+    // indeterminate value and the offset would leave the object, and a guard
+    // is worth more when what it guards is defined. The second cannot be
+    // repaired that way, because `g`'s result is not this check's to know, and
+    // it is here for its shape.
+    //
+    // `Element::ArgumentsEvaluated` is what they are about, and ADR-0026 is
+    // why it says less than `Element::Sequenced`.
+    //
+    // Mutation: the arm in `memory.rs` that reads that element doing nothing.
+    // These two fail on their `.stderr` with the `SC0402` back, and nothing
+    // else fails. The rule's other half is the lowering that emits it, and
+    // mutating that fails these two on their `.stdout` along with every other
+    // artifact holding a call, so the halves are mutated apart. RK-039.
+    a_read_in_a_frees_own_argument_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_in_a_frees_argument_through_a_call_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A controlling expression that is exactly a dereference is read by the
     // branch itself, because it needs no temporary, so the sequence point at
     // the end of it belongs after the branch and not before. C17 6.8 p4, and

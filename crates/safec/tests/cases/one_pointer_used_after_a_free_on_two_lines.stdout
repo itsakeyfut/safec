@@ -13,6 +13,7 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
   Local "_4" "int"
   Local "_5" "int"
   Block "bb0" entry
+    ArgumentsEvaluated one_pointer_used_after_a_free_on_two_lines.c:4:14 generated
     Call one_pointer_used_after_a_free_on_two_lines.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -22,6 +23,7 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced one_pointer_used_after_a_free_on_two_lines.c:4:14 generated
+    ArgumentsEvaluated one_pointer_used_after_a_free_on_two_lines.c:5:5 generated
     Call one_pointer_used_after_a_free_on_two_lines.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"

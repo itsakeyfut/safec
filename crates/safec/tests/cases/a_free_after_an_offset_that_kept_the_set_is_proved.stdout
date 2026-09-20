@@ -17,6 +17,7 @@ Function a_free_after_an_offset_that_kept_the_set_is_proved.c:3:5 "f"
   Local "_8" "int *"
   Local "_9" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_after_an_offset_that_kept_the_set_is_proved.c:4:14 generated
     Call a_free_after_an_offset_that_kept_the_set_is_proved.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -37,6 +38,7 @@ Function a_free_after_an_offset_that_kept_the_set_is_proved.c:3:5 "f"
     Sequenced a_free_after_an_offset_that_kept_the_set_is_proved.c:5:9 generated
     Goto "bb4"
   Block "bb4"
+    ArgumentsEvaluated a_free_after_an_offset_that_kept_the_set_is_proved.c:6:5 generated
     Call a_free_after_an_offset_that_kept_the_set_is_proved.c:6:5 "free" "bb6"
       Destination "_6"
       Copy "_2"
@@ -67,6 +69,7 @@ Function a_free_after_an_offset_that_kept_the_set_is_proved.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_free_after_an_offset_that_kept_the_set_is_proved.c:7:5 generated
+    ArgumentsEvaluated a_free_after_an_offset_that_kept_the_set_is_proved.c:8:5 generated
     Call a_free_after_an_offset_that_kept_the_set_is_proved.c:8:5 "free" "bb7"
       Destination "_9"
       Copy "_2"

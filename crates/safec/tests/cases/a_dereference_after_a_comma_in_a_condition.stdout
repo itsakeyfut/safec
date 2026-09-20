@@ -12,6 +12,7 @@ Function a_dereference_after_a_comma_in_a_condition.c:3:5 "f"
   Local "_3" "void *"
   Local "_4" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_dereference_after_a_comma_in_a_condition.c:4:14 generated
     Call a_dereference_after_a_comma_in_a_condition.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -21,6 +22,7 @@ Function a_dereference_after_a_comma_in_a_condition.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_dereference_after_a_comma_in_a_condition.c:4:14 generated
+    ArgumentsEvaluated a_dereference_after_a_comma_in_a_condition.c:5:5 generated
     Call a_dereference_after_a_comma_in_a_condition.c:5:5 "free" "bb2"
       Destination "_4"
       Copy "_2"

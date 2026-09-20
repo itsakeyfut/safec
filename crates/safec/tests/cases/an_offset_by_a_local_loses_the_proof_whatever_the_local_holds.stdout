@@ -18,6 +18,7 @@ Function an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:3:5 "f"
   Local "_9" "int *"
   Local "_10" "void"
   Block "bb0" entry
+    ArgumentsEvaluated an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:4:14 generated
     Call an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -43,6 +44,7 @@ Function an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:3:5 "f"
       Use
         Constant 1
     Sequenced an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:6:13 generated
+    ArgumentsEvaluated an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:7:5 generated
     Call an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:7:5 "free" "bb6"
       Destination "_7"
       Copy "_2"
@@ -73,6 +75,7 @@ Function an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:8:5 generated
+    ArgumentsEvaluated an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:9:5 generated
     Call an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:9:5 "free" "bb7"
       Destination "_10"
       Copy "_2"

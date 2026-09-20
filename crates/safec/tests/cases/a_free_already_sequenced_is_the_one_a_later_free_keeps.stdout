@@ -14,6 +14,7 @@ Function a_free_already_sequenced_is_the_one_a_later_free_keeps.c:3:5 "f"
   Local "_5" "void"
   Local "_6" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_already_sequenced_is_the_one_a_later_free_keeps.c:4:14 generated
     Call a_free_already_sequenced_is_the_one_a_later_free_keeps.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -23,6 +24,7 @@ Function a_free_already_sequenced_is_the_one_a_later_free_keeps.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_free_already_sequenced_is_the_one_a_later_free_keeps.c:4:14 generated
+    ArgumentsEvaluated a_free_already_sequenced_is_the_one_a_later_free_keeps.c:5:5 generated
     Call a_free_already_sequenced_is_the_one_a_later_free_keeps.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
