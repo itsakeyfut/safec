@@ -97,6 +97,18 @@ compiler exit successfully on code it never managed to check, which is the worst
 thing it can do. See
 [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md).
 
+`Unsafe` says that **some** execution of the function is undefined, not that
+every one is. A check here reads one function at a time, so a parameter ranges
+over every value a caller may pass rather than over the calls this translation
+unit happens to contain: a parameter freed twice is a proved double free though
+the only caller in the file passes a null pointer, which C17 7.22.3.3 p2 would
+make well defined. What removes something from the question is a fact the
+analysis established rather than one it could not rule out, so a pointer proved
+null is exempt and a pointer nothing is known about is not. Today that
+exemption reaches a free whose argument is written as a null pointer constant
+and no further, which is what #188 is for. See
+[ADR-0027](adr/0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md).
+
 
 ## Incremental Safety Levels
 

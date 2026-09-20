@@ -1792,6 +1792,12 @@ fn verdict(
     };
 
     match earliest {
+        // **A null nothing here established does not weaken this.** The site a
+        // parameter stands for carries no allocation of its own, so asking for one
+        // before answering `Unsafe` would drop the proof on the commonest double
+        // free there is, and C17 7.22.3.3 p2 exempts a failed allocation by the
+        // same sentence it exempts a null caller passes. What this asserts is that
+        // some execution of this function is undefined, which is ADR-0027.
         Some(freed) if settled && ordered => Some(Verdict {
             conclusion: Conclusion::Unsafe,
             freed: Some(freed.at),
