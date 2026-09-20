@@ -1743,3 +1743,62 @@ fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
         "and what is open is the order C in fact settled"
     );
 }
+/// A read carried to a call that allocates is not a question that call answers.
+///
+/// **No C program reaches this and a frontend can build it.** A callee is
+/// classified by the name it was declared with, and C's `malloc` takes a size,
+/// so the reads carried to one are compared against arguments that hold no
+/// allocation and the comparison is empty however it is decided. Here the
+/// allocating callee is handed the very local the read above went through,
+/// which is the only shape where the arm that answers for it decides anything.
+///
+/// It has to stay silent. `malloc` frees nothing, so there is no order for C
+/// to have left open and nothing to be unproven about; reporting here would put
+/// a use after free on an allocation.
+///
+/// The destination is a second local, so that nothing here is the site being
+/// handed to a new allocation: that rule clears the carried reads for its own
+/// reason and would hold this test up while the arm under test did nothing.
+///
+/// Mutation: answer `Callee::Allocates` the way `Callee::Opaque` is answered in
+/// `used_before`. One unproven use after free is reported, at the read rather
+/// than at the call, carrying `Unproven::Disagreement` and no `freed` span, and
+/// this fails on the count. Measured: with the arm as written, the whole
+/// workspace stays green when it is mutated, which is why this test exists.
+#[test]
+fn a_read_carried_to_an_allocating_call_is_not_reported() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let value = function.push_local(int);
+    let second = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let handed = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], handed));
+
+    // The read and the call in one block with nothing between them, which is
+    // the shape the test above uses for a free: the read waits, and the call
+    // that ends the block is the one asked about it.
+    function.fill_block(
+        handed,
+        Block {
+            elements: read(value, held, names.at[1], exit).elements,
+            terminator: Terminator::Call {
+                callee: callees.malloc,
+                arguments: vec![Operand::Copy(Place::local(held))],
+                destination: Some(Place::local(second)),
+                then: exit,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
