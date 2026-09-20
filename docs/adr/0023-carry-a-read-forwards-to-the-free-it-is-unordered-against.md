@@ -240,10 +240,18 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   **No longer true.** #184 took the decision and it was to widen this mechanism
   rather than to build a second one: `used_before` asks the same question of an
   opaque callee, and answers it without a `freed here` caret because nothing
-  established a free. The cost this bullet weighed did not arrive. No corpus
-  case moved, because a read waits in `Known::pending` only where an earlier
-  element or terminator registered it, and ADR-0026's
-  `Element::ArgumentsEvaluated` empties it at every call's own arguments.
+  established a free.
+
+  **What that costs, measured rather than inferred from the corpus.** No corpus
+  case moved, and a corpus that does not move is not evidence about ordinary C.
+  What newly reports is an unsequenced read beside a call in a program with no
+  free in it at all: `int f(int *p) { int x = g(*p) + h(p); return x; }` is an
+  `SC0402` where it was silent. It stays `Unknown`, so it is row 4 and
+  `--deny-unknown` is what turns it into a refusal, and that is the ground on
+  which it was accepted rather than a claim that nothing was paid. What bounds
+  it is that a read waits in `Known::pending` only where an earlier element or
+  terminator registered it, and ADR-0026's `Element::ArgumentsEvaluated`
+  empties it at every call's own arguments.
 * **Bad, because #178 got wider and this is where that is written down.**
   ADR-0022's enclosure rule suppresses the marker for a `,`, `&&`, `||` or `?:`
   below anything C leaves unsequenced, and `=` is such a parent under C17

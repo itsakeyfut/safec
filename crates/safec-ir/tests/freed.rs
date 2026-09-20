@@ -1743,14 +1743,22 @@ fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
         "and what is open is the order C in fact settled"
     );
 }
+
 /// A read carried to a call that allocates is not a question that call answers.
 ///
-/// **No C program reaches this and a frontend can build it.** A callee is
-/// classified by the name it was declared with, and C's `malloc` takes a size,
-/// so the reads carried to one are compared against arguments that hold no
-/// allocation and the comparison is empty however it is decided. Here the
-/// allocating callee is handed the very local the read above went through,
-/// which is the only shape where the arm that answers for it decides anything.
+/// **The comparison is empty for every conforming C program, and this is the
+/// shape where it is not.** A callee is classified by the name it was declared
+/// with, and C17 7.22.3.4 gives `malloc` a size, so the reads carried to one
+/// are compared against arguments that hold no allocation and the arm that
+/// answers for it decides nothing. Here the allocating callee is handed the
+/// very local the read above went through.
+///
+/// **A C program reaches it too**, by declaring `void *malloc(int *n);` and
+/// passing a pointer: `int y = g(*p) + k(malloc(p));` is silent where the same
+/// program spelling that callee `mm` reports, measured. Such a program has no
+/// behaviour C defines, because C17 7.1.3 reserves the name, which is the
+/// clause `Callee`'s own doc is about. It is written as IR here so that what
+/// the test turns on is the arm rather than that clause.
 ///
 /// It has to stay silent. `malloc` frees nothing, so there is no order for C
 /// to have left open and nothing to be unproven about; reporting here would put
