@@ -52,6 +52,17 @@ program and a different thing after a branch: the suppressed report on the arm
 that skipped the first dereference is one nobody proved anything about, and
 silence there is the row this project ranks last.
 
+**It holds only where this check can see every write to the pointer.** A
+review found the hole: a local whose address has been taken can be written by
+a store this check cannot follow, so "the execution that reached the second
+dereference went through the first" stays true while "and nothing changed the
+pointer in between" does not. `int *p = &x; int **pp = &p; *pp = 0; *p = 1;`
+said nothing at all. `Nullability::escaped` is the answer: nothing this lattice
+establishes about an escaped local is believed, so the refinement below never
+applies to one. That is a limit on this decision rather than a separate one,
+and it is written here because a reader who takes the argument above at face
+value would rebuild the hole.
+
 **It is the first dereference that is reported, not the last.** The value the
 report reads is what held where the element runs, and the refinement is applied
 by the transfer after it, which is the same order `crate::memory` uses for the
@@ -68,6 +79,10 @@ this is per path rather than per function. The mutation is in `Nullness::joined`
 answering `NonNull` whenever either side holds it, so that the refinement
 survives a merge instead of being taken away by it. The dereference after the
 branch then reports nothing and the case fails.
+
+`a_pointer_written_through_its_own_address_is_not_proved` holds the limit:
+having `Nullability::known` read the value rather than the escape reports
+nothing there and fails it, and nothing else.
 
 **Neither mutation's wider set is written down here.** Dropping `met` fails
 every case whose expected output depends on a pointer having been dereferenced

@@ -126,6 +126,55 @@ struct Nullability<'a> {
     unit: &'a TranslationUnit,
     /// How many locals the function has, for the value's length.
     locals: usize,
+    /// Which locals have their address taken anywhere in the function.
+    ///
+    /// **Nothing this lattice establishes about such a local is believed**, and
+    /// that is what stops this check being quiet about a dereference it did not
+    /// prove. A store through a pointer writes an object the pointer names, and
+    /// the only way a pointer can name a local is for the local's address to
+    /// have been taken, so a local whose address is never taken cannot be
+    /// written except where this check can see it. One whose address *is* taken
+    /// can be written by a store this check cannot follow, by a callee it
+    /// cannot read, or by either on a path it is not on, and a positive claim
+    /// that survives one of those is [`docs/safety-model.md`]'s worst answer:
+    /// measured, `int *p = &x; int **pp = &p; *pp = 0; *p = 1;` said nothing at
+    /// all before this field existed.
+    ///
+    /// **Read where it is used rather than written into the value.** The escape
+    /// is a property of the whole function rather than of a point in it, so it
+    /// needs no lattice dimension, no join and no extra height, and there is no
+    /// list of places a write can happen for it to be missing one of. That is
+    /// the shape ADR-0017 arrived at for the memory axis after the other one
+    /// cost it a silent double free.
+    ///
+    /// [`docs/safety-model.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
+    escaped: Vec<bool>,
+}
+
+/// Which locals have their address taken anywhere in this function.
+///
+/// The whole function rather than the path, deliberately: a walk that marked a
+/// local escaped only from the `Rvalue::Address` onwards would believe a claim
+/// made above one, and a loop puts the write before the escape in the order
+/// this walks even when the program runs them the other way round.
+fn escaped_in(function: &Function) -> Vec<bool> {
+    let mut escaped = vec![false; function.locals().len()];
+
+    let mut taken = |value: &Rvalue| {
+        if let Rvalue::Address(place) = value {
+            escaped[place.local.index()] = true;
+        }
+    };
+
+    for block in function.blocks() {
+        for element in &block.elements {
+            if let Element::Assign(operation) = element {
+                taken(&operation.value);
+            }
+        }
+    }
+
+    escaped
 }
 
 impl Nullability<'_> {
@@ -143,6 +192,19 @@ impl Nullability<'_> {
     /// because a value whose states are about pointers should not be written
     /// about things that are not pointers, and because the day this lattice
     /// keys on something a `Ty` can distinguish, the rule will already be here.
+    /// What is known about this local, which is nothing at all if its address
+    /// has escaped.
+    ///
+    /// Every read of the value goes through here. [`Self::escaped`] says why,
+    /// and why it is applied at the read rather than propagated.
+    fn known(&self, value: &[Nullness], local: LocalId) -> Nullness {
+        if self.escaped[local.index()] {
+            Nullness::Unknown
+        } else {
+            value[local.index()]
+        }
+    }
+
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
@@ -261,36 +323,38 @@ impl Nullability<'_> {
 ///
 /// Read against the value that holds where the operation runs, so that a copy
 /// of a local carries what that local was established to be.
-fn nullness_of(value: &Rvalue, known: &[Nullness]) -> Nullness {
-    match value {
-        // `int *p = 0;`. C17 6.3.2.3 p3: an integer constant expression with
-        // the value 0 is a null pointer constant.
-        Rvalue::Use(Operand::Constant(0)) => Nullness::Null,
-        // Any other constant reaching a pointer needs a cast this subset does
-        // not have, so nothing is claimed about it.
-        Rvalue::Use(Operand::Constant(_)) => Nullness::Unknown,
-        Rvalue::Use(Operand::Copy(place)) => {
-            if place.projection.is_empty() {
-                known[place.local.index()]
-            } else {
-                // What `*pp` holds is a question about a place rather than a
-                // local, which this lattice's key cannot ask.
-                Nullness::Unknown
+impl Nullability<'_> {
+    fn nullness_of(&self, value: &Rvalue, known: &[Nullness]) -> Nullness {
+        match value {
+            // `int *p = 0;`. C17 6.3.2.3 p3: an integer constant expression with
+            // the value 0 is a null pointer constant.
+            Rvalue::Use(Operand::Constant(0)) => Nullness::Null,
+            // Any other constant reaching a pointer needs a cast this subset does
+            // not have, so nothing is claimed about it.
+            Rvalue::Use(Operand::Constant(_)) => Nullness::Unknown,
+            Rvalue::Use(Operand::Copy(place)) => {
+                if place.projection.is_empty() {
+                    self.known(known, place.local)
+                } else {
+                    // What `*pp` holds is a question about a place rather than a
+                    // local, which this lattice's key cannot ask.
+                    Nullness::Unknown
+                }
             }
+            // C17 6.5.3.2 p3: the result of the unary `&` operator is never a null
+            // pointer. It is the one rvalue this analysis can prove.
+            Rvalue::Address(_) => Nullness::NonNull,
+            // Pointer arithmetic and anything computed. `p + 1` off a non-null `p`
+            // is non-null in practice and this does not say so: the operand is an
+            // integer's worth of work away from the rule above, and a warning on
+            // correct C is the cheaper of the two ways to be wrong.
+            Rvalue::Unary { op: _, operand: _ }
+            | Rvalue::Binary {
+                op: _,
+                lhs: _,
+                rhs: _,
+            } => Nullness::Unknown,
         }
-        // C17 6.5.3.2 p3: the result of the unary `&` operator is never a null
-        // pointer. It is the one rvalue this analysis can prove.
-        Rvalue::Address(_) => Nullness::NonNull,
-        // Pointer arithmetic and anything computed. `p + 1` off a non-null `p`
-        // is non-null in practice and this does not say so: the operand is an
-        // integer's worth of work away from the rule above, and a warning on
-        // correct C is the cheaper of the two ways to be wrong.
-        Rvalue::Unary { op: _, operand: _ }
-        | Rvalue::Binary {
-            op: _,
-            lhs: _,
-            rhs: _,
-        } => Nullness::Unknown,
     }
 }
 
@@ -339,7 +403,8 @@ impl Analysis for Nullability<'_> {
         match element {
             Element::Assign(operation) => {
                 if operation.place.projection.is_empty() {
-                    value[operation.place.local.index()] = nullness_of(&operation.value, value);
+                    value[operation.place.local.index()] =
+                        self.nullness_of(&operation.value, value);
                 }
                 // A write through a projection lands somewhere this lattice
                 // cannot name, so it says nothing about what was written. What
@@ -464,6 +529,7 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
 /// apart. The worst rather than the first, because a proved null dereference
 /// beside an unproven one is still a proved null dereference.
 fn report(
+    analysis: &Nullability<'_>,
     findings: &mut Vec<Finding>,
     dereferenced: Option<(Span, Vec<&Place>)>,
     known: &[Nullness],
@@ -474,12 +540,8 @@ fn report(
 
     let worst = places
         .iter()
-        .filter_map(|place| known[place.local.index()].concluded())
-        .max_by_key(|conclusion| match conclusion {
-            Conclusion::Unsafe => 2,
-            Conclusion::Unknown => 1,
-            Conclusion::Safe => 0,
-        });
+        .filter_map(|place| analysis.known(known, place.local).concluded())
+        .max_by_key(|conclusion| severity(*conclusion));
 
     if let Some(conclusion) = worst {
         findings.push(Finding { conclusion, at });
@@ -512,6 +574,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
         let analysis = Nullability {
             unit,
             locals: function.locals().len(),
+            escaped: escaped_in(function),
         };
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
@@ -528,11 +591,17 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
             for element in &block.elements {
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
-                report(&mut findings, dereferenced_in_element(element), &known);
+                report(
+                    &analysis,
+                    &mut findings,
+                    dereferenced_in_element(element),
+                    &known,
+                );
                 analysis.element(function, element, &mut known);
             }
 
             report(
+                &analysis,
                 &mut findings,
                 dereferenced_in_terminator(&block.terminator),
                 &known,
@@ -544,5 +613,38 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // them, for the reason `crate::memory::findings` gives at its own sort.
     findings.sort_by_key(|finding| (finding.at.file().index(), finding.at.start()));
 
+    // **One statement is one thing to say, however many elements it became.**
+    // `*p = 1;` lowers to the write and a read of what it wrote, both carrying
+    // that statement's span, so a pointer this check cannot settle is asked
+    // about twice at one caret and the reader is told the same thing twice.
+    // Where a dereference refines the pointer the second element already
+    // answered nothing, so this only reaches the locals that refinement cannot
+    // help, which is the escaped ones.
+    //
+    // The worst survives, for `report`'s reason: a proved null dereference
+    // beside an unproven one at one caret is still proved.
+    findings.dedup_by(|later, earlier| {
+        if later.at != earlier.at {
+            return false;
+        }
+        if severity(later.conclusion) > severity(earlier.conclusion) {
+            earlier.conclusion = later.conclusion;
+        }
+        true
+    });
+
     findings
+}
+
+/// How much a conclusion outranks another where both stand at one caret.
+///
+/// Not an `Ord` on [`Conclusion`]: that type is `safec_ir`'s answer about one
+/// thing rather than a scale, and ADR-0002 puts the ordering a reader sees on
+/// `Severity` in `safec`, which is the crate that owns what a conclusion costs.
+fn severity(conclusion: Conclusion) -> u8 {
+    match conclusion {
+        Conclusion::Unsafe => 2,
+        Conclusion::Unknown => 1,
+        Conclusion::Safe => 0,
+    }
 }

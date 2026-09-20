@@ -308,6 +308,13 @@ cases! {
     // `malloc` result either null or the allocation, so this warns, and the
     // roadmap's example is a program this compiler has something to say about.
     an_allocation_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The address of a local is the only thing this check can prove not null,
+    // and a store through a pointer that may hold that address is what takes
+    // the proof back. Without it this program said nothing at all, while `p`
+    // was provably null at the write: `docs/safety-model.md`'s worst answer,
+    // found by review. One case for one rule: a callee handed `&p` is the same
+    // escape through a different door.
+    a_pointer_written_through_its_own_address_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The two that hold ADR-0025, and the second is the one that says the fact
     // is per path: the arm that skips the dereference joins back in.
     a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
