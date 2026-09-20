@@ -1019,8 +1019,8 @@ impl Analysis for Allocations<'_> {
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
         // What is read here is read where this element runs, against what held
-        // before it, which is the same question `check` asks one line earlier
-        // and has to get the same answer to.
+        // before it, which is the same question `findings` asks one line
+        // earlier and has to get the same answer to.
         //
         // **Before the arms, so that no arm's early return can skip it, and
         // nothing observes that today.** Measured: moving it below the match
