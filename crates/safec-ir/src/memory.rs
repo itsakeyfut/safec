@@ -289,6 +289,24 @@ struct Held {
     /// that `p`'s address escaped outlives anything done to `pp`. That is
     /// ADR-0018's rule for what this struct holds.
     writes_to: Vec<bool>,
+    /// Whether a write through this local may land somewhere [`writes_to`]
+    /// does not name.
+    ///
+    /// The field above is a may-set, so one member in it means "at most one
+    /// target this check has seen an address for" and not "this one". A
+    /// pointer this check never saw an address taken into has an empty set,
+    /// and a union of an empty set with one member is one member: without
+    /// this flag, `pp` that must point at `p` and `pp` that may point
+    /// anywhere are the same value. Telling them apart is what lets a write
+    /// whose target is certain replace what that target held rather than
+    /// union into it. See ADR-0028.
+    ///
+    /// `true` is the answer that gives up, which is why [`Held::none`] seeds
+    /// it: that value is the lattice's identity and is also what every local
+    /// holds where a function starts.
+    ///
+    /// [`writes_to`]: Held::writes_to
+    writes_elsewhere: bool,
 }
 
 impl Held {
@@ -299,6 +317,7 @@ impl Held {
             lost: false,
             freed: None,
             writes_to: vec![false; sites],
+            writes_elsewhere: true,
         }
     }
 
@@ -331,11 +350,15 @@ impl Held {
             lost,
             freed,
             writes_to,
+            writes_elsewhere,
         } = self;
         sites.fill(false);
         *lost = false;
         *freed = None;
         writes_to.fill(false);
+        // What a local is given ends the claim that this check knew where a
+        // write through it landed, along with the set that claim was about.
+        *writes_elsewhere = true;
     }
 
     /// Also hold everything that one holds, where two paths meet.
@@ -356,7 +379,14 @@ impl Held {
             lost,
             freed,
             writes_to,
+            writes_elsewhere,
         } = self;
+        // **A path that knows where a write through this local lands and a
+        // path that does not is a path that does not.** This is what keeps a
+        // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
+        // union below leaves one target and only this says the set is not
+        // all of it. See ADR-0028.
+        *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
         for (here, there) in sites.iter_mut().zip(&other.sites) {
             *here = *here || *there;
         }
@@ -395,6 +425,7 @@ impl Held {
             lost,
             freed,
             writes_to,
+            writes_elsewhere,
         } = self;
 
         // **A second operand takes the proof with it.** What
@@ -408,12 +439,12 @@ impl Held {
         // certainty about a value nothing here has followed. See ADR-0024.
         *freed = None;
 
-        // The three may-facts, which grow wherever anything meets. The edge is
-        // the one nothing observes here: both callers that build a value out of
-        // operands empty it on the next line, because C17 6.5.6 p8 keeps a
-        // pointer's arithmetic inside the object and a local's address plus one
-        // is not that local. See ADR-0019, and the two `writes_to.fill(false)`
-        // lines in `Allocations::element`.
+        // The may-facts, which grow wherever anything meets. The edge and the
+        // flag beside it are the ones nothing observes here: both callers that
+        // build a value out of operands give up on both on the next line,
+        // because C17 6.5.6 p8 keeps a pointer's arithmetic inside the object
+        // and a local's address plus one is not that local. See ADR-0019, and
+        // the two `writes_to.fill(false)` lines in `Allocations::element`.
         for (here, there) in sites.iter_mut().zip(&other.sites) {
             *here = *here || *there;
         }
@@ -421,6 +452,7 @@ impl Held {
         for (here, there) in writes_to.iter_mut().zip(&other.writes_to) {
             *here = *here || *there;
         }
+        *writes_elsewhere = *writes_elsewhere || other.writes_elsewhere;
     }
 
     /// Stop pointing at a site that now names something else.
@@ -901,7 +933,9 @@ impl Analysis for Allocations<'_> {
         // bit goes from `false` to `true` and never back, once each, and its
         // `lost` bit costs one more of the same. Each local's set of locals a
         // write through it may reach is a second square table that only grows,
-        // so it takes at most one step per pair. Where the set it named was
+        // so it takes at most one step per pair, and whether that table is all
+        // of what a write through it may reach goes from `false` to `true`
+        // once per local, for one more step each. Where the set it named was
         // freed goes from `None` to `Some` once per local and a join only takes
         // it away, so it costs one more step each. Whether a free has been
         // sequenced is one bit per site: the transfer sets it and only a join
@@ -938,7 +972,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 2 + locals * (locals + 6) + positions * (locals + 1)
+        locals * locals * 2 + locals * (locals + 7) + positions * (locals + 1)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1100,12 +1134,12 @@ impl Analysis for Allocations<'_> {
                         return;
                     }
 
-                    // **A union rather than a replacement**, because a pointer
-                    // that may point at one local is not a pointer that must:
-                    // two arms of a branch can leave `pp` with one target each
-                    // and neither is certain here. Replacing would erase a
-                    // value nothing wrote over, which is a silence rather than
-                    // a false positive.
+                    // **What is written, before what it is written into.**
+                    // Whether this lands in one certain local or in any of
+                    // several possible ones is decided below, once the value
+                    // is in hand; a pointer that may point at one local is not
+                    // a pointer that must, and telling those apart is
+                    // ADR-0028.
                     //
                     // **A `match` rather than an `if let`, so a fifth kind of
                     // rvalue has to answer here too.** Every other reader of
@@ -1133,6 +1167,13 @@ impl Analysis for Allocations<'_> {
                         Rvalue::Binary { op: _, lhs, rhs } => {
                             let mut reached = built_from([lhs, rhs], value);
                             reached.writes_to.fill(false);
+                            // Emptying the set says nothing on its own: an
+                            // empty set is what a pointer this check never
+                            // followed an address into has. Giving up on the
+                            // set is saying so. See ADR-0028, and RK-052 for
+                            // why this line is written beside its twin below
+                            // rather than anywhere else.
+                            reached.writes_elsewhere = true;
                             reached
                         }
                         // A constant, a read through a projection, a unary
@@ -1144,6 +1185,46 @@ impl Analysis for Allocations<'_> {
                             Held::none(value.points_to.len())
                         }
                     };
+
+                    // **A write this check can be certain about replaces what
+                    // the target held.** The set names one local and says it
+                    // names all of them, so this write landed in that local
+                    // and whatever was there is gone. Union would manufacture
+                    // a two-element may-set out of a program that has none,
+                    // and ADR-0020 then reads that as real ambiguity and gives
+                    // up a proof over it: `int **pp = &p; *pp = q; free(p);
+                    // *q = 1;` is a certain use after free and was reported as
+                    // a suspicion. See ADR-0028, which is where ADR-0019's
+                    // rejected option was taken up once the flag above made
+                    // "one target" distinguishable from "at most one target".
+                    //
+                    // The whole row, as an assignment to the target would
+                    // replace it: the sites, what it had lost, the proof about
+                    // the set it named and the edge alike. `unproved` is the
+                    // one thing the direct assignment does that this does not,
+                    // for the reason the paragraph below gives, which is about
+                    // the allocation rather than about the local.
+                    //
+                    // **Both halves of "the edge is all of it" are read here.**
+                    // The flag above lives in `Held`, so an assignment to the
+                    // pointer destroys it, and that is right for the assignment
+                    // itself and wrong for an escape: `int ***ppp = &pp; pp =
+                    // &p; opaque(ppp); *pp = q;` gave `pp` a fresh row after
+                    // something had already taken its address, and the
+                    // replacement fired on an edge anybody could have
+                    // overwritten since. `Known::escaped` is the half that
+                    // outlives an assignment, which is ADR-0018's rule for
+                    // which struct a fact belongs in, and it is why the answer
+                    // cannot be recorded on the local whose address is taken.
+                    // See ADR-0028 and RK-061.
+                    let pointer = operation.place.local.index();
+                    if targets.len() == 1
+                        && !value.points_to[pointer].writes_elsewhere
+                        && !value.escaped[pointer]
+                    {
+                        value.points_to[targets[0]] = written;
+                        return;
+                    }
 
                     // **The union and nothing else.** A write through an alias
                     // does not unprove what the target held, which #155's rule
@@ -1249,6 +1330,10 @@ impl Analysis for Allocations<'_> {
                         // two spellings of one C expression are one shape before
                         // anything reads them. See ADR-0021.
                         reached.writes_to.fill(false);
+                        // The twin of the line in the `Deref` arm above, and
+                        // for the same reason: an emptied set is a set this
+                        // check knows nothing about. See ADR-0028.
+                        reached.writes_elsewhere = true;
                         value.points_to[destination.index()] = reached;
                     }
                     // A constant, a read through a projection, or a unary
@@ -1279,6 +1364,24 @@ impl Analysis for Allocations<'_> {
                         // dies with the destination and is what lets a write
                         // through it be followed. See ADR-0019.
                         value.points_to[destination.index()].writes_to[taken.local.index()] = true;
+                        // **And the set is all of it, where the address is of
+                        // the local itself.** `Held::clear` ran a line above,
+                        // so this destination points at exactly this local,
+                        // which is what lets a write through it replace rather
+                        // than union. See ADR-0028.
+                        //
+                        // `&*pp` is not that. C17 6.5.3.2 p3 makes it `pp`, so
+                        // the place it names is what `pp` points at and not
+                        // `pp`, while the edge above can only name a local. The
+                        // union is the right answer to an edge that names the
+                        // wrong thing and a replacement is not, so the flag
+                        // stays set and the write stays a may-write. No C
+                        // reaches this: the lowering applies the same clause and
+                        // folds `&*pp` to a copy of `pp`. Another frontend need
+                        // not, which is `docs/c-family.md`'s reason for the IR
+                        // expressing the shape at all.
+                        value.points_to[destination.index()].writes_elsewhere =
+                            !taken.projection.is_empty();
                         value.escaped[taken.local.index()] = true;
                         value.unproved(taken.local.index());
                     }

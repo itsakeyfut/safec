@@ -351,6 +351,18 @@ cases! {
     a_write_through_a_pointer_plus_zero_on_the_left: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_a_pointer_minus_zero: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_address_taken_on_one_arm_is_written_through_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same shape as the case above, on a program C defines on both paths:
+    // the other arm gives `pp` a pointer this check cannot follow rather than
+    // a null one it would be undefined to write through. A guard for a
+    // soundness rule should not rest on a program C has already given up on.
+    a_write_through_a_pointer_with_one_target_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A write through a pointer whose own address escaped may land anywhere,
+    // whichever order the two happen in. The second case is the one that says
+    // the answer cannot be recorded on the pointer's own row: `pp = &p` after
+    // the escape gives `pp` a fresh row, and a fact written there would have
+    // gone with the old one. See ADR-0028.
+    a_write_through_a_pointer_whose_own_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_that_was_never_given_a_pointer_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_an_alias_keeps_what_it_carried_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_an_alias_that_carries_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

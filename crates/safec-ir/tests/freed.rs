@@ -1573,6 +1573,74 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
     assert_eq!(found[0].at, names.at[5]);
 }
 
+/// The address of a dereference names no local a write through it lands in.
+///
+/// **The one place this question is asked that no C program reaches.** C17
+/// 6.5.3.2 p3 makes `&*p` the value of `p`, so `r = &*p; *r = q;` writes into
+/// whatever `p` points at and not into `p`. The edge a write through a pointer
+/// follows can only name a local, so the local it names here is the wrong one,
+/// and a rule that *replaces* what that local held acts on it: `p` would be
+/// given `q`'s allocation, `free(p)` would take it, and the read through `q`
+/// would be proved a use after free in a program that frees `q` never. A union
+/// into the wrong local is a widened may-set and a replacement of it is a
+/// certainty, which is why the arm answers for the projection now and did not
+/// have to before. See ADR-0028.
+///
+/// The frontend applies the same clause one layer up and folds `&*p` to a copy
+/// of `p`, so this is the shape `docs/c-family.md` asks another frontend be
+/// able to build rather than one `safec` produces.
+///
+/// Mutation: clear `writes_elsewhere` at the `Rvalue::Address` arm of
+/// `Allocations::element` whatever the place is, rather than only where it
+/// names the local itself. The read through `q` becomes `Conclusion::Unsafe`
+/// and this fails on the conclusion.
+#[test]
+fn the_address_of_a_dereference_is_not_an_edge_to_the_local() {
+    let (sources, names) = sources();
+    let (unit, mut function, int, callees) = a_unit(&names, 0);
+    let held = function.push_local(int);
+    let other = function.push_local(int);
+    let alias = function.push_local(int);
+    let value = function.push_local(int);
+
+    let allocate = function.reserve_block();
+    let allocate_other = function.reserve_block();
+    let address = function.reserve_block();
+    let store = function.reserve_block();
+    let release = function.reserve_block();
+    let after = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        allocate,
+        malloc(&callees, held, names.at[0], allocate_other),
+    );
+    function.fill_block(
+        allocate_other,
+        malloc(&callees, other, names.at[1], address),
+    );
+    // `alias = &*held`, which C makes `held` itself.
+    function.fill_block(address, address_of_deref(alias, held, names.at[2], store));
+    function.fill_block(store, write(alias, other, names.at[3], release));
+    function.fill_block(release, free(&callees, held, names.at[4], after));
+    function.fill_block(
+        after,
+        after_the_statement(names.at[4], read(value, other, names.at[5], exit)),
+    );
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    // Whatever else is said, nothing here is proved: `other`'s allocation was
+    // never freed, and a program that frees it never must not be told it did.
+    assert!(
+        found
+            .iter()
+            .all(|finding| finding.conclusion != Conclusion::Unsafe),
+        "{found:?}"
+    );
+}
+
 /// Nothing, in a block that falls through to `then`.
 ///
 /// So that [`after_the_statement`] has somewhere to put a sequence point that

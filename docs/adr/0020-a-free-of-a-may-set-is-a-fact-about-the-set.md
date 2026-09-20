@@ -123,7 +123,10 @@ and ADR-0018 and ADR-0019 say of the last two fields.
   target, unconditionally, so `p` **must** be `q` afterwards; the two-element
   set is manufactured by ADR-0019's deliberate union, and this rule reads it as
   real ambiguity. What would recover that proof is a strong update where the
-  target is certain, which ADR-0019 considered and rejected.
+  target is certain, which ADR-0019 considered and rejected and
+  [ADR-0028](./0028-replace-what-a-target-held-where-a-write-must-land-in-it.md)
+  took up: the program is `error[SC0402]` and exit 1 again, and this rule is
+  unchanged, because the set it was reading is no longer manufactured.
 * Bad, because the proofs given up are wider than the program this issue was
   filed about. Anything that touches a member of a set after the set was freed
   is a suspicion now, including

@@ -160,10 +160,15 @@ with it carried the warning.
 
 **What the first of those costs is the proof.** A read of a local whose address
 has been taken is reported as a warning however clear the free beside it looks,
-because a write through the alias may have replaced the pointer between the
-two. `int **pp = &p; free(p); *pp = q; *p = 1;` is the case, and it used to be
-an `error`: a proof this check did not have, about a program with no defect in
-it. [ADR-0017](adr/0017-record-each-half-of-an-escape-where-its-subject-lives.md)
+because something holds that address and this check does not follow what every
+holder of it does. `int **pp = &p; free(p); *pp = q; *p = 1;` is the case, and
+it used to be an `error`: a proof this check did not have, about a program with
+no defect in it. The warning it carries now says this check stopped following
+the pointer rather than that the read may be after the free, because the write
+through `pp` is one this check *did* follow and it can see that `p` holds `q`.
+What is missing is a way to say so, which is
+[#196](https://github.com/itsakeyfut/safec/issues/196)'s work rather than this
+rule's. [ADR-0017](adr/0017-record-each-half-of-an-escape-where-its-subject-lives.md)
 records where each half of what an escape means is kept, and why the half about
 the allocations those locals hold is kept separately from it.
 
@@ -184,6 +189,16 @@ after free. What it does not know is where a write lands when it never saw the
 address taken, and `*pp = q;` for such a `pp` changes nothing here, so the
 allocation that was really freed keeps whatever was known about it and a later
 use of it is read against a site this check believes is live.
+
+**And one where it is followed and still not proved.** A write through a
+pointer replaces what the target held where the pointer names one local and
+this check has seen every address taken into it, which is what makes the
+program above an `error` rather than a suspicion. Take the pointer's own
+address and that stops being true: `int **pp = &p; opaque(&pp); *pp = q;`
+leaves `pp` holding something `opaque` may have replaced, so the write is
+followed as a *may* write and the proof is not available.
+[ADR-0028](adr/0028-replace-what-a-target-held-where-a-write-must-land-in-it.md)
+records what separates the two.
 
 That remainder is a place with an allocation followed, concluded live and
 wrong, rather than a place with no allocation. It is deliberate:

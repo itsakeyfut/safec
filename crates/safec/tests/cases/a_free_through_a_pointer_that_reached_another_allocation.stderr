@@ -1,21 +1,27 @@
-warning[SC0401]: this may free a value that was freed already
+warning[SC0401]: this frees a pointer this check stopped following
    ╭─[ a_free_through_a_pointer_that_reached_another_allocation.c:8:5 ]
    │
  8 │     free(p);
    │     ───┬───  
-   │        ╰───── may free it again here
+   │        ╰───── this check cannot say what this points at
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
-warning[SC0402]: this may use a value after it was freed
+error[SC0402]: this uses a value after it was freed
    ╭─[ a_free_through_a_pointer_that_reached_another_allocation.c:9:5 ]
    │
+ 5 │     int *q = malloc(8);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 8 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
  9 │     *q = 1;
    │     ───┬──  
-   │        ╰──── used here, perhaps after the free
+   │        ╰──── used here
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_free_through_a_pointer_that_reached_another_allocation.c:9:5 ]
    │
