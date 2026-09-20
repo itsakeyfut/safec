@@ -188,6 +188,24 @@ fn escaped_in(function: &Function) -> Vec<bool> {
 }
 
 impl Nullability<'_> {
+    /// What is known about this local, which is nothing at all if its address
+    /// has escaped.
+    ///
+    /// Every read of the value goes through here. [`Self::escaped`] says why,
+    /// and why it is applied at the read rather than propagated.
+    ///
+    /// **This is the mask that keeps this check out of the bottom row**, so it
+    /// is worth saying what holds it: having it read the value rather than the
+    /// escape fails `a_pointer_written_through_its_own_address_is_not_proved`
+    /// and nothing else.
+    fn known(&self, value: &[Nullness], local: LocalId) -> Nullness {
+        if self.escaped[local.index()] {
+            Nullness::Unknown
+        } else {
+            value[local.index()]
+        }
+    }
+
     /// Whether this local holds a pointer.
     ///
     /// `if (p)` and `if (x)` lower to the same terminator, and only the first
@@ -202,19 +220,6 @@ impl Nullability<'_> {
     /// because a value whose states are about pointers should not be written
     /// about things that are not pointers, and because the day this lattice
     /// keys on something a `Ty` can distinguish, the rule will already be here.
-    /// What is known about this local, which is nothing at all if its address
-    /// has escaped.
-    ///
-    /// Every read of the value goes through here. [`Self::escaped`] says why,
-    /// and why it is applied at the read rather than propagated.
-    fn known(&self, value: &[Nullness], local: LocalId) -> Nullness {
-        if self.escaped[local.index()] {
-            Nullness::Unknown
-        } else {
-            value[local.index()]
-        }
-    }
-
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
@@ -652,17 +657,15 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // answered nothing, so this only reaches the locals that refinement cannot
     // help, which is the escaped ones.
     //
-    // The worst survives, for `report`'s reason: a proved null dereference
-    // beside an unproven one at one caret is still proved.
-    findings.dedup_by(|later, earlier| {
-        if later.at != earlier.at {
-            return false;
-        }
-        if severity(later.conclusion) > severity(earlier.conclusion) {
-            earlier.conclusion = later.conclusion;
-        }
-        true
-    });
+    // The first survives, and it cannot be the milder one. `report` has
+    // already taken the worst of the places one element dereferences, and the
+    // second element a statement lowers to names only the local the first
+    // wrote, which by then is either proved non-null and reported by nothing
+    // or masked by the escape and reported as unproven. A promotion here was
+    // written first and measured unreachable: inverting it, and deleting it,
+    // each left the whole suite green while a panic in this body failed nine
+    // cases, so the body runs and the promotion never fires.
+    findings.dedup_by(|later, earlier| later.at == earlier.at);
 
     findings
 }
