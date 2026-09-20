@@ -7,3 +7,12 @@ warning[SC0402]: this may use a value after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ a_subscript_of_a_freed_pointer.c:6:5 ]
+   │
+ 6 │     p[i] = 42;
+   │     ────┬────  
+   │         ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

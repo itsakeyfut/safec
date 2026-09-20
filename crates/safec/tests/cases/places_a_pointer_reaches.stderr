@@ -1,0 +1,18 @@
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ places_a_pointer_reaches.c:2:5 ]
+   │
+ 2 │     *p = i;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ places_a_pointer_reaches.c:3:5 ]
+   │
+ 3 │     return p[i];
+   │     ──────┬─────  
+   │           ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

@@ -1,0 +1,9 @@
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm.c:5:9 ]
+   │
+ 5 │     if (*p) { } else { free(p); }
+   │         ─┬  
+   │          ╰── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

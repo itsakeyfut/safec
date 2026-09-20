@@ -46,6 +46,7 @@ use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::TranslationUnit;
 use safec_ir::memory::{self, Kind, Unproven};
+use safec_ir::nullability;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::Target;
@@ -82,6 +83,14 @@ const DOUBLE_FREE: Code = Code::new("SC0401");
 /// programs. `docs/diagnostics.md`'s rule is that a code names a class of
 /// program to search for, and these are two classes.
 const USE_AFTER_FREE: Code = Code::new("SC0402");
+
+/// A value read or written through a pointer that may be null.
+///
+/// A third code rather than a severity on one of the two above, because
+/// `docs/diagnostics.md` makes a code a class of program to search for and this
+/// is a third class: the other two are about a pointer that pointed somewhere
+/// once, and this is about one that may never have.
+const NULL_DEREFERENCE: Code = Code::new("SC0403");
 
 /// Everything one run of the compiler produced.
 ///
@@ -586,6 +595,15 @@ fn lowered(
                 diagnostics.report(diagnostic);
             }
         }
+        // A second analysis rather than a second question for the first: one
+        // walk over one lattice is what makes the double free and the use after
+        // free one check, and whether a pointer can be null is answered by a
+        // lattice that shares nothing with theirs.
+        for finding in nullability::findings(&unit) {
+            if let Some(diagnostic) = nullability_finding(&finding) {
+                diagnostics.report(diagnostic);
+            }
+        }
     }
 
     Some(unit)
@@ -711,6 +729,47 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
     }
 
     Some(diagnostic)
+}
+
+/// What the nullability check concluded, as what a user reads.
+///
+/// The check names a conclusion and never reads the policy, so this does not
+/// either, for `memory_finding`'s reason and ADR-0001's.
+///
+/// **Two rows rather than four.** The memory check's words differ by which of
+/// its two questions was asked and by why an answer was unproven; there is one
+/// question here and one reason, which is that nothing established what the
+/// pointer holds. A reason enum with one variant is a field nobody reads.
+///
+/// The value is not named, for `memory_finding`'s reason: the IR holds no `p`,
+/// which is #136, and the caret's quoted line shows the reader their own text.
+fn nullability_finding(finding: &nullability::Finding) -> Option<Diagnostic> {
+    // The unproven row does not say "may be null" of the *pointer* and then
+    // blame the dereference: what this check failed to establish is that the
+    // pointer is not null, and a reader who is told the pointer may be null is
+    // being told something was worked out about it. Nothing was.
+    //
+    // Every conclusion written out rather than `_`, so that a fourth has to be
+    // answered for here. `Safe` is unreachable through `Nullness::concluded`
+    // and `Diagnostic::concluded` gives `None` for it either way.
+    let (message, label) = match finding.conclusion {
+        Conclusion::Unsafe => (
+            "this dereferences a null pointer",
+            "this is null when it is read through",
+        ),
+        Conclusion::Unknown => (
+            "this may dereference a null pointer",
+            "this check cannot say this is not null",
+        ),
+        Conclusion::Safe => ("nothing", "nothing"),
+    };
+
+    Some(
+        Diagnostic::concluded(finding.conclusion, message)?
+            .with_code(NULL_DEREFERENCE)
+            .with_safety_level(SafetyLevel::Memory)
+            .with_label(Label::primary(finding.at, label)),
+    )
 }
 
 /// Where an artifact is written, which is not always what `-o` said.
