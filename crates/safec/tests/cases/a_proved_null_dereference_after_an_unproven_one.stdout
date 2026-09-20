@@ -1,0 +1,30 @@
+Target "x86_64-pc-windows-msvc"
+Function a_proved_null_dereference_after_an_unproven_one.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int *"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_proved_null_dereference_after_an_unproven_one.c:2:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_proved_null_dereference_after_an_unproven_one.c:2:14 generated
+    Operation a_proved_null_dereference_after_an_unproven_one.c:3:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+          Deref
+    Operation a_proved_null_dereference_after_an_unproven_one.c:3:5 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_proved_null_dereference_after_an_unproven_one.c:3:5 generated
+    Operation a_proved_null_dereference_after_an_unproven_one.c:4:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proved_null_dereference_after_an_unproven_one.c:4:12 generated
+    Return

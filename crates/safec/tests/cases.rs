@@ -333,6 +333,19 @@ cases! {
     // nothing is known about. The words do not name the value, so the two
     // cannot be told apart at one caret and only the worse is said.
     a_proved_null_dereference_beside_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same pair with the worse one written second, which is what tells
+    // "the worst of them" apart from "the first of them": the places an
+    // element dereferences are collected destination first, so the case above
+    // has them agreeing and only this one does not.
+    a_proved_null_dereference_after_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A call reading through a pointer it then assigns to. What this pins is
+    // the answer rather than the rule behind it: a call's result lands in a
+    // fresh temporary here and is copied out in an element of its own, so the
+    // order the arguments and the destination are applied in cannot be seen
+    // from any C this frontend lowers.
+    // `a_call_that_reads_a_pointer_and_writes_it_keeps_neither` in
+    // `crates/safec-ir/tests/nulls.rs` is what holds that.
+    a_call_whose_destination_it_dereferences: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_null_dereference_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     an_unproven_dereference_is_an_error_under_deny_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
 
@@ -554,13 +567,14 @@ fn run_case(name: &str, args: &[&str]) {
 /// means empty, and for this one empty means zero.
 ///
 /// Split out so that the rule has a guard that states it, rather than leaving
-/// it implicit in what the expected files happen to contain. Nine cases carry a
-/// `.exit` and one does not, so the rule is now demonstrated many times over and
-/// written down once.
+/// it implicit in what the expected files happen to contain: the cases that
+/// exit non-zero demonstrate it many times over and this says it once.
 ///
-/// Mutation: return `Vec::new()` whatever the code. Ten tests fail: the unit
-/// test below, which is the one that says what the rule is, and every case that
-/// exits non-zero.
+/// Mutation: return `Vec::new()` whatever the code. The unit test below fails,
+/// which is the one that says what the rule is, and so does every case that
+/// exits non-zero. **How many that is is not written here**, because it counts
+/// the cases that happen to exist and a case is added most weeks; it was nine
+/// when this was written and is many times that now. See RK-028.
 fn expected_exit(code: i32) -> Vec<u8> {
     if code == 0 {
         Vec::new()

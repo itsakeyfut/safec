@@ -307,3 +307,78 @@ fn a_local_assigned_from_its_own_dereference_keeps_nothing() {
     assert_eq!(found[1].conclusion, Conclusion::Unknown);
     assert_eq!(found[1].at, names.at[1]);
 }
+
+/// A call reads its arguments where it is reached and writes its destination
+/// when it returns, and a pointer that is both keeps neither fact by accident.
+///
+/// `p = g(*p);` with the result landing in `p` itself. The dereference says the
+/// pointer that was there was not null; the call then puts a different one in
+/// the same local, and nothing is known about that one. Applied the other way
+/// round, the dereference would land on the returned pointer and leave it
+/// proved non-null.
+///
+/// **This compiler's own frontend cannot produce it**, because a call's result
+/// always lands in a fresh temporary and is copied out in an element of its
+/// own. Measured: `p = g(*p);` reaches the IR as a call into `_2` and then
+/// `_1 = Copy(_2)`.
+///
+/// Mutation: move `met` in `Nullability::terminator` below the match, so the
+/// dereference is applied after the destination is written. The write after the
+/// call stops being reported and this fails with one finding where it expects
+/// two.
+///
+/// Mutation: have the `Terminator::Call` arm leave the destination alone. The
+/// pointer keeps what the dereference established, and this fails the same way.
+/// That is the rule which makes a `malloc` result unprovable, which is this
+/// module's headline and the roadmap's own example.
+#[test]
+fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let callee = unit.push_function(Function::declaration(names.function, pointer, [int]));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let p = function.parameters().next().expect("a first parameter");
+
+    let entry = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Call {
+                callee,
+                arguments: vec![Operand::Copy(Place {
+                    local: p,
+                    projection: vec![Projection::Deref],
+                })],
+                destination: Some(Place::local(p)),
+                then: after,
+                origin: Origin::Written(names.at[0]),
+            },
+        },
+    );
+    function.fill_block(
+        after,
+        Block {
+            elements: vec![write_through(p, names.at[1])],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 2, "{found:?}");
+    // The argument, read through the pointer that was there.
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[0]);
+    // The pointer the call returned, which is a different one.
+    assert_eq!(found[1].conclusion, Conclusion::Unknown);
+    assert_eq!(found[1].at, names.at[1]);
+}
