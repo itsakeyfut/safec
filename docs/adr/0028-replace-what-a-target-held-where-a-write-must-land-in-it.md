@@ -124,17 +124,31 @@ than from `git`, because the branch had uncommitted work.
 | `Rvalue::Address` does not set the flag on the local whose address is taken | `a_write_through_a_pointer_whose_own_address_escaped`, and nothing else. That case exists for this row: before it was written the whole suite stayed green while the program became a proved use after free |
 | a field added to `Held` | does not compile: `error[E0063]` in `Held::none` and `error[E0027]` in `Held::clear`, `Held::joined` and `Held::accumulated` |
 
-**Four of the answers are held by nothing, and one reason covers all four.**
-`Held::none` seeding `true`, `Held::clear` restoring it, and the two lines
-beside `writes_to.fill(false)` in the `Rvalue::Binary` readers each leave the
-whole suite passing when they are mutated or removed. The flag is read only
+**Four of the flag's seven answers are held by nothing, and one reason covers
+all four.** `Held::none` seeding `true`, `Held::clear` restoring it, and the two
+lines beside `writes_to.fill(false)` in the `Rvalue::Binary` readers each leave
+the whole suite passing when they are mutated or removed. The flag is read only
 where `writes_to` is not empty, and every one of those four empties `writes_to`
 in the same breath, so the `targets.is_empty()` return above answers before the
-flag is reached. They are written anyway because the alternative is a value
-that says something false about itself, and because the next reader of this
-struct will copy whichever shape is there. The two `Rvalue::Binary` lines are
-also RK-052's rule: one question asked in two places is answered in both or it
-drifts inside the change that touches one of them.
+flag is reached. They are written anyway because the alternative is a value that
+says something false about itself, and because the next reader of this struct
+will copy whichever shape is there. The two `Rvalue::Binary` lines are also
+RK-052's rule: one question asked in two places is answered in both or it drifts
+inside the change that touches one of them.
+
+**Everything the replacement does beyond the sites is held by nothing either,
+and the reason is the escape.** Measured, each on its own: replacing only
+`Held::sites` and leaving the rest of the row, keeping the target's old `lost`,
+keeping its old `freed`, and letting the replacement fall through into the union
+loop below instead of returning, all leave the whole suite passing. `writes_to`
+is written only at `Rvalue::Address`, which sets `Known::escaped` on the same
+local, so the target of a write through a pointer has always escaped, and
+ADR-0017 answers `Reached::Lost` for an escaped local wherever a report is made:
+the conclusion is `Unknown` whatever those three fields say. That is the same
+sentence the `freed = None` line in the union path below already carries, and it
+is load-bearing in one direction: the work #188 and #196 describe narrows what
+an escaped local is reported as, and the day it does, a target that kept a proof
+nothing wrote over is a false proof rather than an inert field.
 
 `Analysis::height` is held by nothing either, as ADR-0016 says of the method and
 as ADR-0018, ADR-0019 and ADR-0020 say of the last three fields added.
