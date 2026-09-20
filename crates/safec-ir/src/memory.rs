@@ -811,13 +811,22 @@ impl Known {
     /// what [`Held::lost`] says and is ADR-0018's fact through a second door.
     ///
     /// **The bit alone is not the point.** [`Self::reached_by`] already
-    /// answers [`Reached::Lost`] for an escaped local, so no report about the
-    /// local itself moves. What moves is what a later `free` of it is entitled
-    /// to write on the sites, which are shared with every other local holding
-    /// them. See ADR-0029.
+    /// answers [`Reached::Lost`] for an escaped local that holds a site, so no
+    /// report about the local itself moves. What moves is what a later `free`
+    /// of it is entitled to write on the sites, which are shared with every
+    /// other local holding them. See ADR-0029.
+    ///
+    /// **A local holding no site is left alone, and that is the reason the
+    /// condition is not just the escape.** Its `lost` bit is read with no
+    /// emptiness condition, so marking it would answer [`Reached::Lost`] for a
+    /// pointer this check never followed: `int *p; get(&p); *p = 1;` is the
+    /// output-parameter idiom, and ADR-0017 declined to report it on purpose.
+    /// There is nothing to lose by leaving it, because a local holding no site
+    /// shares none with anybody, and a `free` of it is reported by
+    /// [`Allocations::touching`]'s own rule whatever this says.
     fn replaced(&mut self) {
         for local in 0..self.escaped.len() {
-            if self.escaped[local] {
+            if self.escaped[local] && self.points_to[local].sites().next().is_some() {
                 self.points_to[local].lost = true;
             }
         }
@@ -960,11 +969,13 @@ impl Allocations<'_> {
     /// one rule written in two places drifting apart, so the argument walk is
     /// spelled the way its twin above spells it and the reason there are two is
     /// written here. See ADR-0029.
-    /// **Neither arm is observable, and both are here anyway.** An argument
-    /// this walk skips reaches no site either, so the branch that reads this
-    /// writes on nothing and the answer changes no program: answering `true`
-    /// for a constant, and dropping the projection test, each leave the whole
-    /// workspace green, measured. What they would cost the day something
+    ///
+    /// **Neither arm is observable, and both are here anyway.** `free` takes
+    /// one argument, so the argument this walk skips is the only argument
+    /// there is, and the branch that reads this then writes on nothing:
+    /// answering `true` for a constant, and dropping the projection test, each
+    /// leave the whole workspace green, measured. The `reached.len() > 1`
+    /// branch says the same thing about the same premise. What they would cost the day something
     /// reaches them is a free refusing to prove because of a row belonging to
     /// a pointer rather than to what it points at. The arm above them is the
     /// one that decides anything.
@@ -1521,12 +1532,27 @@ impl Analysis for Allocations<'_> {
                 // was freed: the one is about which member of a set went, and
                 // the other about a single member going. RK-051 is an early
                 // return that left the conservative rules behind it unrun, and
-                // the rule here is the conservative one. The destination is
-                // left alone exactly as the branch below leaves it, which is
-                // `free` returning nothing and is #135.
+                // the rule here is the conservative one.
+                //
+                // **What it does skip is the destination.** The fall-through
+                // path clears the local `free` is written into and this does
+                // not, which the `reached.len() > 1` branch below does too.
+                // That local is `void` and holds none of this, which is #135;
+                // measured, putting the clear back inside this branch leaves
+                // the whole workspace green.
                 if Self::holds_something_unnameable(arguments, value) {
                     for site in reached {
-                        value.state[site] = SiteState::Unknown;
+                        // **A free cannot un-free an allocation.** A site an
+                        // earlier free this check *could* follow has already
+                        // proved is not something this call has anything to
+                        // say about, and the site is shared, so blanking it
+                        // takes the proof away from every other local holding
+                        // it. Found by review;
+                        // `a_free_this_check_could_not_follow_leaves_a_proved_free_alone`
+                        // is the program and is the guard.
+                        if !matches!(value.state[site], SiteState::Freed { .. }) {
+                            value.state[site] = SiteState::Unknown;
+                        }
                     }
 
                     return;
@@ -1618,11 +1644,21 @@ impl Analysis for Allocations<'_> {
                 // above is about the allocations the arguments name; this is
                 // about the *locals* whose addresses are out there, which this
                 // call may write a fresh pointer into whether or not it was
-                // passed one. `Callee::Frees` and `Callee::Allocates` are not
-                // here because C17 7.22.3.3 and 7.22.3.4 say what those two do
-                // and neither writes through an address a caller stashed
-                // earlier, which is the whole reason the name is read. See
-                // ADR-0029.
+                // passed one.
+                //
+                // **`Callee::Frees` and `Callee::Allocates` are not here**, and
+                // what says so is what each is handed rather than a sentence
+                // forbidding the write: C17 7.22.3.4 gives `malloc` a size and
+                // no address at all, and 7.22.3.3 gives `free` the pointer's
+                // *value*, which p2 of that subclause requires to be one an
+                // allocation function returned and which 7.22.3 requires to be
+                // disjoint from every other object. Neither is ever handed
+                // `&p`. That is the whole reason the name is read.
+                //
+                // **No test holds this**: marking at either arm leaves the
+                // whole workspace green, measured. The record says so rather
+                // than leaving the next reader to find out by widening it.
+                // See ADR-0029.
                 value.replaced();
             }
         }

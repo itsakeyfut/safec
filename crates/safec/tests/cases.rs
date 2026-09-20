@@ -376,6 +376,16 @@ cases! {
     // sharer that `main` proved before the call was allowed to replace what
     // `p` holds. It is a warning here because the callee may have.
     a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free cannot un-free an allocation, so a free this check could not
+    // follow has nothing to say about a site an earlier free it *could* follow
+    // already proved. Writing `Unknown` over that site anyway threw the proof
+    // away, and the site is shared, so what lost it was the sharer's report.
+    // Found by review.
+    a_free_this_check_could_not_follow_leaves_a_proved_free_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other half of the trade the rule makes. The downgrade is only
+    // acceptable because the flag still fails the build, and this is the case
+    // that says so: same program as the sharer case above, one flag on.
+    a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
     // And the direction the cheap versions of that rule fail in. Clearing the
     // escaped local's row at the call instead leaves this program with nothing
     // to say about the read, which is the bottom of `CLAUDE.md`'s list while a

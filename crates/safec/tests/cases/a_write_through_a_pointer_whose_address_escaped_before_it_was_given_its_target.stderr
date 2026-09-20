@@ -1,12 +1,3 @@
-warning[SC0402]: this uses a pointer this check stopped following
-    ╭─[ a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:11:5 ]
-    │
- 11 │     *pp = q;
-    │     ───┬───  
-    │        ╰───── this check cannot say what this points at
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
 warning[SC0401]: this may free a value that was freed already
     ╭─[ a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:12:5 ]
     │

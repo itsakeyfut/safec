@@ -39,10 +39,13 @@ refused to prove over it.
 
 ## Decision Drivers
 
-* An escaped local's contents are stale only once something can have written
-  through the address. Inside this function, a write through a pointer is
-  followed, which is ADR-0019 and ADR-0028. Outside it, the writer is a call,
-  and this check reads no callee's body.
+* An escaped local's contents are stale once something can have written through
+  the address. Inside this function a write through a pointer is followed
+  **where `Held::writes_to` names a target**, which is ADR-0019 and ADR-0028;
+  where it names none the write is dropped, and the same false proof is
+  reachable through that door, which is #202 and which this does not close.
+  Outside the function the writer is a call, and this check reads no callee's
+  body. This decision is about the call.
 * The sites are shared and the local's own answer is not. A fact recorded
   against the local is invisible to the sharer that gets reported, which is
   what RK-048 is about from the other side.
@@ -73,9 +76,13 @@ no field of its own. The rule that reads it lives in the `Callee::Frees` arm of
 the transfer, above the two rules that say which member of a set went, because
 neither applies once the set is not known to be what was freed.
 
-`Callee::Frees` and `Callee::Allocates` do not produce it. C17 7.22.3.3 and
-7.22.3.4 say what those two do and neither writes through an address a caller
-stashed earlier, which is the whole reason this check reads a callee's name.
+`Callee::Frees` and `Callee::Allocates` do not produce it, and what settles that
+is what each is handed rather than a sentence forbidding the write. C17 7.22.3.4
+gives `malloc` a size and no address at all. C17 7.22.3.3 gives `free` the
+pointer's *value*, which p2 of that subclause requires to be one an allocation
+function returned, and 7.22.3 requires every such allocation to be disjoint from
+every other object. Neither function is ever handed `&p`, so neither can write
+through it. That is the whole reason this check reads a callee's name.
 
 ### Confirmation
 
@@ -100,12 +107,18 @@ the other end, a call that ran before the address escaped, and it fails for any
 implementation that reads the escape without reading where it happened. RK-065
 is a guard that held only the order it was written in.
 
-That `free` and `malloc` do not produce it is held by the hand-built IR in
-`crates/safec-ir/tests/freed.rs` rather than by any C program: marking at
-`Callee::Allocates` fails `an_offset_that_moves_the_pointer_carries_no_edge`
-and marking at `Callee::Frees` fails
-`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`. Both were
-expected to be held by nothing and were measured instead.
+That `free` and `malloc` do not produce it is **held by nothing**, and the
+argument above is the whole of it: marking at either arm leaves all sixteen
+targets green, measured. An earlier draft of this rule marked every escaped
+local and two hand-built tests in `crates/safec-ir/tests/freed.rs` caught it;
+once the rule was narrowed to a local that holds a site, they stopped reaching
+it. A reader tempted to widen the arms has the C standard and this paragraph and
+no test.
+
+The emptiness condition is guarded, from the other side: marking every escaped
+local fails `a_write_through_a_pointer_whose_own_address_escaped` and
+`a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target`,
+which gain a `SC0402` about a pointer this check never followed.
 
 `a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved` holds what
 this costs rather than what it fixes, so that the cost cannot be taken away
@@ -114,6 +127,19 @@ without a case moving.
 holds the direction that is worse than the cost: clearing the local's row at the
 call instead leaves that program saying nothing about the read at all, measured,
 and a silence is the bottom of `CLAUDE.md`'s list.
+
+### What the rule does not take
+
+A free this check could not follow writes `SiteState::Unknown` on the sites it
+reached, **except where one of them is already `SiteState::Freed`**. A free
+cannot un-free an allocation, so a site an earlier free this check *could*
+follow has already proved is not something this call has anything to say about,
+and the site is shared, so blanking it would take the proof from every local
+holding it. Review found the over-broad write with the escape written before the
+trusted free, where `Known::unproved` has not wiped the proof first;
+`a_free_this_check_could_not_follow_leaves_a_proved_free_alone` is that program,
+and removing the exception drops its `error[SC0402]` to a warning and fails that
+case alone.
 
 ### Consequences
 
@@ -126,9 +152,11 @@ and a silence is the bottom of `CLAUDE.md`'s list.
   opaque call did nothing, is a warning rather than an error. It is still
   reported, and `--deny-unknown` still fails the build on it. What would recover
   it is knowing what a callee does to what it is passed, which is #134.
-* Bad, because a dereference of a pointer whose own address escaped and which
-  has survived such a call now reports `this uses a pointer this check stopped
-  following`. It is true, and it is a report where there was none.
+* Good, because no program gains a report. The rule marks a local only where it
+  holds a site, so the output-parameter idiom, `int *p; get(&p); *p = 1;`, says
+  what it said before: ADR-0017 declined to report a pointer this check never
+  followed, and this does not reopen it. Marking every escaped local instead
+  puts a `SC0402` on that program, measured.
 * What would reverse this: an annotation saying a callee writes through nothing,
   which is the phase's last issue. Until then the callee's body is not read and
   the conservative answer is the only one available.
