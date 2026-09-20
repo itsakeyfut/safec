@@ -1,0 +1,75 @@
+Target "x86_64-pc-windows-msvc"
+Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:3:6 "stash" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "int **"
+  Local "_5" "void"
+  Local "_6" "void"
+  Local "_7" "void"
+  Local "_8" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:5:14 generated
+    Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:5:14 generated
+    Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:6:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:6:14 generated
+    Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:11 written
+      Destination "_4"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:5 generated
+    Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:5 "stash" "bb2"
+      Destination "_5"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:5 generated
+    ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:8:5 generated
+    Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:8:5 "free" "bb3"
+      Destination "_6"
+      Copy "_3"
+  Block "bb3"
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:8:5 generated
+    ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:9:5 generated
+    Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:9:5 "free" "bb4"
+      Destination "_7"
+      Copy "_1"
+  Block "bb4"
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:9:5 generated
+    Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:10:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:10:5 written
+      Destination "_8"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:10:5 generated
+    Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:11:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:11:12 generated
+    Return

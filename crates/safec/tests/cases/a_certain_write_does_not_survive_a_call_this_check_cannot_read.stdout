@@ -1,0 +1,92 @@
+Target "x86_64-pc-windows-msvc"
+Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:3:6 "opaque" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "void"
+  Local "_9" "void"
+  Local "_10" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 generated
+    Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 generated
+    ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:6:14 generated
+    Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:6:14 "malloc" "bb2"
+      Destination "_4"
+      Constant 8
+  Block "bb2"
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:6:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:6:14 generated
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:7:16 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:7:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:7:16 generated
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:8:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:8:5 written
+      Destination "_7"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:8:5 generated
+    ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 generated
+    Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 "opaque" "bb3"
+      Destination "_8"
+      Copy "_5"
+  Block "bb3"
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 generated
+    ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 generated
+    Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 "free" "bb4"
+      Destination "_9"
+      Copy "_1"
+  Block "bb4"
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 generated
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 written
+      Destination "_10"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 generated
+    Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:12:12 generated
+    Return

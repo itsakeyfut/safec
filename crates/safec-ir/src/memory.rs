@@ -229,7 +229,9 @@ enum Reached {
     /// The second half was prose until ADR-0018 gave it a producer. A site is
     /// named by a local, so a loop that allocates every turn hands one site to
     /// one allocation after another, and whoever still held the last one is
-    /// holding something this check can no longer name.
+    /// holding something this check can no longer name. ADR-0029 gave it a
+    /// second: a call this check cannot read may write through an address that
+    /// escaped, and what it leaves behind has no site either.
     Lost,
 }
 
@@ -266,7 +268,12 @@ struct Held {
     /// is here so that it is a decision rather than a discovery.
     sites: Vec<bool>,
     /// Whether this local may hold an allocation this check can no longer
-    /// name, because the site that named it was handed to a second one.
+    /// name.
+    ///
+    /// Two doors lead here. The site that named what it held was handed to a
+    /// second allocation, which is ADR-0018; or its address had escaped when a
+    /// call this check cannot read ran, and such a call may have written a
+    /// pointer this check has never seen into it, which is ADR-0029.
     lost: bool,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
@@ -794,6 +801,36 @@ impl Known {
             self.unproved(local);
         }
     }
+
+    /// Everything an escaped local holds may have been replaced by a callee.
+    ///
+    /// A call this check cannot read may write through any address that has
+    /// escaped, and nothing here can say which local that reaches: the body is
+    /// not read, and the address may have been stashed anywhere on the way. So
+    /// every escaped local holds something this check cannot name, which is
+    /// what [`Held::lost`] says and is ADR-0018's fact through a second door.
+    ///
+    /// **The bit alone is not the point.** [`Self::reached_by`] already
+    /// answers [`Reached::Lost`] for an escaped local that holds a site, so no
+    /// report about the local itself moves. What moves is what a later `free`
+    /// of it is entitled to write on the sites, which are shared with every
+    /// other local holding them. See ADR-0029.
+    ///
+    /// **A local holding no site is left alone, and that is the reason the
+    /// condition is not just the escape.** Its `lost` bit is read with no
+    /// emptiness condition, so marking it would answer [`Reached::Lost`] for a
+    /// pointer this check never followed: `int *p; get(&p); *p = 1;` is the
+    /// output-parameter idiom, and ADR-0017 declined to report it on purpose.
+    /// There is nothing to lose by leaving it, because a local holding no site
+    /// shares none with anybody, and a `free` of it is reported by
+    /// [`Allocations::touching`]'s own rule whatever this says.
+    fn replaced(&mut self) {
+        for local in 0..self.escaped.len() {
+            if self.escaped[local] && self.points_to[local].sites().next().is_some() {
+                self.points_to[local].lost = true;
+            }
+        }
+    }
 }
 
 /// What the operands of a binary operation build.
@@ -917,6 +954,42 @@ impl Allocations<'_> {
         }
 
         reached
+    }
+
+    /// Whether this call is handed a local that may hold an allocation this
+    /// check cannot name.
+    ///
+    /// **A second question about the same arguments**, and it cannot be folded
+    /// into [`Allocations::touching`]: that answers [`Reached::Lost`] for an
+    /// escaped local as well, which is ADR-0017, and the two facts are not
+    /// interchangeable here. Freeing an escaped local that no call has run past
+    /// still frees what this check thinks it holds, and reading the folded
+    /// answer instead would give up the proof
+    /// `a_free_through_an_escaped_local_is_seen_by_a_sharer` holds. RK-052 is
+    /// one rule written in two places drifting apart, so the argument walk is
+    /// spelled the way its twin above spells it and the reason there are two is
+    /// written here. See ADR-0029.
+    ///
+    /// **Neither arm is observable, and both are here anyway.** `free` takes
+    /// one argument, so the argument this walk skips is the only argument
+    /// there is, and the branch that reads this then writes on nothing:
+    /// answering `true` for a constant, and dropping the projection test, each
+    /// leave the whole workspace green, measured. The `reached.len() > 1`
+    /// branch says the same thing about the same premise. What they would cost the day something
+    /// reaches them is a free refusing to prove because of a row belonging to
+    /// a pointer rather than to what it points at. The arm above them is the
+    /// one that decides anything.
+    fn holds_something_unnameable(arguments: &[Operand], known: &Known) -> bool {
+        arguments.iter().any(|argument| match argument {
+            // A constant holds no allocation, for the reason `touching` gives.
+            Operand::Constant(_) => false,
+            // A projection names a place rather than a local, and this check
+            // follows locals: `free(*pp)` is already a `Reached::Lost` above,
+            // and there is no row here to ask.
+            Operand::Copy(place) => {
+                place.projection.is_empty() && known.points_to[place.local.index()].lost
+            }
+        })
     }
 }
 
@@ -1444,6 +1517,47 @@ impl Analysis for Allocations<'_> {
             Callee::Frees => {
                 let reached: Vec<usize> = sites().collect();
 
+                // **A free of a local that may hold something this check
+                // cannot name does not say which allocation went.** The sites
+                // below are what the local is *thought* to hold, and a call
+                // this check cannot read may have written a fresh pointer over
+                // it since; writing `Freed` on them would be a proof about an
+                // allocation the callee may have swapped out. The site is
+                // shared, so that proof is handed to every other local holding
+                // it, which is how a program C defines became an `error` no
+                // flag suppresses. See ADR-0029.
+                //
+                // **It supersedes both rules below and skips nothing else.**
+                // Neither of them applies once the set is not known to be what
+                // was freed: the one is about which member of a set went, and
+                // the other about a single member going. RK-051 is an early
+                // return that left the conservative rules behind it unrun, and
+                // the rule here is the conservative one.
+                //
+                // **What it does skip is the destination.** The fall-through
+                // path clears the local `free` is written into and this does
+                // not, which the `reached.len() > 1` branch below does too.
+                // That local is `void` and holds none of this, which is #135;
+                // measured, putting the clear back inside this branch leaves
+                // the whole workspace green.
+                if Self::holds_something_unnameable(arguments, value) {
+                    for site in reached {
+                        // **A free cannot un-free an allocation.** A site an
+                        // earlier free this check *could* follow has already
+                        // proved is not something this call has anything to
+                        // say about, and the site is shared, so blanking it
+                        // takes the proof away from every other local holding
+                        // it. Found by review;
+                        // `a_free_this_check_could_not_follow_leaves_a_proved_free_alone`
+                        // is the program and is the guard.
+                        if !matches!(value.state[site], SiteState::Freed { .. }) {
+                            value.state[site] = SiteState::Unknown;
+                        }
+                    }
+
+                    return;
+                }
+
                 // **A may-set is not a must-set, and this is where the two used
                 // to be confused.** Freeing a local that may hold either of two
                 // allocations frees exactly one of them; writing `Freed` on
@@ -1525,6 +1639,27 @@ impl Analysis for Allocations<'_> {
                 for site in sites().collect::<Vec<_>>() {
                     value.state[site] = SiteState::Unknown;
                 }
+
+                // **What it was handed is not all it can reach.** The loop
+                // above is about the allocations the arguments name; this is
+                // about the *locals* whose addresses are out there, which this
+                // call may write a fresh pointer into whether or not it was
+                // passed one.
+                //
+                // **`Callee::Frees` and `Callee::Allocates` are not here**, and
+                // what says so is what each is handed rather than a sentence
+                // forbidding the write: C17 7.22.3.4 gives `malloc` a size and
+                // no address at all, and 7.22.3.3 gives `free` the pointer's
+                // *value*, which p2 of that subclause requires to be one an
+                // allocation function returned and which 7.22.3 requires to be
+                // disjoint from every other object. Neither is ever handed
+                // `&p`. That is the whole reason the name is read.
+                //
+                // **No test holds this**: marking at either arm leaves the
+                // whole workspace green, measured. The record says so rather
+                // than leaving the next reader to find out by widening it.
+                // See ADR-0029.
+                value.replaced();
             }
         }
 
@@ -1649,14 +1784,15 @@ pub enum Unproven {
     ///
     /// `Reached::Lost` with nothing else contributing, and it takes the same
     /// word as that variant because it is the same fact reaching the reader.
-    /// There are four producers and they sit in two functions, which is worth
-    /// writing out because two of them are the ones a reader meets first.
+    /// Every producer sits in one of two functions, which is worth writing out
+    /// because the ones a reader meets first are not all of them.
     /// `Known::reached_by` answers it for a local that held a site and lost
-    /// the name for it, which is ADR-0018, and for one whose address escaped,
-    /// which is ADR-0017. `Allocations::touching` answers it for an argument
+    /// the name for it, which is ADR-0018 and which a call this check cannot
+    /// read also produces, ADR-0029; and for one whose address escaped, which
+    /// is ADR-0017. `Allocations::touching` answers it for an argument
     /// written through a projection, `free(*pp)`, and for one whose local
-    /// reaches no site at all. None of the four says a free happened; each
-    /// says this check can no longer say what the pointer points at.
+    /// reaches no site at all. None of them says a free happened; each says
+    /// this check can no longer say what the pointer points at.
     ///
     /// Those are private, so they are named here rather than linked: a link
     /// out of a public item to one of them is

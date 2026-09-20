@@ -1,0 +1,18 @@
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:10:5 ]
+    │
+ 10 │     free(p);
+    │     ───┬───  
+    │        ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:11:5 ]
+    │
+ 11 │     free(q);
+    │     ───┬───  
+    │        ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
