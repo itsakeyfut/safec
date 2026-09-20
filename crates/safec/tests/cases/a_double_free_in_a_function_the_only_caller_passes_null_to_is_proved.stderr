@@ -1,0 +1,11 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_double_free_in_a_function_the_only_caller_passes_null_to_is_proved.c:4:5 ]
+   │
+ 3 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 4 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
