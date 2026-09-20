@@ -79,7 +79,8 @@ can reach are the end of a full expression (6.8 p4) and the operators `,`
 (6.5.17 p2), `&&` (6.5.13 p4), `||` (6.5.14 p4) and `?:` (6.5.15 p4). Annex C's
 first entry, between a call's arguments and the call itself (6.5.2.2 p10), needs
 nothing: the IR already places the argument operations before the call
-terminator. What it does **not** say is that a call's arguments are ordered
+terminator. (That is the claim [ADR-0026](./0026-say-that-a-call-s-arguments-have-been-evaluated.md)
+withdrew; the consequence below says what took it away.) What it does **not** say is that a call's arguments are ordered
 against each other, and they are not, which is why a sequencing operator inside
 one of them records nothing.
 
@@ -248,6 +249,12 @@ before changed its answer: every one of them frees in a statement of its own.
   argument operations and the call terminator are in one block in that order and
   cannot be otherwise; a frontend that emitted them apart would be building
   something else.
+
+  **No longer true.** That position held for every consumer reading the IR when
+  this was written, and ADR-0023 added one that carries a fact forwards, which a
+  position does not stop. [ADR-0026](./0026-say-that-a-call-s-arguments-have-been-evaluated.md)
+  makes the point an element like the other four, and says why it concludes less
+  than an `Element::Sequenced` does.
 * What would reverse this: an IR that carries the expression tree, where the
   partial order could be read off rather than recorded. That is a larger IR for
   one question, and the question is answered here in one element.
