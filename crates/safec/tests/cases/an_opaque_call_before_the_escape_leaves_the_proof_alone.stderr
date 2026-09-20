@@ -1,0 +1,20 @@
+warning[SC0401]: this may free a value that was freed already
+   ╭─[ an_opaque_call_before_the_escape_leaves_the_proof_alone.c:9:5 ]
+   │
+ 9 │     free(p);
+   │     ───┬───  
+   │        ╰───── may free it again here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
+error[SC0401]: this frees a value that was freed already
+    ╭─[ an_opaque_call_before_the_escape_leaves_the_proof_alone.c:10:5 ]
+    │
+  9 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     free(q);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1

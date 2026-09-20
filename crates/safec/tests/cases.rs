@@ -363,6 +363,29 @@ cases! {
     // gone with the old one. See ADR-0028.
     a_write_through_a_pointer_whose_own_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A call this check cannot read may write a fresh pointer through any
+    // address that has escaped, so a `free` afterwards cannot say which
+    // allocation it took. Both of these are programs C defines and both were
+    // an `error` at exit 1, reported against a **sharer**: what the escape
+    // already took away is the report about the escaped local itself, so a
+    // case that frees or reads through that local alone observes nothing.
+    // RK-048 is that hole and ADR-0029 is the rule.
+    a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_certain_write_does_not_survive_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What that rule costs, kept where it can be seen: a double free through a
+    // sharer that `main` proved before the call was allowed to replace what
+    // `p` holds. It is a warning here because the callee may have.
+    a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the direction the cheap versions of that rule fail in. Clearing the
+    // escaped local's row at the call instead leaves this program with nothing
+    // to say about the read, which is the bottom of `CLAUDE.md`'s list while a
+    // false positive is row 4. See ADR-0029.
+    a_use_after_free_through_an_escaped_local_is_still_reported_after_an_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the other order, which keeps the rule from being the whole of what
+    // an escape means: a call that ran **before** the address escaped cannot
+    // have written through it, so the proof survives. RK-065 is a guard that
+    // held only the order it was written in.
+    an_opaque_call_before_the_escape_leaves_the_proof_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_that_was_never_given_a_pointer_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_an_alias_keeps_what_it_carried_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_an_alias_that_carries_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
