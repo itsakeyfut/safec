@@ -2016,18 +2016,29 @@ fn say(
     }
 }
 
-/// Report every read behind this free that it may be about, where nothing
+/// Report every read behind this call that it may be about, where nothing
 /// orders the two.
 ///
 /// **The half a forward walk cannot see, arriving from the other side.** A read
-/// the walk meets before the free is never asked about it, because a free marks
-/// only what follows; carrying the read forwards to the free asks the same
+/// the walk meets before the call is never asked about it, because a call marks
+/// only what follows; carrying the read forwards to the call asks the same
 /// question at the only point where both are in hand. `Element::Sequenced` is
 /// what says a read is behind rather than beside, and clearing
 /// [`Known::pending`] is where that happens. See ADR-0023.
 ///
+/// **Two callees ask it, and they are asking about different things.** A
+/// `free` took the site away, so the read may have run after the free. A call
+/// this check cannot read may have freed what it was handed, which is the same
+/// suspicion one step weaker and is what `Allocations::terminator` writes as
+/// `SiteState::Unknown` for everything the call touched. Both are the question
+/// the forward walk already asks on the other side of the call, so refusing one
+/// of them here left `g(*p) + h(p)` silent while `h(p) + g(*p)` reported.
+/// What differs is the report: an opaque call has no free to point a second
+/// caret at, and saying it had one would be this compiler asserting something
+/// it did not establish.
+///
 /// **Always unproven, and that is the shape rather than a caution.** The read
-/// and the free are in one full expression with nothing sequencing them, so one
+/// and the call are in one full expression with nothing sequencing them, so one
 /// allowed order reads freed storage and another does not, and which an
 /// implementation picks is unspecified. There is no program this can be right
 /// to call `Unsafe` about, so the worst it can do when it is wrong is a report
@@ -2056,14 +2067,17 @@ fn used_before(
         return;
     };
 
-    // Only a `free`. A call this check cannot read may free what it was passed
-    // and the same asymmetry is there, wider: `h(p) + g(*p)` reports today and
-    // `g(*p) + h(p)` does not. That is issue #184 and not this rule, because
-    // what it costs is every dereference beside an opaque call rather than
-    // beside a free.
-    if analysis.callee(*callee) != Callee::Frees {
-        return;
-    }
+    // Which of the two questions above this is, and the one callee that asks
+    // neither. Written as a match rather than as a comparison so that a fourth
+    // callee is answered for here by `error[E0004]` rather than falling into a
+    // row decided before it existed.
+    let frees = match analysis.callee(*callee) {
+        Callee::Frees => true,
+        Callee::Opaque => false,
+        // `malloc` frees nothing and takes no pointer, so a read carried to it
+        // is a read this call has nothing to say about.
+        Callee::Allocates => return,
+    };
 
     let touched = Allocations::touching(arguments, known);
     let taken: Vec<usize> = named(&touched).collect();
@@ -2101,12 +2115,24 @@ fn used_before(
                 kind: Kind::UseAfterFree,
                 conclusion: Conclusion::Unknown,
                 at: read.at,
-                // Exactly one free, which is this one: the reads are carried to
-                // each free separately, so there is nothing folded here and
-                // nothing for the caret to be wrong about.
-                freed: Some(origin.span()),
+                // Exactly one free, which is this one: the reads are carried
+                // to each free separately, so there is nothing folded here and
+                // nothing for the caret to be wrong about. An opaque call has
+                // freed nothing this check established, so there is no span to
+                // put `freed here` on and no order to explain, which is what
+                // keeps C17 6.5.2.2 p10's note off a program with no free in
+                // it. RK-036 is a label claiming more than the analysis
+                // established.
+                freed: frees.then(|| origin.span()),
                 made,
-                unproven: Some(Unproven::Unsequenced),
+                unproven: Some(if frees {
+                    Unproven::Unsequenced
+                } else {
+                    // The reason this is, rather than one lent to it: the
+                    // variant's own doc says a call this check cannot read was
+                    // handed a pointer and may have freed it.
+                    Unproven::Disagreement
+                }),
             },
         );
     }
