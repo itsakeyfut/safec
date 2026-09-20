@@ -1370,7 +1370,18 @@ impl Analysis for Allocations<'_> {
                         // which is what lets a write through it replace rather
                         // than union. See ADR-0028.
                         //
-                        value.points_to[destination.index()].writes_elsewhere = false;
+                        // `&*pp` is not that. C17 6.5.3.2 p3 makes it `pp`, so
+                        // the place it names is what `pp` points at and not
+                        // `pp`, while the edge above can only name a local. The
+                        // union is the right answer to an edge that names the
+                        // wrong thing and a replacement is not, so the flag
+                        // stays set and the write stays a may-write. No C
+                        // reaches this: the lowering applies the same clause and
+                        // folds `&*pp` to a copy of `pp`. Another frontend need
+                        // not, which is `docs/c-family.md`'s reason for the IR
+                        // expressing the shape at all.
+                        value.points_to[destination.index()].writes_elsewhere =
+                            !taken.projection.is_empty();
                         value.escaped[taken.local.index()] = true;
                         value.unproved(taken.local.index());
                     }
