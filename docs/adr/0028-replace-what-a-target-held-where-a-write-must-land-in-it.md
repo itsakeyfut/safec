@@ -94,14 +94,28 @@ here turned `free(p); *pp = 0; *p = 1;` from a proof into a suspicion.
 Certainty about which local was written says nothing about who else holds that
 allocation.
 
-**A local whose own address is taken gives up the flag.** Once something holds
-`pp`'s address, anybody may put a different pointer in it, so a write through
-`pp` may land where this check cannot see. `opaque(&pp)` never reaches the
-`Deref` arm, so nothing else in this check says so, and without that line
-`int **pp = &p; opaque(&pp); *pp = q; free(p); *q = 1;` was a proved use after
-free about a program with no defect. It is RK-061's rule arriving for this
-lattice: a new answer that proves something positive about a local has to
-answer for that local's address escaping.
+**"The edge is all of it" has two halves, and the rule reads both.** The flag
+lives in `Held`, so an assignment to the pointer destroys it, which is right for
+the assignment and wrong for an escape: once something holds `pp`'s address,
+anybody may put a different pointer in it, and `pp = &p` afterwards hands `pp` a
+fresh row on which nothing recorded that. `int ***ppp = &pp; pp = &p;
+opaque(ppp); *pp = q; free(p); *q = 1;` was then a proved use after free about a
+program with no defect. `Known::escaped` is the half that outlives an
+assignment, which is ADR-0018's rule for which struct a fact belongs in, so the
+condition reads it beside the flag rather than the escape writing on the
+pointer's own row. It is RK-061's rule arriving for this lattice: a new answer
+that proves something positive about a local has to answer for that local's
+address escaping.
+
+**The edge has to name the local itself.** C17 6.5.3.2 p3 makes `&*pp` the value
+of `pp`, so the place it names is what `pp` points at, while the edge can only
+name a local. `Rvalue::Address` of a projected place therefore records an edge
+to the wrong local. A union into the wrong local is a widened may-set and this
+record's replacement of it is a certainty, so the flag stays set where the
+address is projected and the write stays a may-write. No C reaches it: the
+lowering applies the same clause and folds `&*pp` to a copy. `docs/c-family.md`
+asks that another frontend be able to build the shape, which is why it is
+answered rather than assumed away.
 
 **The join is a union and the transfer is not monotone**, which is the shape
 `writes_to` already has and which `Analysis::height`'s second paragraph already
@@ -119,36 +133,47 @@ than from `git`, because the branch had uncommitted work.
 |---|---|
 | union always, as before | `a_free_through_a_pointer_that_reached_another_allocation`, `a_subscript_write_is_the_write_it_is_defined_as`, `a_write_through_a_pointer_minus_zero` and `a_write_through_a_pointer_plus_zero_on_the_left`, which are one program in four spellings and drop back to `warning[SC0402]` and exit 0, and the three cases whose pointer is replaced rather than widened |
 | `Rvalue::Address` does not clear the flag on the destination | the same seven, because the replacement then never fires at all |
-| replace wherever the set names one local, ignoring the flag | `a_write_through_a_pointer_with_one_target_on_one_arm_only` and `an_address_taken_on_one_arm_is_written_through_after_the_join`, which gain an `error[SC0402]` about a program that frees each allocation once, and `a_write_through_a_pointer_whose_own_address_escaped` |
+| replace wherever the set names one local, ignoring the flag | `a_write_through_a_pointer_with_one_target_on_one_arm_only` and `an_address_taken_on_one_arm_is_written_through_after_the_join`, which gain an `error[SC0402]` about a program that frees each allocation once, and `the_address_of_a_dereference_is_not_an_edge_to_the_local` |
 | `Held::joined` intersects the flag rather than unioning it | the first two of those, by the same programs: a path that knows the target meeting a path that does not would answer that it knows |
-| `Rvalue::Address` does not set the flag on the local whose address is taken | `a_write_through_a_pointer_whose_own_address_escaped`, and nothing else. That case exists for this row: before it was written the whole suite stayed green while the program became a proved use after free |
+| the condition does not read `Known::escaped` | `a_write_through_a_pointer_whose_own_address_escaped` and `a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target`, and nothing else. The second is the one that says the answer cannot be recorded on the pointer's own row: it was recorded there first, the whole suite was green, and the same program with two lines reordered was a proved use after free |
+| `Rvalue::Address` clears the flag whatever place is taken | `the_address_of_a_dereference_is_not_an_edge_to_the_local` in `crates/safec-ir/tests/freed.rs`, and nothing else. No C program reaches the shape, which is why the guard is hand-built IR |
 | a field added to `Held` | does not compile: `error[E0063]` in `Held::none` and `error[E0027]` in `Held::clear`, `Held::joined` and `Held::accumulated` |
 
-**Four of the flag's seven answers are held by nothing, and one reason covers
-all four.** `Held::none` seeding `true`, `Held::clear` restoring it, and the two
+**Five of the flag's answers are held by nothing, and one reason covers four of
+them.** `Held::none` seeding `true`, `Held::clear` restoring it, and the two
 lines beside `writes_to.fill(false)` in the `Rvalue::Binary` readers each leave
 the whole suite passing when they are mutated or removed. The flag is read only
 where `writes_to` is not empty, and every one of those four empties `writes_to`
 in the same breath, so the `targets.is_empty()` return above answers before the
-flag is reached. They are written anyway because the alternative is a value that
+flag is reached. The fifth is `Held::accumulated`'s union of the flag, measured
+in both directions by a review: forcing it to `false` and forcing it to `true`
+each leave the whole suite green. Its two `built_from` callers overwrite it on
+the next line, and its third caller, the union path of the write itself, needs a
+target that is already a pointer-to-pointer before it is written into, which
+takes three levels of indirection and no test here has them. They are written anyway because the alternative is a value that
 says something false about itself, and because the next reader of this struct
 will copy whichever shape is there. The two `Rvalue::Binary` lines are also
 RK-052's rule: one question asked in two places is answered in both or it drifts
 inside the change that touches one of them.
 
-**Everything the replacement does beyond the sites is held by nothing either,
-and the reason is the escape.** Measured, each on its own: replacing only
-`Held::sites` and leaving the rest of the row, keeping the target's old `lost`,
-keeping its old `freed`, and letting the replacement fall through into the union
-loop below instead of returning, all leave the whole suite passing. `writes_to`
-is written only at `Rvalue::Address`, which sets `Known::escaped` on the same
-local, so the target of a write through a pointer has always escaped, and
-ADR-0017 answers `Reached::Lost` for an escaped local wherever a report is made:
-the conclusion is `Unknown` whatever those three fields say. That is the same
-sentence the `freed = None` line in the union path below already carries, and it
-is load-bearing in one direction: the work #188 and #196 describe narrows what
-an escaped local is reported as, and the day it does, a target that kept a proof
-nothing wrote over is a false proof rather than an inert field.
+**Everything the replacement does beyond the sites is held by nothing either.**
+Measured, each on its own: replacing only `Held::sites` and leaving the rest of
+the row, keeping the target's old `lost`, keeping its old `freed`, and letting
+the replacement fall through into the union loop below instead of returning, all
+leave the whole suite passing. `lost` and `freed` are facts *about the target*;
+`writes_to` is written only at `Rvalue::Address`, which sets `Known::escaped` on
+the same local; and ADR-0017 answers `Reached::Lost` for an escaped local
+wherever a report **about it** is made, so neither can decide a conclusion
+today. It is load-bearing in one direction: the work #188 and #196 describe
+narrows what an escaped local is reported as, and the day it does, a target that
+kept a proof nothing wrote over is a false proof rather than an inert field.
+
+**That reason covers those fields and nothing wider, which is worth writing down
+because the wider version was written here first and is false.** A
+`Reached::Lost` downgrades a report about the local that carries it. It says
+nothing about the *sites*, which are shared: a free through an escaped local
+still writes `SiteState::Freed`, and that proves things about every other local
+holding that site. The Consequences below name where that matters.
 
 `Analysis::height` is held by nothing either, as ADR-0016 says of the method and
 as ADR-0018, ADR-0019 and ADR-0020 say of the last three fields added.
@@ -177,10 +202,25 @@ as ADR-0018, ADR-0019 and ADR-0020 say of the last three fields added.
   record recovers everywhere else is not available there. That is the flag
   doing its job rather than a cost that can be removed: nothing in this check
   knows what `opaque` put in `pp`.
+* Bad, because a call this check cannot read, between the write and the free,
+  undoes the certainty and nothing takes it back. `int **pp = &p; *pp = q;
+  opaque(pp); free(p); *q = 1;` is `error[SC0402]` and exit 1, and the callee
+  may have stored a different pointer in `p`, so the program is defined. The
+  union used to leave a two-member set there and ADR-0020 refused to prove over
+  it. **The root is older than this record**: `Callee::Opaque` marks only the
+  sites its arguments reach, so an escaped local's contents survive a call that
+  may have replaced them, and
+  `int *p = malloc(4); int *r = p; stash(&p); other(); free(p); *r = 1;` was
+  already `error[SC0402]` and exit 1 before this change. What this record does
+  is put more programs through that door by handing the free a set of one. Two
+  review lenses found it independently, with different programs, and it is
+  issue #200.
 * What would reverse this: a reason to believe `writes_to` can name one local
-  without the write landing there. The three ways it could are a join, an
-  arithmetic result and an escape, and each is answered by a line with a named
-  test above.
+  without the write landing there, or a way for what landed there to be
+  replaced afterwards without this check seeing it. The first has three routes,
+  a join, an arithmetic result and an escape, and each is answered by a line
+  with a named test above. The second is the bullet above and is not answered
+  here.
 
 ## Pros and Cons of the Options
 
