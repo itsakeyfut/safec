@@ -44,6 +44,15 @@ struct Names {
     /// What it is called does not matter beyond not being one of those two,
     /// and that is the whole of what makes it opaque to this check.
     helper: Span,
+    /// A call site in a second file, whose offset is lower than every `at`.
+    ///
+    /// The one span here that is not in `t.c`, and it exists so that the rule
+    /// ordering two of them can be asked which half it reads. Its file is the
+    /// later of the two and its offset the earlier, so a rule comparing
+    /// offsets alone answers differently from one comparing the file first.
+    /// `a_join_names_the_earlier_file_before_the_earlier_offset` is the one
+    /// test that uses it.
+    elsewhere: Span,
 }
 
 /// A file whose bytes the check can read a callee's name out of.
@@ -54,9 +63,14 @@ struct Names {
 /// the rule that ends the walk orders them, so two frees have to be in two
 /// places for that ordering to be about anything. `helper` is last because
 /// adding a word anywhere else moves every span after it.
+///
+/// The second file is here rather than in the one test that needs it for that
+/// same reason: `elsewhere` is a call site like the others, and a test that
+/// built its own file would still be spending the offsets this one hands out.
 fn sources() -> (SourceMap, Names) {
     let mut map = SourceMap::new();
     let file = map.add_virtual("t.c", "free malloc f a b c d e g h i helper\n");
+    let other = map.add_virtual("u.c", "j");
 
     let names = Names {
         free: Span::new(file, 0, 4),
@@ -73,6 +87,7 @@ fn sources() -> (SourceMap, Names) {
         ],
         asked: Span::new(file, 26, 27),
         helper: Span::new(file, 30, 36),
+        elsewhere: Span::new(other, 0, 1),
     };
 
     (map, names)
@@ -423,6 +438,61 @@ fn a_join_names_the_earlier_free() {
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].at, names.at[2]);
     assert_eq!(found[0].freed, Some(names.at[0]), "the earlier of the two");
+}
+
+/// The same join, asked which half of the order it reads first.
+///
+/// The test above holds that two spans are ordered at all; this holds *by
+/// what*. `earlier` compares the file before the offset, and RK-007 in the
+/// review knowledge bank is why: a span names its own file and two of them
+/// need not share one. Nothing held that half, because every span in `t.c`
+/// shares a file and a comparison of offsets alone answers those identically.
+///
+/// **No C program reaches this and a frontend can build it.** Without a
+/// preprocessor every span in one function names the file that function was
+/// written in, so the two halves can only disagree in IR built by hand.
+///
+/// The arm in the earlier file carries the later offset, which is the whole
+/// arrangement: `at[3]` is `t.c` at 20 and `elsewhere` is `u.c` at 0.
+///
+/// Mutation: have `earlier` compare `start()` alone. `freed` becomes the span
+/// in `u.c` and this fails on that field.
+///
+/// **The line has a second wrong version and this is not the test for it.**
+/// Comparing the file alone leaves the two arms of a join inside one file
+/// ordered by which one arrived, which is what RK-038 asks to be measured in
+/// both directions: `a_use_after_two_allocations_names_no_allocation` and
+/// `a_free_sequenced_on_one_arm_only_is_not_a_proof` are the two that fail
+/// under it, and this one passes.
+#[test]
+fn a_join_names_the_earlier_file_before_the_earlier_offset() {
+    let (sources, names) = sources();
+    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let held = function.parameters().next().expect("one parameter");
+
+    let entry = function.reserve_block();
+    let first_arm = function.reserve_block();
+    let second_arm = function.reserve_block();
+    let joined = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, branch(first_arm, second_arm, names.asked));
+    function.fill_block(first_arm, free(&callees, held, names.at[3], joined));
+    function.fill_block(second_arm, free(&callees, held, names.elsewhere, joined));
+    function.fill_block(
+        joined,
+        after_the_statement(names.at[3], free(&callees, held, names.at[2], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(
+        found[0].freed,
+        Some(names.at[3]),
+        "the earlier file, not the earlier offset"
+    );
 }
 
 /// Where a local holds either of two allocations and both were freed, the
