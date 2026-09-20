@@ -134,6 +134,15 @@ impl Nullability<'_> {
     /// `if (p)` and `if (x)` lower to the same terminator, and only the first
     /// says anything about a pointer. Without this, the temporary a `&&`
     /// computes into would be refined as though it were the pointer under it.
+    ///
+    /// **Nothing holds this and it is worth saying so.** Measured: making it
+    /// answer `true` for everything leaves the whole workspace green. What it
+    /// prevents is a non-pointer local being given a nullness, and a
+    /// non-pointer local is never dereferenced in well-formed IR, so no report
+    /// moves. A test for it could not fail, which is worse than none. It stays
+    /// because a value whose states are about pointers should not be written
+    /// about things that are not pointers, and because the day this lattice
+    /// keys on something a `Ty` can distinguish, the rule will already be here.
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
