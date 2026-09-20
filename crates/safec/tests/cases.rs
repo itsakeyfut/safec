@@ -294,15 +294,19 @@ cases! {
     // program that proves the answer, one that leaves it unproven, and one
     // that tests the pointer and so needs neither.
     //
-    // **The three tests are three cases and not one**, because the shapes reach
-    // the check differently: `if (p)` hands the pointer's own place to the
-    // terminator with no element in the block, and `p != 0` and `p == 0` put a
-    // comparison above it that has to be read back through the block. A reader
-    // of the C cannot tell those apart, which is why each is held.
+    // The row that proves it.
     a_null_pointer_dereferenced_is_unsafe: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // **Three tests of a pointer are three cases and not one**, because the
+    // shapes reach the check differently: `if (p)` hands the pointer's own
+    // place to the terminator with no element in the block, and `p != 0` and
+    // `p == 0` put a comparison above it that has to be read back through the
+    // block. A reader of the C cannot tell those apart, which is why each is
+    // held.
     a_pointer_tested_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_compared_against_zero_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_null_arm_returns_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The rows that leave it unproven: a parameter, whose nullness is a
+    // caller's fact, and an allocation, whose nullness is the allocator's.
     a_parameter_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `docs/roadmap.md`'s own headline example. C17 7.22.3.4 p3 makes a
     // `malloc` result either null or the allocation, so this warns, and the
