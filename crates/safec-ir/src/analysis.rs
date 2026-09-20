@@ -10,6 +10,24 @@
 //! the workspace points at `safec`. `safec_llvm::emit::Refusal` has the same
 //! shape for the same reason, and `safec` turns one of those into a diagnostic
 //! too.
+//!
+//! **What a module that runs one of these is called.** An analysis lives in a
+//! module of its own in this crate, and the entry point `safec` calls is
+//! `findings`, answering with that module's own `Finding`. Not `check`: it is
+//! the most generic word available for the most specific thing in a module,
+//! `safec`'s `types` already spends it on something else, and
+//! `docs/roadmap.md` puts three more analyses after the memory one, so the
+//! driver would end up calling one bare `check` and four that can only be
+//! reached through a path. Not one `Finding` shared between them either: the
+//! memory finding carries where a value was freed and where it was made, and
+//! the next axis has neither, so a shared shape would be four checks agreeing
+//! about fields while two of them exist.
+//!
+//! A module owns its entry point and its answer, and a name that collides with
+//! another module's is written with its path where it is used. **Nothing holds
+//! any of this but a reader.** There is no mutation that breaks a convention,
+//! and an analysis that ignores it still compiles; saying so is cheaper than a
+//! record that would have nothing to name in its Confirmation.
 
 /// What a check concluded about one thing it looked at.
 ///
