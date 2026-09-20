@@ -541,8 +541,11 @@ impl Emitter<'_> {
             // backend hands LLVM the one order the element list already spells
             // out. Emitting an ordering barrier for it would forbid
             // rearrangements C permits, which is slower code for no defined
-            // program's benefit.
-            Element::Sequenced { origin: _ } => Some(()),
+            // program's benefit. Both markers, because both are a constraint
+            // on an order and neither asks for anything to be emitted.
+            Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {
+                Some(())
+            }
             // Nothing is written. LLVM has `llvm.lifetime.start` and `.end` for
             // exactly this, and they buy an optimiser something this backend
             // has no optimiser to give it to, while costing two intrinsic calls

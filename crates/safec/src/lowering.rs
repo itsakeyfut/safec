@@ -2057,6 +2057,7 @@ mod tests {
                 Element::Assign(operation) => Some(operation),
                 Element::Evaluate { .. }
                 | Element::Sequenced { .. }
+                | Element::ArgumentsEvaluated { .. }
                 | Element::StorageLive { .. }
                 | Element::StorageDead { .. } => None,
             })
@@ -2146,7 +2147,10 @@ mod tests {
             .blocks()
             .flat_map(|block| block.elements.iter())
             .filter_map(|element| match element {
-                Element::Assign(_) | Element::Evaluate { .. } | Element::Sequenced { .. } => None,
+                Element::Assign(_)
+                | Element::Evaluate { .. }
+                | Element::Sequenced { .. }
+                | Element::ArgumentsEvaluated { .. } => None,
                 Element::StorageLive { local, origin: _ }
                 | Element::StorageDead { local, origin: _ } => {
                     Some((element.name(), local.index()))

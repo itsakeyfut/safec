@@ -452,7 +452,10 @@ impl Analysis for Nullability<'_> {
                 place: _,
                 origin: _,
             } => {}
-            Element::Sequenced { origin: _ } => {}
+            // Neither marker says what a pointer holds. This check keeps no
+            // fact that waits for an order, so it has nothing for either of
+            // them to bound.
+            Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {}
             // Storage beginning or ending leaves a local holding nothing this
             // check can name, and the same on both, because what is lost is
             // the same either way.

@@ -559,6 +559,39 @@ pub enum Element {
         /// `sequenced here` label is who has to add the operator's own span.
         origin: Origin,
     },
+    /// Every argument of the call that follows has been evaluated.
+    ///
+    /// C17 6.5.2.2 p10, first sentence: "There is a sequence point after the
+    /// evaluations of the function designator and the actual arguments but
+    /// before the actual call." ADR-0022 expressed that point by putting the
+    /// argument operations before the call terminator, which is enough for a
+    /// consumer that looks backwards and nothing at all for one that carries a
+    /// fact forwards. [ADR-0026] is why it is an element now.
+    ///
+    /// Emitted where no unsequenced operator encloses the **call**, which is
+    /// ADR-0022's enclosure rule asked about the call rather than about the
+    /// point: a call's arguments are unsequenced against each other, so a call
+    /// below a `+` gets none of these and its argument reads stay open.
+    ///
+    /// **Half of what [`Self::Sequenced`] says, and the half is the design.**
+    /// A read behind this is ordered before everything that follows. A *free*
+    /// behind this is not concluded to be ordered against anything, because a
+    /// call carries reads in its own operands and a consumer judges those after
+    /// this element, while C puts them before it: concluding the other half
+    /// made `g((free(p), 0), *p)` a proved use after free, about two arguments
+    /// C leaves unsequenced. Nothing loses by the omission, because a call this
+    /// is emitted for is the root of its full expression and nothing in that
+    /// expression follows it.
+    ///
+    /// So a consumer that answers this element by doing nothing is this
+    /// compiler before it existed: a suspicion where C licensed silence, which
+    /// is the direction [`Self::Sequenced`]'s own last paragraph asks for.
+    ///
+    /// [ADR-0026]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0026-say-that-a-call-s-arguments-have-been-evaluated.md
+    ArgumentsEvaluated {
+        /// The call whose arguments these were, named by its own span.
+        origin: Origin,
+    },
 }
 
 impl Element {
@@ -574,6 +607,7 @@ impl Element {
             Self::StorageLive { .. } => "StorageLive",
             Self::StorageDead { .. } => "StorageDead",
             Self::Sequenced { .. } => "Sequenced",
+            Self::ArgumentsEvaluated { .. } => "ArgumentsEvaluated",
         }
     }
 }
