@@ -45,7 +45,7 @@ use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::TranslationUnit;
-use safec_ir::memory::{self, Finding, Kind, Unproven};
+use safec_ir::memory::{self, Kind, Unproven};
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::Target;
@@ -581,7 +581,7 @@ fn lowered(
     // nothing below `Off`. `EmitKind` is the other case and deliberately has no
     // `Ord` at all.
     if options.safety >= SafetyLevel::Memory {
-        for finding in memory::check(sources, &unit) {
+        for finding in memory::findings(sources, &unit) {
             if let Some(diagnostic) = memory_finding(&finding) {
                 diagnostics.report(diagnostic);
             }
@@ -602,7 +602,7 @@ fn lowered(
 /// `p`" and the IR holds no `p`: a local is a type and an index, which is #136.
 /// The caret goes on the call or the use, so the quoted line above it shows
 /// `free(p)` or `*p` and the reader finds the name in their own text.
-fn memory_finding(finding: &Finding) -> Option<Diagnostic> {
+fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
     // The label says only as much as the conclusion does, and says it in words
     // nothing else here uses. "freed again" asserts there was a first time,
     // which an unproven result does not know, and reusing the word the other
