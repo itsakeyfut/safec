@@ -31,7 +31,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
     BinOp, BlockId, Element, Function, LocalId, Operand, Place, Rvalue, Terminator,
-    TranslationUnit, Ty,
+    TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::Span;
@@ -131,9 +131,10 @@ struct Nullability<'a> {
     /// **Nothing this lattice establishes about such a local is believed**, and
     /// that is what stops this check being quiet about a dereference it did not
     /// prove. A store through a pointer writes an object the pointer names, and
-    /// the only way a pointer can name a local is for the local's address to
-    /// have been taken, so a local whose address is never taken cannot be
-    /// written except where this check can see it. One whose address *is* taken
+    /// **in this IR** the only way a pointer can come to name a local is for
+    /// the local's address to have been taken, so a local whose address is
+    /// never taken cannot be written except where this check can see it. One
+    /// whose address *is* taken
     /// can be written by a store this check cannot follow, by a callee it
     /// cannot read, or by either on a path it is not on, and a positive claim
     /// that survives one of those is [`docs/safety-model.md`]'s worst answer:
@@ -146,6 +147,15 @@ struct Nullability<'a> {
     /// list of places a write can happen for it to be missing one of. That is
     /// the shape ADR-0017 arrived at for the memory axis after the other one
     /// cost it a silent double free.
+    ///
+    /// **"In this IR" is load-bearing and is not a claim about C.** C17 6.3.2.1
+    /// p3 converts an array to a pointer to its first element with no `&`
+    /// anywhere, so `int a[2]; int *q = a; *q = 0;` names and writes a local
+    /// this scan would call unescaped. `Ty` has no array and the frontend
+    /// refuses one, measured, so there is no such door today; the day there is,
+    /// this is what has to answer for it. A function-scope `static` and a
+    /// `volatile` local are the same shape and are refused for the same
+    /// reason.
     ///
     /// [`docs/safety-model.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
     escaped: Vec<bool>,
@@ -256,7 +266,19 @@ impl Nullability<'_> {
             // the one direction a refinement must not be wrong in.
             return match &operation.value {
                 Rvalue::Binary { op, lhs, rhs } => self.compared_to_null(function, *op, lhs, rhs),
-                Rvalue::Use(_) | Rvalue::Unary { op: _, operand: _ } | Rvalue::Address(_) => None,
+                // C17 6.5.3.3 p5: "The expression `!E` is equivalent to
+                // `(0==E)`." So `if (!p)` is `if (p == 0)` written shorter, and
+                // a reader who cannot tell those apart should not be given two
+                // answers. The other two operators say nothing about null.
+                Rvalue::Unary {
+                    op: UnOp::Not,
+                    operand,
+                } => self.compared_to_null(function, BinOp::Eq, operand, &Operand::Constant(0)),
+                Rvalue::Unary {
+                    op: UnOp::Neg | UnOp::BitNot,
+                    operand: _,
+                } => None,
+                Rvalue::Use(_) | Rvalue::Address(_) => None,
             };
         }
 
@@ -341,8 +363,17 @@ impl Nullability<'_> {
                     Nullness::Unknown
                 }
             }
-            // C17 6.5.3.2 p3: the result of the unary `&` operator is never a null
-            // pointer. It is the one rvalue this analysis can prove.
+            // The address of an object is never null: C17 6.3.2.3 p3 says a
+            // null pointer compares unequal to a pointer to any object or
+            // function, and this is a pointer to one. It is the one rvalue this
+            // analysis can prove.
+            //
+            // **Not 6.5.3.2 p3**, which is what this cited first and which says
+            // only what `&` yields. Its footnote runs the other way: `&*E` is
+            // `E` even where `E` is null. That shape never arrives here because
+            // the lowering folds it away, which is ADR-0021, so the rule is
+            // safe for a reason that has nothing to do with the clause it used
+            // to name.
             Rvalue::Address(_) => Nullness::NonNull,
             // Pointer arithmetic and anything computed. `p + 1` off a non-null `p`
             // is non-null in practice and this does not say so: the operand is an

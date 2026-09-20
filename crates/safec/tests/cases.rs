@@ -305,6 +305,12 @@ cases! {
     a_pointer_tested_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_compared_against_zero_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_null_arm_returns_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A fourth shape, and the reason it is here rather than left out: C17
+    // 6.5.3.3 p5 says `!E` is equivalent to `(0==E)`, so this is the case
+    // above written shorter and a reader cannot tell them apart. It reached
+    // the check as `Unary "Not"` and was read by nobody, which made the two
+    // spellings two answers.
+    a_pointer_tested_with_a_logical_negation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The rows that leave it unproven: a parameter, whose nullness is a
     // caller's fact, and an allocation, whose nullness is the allocator's.
     a_parameter_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
