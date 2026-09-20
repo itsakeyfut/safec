@@ -1134,12 +1134,12 @@ impl Analysis for Allocations<'_> {
                         return;
                     }
 
-                    // **A union rather than a replacement**, because a pointer
-                    // that may point at one local is not a pointer that must:
-                    // two arms of a branch can leave `pp` with one target each
-                    // and neither is certain here. Replacing would erase a
-                    // value nothing wrote over, which is a silence rather than
-                    // a false positive.
+                    // **What is written, before what it is written into.**
+                    // Whether this lands in one certain local or in any of
+                    // several possible ones is decided below, once the value
+                    // is in hand; a pointer that may point at one local is not
+                    // a pointer that must, and telling those apart is
+                    // ADR-0028.
                     //
                     // **A `match` rather than an `if let`, so a fifth kind of
                     // rvalue has to answer here too.** Every other reader of
@@ -1204,8 +1204,23 @@ impl Analysis for Allocations<'_> {
                     // one thing the direct assignment does that this does not,
                     // for the reason the paragraph below gives, which is about
                     // the allocation rather than about the local.
+                    //
+                    // **Both halves of "the edge is all of it" are read here.**
+                    // The flag above lives in `Held`, so an assignment to the
+                    // pointer destroys it, and that is right for the assignment
+                    // itself and wrong for an escape: `int ***ppp = &pp; pp =
+                    // &p; opaque(ppp); *pp = q;` gave `pp` a fresh row after
+                    // something had already taken its address, and the
+                    // replacement fired on an edge anybody could have
+                    // overwritten since. `Known::escaped` is the half that
+                    // outlives an assignment, which is ADR-0018's rule for
+                    // which struct a fact belongs in, and it is why the answer
+                    // cannot be recorded on the local whose address is taken.
+                    // See ADR-0028 and RK-061.
+                    let pointer = operation.place.local.index();
                     if targets.len() == 1
-                        && !value.points_to[operation.place.local.index()].writes_elsewhere
+                        && !value.points_to[pointer].writes_elsewhere
+                        && !value.escaped[pointer]
                     {
                         value.points_to[targets[0]] = written;
                         return;
@@ -1349,24 +1364,13 @@ impl Analysis for Allocations<'_> {
                         // dies with the destination and is what lets a write
                         // through it be followed. See ADR-0019.
                         value.points_to[destination.index()].writes_to[taken.local.index()] = true;
-                        // **And the set is all of it.** `Held::clear` ran a
-                        // line above, so this destination points at exactly
-                        // this local, which is what lets a write through it
-                        // replace rather than union. See ADR-0028.
-                        value.points_to[destination.index()].writes_elsewhere = false;
-                        // **The same question asked about the local whose
-                        // address this is.** Something holds `taken`'s address
-                        // now, so anybody may put a different pointer in it and
-                        // a write through `taken` may land where this check
-                        // cannot see. `opaque(&pp)` never reaches the `Deref`
-                        // arm, so nothing else says so, and without this line
-                        // `int **pp = &p; opaque(&pp); *pp = q;` replaced what
-                        // `p` held on the strength of an edge that was already
-                        // stale. See ADR-0028 and RK-061.
+                        // **And the set is all of it, where the address is of
+                        // the local itself.** `Held::clear` ran a line above,
+                        // so this destination points at exactly this local,
+                        // which is what lets a write through it replace rather
+                        // than union. See ADR-0028.
                         //
-                        // After the destination, so that a local whose address
-                        // is taken into itself answers `true`.
-                        value.points_to[taken.local.index()].writes_elsewhere = true;
+                        value.points_to[destination.index()].writes_elsewhere = false;
                         value.escaped[taken.local.index()] = true;
                         value.unproved(taken.local.index());
                     }
