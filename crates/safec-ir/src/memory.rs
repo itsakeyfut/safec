@@ -960,6 +960,14 @@ impl Allocations<'_> {
     /// one rule written in two places drifting apart, so the argument walk is
     /// spelled the way its twin above spells it and the reason there are two is
     /// written here. See ADR-0029.
+    /// **Neither arm is observable, and both are here anyway.** An argument
+    /// this walk skips reaches no site either, so the branch that reads this
+    /// writes on nothing and the answer changes no program: answering `true`
+    /// for a constant, and dropping the projection test, each leave the whole
+    /// workspace green, measured. What they would cost the day something
+    /// reaches them is a free refusing to prove because of a row belonging to
+    /// a pointer rather than to what it points at. The arm above them is the
+    /// one that decides anything.
     fn holds_something_unnameable(arguments: &[Operand], known: &Known) -> bool {
         arguments.iter().any(|argument| match argument {
             // A constant holds no allocation, for the reason `touching` gives.

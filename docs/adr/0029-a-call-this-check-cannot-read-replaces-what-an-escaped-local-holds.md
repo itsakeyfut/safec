@@ -100,6 +100,13 @@ the other end, a call that ran before the address escaped, and it fails for any
 implementation that reads the escape without reading where it happened. RK-065
 is a guard that held only the order it was written in.
 
+That `free` and `malloc` do not produce it is held by the hand-built IR in
+`crates/safec-ir/tests/freed.rs` rather than by any C program: marking at
+`Callee::Allocates` fails `an_offset_that_moves_the_pointer_carries_no_edge`
+and marking at `Callee::Frees` fails
+`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`. Both were
+expected to be held by nothing and were measured instead.
+
 `a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved` holds what
 this costs rather than what it fixes, so that the cost cannot be taken away
 without a case moving.
