@@ -2134,7 +2134,7 @@ fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
 /// Through a pointer, so a projection: an unprojected place is the local itself
 /// and holding a freed pointer is not using it. The span is the element's,
 /// because a [`Place`] has none of its own.
-fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
+pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
     // Every field written out, never `..`: RK-018 in the review knowledge bank
     // is a field added to a variant that already exists walking past an
     // exhaustive match.
@@ -2164,7 +2164,7 @@ fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
 }
 
 /// The same, for what a terminator reads.
-fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Place>)> {
+pub(crate) fn dereferenced_in_terminator(terminator: &Terminator) -> Option<(Span, Vec<&Place>)> {
     match terminator {
         Terminator::Call {
             callee: _,

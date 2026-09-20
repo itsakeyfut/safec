@@ -21,6 +21,7 @@ pub mod dataflow;
 pub mod interp;
 pub mod ir;
 pub mod memory;
+pub mod nullability;
 pub mod print;
 pub mod source;
 pub mod target;
