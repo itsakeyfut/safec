@@ -1,0 +1,13 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ an_unsequenced_use_before_an_opaque_call_is_reported.c:10:13 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 10 │     int x = g(*p) + h(p);
+    │             ──┬──  
+    │               ╰──── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

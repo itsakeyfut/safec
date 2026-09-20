@@ -120,6 +120,46 @@ cases! {
     // artifact holding a call, so the halves are mutated apart. RK-039.
     a_read_in_a_frees_own_argument_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_read_in_a_frees_argument_through_a_call_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same question asked of a call this check cannot read, which may have
+    // freed what it was handed and cannot say. The pair is the asymmetry
+    // itself: the first reads through `p` in the operand beside the call, where
+    // C17 6.5 p3 orders neither against the other, and the second puts a
+    // sequence point between them and has to stay silent. Without the first,
+    // `used_before` can go back to refusing every callee but `free` with the
+    // suite green.
+    //
+    // Its `.stderr` is where the words are pinned: `allocated here` and `used
+    // here, perhaps after the free`, and **no** `freed here` caret and no
+    // 6.5.2.2 p10 note, because nothing established a free. That is the whole
+    // of what `Unproven::Disagreement` buys over `Unproven::Unsequenced` here.
+    //
+    // Both test `p` before reading it so that what they pin is this check
+    // rather than the nullability one, whose `SC0403` would otherwise be in
+    // both files and would make the second case's silence a sentence rather
+    // than an empty file. They write through `p` first for the reason the pair
+    // above give.
+    //
+    // **The second's call is written `h(p) + 1`, and the `+ 1` is the whole of
+    // why it guards anything.** Spelled `h(p)`, the call is enclosed by nothing
+    // C leaves unsequenced, so ADR-0026's marker is emitted at its own
+    // arguments and empties the carried reads a second time; measured, the case
+    // then survived the removal of *either* clearing and named neither. RK-039
+    // is a mutation that nothing fails because two rules hold it. Under the
+    // `+`, the marker is suppressed and the sequence point at the end of the
+    // statement before is the only thing left holding the silence.
+    //
+    // Mutations, each applied alone and the failure read:
+    //
+    // * refuse `Callee::Opaque` in `used_before` again. The first fails on its
+    //   `.stderr`, which goes empty.
+    // * give the opaque case `Unproven::Unsequenced` and the call's span as
+    //   `freed`. The first fails on its `.stderr`, which gains a `freed here`
+    //   caret and the 6.5.2.2 p10 note, about a free no program here performs.
+    // * the `Element::Sequenced` arm stops clearing the carried reads. Both
+    //   fail: the second gains an `SC0402` about `g(*p)` a statement earlier,
+    //   and the first gains a second one about `*p = 1`.
+    an_unsequenced_use_before_an_opaque_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_use_an_opaque_call_is_sequenced_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A controlling expression that is exactly a dereference is read by the
     // branch itself, because it needs no temporary, so the sequence point at
     // the end of it belongs after the branch and not before. C17 6.8 p4, and
