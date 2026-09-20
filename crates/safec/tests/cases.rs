@@ -289,6 +289,32 @@ cases! {
     // is the case that holds the refusal itself, which `pp[1]` still earns.
     a_zero_subscript_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // The nullability check's cases, kept together for the reason the memory
+    // check's are: one table, whose rows are the three-valued model met by a
+    // program that proves the answer, one that leaves it unproven, and one
+    // that tests the pointer and so needs neither.
+    //
+    // **The three tests are three cases and not one**, because the shapes reach
+    // the check differently: `if (p)` hands the pointer's own place to the
+    // terminator with no element in the block, and `p != 0` and `p == 0` put a
+    // comparison above it that has to be read back through the block. A reader
+    // of the C cannot tell those apart, which is why each is held.
+    a_null_pointer_dereferenced_is_unsafe: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_tested_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_compared_against_zero_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_whose_null_arm_returns_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `docs/roadmap.md`'s own headline example. C17 7.22.3.4 p3 makes a
+    // `malloc` result either null or the allocation, so this warns, and the
+    // roadmap's example is a program this compiler has something to say about.
+    an_allocation_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The two that hold ADR-0025, and the second is the one that says the fact
+    // is per path: the arm that skips the dereference joins back in.
+    a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_dereferenced_on_one_arm_is_not_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_null_dereference_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
+    an_unproven_dereference_is_an_error_under_deny_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

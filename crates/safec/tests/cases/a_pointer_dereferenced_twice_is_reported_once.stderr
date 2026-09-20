@@ -1,0 +1,9 @@
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ a_pointer_dereferenced_twice_is_reported_once.c:2:5 ]
+   │
+ 2 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

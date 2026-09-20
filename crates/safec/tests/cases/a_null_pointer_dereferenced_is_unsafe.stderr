@@ -1,0 +1,8 @@
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_null_pointer_dereferenced_is_unsafe.c:3:5 ]
+   │
+ 3 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
