@@ -14,6 +14,7 @@ Function a_write_through_a_pointer_the_check_meets_first_is_reported.c:3:5 "f"
   Local "_5" "void"
   Local "_6" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_write_through_a_pointer_the_check_meets_first_is_reported.c:4:14 generated
     Call a_write_through_a_pointer_the_check_meets_first_is_reported.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4

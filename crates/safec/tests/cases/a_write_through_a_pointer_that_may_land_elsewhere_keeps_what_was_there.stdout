@@ -22,6 +22,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
   Local "_13" "void"
   Local "_14" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 generated
     Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -36,6 +37,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
       Use
         Copy "_2"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:5:14 generated
+    ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:14 generated
     Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:7:14 "malloc" "bb2"
       Destination "_7"
       Constant 8
@@ -87,6 +89,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
         Copy "_8"
           Deref
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:10:5 generated
+    ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 generated
     Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 "free" "bb6"
       Destination "_13"
       Copy "_4"

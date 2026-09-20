@@ -11,6 +11,7 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:3:5 "
   Local "_2" "void *"
   Local "_3" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:4:14 generated
     Call a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -25,6 +26,7 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:3:5 "
         Deref
   Block "bb2"
     Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:5:9 generated
+    ArgumentsEvaluated a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:5:15 generated
     Call a_condition_read_through_a_pointer_is_sequenced_before_the_body.c:5:15 "free" "bb5"
       Destination "_3"
       Copy "_1"

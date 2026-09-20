@@ -14,6 +14,7 @@ Function a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reporte
   Local "_5" "void"
   Local "_6" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:4:14 generated
     Call a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4

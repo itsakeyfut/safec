@@ -16,6 +16,7 @@ Function an_unproven_use_is_an_error_under_deny_unknown.c:3:5 "f"
       Copy "_1"
   Block "bb1"
     Sequenced an_unproven_use_is_an_error_under_deny_unknown.c:4:9 generated
+    ArgumentsEvaluated an_unproven_use_is_an_error_under_deny_unknown.c:4:14 generated
     Call an_unproven_use_is_an_error_under_deny_unknown.c:4:14 "free" "bb4"
       Destination "_3"
       Copy "_2"

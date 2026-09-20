@@ -37,6 +37,7 @@ Function a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:2
   Block "bb2"
     Sequenced a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:6:12 generated
     StorageLive a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:7:9 generated "_5"
+    ArgumentsEvaluated a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:7:18 generated
     Call a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:7:18 "malloc" "bb4"
       Destination "_6"
       Constant 4

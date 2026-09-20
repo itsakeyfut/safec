@@ -18,6 +18,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
   Local "_9" "void"
   Local "_10" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:4:14 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -27,6 +28,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:4:14 generated
+    ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:5:14 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -67,6 +69,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
       Copy "_1"
   Block "bb6"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
+    ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:8:14 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:8:14 "free" "bb9"
       Destination "_9"
       Copy "_6"
@@ -74,6 +77,7 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
     Goto "bb8"
   Block "bb8"
+    ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:9:5 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:9:5 "free" "bb10"
       Destination "_10"
       Copy "_6"

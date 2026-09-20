@@ -16,6 +16,7 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
   Local "_4" "int"
   Local "_5" "void"
   Block "bb0" entry
+    ArgumentsEvaluated an_unproven_read_and_a_freed_one_at_one_span.c:5:14 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:5:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -25,6 +26,7 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
       Use
         Copy "_2"
     Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:5:14 generated
+    ArgumentsEvaluated an_unproven_read_and_a_freed_one_at_one_span.c:6:5 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:6:5 "helper" "bb2"
       Destination "_3"
       Copy "_1"
@@ -43,6 +45,7 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
       Copy "_4"
   Block "bb4"
     Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:9 generated
+    ArgumentsEvaluated an_unproven_read_and_a_freed_one_at_one_span.c:7:16 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:7:16 "free" "bb5"
       Destination "_5"
       Copy "_1"

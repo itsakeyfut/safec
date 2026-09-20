@@ -39,6 +39,7 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
       Constant 8
   Block "bb3"
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:6:12 generated
+    ArgumentsEvaluated a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:12:5 generated
     Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:12:5 "free" "bb9"
       Destination "_10"
       Copy "_2"
@@ -56,6 +57,7 @@ Function a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:3:5 "f
       Copy "_3"
   Block "bb5"
     Sequenced a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:13 generated
+    ArgumentsEvaluated a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:21 generated
     Call a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved.c:8:21 "free" "bb8"
       Destination "_6"
       Copy "_3"

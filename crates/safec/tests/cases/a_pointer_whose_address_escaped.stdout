@@ -17,6 +17,7 @@ Function a_pointer_whose_address_escaped.c:3:5 "f"
   Local "_8" "void"
   Local "_9" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_pointer_whose_address_escaped.c:4:14 generated
     Call a_pointer_whose_address_escaped.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -26,6 +27,7 @@ Function a_pointer_whose_address_escaped.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_pointer_whose_address_escaped.c:4:14 generated
+    ArgumentsEvaluated a_pointer_whose_address_escaped.c:5:14 generated
     Call a_pointer_whose_address_escaped.c:5:14 "malloc" "bb2"
       Destination "_4"
       Constant 4
@@ -55,11 +57,13 @@ Function a_pointer_whose_address_escaped.c:3:5 "f"
         Copy "_5"
           Deref
     Sequenced a_pointer_whose_address_escaped.c:7:5 generated
+    ArgumentsEvaluated a_pointer_whose_address_escaped.c:8:5 generated
     Call a_pointer_whose_address_escaped.c:8:5 "free" "bb3"
       Destination "_8"
       Copy "_1"
   Block "bb3"
     Sequenced a_pointer_whose_address_escaped.c:8:5 generated
+    ArgumentsEvaluated a_pointer_whose_address_escaped.c:9:5 generated
     Call a_pointer_whose_address_escaped.c:9:5 "free" "bb4"
       Destination "_9"
       Copy "_3"

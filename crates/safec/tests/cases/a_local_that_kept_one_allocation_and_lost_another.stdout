@@ -20,6 +20,7 @@ Function a_local_that_kept_one_allocation_and_lost_another.c:3:5 "f"
   Local "_11" "int"
   Local "_12" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_local_that_kept_one_allocation_and_lost_another.c:4:14 generated
     Call a_local_that_kept_one_allocation_and_lost_another.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 8

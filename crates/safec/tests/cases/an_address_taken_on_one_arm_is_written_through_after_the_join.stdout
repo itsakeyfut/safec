@@ -19,6 +19,7 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
   Local "_10" "void"
   Local "_11" "int"
   Block "bb0" entry
+    ArgumentsEvaluated an_address_taken_on_one_arm_is_written_through_after_the_join.c:4:14 generated
     Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -28,6 +29,7 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:4:14 generated
+    ArgumentsEvaluated an_address_taken_on_one_arm_is_written_through_after_the_join.c:5:14 generated
     Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 8
@@ -75,6 +77,7 @@ Function an_address_taken_on_one_arm_is_written_through_after_the_join.c:3:5 "f"
         Copy "_6"
           Deref
     Sequenced an_address_taken_on_one_arm_is_written_through_after_the_join.c:8:5 generated
+    ArgumentsEvaluated an_address_taken_on_one_arm_is_written_through_after_the_join.c:9:5 generated
     Call an_address_taken_on_one_arm_is_written_through_after_the_join.c:9:5 "free" "bb6"
       Destination "_10"
       Copy "_2"

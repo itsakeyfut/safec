@@ -89,6 +89,7 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:12:9 generated
+    ArgumentsEvaluated a_local_given_something_fresh_forgets_what_it_lost.c:13:9 generated
     Call a_local_given_something_fresh_forgets_what_it_lost.c:13:9 "free" "bb8"
       Destination "_9"
       Copy "_2"

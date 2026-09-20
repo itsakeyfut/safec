@@ -17,6 +17,7 @@ Function an_address_that_escaped_on_one_arm_only.c:3:5 "f"
   Local "_8" "int *"
   Local "_9" "void"
   Block "bb0" entry
+    ArgumentsEvaluated an_address_that_escaped_on_one_arm_only.c:4:14 generated
     Call an_address_that_escaped_on_one_arm_only.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -61,6 +62,7 @@ Function an_address_that_escaped_on_one_arm_only.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced an_address_that_escaped_on_one_arm_only.c:7:5 generated
+    ArgumentsEvaluated an_address_that_escaped_on_one_arm_only.c:8:5 generated
     Call an_address_that_escaped_on_one_arm_only.c:8:5 "free" "bb6"
       Destination "_9"
       Copy "_2"

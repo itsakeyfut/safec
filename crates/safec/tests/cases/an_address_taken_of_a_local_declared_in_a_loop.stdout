@@ -23,6 +23,7 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
   Block "bb2"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:4:12 generated
     StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:5:9 generated "_2"
+    ArgumentsEvaluated an_address_taken_of_a_local_declared_in_a_loop.c:5:18 generated
     Call an_address_taken_of_a_local_declared_in_a_loop.c:5:18 "malloc" "bb4"
       Destination "_3"
       Constant 4
@@ -40,6 +41,7 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:5:18 generated
+    ArgumentsEvaluated an_address_taken_of_a_local_declared_in_a_loop.c:6:9 generated
     Call an_address_taken_of_a_local_declared_in_a_loop.c:6:9 "free" "bb5"
       Destination "_4"
       Copy "_2"

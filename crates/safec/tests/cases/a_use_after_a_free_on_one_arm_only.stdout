@@ -16,6 +16,7 @@ Function a_use_after_a_free_on_one_arm_only.c:3:5 "f"
       Copy "_1"
   Block "bb1"
     Sequenced a_use_after_a_free_on_one_arm_only.c:4:9 generated
+    ArgumentsEvaluated a_use_after_a_free_on_one_arm_only.c:4:14 generated
     Call a_use_after_a_free_on_one_arm_only.c:4:14 "free" "bb4"
       Destination "_3"
       Copy "_2"

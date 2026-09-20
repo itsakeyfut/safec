@@ -7,6 +7,7 @@ Function a_free_read_out_of_another_pointer.c:2:5 "f"
   Local "_1" "int **" parameter
   Local "_2" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_read_out_of_another_pointer.c:3:5 generated
     Call a_free_read_out_of_another_pointer.c:3:5 "free" "bb1"
       Destination "_2"
       Copy "_1"

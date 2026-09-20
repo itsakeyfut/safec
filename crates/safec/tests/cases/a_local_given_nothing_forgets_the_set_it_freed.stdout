@@ -19,6 +19,7 @@ Function a_local_given_nothing_forgets_the_set_it_freed.c:3:5 "f"
   Local "_10" "int *"
   Local "_11" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_local_given_nothing_forgets_the_set_it_freed.c:4:14 generated
     Call a_local_given_nothing_forgets_the_set_it_freed.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -28,6 +29,7 @@ Function a_local_given_nothing_forgets_the_set_it_freed.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_local_given_nothing_forgets_the_set_it_freed.c:4:14 generated
+    ArgumentsEvaluated a_local_given_nothing_forgets_the_set_it_freed.c:5:14 generated
     Call a_local_given_nothing_forgets_the_set_it_freed.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -64,6 +66,7 @@ Function a_local_given_nothing_forgets_the_set_it_freed.c:3:5 "f"
     Sequenced a_local_given_nothing_forgets_the_set_it_freed.c:7:30 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated a_local_given_nothing_forgets_the_set_it_freed.c:8:5 generated
     Call a_local_given_nothing_forgets_the_set_it_freed.c:8:5 "free" "bb6"
       Destination "_9"
       Copy "_6"
@@ -78,6 +81,7 @@ Function a_local_given_nothing_forgets_the_set_it_freed.c:3:5 "f"
       Use
         Copy "_6"
     Sequenced a_local_given_nothing_forgets_the_set_it_freed.c:9:5 generated
+    ArgumentsEvaluated a_local_given_nothing_forgets_the_set_it_freed.c:10:5 generated
     Call a_local_given_nothing_forgets_the_set_it_freed.c:10:5 "free" "bb7"
       Destination "_11"
       Copy "_6"

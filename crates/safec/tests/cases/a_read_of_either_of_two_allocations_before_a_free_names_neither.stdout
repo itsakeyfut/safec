@@ -23,6 +23,7 @@ Function a_read_of_either_of_two_allocations_before_a_free_names_neither.c:4:5 "
   Local "_11" "void"
   Local "_12" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_read_of_either_of_two_allocations_before_a_free_names_neither.c:5:14 generated
     Call a_read_of_either_of_two_allocations_before_a_free_names_neither.c:5:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -32,6 +33,7 @@ Function a_read_of_either_of_two_allocations_before_a_free_names_neither.c:4:5 "
       Use
         Copy "_3"
     Sequenced a_read_of_either_of_two_allocations_before_a_free_names_neither.c:5:14 generated
+    ArgumentsEvaluated a_read_of_either_of_two_allocations_before_a_free_names_neither.c:6:14 generated
     Call a_read_of_either_of_two_allocations_before_a_free_names_neither.c:6:14 "malloc" "bb2"
       Destination "_5"
       Constant 8

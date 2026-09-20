@@ -14,6 +14,7 @@ Function a_double_free_in_one_expression_does_not_turn_on_the_order.c:3:5 "f"
   Local "_5" "void"
   Local "_6" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_double_free_in_one_expression_does_not_turn_on_the_order.c:4:14 generated
     Call a_double_free_in_one_expression_does_not_turn_on_the_order.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4

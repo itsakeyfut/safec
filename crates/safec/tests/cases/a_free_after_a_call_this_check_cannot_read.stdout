@@ -15,6 +15,7 @@ Function a_free_after_a_call_this_check_cannot_read.c:4:5 "f"
   Local "_3" "void"
   Local "_4" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_after_a_call_this_check_cannot_read.c:5:14 generated
     Call a_free_after_a_call_this_check_cannot_read.c:5:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -24,11 +25,13 @@ Function a_free_after_a_call_this_check_cannot_read.c:4:5 "f"
       Use
         Copy "_2"
     Sequenced a_free_after_a_call_this_check_cannot_read.c:5:14 generated
+    ArgumentsEvaluated a_free_after_a_call_this_check_cannot_read.c:6:5 generated
     Call a_free_after_a_call_this_check_cannot_read.c:6:5 "helper" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_free_after_a_call_this_check_cannot_read.c:6:5 generated
+    ArgumentsEvaluated a_free_after_a_call_this_check_cannot_read.c:7:5 generated
     Call a_free_after_a_call_this_check_cannot_read.c:7:5 "free" "bb3"
       Destination "_4"
       Copy "_1"

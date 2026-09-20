@@ -11,6 +11,7 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
   Local "_2" "void *"
   Local "_3" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_subscript_in_a_condition_after_a_free.c:4:14 generated
     Call a_subscript_in_a_condition_after_a_free.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -20,6 +21,7 @@ Function a_subscript_in_a_condition_after_a_free.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_subscript_in_a_condition_after_a_free.c:4:14 generated
+    ArgumentsEvaluated a_subscript_in_a_condition_after_a_free.c:5:5 generated
     Call a_subscript_in_a_condition_after_a_free.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"

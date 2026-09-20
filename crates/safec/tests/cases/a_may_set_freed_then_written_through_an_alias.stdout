@@ -24,6 +24,7 @@ Function a_may_set_freed_then_written_through_an_alias.c:4:5 "f"
   Local "_12" "void"
   Local "_13" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_may_set_freed_then_written_through_an_alias.c:5:14 generated
     Call a_may_set_freed_then_written_through_an_alias.c:5:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -33,6 +34,7 @@ Function a_may_set_freed_then_written_through_an_alias.c:4:5 "f"
       Use
         Copy "_3"
     Sequenced a_may_set_freed_then_written_through_an_alias.c:5:14 generated
+    ArgumentsEvaluated a_may_set_freed_then_written_through_an_alias.c:6:14 generated
     Call a_may_set_freed_then_written_through_an_alias.c:6:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -69,6 +71,7 @@ Function a_may_set_freed_then_written_through_an_alias.c:4:5 "f"
     Sequenced a_may_set_freed_then_written_through_an_alias.c:8:30 generated
     Goto "bb5"
   Block "bb5"
+    ArgumentsEvaluated a_may_set_freed_then_written_through_an_alias.c:9:5 generated
     Call a_may_set_freed_then_written_through_an_alias.c:9:5 "free" "bb6"
       Destination "_9"
       Copy "_6"
@@ -83,11 +86,13 @@ Function a_may_set_freed_then_written_through_an_alias.c:4:5 "f"
       Use
         Copy "_11"
     Sequenced a_may_set_freed_then_written_through_an_alias.c:10:16 generated
+    ArgumentsEvaluated a_may_set_freed_then_written_through_an_alias.c:11:5 generated
     Call a_may_set_freed_then_written_through_an_alias.c:11:5 "opaque" "bb7"
       Destination "_12"
       Copy "_10"
   Block "bb7"
     Sequenced a_may_set_freed_then_written_through_an_alias.c:11:5 generated
+    ArgumentsEvaluated a_may_set_freed_then_written_through_an_alias.c:12:5 generated
     Call a_may_set_freed_then_written_through_an_alias.c:12:5 "free" "bb8"
       Destination "_13"
       Copy "_6"

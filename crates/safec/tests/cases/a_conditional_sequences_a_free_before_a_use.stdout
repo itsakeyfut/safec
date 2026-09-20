@@ -13,6 +13,7 @@ Function a_conditional_sequences_a_free_before_a_use.c:3:5 "f"
   Local "_4" "void"
   Local "_5" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_conditional_sequences_a_free_before_a_use.c:4:14 generated
     Call a_conditional_sequences_a_free_before_a_use.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -22,6 +23,7 @@ Function a_conditional_sequences_a_free_before_a_use.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_conditional_sequences_a_free_before_a_use.c:4:14 generated
+    ArgumentsEvaluated a_conditional_sequences_a_free_before_a_use.c:5:14 generated
     Call a_conditional_sequences_a_free_before_a_use.c:5:14 "free" "bb2"
       Destination "_4"
       Copy "_1"

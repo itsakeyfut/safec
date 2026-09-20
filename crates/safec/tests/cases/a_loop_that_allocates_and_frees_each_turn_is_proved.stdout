@@ -42,6 +42,7 @@ Function a_loop_that_allocates_and_frees_each_turn_is_proved.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_loop_that_allocates_and_frees_each_turn_is_proved.c:6:9 generated
+    ArgumentsEvaluated a_loop_that_allocates_and_frees_each_turn_is_proved.c:7:9 generated
     Call a_loop_that_allocates_and_frees_each_turn_is_proved.c:7:9 "free" "bb5"
       Destination "_5"
       Copy "_2"

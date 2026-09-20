@@ -19,6 +19,7 @@ Function a_may_set_where_one_free_is_sequenced_and_one_is_not.c:3:5 "f"
   Local "_10" "void"
   Local "_11" "int"
   Block "bb0" entry
+    ArgumentsEvaluated a_may_set_where_one_free_is_sequenced_and_one_is_not.c:4:14 generated
     Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:4:14 "malloc" "bb1"
       Destination "_3"
       Constant 4
@@ -28,6 +29,7 @@ Function a_may_set_where_one_free_is_sequenced_and_one_is_not.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:4:14 generated
+    ArgumentsEvaluated a_may_set_where_one_free_is_sequenced_and_one_is_not.c:5:14 generated
     Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:5:14 "malloc" "bb2"
       Destination "_5"
       Constant 4
@@ -37,6 +39,7 @@ Function a_may_set_where_one_free_is_sequenced_and_one_is_not.c:3:5 "f"
       Use
         Copy "_5"
     Sequenced a_may_set_where_one_free_is_sequenced_and_one_is_not.c:5:14 generated
+    ArgumentsEvaluated a_may_set_where_one_free_is_sequenced_and_one_is_not.c:6:5 generated
     Call a_may_set_where_one_free_is_sequenced_and_one_is_not.c:6:5 "free" "bb3"
       Destination "_6"
       Copy "_2"

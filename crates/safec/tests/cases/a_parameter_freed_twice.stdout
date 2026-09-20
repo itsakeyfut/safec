@@ -11,11 +11,13 @@ Function a_parameter_freed_twice.c:3:5 "f"
   Local "_2" "void"
   Local "_3" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_parameter_freed_twice.c:4:5 generated
     Call a_parameter_freed_twice.c:4:5 "free" "bb1"
       Destination "_2"
       Copy "_1"
   Block "bb1"
     Sequenced a_parameter_freed_twice.c:4:5 generated
+    ArgumentsEvaluated a_parameter_freed_twice.c:5:5 generated
     Call a_parameter_freed_twice.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"

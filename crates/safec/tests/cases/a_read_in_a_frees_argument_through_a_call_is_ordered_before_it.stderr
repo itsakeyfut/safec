@@ -1,0 +1,9 @@
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:6:14 ]
+   │
+ 6 │     free(p + g(*p));
+   │              ──┬──  
+   │                ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

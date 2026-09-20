@@ -56,6 +56,7 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Copy "_4"
   Block "bb5"
     Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:9:13 generated
+    ArgumentsEvaluated a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 generated
     Call a_double_free_across_a_loop_names_the_free_that_is_wrong.c:10:13 "free" "bb8"
       Destination "_7"
       Copy "_3"
@@ -81,6 +82,7 @@ Function a_double_free_across_a_loop_names_the_free_that_is_wrong.c:3:5 "f"
       Use
         Copy "_4"
     Sequenced a_double_free_across_a_loop_names_the_free_that_is_wrong.c:13:9 generated
+    ArgumentsEvaluated a_double_free_across_a_loop_names_the_free_that_is_wrong.c:14:9 generated
     Call a_double_free_across_a_loop_names_the_free_that_is_wrong.c:14:9 "free" "bb9"
       Destination "_10"
       Copy "_2"

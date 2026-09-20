@@ -336,6 +336,20 @@ enum Task {
     Second(ExprId),
     /// The last arm is done; come back together.
     Merge(ExprId),
+    /// Every argument of this call has been evaluated; say so before it runs.
+    ///
+    /// Between the operands and the node, the way [`Self::Discard`] is for a
+    /// comma, and for RK-040's reason: an element built where a node finishes
+    /// lands after everything the node contains, and what this one says is
+    /// about what came before it. The span is the call's, because that is what
+    /// the point falls before.
+    ///
+    /// Pushed only where nothing unsequenced encloses the call, which is why
+    /// the flag is read rather than the task always being pushed: see
+    /// [`Lowering::begin_value`].
+    ///
+    /// [`Lowering::begin_value`]: Lowering::begin_value
+    Arguments(Span),
     /// Put [`Lowering::top_level`] back to what it was before this node.
     ///
     /// Pushed before a node's own tasks, so it is popped after all of them.
@@ -354,14 +368,16 @@ enum Task {
 /// a call's arguments are unsequenced against *each other*, which is why
 /// `Expr::Call` answers false here.
 ///
-/// **The IR expresses that one by position, and position is only half an
-/// answer.** The argument operations are in the block before the call
+/// **That one is an [`Element::ArgumentsEvaluated`], emitted by
+/// [`Lowering::begin_value`]'s call arm.** ADR-0022 expressed it by position
+/// instead: the argument operations are in the block before the call
 /// terminator, which is enough for a consumer that looks backwards from the
-/// call: ADR-0022 says so and it was true of everything reading the IR when it
-/// was written. A consumer that carries a read forwards is not stopped by a
-/// position, so ADR-0023's half of the memory check reports
-/// `void f(int *p) { free(p + *p); }`, which C defines. That is issue #185 and
-/// what would close it is this point being an element like the others.
+/// call and nothing at all for ADR-0023's, which carries a read forwards. That
+/// consumer reported `void f(int *p) { free(p + *p); }`, which C defines. See
+/// ADR-0026, which also says why the element concludes less than an
+/// [`Element::Sequenced`] does.
+///
+/// [`Lowering::begin_value`]: Lowering::begin_value
 ///
 /// **Everything else answers false, including a node with one operand.** A
 /// sequence point inside `-(free(p), *p)` does order those two, because there
@@ -1079,6 +1095,9 @@ impl Lowering<'_> {
                 Task::Discard(id) => self.discard(builder, id, &mut values),
                 Task::Second(id) => self.second(builder, id, &mut tasks, &mut values),
                 Task::Merge(id) => self.merge(builder, id, &mut values),
+                Task::Arguments(span) => builder.element(Element::ArgumentsEvaluated {
+                    origin: Origin::Generated(span),
+                }),
                 Task::Restore(top_level) => self.top_level = top_level,
             }
         }
@@ -1125,6 +1144,11 @@ impl Lowering<'_> {
     ) -> Option<()> {
         self.typed(id, diagnostics)?;
 
+        // Before [`Lowering::descend`], which is what takes the flag away for
+        // this node's own operands. What the call arm below asks is whether
+        // anything unsequenced encloses **the call**, and asking after the
+        // descent answers about its arguments instead, which is always no.
+        let at_root = self.top_level;
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
@@ -1177,8 +1201,34 @@ impl Lowering<'_> {
                 tasks.push(Task::Split(id));
                 tasks.push(Task::Value(*condition));
             }
-            Expr::Call { arguments, .. } => {
+            Expr::Call {
+                arguments, span, ..
+            } => {
+                let span = *span;
                 tasks.push(Task::Finish(id));
+                // C17 6.5.2.2 p10, first sentence: a sequence point after the
+                // arguments and before the call. Popped after every argument
+                // and before the `Finish` that builds the terminator, which is
+                // where C puts it.
+                //
+                // **Only where nothing unsequenced encloses the call.** The
+                // marker is a claim about the whole block, and a block holds
+                // the other operands of whatever encloses this: emitting one
+                // for `*p + (free(p), 0)` would order the read against a free
+                // C leaves it unordered against. That is ADR-0022's enclosure
+                // rule, asked about the call rather than about the point, and
+                // it is the same rule the four operators already ask. See
+                // ADR-0026.
+                //
+                // Mutation: emit it whatever encloses the call. Four cases
+                // lose their `SC0402` outright, measured:
+                // `an_unsequenced_use_the_check_meets_first_is_reported`,
+                // `a_write_through_a_pointer_the_check_meets_first_is_reported`,
+                // `a_discarded_read_the_check_meets_first_is_reported` and
+                // `a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported`.
+                if at_root {
+                    tasks.push(Task::Arguments(span));
+                }
                 for &argument in arguments.iter().rev() {
                     tasks.push(Task::Value(argument));
                 }

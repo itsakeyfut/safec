@@ -12,6 +12,7 @@ Function a_value_freed_twice.c:3:5 "f"
   Local "_3" "void"
   Local "_4" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_value_freed_twice.c:4:14 generated
     Call a_value_freed_twice.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -21,11 +22,13 @@ Function a_value_freed_twice.c:3:5 "f"
       Use
         Copy "_2"
     Sequenced a_value_freed_twice.c:4:14 generated
+    ArgumentsEvaluated a_value_freed_twice.c:5:5 generated
     Call a_value_freed_twice.c:5:5 "free" "bb2"
       Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_value_freed_twice.c:5:5 generated
+    ArgumentsEvaluated a_value_freed_twice.c:6:5 generated
     Call a_value_freed_twice.c:6:5 "free" "bb3"
       Destination "_4"
       Copy "_1"

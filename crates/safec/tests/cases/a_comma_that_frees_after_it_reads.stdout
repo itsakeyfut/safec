@@ -11,6 +11,7 @@ Function a_comma_that_frees_after_it_reads.c:3:5 "f"
   Local "_2" "void *"
   Local "_3" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_comma_that_frees_after_it_reads.c:4:14 generated
     Call a_comma_that_frees_after_it_reads.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -24,6 +25,7 @@ Function a_comma_that_frees_after_it_reads.c:3:5 "f"
       Place "_1"
         Deref
     Sequenced a_comma_that_frees_after_it_reads.c:5:5 generated
+    ArgumentsEvaluated a_comma_that_frees_after_it_reads.c:5:9 generated
     Call a_comma_that_frees_after_it_reads.c:5:9 "free" "bb2"
       Destination "_3"
       Copy "_1"

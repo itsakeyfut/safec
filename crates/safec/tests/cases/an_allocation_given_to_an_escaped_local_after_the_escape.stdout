@@ -24,6 +24,7 @@ Function an_allocation_given_to_an_escaped_local_after_the_escape.c:3:5 "f"
       Use
         Copy "_3"
     Sequenced an_allocation_given_to_an_escaped_local_after_the_escape.c:5:16 generated
+    ArgumentsEvaluated an_allocation_given_to_an_escaped_local_after_the_escape.c:6:14 generated
     Call an_allocation_given_to_an_escaped_local_after_the_escape.c:6:14 "malloc" "bb1"
       Destination "_5"
       Constant 8
@@ -42,6 +43,7 @@ Function an_allocation_given_to_an_escaped_local_after_the_escape.c:3:5 "f"
       Use
         Copy "_1"
     Sequenced an_allocation_given_to_an_escaped_local_after_the_escape.c:7:5 generated
+    ArgumentsEvaluated an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 generated
     Call an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 "free" "bb2"
       Destination "_7"
       Copy "_4"

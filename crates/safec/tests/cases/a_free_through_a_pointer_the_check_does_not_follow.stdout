@@ -14,6 +14,7 @@ Function a_free_through_a_pointer_the_check_does_not_follow.c:3:5 "f"
   Local "_5" "void"
   Local "_6" "void"
   Block "bb0" entry
+    ArgumentsEvaluated a_free_through_a_pointer_the_check_does_not_follow.c:4:14 generated
     Call a_free_through_a_pointer_the_check_does_not_follow.c:4:14 "malloc" "bb1"
       Destination "_2"
       Constant 4
@@ -32,11 +33,13 @@ Function a_free_through_a_pointer_the_check_does_not_follow.c:3:5 "f"
       Use
         Copy "_4"
     Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:5:16 generated
+    ArgumentsEvaluated a_free_through_a_pointer_the_check_does_not_follow.c:6:5 generated
     Call a_free_through_a_pointer_the_check_does_not_follow.c:6:5 "free" "bb2"
       Destination "_5"
       Copy "_1"
   Block "bb2"
     Sequenced a_free_through_a_pointer_the_check_does_not_follow.c:6:5 generated
+    ArgumentsEvaluated a_free_through_a_pointer_the_check_does_not_follow.c:7:5 generated
     Call a_free_through_a_pointer_the_check_does_not_follow.c:7:5 "free" "bb3"
       Destination "_6"
       Copy "_3"
