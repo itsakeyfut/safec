@@ -20,18 +20,28 @@ the last marker forwards to meet whatever frees ahead of it, and a position does
 not stop a walk that travels that way. So `void f(int *p) { free(p + *p); }` is
 reported, although C orders that read before the call unconditionally, and the
 note the report prints cites the very clause that refutes it. That is issue
-#185, and it is row 4 of `CLAUDE.md`'s list: a report about a program with no
-defect, at a caret a reader can see.
+#185, and it is row 4 of `CLAUDE.md`'s list: a report about an ordering C
+settled, at a caret a reader can see.
+
+What the report is wrong about is the ordering and nothing else. Whether such a
+program is defined is a separate question that this check is not asking here:
+`*p = 0; free(p + *p);` is defined and was reported, and the spelling above is
+defined for a caller that passes an allocation holding zero. The corpus case
+uses the first, so what it guards is a program C defines rather than one it
+leaves open for other reasons.
 
 ## Decision Drivers
 
 * The point is real and unconditional. 6.5.2.2 p10's first sentence does not
   ask what encloses the call; what asks that is whether a *block-wide* marker
   may be written for it, which is ADR-0022's enclosure rule.
-* A call's arguments are unsequenced against **each other**, by the same
-  paragraph's second sentence. Anything that orders them is a proof C has not
-  licensed, which `docs/safety-model.md` calls the worst thing this compiler
-  can do.
+* A call's arguments are unsequenced against **each other**, by 6.5 p3, which
+  leaves the subexpressions of anything not specified later unsequenced; p10
+  specifies only the arguments against the call. Its second sentence is a
+  different rule, the caller's evaluations against the callee's body, and the
+  `SC0402` note is what already cites that one. Anything that orders two
+  arguments is a proof C has not licensed, which `docs/safety-model.md` calls
+  the worst thing this compiler can do.
 * The IR linearises those unsequenced arguments into one block, and a call
   carries some of its argument reads in its own operands rather than in
   elements, so any marker written before the terminator has some argument
@@ -62,9 +72,16 @@ reads after the element although C puts them before it. Emitting a full
 `Element::Sequenced` here turned `int x = g((free(p), 0), *p);` from a warning
 into an **error**, about two arguments C leaves unsequenced;
 `a_comma_inside_a_call_argument_orders_nothing_outside_it` is the case, and it
-exists to say exactly that. Nothing is lost by omitting the half, because a
-call this element is emitted for is the root of its full expression and nothing
-in that expression follows it.
+exists to say exactly that.
+
+Nothing is lost by omitting the half, and the reason is not that a call this is
+emitted for is the last thing in its expression. It is not: `free(p), *p = 42;`
+emits one, because a comma keeps its operands eligible, and the write follows
+it. What holds is narrower and checkable: **anything in the same full expression
+that can follow one of these is separated from it by an `Element::Sequenced`**,
+because the operators that keep a call eligible are exactly the four that emit
+one. In that program the comma's own marker is what proves the write, and it
+would prove it whatever this element concluded.
 
 The kind rather than a field, because the three options cost the same 116
 artifacts and close the same programs, and what separates them is the reader
@@ -76,21 +93,34 @@ as a full barrier, which is the false proof above. A field on `Terminator::Call`
 is RK-018 in the review knowledge bank: `Terminator::Call { .. }` is how several
 consumers already spell it, and a field walks past an exhaustive match.
 
-**What this does not close.** A call below something C leaves unsequenced gets
-no element, so `x = (free(p + *p), 0) + g(0);` is still reported. The enclosure
-rule is why, it is ADR-0022's rule asked about the call rather than about the
-point, and the reports it leaves standing are #178's class rather than a second
-one: a proof C settles and this check does not give. The same holds for
-`k(p, *p)`, whose read never waits at all, and for the stronger half of the
-marker, which is left unconcluded for the reason above.
+**What this does not close, and it is this record's own class rather than
+#178's.** A call below something C leaves unsequenced gets no element, so
+`x = (free(p + *p), 0);` is still reported, with the caret on a read inside that
+free's own argument list and the note citing the clause that orders it. That is
+the same sentence this record was opened to remove, surviving at a different
+enclosure, and calling it #178's class would be wrong: #178 is a proof C settles
+and this check does not give, while this is a report about a read C ordered
+unconditionally.
+
+It is left open because the element clears **the whole** carried set, and under
+an unsequenced parent that set holds the other operand's reads as well: the
+enclosure rule is what keeps those, and ADR-0026's own measurement is that
+dropping it deletes four reports. Clearing only the reads this call's arguments
+produced needs an IR whose call carries its argument evaluations, which is the
+reversal named below. The residue is row 4 either way.
+
+The same holds for `k(p, *p)`, whose read never waits at all, and for the
+stronger half of the marker, which is left unconcluded for the reason above.
 
 ### Confirmation
 
 `error[E0004]` at every reader of `Element` if the kind goes, which is nine
 matches in three crates, and `error[E0027]` at the six that walk the IR if a
 field is added to it, because each of those names the field rather than writing
-`..`. The three in test helpers do write `..`, because what they filter on is
-which kind it is.
+`..`. Three write `..` and answer for nothing below the kind: `Element::name`
+in `ir.rs`, which is asking which kind it is in order to print it, and the
+`assigns` and `markers` helpers in `lowering.rs`'s test module, which filter by
+kind for the same reason.
 
 Three mutations, each measured, each failing named cases and nothing else:
 
@@ -108,6 +138,16 @@ Three mutations, each measured, each failing named cases and nothing else:
   `a_comma_inside_a_call_argument_orders_nothing_outside_it` fails on its
   `.stderr`, its warning having become an error.
 
+`a_read_in_an_argument_with_no_marker_is_reported_unproven` in
+`crates/safec-ir/tests/freed.rs` is the boundary rather than a mutation: IR
+built by hand with the read and the free in one block and no element between
+them, which is what an adapter that has not read this record produces. It
+answers `Unknown` about a program C defines, and the mutation its doc comment
+names is inserting the element, which silences it. ADR-0021's
+`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` is the
+precedent, and `docs/c-family.md` is where the obligation is written for
+whoever writes the second frontend.
+
 The two halves are mutated apart on purpose. Mutating the lowering alone fails
 the two new cases on their `.stdout`, along with every other artifact that holds
 a call, which says nothing about whether any consumer reads the element: RK-039
@@ -124,9 +164,10 @@ a rule keyed on anything a call happens to be.
 * Good, because the fifth of Annex C's points is now expressed the way the other
   four are, and ADR-0022's "one rule with two spellings" consequence is spent.
 * Bad, because it is a line in a hundred and sixteen artifacts, and two markers
-  in one block can print at the same span: `free(p + *p);` has an
-  `ArgumentsEvaluated` and a `Sequenced` at 5:5, meaning different points and
-  licensing different things. The kind's name is what tells them apart.
+  can print at the same span meaning different points and licensing different
+  things: `free(p + *p);` has an `ArgumentsEvaluated` at 5:5 and the statement's
+  `Sequenced` at 5:5, the second in the block the call leads to, because a call
+  ends its block. The kind's name is what tells them apart.
 * Bad, because the element says less than C does, and a reader who takes it for
   a sequence point will over-read it. Its doc comment is where that is answered.
 * What would reverse this: an IR whose call carries its argument evaluations

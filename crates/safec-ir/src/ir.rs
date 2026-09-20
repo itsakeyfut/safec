@@ -579,9 +579,15 @@ pub enum Element {
     /// call carries reads in its own operands and a consumer judges those after
     /// this element, while C puts them before it: concluding the other half
     /// made `g((free(p), 0), *p)` a proved use after free, about two arguments
-    /// C leaves unsequenced. Nothing loses by the omission, because a call this
-    /// is emitted for is the root of its full expression and nothing in that
-    /// expression follows it.
+    /// C leaves unsequenced.
+    ///
+    /// **Nothing loses by the omission**, because anything in the same full
+    /// expression that can follow one of these is separated from it by a
+    /// [`Self::Sequenced`]: the operators that keep a call eligible for this
+    /// element are exactly the four that emit one. `free(p), *p = 42;` is the
+    /// case to read rather than a call at the root, because there the free is a
+    /// comma's left operand and the write does follow it, and the comma's own
+    /// marker is what proves it.
     ///
     /// So a consumer that answers this element by doing nothing is this
     /// compiler before it existed: a suspicion where C licensed silence, which
