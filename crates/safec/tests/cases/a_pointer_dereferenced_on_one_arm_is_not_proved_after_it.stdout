@@ -1,0 +1,45 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int"
+  Local "_4" "int"
+  Block "bb0" entry
+    Branch a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:2:9 "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:2:9 generated
+    Operation a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:3:9 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:3:9 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:3:9 generated
+    Goto "bb3"
+  Block "bb2"
+    Sequenced a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:5:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 2
+    Operation a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:5:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:5:5 generated
+    Operation a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:6:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_dereferenced_on_one_arm_is_not_proved_after_it.c:6:12 generated
+    Return

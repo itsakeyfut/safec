@@ -13,3 +13,12 @@ warning[SC0402]: this may use a value after it was freed
   = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ a_comma_inside_a_call_argument_orders_nothing_outside_it.c:6:13 ]
+   │
+ 6 │     int x = g((free(p), 0), *p);
+   │             ─────────┬─────────  
+   │                      ╰─────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

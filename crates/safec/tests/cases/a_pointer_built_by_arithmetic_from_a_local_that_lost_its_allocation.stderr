@@ -7,3 +7,12 @@ warning[SC0402]: this uses a pointer this check stopped following
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:11:5 ]
+    │
+ 11 │     *made = 1;
+    │     ────┬────  
+    │         ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error

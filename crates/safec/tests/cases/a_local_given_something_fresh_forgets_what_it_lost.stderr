@@ -1,0 +1,8 @@
+error[SC0403]: this dereferences a null pointer
+    ╭─[ a_local_given_something_fresh_forgets_what_it_lost.c:10:13 ]
+    │
+ 10 │             *keep = 1;
+    │             ────┬────  
+    │                 ╰────── this is null when it is read through
+────╯
+  = note: this check belongs to safety level 1

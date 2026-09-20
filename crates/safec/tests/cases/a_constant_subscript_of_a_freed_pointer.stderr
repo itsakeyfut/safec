@@ -12,3 +12,12 @@ error[SC0402]: this uses a value after it was freed
    │         ╰────── used here
 ───╯
   = note: this check belongs to safety level 1
+warning[SC0403]: this may dereference a null pointer
+   ╭─[ a_constant_subscript_of_a_freed_pointer.c:6:5 ]
+   │
+ 6 │     p[0] = 42;
+   │     ────┬────  
+   │         ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; `--deny-unknown` makes it an error
