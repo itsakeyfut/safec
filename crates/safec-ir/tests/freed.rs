@@ -1726,10 +1726,16 @@ fn a_call_into_a_local_whose_address_escaped() {
 /// handing it the allocation would name the pointer as the thing that was
 /// allocated.
 ///
-/// The free is what makes the omission visible, for the reason the test above
-/// gives: with the guard the pointer reaches no site and ADR-0017 answers
-/// `Reached::Lost`, so the free is reported; without it the pointer holds a
-/// live allocation and a first free of one is reported by nobody.
+/// The free is what makes the omission visible, and by a different route from
+/// the test above. That one's local escaped, so ADR-0017's rule answers for
+/// it; this one's local never does, and `Known::reached_by` says nothing about
+/// a local reaching no site however it came to reach none. What answers
+/// `Reached::Lost` here is `Allocations::touching`'s own rule for an argument
+/// that reached nothing at all, which is why deleting that rule fails this
+/// test along with the five that are about it.
+///
+/// Either way the free is reported. Without the guard the pointer holds a live
+/// allocation and a first free of one is reported by nobody.
 ///
 /// Mutation: remove the `if !place.projection.is_empty() { return; }` above
 /// the call's destination in the terminator's transfer. Nothing is reported
