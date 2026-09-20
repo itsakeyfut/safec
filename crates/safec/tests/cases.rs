@@ -343,6 +343,26 @@ cases! {
     an_escape_on_one_arm_and_an_allocation_on_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_escape_on_one_arm_and_a_shared_allocation_on_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_address_taken_of_a_local_declared_in_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The storage pair ADR-0012 emits, read by the memory check rather than by
+    // the lowering that writes it. A local declared inside a loop is given
+    // fresh storage each time round, and the only path from its `StorageDead`
+    // back to it is the back edge, so this is the one shape where the previous
+    // iteration's facts can still be standing.
+    //
+    // **The write before the assignment is what makes it visible.**
+    // `Known::clear` clears the local's edge to its sites and not the sites
+    // themselves, so a stale `Freed` can only be observed by a read that
+    // happens before the local is given anything. `*p` on an indeterminate
+    // pointer is a defect with a check of its own that does not exist yet, and
+    // when that check lands this case will have something to say about it: the
+    // program is chosen for a read this compiler currently answers nothing
+    // about, which is RK-010's shape.
+    //
+    // Mutation: both the `StorageLive` and the `StorageDead` arm of
+    // `Allocations::element` to no-ops. The free from the previous iteration
+    // arrives at the write and this fails on its `.stderr`, which gains a
+    // `warning[SC0402]` beside the null one.
+    a_scope_reentered_forgets_what_its_local_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_where_one_of_two_allocations_is_live: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_double_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     an_unproven_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
