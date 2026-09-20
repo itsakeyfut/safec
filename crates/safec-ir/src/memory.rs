@@ -844,7 +844,7 @@ impl Allocations<'_> {
 
     /// What the arguments of a call reach, in the order they were written.
     ///
-    /// Shared with [`check`], so that the walk which reports and the walk which
+    /// Shared with [`findings`], so that the walk which reports and the walk which
     /// computes cannot disagree about what a call touches.
     fn touching(arguments: &[Operand], known: &Known) -> Vec<Reached> {
         let mut reached = Vec::new();
@@ -1019,8 +1019,8 @@ impl Analysis for Allocations<'_> {
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
         // What is read here is read where this element runs, against what held
-        // before it, which is the same question `check` asks one line earlier
-        // and has to get the same answer to.
+        // before it, which is the same question `findings` asks one line
+        // earlier and has to get the same answer to.
         //
         // **Before the arms, so that no arm's early return can skip it, and
         // nothing observes that today.** Measured: moving it below the match
@@ -1559,7 +1559,7 @@ pub enum Unproven {
 /// The replay rather than a second lattice, because the transfer is what
 /// decides which sites a call touches and having two answers to that is having
 /// one of them be wrong.
-pub fn check(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
+pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     let mut findings = Vec::new();
 
     for id in unit.functions() {

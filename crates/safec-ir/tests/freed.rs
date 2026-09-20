@@ -17,7 +17,7 @@ use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
-use safec_ir::memory::{Finding, Kind, Unproven, check};
+use safec_ir::memory::{self, Kind, Unproven};
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -228,9 +228,13 @@ fn after_the_statement(at: Span, mut block: Block) -> Block {
 }
 
 /// What the check concluded about one function.
-fn findings(mut unit: TranslationUnit, sources: &SourceMap, function: Function) -> Vec<Finding> {
+fn concluded(
+    mut unit: TranslationUnit,
+    sources: &SourceMap,
+    function: Function,
+) -> Vec<memory::Finding> {
     unit.push_function(function);
-    check(sources, &unit)
+    memory::findings(sources, &unit)
 }
 
 /// A value freed twice is proved unsafe, and both frees can be named.
@@ -263,7 +267,7 @@ fn a_value_freed_twice_is_unsafe() {
     );
     function.fill_block(exit, after_the_statement(names.at[2], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::DoubleFree);
@@ -305,7 +309,7 @@ fn a_value_freed_through_a_copy_is_unsafe() {
     );
     function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
@@ -338,7 +342,7 @@ fn a_parameter_is_an_allocation_site() {
     );
     function.fill_block(exit, after_the_statement(names.at[1], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
@@ -375,7 +379,7 @@ fn two_allocations_are_two_sites() {
     );
     function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -414,7 +418,7 @@ fn a_join_names_the_earlier_free() {
     );
     function.fill_block(exit, after_the_statement(names.at[2], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].at, names.at[2]);
@@ -478,7 +482,7 @@ fn a_free_of_either_of_two_allocations_names_the_earlier() {
     function.fill_block(joined, free(&callees, held, names.at[5], exit));
     function.fill_block(exit, after_the_statement(names.at[5], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
@@ -532,7 +536,7 @@ fn a_free_that_may_not_be_the_first_is_unproven() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     // Both arms free something the other arm may already have freed, and which
     // of them did is what the loop makes unanswerable. Two calls, two findings,
@@ -647,7 +651,7 @@ fn a_read_through_a_freed_pointer_is_unsafe() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
@@ -686,7 +690,7 @@ fn a_write_through_a_freed_pointer_is_unsafe() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
@@ -721,7 +725,7 @@ fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
     function.fill_block(entry, read(other, value, names.at[0], exit));
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -763,7 +767,7 @@ fn taking_the_address_of_a_dereference_is_not_a_use() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
@@ -799,7 +803,7 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
@@ -855,7 +859,7 @@ fn a_use_after_two_allocations_names_no_allocation() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
@@ -911,7 +915,7 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
     function.fill_block(joined, free(&callees, either, names.at[5], exit));
     function.fill_block(exit, after_the_statement(names.at[5], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].at, names.at[5]);
@@ -960,7 +964,7 @@ fn a_site_allocated_on_two_arms_names_no_allocation() {
     );
     function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
@@ -1002,7 +1006,7 @@ fn a_second_free_keeps_where_the_allocation_was() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     // The second free is one finding and the read after it is the other.
     assert_eq!(found.len(), 2, "{found:?}");
@@ -1052,7 +1056,7 @@ fn a_dereference_in_a_condition_is_a_use() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
@@ -1104,7 +1108,7 @@ fn a_place_evaluated_for_nothing_is_a_use() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
@@ -1153,7 +1157,7 @@ fn evaluating_a_place_moves_no_site() {
     );
     function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::DoubleFree);
@@ -1191,7 +1195,7 @@ fn evaluating_a_place_moves_no_site() {
 /// another frontend be able to build this IR with no C frontend present.
 ///
 /// **An unrelated report comes first on purpose.** What `said` carries for a
-/// caret is where in `findings` the report standing there is, which is not the
+/// caret is where in `concluded` the report standing there is, which is not the
 /// caret's own position in `said`: anything reported before the pair sits
 /// between the two numbers. The double free of `other` is that anything, and
 /// without it both numbers are zero and taking the wrong one is invisible.
@@ -1223,7 +1227,7 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
 
     // A defect of its own, reported before the pair below and nothing to do
     // with it. It is here so that the report standing at the pair's caret is
-    // not the first thing in `findings`.
+    // not the first thing in `concluded`.
     function.fill_block(
         allocate_other,
         malloc(&callees, other, names.at[0], release_other),
@@ -1249,7 +1253,7 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     // Three, and the first has to survive untouched. Freeing a site nothing
     // can prove anything about is itself a `DoubleFree` this check cannot rule
@@ -1316,7 +1320,7 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     function.fill_block(suspect, read(value, held, names.at[2], exit));
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
@@ -1395,7 +1399,7 @@ fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     // Nothing at all. The write through `stepped` is not followed, so nothing
     // records that `p` holds what `q` held, and the read after the free asks
@@ -1487,7 +1491,7 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
     );
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     // One finding, and which one is the whole of this test. `free(z)` frees
     // something this check was not following, which it cannot rule out; what
@@ -1560,7 +1564,7 @@ fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
     function.fill_block(join, read(value, held, names.at[3], exit));
     function.fill_block(exit, returns());
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].kind, Kind::UseAfterFree);
@@ -1624,7 +1628,7 @@ fn a_call_into_a_local_whose_address_escaped() {
     function.fill_block(release, free(&callees, shared, names.at[4], exit));
     function.fill_block(exit, after_the_statement(names.at[4], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     // One free of one allocation, and it is still not something this check can
     // rule out, because anything holding the address could have put a freed
@@ -1680,7 +1684,7 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
     function.fill_block(release, free(&callees, held, names.at[3], exit));
     function.fill_block(exit, after_the_statement(names.at[3], returns()));
 
-    let found = findings(unit, &sources, function);
+    let found = concluded(unit, &sources, function);
 
     assert!(found.is_empty(), "{found:?}");
 }
