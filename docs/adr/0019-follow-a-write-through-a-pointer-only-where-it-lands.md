@@ -136,11 +136,14 @@ this method and what ADR-0018 says about the last field added.
 * Good, because the headline silence is closed: the program in #162 is
   reported on its last line, where it used to say nothing at all. It was
   `error[SC0402]` and exit 1 when this record landed and is `warning[SC0402]`
-  and exit 0 since
-  [ADR-0020](./0020-a-free-of-a-may-set-is-a-fact-about-the-set.md), which is
-  the last bullet of this section arriving: the proof rested on a free over a
-  two-site may-set marking both members freed, and that rule was wrong.
-  `--deny-unknown` still exits 1.
+  and exit 0 between
+  [ADR-0020](./0020-a-free-of-a-may-set-is-a-fact-about-the-set.md) and
+  [ADR-0028](./0028-replace-what-a-target-held-where-a-write-must-land-in-it.md),
+  which is the last bullet of this section arriving and then being answered:
+  the proof rested on a free over a two-site may-set marking both members
+  freed, that rule was wrong, and what was wrong with the *set* is that this
+  record manufactured it. It is `error[SC0402]` and exit 1 again, and
+  `--deny-unknown` exited 1 throughout.
 * Good, because two corpus programs that contain a real double free through an
   alias are now suspected at both frees rather than one.
 * Bad, because `*pp = q` with no `&` in sight is still silent, deliberately.
@@ -182,6 +185,13 @@ this method and what ADR-0018 says about the last field added.
 * What would reverse this: a `Deref` arm that knows which of several targets a
   write must land in. That is a must-analysis beside this may-analysis, and the
   measurement to take first is whether the precision is worth a second lattice.
+  **Taken, and the answer was neither.**
+  [ADR-0028](./0028-replace-what-a-target-held-where-a-write-must-land-in-it.md)
+  is the rejected option below arriving with the fact that was missing from it:
+  `writes_to` naming one local meant "at most one target this check has seen an
+  address for", and one `bool` saying whether the set is all of it separates
+  that from "this one". Where it is, the write replaces. The reason given below
+  for rejecting it is still the reason the flag exists.
 
 ## Pros and Cons of the Options
 

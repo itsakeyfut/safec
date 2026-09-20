@@ -1186,6 +1186,31 @@ impl Analysis for Allocations<'_> {
                         }
                     };
 
+                    // **A write this check can be certain about replaces what
+                    // the target held.** The set names one local and says it
+                    // names all of them, so this write landed in that local
+                    // and whatever was there is gone. Union would manufacture
+                    // a two-element may-set out of a program that has none,
+                    // and ADR-0020 then reads that as real ambiguity and gives
+                    // up a proof over it: `int **pp = &p; *pp = q; free(p);
+                    // *q = 1;` is a certain use after free and was reported as
+                    // a suspicion. See ADR-0028, which is where ADR-0019's
+                    // rejected option was taken up once the flag above made
+                    // "one target" distinguishable from "at most one target".
+                    //
+                    // The whole row, as an assignment to the target would
+                    // replace it: the sites, what it had lost, the proof about
+                    // the set it named and the edge alike. `unproved` is the
+                    // one thing the direct assignment does that this does not,
+                    // for the reason the paragraph below gives, which is about
+                    // the allocation rather than about the local.
+                    if targets.len() == 1
+                        && !value.points_to[operation.place.local.index()].writes_elsewhere
+                    {
+                        value.points_to[targets[0]] = written;
+                        return;
+                    }
+
                     // **The union and nothing else.** A write through an alias
                     // does not unprove what the target held, which #155's rule
                     // for a direct assignment would suggest it should. The
