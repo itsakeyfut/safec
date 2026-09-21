@@ -231,7 +231,9 @@ enum Reached {
     /// one allocation after another, and whoever still held the last one is
     /// holding something this check can no longer name. ADR-0029 gave it a
     /// second: a call this check cannot read may write through an address that
-    /// escaped, and what it leaves behind has no site either.
+    /// escaped, and what it leaves behind has no site either. ADR-0031 gave it
+    /// a third, which is that same write performed here rather than by a
+    /// callee.
     Lost,
 }
 
@@ -270,10 +272,13 @@ struct Held {
     /// Whether this local may hold an allocation this check can no longer
     /// name.
     ///
-    /// Two doors lead here. The site that named what it held was handed to a
+    /// Three doors lead here. The site that named what it held was handed to a
     /// second allocation, which is ADR-0018; or its address had escaped when a
     /// call this check cannot read ran, and such a call may have written a
-    /// pointer this check has never seen into it, which is ADR-0029.
+    /// pointer this check has never seen into it, which is ADR-0029; or its
+    /// address had escaped when a write through a pointer this check cannot
+    /// pin down wrote its type, which is ADR-0031 and is the same sentence
+    /// with the writer inside this function.
     lost: bool,
     /// Where the allocation this local held was freed, when the free could not
     /// say which member of the set it was.
@@ -802,13 +807,24 @@ impl Known {
         }
     }
 
-    /// Everything an escaped local holds may have been replaced by a callee.
+    /// Everything an escaped local this writer could have reached holds may
+    /// have been replaced.
     ///
-    /// A call this check cannot read may write through any address that has
-    /// escaped, and nothing here can say which local that reaches: the body is
-    /// not read, and the address may have been stashed anywhere on the way. So
-    /// every escaped local holds something this check cannot name, which is
-    /// what [`Held::lost`] says and is ADR-0018's fact through a second door.
+    /// A writer this check cannot follow may write through any address that
+    /// has escaped, and nothing here can say which local that reaches: the
+    /// address may have been stashed anywhere on the way. So every escaped
+    /// local it could have reached holds something this check cannot name,
+    /// which is what [`Held::lost`] says and is ADR-0018's fact through a
+    /// second door.
+    ///
+    /// **Which locals that is belongs to the caller**, because the two writers
+    /// know different amounts. A call this check cannot read may write any
+    /// type, since nothing here reads a callee's body, and answers `true` for
+    /// every local; a write through a pointer writes one type and says so, and
+    /// ADR-0031 is why that narrowing is the difference between a rule that
+    /// costs what it should and one that costs everything. Deciding it here
+    /// instead would make one of the two answer a question written for the
+    /// other, which is RK-055 in the review knowledge bank.
     ///
     /// **The bit alone is not the point.** [`Self::reached_by`] already
     /// answers [`Reached::Lost`] for an escaped local that holds a site, so no
@@ -824,9 +840,12 @@ impl Known {
     /// There is nothing to lose by leaving it, because a local holding no site
     /// shares none with anybody, and a `free` of it is reported by
     /// [`Allocations::touching`]'s own rule whatever this says.
-    fn replaced(&mut self) {
+    fn replaced(&mut self, may_hold: impl Fn(usize) -> bool) {
         for local in 0..self.escaped.len() {
-            if self.escaped[local] && self.points_to[local].sites().next().is_some() {
+            if may_hold(local)
+                && self.escaped[local]
+                && self.points_to[local].sites().next().is_some()
+            {
                 self.points_to[local].lost = true;
             }
         }
@@ -1256,6 +1275,65 @@ impl Analysis for Allocations<'_> {
                 // be inventing the second.
                 if operation.place.projection.as_slice() == [Projection::Deref] {
                     let targets = value.written_through(operation.place.local);
+                    let pointer = operation.place.local.index();
+
+                    // **Whether this write lands in one local and nowhere
+                    // else.** ADR-0028's condition, read here as well as at
+                    // the replacement below: one is about what the write may
+                    // have reached *besides* its target and the other about
+                    // what it does to that target, and the two have to be the
+                    // same question. Spelled twice they are one rule in two
+                    // places, which is RK-052 in the review knowledge bank.
+                    let certain = targets.len() == 1
+                        && !value.points_to[pointer].writes_elsewhere
+                        && !value.escaped[pointer];
+
+                    // **Any other write may land in an escaped local, and the
+                    // free that follows is not told.** This is ADR-0029's fact
+                    // with the writer inside the function: whoever holds the
+                    // address may have been handed it through a projection
+                    // this check does not follow, so a write it cannot pin
+                    // down may replace what any escaped local holds, and
+                    // writing `Freed` on that local's sites later is a proof
+                    // about an allocation this write may have swapped out. See
+                    // ADR-0031.
+                    //
+                    // **Above the early return, not below it.** The return a
+                    // few lines down is for a write this check can follow
+                    // nowhere at all, which is the case that needs this rule
+                    // most: RK-051 in the review knowledge bank is a
+                    // conservative rule left unrun behind exactly such a
+                    // return.
+                    if !certain {
+                        // **Only a local declared with the type this write
+                        // writes.** C17 6.5 p7 gives an object an effective
+                        // type and lets an lvalue of another type access it
+                        // only for a character type, which this frontend has
+                        // no cast to make; so a write of an `int` cannot
+                        // replace a pointer, and the rule costs what it should
+                        // rather than every escaped local at every `*p = 1`.
+                        // `docs/c-family.md` carries what that asks of a
+                        // frontend, and getting it wrong keeps a proof rather
+                        // than losing one, which is a false positive and not a
+                        // silence.
+                        //
+                        // `None` is a `Deref` of something that is not a
+                        // pointer, which the lowering does not build and a
+                        // hand-built unit can. Every local then, because a
+                        // write whose type this cannot name is a write it
+                        // cannot narrow.
+                        let written_ty = self.unit.place_ty(function, &operation.place);
+                        // A row of bytes per local, against a value that is
+                        // already square in them, because the predicate is
+                        // asked per index and `LocalId` cannot be built from
+                        // one.
+                        let may_hold: Vec<bool> = function
+                            .locals()
+                            .map(|local| written_ty.is_none_or(|ty| function.local(local) == ty))
+                            .collect();
+                        value.replaced(|local| may_hold[local]);
+                    }
+
                     if targets.is_empty() {
                         return;
                     }
@@ -1346,11 +1424,7 @@ impl Analysis for Allocations<'_> {
                     // which struct a fact belongs in, and it is why the answer
                     // cannot be recorded on the local whose address is taken.
                     // See ADR-0028 and RK-061.
-                    let pointer = operation.place.local.index();
-                    if targets.len() == 1
-                        && !value.points_to[pointer].writes_elsewhere
-                        && !value.escaped[pointer]
-                    {
+                    if certain {
                         value.points_to[targets[0]] = written;
                         return;
                     }
@@ -1712,7 +1786,13 @@ impl Analysis for Allocations<'_> {
                 // whole workspace green, measured. The record says so rather
                 // than leaving the next reader to find out by widening it.
                 // See ADR-0029.
-                value.replaced();
+                //
+                // **Every local, because a callee's write has no type this
+                // function knows.** The other producer of this fact narrows by
+                // the type it writes, which is ADR-0031; a callee's body is not
+                // read, so there is nothing here to narrow by. Narrowing this
+                // one would need what #134's annotation says.
+                value.replaced(|_| true);
             }
         }
 

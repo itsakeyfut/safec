@@ -46,6 +46,9 @@ refused to prove over it.
   reachable through that door, which is #202 and which this does not close.
   Outside the function the writer is a call, and this check reads no callee's
   body. This decision is about the call.
+  [ADR-0031](./0031-a-write-this-check-cannot-pin-down-replaces-what-an-escaped-local-holds.md)
+  has since closed the other door, with the same fact and the same method,
+  narrowed by the type the write writes.
 * The sites are shared and the local's own answer is not. A fact recorded
   against the local is invisible to the sharer that gets reported, which is
   what RK-048 is about from the other side.
