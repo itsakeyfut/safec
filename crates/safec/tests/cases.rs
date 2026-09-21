@@ -422,6 +422,22 @@ cases! {
     // says nothing about. Narrowing the rule to an empty target set leaves
     // this program an `error` at exit 1.
     a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The first case above with the alias written inline instead of read into
+    // a temporary, which is the same program and a place with two `Deref`s.
+    // This check follows a write through exactly one, so the rule has to fire
+    // for every projection it declines rather than for the shape it can
+    // follow: keyed on that shape, the two spellings of one program answered
+    // opposite ways. Two review lenses found it independently.
+    a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The exception C17 6.5 p7 carries, and the one write that reaches an
+    // escaped local of every type: a character lvalue may access an object of
+    // any type, so copying one pointer's object representation over another's
+    // is defined. No cast is needed to get a `char *` that aliases a pointer,
+    // because the `void *` round trip is implicit both ways, and this
+    // frontend accepts it. Found by review, which compiled the program with
+    // `clang -std=c17 -pedantic-errors` and ran it under AddressSanitizer to
+    // show there is no use after free in it.
+    a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the write the rule must not fire on: ADR-0028's certain one, which
     // lands in its target and nowhere else, beside an escaped local of the
     // same type that keeps its proof. Firing at every write drops this

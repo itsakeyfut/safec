@@ -275,10 +275,20 @@ shapes above.
 and it is the other half of the same reading. The memory check compares the type
 a write writes with the type each escaped local is declared with, and distrusts
 only the locals that match, so **a write through a pointer to `T` must not land
-in an object declared as anything but `T`**. C17 6.5 p7 is what makes that sound
-for a program whose types are what C requires: an object has an effective type
-and an lvalue of another type may access it only where that type is a character
-type, which this frontend has no cast to produce.
+in an object declared as anything but `T`, unless `T` is a character type**.
+C17 6.5 p7 is what makes that sound for a program whose types are what C
+requires: an object has an effective type and an lvalue of another type may
+access it only in the cases that clause lists.
+
+The character type is the case of those that a conforming program reaches, and
+it needs no cast to get there: C17 6.3.2.3 p1 and 6.5.16.1 p1 make the `void *`
+round trip implicit both ways, so `void *v = &p; char *c = v;` is a program
+this frontend accepts and copying a pointer's object representation through `c`
+is defined. The check answers for it by distrusting every escaped local at a
+write of a character type, which is why the requirement is written with an
+exception rather than without one. An earlier draft of ADR-0031 claimed the
+case needed a cast; review wrote the C, compiled it with `clang -std=c17
+-pedantic-errors` and ran it under AddressSanitizer to show otherwise.
 
 **What an omission costs here is a false positive, which is the cheapest of the
 five.** The comparison can only keep a local out of the distrusted set, a local
@@ -287,6 +297,13 @@ proof is a report: an adapter whose types are dishonest gets the `error` about a
 program C defines that ADR-0031 removed, and never a silence. That is the
 opposite of the requirement above it, which is why the two are written as two:
 they read the same `Ty` and they fail in opposite directions.
+
+This compiler's own frontend breaks it today, by the same shape that breaks the
+fourth. `char **alias = *outer;` is accepted in silence where `alias = *outer;`
+is `error[SC0302]`, which is #205, and a write through that `alias` is then
+narrowed away from an `int *` local that it may have reached. Measured, and the
+answer is the `error[SC0402]` this compiler gave before ADR-0031 rather than
+anything quieter.
 
 That is the same discipline the accepted records already use:
 [ADR-0003](adr/0003-pass-the-source-map-to-each-render-call.md) is confirmed by
