@@ -121,6 +121,21 @@ The three hand-built cases are in `crates/safec-ir/tests/freed.rs` because the
 frontend refuses each of their shapes, which is the same reason ADR-0028 keeps
 `the_address_of_a_dereference_is_not_an_edge_to_the_local` there.
 
+**One of the two call sites is held by nothing, and this says which rule is
+answering instead.** The rule is one function and the predicate is passed at two
+call sites, so RK-052's shape applies; measured, the `Deref` arm can stop
+filtering altogether and the whole workspace stays green, while the same
+mutation at the assignment arm fails the three cases above. What covers it is
+[ADR-0017](./0017-record-each-half-of-an-escape-where-its-subject-lives.md):
+`Held::writes_to` is written only where a local's address was taken, so the
+target of a write through a pointer has always escaped, and an escaped local
+answers `Reached::Lost` wherever a report is made. `*pp = q + i;` was built by
+hand with the site carried on into a copy of the target, and the answer is
+`Unknown` with or without the filter. RK-064 is the entry that asks for this
+paragraph rather than for the words "held by nothing": the day #188 or #196
+narrows what an escaped local is reported as, this line stops being covered, and
+what it would cost then is a proof about a set the index widened.
+
 ### Consequences
 
 * Good, because the proof is back in the spelling C programs use, and the two
