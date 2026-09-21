@@ -1,0 +1,99 @@
+Target "x86_64-pc-windows-msvc"
+Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "int ***"
+  Local "_7" "int ***"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "void"
+  Local "_12" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:14 generated
+    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:4:14 generated
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:5:14 generated
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:6:16 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:6:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:6:16 generated
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:7:18 written
+      Destination "_7"
+      Address
+        Place "_4"
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:7:12 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:7:18 generated
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:8:11 written
+      Destination "_8"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:8:16 generated
+    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:11 "malloc" "bb2"
+      Destination "_9"
+      Constant 8
+  Block "bb2"
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:5 written
+      Destination "_8"
+        Deref
+      Use
+        Copy "_9"
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:5 written
+      Destination "_10"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:9:5 generated
+    ArgumentsEvaluated a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 generated
+    Call a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 "free" "bb3"
+      Destination "_11"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:10:5 generated
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:11:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:11:5 written
+      Destination "_12"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:11:5 generated
+    Operation a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter.c:12:12 generated
+    Return

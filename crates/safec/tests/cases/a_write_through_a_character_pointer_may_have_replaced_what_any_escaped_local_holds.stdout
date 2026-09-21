@@ -1,0 +1,161 @@
+Target "x86_64-pc-windows-msvc"
+Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "void *"
+  Local "_7" "int **"
+  Local "_8" "char *"
+  Local "_9" "void *"
+  Local "_10" "int **"
+  Local "_11" "char *"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "char *"
+  Local "_15" "char *"
+  Local "_16" "char"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "void"
+  Local "_20" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 generated
+    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:5:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:5:14 generated
+    ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:14 generated
+    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 8
+  Block "bb2"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:6:14 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:7:15 written
+      Destination "_7"
+      Address
+        Place "_1"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:7:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:7:15 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:8:11 written
+      Destination "_8"
+      Use
+        Copy "_6"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:8:15 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:9:15 written
+      Destination "_10"
+      Address
+        Place "_4"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:9:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:9:15 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:10:11 written
+      Destination "_11"
+      Use
+        Copy "_9"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:10:15 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:11:9 written
+      Destination "_12"
+      Use
+        Constant 0
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:11:13 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 written
+      Destination "_13"
+      Binary "Lt"
+        Copy "_12"
+        Constant 8
+    Branch a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 "bb4" "bb5"
+      Copy "_13"
+  Block "bb4"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 written
+      Destination "_14"
+      Binary "Add"
+        Copy "_8"
+        Copy "_12"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:16 written
+      Destination "_15"
+      Binary "Add"
+        Copy "_11"
+        Copy "_12"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 written
+      Destination "_14"
+        Deref
+      Use
+        Copy "_15"
+          Deref
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 written
+      Destination "_16"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:13:9 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:13 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_12"
+        Constant 1
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:9 written
+      Destination "_12"
+      Use
+        Copy "_17"
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:9 written
+      Destination "_18"
+      Use
+        Copy "_12"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:14:9 generated
+    Goto "bb3"
+  Block "bb5"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 generated
+    ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 generated
+    Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 "free" "bb6"
+      Destination "_19"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:17:5 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:17:5 written
+      Destination "_20"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:17:5 generated
+    Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:18:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:18:12 generated
+    Return

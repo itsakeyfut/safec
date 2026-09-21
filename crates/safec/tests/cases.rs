@@ -396,6 +396,53 @@ cases! {
     // have written through it, so the proof survives. RK-065 is a guard that
     // held only the order it was written in.
     an_opaque_call_before_the_escape_leaves_the_proof_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same rule through the door ADR-0029 named and declined: the writer
+    // is a write in this function rather than a callee. Both of these were an
+    // `error` at exit 1 about a program C defines, and both report through a
+    // sharer for RK-048's reason. The second is here although one mutation
+    // fails both, because the two are the ways a pointer gets out of this
+    // check's sight: through a parameter, and through a chain of locals with
+    // no call and no parameter in it. A fix keyed on either shape alone passes
+    // the other. See ADR-0031.
+    a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other half of the trade, as ADR-0029's own flag case says it for the
+    // call: the downgrade is only acceptable because the flag still fails the
+    // build. Same program as the first case above, one flag on.
+    a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    // What keeps that rule from costing everything, and the only case that
+    // holds it: a write through a pointer to an `int` cannot put a pointer
+    // anywhere, so the escaped local keeps what it held and the double free
+    // below stays proved. Marking every escaped local instead drops this
+    // `error[SC0401]` to a warning and exit 1 to exit 0.
+    a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The half of the door that a write with no target at all does not reach:
+    // one named target, and a path on which the pointer was never given one,
+    // so the write may land beside that target in an escaped local the union
+    // says nothing about. Narrowing the rule to an empty target set leaves
+    // this program an `error` at exit 1.
+    a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The first case above with the alias written inline instead of read into
+    // a temporary, which is the same program and a place with two `Deref`s.
+    // This check follows a write through exactly one, so the rule has to fire
+    // for every projection it declines rather than for the shape it can
+    // follow: keyed on that shape, the two spellings of one program answered
+    // opposite ways. Two review lenses found it independently.
+    a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The exception C17 6.5 p7 carries, and the one write that reaches an
+    // escaped local of every type: a character lvalue may access an object of
+    // any type, so copying one pointer's object representation over another's
+    // is defined. No cast is needed to get a `char *` that aliases a pointer,
+    // because the `void *` round trip is implicit both ways, and this
+    // frontend accepts it. Found by review, which compiled the program with
+    // `clang -std=c17 -pedantic-errors` and ran it under AddressSanitizer to
+    // show there is no use after free in it.
+    a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the write the rule must not fire on: ADR-0028's certain one, which
+    // lands in its target and nowhere else, beside an escaped local of the
+    // same type that keeps its proof. Firing at every write drops this
+    // `error[SC0401]` to a warning.
+    a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_that_was_never_given_a_pointer_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_an_alias_keeps_what_it_carried_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_write_through_an_alias_that_carries_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

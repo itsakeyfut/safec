@@ -2362,3 +2362,76 @@ fn a_read_carried_to_an_allocating_call_is_not_reported() {
 
     assert!(found.is_empty(), "{found:?}");
 }
+
+/// A write whose type this check cannot name distrusts every escaped local.
+///
+/// **The one place ADR-0031's narrowing is asked about a type that is not
+/// there, and no C program reaches it.** The rule distrusts the escaped locals
+/// declared with the type the write writes, which
+/// `TranslationUnit::place_ty` answers for the place being written through. It
+/// answers `None` for a `Deref` of something that is not a pointer, which its
+/// own doc comment says the lowering does not build and a hand-built unit can,
+/// so the arm that decides what to do with no type is reachable only from
+/// here.
+///
+/// Narrowing to nothing is the wrong answer: a write this check cannot even
+/// name the type of is a write it cannot narrow, and `held` would keep a proof
+/// that write may have destroyed. The cost is a report about a program that is
+/// defined, which is row 4 of `CLAUDE.md`'s list, so this is a false positive
+/// rather than a silence; it is guarded here because nothing else can reach
+/// the arm and an unreached arm is one a later reader deletes.
+///
+/// The report is observed through `sharer` rather than through `held`, because
+/// ADR-0017 has already taken away the report about an escaped local itself.
+/// RK-048 is that hole.
+///
+/// Mutation: spell the fallback `written_ty.is_some_and(...)` rather than
+/// `written_ty.is_none_or(...)` in the `Projection::Deref` arm of
+/// `Allocations::element`. The read through `sharer` becomes
+/// `Conclusion::Unsafe` and this fails on the conclusion.
+#[test]
+fn a_write_whose_type_this_check_cannot_name_distrusts_every_escaped_local() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let sharer = function.push_local(types.ptr);
+    let alias = function.push_local(types.ptr_ptr);
+    // Declared `int`, so `*bogus` has no type at all. No C program declares a
+    // pointer this way; `docs/c-family.md` asks that another frontend be able
+    // to build the shape, and this is what it costs when one does.
+    let bogus = function.push_local(types.int);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let share = function.reserve_block();
+    let escape = function.reserve_block();
+    let store = function.reserve_block();
+    let release = function.reserve_block();
+    let after = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], share));
+    function.fill_block(share, copy(sharer, held, names.at[1], escape));
+    function.fill_block(escape, address_of(alias, held, names.at[2], store));
+    // `*bogus = alias`, a write of a pointer through a place this check cannot
+    // name the type of. It may have landed in `held`.
+    function.fill_block(store, write(bogus, alias, names.at[3], release));
+    function.fill_block(release, free(&callees, held, names.at[4], after));
+    function.fill_block(
+        after,
+        after_the_statement(names.at[4], read(value, sharer, names.at[5], exit)),
+    );
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    // Reported, and not proved: the write may have put something else in
+    // `held`, so the free need not have taken what `sharer` holds.
+    assert!(!found.is_empty(), "{found:?}");
+    assert!(
+        found
+            .iter()
+            .all(|finding| finding.conclusion != Conclusion::Unsafe),
+        "{found:?}"
+    );
+}
