@@ -88,56 +88,62 @@ if let [one] = followed[..] {
 **The proof is carried by the fold and not by the combining method**, which is
 where this record was first wrong. Written as a rule inside `accumulated` the
 condition was "the set does not grow", and a review found that it cannot tell
-the fold's empty seed from a real operand that holds no site. This check does not
-read types, so a local holding nothing is an `int` and a pointer whose allocation
-it lost at the same time:
+the fold's empty seed from a real operand that holds no site. When this was
+written the check did not read types, so a local holding nothing was an `int`
+and a pointer whose allocation it lost at the same time, and
+`int *slot = base + ok;` with `ok` an `int` and `base` a pointer this check
+follows no allocation for was a **proved** use after free about an allocation
+nothing had freed.
 
-```c
-int ok = (q != 0);      /* the whole of q's `Held` travels: 6.5's operands are not typed here */
-int *base = *spare;     /* a pointer this check follows no allocation for */
-int *slot = base + ok;  /* proved use after free, measured, where `main` says "perhaps" */
-```
+[ADR-0030](./0030-a-pointer-operand-decides-what-pointer-arithmetic-reaches.md)
+has since made that shape answer differently: `ok` is an integer, C17 6.5.6 p8
+keeps `base + ok` inside the object `base` points into, and so `ok` contributes
+nothing and the expression has one contributing operand rather than two. **What
+that record changes is which operands contributed, and not what happens when two
+of them did.** Two contributing operands are two pointers, which is `q + r`, and
+the reason the rule here still stands is unchanged: the result may be either of
+them, and a proof about one of two sets is not a proof.
 
-`slot` may be `base` offset, and `base` was never freed. Keeping the proof for
-`p + n` with `n` an `int` keeps it for that, because the two are one shape here.
-So the proof survives only where **nothing else contributed**: one followed
-operand and a constant, which C17 6.5.6 p8 keeps inside the same object.
+So the proof survives only where **nothing else contributed**: one contributing
+operand and a constant, which the clause above keeps inside the same object.
 
 **A union of the present ones invents a proof, and it is the reading a reader
 arrives at first.** What `Held::freed` is worth is not that *some* member of the
 set was freed; it is that freeing the local again takes the same member. A set
-that has gained a site nothing freed no longer supports that. Measured, with the
-accumulator taking the proof from whichever side has one:
+that has gained a site nothing freed no longer supports that. The shape is
 
-```console
-$ cat d4.c
-void *malloc(int n);
-void free(void *p);
-int f(int c, int i) {
-    int *q = malloc(4);
-    if (c) { q = malloc(8); }
-    free(q);
-    int *p = q + i;
-    free(p);
-    return 0;
-}
-
-$ safec ... d4.c          # main, and this decision
-warning[SC0401]: this may free a value that was freed already
-$ safec ... d4.c          # the union of the present ones
-error[SC0401]: this frees a value that was freed already
+```text
+q = malloc(); if (c) { q = malloc(); }   two sites
+free(q)                                  the proof: freeing q again takes the same member
+p = q + r                                r is another pointer, holding a site nothing freed
+free(p)                                  a proof this check cannot make
 ```
 
-`i` is a parameter and a parameter is a site, so the accumulator reaches `i`'s
-site as well as `q`'s two. `p` may hold the one nothing freed. That report is a
-proof this check cannot make. `CLAUDE.md` puts a false positive on row 4, not on
-row 6: the reader can see it and `docs/safety-model.md` reserves row 6 for a
-silence. What makes it worth a decision anyway is that `Unsafe` is what that
-document reserves for something established, so a wrong one spends the word.
+**Written as IR rather than as C, because it is not C.** `q + r` with two
+pointers violates C17 6.5.6 p2, which requires one operand of an addition to
+have integer type; `clang -std=c17 -pedantic-errors` answers `invalid operands
+to binary expression ('int *' and 'int *')`, measured. The one conforming
+spelling with two pointer operands is `q - r`, whose result is a `ptrdiff_t` and
+which this frontend refuses for want of that type. So `p` may hold the one
+nothing freed, and no C program reaches it. That report is a proof this check
+cannot make. `CLAUDE.md` puts a false positive on row 4, not on row 6: the
+reader can see it and `docs/safety-model.md` reserves row 6 for a silence. What
+makes it worth a decision anyway is that `Unsafe` is what that document reserves
+for something established, so a wrong one spends the word.
 
-**Symmetric, because it counts operands rather than folding them.** `p = i + q`
-and `p = q + i` are one expression and answer the same, and neither keeps the
-proof, because each has two followed operands.
+**There is no console transcript here and there used to be.** It was measured on
+`int *p = q + i;` with `i` a parameter, which ADR-0030 has since made a program
+with one contributing operand; and `q + r` is
+`error[SC0304]: cannot compile an expression whose type is not known` in this
+frontend, so the shape the rule is now about cannot be written in C here at all.
+`an_offset_by_a_second_pointer_loses_the_proof` in
+`crates/safec-ir/tests/freed.rs` is where it is measured instead.
+
+**Symmetric, because it counts contributions rather than folding them.**
+`p = i + q` and `p = q + i` are one expression and answer the same. Under
+ADR-0030 that is one contribution each and both keep the proof; it was two each
+and neither kept it, and what mattered then and now is that the two spellings
+are never told apart.
 
 **A field-wise algebra is not the answer, and that is why there is no trait.**
 The proof's rule is not about the two values being combined at all; it is about
@@ -173,11 +179,15 @@ none. Measured both ways.
 
 Each mutation below applied on its own, the whole workspace suite run with
 `--no-fail-fast`, the tree restored, and the failure read rather than predicted.
+**Re-measured after ADR-0030 narrowed what counts as an operand here**, which is
+what RK-066 in the review knowledge bank asks for: the second row used to be
+held by two corpus cases and is held by a hand-built one now, because the
+programs those cases were written from no longer reach the rule.
 
 | Mutation | Named test that fails |
 |---|---|
-| `built_from` does not restore the proof for a sole operand | `a_free_after_an_offset_that_kept_the_set_is_proved`, which drops to a warning |
-| `built_from` restores the proof whenever any operand carries one | `an_offset_by_a_local_loses_the_proof_whatever_the_local_holds` and `an_offset_that_grew_the_set_is_not_proved`, each of which becomes a certainty about a value nothing followed |
+| `built_from` does not restore the proof for a sole operand | `a_free_after_an_offset_that_kept_the_set_is_proved`, `an_offset_by_an_integer_local_keeps_the_proof` and `an_offset_by_an_integer_parameter_keeps_the_proof`, each of which drops to a warning. The last two are the cases ADR-0030 moved onto this row |
+| `built_from` restores the proof whenever any operand carries one | `an_offset_by_a_second_pointer_loses_the_proof` in `crates/safec-ir/tests/freed.rs`, which becomes a certainty about a value that may be the other operand's |
 | `accumulated` does not union `lost` | `a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation`, which goes silent. A free cannot hold it, because an argument reaching nothing answers `Reached::Lost` anyway; a dereference can, because that one says nothing about a place it follows no allocation for |
 | `accumulated` does not union `sites` | eleven, across the corpus |
 | `joined` accumulates the proof rather than intersecting it, at the method or at its one caller | `a_free_of_a_may_set_on_one_arm_only`, a proved error on a path that never freed |
@@ -259,6 +269,8 @@ it is a proof about a pointer the write may have replaced.
   [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs), and
   the `Deref` arm of `Allocations::element` beside them.
 * ADR-0020 is what put a proof in this struct; ADR-0018 is what the struct holds
-  and why; ADR-0017 is the escape answer the unguarded line rests on.
+  and why; ADR-0017 is the escape answer the unguarded line rests on;
+  [ADR-0030](./0030-a-pointer-operand-decides-what-pointer-arithmetic-reaches.md)
+  is which operands the fold counts, which this record takes as given.
 * Issue #174 carries the measurement the body was filed with, and the note that
   ADR-0021 has since folded the program it used.

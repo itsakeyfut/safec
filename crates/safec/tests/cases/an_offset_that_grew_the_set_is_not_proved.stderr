@@ -1,9 +1,0 @@
-warning[SC0401]: this may free a value that was freed already
-   ╭─[ an_offset_that_grew_the_set_is_not_proved.c:8:5 ]
-   │
- 8 │     free(p);
-   │     ───┬───  
-   │        ╰───── may free it again here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error

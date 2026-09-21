@@ -39,7 +39,7 @@ use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
     Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TranslationUnit,
+    TranslationUnit, Ty,
 };
 use crate::source::{SourceMap, Span};
 
@@ -835,28 +835,61 @@ impl Known {
 
 /// What the operands of a binary operation build.
 ///
-/// **The proof survives only where nothing else contributed.** One followed
+/// **Where one operand is a pointer, it is the only one that contributed.**
+/// C17 6.5.6 p8 keeps the result of pointer arithmetic inside the object the
+/// pointer operand points into, so the integer beside it cannot decide what the
+/// result reaches whatever that integer happens to hold. That is a statement
+/// about the program rather than a belief about a type, which is what lets a
+/// may-set be narrowed here at all. See ADR-0030.
+///
+/// **The proof survives only where nothing else contributed.** One contributing
 /// operand and a constant is `p + 1`: the result is that operand offset, and
-/// C17 6.5.6 p8 keeps it inside the same object, so the set the proof is about
-/// is the set the result names. Two followed operands is an expression whose
-/// value may be either of them, and [`Held::accumulated`] drops the proof for
-/// the reason written there.
+/// the clause above keeps it inside the same object, so the set the proof is
+/// about is the set the result names. Two of them is an expression whose value
+/// may be either, and [`Held::accumulated`] drops the proof for the reason
+/// written there.
 ///
 /// One function with two callers, because the same question is asked where a
 /// value is assigned and where one is written through a pointer, and RK-052 in
 /// the review knowledge bank is one rule in two places drifting apart inside
 /// the change that touches one of them.
-fn built_from(operands: [&Operand; 2], value: &Known) -> Held {
-    let followed: Vec<usize> = operands
+fn built_from(
+    operands: [&Operand; 2],
+    value: &Known,
+    is_pointer: impl Fn(LocalId) -> bool,
+) -> Held {
+    let followed: Vec<LocalId> = operands
         .iter()
         .filter_map(|operand| match operand {
             // A constant is not a value this check follows, and neither is a
             // read through a projection: `*pp + 1` reaches whatever `pp` points
             // at, which is a place rather than a local.
-            Operand::Copy(source) if source.projection.is_empty() => Some(source.local.index()),
+            Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
             _ => None,
         })
         .collect();
+
+    // **An operation with no pointer operand keeps every one of them**, and
+    // this is the half C says nothing about: two integers added together are
+    // not pointer arithmetic, so no clause says the result cannot reach what
+    // its operands reach. Narrowing there would be narrowing on nobody's
+    // authority, and RK-045 is what an emptied set costs: a dereference of a
+    // local that reaches no site is reported by nothing at all.
+    //
+    // **`i + j` reaches this constantly**, and what is rare is one of those
+    // integers holding an allocation. It takes a program C forbids, which this
+    // compiler does not yet refuse: `int i = p;` is a constraint violation
+    // under C17 6.5.16.1 p1 and #154 is the check that is missing. See
+    // ADR-0030, which measures what this branch is worth on such a program.
+    let followed: Vec<usize> = if followed.iter().any(|&local| is_pointer(local)) {
+        followed
+            .iter()
+            .filter(|&&local| is_pointer(local))
+            .map(|local| local.index())
+            .collect()
+    } else {
+        followed.iter().map(|local| local.index()).collect()
+    };
 
     let mut reached = Held::none(value.points_to.len());
     for &source in &followed {
@@ -908,6 +941,26 @@ impl Allocations<'_> {
             "free" => Callee::Frees,
             "malloc" => Callee::Allocates,
             _ => Callee::Opaque,
+        }
+    }
+
+    /// Whether this local holds a pointer.
+    ///
+    /// What tells the pointer operand of an addition from the integer beside
+    /// it, which is the question [`built_from`] asks and C17 6.5.6 p8 answers.
+    /// See ADR-0030.
+    ///
+    /// **Written out rather than as a `matches!`, because the answer for a kind
+    /// nobody has added yet is not `false`.** A type this does not recognise is
+    /// dropped from an addition that has a pointer beside it, and a dropped
+    /// operand is a site nothing reports: `error[E0004]` here is what asks a
+    /// fourth kind of type whether it is one. RK-015 is the limit of that, and
+    /// this is the case where a reader has something to decide rather than a
+    /// line to fill in.
+    fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
+        match self.unit.ty(function.local(local)) {
+            Ty::Pointer(_) => true,
+            Ty::Int | Ty::Char | Ty::Void => false,
         }
     }
 
@@ -1124,7 +1177,7 @@ impl Analysis for Allocations<'_> {
         into.settle();
     }
 
-    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+    fn element(&self, function: &Function, element: &Element, value: &mut Self::Value) {
         // What is read here is read where this element runs, against what held
         // before it, which is the same question `findings` asks one line
         // earlier and has to get the same answer to.
@@ -1232,13 +1285,16 @@ impl Analysis for Allocations<'_> {
                         }
                         // The arithmetic written straight into the place, which
                         // no C reaches for the reason above and another
-                        // frontend may. Both operands, for the reason the arm
-                        // above gives, and the same question about the edge:
-                        // this asked none of it until review built the shape by
-                        // hand, and carried an edge through `qq + 7` that the
-                        // arm one level up had just been taught to drop.
+                        // frontend may. The operands the types say contributed,
+                        // for the reason the arm above gives, and the same
+                        // question about the edge: this asked none of it until
+                        // review built the shape by hand, and carried an edge
+                        // through `qq + 7` that the arm one level up had just
+                        // been taught to drop.
                         Rvalue::Binary { op: _, lhs, rhs } => {
-                            let mut reached = built_from([lhs, rhs], value);
+                            let mut reached = built_from([lhs, rhs], value, |local| {
+                                self.is_pointer(function, local)
+                            });
                             reached.writes_to.fill(false);
                             // Emptying the set says nothing on its own: an
                             // empty set is what a pointer this check never
@@ -1371,25 +1427,22 @@ impl Analysis for Allocations<'_> {
                     // rather than a diagnostic, which is the worst answer this
                     // compiler has.
                     //
-                    // Both operands, and a union rather than a choice. Which
-                    // one is the pointer is a question about types and this
-                    // does not read them; taking both is a may-set growing,
-                    // which is the direction that cannot make a proof out of
-                    // nothing. `q - p` is an integer and picks up both, and
-                    // nothing dereferences an integer.
+                    // **The pointer operand, and the integer beside it is not
+                    // one.** Which is which is a question about types and
+                    // [`built_from`] reads them: 6.5.6 p8 keeps the result
+                    // inside the object the *pointer* points into, so a site
+                    // the index happens to be is not a site the subscript may
+                    // reach. A parameter is a site, so until this was read
+                    // `p[i]` unioned the allocation `p` holds with the site `i`
+                    // is, and a live site stops the result being proved:
+                    // `free(p); p[i] = 42;` was a warning where
+                    // `free(p); p[0] = 42;` was an error. See ADR-0030.
                     //
                     // Read before the write, so `p = p + 1` keeps what `p`
                     // held rather than clearing it and unioning the result.
-                    //
-                    // **It costs a proof where the index is a local.** A
-                    // parameter is a site, so `p[i]` unions the allocation `p`
-                    // holds with the site `i` is, and a site that is live stops
-                    // the result being proved: `free(p); p[i] = 42;` is a
-                    // warning where `free(p); p[0] = 42;` is an error. The
-                    // types are in the IR and reading them would separate the
-                    // two, which is #143 rather than a line here.
                     Rvalue::Binary { op: _, lhs, rhs } => {
-                        let mut reached = built_from([lhs, rhs], value);
+                        let mut reached =
+                            built_from([lhs, rhs], value, |local| self.is_pointer(function, local));
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
                         // points into, which is why the allocation comes along.

@@ -99,22 +99,44 @@ struct Callees {
     helper: FuncId,
 }
 
-/// A unit, the function under test, its `int`, and the callees it can name.
-fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, TyId, Callees) {
+/// The types the locals in these programs are built from.
+///
+/// **Three rather than one, because the check reads them now.** ADR-0030 makes
+/// which operand of an addition is the pointer a question about types, so a
+/// fixture that builds every local as an `int` asks what this check answers
+/// where neither operand is a pointer rather than what it answers for `p + i`.
+/// A local's type here is what the C program the test is written from would
+/// have declared, and where no C program can be written the test says so.
+struct Types {
+    /// `int`, for a local holding a value rather than an address.
+    int: TyId,
+    /// `int *`, which is what a `malloc` in these programs answers with.
+    ptr: TyId,
+    /// `int **`, for a local holding the address of one of those.
+    ptr_ptr: TyId,
+}
+
+/// A unit, the function under test, its types, and the callees it can name.
+fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, Types, Callees) {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
     let int = unit.push_type(Ty::Int);
     let void = unit.push_type(Ty::Void);
+    let ptr = unit.push_type(Ty::Pointer(int));
+    let ptr_ptr = unit.push_type(Ty::Pointer(ptr));
 
     let callees = Callees {
-        free: unit.push_function(Function::declaration(names.free, void, [int])),
-        malloc: unit.push_function(Function::declaration(names.malloc, int, [])),
-        helper: unit.push_function(Function::declaration(names.helper, void, [int])),
+        free: unit.push_function(Function::declaration(names.free, void, [ptr])),
+        malloc: unit.push_function(Function::declaration(names.malloc, ptr, [])),
+        helper: unit.push_function(Function::declaration(names.helper, void, [ptr])),
     };
 
-    let function = Function::new(names.function, int, vec![int; parameters]);
-    (unit, function, int, callees)
+    // Every parameter these programs take is one they free or dereference, so
+    // they are pointers. A test wanting an allocation in something that is not
+    // one builds it with `malloc`, which is the shape no C frontend writes.
+    let function = Function::new(names.function, int, vec![ptr; parameters]);
+    (unit, function, Types { int, ptr, ptr_ptr }, callees)
 }
 
 /// `free(local);`, ending the block.
@@ -266,8 +288,8 @@ fn concluded(
 #[test]
 fn a_value_freed_twice_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let first = function.reserve_block();
@@ -305,9 +327,9 @@ fn a_value_freed_twice_is_unsafe() {
 #[test]
 fn a_value_freed_through_a_copy_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let alias = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let alias = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let aliased = function.reserve_block();
@@ -343,7 +365,7 @@ fn a_value_freed_through_a_copy_is_unsafe() {
 #[test]
 fn a_parameter_is_an_allocation_site() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let first = function.reserve_block();
@@ -375,9 +397,9 @@ fn a_parameter_is_an_allocation_site() {
 #[test]
 fn two_allocations_are_two_sites() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let first_held = function.push_local(int);
-    let second_held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let first_held = function.push_local(types.ptr);
+    let second_held = function.push_local(types.ptr);
 
     let one = function.reserve_block();
     let two = function.reserve_block();
@@ -412,7 +434,7 @@ fn two_allocations_are_two_sites() {
 #[test]
 fn a_join_names_the_earlier_free() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let entry = function.reserve_block();
@@ -467,7 +489,7 @@ fn a_join_names_the_earlier_free() {
 #[test]
 fn a_join_names_the_earlier_file_before_the_earlier_offset() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let entry = function.reserve_block();
@@ -516,10 +538,10 @@ fn a_join_names_the_earlier_file_before_the_earlier_offset() {
 #[test]
 fn a_free_of_either_of_two_allocations_names_the_earlier() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let one = function.push_local(int);
-    let other = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let one = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
 
     let allocate_one = function.reserve_block();
     let allocate_two = function.reserve_block();
@@ -580,7 +602,7 @@ fn a_free_of_either_of_two_allocations_names_the_earlier() {
 #[test]
 fn a_free_that_may_not_be_the_first_is_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let entry = function.reserve_block();
@@ -695,9 +717,9 @@ fn deref(local: LocalId) -> Place {
 #[test]
 fn a_read_through_a_freed_pointer_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let live = function.reserve_block();
@@ -743,9 +765,9 @@ fn a_read_through_a_freed_pointer_is_unsafe() {
 #[test]
 fn a_write_through_a_freed_pointer_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -783,9 +805,9 @@ fn a_write_through_a_freed_pointer_is_unsafe() {
 #[test]
 fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
     let (sources, names) = sources();
-    let (unit, mut function, int, _callees) = a_unit(&names, 0);
-    let value = function.push_local(int);
-    let other = function.push_local(int);
+    let (unit, mut function, types, _callees) = a_unit(&names, 0);
+    let value = function.push_local(types.ptr);
+    let other = function.push_local(types.int);
 
     let entry = function.reserve_block();
     let exit = function.reserve_block();
@@ -817,9 +839,9 @@ fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
 #[test]
 fn taking_the_address_of_a_dereference_is_not_a_use() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let taken = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let taken = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -854,9 +876,9 @@ fn taking_the_address_of_a_dereference_is_not_a_use() {
 #[test]
 fn a_use_after_a_free_on_one_path_is_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let decide = function.reserve_block();
@@ -906,9 +928,9 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
 #[test]
 fn a_use_after_two_allocations_names_no_allocation() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let decide = function.reserve_block();
     let first_arm = function.reserve_block();
@@ -954,10 +976,10 @@ fn a_use_after_two_allocations_names_no_allocation() {
 #[test]
 fn a_free_where_one_site_is_unknown_is_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 1);
+    let (unit, mut function, types, callees) = a_unit(&names, 1);
     let given = function.parameters().next().expect("one parameter");
-    let held = function.push_local(int);
-    let either = function.push_local(int);
+    let held = function.push_local(types.ptr);
+    let either = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1013,8 +1035,8 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
 #[test]
 fn a_site_allocated_on_two_arms_names_no_allocation() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let decide = function.reserve_block();
     let first_arm = function.reserve_block();
@@ -1054,9 +1076,9 @@ fn a_site_allocated_on_two_arms_names_no_allocation() {
 #[test]
 fn a_second_free_keeps_where_the_allocation_was() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1105,8 +1127,8 @@ fn a_second_free_keeps_where_the_allocation_was() {
 #[test]
 fn a_dereference_in_a_condition_is_a_use() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1162,8 +1184,8 @@ fn evaluate(local: LocalId, at: Span, then: BlockId) -> Block {
 #[test]
 fn a_place_evaluated_for_nothing_is_a_use() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1203,8 +1225,8 @@ fn a_place_evaluated_for_nothing_is_a_use() {
 #[test]
 fn evaluating_a_place_moves_no_site() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let discarded = function.reserve_block();
@@ -1280,10 +1302,10 @@ fn evaluating_a_place_moves_no_site() {
 #[test]
 fn a_proof_replaces_the_suspicion_at_one_caret() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let other = function.push_local(int);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let other = function.push_local(types.ptr);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate_other = function.reserve_block();
     let release_other = function.reserve_block();
@@ -1368,10 +1390,10 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
 #[test]
 fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let escape = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let escape = function.push_local(types.ptr_ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1419,6 +1441,29 @@ fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> 
     }
 }
 
+/// `to = lhs + rhs;`, in a block that falls through to `then`.
+///
+/// The same addition with a local on both sides rather than a constant on one,
+/// which is what asks which of the two contributed. The four tests it serves
+/// are shapes this frontend cannot write, and they are not one kind of thing:
+/// an addition of two pointers is a constraint violation under C17 6.5.6 p2,
+/// while `i[p]` is valid C that this frontend refuses anyway. It answers
+/// `SC0304` for both. See ADR-0030.
+fn summed(to: LocalId, lhs: LocalId, rhs: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(lhs)),
+                rhs: Operand::Copy(Place::local(rhs)),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
 /// An offset of zero that survived into the IR is a shape this check does not
 /// follow.
 ///
@@ -1442,12 +1487,12 @@ fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> 
 #[test]
 fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let p = function.push_local(int);
-    let q = function.push_local(int);
-    let pp = function.push_local(int);
-    let stepped = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let p = function.push_local(types.ptr);
+    let q = function.push_local(types.ptr);
+    let pp = function.push_local(types.ptr_ptr);
+    let stepped = function.push_local(types.ptr_ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let alias = function.reserve_block();
@@ -1531,13 +1576,13 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 #[test]
 fn an_offset_that_moves_the_pointer_carries_no_edge() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let z = function.push_local(int);
-    let p = function.push_local(int);
-    let q = function.push_local(int);
-    let pp = function.push_local(int);
-    let qq = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let z = function.push_local(types.ptr);
+    let p = function.push_local(types.ptr);
+    let q = function.push_local(types.ptr);
+    let pp = function.push_local(types.ptr_ptr);
+    let qq = function.push_local(types.ptr_ptr);
+    let value = function.push_local(types.int);
 
     let hold = function.reserve_block();
     let alias = function.reserve_block();
@@ -1573,6 +1618,311 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
     assert_eq!(found[0].at, names.at[5]);
 }
 
+/// Two pointer operands both contributed, so the proof about the set goes.
+///
+/// ADR-0024's rule, in the one shape that still reaches it. The proof
+/// `free(q)` leaves on a two-site `q` says that freeing `q` again takes the
+/// same member; `q + r` may be `r`'s value instead, so freeing *that* again
+/// proves nothing. ADR-0030 is why the corpus cannot hold this any more: the
+/// case that used to was `q + i` with `i` a parameter, and an integer operand
+/// no longer contributes, while `q + r` is `error[SC0304]` in this frontend.
+///
+/// **Two allocations into two locals, joined into one, and that is the whole
+/// arrangement.** A site is named by the local a `malloc` wrote into, which is
+/// ADR-0018, so allocating twice into `q` gives one site rather than two and
+/// the free is then an ordinary free of a single member. Measured that way
+/// first: this test passed under its own mutation, because a set whose only
+/// member was freed proves the second free without any help from the proof.
+///
+/// `r` holds nothing at all, which is deliberate: what drops the proof is that
+/// a second operand contributed, not what it contributed. A reader tempted to
+/// write the rule as "the set grew" has to answer for this program, whose set
+/// gains no site.
+///
+/// Mutation: in `built_from`, restore the proof whenever any operand carries
+/// one, by reading the first of them rather than the only one. The free below
+/// becomes `Conclusion::Unsafe` and this fails on that field.
+#[test]
+fn an_offset_by_a_second_pointer_loses_the_proof() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let one = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
+    let q = function.push_local(types.ptr);
+    let r = function.push_local(types.ptr);
+    let p = function.push_local(types.ptr);
+
+    let allocate_one = function.reserve_block();
+    let allocate_two = function.reserve_block();
+    let pick = function.reserve_block();
+    let take_one = function.reserve_block();
+    let take_two = function.reserve_block();
+    let release = function.reserve_block();
+    let offset = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        allocate_one,
+        malloc(&callees, one, names.at[0], allocate_two),
+    );
+    function.fill_block(allocate_two, malloc(&callees, other, names.at[1], pick));
+    function.fill_block(pick, branch(take_one, take_two, names.asked));
+    function.fill_block(take_one, copy(q, one, names.at[2], release));
+    function.fill_block(take_two, copy(q, other, names.at[2], release));
+
+    function.fill_block(release, free(&callees, q, names.at[3], offset));
+    function.fill_block(
+        offset,
+        after_the_statement(names.at[3], summed(p, q, r, names.at[4], second)),
+    );
+    function.fill_block(second, free(&callees, p, names.at[5], exit));
+    function.fill_block(exit, after_the_statement(names.at[5], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unknown,
+        "the proof does not survive a second operand"
+    );
+    assert_eq!(found[0].at, names.at[5]);
+}
+
+/// An index that is itself a freed pointer is a site the result still reaches.
+///
+/// **The direction narrowing a may-set can be wrong in.** ADR-0030 drops the
+/// operands the types say did not contribute, and what that must never drop is
+/// a site that mattered: here both operands are pointers, so both contribute,
+/// and the second of them is the freed one. A rule that kept the first alone
+/// would answer nothing about a read through the result.
+///
+/// Unproven rather than proved, because the other operand's site is live and
+/// the result may be either. What is under test is that it is reported at all.
+///
+/// **Not a subscript, and not C.** C17 6.5.2.1 p1 requires one operand of `[]`
+/// to have integer type, so `q[r]` over two pointers is a constraint violation
+/// rather than a spelling this check has to answer for, and so is the `q + r`
+/// below it under 6.5.6 p2. `safec` refuses both with `error[SC0304]`, whose
+/// note calls it a gap in this compiler; for these two the program is at fault
+/// instead, which is #154's shape and not this test's.
+///
+/// Mutation: in `built_from`, take the left operand rather than the ones the
+/// types say are pointers. The read reaches only the live site, nothing is
+/// reported, and this fails on the length.
+#[test]
+fn an_index_that_is_a_freed_pointer_is_still_reached() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let base = function.push_local(types.ptr);
+    let freed = function.push_local(types.ptr);
+    let element = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let allocate_other = function.reserve_block();
+    let release = function.reserve_block();
+    let subscript = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        allocate,
+        malloc(&callees, base, names.at[0], allocate_other),
+    );
+    function.fill_block(
+        allocate_other,
+        malloc(&callees, freed, names.at[1], release),
+    );
+    function.fill_block(release, free(&callees, freed, names.at[2], subscript));
+    function.fill_block(
+        subscript,
+        after_the_statement(
+            names.at[2],
+            summed(element, base, freed, names.at[3], dangling),
+        ),
+    );
+    function.fill_block(dangling, read(value, element, names.at[4], exit));
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unknown,
+        "the result may be the live one"
+    );
+    assert_eq!(found[0].at, names.at[4]);
+}
+
+/// The pointer operand is followed whichever side it is written on.
+///
+/// C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, which makes `i[p]` and
+/// `p[i]` one program. A rule that took the left operand would answer about the
+/// index in one of them, and the answer it would give is silence.
+///
+/// **Hand-built because this frontend refuses valid C here.** `i[p]` is a
+/// program `clang -std=c17 -pedantic-errors` accepts and `safec` answers
+/// `error[SC0304]` for, so the corpus can hold `p[i]` and nothing else. That is
+/// a gap in this compiler rather than a fault in the program, which is what
+/// that code's note says and is true of this one.
+///
+/// Mutation: in `built_from`, take the left operand rather than the ones the
+/// types say are pointers. The read below reaches no site, nothing at all is
+/// reported, and this fails on the length, which is the direction that matters.
+#[test]
+fn an_index_written_on_the_left_still_carries_the_pointer() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let p = function.push_local(types.ptr);
+    let index = function.push_local(types.int);
+    let element = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let subscript = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, p, names.at[0], release));
+    function.fill_block(release, free(&callees, p, names.at[1], subscript));
+    function.fill_block(
+        subscript,
+        after_the_statement(
+            names.at[1],
+            summed(element, index, p, names.at[2], dangling),
+        ),
+    );
+    function.fill_block(dangling, read(value, element, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].freed, Some(names.at[1]));
+    assert_eq!(found[0].made, Some(names.at[0]));
+}
+
+/// An allocation in a local declared `int` is dropped beside a pointer.
+///
+/// **The boundary, and it is a silence.** ADR-0030 reads a local's declared
+/// type to tell the pointer operand of an addition from the integer beside it,
+/// and drops the integer, so a well-formed safety IR has to declare a local
+/// that may hold an allocation as a pointer. `docs/c-family.md` carries that
+/// requirement, beside the three others nothing enforces at the boundary.
+///
+/// This is what breaking it costs: **nothing is reported at all**, under every
+/// flag, about a use after free. Not a suspicion, which is what an IR missing
+/// a sequence point gets; the whole finding. That is the bottom row of
+/// `CLAUDE.md`'s list, and it is here so that the day the requirement is
+/// enforced, or the day the rule stops needing it, a named test says so rather
+/// than passing quietly.
+///
+/// Two shapes in this tree break the requirement and neither is a cast: #204
+/// is the lowering's own compound-assignment temporary, and #205 is an
+/// initializer that is never checked against the assignment constraint. Both
+/// are why this test says `is dropped` rather than `cannot happen`.
+///
+/// Mutation: none from inside this file, for the reason
+/// `an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` gives about
+/// its own boundary. What this holds is the absence of an answer. Making the
+/// filter keep an operand that carries a site, whatever its type, turns this
+/// into a report and fails it.
+#[test]
+fn an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    // The requirement this program breaks: a `malloc` into a local that is not
+    // a pointer. No conforming C reaches it through this frontend today; #205
+    // is the hole that does, and a hand-built unit needs no hole.
+    let holder = function.push_local(types.int);
+    let beside = function.push_local(types.ptr);
+    let sum = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let add = function.reserve_block();
+    let release = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, holder, names.at[0], add));
+    function.fill_block(add, summed(sum, holder, beside, names.at[1], release));
+    function.fill_block(release, free(&callees, holder, names.at[2], dangling));
+    function.fill_block(
+        dangling,
+        after_the_statement(names.at[2], read(value, sum, names.at[3], exit)),
+    );
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    // `beside` is a pointer holding nothing, and it is the only operand the
+    // filter keeps. The read through `sum` therefore asks about an allocation
+    // this check is no longer carrying, and asks it of nobody.
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// An addition of two integers carries what both of them hold.
+///
+/// The half of ADR-0030 that C says nothing about. Every `i + j` reaches that
+/// branch; what is under test here is the case it exists for, an allocation in
+/// a local that is not a pointer. The C frontend writes that only for a program
+/// C forbids, `int i = p;` being a constraint violation under C17 6.5.16.1 p1
+/// that #154 is the missing check for, and a hand-built unit writes it freely.
+/// Narrowing here instead would empty the set, and RK-045 in the review
+/// knowledge bank is what an empty set costs at a dereference, which is
+/// silence.
+///
+/// `m` holds nothing, so what the fallback keeps is the site in `n`. Freeing
+/// `n` and then the sum is a double free of the one allocation there is.
+///
+/// Mutation: in `built_from`, drop the fallback, so that an operation with no
+/// pointer operand follows neither. The sum reaches no site, the free below
+/// answers `Reached::Lost` and drops to `Conclusion::Unknown`, and this fails
+/// on that field.
+#[test]
+fn an_addition_of_two_integers_carries_what_both_hold() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let n = function.push_local(types.int);
+    let m = function.push_local(types.int);
+    let sum = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let add = function.reserve_block();
+    let release = function.reserve_block();
+    let again = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // Straight into an `int`, which is the whole shape under test.
+    function.fill_block(allocate, malloc(&callees, n, names.at[0], add));
+    function.fill_block(add, summed(sum, n, m, names.at[1], release));
+    function.fill_block(release, free(&callees, n, names.at[2], again));
+    function.fill_block(
+        again,
+        after_the_statement(names.at[2], free(&callees, sum, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].freed, Some(names.at[2]));
+    assert_eq!(found[0].made, Some(names.at[0]));
+}
+
 /// The address of a dereference names no local a write through it lands in.
 ///
 /// **The one place this question is asked that no C program reaches.** C17
@@ -1597,11 +1947,11 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
 #[test]
 fn the_address_of_a_dereference_is_not_an_edge_to_the_local() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let other = function.push_local(int);
-    let alias = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
+    let alias = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let allocate_other = function.reserve_block();
@@ -1674,9 +2024,9 @@ fn nothing(then: BlockId) -> Block {
 #[test]
 fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let decide = function.reserve_block();
@@ -1746,10 +2096,10 @@ fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
 #[test]
 fn a_call_into_a_local_whose_address_escaped() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let escape = function.push_local(int);
-    let shared = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let escape = function.push_local(types.ptr_ptr);
+    let shared = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let escaped = function.reserve_block();
@@ -1812,8 +2162,8 @@ fn a_call_into_a_local_whose_address_escaped() {
 #[test]
 fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let pointer = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let pointer = function.push_local(types.ptr_ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1868,9 +2218,9 @@ fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
 #[test]
 fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let live = function.reserve_block();
@@ -1914,9 +2264,9 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
 #[test]
 fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let argument = function.reserve_block();
@@ -1978,10 +2328,10 @@ fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
 #[test]
 fn a_read_carried_to_an_allocating_call_is_not_reported() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
-    let second = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+    let second = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let handed = function.reserve_block();

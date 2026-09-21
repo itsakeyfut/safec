@@ -247,20 +247,20 @@ cases! {
     a_may_set_freed_then_written_through_an_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What a proof about a may-set survives when a value is built from its
     // operands, which is the half of `Held` that is not a may-fact. It carries
-    // while the set does not grow, so an offset keeps it and an offset by
-    // something that is itself a site does not: `i` is a parameter, so `q + i`
-    // reaches `i`'s site too, and a set that has gained a site nothing freed
-    // cannot support a proof about the one that was. See ADR-0024.
+    // while the set does not grow, and an offset by an integer does not grow
+    // it: C17 6.5.6 p8 keeps the result inside the object the *pointer* operand
+    // points into, whatever the index happens to be. `i` is a parameter and so
+    // a site, and the result reaches it no longer. See ADR-0024 for the proof's
+    // rule and ADR-0030 for which operands it counts.
     a_free_after_an_offset_that_kept_the_set_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    an_offset_that_grew_the_set_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // The same offset written with a local rather than a constant, which loses
-    // the proof however little that local holds. This check does not read
-    // types, so a local holding no site is an `int` and a pointer whose
-    // allocation it lost at the same time: `p + n` and `base + ok` with `base`
-    // read out of another pointer are one shape here. Keeping the proof for the
-    // first keeps it for the second, which is a certainty about a value nothing
-    // followed, so neither keeps it.
-    an_offset_by_a_local_loses_the_proof_whatever_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_offset_by_an_integer_parameter_keeps_the_proof: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same offset by an integer that is not a site at all, which is the
+    // other half of that: the two cases differ in whether there was anything to
+    // pick up, and neither picks it up. A set that *has* grown loses the proof
+    // still, and no C this frontend accepts writes one, so
+    // `an_offset_by_a_second_pointer_loses_the_proof` holds that from
+    // hand-built IR instead.
+    an_offset_by_an_integer_local_keeps_the_proof: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the may-fact beside the proof. A local that lost the name for what it
     // held says so, and arithmetic on it builds a pointer that has lost it too.
     // ADR-0018 holds that for a copy and nothing held it for arithmetic, so the

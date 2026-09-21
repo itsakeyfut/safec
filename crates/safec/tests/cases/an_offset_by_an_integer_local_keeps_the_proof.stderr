@@ -1,0 +1,12 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ an_offset_by_an_integer_local_keeps_the_proof.c:9:5 ]
+   │
+ 7 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+   │ 
+ 9 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
