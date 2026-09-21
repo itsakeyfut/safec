@@ -270,6 +270,24 @@ with the local declared as a pointer produces a proved use after free.
 fails a named test rather than passing quietly, and #204 and #205 are the two
 shapes above.
 
+**A fifth arrived with**
+[ADR-0031](adr/0031-a-write-this-check-cannot-pin-down-replaces-what-an-escaped-local-holds.md),
+and it is the other half of the same reading. The memory check compares the type
+a write writes with the type each escaped local is declared with, and distrusts
+only the locals that match, so **a write through a pointer to `T` must not land
+in an object declared as anything but `T`**. C17 6.5 p7 is what makes that sound
+for a program whose types are what C requires: an object has an effective type
+and an lvalue of another type may access it only where that type is a character
+type, which this frontend has no cast to produce.
+
+**What an omission costs here is a false positive, which is the cheapest of the
+five.** The comparison can only keep a local out of the distrusted set, a local
+that is not distrusted keeps whatever this check had proved about it, and a
+proof is a report: an adapter whose types are dishonest gets the `error` about a
+program C defines that ADR-0031 removed, and never a silence. That is the
+opposite of the requirement above it, which is why the two are written as two:
+they read the same `Ty` and they fail in opposite directions.
+
 That is the same discipline the accepted records already use:
 [ADR-0003](adr/0003-pass-the-source-map-to-each-render-call.md) is confirmed by
 `E0502` and [ADR-0004](adr/0004-resolve-the-strictest-level-where-the-policy-is-built.md)
