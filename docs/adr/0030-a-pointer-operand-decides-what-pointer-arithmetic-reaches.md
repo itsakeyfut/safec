@@ -74,16 +74,53 @@ Ranked on `CLAUDE.md`'s list, which is why this half exists at all:
 
 RK-045 is the mechanism of the second row: a local reaching **no** site is
 silence at a dereference, while a local reaching one live site is silence too,
-so emptying a set does not announce itself anywhere. No C this frontend accepts
-reaches the branch, which answers `error[SC0304]: cannot compile an expression
-whose type is not known` for `q + r` and for `q - r`, measured. It is kept for
-what it would cost the day something does reach it, which is the same argument
-[ADR-0024](./0024-a-proof-survives-while-the-set-it-is-about-does-not-grow.md)
-makes for its own unreachable line, and RK-064 is the entry that asks which
-upstream rule is answering rather than leaving a reader to guess.
+so emptying a set does not announce itself anywhere.
+
+**The branch is reached constantly and its subject is rare.** Every `i + j` in
+every C program takes it, and a parameter is an allocation site, so what it
+folds is usually two site sets that nothing will ever dereference. What is rare
+is an integer that holds a real allocation, and the fallback exists for that
+case rather than for the arithmetic.
 
 **The rule counts contributions rather than sides.** `i[p]` is `i + p` and is
 the same program as `p[i]`, so the filter reads types and never positions.
+
+**What this reads is a declared type, and what the clause is about is a C
+program. That gap is a requirement on the IR.** 6.5.6 p2 makes the operand
+beside a pointer an integer, and what keeps an address out of an integer is the
+rest of C's type rules. An analysis reading `Ty` inherits all of them, so this
+record adds a fourth entry to the list of things
+[`docs/c-family.md`](../c-family.md) asks a well-formed safety IR to satisfy and
+nothing enforces at the boundary: **a local that may hold an allocation is
+declared as a pointer.**
+
+**Two shapes in this tree break it today, and neither is a cast**, which is what
+the first draft of this record named as the thing that would reverse it.
+
+* `Lowering::promoted` types a compound assignment's temporary `Ty::Int`
+  whatever the left operand is, so `p += i` writes pointer arithmetic into a
+  local declared `int`. Nothing is lost today: that temporary has one use and no
+  expression this frontend builds puts it beside a pointer. #204.
+* An initializer is never checked against the assignment constraint, so
+  `int n = p;` is accepted where `n = p;` is `error[SC0302]`. Something *is*
+  lost: measured, `int i = p; free(p); int *r = base + i; free(r);` answered
+  `warning[SC0401]` before this record and answers nothing at all after it, on a
+  program `clang -std=c17 -pedantic-errors` rejects outright. #205.
+
+`CLAUDE.md` puts a silence on row 6, which is the row this project exists to
+keep empty, so the cost of the second one is stated rather than filed under
+precision.
+
+**The obvious repair costs the whole decision, and that is measured rather than
+argued.** Keeping any operand that carries a site, whatever its type, closes the
+silence: `.filter(|&&local| is_pointer(local) || carries_a_site(local))` makes
+`an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer` report. It
+also fails `a_subscript_of_a_freed_pointer` and
+`an_offset_by_an_integer_parameter_keeps_the_proof`, because `i` in `p[i]` is a
+parameter and a parameter is a site, which is the entire problem this record was
+opened to solve. So the two cannot both be had from the type alone, and what
+separates them is whether the IR's types can be trusted, which is #204 and #205
+rather than a line here.
 
 **What ADR-0024 decides is untouched.** The proof still survives while the set
 does not grow, and still drops where two operands contributed; what this record
@@ -112,12 +149,13 @@ serve the old one, and the failure read rather than predicted.
 | Mutation | Named test that fails |
 |---|---|
 | the predicate is never consulted, so every followed operand travels again | `a_subscript_of_a_freed_pointer`, `an_offset_by_an_integer_local_keeps_the_proof` and `an_offset_by_an_integer_parameter_keeps_the_proof`, each back to a warning |
-| the filter keeps the operands that are **not** pointers | `a_subscript_of_a_freed_pointer` and `an_index_written_on_the_left_still_carries_the_pointer`, whose `SC0402` goes silent altogether, and six cases beside them. Not `a_constant_subscript_of_a_freed_pointer`: ADR-0021 folds `p[0]` away where the IR is built, so it has no addition for this to be wrong about |
+| the filter keeps the operands that are **not** pointers | `a_subscript_of_a_freed_pointer` and `an_index_written_on_the_left_still_carries_the_pointer`, whose `SC0402` goes silent altogether, and every other case whose arithmetic has a pointer in it. Not `a_constant_subscript_of_a_freed_pointer`: ADR-0021 folds `p[0]` away where the IR is built, so it has no addition for this to be wrong about |
 | the filter takes the left operand rather than the pointer one | `an_index_written_on_the_left_still_carries_the_pointer`, which is `i[p]`; `an_index_that_is_a_freed_pointer_is_still_reached`, which is the site a narrowing must not drop; and `an_offset_by_a_second_pointer_loses_the_proof` |
 | the fallback goes, so an operation with no pointer operand reaches nothing | `an_addition_of_two_integers_carries_what_both_hold`, which drops from `Conclusion::Unsafe` to `Unknown` |
 | two pointer operands keep the proof | `an_offset_by_a_second_pointer_loses_the_proof`, which becomes `Conclusion::Unsafe` |
+| an operand that carries a site is kept whatever its type, which is the repair above | `an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer`, which starts reporting, together with `a_subscript_of_a_freed_pointer` and `an_offset_by_an_integer_parameter_keeps_the_proof`, which stop proving |
 
-The four hand-built cases are in `crates/safec-ir/tests/freed.rs` because the
+The five hand-built cases are in `crates/safec-ir/tests/freed.rs` because the
 frontend refuses each of their shapes, which is the same reason ADR-0028 keeps
 `the_address_of_a_dereference_is_not_an_edge_to_the_local` there.
 
@@ -146,11 +184,21 @@ what it would cost then is a proof about a set the index widened.
 * Bad, because a may-set is now narrowed, and every later reader of
   `built_from` has one more thing to be right about. The fallback is the half
   that will look redundant.
-* Bad, because the branch nothing reaches is guarded by a hand-built test and
+* Bad, because what the fallback is *for* is guarded by a hand-built test and
   not by the corpus, so what holds it is a file a C programmer does not read.
-* What would reverse this: a cast in the IR. `(int)p` and `(int *)n` make a
-  local's declared type stop answering what it may hold, and this rule would
-  then need the cast to say what it did rather than the declaration.
+* Bad, because it makes a declared type load-bearing for safety, and the
+  lowering's types were until now a convenience. #204 and #205 are the two
+  places that assumption is already false, and the list in `docs/c-family.md`
+  is where the next frontend author meets it.
+* Bad, because a program that violates 6.5.16.1 p1 loses a warning it used to
+  get, measured above. #205 is the check that would refuse such a program, and
+  until it lands this record is borrowing that laxity.
+* What would reverse this: anything that makes a local's declared type stop
+  answering what it may hold. A cast in the IR is the obvious one, `(int)p` and
+  `(int *)n`, and it is not the only one: an assignment across types is already
+  accepted here and the rule is leaning on #154 to remove it. Either way what
+  this rule would need is the conversion to say what it did, rather than the
+  declaration.
 
 ## Pros and Cons of the Options
 

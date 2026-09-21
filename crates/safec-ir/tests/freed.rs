@@ -1444,10 +1444,11 @@ fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> 
 /// `to = lhs + rhs;`, in a block that falls through to `then`.
 ///
 /// The same addition with a local on both sides rather than a constant on one,
-/// which is what asks which of the two contributed. The three tests it serves
-/// are shapes this frontend cannot write: it answers `SC0304` for an addition
-/// of two pointers, for a subscript written `i[p]`, and for anything else whose
-/// type it cannot work out. See ADR-0030.
+/// which is what asks which of the two contributed. The four tests it serves
+/// are shapes this frontend cannot write, and they are not one kind of thing:
+/// an addition of two pointers is a constraint violation under C17 6.5.6 p2,
+/// while `i[p]` is valid C that this frontend refuses anyway. It answers
+/// `SC0304` for both. See ADR-0030.
 fn summed(to: LocalId, lhs: LocalId, rhs: LocalId, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![Element::Assign(Operation {
@@ -1695,13 +1696,18 @@ fn an_offset_by_a_second_pointer_loses_the_proof() {
 /// **The direction narrowing a may-set can be wrong in.** ADR-0030 drops the
 /// operands the types say did not contribute, and what that must never drop is
 /// a site that mattered: here both operands are pointers, so both contribute,
-/// and the one the subscript is written with is the freed one. A rule that kept
-/// the base alone would answer nothing about a read through the result.
+/// and the second of them is the freed one. A rule that kept the first alone
+/// would answer nothing about a read through the result.
 ///
 /// Unproven rather than proved, because the other operand's site is live and
 /// the result may be either. What is under test is that it is reported at all.
 ///
-/// Hand-built because `p + q` is `error[SC0304]` in this frontend.
+/// **Not a subscript, and not C.** C17 6.5.2.1 p1 requires one operand of `[]`
+/// to have integer type, so `q[r]` over two pointers is a constraint violation
+/// rather than a spelling this check has to answer for, and so is the `q + r`
+/// below it under 6.5.6 p2. `safec` refuses both with `error[SC0304]`, whose
+/// note calls it a gap in this compiler; for these two the program is at fault
+/// instead, which is #154's shape and not this test's.
 ///
 /// Mutation: in `built_from`, take the left operand rather than the ones the
 /// types say are pointers. The read reaches only the live site, nothing is
@@ -1757,9 +1763,13 @@ fn an_index_that_is_a_freed_pointer_is_still_reached() {
 ///
 /// C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, which makes `i[p]` and
 /// `p[i]` one program. A rule that took the left operand would answer about the
-/// index in one of them, and the answer it would give is silence. ADR-0030 is
-/// why this is hand-built: `i[p]` is `error[SC0304]` in this frontend, so the
-/// corpus can hold `p[i]` and nothing else.
+/// index in one of them, and the answer it would give is silence.
+///
+/// **Hand-built because this frontend refuses valid C here.** `i[p]` is a
+/// program `clang -std=c17 -pedantic-errors` accepts and `safec` answers
+/// `error[SC0304]` for, so the corpus can hold `p[i]` and nothing else. That is
+/// a gap in this compiler rather than a fault in the program, which is what
+/// that code's note says and is true of this one.
 ///
 /// Mutation: in `built_from`, take the left operand rather than the ones the
 /// types say are pointers. The read below reaches no site, nothing at all is
@@ -1801,11 +1811,73 @@ fn an_index_written_on_the_left_still_carries_the_pointer() {
     assert_eq!(found[0].made, Some(names.at[0]));
 }
 
+/// An allocation in a local declared `int` is dropped beside a pointer.
+///
+/// **The boundary, and it is a silence.** ADR-0030 reads a local's declared
+/// type to tell the pointer operand of an addition from the integer beside it,
+/// and drops the integer, so a well-formed safety IR has to declare a local
+/// that may hold an allocation as a pointer. `docs/c-family.md` carries that
+/// requirement, beside the three others nothing enforces at the boundary.
+///
+/// This is what breaking it costs: **nothing is reported at all**, under every
+/// flag, about a use after free. Not a suspicion, which is what an IR missing
+/// a sequence point gets; the whole finding. That is the bottom row of
+/// `CLAUDE.md`'s list, and it is here so that the day the requirement is
+/// enforced, or the day the rule stops needing it, a named test says so rather
+/// than passing quietly.
+///
+/// Two shapes in this tree break the requirement and neither is a cast: #204
+/// is the lowering's own compound-assignment temporary, and #205 is an
+/// initializer that is never checked against the assignment constraint. Both
+/// are why this test says `is dropped` rather than `cannot happen`.
+///
+/// Mutation: none from inside this file, for the reason
+/// `an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` gives about
+/// its own boundary. What this holds is the absence of an answer. Making the
+/// filter keep an operand that carries a site, whatever its type, turns this
+/// into a report and fails it.
+#[test]
+fn an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    // The requirement this program breaks: a `malloc` into a local that is not
+    // a pointer. No conforming C reaches it through this frontend today; #205
+    // is the hole that does, and a hand-built unit needs no hole.
+    let holder = function.push_local(types.int);
+    let beside = function.push_local(types.ptr);
+    let sum = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let add = function.reserve_block();
+    let release = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, holder, names.at[0], add));
+    function.fill_block(add, summed(sum, holder, beside, names.at[1], release));
+    function.fill_block(release, free(&callees, holder, names.at[2], dangling));
+    function.fill_block(
+        dangling,
+        after_the_statement(names.at[2], read(value, sum, names.at[3], exit)),
+    );
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    // `beside` is a pointer holding nothing, and it is the only operand the
+    // filter keeps. The read through `sum` therefore asks about an allocation
+    // this check is no longer carrying, and asks it of nobody.
+    assert!(found.is_empty(), "{found:?}");
+}
+
 /// An addition of two integers carries what both of them hold.
 ///
-/// The half of ADR-0030 that C says nothing about, and the only shape that
-/// reaches it: an allocation in a local that is not a pointer. No C frontend
-/// writes this, and a hand-built unit can, which is what the fallback is for.
+/// The half of ADR-0030 that C says nothing about. Every `i + j` reaches that
+/// branch; what is under test here is the case it exists for, an allocation in
+/// a local that is not a pointer. The C frontend writes that only for a program
+/// C forbids, `int i = p;` being a constraint violation under C17 6.5.16.1 p1
+/// that #154 is the missing check for, and a hand-built unit writes it freely.
 /// Narrowing here instead would empty the set, and RK-045 in the review
 /// knowledge bank is what an empty set costs at a dereference, which is
 /// silence.

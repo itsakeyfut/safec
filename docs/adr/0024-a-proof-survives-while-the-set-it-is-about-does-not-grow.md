@@ -110,17 +110,22 @@ operand and a constant, which the clause above keeps inside the same object.
 **A union of the present ones invents a proof, and it is the reading a reader
 arrives at first.** What `Held::freed` is worth is not that *some* member of the
 set was freed; it is that freeing the local again takes the same member. A set
-that has gained a site nothing freed no longer supports that. The program is
+that has gained a site nothing freed no longer supports that. The shape is
 
-```c
-int *q = malloc(4);
-if (c) { q = malloc(8); }
-free(q);           /* the proof: freeing q again takes the same member */
-int *p = q + r;    /* r is another pointer, holding a site nothing freed */
-free(p);           /* a proof this check cannot make */
+```text
+q = malloc(); if (c) { q = malloc(); }   two sites
+free(q)                                  the proof: freeing q again takes the same member
+p = q + r                                r is another pointer, holding a site nothing freed
+free(p)                                  a proof this check cannot make
 ```
 
-where `p` may hold the one nothing freed. That report is a proof this check
+**Written as IR rather than as C, because it is not C.** `q + r` with two
+pointers violates C17 6.5.6 p2, which requires one operand of an addition to
+have integer type; `clang -std=c17 -pedantic-errors` answers `invalid operands
+to binary expression ('int *' and 'int *')`, measured. The one conforming
+spelling with two pointer operands is `q - r`, whose result is a `ptrdiff_t` and
+which this frontend refuses for want of that type. So `p` may hold the one
+nothing freed, and no C program reaches it. That report is a proof this check
 cannot make. `CLAUDE.md` puts a false positive on row 4, not on row 6: the
 reader can see it and `docs/safety-model.md` reserves row 6 for a silence. What
 makes it worth a decision anyway is that `Unsafe` is what that document reserves

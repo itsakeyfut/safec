@@ -874,10 +874,13 @@ fn built_from(
     // not pointer arithmetic, so no clause says the result cannot reach what
     // its operands reach. Narrowing there would be narrowing on nobody's
     // authority, and RK-045 is what an emptied set costs: a dereference of a
-    // local that reaches no site is reported by nothing at all. No C this
-    // frontend accepts reaches this, which refuses `q + r` as an expression
-    // whose type it cannot work out; a hand-built unit reaches it, and what it
-    // would cost is a silence. See ADR-0030.
+    // local that reaches no site is reported by nothing at all.
+    //
+    // **`i + j` reaches this constantly**, and what is rare is one of those
+    // integers holding an allocation. It takes a program C forbids, which this
+    // compiler does not yet refuse: `int i = p;` is a constraint violation
+    // under C17 6.5.16.1 p1 and #154 is the check that is missing. See
+    // ADR-0030, which measures what this branch is worth on such a program.
     let followed: Vec<usize> = if followed.iter().any(|&local| is_pointer(local)) {
         followed
             .iter()

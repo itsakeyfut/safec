@@ -245,6 +245,31 @@ author reads, rather than only in the record of the change that introduced it.
 `crates/safec-ir/tests/freed.rs` holds the boundary so that closing it later
 fails a named test rather than passing quietly.
 
+**A fourth arrived with**
+[ADR-0030](adr/0030-a-pointer-operand-decides-what-pointer-arithmetic-reaches.md),
+and it is the first that this compiler's own frontend does not yet satisfy. The
+memory check reads a local's declared type to tell the pointer operand of an
+addition from the integer beside it, and drops the integer, so **a local that
+may hold an allocation has to be declared as a pointer**. C17 6.5.6 p8 is what
+makes that sound for a program whose types are what C requires.
+
+Two shapes break it today and neither involves a cast. `Lowering::promoted`
+gives a compound assignment's temporary `Ty::Int` whatever the left operand is,
+so `p += i` writes pointer arithmetic into a local declared `int`; nothing is
+lost, because no expression puts that temporary beside a pointer operand, and
+the requirement is broken all the same. And an initializer is never checked
+against the assignment constraint, so `int n = p;` is accepted in silence where
+`n = p;` is `error[SC0302]`.
+
+**What an omission costs here is a silence, which is the worst of the four.**
+Measured on hand-built IR: a `malloc` into a local declared `int`, added to a
+pointer that holds nothing, produces no finding at all where the same program
+with the local declared as a pointer produces a proved use after free.
+`an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer` in
+`crates/safec-ir/tests/freed.rs` holds that boundary, so that closing it later
+fails a named test rather than passing quietly, and #204 and #205 are the two
+shapes above.
+
 That is the same discipline the accepted records already use:
 [ADR-0003](adr/0003-pass-the-source-map-to-each-render-call.md) is confirmed by
 `E0502` and [ADR-0004](adr/0004-resolve-the-strictest-level-where-the-policy-is-built.md)
