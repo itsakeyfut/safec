@@ -99,22 +99,44 @@ struct Callees {
     helper: FuncId,
 }
 
-/// A unit, the function under test, its `int`, and the callees it can name.
-fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, TyId, Callees) {
+/// The types the locals in these programs are built from.
+///
+/// **Three rather than one, because the check reads them now.** ADR-0030 makes
+/// which operand of an addition is the pointer a question about types, so a
+/// fixture that builds every local as an `int` asks what this check answers
+/// where neither operand is a pointer rather than what it answers for `p + i`.
+/// A local's type here is what the C program the test is written from would
+/// have declared, and where no C program can be written the test says so.
+struct Types {
+    /// `int`, for a local holding a value rather than an address.
+    int: TyId,
+    /// `int *`, which is what a `malloc` in these programs answers with.
+    ptr: TyId,
+    /// `int **`, for a local holding the address of one of those.
+    ptr_ptr: TyId,
+}
+
+/// A unit, the function under test, its types, and the callees it can name.
+fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, Types, Callees) {
     let mut unit = TranslationUnit::new(
         Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
     );
     let int = unit.push_type(Ty::Int);
     let void = unit.push_type(Ty::Void);
+    let ptr = unit.push_type(Ty::Pointer(int));
+    let ptr_ptr = unit.push_type(Ty::Pointer(ptr));
 
     let callees = Callees {
-        free: unit.push_function(Function::declaration(names.free, void, [int])),
-        malloc: unit.push_function(Function::declaration(names.malloc, int, [])),
-        helper: unit.push_function(Function::declaration(names.helper, void, [int])),
+        free: unit.push_function(Function::declaration(names.free, void, [ptr])),
+        malloc: unit.push_function(Function::declaration(names.malloc, ptr, [])),
+        helper: unit.push_function(Function::declaration(names.helper, void, [ptr])),
     };
 
-    let function = Function::new(names.function, int, vec![int; parameters]);
-    (unit, function, int, callees)
+    // Every parameter these programs take is one they free or dereference, so
+    // they are pointers. A test wanting an allocation in something that is not
+    // one builds it with `malloc`, which is the shape no C frontend writes.
+    let function = Function::new(names.function, int, vec![ptr; parameters]);
+    (unit, function, Types { int, ptr, ptr_ptr }, callees)
 }
 
 /// `free(local);`, ending the block.
@@ -266,8 +288,8 @@ fn concluded(
 #[test]
 fn a_value_freed_twice_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let first = function.reserve_block();
@@ -305,9 +327,9 @@ fn a_value_freed_twice_is_unsafe() {
 #[test]
 fn a_value_freed_through_a_copy_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let alias = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let alias = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let aliased = function.reserve_block();
@@ -343,7 +365,7 @@ fn a_value_freed_through_a_copy_is_unsafe() {
 #[test]
 fn a_parameter_is_an_allocation_site() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let first = function.reserve_block();
@@ -375,9 +397,9 @@ fn a_parameter_is_an_allocation_site() {
 #[test]
 fn two_allocations_are_two_sites() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let first_held = function.push_local(int);
-    let second_held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let first_held = function.push_local(types.ptr);
+    let second_held = function.push_local(types.ptr);
 
     let one = function.reserve_block();
     let two = function.reserve_block();
@@ -412,7 +434,7 @@ fn two_allocations_are_two_sites() {
 #[test]
 fn a_join_names_the_earlier_free() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let entry = function.reserve_block();
@@ -467,7 +489,7 @@ fn a_join_names_the_earlier_free() {
 #[test]
 fn a_join_names_the_earlier_file_before_the_earlier_offset() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let entry = function.reserve_block();
@@ -516,10 +538,10 @@ fn a_join_names_the_earlier_file_before_the_earlier_offset() {
 #[test]
 fn a_free_of_either_of_two_allocations_names_the_earlier() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let one = function.push_local(int);
-    let other = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let one = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
 
     let allocate_one = function.reserve_block();
     let allocate_two = function.reserve_block();
@@ -580,7 +602,7 @@ fn a_free_of_either_of_two_allocations_names_the_earlier() {
 #[test]
 fn a_free_that_may_not_be_the_first_is_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, _int, callees) = a_unit(&names, 1);
+    let (unit, mut function, _types, callees) = a_unit(&names, 1);
     let held = function.parameters().next().expect("one parameter");
 
     let entry = function.reserve_block();
@@ -695,9 +717,9 @@ fn deref(local: LocalId) -> Place {
 #[test]
 fn a_read_through_a_freed_pointer_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let live = function.reserve_block();
@@ -743,9 +765,9 @@ fn a_read_through_a_freed_pointer_is_unsafe() {
 #[test]
 fn a_write_through_a_freed_pointer_is_unsafe() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -783,9 +805,9 @@ fn a_write_through_a_freed_pointer_is_unsafe() {
 #[test]
 fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
     let (sources, names) = sources();
-    let (unit, mut function, int, _callees) = a_unit(&names, 0);
-    let value = function.push_local(int);
-    let other = function.push_local(int);
+    let (unit, mut function, types, _callees) = a_unit(&names, 0);
+    let value = function.push_local(types.ptr);
+    let other = function.push_local(types.int);
 
     let entry = function.reserve_block();
     let exit = function.reserve_block();
@@ -817,9 +839,9 @@ fn a_dereference_of_a_pointer_with_no_allocation_says_nothing() {
 #[test]
 fn taking_the_address_of_a_dereference_is_not_a_use() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let taken = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let taken = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -854,9 +876,9 @@ fn taking_the_address_of_a_dereference_is_not_a_use() {
 #[test]
 fn a_use_after_a_free_on_one_path_is_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let decide = function.reserve_block();
@@ -906,9 +928,9 @@ fn a_use_after_a_free_on_one_path_is_unproven() {
 #[test]
 fn a_use_after_two_allocations_names_no_allocation() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let decide = function.reserve_block();
     let first_arm = function.reserve_block();
@@ -954,10 +976,10 @@ fn a_use_after_two_allocations_names_no_allocation() {
 #[test]
 fn a_free_where_one_site_is_unknown_is_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 1);
+    let (unit, mut function, types, callees) = a_unit(&names, 1);
     let given = function.parameters().next().expect("one parameter");
-    let held = function.push_local(int);
-    let either = function.push_local(int);
+    let held = function.push_local(types.ptr);
+    let either = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1013,8 +1035,8 @@ fn a_free_where_one_site_is_unknown_is_unproven() {
 #[test]
 fn a_site_allocated_on_two_arms_names_no_allocation() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let decide = function.reserve_block();
     let first_arm = function.reserve_block();
@@ -1054,9 +1076,9 @@ fn a_site_allocated_on_two_arms_names_no_allocation() {
 #[test]
 fn a_second_free_keeps_where_the_allocation_was() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1105,8 +1127,8 @@ fn a_second_free_keeps_where_the_allocation_was() {
 #[test]
 fn a_dereference_in_a_condition_is_a_use() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1162,8 +1184,8 @@ fn evaluate(local: LocalId, at: Span, then: BlockId) -> Block {
 #[test]
 fn a_place_evaluated_for_nothing_is_a_use() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1203,8 +1225,8 @@ fn a_place_evaluated_for_nothing_is_a_use() {
 #[test]
 fn evaluating_a_place_moves_no_site() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let discarded = function.reserve_block();
@@ -1280,10 +1302,10 @@ fn evaluating_a_place_moves_no_site() {
 #[test]
 fn a_proof_replaces_the_suspicion_at_one_caret() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let other = function.push_local(int);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let other = function.push_local(types.ptr);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate_other = function.reserve_block();
     let release_other = function.reserve_block();
@@ -1368,10 +1390,10 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
 #[test]
 fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let escape = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let escape = function.push_local(types.ptr_ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1442,12 +1464,12 @@ fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> 
 #[test]
 fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let p = function.push_local(int);
-    let q = function.push_local(int);
-    let pp = function.push_local(int);
-    let stepped = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let p = function.push_local(types.ptr);
+    let q = function.push_local(types.ptr);
+    let pp = function.push_local(types.ptr_ptr);
+    let stepped = function.push_local(types.ptr_ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let alias = function.reserve_block();
@@ -1531,13 +1553,13 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 #[test]
 fn an_offset_that_moves_the_pointer_carries_no_edge() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let z = function.push_local(int);
-    let p = function.push_local(int);
-    let q = function.push_local(int);
-    let pp = function.push_local(int);
-    let qq = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let z = function.push_local(types.ptr);
+    let p = function.push_local(types.ptr);
+    let q = function.push_local(types.ptr);
+    let pp = function.push_local(types.ptr_ptr);
+    let qq = function.push_local(types.ptr_ptr);
+    let value = function.push_local(types.int);
 
     let hold = function.reserve_block();
     let alias = function.reserve_block();
@@ -1597,11 +1619,11 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
 #[test]
 fn the_address_of_a_dereference_is_not_an_edge_to_the_local() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let other = function.push_local(int);
-    let alias = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
+    let alias = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let allocate_other = function.reserve_block();
@@ -1674,9 +1696,9 @@ fn nothing(then: BlockId) -> Block {
 #[test]
 fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let decide = function.reserve_block();
@@ -1746,10 +1768,10 @@ fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
 #[test]
 fn a_call_into_a_local_whose_address_escaped() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let escape = function.push_local(int);
-    let shared = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let escape = function.push_local(types.ptr_ptr);
+    let shared = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let escaped = function.reserve_block();
@@ -1812,8 +1834,8 @@ fn a_call_into_a_local_whose_address_escaped() {
 #[test]
 fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let pointer = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let pointer = function.push_local(types.ptr_ptr);
 
     let allocate = function.reserve_block();
     let release = function.reserve_block();
@@ -1868,9 +1890,9 @@ fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
 #[test]
 fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let live = function.reserve_block();
@@ -1914,9 +1936,9 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
 #[test]
 fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
 
     let allocate = function.reserve_block();
     let argument = function.reserve_block();
@@ -1978,10 +2000,10 @@ fn a_read_in_an_argument_with_no_marker_is_reported_unproven() {
 #[test]
 fn a_read_carried_to_an_allocating_call_is_not_reported() {
     let (sources, names) = sources();
-    let (unit, mut function, int, callees) = a_unit(&names, 0);
-    let held = function.push_local(int);
-    let value = function.push_local(int);
-    let second = function.push_local(int);
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+    let second = function.push_local(types.ptr);
 
     let allocate = function.reserve_block();
     let handed = function.reserve_block();
