@@ -101,7 +101,8 @@ are the two shapes that break the fourth today, do not block this.
 
 ### Confirmation
 
-Six cases in `crates/safec/tests/cases`. Six mutations in
+Six cases in `crates/safec/tests/cases` and one hand-built unit in
+`crates/safec-ir/tests/freed.rs`. Seven mutations in
 `crates/safec-ir/src/memory.rs`, each measured against the whole workspace, each
 failing named cases and nothing else.
 
@@ -133,6 +134,15 @@ every write fails
 `a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone`
 alone. Those two cases are why the condition is what it is rather than either
 thing next to it.
+
+Spelling the fallback `is_some_and` rather than `is_none_or`, so that a write
+this check cannot name the type of narrows to nothing rather than to
+everything, fails
+`a_write_whose_type_this_check_cannot_name_distrusts_every_escaped_local` in
+`crates/safec-ir/tests/freed.rs` and nothing else. It is hand-built because
+`TranslationUnit::place_ty` answers `None` only for a `Deref` of something that
+is not a pointer, which the lowering does not build; a coverage pass found the
+arm unreached by every case above.
 
 `error[E0061]` is the compiler's half: `Known::replaced` takes a parameter, so
 the `Callee::Opaque` call site cannot go on compiling without saying what a
