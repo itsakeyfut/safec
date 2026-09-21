@@ -1,9 +1,0 @@
-warning[SC0401]: this may free a value that was freed already
-   ╭─[ an_offset_by_a_local_loses_the_proof_whatever_the_local_holds.c:9:5 ]
-   │
- 9 │     free(p);
-   │     ───┬───  
-   │        ╰───── may free it again here
-───╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error

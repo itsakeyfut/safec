@@ -1441,6 +1441,28 @@ fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> 
     }
 }
 
+/// `to = lhs + rhs;`, in a block that falls through to `then`.
+///
+/// The same addition with a local on both sides rather than a constant on one,
+/// which is what asks which of the two contributed. The three tests it serves
+/// are shapes this frontend cannot write: it answers `SC0304` for an addition
+/// of two pointers, for a subscript written `i[p]`, and for anything else whose
+/// type it cannot work out. See ADR-0030.
+fn summed(to: LocalId, lhs: LocalId, rhs: LocalId, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Copy(Place::local(lhs)),
+                rhs: Operand::Copy(Place::local(rhs)),
+            },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
 /// An offset of zero that survived into the IR is a shape this check does not
 /// follow.
 ///
@@ -1593,6 +1615,177 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
     assert_eq!(found[0].kind, Kind::DoubleFree, "not a use after free");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
     assert_eq!(found[0].at, names.at[5]);
+}
+
+/// Two pointer operands both contributed, so the proof about the set goes.
+///
+/// ADR-0024's rule, in the one shape that still reaches it. The proof
+/// `free(q)` leaves on a two-site `q` says that freeing `q` again takes the
+/// same member; `q + r` may be `r`'s value instead, so freeing *that* again
+/// proves nothing. ADR-0030 is why the corpus cannot hold this any more: the
+/// case that used to was `q + i` with `i` a parameter, and an integer operand
+/// no longer contributes, while `q + r` is `error[SC0304]` in this frontend.
+///
+/// **Two allocations into two locals, joined into one, and that is the whole
+/// arrangement.** A site is named by the local a `malloc` wrote into, which is
+/// ADR-0018, so allocating twice into `q` gives one site rather than two and
+/// the free is then an ordinary free of a single member. Measured that way
+/// first: this test passed under its own mutation, because a set whose only
+/// member was freed proves the second free without any help from the proof.
+///
+/// `r` holds nothing at all, which is deliberate: what drops the proof is that
+/// a second operand contributed, not what it contributed. A reader tempted to
+/// write the rule as "the set grew" has to answer for this program, whose set
+/// gains no site.
+///
+/// Mutation: in `built_from`, restore the proof whenever any operand carries
+/// one, by reading the first of them rather than the only one. The free below
+/// becomes `Conclusion::Unsafe` and this fails on that field.
+#[test]
+fn an_offset_by_a_second_pointer_loses_the_proof() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let one = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
+    let q = function.push_local(types.ptr);
+    let r = function.push_local(types.ptr);
+    let p = function.push_local(types.ptr);
+
+    let allocate_one = function.reserve_block();
+    let allocate_two = function.reserve_block();
+    let pick = function.reserve_block();
+    let take_one = function.reserve_block();
+    let take_two = function.reserve_block();
+    let release = function.reserve_block();
+    let offset = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        allocate_one,
+        malloc(&callees, one, names.at[0], allocate_two),
+    );
+    function.fill_block(allocate_two, malloc(&callees, other, names.at[1], pick));
+    function.fill_block(pick, branch(take_one, take_two, names.asked));
+    function.fill_block(take_one, copy(q, one, names.at[2], release));
+    function.fill_block(take_two, copy(q, other, names.at[2], release));
+
+    function.fill_block(release, free(&callees, q, names.at[3], offset));
+    function.fill_block(
+        offset,
+        after_the_statement(names.at[3], summed(p, q, r, names.at[4], second)),
+    );
+    function.fill_block(second, free(&callees, p, names.at[5], exit));
+    function.fill_block(exit, after_the_statement(names.at[5], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unknown,
+        "the proof does not survive a second operand"
+    );
+    assert_eq!(found[0].at, names.at[5]);
+}
+
+/// The pointer operand is followed whichever side it is written on.
+///
+/// C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, which makes `i[p]` and
+/// `p[i]` one program. A rule that took the left operand would answer about the
+/// index in one of them, and the answer it would give is silence. ADR-0030 is
+/// why this is hand-built: `i[p]` is `error[SC0304]` in this frontend, so the
+/// corpus can hold `p[i]` and nothing else.
+///
+/// Mutation: in `built_from`, take the left operand rather than the ones the
+/// types say are pointers. The read below reaches no site, nothing at all is
+/// reported, and this fails on the length, which is the direction that matters.
+#[test]
+fn an_index_written_on_the_left_still_carries_the_pointer() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let p = function.push_local(types.ptr);
+    let index = function.push_local(types.int);
+    let element = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let release = function.reserve_block();
+    let subscript = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, p, names.at[0], release));
+    function.fill_block(release, free(&callees, p, names.at[1], subscript));
+    function.fill_block(
+        subscript,
+        after_the_statement(
+            names.at[1],
+            summed(element, index, p, names.at[2], dangling),
+        ),
+    );
+    function.fill_block(dangling, read(value, element, names.at[3], exit));
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].freed, Some(names.at[1]));
+    assert_eq!(found[0].made, Some(names.at[0]));
+}
+
+/// An addition of two integers carries what both of them hold.
+///
+/// The half of ADR-0030 that C says nothing about, and the only shape that
+/// reaches it: an allocation in a local that is not a pointer. No C frontend
+/// writes this, and a hand-built unit can, which is what the fallback is for.
+/// Narrowing here instead would empty the set, and RK-045 in the review
+/// knowledge bank is what an empty set costs at a dereference, which is
+/// silence.
+///
+/// `m` holds nothing, so what the fallback keeps is the site in `n`. Freeing
+/// `n` and then the sum is a double free of the one allocation there is.
+///
+/// Mutation: in `built_from`, drop the fallback, so that an operation with no
+/// pointer operand follows neither. The sum reaches no site, the free below
+/// answers `Reached::Lost` and drops to `Conclusion::Unknown`, and this fails
+/// on that field.
+#[test]
+fn an_addition_of_two_integers_carries_what_both_hold() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let n = function.push_local(types.int);
+    let m = function.push_local(types.int);
+    let sum = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let add = function.reserve_block();
+    let release = function.reserve_block();
+    let again = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // Straight into an `int`, which is the whole shape under test.
+    function.fill_block(allocate, malloc(&callees, n, names.at[0], add));
+    function.fill_block(add, summed(sum, n, m, names.at[1], release));
+    function.fill_block(release, free(&callees, n, names.at[2], again));
+    function.fill_block(
+        again,
+        after_the_statement(names.at[2], free(&callees, sum, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::DoubleFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3]);
+    assert_eq!(found[0].freed, Some(names.at[2]));
+    assert_eq!(found[0].made, Some(names.at[0]));
 }
 
 /// The address of a dereference names no local a write through it lands in.
