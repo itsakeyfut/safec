@@ -97,6 +97,15 @@ compiler exit successfully on code it never managed to check, which is the worst
 thing it can do. See
 [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md).
 
+**Which column is the default is an open question.** The table above, and the
+flag that resolves it in `crates/safec/src/cli.rs`, belong to a compiler that
+accepts every program and comments on it. This project asks instead that a
+program be rewritten until it can be proved, and under that reading a build
+that succeeded while something went unproven is a build that says nothing.
+[ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md)
+proposes that an unproven conclusion fail the build wherever a check runs, and
+nothing has changed here yet.
+
 `Unsafe` says that **some** execution of the function is undefined, not that
 every one is. A check here reads one function at a time, so a parameter ranges
 over every value a caller may pass rather than over the calls this translation
@@ -212,3 +221,10 @@ Safety-checked C
 ```
 
 This should be explored experimentally rather than decided prematurely.
+
+What an annotation cannot reach is code this compiler never checked: another
+translation unit, the C library, inline assembly, an allocator. Something has
+to hold what is trusted there, or the levels above have nothing to stand on.
+[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md)
+proposes a declared region that claims nothing about its body and carries a
+promise at its boundary, and decides the stance rather than the syntax.
