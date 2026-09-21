@@ -1690,6 +1690,69 @@ fn an_offset_by_a_second_pointer_loses_the_proof() {
     assert_eq!(found[0].at, names.at[5]);
 }
 
+/// An index that is itself a freed pointer is a site the result still reaches.
+///
+/// **The direction narrowing a may-set can be wrong in.** ADR-0030 drops the
+/// operands the types say did not contribute, and what that must never drop is
+/// a site that mattered: here both operands are pointers, so both contribute,
+/// and the one the subscript is written with is the freed one. A rule that kept
+/// the base alone would answer nothing about a read through the result.
+///
+/// Unproven rather than proved, because the other operand's site is live and
+/// the result may be either. What is under test is that it is reported at all.
+///
+/// Hand-built because `p + q` is `error[SC0304]` in this frontend.
+///
+/// Mutation: in `built_from`, take the left operand rather than the ones the
+/// types say are pointers. The read reaches only the live site, nothing is
+/// reported, and this fails on the length.
+#[test]
+fn an_index_that_is_a_freed_pointer_is_still_reached() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let base = function.push_local(types.ptr);
+    let freed = function.push_local(types.ptr);
+    let element = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let allocate_other = function.reserve_block();
+    let release = function.reserve_block();
+    let subscript = function.reserve_block();
+    let dangling = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(
+        allocate,
+        malloc(&callees, base, names.at[0], allocate_other),
+    );
+    function.fill_block(
+        allocate_other,
+        malloc(&callees, freed, names.at[1], release),
+    );
+    function.fill_block(release, free(&callees, freed, names.at[2], subscript));
+    function.fill_block(
+        subscript,
+        after_the_statement(
+            names.at[2],
+            summed(element, base, freed, names.at[3], dangling),
+        ),
+    );
+    function.fill_block(dangling, read(value, element, names.at[4], exit));
+    function.fill_block(exit, returns());
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unknown,
+        "the result may be the live one"
+    );
+    assert_eq!(found[0].at, names.at[4]);
+}
+
 /// The pointer operand is followed whichever side it is written on.
 ///
 /// C17 6.5.2.1 p2 defines `E1[E2]` as `(*((E1)+(E2)))`, which makes `i[p]` and

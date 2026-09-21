@@ -113,11 +113,11 @@ serve the old one, and the failure read rather than predicted.
 |---|---|
 | the predicate is never consulted, so every followed operand travels again | `a_subscript_of_a_freed_pointer`, `an_offset_by_an_integer_local_keeps_the_proof` and `an_offset_by_an_integer_parameter_keeps_the_proof`, each back to a warning |
 | the filter keeps the operands that are **not** pointers | `a_subscript_of_a_freed_pointer` and `an_index_written_on_the_left_still_carries_the_pointer`, whose `SC0402` goes silent altogether, and six cases beside them. Not `a_constant_subscript_of_a_freed_pointer`: ADR-0021 folds `p[0]` away where the IR is built, so it has no addition for this to be wrong about |
-| the filter takes the left operand rather than the pointer one | `an_index_written_on_the_left_still_carries_the_pointer` in `crates/safec-ir/tests/freed.rs`, which is `i[p]` and which no C this frontend accepts can write |
+| the filter takes the left operand rather than the pointer one | `an_index_written_on_the_left_still_carries_the_pointer`, which is `i[p]`; `an_index_that_is_a_freed_pointer_is_still_reached`, which is the site a narrowing must not drop; and `an_offset_by_a_second_pointer_loses_the_proof` |
 | the fallback goes, so an operation with no pointer operand reaches nothing | `an_addition_of_two_integers_carries_what_both_hold`, which drops from `Conclusion::Unsafe` to `Unknown` |
 | two pointer operands keep the proof | `an_offset_by_a_second_pointer_loses_the_proof`, which becomes `Conclusion::Unsafe` |
 
-The three hand-built cases are in `crates/safec-ir/tests/freed.rs` because the
+The four hand-built cases are in `crates/safec-ir/tests/freed.rs` because the
 frontend refuses each of their shapes, which is the same reason ADR-0028 keeps
 `the_address_of_a_dereference_is_not_an_edge_to_the_local` there.
 
