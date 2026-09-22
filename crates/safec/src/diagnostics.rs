@@ -354,7 +354,7 @@ impl Diagnostic {
     /// An unproven result starts as a warning and may not stay one. Whether it
     /// fails the build is [`DiagnosticSink`]'s, taken once from [`Policy`], so
     /// a check that reaches [`Conclusion::Unknown`] does not need to know what
-    /// `--deny-unknown` is. See ADR-0001.
+    /// the policy of the run it is part of is. See ADR-0001.
     ///
     /// **The only way to build a [`Certainty::Unproven`] diagnostic from
     /// outside this module**, which is what a check is. Every field of a
@@ -486,8 +486,8 @@ impl Diagnostic {
 
     /// Raise an unproven warning to an error.
     ///
-    /// Private, and called from exactly one place: [`DiagnosticSink::report`]
-    /// under `--deny-unknown`. Because [`Diagnostic::concluded`] is the only
+    /// Private, and called from exactly one place: [`DiagnosticSink::report`],
+    /// under a [`Policy`] that denies unknown. Because [`Diagnostic::concluded`] is the only
     /// source of [`Certainty::Unproven`] and fixes the severity at
     /// [`Severity::Warning`], this only ever has one direction to handle.
     fn promote_to_error(&mut self) {
