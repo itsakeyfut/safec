@@ -33,7 +33,10 @@ use safec_ir::source::Span;
 pub enum Severity {
     /// The severity of a help diagnostic standing on its own.
     ///
-    /// **Nothing emits one, and a remedy is not this.** What to change about a
+    /// **Nothing can emit one, and a remedy is not this.** `Diagnostic::new`
+    /// is private, so no diagnostic built outside this module can carry this
+    /// severity. The variant itself is an ordinary public value and stays
+    /// reachable; what is held is what a `Diagnostic` may be. What to change about a
     /// program is a [`Remedy`] on the diagnostic that rejected it, so that the
     /// two cannot be separated by a sort, a filter or a count. ADR-0034 records
     /// why, and what it rejected is exactly what this doc comment used to say:
@@ -43,7 +46,14 @@ pub enum Severity {
     /// because the two tests holding the two rendering paths to one spelling
     /// are better for having a fourth to iterate over.
     Help,
-    /// Context the user asked for, or that a check offers unprompted.
+    /// Context the user asked for.
+    ///
+    /// **Nothing can emit one either**, for the reason above. What a check
+    /// offers unprompted is [`Diagnostic::with_note`], a field on the
+    /// diagnostic it belongs to, which `write_notes` spells `= note:`
+    /// without asking any severity. This variant is a header this renderer
+    /// can spell and nothing more, which is also why [`Severity::Help`]
+    /// stays.
     Note,
     /// Something is suspect, but compilation continues.
     Warning,
@@ -311,7 +321,28 @@ pub struct Diagnostic {
 
 impl Diagnostic {
     /// A diagnostic at the given severity.
-    pub fn new(severity: Severity, message: impl Into<String>) -> Self {
+    ///
+    /// **Private, and that is the guard.** [`Severity::Help`] and
+    /// [`Severity::Note`] mean nothing failed, and this is the only way to
+    /// build a diagnostic at either. With it private, a diagnostic built
+    /// outside this module can carry only a severity that means something:
+    /// [`Severity::Error`] through [`Self::error`] and [`Self::concluded`], and
+    /// [`Severity::Warning`] through [`Self::warning`] and the same. One at
+    /// [`Severity::Help`] is `error[E0624]` where it used to be a sentence.
+    /// See ADR-0034.
+    ///
+    /// **What this does not hold is a constructor added beside these.** A
+    /// guard that is an absence degrades by addition rather than by edit, and
+    /// nothing here notices: a `pub fn note` written next to [`Self::warning`]
+    /// and reported into a sink leaves the whole suite green, which was
+    /// measured rather than supposed. It is the same shape as the hole stated
+    /// on [`Self::concluded`].
+    ///
+    /// Reachable inside this module **and its children**, which is why the two
+    /// tests in `render.rs` can iterate all four severities: privacy holds
+    /// against the rest of the crate and against a user of it, not against
+    /// this module's own subtree.
+    fn new(severity: Severity, message: impl Into<String>) -> Self {
         Self {
             severity,
             certainty: Certainty::Proven,
