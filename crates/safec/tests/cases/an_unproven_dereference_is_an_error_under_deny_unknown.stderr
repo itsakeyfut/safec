@@ -7,3 +7,4 @@ error[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

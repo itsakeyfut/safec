@@ -7,6 +7,7 @@ warning[SC0401]: this may free a value that was freed already
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0401]: this frees a value that was freed already
     ╭─[ an_opaque_call_before_the_escape_leaves_the_proof_alone.c:10:5 ]
     │
@@ -18,3 +19,4 @@ error[SC0401]: this frees a value that was freed already
     │        ╰───── freed again here
 ────╯
   = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

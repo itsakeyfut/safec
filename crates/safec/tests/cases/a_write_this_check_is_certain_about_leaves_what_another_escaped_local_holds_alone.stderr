@@ -7,6 +7,7 @@ warning[SC0401]: this may free a value that was freed already
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0401]: this frees a value that was freed already
     ╭─[ a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 ]
     │
@@ -18,6 +19,7 @@ error[SC0401]: this frees a value that was freed already
     │         ╰───── freed again here
 ────╯
   = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:6:5 ]
    │
@@ -27,3 +29,4 @@ warning[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it

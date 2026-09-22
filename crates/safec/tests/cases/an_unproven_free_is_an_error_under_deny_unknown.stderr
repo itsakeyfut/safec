@@ -7,3 +7,4 @@ error[SC0401]: this may free a value that was freed already
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free it on every path or on none, and keep it out of a call this check cannot read in between
