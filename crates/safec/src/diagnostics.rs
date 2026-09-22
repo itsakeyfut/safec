@@ -33,7 +33,9 @@ use safec_ir::source::Span;
 pub enum Severity {
     /// The severity of a help diagnostic standing on its own.
     ///
-    /// **Nothing emits one, and a remedy is not this.** What to change about a
+    /// **Nothing can emit one, and a remedy is not this.** `Diagnostic::new`
+    /// is private, so the only severities reachable from outside this module
+    /// are the two that mean something. What to change about a
     /// program is a [`Remedy`] on the diagnostic that rejected it, so that the
     /// two cannot be separated by a sort, a filter or a count. ADR-0034 records
     /// why, and what it rejected is exactly what this doc comment used to say:
@@ -311,7 +313,24 @@ pub struct Diagnostic {
 
 impl Diagnostic {
     /// A diagnostic at the given severity.
-    pub fn new(severity: Severity, message: impl Into<String>) -> Self {
+    ///
+    /// **Private, and that is the guard.** [`Severity::Help`] and
+    /// [`Severity::Note`] mean nothing failed, and this is the only way to
+    /// build a diagnostic at either. With it private, the severities reachable
+    /// from outside this module are exactly the ones that mean something:
+    /// [`Severity::Error`] through [`Self::error`] and [`Self::concluded`], and
+    /// [`Severity::Warning`] through [`Self::warning`] and the same.
+    /// ADR-0034 rejected a remedy reported as a separate diagnostic at
+    /// [`Severity::Help`] partly because nothing would stop one being counted
+    /// in a sink as an entry that means nothing failed. `error[E0624]` is what
+    /// stops it, where the sentence on [`Severity::Help`] used to be all there
+    /// was.
+    ///
+    /// Inside this module it stays reachable, which is the same reach as the
+    /// sentence on [`Self::concluded`] about a second constructor: privacy
+    /// holds against the rest of the crate and against a user of it, not
+    /// against this file.
+    fn new(severity: Severity, message: impl Into<String>) -> Self {
         Self {
             severity,
             certainty: Certainty::Proven,
