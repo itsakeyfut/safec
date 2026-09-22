@@ -34,7 +34,7 @@ use crate::ast::{
 };
 use crate::cli::HOST_TRIPLE;
 use crate::diagnostics::render::Renderer;
-use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Policy};
+use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label, Policy, Remedy};
 use crate::lexer::lex;
 use crate::lowering::lower;
 use crate::options::{EmitKind, Options};
@@ -91,6 +91,55 @@ const USE_AFTER_FREE: Code = Code::new("SC0402");
 /// is a third class: the other two are about a pointer that pointed somewhere
 /// once, and this is about one that may never have.
 const NULL_DEREFERENCE: Code = Code::new("SC0403");
+
+/// What to change where this check stopped following a pointer.
+///
+/// **It names no cause, and that is the whole of its design.**
+/// `Unproven::Lost` has five producers, which its own doc comment lists, and a
+/// `memory::Finding` does not say which of them answered. A remedy naming one
+/// would be right for some and false for the others, which is RK-036 in the
+/// review knowledge bank: a conservative over-approximation given a confident
+/// word. So this says only what is true of all five, and tells the reader the
+/// one thing that matters here, which is not to go hunting for a defect.
+///
+/// Shared by both codes because the fact is the same fact. #213 carries the
+/// reason into the `Finding` and replaces this with five.
+const LOST_REMEDY: &str = "nothing here says the program is wrong: this check could no longer \
+                           say which allocation this pointer holds";
+
+/// What to change where C has not ordered the free against the use.
+///
+/// The only remedy here about something C decided rather than about what the
+/// program meant, which is why `Unsequenced` is a row of its own rather than
+/// sharing one with `Disagreement`. See ADR-0022, and the note attached below
+/// for what the check did and did not find.
+const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, so that C orders \
+                                  one before the other";
+
+/// What to change where this check could not tell whether the free reached.
+///
+/// **The free is conditional because this check does not know there is one.**
+/// `Unproven::Disagreement` has two causes: paths that disagree about a free,
+/// where one exists, and a call this check cannot read that was handed the
+/// pointer, where there may be none at all. Nothing in a `Finding` separates
+/// them, and its `freed` span does not: `memory.rs` carries a free span only
+/// where it also answers `Unproven::Unsequenced`, so a `Disagreement` always
+/// arrives with `None` and the report carries no `freed here` label.
+///
+/// What stood here said `free it on every path or on none` unconditionally. On
+/// a program with no `free` in it that is an instruction to add one, and adding
+/// it turns the warning into a proved use after free: the corpus case
+/// `an_unsequenced_use_before_an_opaque_call_is_reported` allocates, calls two
+/// functions, frees nothing, and carried exactly that advice at exit 0. A
+/// remedy is a claim in the way a label is, RK-036, and that one claimed a free
+/// this check never found.
+///
+/// `if it is freed` is what makes one sentence true of both causes while
+/// keeping the action a reader of the first can take. Naming no free at all
+/// would be safe the way `LOST_REMEDY` is safe, and would cost the reader whose
+/// paths really do disagree the one thing they could have done about it.
+const DISAGREEMENT_REMEDY: &str = "if it is freed, free it on every path or on none, and keep it \
+                                   out of a call this check cannot read in between";
 
 /// Everything one run of the compiler produced.
 ///
@@ -643,17 +692,50 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
     // That is RK-034 in the review knowledge bank read forwards, and RK-015 is
     // its limit: `E0004` makes somebody write an arm and does not make the arm
     // right.
-    let (code, message, label) = match (finding.kind, finding.conclusion, finding.unproven) {
+    // **A remedy is a claim like a label is**, which is RK-036, so each of
+    // these is written against what its row established and not against what
+    // its words suggest. Two rows are worth saying out loud. `Lost` names no
+    // cause because `Unproven::Lost` has five producers and a `Finding` does
+    // not say which answered, so anything more specific would be right for some
+    // of them and false for the rest; #213 carries the reason and replaces it
+    // with five. `Disagreement` has two causes of its own, paths that disagree
+    // and a call this check cannot read, so its remedy names what would let
+    // this check conclude rather than which of the two happened.
+    //
+    // `Unsequenced` is split out of the group it shares its words with, and
+    // only because its remedy differs: C decided that one, and what to change
+    // is the statement boundary rather than the free. The message and the label
+    // are written twice as a result, which is the same trade this function
+    // already makes by naming every reason rather than taking `_`.
+    let (code, message, label, remedy) = match (finding.kind, finding.conclusion, finding.unproven)
+    {
         (Kind::DoubleFree, Conclusion::Unsafe, _) => (
             DOUBLE_FREE,
             "this frees a value that was freed already",
             "freed again here",
+            "remove one of the two frees, or take this one off the path that reaches the first",
         ),
         (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
             DOUBLE_FREE,
             "this frees a pointer this check stopped following",
             "this check cannot say what this points at",
+            LOST_REMEDY,
         ),
+        // **`Unsequenced` is split out below and not here**, which is the one
+        // place the two kinds are shaped differently. No corpus case reaches a
+        // double free that is unproven for that reason, and two written to try
+        // were reported as proved double frees instead:
+        // `(free(p), 0) + (free(p), 0)` and `h((free(p), 0), (free(p), 0))`.
+        // That is what was measured, rather than a claim that none exists. It
+        // reads as the shape of the question: ADR-0023 carries a *read*
+        // forwards to the free it is unordered against, and a second free is
+        // the same defect whichever of the two runs first, so an open order
+        // takes nothing away from it.
+        //
+        // A row here would therefore be one nothing can break, and the group
+        // keeps the remedy it had. `DISAGREEMENT_REMEDY` asks for the free
+        // conditionally, so it stays true of a double free that arrives this
+        // way if one ever does.
         (
             Kind::DoubleFree,
             Conclusion::Unknown,
@@ -662,33 +744,39 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             DOUBLE_FREE,
             "this may free a value that was freed already",
             "may free it again here",
+            DISAGREEMENT_REMEDY,
         ),
         (Kind::UseAfterFree, Conclusion::Unsafe, _) => (
             USE_AFTER_FREE,
             "this uses a value after it was freed",
             "used here",
+            "move the free after this use, or do not free here",
         ),
         (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
             USE_AFTER_FREE,
             "this uses a pointer this check stopped following",
             "this check cannot say what this points at",
+            LOST_REMEDY,
         ),
-        (
-            Kind::UseAfterFree,
-            Conclusion::Unknown,
-            Some(Unproven::Disagreement | Unproven::Unsequenced) | None,
-        ) => (
+        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
             USE_AFTER_FREE,
             "this may use a value after it was freed",
             "used here, perhaps after the free",
+            UNSEQUENCED_REMEDY,
+        ),
+        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Disagreement) | None) => (
+            USE_AFTER_FREE,
+            "this may use a value after it was freed",
+            "used here, perhaps after the free",
+            DISAGREEMENT_REMEDY,
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
-        // for it, so none of the three is read. Written out rather than `_` so
+        // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
-        (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing", "nothing"),
+        (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing", "nothing", "nothing"),
     };
 
-    let mut diagnostic = Diagnostic::concluded(finding.conclusion, message)?
+    let mut diagnostic = Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
         .with_code(code)
         .with_safety_level(SafetyLevel::Memory)
         .with_label(Label::primary(finding.at, label));
@@ -752,20 +840,27 @@ fn nullability_finding(finding: &nullability::Finding) -> Option<Diagnostic> {
     // Every conclusion written out rather than `_`, so that a fourth has to be
     // answered for here. `Safe` is unreachable through `Nullness::concluded`
     // and `Diagnostic::concluded` gives `None` for it either way.
-    let (message, label) = match finding.conclusion {
+    // The unproven row asks for a test rather than for a value, because what
+    // this check failed to establish is that the pointer is not null and a test
+    // is what would establish it. Telling a reader to give it a value there
+    // would assert that it has none, which is the row above's sentence and not
+    // this one's. RK-036.
+    let (message, label, remedy) = match finding.conclusion {
         Conclusion::Unsafe => (
             "this dereferences a null pointer",
             "this is null when it is read through",
+            "give this pointer a value before reading through it, or do not read through it here",
         ),
         Conclusion::Unknown => (
             "this may dereference a null pointer",
             "this check cannot say this is not null",
+            "test this pointer against null before reading through it",
         ),
-        Conclusion::Safe => ("nothing", "nothing"),
+        Conclusion::Safe => ("nothing", "nothing", "nothing"),
     };
 
     Some(
-        Diagnostic::concluded(finding.conclusion, message)?
+        Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
             .with_code(NULL_DEREFERENCE)
             .with_safety_level(SafetyLevel::Memory)
             .with_label(Label::primary(finding.at, label)),

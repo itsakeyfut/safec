@@ -31,7 +31,17 @@ use safec_ir::source::Span;
 /// stop the compilation where an error would let it continue, belongs above it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Severity {
-    /// A suggested way to resolve a diagnostic reported alongside it.
+    /// The severity of a help diagnostic standing on its own.
+    ///
+    /// **Nothing emits one, and a remedy is not this.** What to change about a
+    /// program is a [`Remedy`] on the diagnostic that rejected it, so that the
+    /// two cannot be separated by a sort, a filter or a count. ADR-0034 records
+    /// why, and what it rejected is exactly what this doc comment used to say:
+    /// that a help is a suggestion reported alongside the thing it explains.
+    ///
+    /// The variant stays because it is a severity this renderer can spell, and
+    /// because the two tests holding the two rendering paths to one spelling
+    /// are better for having a fourth to iterate over.
     Help,
     /// Context the user asked for, or that a check offers unprompted.
     Note,
@@ -220,6 +230,51 @@ impl Label {
     }
 }
 
+/// A change that would make the program compile, or what this check would need
+/// in order to conclude.
+///
+/// **A type rather than a `String`, for two reasons.** It is the one part of a
+/// diagnostic addressed to what the reader should do next rather than to what
+/// happened, and that is worth holding in a type rather than in a convention
+/// about which `Vec<String>` a sentence was put into. And
+/// [`Diagnostic::concluded`] takes a message and a remedy in that order: two
+/// `impl Into<String>` arguments in a row can be given the wrong way round with
+/// nothing at all to say so, and these cannot.
+///
+/// **It carries no span, and that is a decision rather than an omission.**
+/// Every place a remedy would point at today is already a label, `freed here`
+/// and `allocated here` in `driver.rs`, or is not written down anywhere: the
+/// place to test a pointer before reading through it is not a span this
+/// compiler holds. A field set by nobody and read by nobody is breakable by no
+/// mutation, which is a guard in name only. Whoever writes the first remedy
+/// that wants a place adds one then. See ADR-0034.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Remedy {
+    message: String,
+}
+
+impl Remedy {
+    /// What the reader should do next.
+    ///
+    /// Usually an imperative naming a change to the program. Not always: where
+    /// a check gave up rather than found something, what it says instead is
+    /// what it failed to establish, because an instruction there would claim
+    /// something about a program nothing was worked out about. `LOST_REMEDY` in
+    /// `driver.rs` is that case and is the reason this sentence does not say
+    /// "in the imperative", which it used to and which was already false of a
+    /// string in the tree.
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+
+    /// What this remedy asks for.
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
 /// Something the compiler has to say about the program.
 ///
 /// Built by chaining: a message is required, everything else is optional.
@@ -245,6 +300,13 @@ pub struct Diagnostic {
     message: String,
     labels: Vec<Label>,
     notes: Vec<String>,
+    /// What to change about the program, or what this check would have needed.
+    ///
+    /// A `Vec` rather than an `Option` for two reasons that pull the same way:
+    /// a diagnostic about the invocation has nothing to suggest and carries
+    /// none, and one rejection can ask for more than one thing.
+    /// [`Self::concluded`] is what makes it non-empty for a safety finding.
+    remedies: Vec<Remedy>,
 }
 
 impl Diagnostic {
@@ -258,6 +320,7 @@ impl Diagnostic {
             message: message.into(),
             labels: Vec::new(),
             notes: Vec::new(),
+            remedies: Vec::new(),
         }
     }
 
@@ -298,14 +361,41 @@ impl Diagnostic {
     /// `Diagnostic` is private, so nothing else can make one; inside this file
     /// a second constructor could, and the only thing stopping that is
     /// somebody reading this sentence.
-    pub fn concluded(what: Conclusion, message: impl Into<String>) -> Option<Self> {
+    ///
+    /// **The remedy is required, because a rejection that does not say what to
+    /// change is a refusal.** A check that cannot name one is not excused: what
+    /// it says instead is what it failed to establish, which claims nothing
+    /// about the program. Taking this parameter away is `error[E0061]` at every
+    /// call site, which is the point of it being a parameter rather than a
+    /// `with_` method: an omitted argument has to stop the build, and a `with_`
+    /// method that was never called cannot. Making it an `Option` instead is
+    /// `error[E0308]` at the same places, which is a different error and worth
+    /// spelling correctly, because a reader checking this sentence runs the
+    /// mutation it names. See ADR-0034.
+    ///
+    /// **The hole, stated rather than closed.** [`Self::error`] is public and
+    /// this reaches it for [`Conclusion::Unsafe`], so a check can build a
+    /// rejecting diagnostic through it and carry no remedy. Nothing here stops
+    /// that. What it costs is a rejection reaching a reader without its remedy,
+    /// which is visible in the output and in a corpus expectation rather than
+    /// silent, so it is the cheaper of the two failures. It is the same shape
+    /// as the sentence above about a second constructor.
+    ///
+    /// [`Conclusion::Safe`] builds no diagnostic, so the remedy given for one
+    /// is dropped. A caller with nothing to suggest there is answering for an
+    /// arm that reports nothing, which is what `nullability_finding` already
+    /// does for the message and the label.
+    pub fn concluded(what: Conclusion, message: impl Into<String>, remedy: Remedy) -> Option<Self> {
         match what {
             Conclusion::Safe => None,
-            Conclusion::Unsafe => Some(Self::error(message)),
-            Conclusion::Unknown => Some(Self {
-                certainty: Certainty::Unproven,
-                ..Self::new(Severity::Warning, message)
-            }),
+            Conclusion::Unsafe => Some(Self::error(message).with_remedy(remedy)),
+            Conclusion::Unknown => Some(
+                Self {
+                    certainty: Certainty::Unproven,
+                    ..Self::new(Severity::Warning, message)
+                }
+                .with_remedy(remedy),
+            ),
         }
     }
 
@@ -324,6 +414,23 @@ impl Diagnostic {
     /// Add a remark that stands on its own, with no span to point at.
     pub fn with_note(mut self, note: impl Into<String>) -> Self {
         self.notes.push(note.into());
+        self
+    }
+
+    /// Ask for a change that would make the program compile.
+    ///
+    /// **Private, because nothing attaches a second one.** [`Self::concluded`]
+    /// is the only caller and it calls this once, so whether this appends or
+    /// replaces is a difference no mutation can show: both were tried and the
+    /// suite stayed green either way. Public, it would be an interface whose
+    /// distinguishing behaviour has no caller. Whoever writes the first
+    /// rejection with two ways out of it makes this `pub` and brings a test for
+    /// the order they arrive in.
+    ///
+    /// Private to this module rather than to this `impl`, so
+    /// [`crate::diagnostics::render`] can still build one to render.
+    fn with_remedy(mut self, remedy: Remedy) -> Self {
+        self.remedies.push(remedy);
         self
     }
 
@@ -360,6 +467,11 @@ impl Diagnostic {
     /// Every note, in the order they were attached.
     pub fn notes(&self) -> &[String] {
         &self.notes
+    }
+
+    /// Every remedy, in the order they were attached.
+    pub fn remedies(&self) -> &[Remedy] {
+        &self.remedies
     }
 
     /// Whether the analysis could prove what this reports.
@@ -533,8 +645,12 @@ mod tests {
     /// the path a check takes: an unproven diagnostic has one way to exist and
     /// this is it.
     fn unproven(message: &str) -> Diagnostic {
-        Diagnostic::concluded(Conclusion::Unknown, message)
-            .expect("an unknown conclusion is reported")
+        Diagnostic::concluded(
+            Conclusion::Unknown,
+            message,
+            Remedy::new("say more about it"),
+        )
+        .expect("an unknown conclusion is reported")
     }
 
     /// Each conclusion is reported the way `docs/safety-model.md` says.
@@ -555,24 +671,54 @@ mod tests {
     /// certainty is `Proven`. Eight tests fail, this among them: everything
     /// that watches the sink promote an unprovable result is downstream of this
     /// arm, which is what the third row is worth.
+    ///
+    /// **The remedy is checked on both reported rows and not only on one.** It
+    /// is attached by a different expression in each arm, so an arm that
+    /// dropped it would be a silence in exactly one of the two. Mutation: drop
+    /// the `with_remedy` call from the `Unsafe` arm. The second row fails and
+    /// the third does not.
     #[test]
     fn every_conclusion_is_reported_the_way_the_model_says() {
         assert_eq!(
-            Diagnostic::concluded(Conclusion::Safe, "nothing to say"),
+            Diagnostic::concluded(Conclusion::Safe, "nothing to say", Remedy::new("nothing")),
             None
         );
 
-        let unsafe_ = Diagnostic::concluded(Conclusion::Unsafe, "use of freed value `p`")
-            .expect("an unsafe conclusion is reported");
+        let unsafe_ = Diagnostic::concluded(
+            Conclusion::Unsafe,
+            "use of freed value `p`",
+            Remedy::new("move the free after this use"),
+        )
+        .expect("an unsafe conclusion is reported");
         assert_eq!(unsafe_.severity(), Severity::Error);
         assert_eq!(unsafe_.certainty(), Certainty::Proven);
         assert_eq!(unsafe_.message(), "use of freed value `p`");
+        assert_eq!(
+            unsafe_
+                .remedies()
+                .iter()
+                .map(Remedy::message)
+                .collect::<Vec<_>>(),
+            ["move the free after this use"]
+        );
 
-        let unknown = Diagnostic::concluded(Conclusion::Unknown, "`p` may escape")
-            .expect("an unknown conclusion is reported");
+        let unknown = Diagnostic::concluded(
+            Conclusion::Unknown,
+            "`p` may escape",
+            Remedy::new("keep `p` in one local"),
+        )
+        .expect("an unknown conclusion is reported");
         assert_eq!(unknown.severity(), Severity::Warning);
         assert_eq!(unknown.certainty(), Certainty::Unproven);
         assert_eq!(unknown.message(), "`p` may escape");
+        assert_eq!(
+            unknown
+                .remedies()
+                .iter()
+                .map(Remedy::message)
+                .collect::<Vec<_>>(),
+            ["keep `p` in one local"]
+        );
     }
     use super::*;
     use safec_ir::source::{SourceMap, Span};

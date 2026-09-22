@@ -26,7 +26,7 @@ use std::ops::Range;
 
 use ariadne::{Color, Config, Fmt, IndexType, Label as AriadneLabel, Report, ReportKind, Source};
 
-use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Severity};
+use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Remedy, Severity};
 use crate::options::ColorMode;
 use safec_ir::print::{is_obeyed, shown};
 use safec_ir::source::{FileId, SourceFile, SourceMap, Span};
@@ -273,7 +273,8 @@ impl Renderer {
             strip_header_escapes(&mut rendered);
         }
         out.write_all(&rendered)?;
-        write_notes(&notes, out)
+        write_notes(&notes, out)?;
+        write_remedies(diagnostic.remedies(), out)
     }
 }
 
@@ -370,12 +371,33 @@ fn render_header_only(
     } else {
         writeln!(out, "{head} {message}")?;
     }
-    write_notes(notes, out)
+    write_notes(notes, out)?;
+    write_remedies(diagnostic.remedies(), out)
 }
 
 fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
     for note in notes {
         writeln!(out, "  = note: {}", shown(note))?;
+    }
+    Ok(())
+}
+
+/// What to change, after what happened.
+///
+/// Written here rather than handed to `ariadne` for [`write_notes`]'s reason:
+/// one spelling for both paths, and a remedy that only appeared on diagnostics
+/// with a caret would be a different interface depending on whether the check
+/// had a span. Both paths call this, which is two calls and two mutations
+/// rather than one.
+///
+/// After the notes, because a note says what happened and a remedy says what to
+/// do about it, and the second reads as the conclusion of the first.
+///
+/// `shown` rather than the text of a source file, for RK-002's reason: these
+/// are strings this compiler wrote.
+fn write_remedies(remedies: &[Remedy], out: &mut impl io::Write) -> io::Result<()> {
+    for remedy in remedies {
+        writeln!(out, "  = help: {}", shown(remedy.message()))?;
     }
     Ok(())
 }
@@ -553,8 +575,12 @@ mod tests {
     /// the path a check takes: an unproven diagnostic has one way to exist and
     /// this is it.
     fn unproven(message: &str) -> Diagnostic {
-        Diagnostic::concluded(Conclusion::Unknown, message)
-            .expect("an unknown conclusion is reported")
+        Diagnostic::concluded(
+            Conclusion::Unknown,
+            message,
+            Remedy::new("say more about it"),
+        )
+        .expect("an unknown conclusion is reported")
     }
     use super::*;
     use clap::Parser as _;
@@ -638,6 +664,41 @@ mod tests {
             let expected = format!("{}[SC0001]: m", severity.as_str());
             assert_eq!(first_line(&render(&sources, &bare)), expected);
             assert_eq!(first_line(&render(&sources, &anchored)), expected);
+        }
+    }
+
+    /// A remedy reaches the reader on both rendering paths, after the notes.
+    ///
+    /// **Two calls rather than one.** `write_one` writes after `ariadne`'s
+    /// block and `render_header_only` writes after its own line, so dropping
+    /// either one is a silence on half the diagnostics rather than on all of
+    /// them, and a test that rendered only an anchored diagnostic would not
+    /// see it.
+    ///
+    /// Mutation: drop the `write_remedies` call from `write_one`. The anchored
+    /// half fails. Mutation: drop it from `render_header_only`. The bare half
+    /// fails. Mutation: call `write_remedies` before `write_notes`. The
+    /// ordering assertion fails and nothing else does.
+    #[test]
+    fn a_remedy_is_written_after_the_notes_on_both_rendering_paths() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("main.c", "int x;\n");
+
+        let bare = unproven("m");
+        let anchored = bare
+            .clone()
+            .with_label(Label::primary(Span::new(file, 0, 3), "here"));
+
+        for rendered in [render(&sources, &bare), render(&sources, &anchored)] {
+            let help = rendered
+                .find("  = help: say more about it")
+                .unwrap_or_else(|| panic!("no remedy in {rendered:?}"));
+            // An unproven conclusion always carries one, so there is a note to
+            // be after. It is what says the result could not be proven.
+            let note = rendered
+                .find("  = note: ")
+                .unwrap_or_else(|| panic!("no note in {rendered:?}"));
+            assert!(note < help, "the remedy came before the note: {rendered:?}");
         }
     }
 
@@ -795,6 +856,15 @@ mod tests {
     /// of the report or clear the line above it. Neither rendering path may
     /// pass one through, and the colour mode does not get a say: `--color
     /// always` means the renderer adds colour, not that content may.
+    ///
+    /// **A remedy is the fourth place that echoes, and it is here for the same
+    /// reason the note is.** Every remedy in the tree today is a static string
+    /// this compiler wrote, so nothing a user controls reaches one yet; the day
+    /// a remedy names an identifier it will, and RK-002 in the review knowledge
+    /// bank is the record of that shape costing this repository a terminal.
+    ///
+    /// Mutation: drop `shown` from `write_remedies`. This fails and nothing
+    /// else does, because every other remedy is plain ASCII.
     #[test]
     fn content_never_reaches_the_terminal_as_an_instruction() {
         let mut sources = SourceMap::new();
@@ -805,9 +875,25 @@ mod tests {
             .clone()
             .with_label(Label::primary(Span::new(file, 0, 3), "here\u{1b}[32m"))
             .with_note("note\u{1b}[33m");
+        // Through `concluded` rather than beside it: that is the one way a
+        // remedy is attached, now that `with_remedy` is private.
+        let remedied = Diagnostic::concluded(
+            Conclusion::Unknown,
+            "m",
+            Remedy::new("rename `evil\u{1b}[34m.c`"),
+        )
+        .expect("an unknown conclusion is reported");
+
+        // The remedy goes through both paths, not just the one a diagnostic
+        // with nothing to point at takes. They share `write_remedies`, so a
+        // mutation to the escaping breaks either; what this fourth case holds
+        // is that they go on sharing it.
+        let remedied_and_anchored = remedied
+            .clone()
+            .with_label(Label::primary(Span::new(file, 0, 3), "here"));
 
         for mode in [ColorMode::Never, ColorMode::Always] {
-            for diagnostic in [&bare, &anchored] {
+            for diagnostic in [&bare, &anchored, &remedied, &remedied_and_anchored] {
                 let rendered = render_with(&sources, diagnostic, mode);
 
                 assert!(!rendered.contains("evil\u{1b}"), "{mode:?}: {rendered:?}");

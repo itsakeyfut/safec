@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-22
 decision-makers: itsakeyfut
 ---
@@ -17,12 +17,22 @@ nicety and becomes part of what a safety diagnostic is.
 The vocabulary is already half here, which is the part worth checking before
 deciding anything. `Severity::Help` exists in
 `crates/safec/src/diagnostics.rs`, and its doc comment reads "A suggested way to
-resolve a diagnostic reported alongside it". **Nothing constructs one.** The
-only mention outside the enum is an assertion that it spells itself `help`, and
-`crates/safec/src/diagnostics/render.rs` collapses a note and a help into one
-heading in one of its two rendering paths. A `Diagnostic` holds a severity, a
-certainty, a level, a code, a message, labels and notes, so a remedy written
-today is a `with_note` string like any other.
+resolve a diagnostic reported alongside it". **No production code constructs
+one**, though two tests in `crates/safec/src/diagnostics/render.rs` do, by
+iterating every severity. A `Diagnostic` holds a severity, a certainty, a
+level, a code, a message, labels and notes, so a remedy written today is a
+`with_note` string like any other.
+
+**Two sentences here were wrong and are corrected rather than preserved.**
+This paragraph said that the only mention outside the enum was the spelling
+assertion, and that the renderer collapses a note and a help into one heading
+on one of its two paths. Reading the code while designing #208 found both to be
+false: the two tests above construct one, and the comment in `write_one` says
+that `ariadne` collapses them *left to itself*, which is why `ReportKind`
+`::Custom` is used, so that both paths agree and a help stays distinguishable
+from a note. `CLAUDE.md` calls false prose worse than none because it is
+believed, and a record cannot be accepted on a premise its author has since
+disproved. What the correction costs the decision is in *Decision Outcome*.
 
 What is undecided is therefore not whether a remedy can be printed. It is
 whether a remedy is a separate diagnostic reported beside the one it explains,
@@ -58,10 +68,13 @@ safety diagnostic at once.
 
 Chosen option: "a field on `Diagnostic`".
 
-Notes lose a distinction the renderer is already trying to make. Two headings
-exist and one of the two paths collapses them, so the difference between context
-and a change to make is already meant to be real, and spelling a remedy as a
-note gives that up rather than settling it.
+Notes lose a distinction the renderer already goes to trouble to keep. Neither
+path collapses a note into a help: `ReportKind::Custom` exists in `write_one`
+precisely so that `ariadne` does not, and the two rendering paths spell the two
+apart. That is a stronger argument than the one first written here, which had
+the fact backwards: the distinction is not merely *meant* to be real, it is
+maintained at a cost, and spelling a remedy as a note throws away something
+already paid for.
 
 A separate diagnostic makes the association a convention. Nothing would stop a
 remedy being emitted without its subject, ordered away from it, or counted as an
@@ -77,9 +90,18 @@ into a severity cannot be built without a remedy, so one omitted is
 `error[E0061]` at the call site rather than an empty line in the output. That is
 row 1 on `CLAUDE.md`'s list, which is where a decision like this should fail.
 
-Several remedies at several places is the normal case, so the field is a list,
-and each entry carries the span it is about. A remedy with no span is a remedy
-about the whole diagnostic.
+The field is a list, because one rejection can have two ways out of it and
+choosing between them for the reader is not this layer's job.
+
+**No entry carries a span, and this paragraph proposed that they would.** The
+design run found that every place a remedy would point at is already a label,
+`freed here` and `allocated here` in `driver.rs`, or is not a span this
+compiler holds: there is nowhere written down that says where to test a pointer
+before reading through it. A field set by nobody and read by nobody is
+breakable by no mutation, so it would have been a guard in name only. The
+sentence is corrected rather than left standing because `Remedy`'s own doc
+comment sends a reader here for that reason, and a record that answers the
+opposite of what the code says is worse than one that says nothing.
 
 **What this leaves behind is `Severity::Help`.** It then has no constructor and
 no meaning as a severity, so either it goes, which `E0004` makes the rest of the
@@ -89,21 +111,32 @@ either way.
 
 ### Confirmation
 
-**Nothing guards this today.** The only thing in the tree about a remedy is
-`Severity::Help`'s spelling assertion in `crates/safec/src/diagnostics.rs`,
-which holds a string and nothing about where a remedy lives.
+**The constructor, and the build stops rather than a test failing.**
+`Diagnostic::concluded` in `crates/safec/src/diagnostics.rs` takes a `Remedy`
+as its third argument. Mutation: remove that parameter and the two
+`with_remedy` calls in its arms. The library does not compile:
+`error[E0061]` at `memory_finding` and at `nullability_finding` in
+`crates/safec/src/driver.rs`, which are every place a safety finding is built.
+The test modules fail the same way under `cargo test`; how many of them there
+are is a fact about the suite rather than about this decision, and the suite
+grows, so it is not written down here.
 
-What would guard it is the constructor. Once a rejecting safety diagnostic
-cannot be built without a remedy, the mutation is to give that parameter a
-default or make it optional, and the build stops at every call site that
-supplied one. A guard spelled as a test instead, asserting that some particular
-diagnostic carries a remedy, is worth less: it holds for the diagnostics
-somebody wrote it for and says nothing about the next one, which is the whole
-population this record is about.
+That is the guard this record is about, and it is row 1 on `CLAUDE.md`'s list.
+A guard spelled as a test instead, asserting that some particular diagnostic
+carries a remedy, would hold for the diagnostics somebody wrote it for and say
+nothing about the next one, which is the whole population here.
 
-This section is to be rewritten in the change that lands the field. RK-017 in
-the review knowledge bank is what happens otherwise, and ADR-0029 is the
-instance where a record's Confirmation outlived the rule it described.
+**Reaching the reader is a second thing and takes two more mutations.**
+`a_remedy_is_written_after_the_notes_on_both_rendering_paths` in
+`crates/safec/src/diagnostics/render.rs` renders one diagnostic twice, with a
+label and without, because `write_one` and `render_header_only` each call
+`write_remedies` and dropping either is a silence on half the diagnostics.
+Mutation: drop the call from `write_one`, and that test fails; restore it and
+drop the one in `render_header_only`, and it fails again. Both were applied.
+
+**What is held by nobody**, and it is the hole *Decision Outcome* names:
+`Diagnostic::error` is public, so a check that builds a rejection through it
+rather than through `concluded` carries no remedy and nothing complains.
 
 ### Consequences
 

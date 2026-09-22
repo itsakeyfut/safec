@@ -7,6 +7,7 @@ warning[SC0401]: this may free a value that was freed already
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0402]: this may use a value after it was freed
     ╭─[ a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:11:5 ]
     │
@@ -16,6 +17,7 @@ warning[SC0402]: this may use a value after it was freed
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:6:5 ]
    │
@@ -25,6 +27,7 @@ warning[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:9:5 ]
    │
@@ -34,6 +37,7 @@ warning[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:11:5 ]
     │
@@ -43,3 +47,4 @@ warning[SC0403]: this may dereference a null pointer
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it

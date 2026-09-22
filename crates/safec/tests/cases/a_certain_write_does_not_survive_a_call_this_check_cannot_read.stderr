@@ -7,6 +7,7 @@ warning[SC0401]: this frees a pointer this check stopped following
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
 warning[SC0402]: this may use a value after it was freed
     ╭─[ a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 ]
     │
@@ -16,6 +17,7 @@ warning[SC0402]: this may use a value after it was freed
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0403]: this may dereference a null pointer
     ╭─[ a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 ]
     │
@@ -25,3 +27,4 @@ warning[SC0403]: this may dereference a null pointer
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it

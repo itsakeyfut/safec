@@ -7,6 +7,7 @@ warning[SC0402]: this may use a value after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_may_set_where_one_free_is_sequenced_and_one_is_not.c:8:13 ]
    │
@@ -16,3 +17,4 @@ warning[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it

@@ -7,6 +7,7 @@ warning[SC0402]: this may use a value after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0401]: this may free a value that was freed already
    ╭─[ a_loop_whose_condition_reads_what_its_body_freed.c:5:18 ]
    │
@@ -16,6 +17,7 @@ warning[SC0401]: this may free a value that was freed already
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_loop_whose_condition_reads_what_its_body_freed.c:5:12 ]
    │
@@ -25,3 +27,4 @@ warning[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it

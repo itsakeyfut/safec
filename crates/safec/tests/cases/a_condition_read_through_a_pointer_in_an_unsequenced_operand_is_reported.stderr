@@ -13,6 +13,7 @@ warning[SC0402]: this may use a value after it was freed
   = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: put the free and this in separate statements, so that C orders one before the other
 warning[SC0403]: this may dereference a null pointer
    ╭─[ a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:5:14 ]
    │
@@ -22,3 +23,4 @@ warning[SC0403]: this may dereference a null pointer
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
+  = help: test this pointer against null before reading through it
