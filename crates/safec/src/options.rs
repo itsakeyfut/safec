@@ -33,11 +33,15 @@ pub struct Options {
     /// `docs/architecture.md`'s "Output depends on the target, never on the
     /// host".
     pub target: Target,
-    /// Whether `Unknown` analysis results are errors rather than warnings.
+    /// Whether a result the analysis could not prove is a warning rather than
+    /// an error.
     ///
-    /// The resolved answer, not the raw flag: `--safety strict` sets it too,
-    /// because that level is defined as leaving nothing `Unknown`.
-    pub deny_unknown: bool,
+    /// The request, not the resolved answer. Every value of it is a legitimate
+    /// thing to ask for, and what it means at the level this run asked for is
+    /// decided in one place, [`crate::diagnostics::Policy::new`]. See ADR-0004
+    /// for why that place is not here, and ADR-0033 for why the default is to
+    /// deny.
+    pub allow_unknown: bool,
     /// When to colorize diagnostics.
     pub color: ColorMode,
 }

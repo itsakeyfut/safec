@@ -1,4 +1,4 @@
-warning[SC0401]: this frees a pointer this check stopped following
+error[SC0401]: this frees a pointer this check stopped following
     ╭─[ a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 ]
     │
  10 │     free(p);
@@ -6,9 +6,9 @@ warning[SC0401]: this frees a pointer this check stopped following
     │        ╰───── this check cannot say what this points at
 ────╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use a value after it was freed
     ╭─[ a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 ]
     │
  11 │     *q = 1;
@@ -16,9 +16,9 @@ warning[SC0402]: this may use a value after it was freed
     │        ╰──── used here, perhaps after the free
 ────╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-warning[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference a null pointer
     ╭─[ a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 ]
     │
  11 │     *q = 1;
@@ -26,5 +26,5 @@ warning[SC0403]: this may dereference a null pointer
     │        ╰──── this check cannot say this is not null
 ────╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it

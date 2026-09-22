@@ -335,7 +335,7 @@ cases! {
     // constant, and the clause above supports it for this one, so `free(17)`
     // stays silent and this case does not say otherwise. The comment on that
     // arm says where the other half belongs.
-    a_free_of_a_null_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    a_free_of_a_null_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_alias_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -385,7 +385,7 @@ cases! {
     // The other half of the trade the rule makes. The downgrade is only
     // acceptable because the flag still fails the build, and this is the case
     // that says so: same program as the sharer case above, one flag on.
-    a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the direction the cheap versions of that rule fail in. Clearing the
     // escaped local's row at the call instead leaves this program with nothing
     // to say about the read, which is the bottom of `CLAUDE.md`'s list while a
@@ -409,7 +409,7 @@ cases! {
     // The other half of the trade, as ADR-0029's own flag case says it for the
     // call: the downgrade is only acceptable because the flag still fails the
     // build. Same program as the first case above, one flag on.
-    a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What keeps that rule from costing everything, and the only case that
     // holds it: a write through a pointer to an `int` cannot put a pointer
     // anywhere, so the escaped local keeps what it held and the double free
@@ -477,8 +477,12 @@ cases! {
     a_free_where_one_of_two_allocations_is_live: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_double_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     an_unproven_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
-    an_unproven_free_is_an_error_under_deny_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
-    an_unproven_use_is_an_error_under_deny_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    // The other side of ADR-0033, and the only cases that reach it: an unproven
+    // conclusion is an error wherever a check runs, so a warning needs the run
+    // to have asked for one. Without these three the arm of `certainty_note`
+    // that is not promoted has no observer outside the renderer's own tests.
+    an_unproven_free_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+    an_unproven_use_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     a_double_free_is_found_on_a_backend_run: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     a_discarded_dereference_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     // `pp[0]` is `*pp`, and the backend can write `*pp`. It used to refuse
@@ -546,7 +550,7 @@ cases! {
     // `crates/safec-ir/tests/nulls.rs` is what holds that.
     a_call_whose_destination_it_dereferences: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_null_dereference_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
-    an_unproven_dereference_is_an_error_under_deny_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--deny-unknown"],
+    an_unproven_dereference_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

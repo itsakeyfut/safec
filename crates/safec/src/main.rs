@@ -13,7 +13,17 @@ use safec::cli::Cli;
 use safec::driver;
 
 fn main() -> ExitCode {
-    let options = Cli::parse().into_options();
+    let cli = Cli::parse();
+
+    // Refused here rather than inside the compiler: an invocation that asks for
+    // two different things has nothing to compile, and clap's own error is what
+    // every other argument mistake prints. `Cli::check` says why it cannot be
+    // clap's own `conflicts_with`.
+    if let Err(error) = cli.check() {
+        error.exit();
+    }
+
+    let options = cli.into_options();
 
     // The driver takes both streams so that a test can read what a run said and
     // what it made. The binary is the one that decides diagnostics belong on

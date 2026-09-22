@@ -1,4 +1,4 @@
-warning[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use a value after it was freed
    ╭─[ a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:8:5 ]
    │
  8 │     *p = 1;
@@ -6,9 +6,9 @@ warning[SC0402]: this may use a value after it was freed
    │        ╰──── used here, perhaps after the free
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-warning[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference a null pointer
    ╭─[ a_pointer_rebuilt_by_arithmetic_after_its_address_escaped.c:8:5 ]
    │
  8 │     *p = 1;
@@ -16,5 +16,5 @@ warning[SC0403]: this may dereference a null pointer
    │        ╰──── this check cannot say this is not null
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it

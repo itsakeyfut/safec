@@ -126,6 +126,32 @@ fn an_invocation_the_parser_could_not_understand_exits_two() {
     }
 }
 
+/// An invocation that parses and then asks for two different things is refused
+/// the same way, and before a file is read.
+///
+/// `--allow-unknown` beside the level defined as leaving nothing `Unknown` is
+/// the pair. clap cannot express a conflict with one *value* of an argument, so
+/// `Cli::check` states it and `main` is what calls that; nothing in process can
+/// see either. The file named does not exist, which is the point: a run that
+/// reached the compiler would report that instead.
+///
+/// Mutation: drop the `check` call in `main`. The run reaches the compiler,
+/// fails on the absent file, and exits 1.
+#[test]
+fn an_invocation_that_asks_for_two_different_things_exits_two() {
+    let path = missing("safec_exit_code_conflict.c");
+    let output = safec(&[
+        "--safety",
+        "strict",
+        "--allow-unknown",
+        &path.display().to_string(),
+    ]);
+
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    let report = String::from_utf8_lossy(&output.stderr);
+    assert!(report.contains("--allow-unknown"), "{report}");
+}
+
 /// Asking what the compiler is has succeeded, whatever the compiler would make
 /// of the source it was not given.
 #[test]

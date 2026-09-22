@@ -662,7 +662,7 @@ fn lowered(
 ///
 /// The check names a conclusion and never reads the policy, so this does not
 /// either: `Diagnostic::concluded` is the one place a conclusion becomes a
-/// severity and `DiagnosticSink` is the one place `--deny-unknown` is applied.
+/// severity and `DiagnosticSink` is the one place the policy is applied.
 /// ADR-0001 is why there is one of each.
 ///
 /// The value is not named. `docs/safety-model.md` writes "use of freed value
@@ -2012,7 +2012,7 @@ mod tests {
             // one on the machine.
             emit: EmitKind::Tokens,
             target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
-            deny_unknown: false,
+            allow_unknown: false,
             color: ColorMode::Never,
         }
     }
@@ -2199,29 +2199,38 @@ mod tests {
         (report, outcome)
     }
 
-    /// The wiring ADR-0001 is about. Without it `--deny-unknown` parses,
+    /// The wiring ADR-0001 is about. Without it `--allow-unknown` parses,
     /// documents itself, and does nothing.
+    ///
+    /// The name says "the options the run was given" rather than "the resolved
+    /// options", which is what these deliberately are not since #209: the
+    /// field is the request, and `Policy::new` is where it becomes an answer.
+    ///
+    /// Mutation: build the sink with `DiagnosticSink::new()`. Both rows fail,
+    /// because the fixture compiles at `SafetyLevel::Memory`, where the default
+    /// is to deny.
     #[test]
-    fn the_sink_is_built_from_the_resolved_options() {
-        for deny_unknown in [false, true] {
+    fn the_sink_is_built_from_the_options_the_run_was_given() {
+        for allow_unknown in [false, true] {
             let mut options = options(Vec::new());
-            options.deny_unknown = deny_unknown;
+            options.allow_unknown = allow_unknown;
 
             assert_eq!(
                 compile(&options).diagnostics.policy().deny_unknown(),
-                deny_unknown,
+                !allow_unknown,
             );
         }
     }
 
-    /// The strictest level is defined as leaving nothing `Unknown`, so its
-    /// implication has to reach the sink even when the flag was not given as
-    /// well. The level itself does not: a sink holds a [`Policy`] and never
-    /// learns which checks ran.
+    /// The strictest level is defined as leaving nothing `Unknown`, so it
+    /// denies them in the sink even where the run asked to keep them. The level
+    /// itself does not reach the sink: it holds a [`Policy`] and never learns
+    /// which checks ran.
     #[test]
     fn the_strictest_safety_level_denies_unknown_in_the_sink() {
         let mut options = options(Vec::new());
         options.safety = SafetyLevel::Strict;
+        options.allow_unknown = true;
 
         assert!(compile(&options).diagnostics.policy().deny_unknown());
     }
