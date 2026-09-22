@@ -116,8 +116,11 @@ mutation that makes it fail:
   reason.
 * Counting before promoting rather than after fails the test that `error_count()`
   equals a recount over `diagnostics()` in both policies.
-* Dropping the `|| safety >= SafetyLevel::Strict` clause fails the `cli.rs` test
-  that `--safety strict` alone resolves `deny_unknown` to true.
+* Dropping the `|| safety >= SafetyLevel::Strict` clause fails the
+  `diagnostics.rs` tests that the strictest level denies unknown however the
+  policy is built. That clause was resolved in `cli.rs` as well until #209,
+  which left `Options` carrying the request rather than an answer; `Policy::new`
+  is now the only place it is resolved.
 * Making `Diagnostic::concluded` answer `Certainty::Proven` for
   `Conclusion::Unknown` fails eight named tests, which is what this decision
   costs to break: `a_result_that_could_not_be_proven_starts_as_a_warning`,
@@ -125,14 +128,18 @@ mutation that makes it fail:
   `every_conclusion_is_reported_the_way_the_model_says`,
   `the_error_count_agrees_with_the_diagnostics_under_either_policy`, the two
   `the_strictest_safety_level_denies_unknown` tests, and two in `render.rs`.
+  Measured before #209 inverted the default, so the count is a fact about the
+  suite of the day rather than about the rule: see RK-028.
 
 Each of those mutations was applied and the named test observed to fail.
 
 The wiring this record was written ahead of has since landed. `compile` in
 `crates/safec/src/driver.rs` builds the sink from `Policy::from(options)` and is
-the only thing that builds one, so `--deny-unknown` now takes effect end to end.
-`the_sink_is_built_from_the_resolved_options` guards it: replacing the
-conversion with `DiagnosticSink::new` fails it.
+the only thing that builds one, so the policy takes effect end to end.
+`the_sink_is_built_from_the_options_the_run_was_given` guards it: replacing the
+conversion with `DiagnosticSink::new` fails it. It was named for the *resolved*
+options until #209, and the rename is the point of that change: the options
+carry the request, and the sink's policy is where it becomes an answer.
 
 [ADR-0004](0004-resolve-the-strictest-level-where-the-policy-is-built.md) later
 closed `Policy` itself, so a sink cannot be given a policy that was not resolved

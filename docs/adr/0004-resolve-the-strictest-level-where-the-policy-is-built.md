@@ -176,14 +176,24 @@ reached from:
 Verified by mutation. Replacing the body of `Policy::new` with
 
 ```rust
-Self { deny_unknown }
+Self { deny_unknown: !allow_unknown }
 ```
 
-fails exactly those three and nothing else. The parser's own resolution keeps
-its own guards in `crates/safec/src/cli.rs`
-(`the_strictest_safety_level_denies_unknown_on_its_own` and
-`a_lower_safety_level_leaves_deny_unknown_to_its_flag`), and those still pass
-under that mutation. That is the point of the record: they never covered this.
+fails exactly those three and nothing else. It was `Self { deny_unknown }` until
+#209 inverted the flag; the mutation is the same one, spelled for the argument
+the constructor now takes. Two tests in `crates/safec/src/cli.rs` held the
+parser's own resolution and passed under it either way, which was the point of
+this record: they never covered this. #209 removed them along with the
+resolution they were about.
+
+**The duplication this record accepted is gone, and the decision is not.** The
+*Consequences* below call out that the implication is written twice, in
+`Cli::into_options` as well as here. #209 removed the copy there, because the
+field it was keeping truthful stopped claiming to be an answer:
+`Options::allow_unknown` is what the user asked for, and every value of it is a
+legitimate ask, so there is no invariant for a hand-built `Options` to break.
+`every_safety_level_carries_the_request_across_the_boundary_unchanged` is what
+holds that layer now, and what it holds is that the layer does not decide.
 
 ### Consequences
 

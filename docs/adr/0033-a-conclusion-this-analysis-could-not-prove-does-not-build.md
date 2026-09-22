@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-22
 decision-makers: itsakeyfut
 ---
@@ -20,10 +20,9 @@ succeeds while the analysis could not prove something is a build that says
 nothing, and `--deny-unknown` is not a policy a user opts into. It is what being
 checked means.
 
-This diverges from [`safety-model.md`](../safety-model.md), so that document
-gains a pointer here in the same change. Nothing in the code depends on this
-record yet, and the flag keeps its current behaviour until the change that
-closes it.
+This diverged from [`safety-model.md`](../safety-model.md) when it was written.
+[#209](https://github.com/itsakeyfut/safec/issues/209) landed it, and that
+document now says what this decided rather than pointing at a proposal.
 
 ## Decision Drivers
 
@@ -68,6 +67,20 @@ The middle one makes asking to be checked and failing unless proved the same
 event. `--safety memory` is a user saying they want the answer, and the answer
 is only worth having if a build that survives it means something.
 
+**What the default level makes this mean, recorded at acceptance.** The
+paragraph above says the plain invocation stays silent, and it does not:
+`--safety` has defaulted to `memory` since the command line was defined, so
+`safec main.c` is a checked invocation and the option chosen here and the option
+rejected above are the same thing for it. That was checked in the code while
+[#209](https://github.com/itsakeyfut/safec/issues/209) was designed rather than
+assumed, and the default was left where it is. Moving it to `off` would make a
+successful bare run mean either "checked and proved" or "nothing ran", with one
+exit code for both, which is
+[#62](https://github.com/itsakeyfut/safec/issues/62) and the bottom row of
+`CLAUDE.md`'s list; rejecting more programs is row 4, where the reader can see
+it. So the way in is `--safety off`, typed out, or `--allow-unknown` while a
+program is being migrated.
+
 **What this costs is paid for by
 [ADR-0032](./0032-bound-what-is-unchecked-inside-a-declared-hatch.md).** Without
 a hatch this rejects code with nowhere to put what cannot be proved, which is
@@ -76,21 +89,30 @@ taken in two places.
 
 ### Confirmation
 
-**Nothing guards the new rule today, and one test holds the old one.**
-`a_lower_safety_level_leaves_deny_unknown_to_its_flag` in
-`crates/safec/src/cli.rs` asserts that every level below strict leaves the flag
-alone, which is exactly what this decision reverses.
-`deny_unknown_is_set_by_its_flag` beside it, and
-`the_sink_is_built_from_the_resolved_options` in `crates/safec/src/driver.rs`,
-hold the path from the flag to the sink and are unaffected by which way the
-default points.
+`every_level_that_runs_a_check_denies_unknown_unless_it_was_allowed` in
+`crates/safec/src/diagnostics.rs` is the rule. It walks a written-out table of
+every level against both answers, and checks that table's length against
+`SafetyLevel::value_variants()`, so a level added without an answer fails it by
+name rather than passing quietly.
 
-So the record is confirmed by nothing until the change that lands it, and that
-change is a rewrite of the first of those tests rather than an addition beside
-it. The mutation that must fail afterwards is resolving the default the way it
-resolves now: a level above 0 with the flag absent, reaching a sink that does
-not promote. If that mutation leaves the suite green, the default was changed
-somewhere the resolution does not run through.
+The mutation is resolving the default the way it resolved before this landed,
+`deny_unknown: allow_unknown || safety >= SafetyLevel::Strict`. **Two halves
+have to go red**: that test, and the corpus, where 83 cases carry exit 1 with no
+flag on the command line. If only one does, the default is being decided in two
+places, which is what ADR-0001 and ADR-0004 exist to prevent. Applied, and both
+were observed to fail.
+
+The other side is held too, which is what keeps the promotion from being correct
+for the wrong reason:
+`an_unproven_free_is_a_warning_under_allow_unknown` and its `use` and
+`dereference` siblings are the only cases that reach the unpromoted arm of
+`certainty_note` from a command line.
+`every_safety_level_carries_the_request_across_the_boundary_unchanged` in
+`crates/safec/src/cli.rs`, which replaced the test that held the old default,
+says the command line does not decide it early;
+`allowing_unknown_is_refused_at_the_level_defined_as_leaving_none` beside it and
+`an_invocation_that_asks_for_two_different_things_exits_two` in
+`crates/safec/tests/exit_code.rs` hold the refusal and its wiring.
 
 ### Consequences
 
@@ -101,9 +123,9 @@ somewhere the resolution does not run through.
 * Bad, because the false positive rate becomes something users feel rather than
   something they can ignore. That is row 4 on `CLAUDE.md`'s list and it is the
   whole cost of this decision.
-* Bad, because the flag inverts. `--deny-unknown` becomes the default above
-  level 0, so what remains is the flag that allows unknown, and Phase 5 should
-  wire it that way rather than build the current shape and reverse it.
+* Bad, because the flag inverts. Denying became the default above level 0 and
+  `--deny-unknown` was removed rather than left as a flag whose name describes
+  the default; `--allow-unknown` is what remains.
 * What would reverse this: a measurement on real C showing that what is left
   unproven cannot be absorbed by ADR-0032's hatch and by annotations, so that
   the rewrite asked of a user is not some of a file but most of it.
