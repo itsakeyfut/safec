@@ -146,6 +146,13 @@ closed. With it private the same call is `error[E0624]`, an associated function
 that is private, and there is nothing to run. Row 1 on `CLAUDE.md`'s list, like
 the constructor above it.
 
+What that guard does not hold, because it is an absence rather than a check: a
+constructor added beside the three public ones. Adding `pub fn note` to
+`Diagnostic` and reporting one into a sink leaves every test in the workspace
+passing, which was measured. Privacy stops a severity being *chosen* from
+outside; it cannot stop one being *offered* from inside, and that is the same
+shape as the hole below.
+
 **What is held by nobody**, and it is the hole *Decision Outcome* names:
 `Diagnostic::error` is public, so a check that builds a rejection through it
 rather than through `concluded` carries no remedy and nothing complains.
