@@ -170,9 +170,11 @@ target of a write through a pointer has always escaped, and an escaped local
 answers `Reached::Lost` wherever a report is made. `*pp = q + i;` was built by
 hand with the site carried on into a copy of the target, and the answer is
 `Unknown` with or without the filter. RK-064 is the entry that asks for this
-paragraph rather than for the words "held by nothing": the day #188 or #196
-narrows what an escaped local is reported as, this line stops being covered, and
-what it would cost then is a proof about a set the index widened.
+paragraph rather than for the words "held by nothing": the day something
+narrows what an escaped local is reported as, this line stops being covered,
+and what it would cost then is a proof about a set the index widened. #188 has
+landed and did not narrow it, because the nullness its exemption reads is
+masked by the same escape; #196 is what still describes that work.
 
 ### Consequences
 

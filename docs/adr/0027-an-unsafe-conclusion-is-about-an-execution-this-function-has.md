@@ -55,11 +55,9 @@ A pointer the analysis established *is* null is the one thing that removes a fre
 from the question, because then no execution frees anything. That is the rule
 `Allocations::touching` already applies to `free(0)` with this clause quoted,
 and extending it to a local the nullability analysis proved null is the seam
-#188 builds. That arm is wider than the clause and says so: it skips every
+#188 built. That arm is wider than the clause and says so: it skips every
 constant, `free(17)` included, which is #154's to answer rather than this
-rule's, so what #188 extends is the principle here and not that arm's reach.
-Until #188 lands, such a free is reported as a pointer this check stopped
-following, which is #188's subject and not this record's.
+rule's, so what #188 extended is the principle here and not that arm's reach.
 
 The second option was rejected on a measurement rather than on taste: because a
 `malloc` result is `Nullness::Unknown`, it turns `a_value_freed_twice` into a
@@ -113,10 +111,28 @@ rule that reads call sites, which is interprocedural and exists in no phase of
 anybody who narrows this rule has to rewrite an expectation whose name states
 what is being given up, and finds this record from there.
 
-The first option is held by nothing today, because nothing in
-`crates/safec-ir/src/memory.rs` reads `crates/safec-ir/src/nullability.rs`: the
-seam does not exist yet. #188 is where it is built, and the case that will hold
-this half is the one that issue names.
+**The exemption is held by three corpus cases**, one per condition above, and
+each of them is exit 1 becoming exit 0 under its own mutation, which is the
+direction that matters. `a_free_of_a_pointer_proved_null` is the rule itself:
+dropping the filter in `memory.rs::reported` puts `this frees a pointer this
+check stopped following` back on a program C defines, and fails it along with
+`a_pointer_set_to_nothing_after_a_free_holds_nothing` and
+`a_local_given_nothing_forgets_the_set_it_freed`, which are the two spellings
+of `free(p); p = 0; free(p);` the corpus keeps.
+`a_pointer_proved_null_before_its_address_escaped_is_not_exempt` holds the
+mask: reading the lattice rather than `Nullability::known` in
+`nullability.rs::null_at_terminators` exempts both frees of a local a store
+this check cannot follow has given an allocation, and that case goes silent.
+`a_pointer_that_stopped_being_null_before_the_free_is_not_exempt` holds the
+position: recording the row before a block's elements rather than after exempts
+a **proved** double free, and that case goes silent too. Measured, each of the
+last two fails on its own mutation and the other keeps reporting.
+
+The third condition is held by where the exemption is called from rather than
+by a case. `memory.rs::asked` is reached only from the walk that reports;
+`Analysis::terminator` has no access to the nullness, so a free of a pointer
+established null still marks its sites freed and still leaves the local holding
+them. What that costs is in the Consequences below.
 
 ### Consequences
 
@@ -127,6 +143,19 @@ this half is the one that issue names.
 * Bad, because `safec` rejects a program that is well defined as written, and a
   reader who checks the whole translation unit can see that the only caller
   passes a null pointer.
+* Bad, because the exemption is applied to the report and not to the transfer,
+  so a free of a pointer established null still marks the sites it reaches
+  freed. On the arm of `if (p == 0)` that freed nothing, the sites are freed
+  all the same, and a later use of one of them is reported. That is a false
+  positive on row 4, taken deliberately: the alternative is a transfer that
+  believes a nullness, and a nullness this compiler is wrong about would then
+  be a real free nobody recorded, which is the bottom row.
+* Bad, for the same reason, in the other reader of what a call frees.
+  `memory.rs::used_before` carries a read forwards to a `free` it is unordered
+  against and asks `Allocations::touching` without the filter, so such a read
+  is reported unsequenced against a free that does nothing. It takes a branch
+  that establishes the null to reach at all, and it is row 4 again. #219 is
+  where that is written down.
 * What would reverse this: an interprocedural phase that can say what a function
   is called with. At that point a parameter stops ranging over every value and
   the quantifier this record fixes is the wrong one, and the case named above is
@@ -173,5 +202,5 @@ this half is the one that issue names.
 * [ADR-0020](./0020-a-free-of-a-may-set-is-a-fact-about-the-set.md), which is the
   other rule about when a free is a proof, and answers a different question: what
   a set of sites says, rather than what an execution is.
-* Issues #137, where the measurements above were made, and #188, which builds the
+* Issues #137, where the measurements above were made, and #188, which built the
   seam this record's exemption is applied through.

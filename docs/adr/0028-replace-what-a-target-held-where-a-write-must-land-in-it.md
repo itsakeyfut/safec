@@ -164,9 +164,12 @@ leave the whole suite passing. `lost` and `freed` are facts *about the target*;
 `writes_to` is written only at `Rvalue::Address`, which sets `Known::escaped` on
 the same local; and ADR-0017 answers `Reached::Lost` for an escaped local
 wherever a report **about it** is made, so neither can decide a conclusion
-today. It is load-bearing in one direction: the work #188 and #196 describe
-narrows what an escaped local is reported as, and the day it does, a target that
-kept a proof nothing wrote over is a false proof rather than an inert field.
+today. It is load-bearing in one direction: the day something narrows what an
+escaped local is reported as, a target that kept a proof nothing wrote over is
+a false proof rather than an inert field. #188 has since landed and is not that
+day: its exemption reads the nullness through `Nullability::known`, which
+answers nothing at all for a local whose address escaped, so an escaped local
+is answered exactly as it was here. #196 is the work that still describes it.
 
 **That reason covers those fields and nothing wider, which is worth writing down
 because the wider version was written here first and is false.** A
@@ -194,8 +197,11 @@ as ADR-0018, ADR-0019 and ADR-0020 say of the last three fields added.
 * Bad, because those same three now say `this check stopped following` instead.
   That is ADR-0017's answer for a local whose address escaped, and it is honest
   but it is not the whole truth: `p` holds a fresh allocation, or null, and this
-  check can see which. #188 owns the null half and #196 owns a report that names
-  no free. Nothing here changes ADR-0017.
+  check can see which. #196 owns a report that names no free. The null half is
+  not #188's after all: that issue exempts a free of a pointer proved null, and
+  a local whose address escaped is one this compiler proves nothing about, which
+  is the mask ADR-0027's first condition asks for. Nothing here changes
+  ADR-0017.
 * Bad, because a pointer whose own address escaped can never reach the
   replacement, however plainly the program reads. `int **pp = &p; opaque(&pp);
   *pp = q;` is followed exactly as it was, by the union, and the proof this
