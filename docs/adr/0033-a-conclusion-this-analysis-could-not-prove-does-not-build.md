@@ -97,10 +97,13 @@ name rather than passing quietly.
 
 The mutation is resolving the default the way it resolved before this landed,
 `deny_unknown: allow_unknown || safety >= SafetyLevel::Strict`. **Two halves
-have to go red**: that test, and the corpus, where 83 cases carry exit 1 with no
-flag on the command line. If only one does, the default is being decided in two
+have to go red**: that test, and the corpus, where every case that reports an
+unproven conclusion and asks for nothing about it now carries a non-zero
+expected exit code. If only one does, the default is being decided in two
 places, which is what ADR-0001 and ADR-0004 exist to prevent. Applied, and both
-were observed to fail.
+were observed to fail. No count is given: a count of the cases that happen to
+exist is a fact about the suite, which grows every week, rather than about the
+rule. See RK-028.
 
 The other side is held too, which is what keeps the promotion from being correct
 for the wrong reason:
@@ -142,8 +145,10 @@ says the command line does not decide it early;
 ### Failing wherever a check runs
 
 * Good, because asking for a check and being held to it are one action.
-* Good, because level 0 is untouched, so the migration path in
-  [`concept.md`](../concept.md) survives.
+* Good, because level 0 is untouched. What that is worth is less than it reads:
+  `--safety` defaults to `memory`, so reaching level 0 means editing the build
+  that was meant to be able to set `CC=safec` and change nothing else. See
+  *What the default level makes this mean* above.
 * Bad, because it needs the hatch before it is usable, so two records have to
   land near each other.
 

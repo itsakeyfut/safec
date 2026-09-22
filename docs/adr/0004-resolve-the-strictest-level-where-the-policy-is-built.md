@@ -83,6 +83,11 @@ true of `Policy` for an answer to that question to hold at all.
 
 Chosen option: **resolve it in `Policy::new`, and make the field private**.
 
+The shape below is the one this was decided on. #209 inverted the flag and gave
+the constructor a third fact to answer for, so this block is what was chosen
+rather than something to copy: the Confirmation carries the current signature.
+Copied as it stands it would deny exactly when the user asked to allow.
+
 ```rust
 pub struct Policy {
     deny_unknown: bool,
@@ -179,9 +184,12 @@ Verified by mutation. Replacing the body of `Policy::new` with
 Self { deny_unknown: !allow_unknown }
 ```
 
-fails exactly those three and nothing else. It was `Self { deny_unknown }` until
-#209 inverted the flag; the mutation is the same one, spelled for the argument
-the constructor now takes. Two tests in `crates/safec/src/cli.rs` held the
+fails those three and one more:
+`every_level_that_runs_a_check_denies_unknown_unless_it_was_allowed`, which
+ADR-0033 added, because this mutation drops that record's clause along with this
+one. Four, applied and read rather than predicted. It was `Self { deny_unknown }`
+until #209 inverted the flag; the mutation is the same one, spelled for the
+argument the constructor now takes. Two tests in `crates/safec/src/cli.rs` held the
 parser's own resolution and passed under it either way, which was the point of
 this record: they never covered this. #209 removed them along with the
 resolution they were about.
@@ -205,7 +213,8 @@ holds that layer now, and what it holds is that the layer does not decide.
 * Good, because a reversal is a compile error rather than a test somebody has to
   remember to keep.
 * Bad, because the implication is written twice, and a reader who finds only one
-  copy may take it for the only one. Both sites name the other.
+  copy may take it for the only one. Both sites name the other. #209 removed the
+  second copy; the Confirmation above says what made it unnecessary.
 * Bad, because it closes one invariant and leaves `Options` open. Other
   inconsistent combinations are still constructible, `--emit tokens --safety
   strict` among them, and nothing here helps with those.

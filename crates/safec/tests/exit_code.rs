@@ -152,6 +152,54 @@ fn an_invocation_that_asks_for_two_different_things_exits_two() {
     assert!(report.contains("--allow-unknown"), "{report}");
 }
 
+/// That refusal names the program the way it was run, not the way it was built.
+///
+/// `clap` takes a bin name off `argv[0]` while parsing and prints it in every
+/// usage line. A `Command` built after the parse has not seen `argv[0]`, so a
+/// refusal raised through one says `safec` however the binary was invoked, and
+/// the rename that matters is the one `cli.rs` opens by describing: a build
+/// that sets `CC=safec` reaches it as `cc`.
+///
+/// Both halves are asserted, because naming the copy is only right if it is
+/// also what `clap`'s own errors say. The second invocation is refused by
+/// `clap` rather than by `Cli::check`.
+///
+/// Mutation: build the error from `Self::command()` rather than
+/// `Self::as_invoked()`. The first assertion fails, naming the copy it
+/// expected.
+#[test]
+fn a_refusal_names_the_program_the_way_it_was_run() {
+    let copy = std::env::temp_dir().join(format!("safec_as_cc_{}.exe", std::process::id()));
+    std::fs::copy(env!("CARGO_BIN_EXE_safec"), &copy).expect("the binary can be copied");
+    let invoked = copy
+        .file_name()
+        .expect("a file name")
+        .to_string_lossy()
+        .into_owned();
+
+    let run = |args: &[&str]| {
+        let output = Command::new(&copy)
+            .args(args)
+            .output()
+            .expect("the copy runs");
+        String::from_utf8_lossy(&output.stderr).into_owned()
+    };
+
+    let refused = run(&["--safety", "strict", "--allow-unknown", "a.c"]);
+    let by_clap = run(&["--allow-unknown", "--allow-unknown", "a.c"]);
+
+    let _ = std::fs::remove_file(&copy);
+
+    assert!(
+        refused.contains(&format!("Usage: {invoked}")),
+        "the conflict named a program nobody ran: {refused}"
+    );
+    assert!(
+        by_clap.contains(&format!("Usage: {invoked}")),
+        "clap itself stopped naming the program: {by_clap}"
+    );
+}
+
 /// Asking what the compiler is has succeeded, whatever the compiler would make
 /// of the source it was not given.
 #[test]

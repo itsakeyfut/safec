@@ -227,7 +227,7 @@ Existing C
    ↓
 Safety inference
    ↓
-Warnings / uncertainty
+Refusals / uncertainty
    ↓
 Add annotations where necessary
    ↓

@@ -6,7 +6,7 @@
 //! changing meaning underneath it. Everything this project invents gets a long
 //! flag of its own.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::error::ErrorKind;
 use clap::{CommandFactory, Parser};
@@ -113,7 +113,7 @@ impl Cli {
     /// [`Policy::new`]: crate::diagnostics::Policy::new
     pub fn check(&self) -> Result<(), clap::Error> {
         if self.allow_unknown && self.safety >= SafetyLevel::Strict {
-            return Err(Self::command().error(
+            return Err(Self::as_invoked().error(
                 ErrorKind::ArgumentConflict,
                 "--allow-unknown cannot be used with --safety strict, \
                  which is defined as leaving nothing unknown",
@@ -121,6 +121,29 @@ impl Cli {
         }
 
         Ok(())
+    }
+
+    /// The command, named the way this process was invoked.
+    ///
+    /// `clap` fills its `Usage:` line from a bin name it takes off `argv[0]`
+    /// while parsing. A [`clap::Command`] built afterwards never saw `argv[0]`
+    /// and falls back to the `name` in the derive above, so a refusal reported
+    /// through one tells a user who ran `cc` to go and re-read the usage of
+    /// `safec`. The rename this module's own doc comment is about is exactly
+    /// the case where that is wrong.
+    fn as_invoked() -> clap::Command {
+        let command = Self::command();
+
+        match std::env::args_os().next() {
+            // The file name rather than the path, because that is what `clap`
+            // prints for the errors it raises itself. A second spelling here
+            // would make one refusal disagree with every other.
+            Some(argv0) => match Path::new(&argv0).file_name() {
+                Some(name) => command.bin_name(name.to_string_lossy().into_owned()),
+                None => command,
+            },
+            None => command,
+        }
     }
 
     /// Resolve the arguments into the options the compiler runs on.
