@@ -344,8 +344,12 @@ mod tests {
     /// [`Policy::new`] answers the pair by denying, so honouring the flag is
     /// not what is at stake: being told in one line, before a file is read, is.
     ///
-    /// Mutation: drop the `self.allow_unknown &&` conjunct, so every strict run
-    /// is refused. The second test fails.
+    /// Mutation: drop the `self.safety >= SafetyLevel::Strict` conjunct, so
+    /// every run that allows unknown is refused. The test below fails on its
+    /// second loop. The other conjunct is held by that test's first loop, and
+    /// only since this was measured: without the `strict` row there, dropping
+    /// `self.allow_unknown &&` refuses every strict run with the whole suite
+    /// green.
     ///
     /// [`Policy::new`]: crate::diagnostics::Policy::new
     #[test]
@@ -359,13 +363,29 @@ mod tests {
         );
     }
 
+    /// Only the pair is refused, and neither half on its own is.
+    ///
+    /// Both loops are load-bearing and each holds one conjunct of the refusal.
+    /// The first covers every level with nothing asked, `strict` included,
+    /// which is the row that was missing when this was written: without it, a
+    /// `check` that refuses every strict run leaves the whole suite green.
+    /// Measured, which is how the row came to be here.
     #[test]
-    fn allowing_unknown_is_accepted_below_the_strictest_level() {
+    fn an_invocation_that_asks_for_only_one_of_the_two_is_accepted() {
+        for level in ["off", "memory", "lifetime", "ownership", "thread", "strict"] {
+            let cli = Cli::try_parse_from(["safec", "--safety", level, "a.c"]).unwrap();
+
+            assert!(cli.check().is_ok(), "--safety {level} alone was refused");
+        }
+
         for level in ["off", "memory", "lifetime", "ownership", "thread"] {
             let cli = Cli::try_parse_from(["safec", "--safety", level, "--allow-unknown", "a.c"])
                 .unwrap();
 
-            assert!(cli.check().is_ok(), "--safety {level} was refused");
+            assert!(
+                cli.check().is_ok(),
+                "--safety {level} with the flag was refused"
+            );
         }
     }
 
