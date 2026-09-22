@@ -719,7 +719,10 @@ pub(crate) fn null_at_terminators(
     for &id in cfg.order() {
         // What a `None` says is that no execution reaches this block, and the
         // row of `false` it keeps says nothing was established there, which is
-        // the answer that exempts nothing.
+        // the answer that exempts nothing. Nothing holds that and nothing can:
+        // the caller walks the reachable blocks, so a row filled with `true`
+        // here changes no program. It is the answer that is right about a
+        // block rather than the answer that is convenient.
         let Some(mut known) = solution.value(id).cloned() else {
             continue;
         };

@@ -2332,11 +2332,16 @@ fn asked<'o>(arguments: &'o [Operand], null: &'o [bool]) -> impl Iterator<Item =
 /// **A projection answers `false`.** `free(*pp)` asks what a *place* holds, and
 /// the nullability lattice is keyed by the local, which its own doc comment
 /// says it pays for. Answering anything else here would be reading a claim
-/// about `pp` as a claim about what `pp` points at.
+/// about `pp` as a claim about what `pp` points at. Mutation: drop the
+/// `projection.is_empty()` guard. `a_free_read_out_of_a_pointer_proved_null`
+/// loses its `error[SC0401]` and fails, and nothing else in the suite moves.
 ///
 /// A constant answers `false` as well, although `free(0)` is exempt: it is
 /// exempt in `Allocations::touching`, where the operand is read, and two rules
-/// for one argument is one of them being wrong.
+/// for one argument is one of them being wrong. **That arm is held by nothing
+/// and cannot be**: answering `true` for a constant changes no program,
+/// because `touching` has already skipped every one of them before this is
+/// asked. It is written out so the arm says which rule owns it.
 fn established_null(argument: &Operand, null: &[bool]) -> bool {
     match argument {
         Operand::Copy(place) if place.projection.is_empty() => null[place.local.index()],

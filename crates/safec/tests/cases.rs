@@ -368,6 +368,13 @@ cases! {
     // reached, so recording the row before the block's elements rather than
     // after exempts a proved double free of `q`'s site. Measured: each
     // mutation takes its own case to exit 0 and leaves the other reporting.
+    // And the argument the exemption is not allowed to read at all. `pp` is
+    // established null and `*pp` is a question about what it points at, which
+    // the nullability lattice is keyed by the local and cannot ask; answering
+    // it with `pp`'s own nullness takes the `SC0401` off this case and leaves
+    // the `SC0403` alone. Measured: dropping the `projection.is_empty()` guard
+    // in `established_null` fails this case and nothing else in the suite.
+    a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_that_stopped_being_null_before_the_free_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
