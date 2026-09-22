@@ -407,10 +407,17 @@ impl Diagnostic {
 
     /// Ask for a change that would make the program compile.
     ///
-    /// [`Self::concluded`] attaches the one it required, so this is for a
-    /// second: a rejection with two ways out says both rather than choosing for
-    /// the reader.
-    pub fn with_remedy(mut self, remedy: Remedy) -> Self {
+    /// **Private, because nothing attaches a second one.** [`Self::concluded`]
+    /// is the only caller and it calls this once, so whether this appends or
+    /// replaces is a difference no mutation can show: both were tried and the
+    /// suite stayed green either way. Public, it would be an interface whose
+    /// distinguishing behaviour has no caller. Whoever writes the first
+    /// rejection with two ways out of it makes this `pub` and brings a test for
+    /// the order they arrive in.
+    ///
+    /// Private to this module rather than to this `impl`, so
+    /// [`crate::diagnostics::render`] can still build one to render.
+    fn with_remedy(mut self, remedy: Remedy) -> Self {
         self.remedies.push(remedy);
         self
     }

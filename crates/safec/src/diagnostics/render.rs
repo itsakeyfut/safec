@@ -856,6 +856,15 @@ mod tests {
     /// of the report or clear the line above it. Neither rendering path may
     /// pass one through, and the colour mode does not get a say: `--color
     /// always` means the renderer adds colour, not that content may.
+    ///
+    /// **A remedy is the fourth place that echoes, and it is here for the same
+    /// reason the note is.** Every remedy in the tree today is a static string
+    /// this compiler wrote, so nothing a user controls reaches one yet; the day
+    /// a remedy names an identifier it will, and RK-002 in the review knowledge
+    /// bank is the record of that shape costing this repository a terminal.
+    ///
+    /// Mutation: drop `shown` from `write_remedies`. This fails and nothing
+    /// else does, because every other remedy is plain ASCII.
     #[test]
     fn content_never_reaches_the_terminal_as_an_instruction() {
         let mut sources = SourceMap::new();
@@ -866,9 +875,17 @@ mod tests {
             .clone()
             .with_label(Label::primary(Span::new(file, 0, 3), "here\u{1b}[32m"))
             .with_note("note\u{1b}[33m");
+        // Through `concluded` rather than beside it: that is the one way a
+        // remedy is attached, now that `with_remedy` is private.
+        let remedied = Diagnostic::concluded(
+            Conclusion::Unknown,
+            "m",
+            Remedy::new("rename `evil\u{1b}[34m.c`"),
+        )
+        .expect("an unknown conclusion is reported");
 
         for mode in [ColorMode::Never, ColorMode::Always] {
-            for diagnostic in [&bare, &anchored] {
+            for diagnostic in [&bare, &anchored, &remedied] {
                 let rendered = render_with(&sources, diagnostic, mode);
 
                 assert!(!rendered.contains("evil\u{1b}"), "{mode:?}: {rendered:?}");
