@@ -293,6 +293,45 @@ prose beside the code as well as the code, and the second went from answering
 one to answering three the moment a comment named the constructor it was
 counting. A command that a comment can move is not settling anything.
 
+## Remedies
+
+**A note says what happened. A remedy says what to change.** The two render
+differently, `= note:` and `= help:`, and they are different fields on a
+`Diagnostic` rather than one field with a convention about which sentences go
+in it.
+
+A safety check cannot report without one. `Diagnostic::concluded` takes a
+remedy as an argument rather than offering a `with_` method for it, so a
+rejection built without one does not compile. That is the whole mechanism, and
+[ADR-0034](adr/0034-a-diagnostic-that-rejects-a-program-carries-the-change-that-would-make-it-compile.md)
+records why it is a field rather than a diagnostic reported alongside.
+
+**The hole is that `Diagnostic::error` is public.** A check that builds a
+rejection through it instead carries no remedy and nothing says so. What that
+costs is a rejection reaching a reader without its remedy, which is visible in
+the output and in a corpus expectation rather than silent.
+
+**A remedy is a claim, like a label is.** So one is written against what its
+row established rather than against what its words suggest, and two rows here
+are worth reading for what they do not say.
+
+`Unproven::Lost` names no cause. That variant has five producers and a
+`Finding` does not say which answered, so `nothing here says the program is
+wrong: this check could no longer say which allocation this pointer holds` is
+what is true of all five. It tells a reader the one thing that matters there,
+which is not to go hunting for a defect.
+[#213](https://github.com/itsakeyfut/safec/issues/213) carries the reason and
+replaces it with five.
+
+`Unproven::Disagreement` has two causes of its own, paths that disagree about a
+free and a call this check cannot read, and a `Finding` does not separate those
+either. Its remedy names what would let the check conclude rather than which of
+the two happened, which is why it has two halves.
+
+`Unproven::Unsequenced` is the one remedy about something C decided rather than
+about what the program meant, so it asks for a statement boundary rather than
+for the free to move. See [ADR-0022](adr/0022-say-where-c-sequences-one-evaluation-before-another.md).
+
 ## Where this lives now
 
 Implemented in `crates/safec/src/diagnostics.rs`, with the terminal renderer in
