@@ -118,13 +118,28 @@ const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, 
 
 /// What to change where this check could not tell whether the free reached.
 ///
-/// `Unproven::Disagreement` has two causes, paths that disagree about a free
-/// and a call this check cannot read that was handed the pointer, and a
-/// `Finding` does not separate them either. So this names what would let the
-/// check conclude rather than which of the two happened, and both halves are
-/// needed: one answers the paths and the other answers the call.
-const DISAGREEMENT_REMEDY: &str = "free it on every path or on none, and keep it out of a call \
-                                   this check cannot read in between";
+/// **The free is conditional because this check does not know there is one.**
+/// `Unproven::Disagreement` has two causes: paths that disagree about a free,
+/// where one exists, and a call this check cannot read that was handed the
+/// pointer, where there may be none at all. Nothing in a `Finding` separates
+/// them, and its `freed` span does not: `memory.rs` carries a free span only
+/// where it also answers `Unproven::Unsequenced`, so a `Disagreement` always
+/// arrives with `None` and the report carries no `freed here` label.
+///
+/// What stood here said `free it on every path or on none` unconditionally. On
+/// a program with no `free` in it that is an instruction to add one, and adding
+/// it turns the warning into a proved use after free: the corpus case
+/// `an_unsequenced_use_before_an_opaque_call_is_reported` allocates, calls two
+/// functions, frees nothing, and carried exactly that advice at exit 0. A
+/// remedy is a claim in the way a label is, RK-036, and that one claimed a free
+/// this check never found.
+///
+/// `if it is freed` is what makes one sentence true of both causes while
+/// keeping the action a reader of the first can take. Naming no free at all
+/// would be safe the way `LOST_REMEDY` is safe, and would cost the reader whose
+/// paths really do disagree the one thing they could have done about it.
+const DISAGREEMENT_REMEDY: &str = "if it is freed, free it on every path or on none, and keep it \
+                                   out of a call this check cannot read in between";
 
 /// Everything one run of the compiler produced.
 ///
@@ -706,13 +721,26 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "this check cannot say what this points at",
             LOST_REMEDY,
         ),
-        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
-            DOUBLE_FREE,
-            "this may free a value that was freed already",
-            "may free it again here",
-            UNSEQUENCED_REMEDY,
-        ),
-        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Disagreement) | None) => (
+        // **`Unsequenced` is split out below and not here**, which is the one
+        // place the two kinds are shaped differently. No corpus case reaches a
+        // double free that is unproven for that reason, and two written to try
+        // were reported as proved double frees instead:
+        // `(free(p), 0) + (free(p), 0)` and `h((free(p), 0), (free(p), 0))`.
+        // That is what was measured, rather than a claim that none exists. It
+        // reads as the shape of the question: ADR-0023 carries a *read*
+        // forwards to the free it is unordered against, and a second free is
+        // the same defect whichever of the two runs first, so an open order
+        // takes nothing away from it.
+        //
+        // A row here would therefore be one nothing can break, and the group
+        // keeps the remedy it had. `DISAGREEMENT_REMEDY` asks for the free
+        // conditionally, so it stays true of a double free that arrives this
+        // way if one ever does.
+        (
+            Kind::DoubleFree,
+            Conclusion::Unknown,
+            Some(Unproven::Disagreement | Unproven::Unsequenced) | None,
+        ) => (
             DOUBLE_FREE,
             "this may free a value that was freed already",
             "may free it again here",

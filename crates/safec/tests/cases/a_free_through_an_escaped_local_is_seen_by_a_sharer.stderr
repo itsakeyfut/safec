@@ -7,7 +7,7 @@ warning[SC0401]: this may free a value that was freed already
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; `--deny-unknown` makes it an error
-  = help: free it on every path or on none, and keep it out of a call this check cannot read in between
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 error[SC0401]: this frees a value that was freed already
    ╭─[ a_free_through_an_escaped_local_is_seen_by_a_sharer.c:8:5 ]
    │

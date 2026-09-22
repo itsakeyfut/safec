@@ -254,7 +254,15 @@ pub struct Remedy {
 }
 
 impl Remedy {
-    /// What to change, said in the imperative.
+    /// What the reader should do next.
+    ///
+    /// Usually an imperative naming a change to the program. Not always: where
+    /// a check gave up rather than found something, what it says instead is
+    /// what it failed to establish, because an instruction there would claim
+    /// something about a program nothing was worked out about. `LOST_REMEDY` in
+    /// `driver.rs` is that case and is the reason this sentence does not say
+    /// "in the imperative", which it used to and which was already false of a
+    /// string in the tree.
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -357,9 +365,13 @@ impl Diagnostic {
     /// **The remedy is required, because a rejection that does not say what to
     /// change is a refusal.** A check that cannot name one is not excused: what
     /// it says instead is what it failed to establish, which claims nothing
-    /// about the program. Making this parameter optional is `error[E0061]` at
-    /// every call site, which is the point of it being a parameter rather than
-    /// a `with_` method. See ADR-0034.
+    /// about the program. Taking this parameter away is `error[E0061]` at every
+    /// call site, which is the point of it being a parameter rather than a
+    /// `with_` method: an omitted argument has to stop the build, and a `with_`
+    /// method that was never called cannot. Making it an `Option` instead is
+    /// `error[E0308]` at the same places, which is a different error and worth
+    /// spelling correctly, because a reader checking this sentence runs the
+    /// mutation it names. See ADR-0034.
     ///
     /// **The hole, stated rather than closed.** [`Self::error`] is public and
     /// this reaches it for [`Conclusion::Unsafe`], so a check can build a

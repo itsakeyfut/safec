@@ -884,8 +884,16 @@ mod tests {
         )
         .expect("an unknown conclusion is reported");
 
+        // The remedy goes through both paths, not just the one a diagnostic
+        // with nothing to point at takes. They share `write_remedies`, so a
+        // mutation to the escaping breaks either; what this fourth case holds
+        // is that they go on sharing it.
+        let remedied_and_anchored = remedied
+            .clone()
+            .with_label(Label::primary(Span::new(file, 0, 3), "here"));
+
         for mode in [ColorMode::Never, ColorMode::Always] {
-            for diagnostic in [&bare, &anchored, &remedied] {
+            for diagnostic in [&bare, &anchored, &remedied, &remedied_and_anchored] {
                 let rendered = render_with(&sources, diagnostic, mode);
 
                 assert!(!rendered.contains("evil\u{1b}"), "{mode:?}: {rendered:?}");

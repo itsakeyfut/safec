@@ -90,9 +90,18 @@ into a severity cannot be built without a remedy, so one omitted is
 `error[E0061]` at the call site rather than an empty line in the output. That is
 row 1 on `CLAUDE.md`'s list, which is where a decision like this should fail.
 
-Several remedies at several places is the normal case, so the field is a list,
-and each entry carries the span it is about. A remedy with no span is a remedy
-about the whole diagnostic.
+The field is a list, because one rejection can have two ways out of it and
+choosing between them for the reader is not this layer's job.
+
+**No entry carries a span, and this paragraph proposed that they would.** The
+design run found that every place a remedy would point at is already a label,
+`freed here` and `allocated here` in `driver.rs`, or is not a span this
+compiler holds: there is nowhere written down that says where to test a pointer
+before reading through it. A field set by nobody and read by nobody is
+breakable by no mutation, so it would have been a guard in name only. The
+sentence is corrected rather than left standing because `Remedy`'s own doc
+comment sends a reader here for that reason, and a record that answers the
+opposite of what the code says is worse than one that says nothing.
 
 **What this leaves behind is `Severity::Help`.** It then has no constructor and
 no meaning as a severity, so either it goes, which `E0004` makes the rest of the
@@ -108,7 +117,9 @@ as its third argument. Mutation: remove that parameter and the two
 `with_remedy` calls in its arms. The library does not compile:
 `error[E0061]` at `memory_finding` and at `nullability_finding` in
 `crates/safec/src/driver.rs`, which are every place a safety finding is built.
-Three more call sites in test modules fail the same way under `cargo test`.
+The test modules fail the same way under `cargo test`; how many of them there
+are is a fact about the suite rather than about this decision, and the suite
+grows, so it is not written down here.
 
 That is the guard this record is about, and it is row 1 on `CLAUDE.md`'s list.
 A guard spelled as a test instead, asserting that some particular diagnostic
