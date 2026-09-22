@@ -134,6 +134,18 @@ label and without, because `write_one` and `render_header_only` each call
 Mutation: drop the call from `write_one`, and that test fails; restore it and
 drop the one in `render_header_only`, and it fails again. Both were applied.
 
+**The third of the three, and the build stops rather than a test failing.**
+*Decision Outcome* rejects a separate diagnostic at `Severity::Help` partly
+because nothing would stop one being counted as an entry that means nothing
+failed. `Diagnostic::new` is private, so outside
+`crates/safec/src/diagnostics.rs` and its child modules there is no way to
+build a diagnostic at a severity that means nothing. Mutation: make it `pub`
+again and call it from `crates/safec/src/driver.rs` with `Severity::Help`.
+That compiles, which is the state [#214](https://github.com/itsakeyfut/safec/issues/214)
+closed. With it private the same call is `error[E0624]`, an associated function
+that is private, and there is nothing to run. Row 1 on `CLAUDE.md`'s list, like
+the constructor above it.
+
 **What is held by nobody**, and it is the hole *Decision Outcome* names:
 `Diagnostic::error` is public, so a check that builds a rejection through it
 rather than through `concluded` carries no remedy and nothing complains.
