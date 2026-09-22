@@ -293,17 +293,20 @@ fn safety_level_note(diagnostic: &Diagnostic) -> Option<String> {
 fn certainty_note(diagnostic: &Diagnostic) -> Option<String> {
     (diagnostic.certainty() == Certainty::Unproven).then(|| {
         if diagnostic.severity().is_error() {
-            // The sink has already promoted it, and which flag asked for that
-            // is not knowable here: `--safety strict` sets the same policy as
-            // `--deny-unknown`, and `Policy` carries the decision rather than
-            // its origin. Naming one of them would be a guess, and the wrong
-            // guess tells the user a flag they never gave is to blame.
+            // The sink has already promoted it, and what asked for that is not
+            // knowable here: it is the default wherever a check runs, and
+            // `Policy` carries the decision rather than its origin. Naming a
+            // flag would be a guess, and the wrong guess tells the user a flag
+            // they never gave is to blame.
             "this could not be proven, and unproven results are errors in this compilation"
                 .to_owned()
         } else {
             // Still a warning, so this is advice rather than an explanation,
-            // and the flag that would escalate it can be named.
-            "this could not be proven; `--deny-unknown` makes it an error".to_owned()
+            // and here the origin *is* knowable: both producers of an unproven
+            // conclusion sit inside the safety gate in `driver::lowered`, so a
+            // run below it has none to report and the only way to this arm is
+            // having asked for it.
+            "this could not be proven; it is an error without `--allow-unknown`".to_owned()
         }
     })
 }
@@ -1095,8 +1098,9 @@ mod tests {
 
         let unproven = render(&sources, &unproven("`p` may escape"));
         assert!(
-            unproven
-                .contains("  = note: this could not be proven; `--deny-unknown` makes it an error"),
+            unproven.contains(
+                "  = note: this could not be proven; it is an error without `--allow-unknown`"
+            ),
             "{unproven}"
         );
 
@@ -1105,17 +1109,22 @@ mod tests {
     }
 
     /// Once the sink has promoted it the note explains why it is an error, and
-    /// it cannot name the flag responsible: `--safety strict` sets the same
-    /// policy as `--deny-unknown`, so naming either one would tell half the
-    /// users that a flag they never gave is to blame.
+    /// it cannot name what is responsible: denying is the default wherever a
+    /// check runs and `--safety strict` sets the same policy, so naming a flag
+    /// would tell most users that one they never gave is to blame.
     ///
     /// Driven from the command line rather than from a hand-built `Policy`, so
-    /// that the whole path from an argument to a rendered note is pinned.
+    /// that the whole path from an argument to a rendered note is pinned. The
+    /// bare invocation is one of the rows because since ADR-0033 it is a
+    /// checked one: `--safety` defaults to `memory`.
+    ///
+    /// Mutation: name `--allow-unknown` in the promoted arm of
+    /// `certainty_note`. The last assertion fails on both rows.
     #[test]
     fn a_promoted_diagnostic_does_not_name_a_flag_the_user_may_not_have_given() {
         for args in [
             &["safec", "--safety", "strict", "a.c"][..],
-            &["safec", "--deny-unknown", "a.c"][..],
+            &["safec", "a.c"][..],
         ] {
             let options = crate::cli::Cli::try_parse_from(args)
                 .unwrap()
@@ -1133,7 +1142,7 @@ mod tests {
                 "{args:?}: {rendered}"
             );
             assert!(
-                !rendered.contains("--deny-unknown"),
+                !rendered.contains("--allow-unknown"),
                 "{args:?} blamed a flag: {rendered}"
             );
         }

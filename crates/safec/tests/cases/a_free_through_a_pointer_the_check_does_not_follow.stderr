@@ -1,4 +1,4 @@
-warning[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free a value that was freed already
    ╭─[ a_free_through_a_pointer_the_check_does_not_follow.c:6:5 ]
    │
  6 │     free(p);
@@ -6,9 +6,9 @@ warning[SC0401]: this may free a value that was freed already
    │        ╰───── may free it again here
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-warning[SC0401]: this frees a pointer this check stopped following
+error[SC0401]: this frees a pointer this check stopped following
    ╭─[ a_free_through_a_pointer_the_check_does_not_follow.c:7:5 ]
    │
  7 │     free(*pp);
@@ -16,5 +16,5 @@ warning[SC0401]: this frees a pointer this check stopped following
    │         ╰────── this check cannot say what this points at
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

@@ -6,9 +6,10 @@
 //! changing meaning underneath it. Everything this project invents gets a long
 //! flag of its own.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use clap::Parser;
+use clap::error::ErrorKind;
+use clap::{CommandFactory, Parser};
 
 use safec_ir::target::Target;
 
@@ -51,16 +52,22 @@ pub struct Cli {
     )]
     pub emit: EmitKind,
 
-    /// Report `Unknown` analysis results as errors rather than warnings.
+    /// Report `Unknown` analysis results as warnings rather than errors.
     ///
-    /// Implied by `--safety strict`, which is defined as leaving nothing
-    /// `Unknown`. [`Cli::into_options`] resolves the two into one value.
+    /// Wherever a safety check runs, a conclusion it could not prove fails the
+    /// build, because that is what asking to be checked means here. This is the
+    /// way back to a warning for a program that is still being migrated. See
+    /// ADR-0033.
     ///
-    /// The forerunner of a lint level system. When `--deny <LINT>` arrives,
+    /// Does nothing at `--safety off`, where no check runs and there is no
+    /// unproven conclusion to report, and is refused beside `--safety strict`,
+    /// which is defined as leaving nothing `Unknown`: see [`Cli::check`].
+    ///
+    /// The forerunner of a lint level system. When `--warn <LINT>` arrives,
     /// `unknown` becomes its first lint and this spelling becomes a hidden
     /// alias rather than a second way of saying the same thing.
     #[arg(long)]
-    pub deny_unknown: bool,
+    pub allow_unknown: bool,
 
     /// The machine to compile for.
     ///
@@ -89,6 +96,56 @@ pub struct Cli {
 }
 
 impl Cli {
+    /// Refuse an invocation that asks for two different things.
+    ///
+    /// `--safety strict` is defined as leaving nothing `Unknown`, so
+    /// `--allow-unknown` beside it cannot be honoured. [`Policy::new`] answers
+    /// that pair by denying, because a policy has to be total for a caller that
+    /// never saw a command line, and this is what stops the user finding that
+    /// out from a build's worth of errors rather than from one line.
+    ///
+    /// Separate from clap's own `conflicts_with`, which relates two arguments
+    /// and cannot be told about one *value* of `--safety`. Reported as a
+    /// [`clap::Error`] all the same, so that it prints and exits the way every
+    /// other argument mistake does: nothing has been read at this point, so
+    /// there is no source text to put a caret into.
+    ///
+    /// [`Policy::new`]: crate::diagnostics::Policy::new
+    pub fn check(&self) -> Result<(), clap::Error> {
+        if self.allow_unknown && self.safety >= SafetyLevel::Strict {
+            return Err(Self::as_invoked().error(
+                ErrorKind::ArgumentConflict,
+                "--allow-unknown cannot be used with --safety strict, \
+                 which is defined as leaving nothing unknown",
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// The command, named the way this process was invoked.
+    ///
+    /// `clap` fills its `Usage:` line from a bin name it takes off `argv[0]`
+    /// while parsing. A [`clap::Command`] built afterwards never saw `argv[0]`
+    /// and falls back to the `name` in the derive above, so a refusal reported
+    /// through one tells a user who ran `cc` to go and re-read the usage of
+    /// `safec`. The rename this module's own doc comment is about is exactly
+    /// the case where that is wrong.
+    fn as_invoked() -> clap::Command {
+        let command = Self::command();
+
+        match std::env::args_os().next() {
+            // The file name rather than the path, because that is what `clap`
+            // prints for the errors it raises itself. A second spelling here
+            // would make one refusal disagree with every other.
+            Some(argv0) => match Path::new(&argv0).file_name() {
+                Some(name) => command.bin_name(name.to_string_lossy().into_owned()),
+                None => command,
+            },
+            None => command,
+        }
+    }
+
     /// Resolve the arguments into the options the compiler runs on.
     ///
     /// The mapping is one to one today. It exists so that the compiler depends
@@ -105,7 +162,7 @@ impl Cli {
             safety,
             emit,
             target,
-            deny_unknown,
+            allow_unknown,
             color,
         } = self;
 
@@ -117,10 +174,12 @@ impl Cli {
             // clap answered for the spelling against `Target::ALL`, so the only
             // way here is a triple that table holds.
             target: Target::from_triple(&target).expect("clap accepted this triple"),
-            // `--safety strict` is defined as leaving nothing `Unknown`, so it
-            // carries `--deny-unknown` with it. Resolved once here rather than
-            // in every consumer of `Options`, which is what this method is for.
-            deny_unknown: deny_unknown || safety >= SafetyLevel::Strict,
+            // Carried across unresolved. This used to resolve the strictest
+            // level here as well, so that `Options::deny_unknown` read
+            // truthfully to anyone who inspected it; the field is now the
+            // request rather than an answer, and `Policy::new` is the one place
+            // that turns the pair into what the sink does. See ADR-0004.
+            allow_unknown,
             color,
         }
     }
@@ -128,9 +187,7 @@ impl Cli {
 
 #[cfg(test)]
 mod tests {
-    use clap::CommandFactory;
     use clap::ValueEnum;
-    use clap::error::ErrorKind;
 
     use super::*;
 
@@ -230,7 +287,7 @@ mod tests {
         assert_eq!(cli.emit, EmitKind::Executable);
         assert_eq!(cli.color, ColorMode::Auto);
         assert_eq!(cli.output, None);
-        assert!(!cli.deny_unknown);
+        assert!(!cli.allow_unknown);
     }
 
     #[test]
@@ -266,34 +323,92 @@ mod tests {
     }
 
     #[test]
-    fn deny_unknown_is_set_by_its_flag() {
-        let cli = Cli::try_parse_from(["safec", "--deny-unknown", "a.c"]).unwrap();
-        assert!(cli.deny_unknown);
+    fn allow_unknown_is_set_by_its_flag() {
+        let cli = Cli::try_parse_from(["safec", "--allow-unknown", "a.c"]).unwrap();
+        assert!(cli.allow_unknown);
     }
 
-    /// The strictest level is defined as leaving nothing `Unknown`, so asking
-    /// for it is asking for `--deny-unknown`. Resolved here so that
-    /// `Options::deny_unknown` is the answer it claims to be, and resolved
-    /// again where the sink's policy is built, because `Options` has public
-    /// fields and a caller that is not this parser can leave the two
-    /// disagreeing. See ADR-0004.
+    /// The request crosses the boundary unresolved, at every level.
+    ///
+    /// This replaces `a_lower_safety_level_leaves_deny_unknown_to_its_flag`,
+    /// which asserted what ADR-0033 reverses. `Cli::into_options` used to
+    /// resolve the strictest level here as well, so that `Options` read
+    /// truthfully to anyone who inspected it; the field is now what the user
+    /// asked for and `Policy::new` is the only place that turns the pair into
+    /// what the sink does, so what is left for this layer to hold is that it
+    /// does not decide early. `every_level_that_runs_a_check_denies_unknown_`
+    /// `unless_it_was_allowed` in `diagnostics.rs` is where the rule itself is.
+    ///
+    /// Mutation: resolve it here, `allow_unknown: allow_unknown && safety <
+    /// SafetyLevel::Strict`. The strict row fails, naming the level.
     #[test]
-    fn the_strictest_safety_level_denies_unknown_on_its_own() {
-        let options = Cli::try_parse_from(["safec", "--safety", "strict", "a.c"])
-            .unwrap()
-            .into_options();
+    fn every_safety_level_carries_the_request_across_the_boundary_unchanged() {
+        for level in ["off", "memory", "lifetime", "ownership", "thread", "strict"] {
+            for asked in [false, true] {
+                let mut args = vec!["safec", "--safety", level];
+                if asked {
+                    args.push("--allow-unknown");
+                }
+                args.push("a.c");
 
-        assert!(options.deny_unknown);
+                let options = Cli::try_parse_from(args).unwrap().into_options();
+
+                assert_eq!(
+                    options.allow_unknown, asked,
+                    "--safety {level} did not carry allow_unknown = {asked}"
+                );
+            }
+        }
     }
 
+    /// The level defined as leaving nothing `Unknown` cannot also be asked to
+    /// leave some.
+    ///
+    /// [`Policy::new`] answers the pair by denying, so honouring the flag is
+    /// not what is at stake: being told in one line, before a file is read, is.
+    ///
+    /// Mutation: drop the `self.safety >= SafetyLevel::Strict` conjunct, so
+    /// every run that allows unknown is refused. The test below fails on its
+    /// second loop. The other conjunct is held by that test's first loop, and
+    /// only since this was measured: without the `strict` row there, dropping
+    /// `self.allow_unknown &&` refuses every strict run with the whole suite
+    /// green.
+    ///
+    /// [`Policy::new`]: crate::diagnostics::Policy::new
     #[test]
-    fn a_lower_safety_level_leaves_deny_unknown_to_its_flag() {
+    fn allowing_unknown_is_refused_at_the_level_defined_as_leaving_none() {
+        let cli = Cli::try_parse_from(["safec", "--safety", "strict", "--allow-unknown", "a.c"])
+            .expect("the arguments parse; the conflict is not clap's to see");
+
+        assert_eq!(
+            cli.check().expect_err("the pair is refused").kind(),
+            ErrorKind::ArgumentConflict
+        );
+    }
+
+    /// Only the pair is refused, and neither half on its own is.
+    ///
+    /// Both loops are load-bearing and each holds one conjunct of the refusal.
+    /// The first covers every level with nothing asked, `strict` included,
+    /// which is the row that was missing when this was written: without it, a
+    /// `check` that refuses every strict run leaves the whole suite green.
+    /// Measured, which is how the row came to be here.
+    #[test]
+    fn an_invocation_that_asks_for_only_one_of_the_two_is_accepted() {
+        for level in ["off", "memory", "lifetime", "ownership", "thread", "strict"] {
+            let cli = Cli::try_parse_from(["safec", "--safety", level, "a.c"]).unwrap();
+
+            assert!(cli.check().is_ok(), "--safety {level} alone was refused");
+        }
+
         for level in ["off", "memory", "lifetime", "ownership", "thread"] {
-            let options = Cli::try_parse_from(["safec", "--safety", level, "a.c"])
-                .unwrap()
-                .into_options();
+            let cli = Cli::try_parse_from(["safec", "--safety", level, "--allow-unknown", "a.c"])
+                .unwrap();
 
-            assert!(!options.deny_unknown, "--safety {level} denied unknown");
+            assert!(
+                cli.check().is_ok(),
+                "--safety {level} with the flag was refused"
+            );
         }
     }
 
@@ -302,15 +417,19 @@ mod tests {
     /// added to `Options` breaks the struct literal below, and one added to
     /// `Cli` breaks the destructuring in `into_options`. What is left for the
     /// test is that each argument arrives as the value that was parsed.
+    ///
+    /// `--safety thread` rather than `strict`, because `--allow-unknown` beside
+    /// the strictest level is an invocation [`Cli::check`] refuses, and pinning
+    /// the trip made by one nobody can run is pinning nothing.
     #[test]
     fn every_argument_survives_the_trip_into_options() {
         let options = Cli::try_parse_from([
             "safec",
             "--safety",
-            "strict",
+            "thread",
             "--emit",
             "safety-ir",
-            "--deny-unknown",
+            "--allow-unknown",
             "--color",
             "never",
             "--target",
@@ -328,7 +447,7 @@ mod tests {
             Options {
                 inputs: vec![PathBuf::from("a.c"), PathBuf::from("b.c")],
                 output: Some(PathBuf::from("out.ir")),
-                safety: SafetyLevel::Strict,
+                safety: SafetyLevel::Thread,
                 emit: EmitKind::SafetyIr,
                 // Named in the arguments above, and a triple nothing hosts.
                 // Leaving `--target` out and writing a host's triple here made
@@ -337,7 +456,7 @@ mod tests {
                 // `a_target_the_host_is_not` exists to catch in the corpus and
                 // the same one, one layer up.
                 target: Target::from_triple("wasm32-unknown-unknown").expect("a known triple"),
-                deny_unknown: true,
+                allow_unknown: true,
                 color: ColorMode::Never,
             }
         );

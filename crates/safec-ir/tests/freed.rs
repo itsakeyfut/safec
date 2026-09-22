@@ -867,8 +867,9 @@ fn taking_the_address_of_a_dereference_is_not_a_use() {
 /// A use after a free on one path only is suspected rather than proved.
 ///
 /// `docs/safety-model.md`'s middle conclusion, on this check: the program may
-/// be correct and this cannot say that it is, so `--deny-unknown` is what turns
-/// it into a refusal.
+/// be correct and this cannot say that it is, so a policy that denies unknown
+/// is what turns it into a refusal, which since ADR-0033 is every build above
+/// `--safety off`.
 ///
 /// Mutation: treat a site that is `Unknown` as freed. This becomes an error
 /// about a program the check proved nothing about, which is the false-positive
@@ -1521,7 +1522,7 @@ fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
     // about an allocation this check is not carrying. Written `*pp = q;`, the
     // same program is one `UseAfterFree`, unproven because `p`'s address
     // escaped and ADR-0017 keeps it out of a proof. Unproven is still an error
-    // under `--deny-unknown`; this is silence under every flag.
+    // wherever a check runs; this is silence under every flag.
     assert!(found.is_empty(), "{found:?}");
 }
 

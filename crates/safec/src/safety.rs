@@ -21,8 +21,11 @@ use clap::ValueEnum;
 /// every variant it applies to.
 ///
 /// A level decides which checks run and nothing else. How loudly a check speaks
-/// is decided by what it concluded and by `--deny-unknown`, not by the level:
-/// a result the analysis proved is an error at every level.
+/// is decided by what it concluded and by the policy the run resolved to, not by
+/// the level: a result the analysis proved is an error at every level that runs
+/// the check that proved it. What the level does decide is whether any check
+/// runs at all, which is why [`crate::diagnostics::Policy`] reads it: see
+/// ADR-0033.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 #[value(rename_all = "kebab-case")]
 pub enum SafetyLevel {

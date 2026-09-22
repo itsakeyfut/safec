@@ -53,7 +53,7 @@ pub enum Conclusion {
     ///
     /// The unknown of the three-valued model, and the thing an annotation
     /// exists to remove. Whether it fails a build is the policy's to say, which
-    /// is why a check that reaches this does not need to know what
-    /// `--deny-unknown` is.
+    /// is why a check that reaches this does not need to know what the policy
+    /// of the run it is part of is.
     Unknown,
 }

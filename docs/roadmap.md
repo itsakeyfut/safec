@@ -190,8 +190,8 @@ Safety level 1. The first phase that reports something about a C program.
 - wiring `--safety memory` so that the level selects these checks
 
 **Done when:** the use-after-free example above is an error, level 0 reports
-nothing, and a case the analysis cannot prove is a warning that `--deny-unknown`
-turns into an error.
+nothing, and a case the analysis cannot prove is an error that
+`--allow-unknown` turns back into a warning.
 
 ### Phase 6: Lifetime Safety
 
@@ -239,7 +239,8 @@ Safety levels 4 and 5.
 - data-race detection
 - thread ownership and capability experiments
 - wiring `--safety thread`, and `--safety strict`, which is defined as leaving
-  nothing `Unknown` and therefore implies `--deny-unknown`
+  nothing `Unknown` and therefore refuses `--allow-unknown` rather than
+  ignoring it
 
 **Done when:** a value shared between threads without synchronization is
 reported, and `--safety strict` on a program the analysis cannot fully prove

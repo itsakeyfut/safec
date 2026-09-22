@@ -586,8 +586,8 @@ impl Known {
     /// this check never had a site for is an indeterminate pointer, which is a
     /// different defect with a check of its own that does not exist yet.
     /// Answering [`Reached::Lost`] here instead put `perhaps after the free` on
-    /// a program that frees nothing at all, and made `--deny-unknown` unusable
-    /// on the output-parameter idiom. `an_escaped_local_that_reaches_no_site_at_all`
+    /// a program that frees nothing at all, and made a build that denies
+    /// unknown unusable on the output-parameter idiom. `an_escaped_local_that_reaches_no_site_at_all`
     /// is that program and is the guard.
     ///
     /// It used to be `int *p; int **pp = &p; *pp = malloc(4); *p = 1;`, which
@@ -793,7 +793,7 @@ impl Known {
     /// took the address and an arm that allocated meet here, and the merged
     /// value held an escaped local reaching a site this check had proved live:
     /// `if (c) { pp = &p; *pp = q; } else { p = malloc(8); } free(q); free(p);`
-    /// was silent at `--deny-unknown --safety strict` on a double free. The
+    /// was silent at `--safety strict` on a double free. The
     /// union of `escaped` alone does not do it, because nothing downstream of
     /// a join reads the bit unless the local is written again.
     ///

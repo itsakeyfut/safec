@@ -45,9 +45,19 @@ fn artifact_path(name: &str) -> PathBuf {
 /// machine does not matter here, and naming one keeps the run from depending
 /// on where it is.
 fn llvm_ir_to(path: &Path, case: &str) -> std::process::Output {
+    llvm_ir_to_with(path, case, &[])
+}
+
+/// The same, with arguments the caller needs on top.
+///
+/// One caller needs `--allow-unknown`, because since ADR-0033 an unproven
+/// conclusion is an error wherever a check runs and a run that only warns has
+/// to ask for it.
+fn llvm_ir_to_with(path: &Path, case: &str, extra: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_safec"))
         .args(["--color", "never", "--emit", "llvm-ir"])
         .args(["--target", "x86_64-pc-windows-msvc"])
+        .args(extra)
         .arg("-o")
         .arg(path)
         .arg(test_file(&format!("cases/{case}.c")))
@@ -186,13 +196,22 @@ fn a_backend_refusal_leaves_no_llvm_ir() {
 /// this, refusing to emit for any program the memory check mentions would pass
 /// both of them.
 ///
+/// `--allow-unknown` is what leaves a warning to be the worst report. Since
+/// ADR-0033 an unproven conclusion is an error wherever a check runs, so the
+/// same program without the flag exits 1 and writes nothing, which is the two
+/// tests above rather than this one.
+///
 /// Mutation: read `has_errors()` as `!is_empty()` in `run_compiler`'s write
 /// rule, so that anything reported at all is a failed run. This fails on the
 /// file being absent.
 #[test]
 fn a_warning_still_writes_its_llvm_ir() {
     let path = artifact_path("warned.ll");
-    let output = llvm_ir_to(&path, "a_call_this_check_cannot_read_between_two_frees");
+    let output = llvm_ir_to_with(
+        &path,
+        "a_call_this_check_cannot_read_between_two_frees",
+        &["--allow-unknown"],
+    );
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(0), "{said}");

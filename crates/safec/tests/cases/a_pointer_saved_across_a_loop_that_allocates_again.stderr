@@ -1,4 +1,4 @@
-warning[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses a pointer this check stopped following
    ╭─[ a_pointer_saved_across_a_loop_that_allocates_again.c:9:13 ]
    │
  9 │             *keep = 1;
@@ -6,9 +6,9 @@ warning[SC0402]: this uses a pointer this check stopped following
    │                 ╰────── this check cannot say what this points at
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference a null pointer
    ╭─[ a_pointer_saved_across_a_loop_that_allocates_again.c:9:13 ]
    │
  9 │             *keep = 1;
@@ -16,5 +16,5 @@ warning[SC0403]: this may dereference a null pointer
    │                 ╰────── this check cannot say this is not null
 ───╯
   = note: this check belongs to safety level 1
-  = note: this could not be proven; `--deny-unknown` makes it an error
+  = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
