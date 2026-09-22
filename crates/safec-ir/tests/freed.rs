@@ -2436,3 +2436,121 @@ fn a_write_whose_type_this_check_cannot_name_distrusts_every_escaped_local() {
         "{found:?}"
     );
 }
+
+/// A local given a constant that is not a null pointer constant.
+///
+/// **Not `0`, and that is the whole of why this builder exists.** The rule
+/// under test is that an assignment makes a local forget the sites it held,
+/// and the C that used to hold it spelled the assignment `p = 0;`. ADR-0027
+/// now exempts a free of a pointer proved null from being reported at all, so
+/// that spelling answers nothing whatever the lattice does, and a test written
+/// with it passes with the rule deleted. A constant this subset cannot even
+/// write without a cast keeps the memory check's answer observable, which is
+/// what this file is for.
+fn given_a_constant(to: LocalId, value: i128, at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Use(Operand::Constant(value)),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// A local given something else forgets the allocation it held, so freeing it
+/// again is not a double free.
+///
+/// `free(p); p = 0; free(p);` in C, which is the commonest hygiene the
+/// language has. The corpus holds that program as
+/// `a_pointer_set_to_nothing_after_a_free_holds_nothing` and it is silent
+/// there for two reasons now, the exemption above and this rule, so it can no
+/// longer say which of them is working. This asks the lattice on its own.
+///
+/// **What forgetting costs is the proof, not the report.** A local that
+/// reaches no site is one this check has lost the pointer of, so the second
+/// free is still spoken about; what it can no longer say is that anything was
+/// freed twice. That distinction is `Reached::Lost` against
+/// `SiteState::Freed`, and asserting only that nothing is reported would pass
+/// on a check that had gone silent instead.
+///
+/// Mutation: have the arm of `Allocations::element` that assigns a constant
+/// leave the destination's sites alone. The second free reaches a site this
+/// check watched being freed, the conclusion is `Unsafe`, and this fails.
+#[test]
+fn a_local_given_a_constant_forgets_the_site_it_held() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let first = function.reserve_block();
+    let given = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], first));
+    function.fill_block(first, free(&callees, held, names.at[1], given));
+    function.fill_block(
+        given,
+        after_the_statement(names.at[1], given_a_constant(held, 17, names.at[2], second)),
+    );
+    function.fill_block(second, free(&callees, held, names.at[3], exit));
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].unproven, Some(Unproven::Lost));
+    assert_eq!(found[0].freed, None, "nothing here established a free");
+}
+
+/// The same rule about a local that named a set of two allocations.
+///
+/// The set is what ADR-0020 records a free against, on the local rather than
+/// on its members, so forgetting it is a second thing to forget and a rule
+/// that clears the members alone leaves it behind. The corpus held this as
+/// `a_local_given_nothing_forgets_the_set_it_freed`, which the exemption has
+/// since silenced for its own reason.
+///
+/// Mutation: keep the local's record of the set it freed across the
+/// assignment. The second free is answered from a set this check calls freed,
+/// the conclusion stops being `Unproven::Lost`, and this fails.
+#[test]
+fn a_local_given_a_constant_forgets_the_set_it_freed() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let one = function.push_local(types.ptr);
+    let other = function.push_local(types.ptr);
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let again = function.reserve_block();
+    let asked = function.reserve_block();
+    let takes_one = function.reserve_block();
+    let takes_other = function.reserve_block();
+    let first = function.reserve_block();
+    let given = function.reserve_block();
+    let second = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, one, names.at[0], again));
+    function.fill_block(again, malloc(&callees, other, names.at[1], asked));
+    function.fill_block(asked, branch(takes_one, takes_other, names.asked));
+    function.fill_block(takes_one, copy(held, one, names.at[2], first));
+    function.fill_block(takes_other, copy(held, other, names.at[2], first));
+    function.fill_block(first, free(&callees, held, names.at[3], given));
+    function.fill_block(
+        given,
+        after_the_statement(names.at[3], given_a_constant(held, 17, names.at[4], second)),
+    );
+    function.fill_block(second, free(&callees, held, names.at[5], exit));
+    function.fill_block(exit, after_the_statement(names.at[5], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].unproven, Some(Unproven::Lost));
+}

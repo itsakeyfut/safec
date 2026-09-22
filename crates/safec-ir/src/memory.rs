@@ -41,6 +41,7 @@ use crate::ir::{
     Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit, Ty,
 };
+use crate::nullability;
 use crate::source::{SourceMap, Span};
 
 /// What this check can read in a callee's name.
@@ -1032,7 +1033,16 @@ impl Allocations<'_> {
     ///
     /// Shared with [`findings`], so that the walk which reports and the walk which
     /// computes cannot disagree about what a call touches.
-    fn touching(arguments: &[Operand], known: &Known) -> Vec<Reached> {
+    ///
+    /// **What they may disagree about is which arguments are handed here**, and
+    /// exactly one thing does it: `asked` leaves out a pointer the nullability
+    /// check established is null, because C says such a call does nothing, and
+    /// only the walk that reports asks that. See ADR-0027, and `reported` for
+    /// why the transfer is deliberately not told.
+    fn touching<'o>(
+        arguments: impl IntoIterator<Item = &'o Operand>,
+        known: &Known,
+    ) -> Vec<Reached> {
         let mut reached = Vec::new();
 
         for argument in arguments {
@@ -1052,6 +1062,11 @@ impl Allocations<'_> {
                 // `a_free_of_a_null_constant` pins the half the clause
                 // supports; the other half is held by nobody here and is not
                 // this check's to hold.
+                //
+                // **The same clause reaches a local**, where the constant was
+                // given a name first, and that is `asked`'s rather than this
+                // arm's: what it takes to recognise is a nullness the other
+                // check established, which nothing here can see. See ADR-0027.
                 Operand::Constant(_) => continue,
                 Operand::Copy(place) => place,
             };
@@ -1653,7 +1668,7 @@ impl Analysis for Allocations<'_> {
         // what it says is that this call touched something the check was not
         // following, which is a fact about the report rather than about the
         // lattice.
-        let touched = Self::touching(arguments, value);
+        let touched = Self::touching(arguments.iter(), value);
         let sites = || named(&touched);
 
         match self.callee(*callee) {
@@ -1977,6 +1992,11 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         };
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
+        // The other check's answer, asked at each block's terminator, which is
+        // where a free is reached. A free of a pointer that check established
+        // is null frees nothing, and `asked` is the one place that is applied.
+        // See ADR-0027.
+        let null = nullability::null_at_terminators(unit, function, &cfg);
 
         // Per function, because a span belongs to one of them. The third
         // field is where in `findings` the report standing at that caret is,
@@ -2017,7 +2037,8 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 dereferenced_in_terminator(&block.terminator),
                 &known,
             );
-            if let Some(finding) = reported(&analysis, &block.terminator, &known) {
+            if let Some(finding) = reported(&analysis, &block.terminator, &known, &null[id.index()])
+            {
                 findings.push(finding);
             }
             // After the free's own finding, which is the one whose caret is
@@ -2237,7 +2258,12 @@ fn verdict(
 /// One finding per call rather than one per site: a local may point at several
 /// allocations where a branch put them there, and two carets on one `free` say
 /// one thing twice.
-fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) -> Option<Finding> {
+fn reported(
+    analysis: &Allocations<'_>,
+    terminator: &Terminator,
+    known: &Known,
+    null: &[bool],
+) -> Option<Finding> {
     let Terminator::Call {
         callee,
         arguments,
@@ -2255,7 +2281,7 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
 
     let verdict = verdict(
         Kind::DoubleFree,
-        Allocations::touching(arguments, known),
+        Allocations::touching(asked(arguments, null), known),
         known,
     )?;
 
@@ -2267,6 +2293,55 @@ fn reported(analysis: &Allocations<'_>, terminator: &Terminator, known: &Known) 
         made: verdict.made,
         unproven: verdict.unproven,
     })
+}
+
+/// The arguments of a `free` this report asks about, which is every one except
+/// a pointer this compiler established is null.
+///
+/// C17 7.22.3.3 p2: if the argument is a null pointer, no action occurs. So a
+/// call whose only argument is such a pointer frees nothing, and there is
+/// nothing here for a double free to be about. `Allocations::touching` already
+/// applies this to an argument *written* as a constant, with the clause quoted;
+/// this is the same rule reaching a local the nullability check proved. See
+/// ADR-0027, which is also why nothing weaker exempts one: a pointer nobody
+/// established anything about still weakens no proof.
+///
+/// **Only the report, never the transfer.** This is called from the walk that
+/// reports and `Analysis::terminator` cannot reach it, so a free of a pointer
+/// established null still marks its sites freed and still leaves the local
+/// holding them. Clearing them instead would make the local reach no site,
+/// which is how this check spells having lost a pointer, and the reader would
+/// get a warning about the wrong thing. That is the third of ADR-0027's three
+/// conditions and it is held by where this function is called from.
+///
+/// **The result being empty is not [`Reached::Lost`]**, and the two are worth
+/// keeping apart here because RK-045 and RK-049 are both about this check
+/// having two emptinesses. `verdict` answers `None` for no sites and nothing
+/// lost, which is silence, and that is the right answer to a call C says does
+/// nothing. What is lost still arrives as a `Reached::Lost` from the arguments
+/// that were asked about.
+fn asked<'o>(arguments: &'o [Operand], null: &'o [bool]) -> impl Iterator<Item = &'o Operand> + 'o {
+    arguments
+        .iter()
+        .filter(move |argument| !established_null(argument, null))
+}
+
+/// Whether this argument is a pointer this compiler established is null where
+/// the call runs.
+///
+/// **A projection answers `false`.** `free(*pp)` asks what a *place* holds, and
+/// the nullability lattice is keyed by the local, which its own doc comment
+/// says it pays for. Answering anything else here would be reading a claim
+/// about `pp` as a claim about what `pp` points at.
+///
+/// A constant answers `false` as well, although `free(0)` is exempt: it is
+/// exempt in `Allocations::touching`, where the operand is read, and two rules
+/// for one argument is one of them being wrong.
+fn established_null(argument: &Operand, null: &[bool]) -> bool {
+    match argument {
+        Operand::Copy(place) if place.projection.is_empty() => null[place.local.index()],
+        Operand::Copy(_) | Operand::Constant(_) => false,
+    }
 }
 
 /// Report every dereference at `at` of something that was freed.
@@ -2473,7 +2548,7 @@ fn used_before(
         Callee::Allocates => return,
     };
 
-    let touched = Allocations::touching(arguments, known);
+    let touched = Allocations::touching(arguments.iter(), known);
     let taken: Vec<usize> = named(&touched).collect();
 
     for ((.., place), read) in &known.pending {

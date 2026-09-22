@@ -673,6 +673,72 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     findings
 }
 
+/// Which locals this check established are null where each block's terminator
+/// runs.
+///
+/// Indexed by [`BlockId::index`], a row of one `bool` per local. A block no
+/// execution reaches holds a row of `false`, which says nothing was established
+/// about those locals rather than that something was.
+///
+/// **Nothing in this module reads it.** [`crate::memory`] does, to exempt a
+/// free of a pointer this check established is null, which C17 7.22.3.3 p2
+/// makes a call that does nothing. ADR-0027 is that rule, and two of the three
+/// conditions it names for an implementation are held here:
+///
+/// - the answer is read through [`Nullability::known`], so a local whose
+///   address escaped answers nothing at all. A raw read of the value would
+///   exempt a free of a pointer a store this check cannot follow has since
+///   replaced, which is a double free reported by nobody;
+/// - it is recorded where the terminator runs rather than where the block
+///   starts. `int *p = 0; free(q); p = q; free(p);` is established null at the
+///   entry of the block that frees `p` and is not null where the free runs, and
+///   answering with the entry silences a proved double free.
+///
+/// The third is the caller's and is held by what this does not return: there is
+/// no answer here for a point inside a block, so nothing can reach the transfer
+/// with it.
+///
+/// **The replay lives here rather than in the module that asks**, so that there
+/// is one walk over this lattice. A second copy of "run the elements, then ask"
+/// would agree today and stop agreeing the day [`Analysis::element`] learns
+/// something new, with nothing failing when it does.
+pub(crate) fn null_at_terminators(
+    unit: &TranslationUnit,
+    function: &Function,
+    cfg: &Cfg,
+) -> Vec<Vec<bool>> {
+    let analysis = Nullability {
+        unit,
+        locals: function.locals().len(),
+        escaped: escaped_in(function),
+    };
+    let solution = solve(&analysis, function, cfg);
+
+    let mut null = vec![vec![false; function.locals().len()]; function.blocks().len()];
+
+    for &id in cfg.order() {
+        // What a `None` says is that no execution reaches this block, and the
+        // row of `false` it keeps says nothing was established there, which is
+        // the answer that exempts nothing.
+        let Some(mut known) = solution.value(id).cloned() else {
+            continue;
+        };
+
+        let block = function.block(id);
+        for element in &block.elements {
+            analysis.element(function, element, &mut known);
+        }
+
+        // Before the terminator's own transfer, which is the position
+        // [`findings`] reports from and the position the free is reached at.
+        for local in function.locals() {
+            null[id.index()][local.index()] = analysis.known(&known, local) == Nullness::Null;
+        }
+    }
+
+    null
+}
+
 /// How much a conclusion outranks another where both stand at one caret.
 ///
 /// Not an `Ord` on [`Conclusion`]: that type is `safec_ir`'s answer about one

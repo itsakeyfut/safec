@@ -243,6 +243,13 @@ cases! {
     a_free_of_either_of_two_locals_names_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_of_one_of_two_allocations_by_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_of_a_may_set_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Silent, and for two reasons since ADR-0027: the local forgot the set it
+    // freed, and `p = 0; free(p);` is a call C defines as doing nothing. Which
+    // of the two is working can no longer be read off this case, so the
+    // forgetting is asked of the lattice directly by
+    // `a_local_given_a_constant_forgets_the_set_it_freed` in
+    // `crates/safec-ir/tests/freed.rs`, where the assignment is a constant
+    // this subset cannot write.
     a_local_given_nothing_forgets_the_set_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_may_set_freed_then_written_through_an_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What a proof about a may-set survives when a value is built from its
@@ -279,6 +286,9 @@ cases! {
     a_double_free_across_a_loop_names_the_free_that_is_wrong: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_given_something_fresh_forgets_what_it_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `free(p); p = 0;`, the commonest hygiene C has, and silent for the two
+    // reasons the case above is. `a_local_given_a_constant_forgets_the_site_it_held`
+    // is where the lattice half is asked on its own.
     a_pointer_set_to_nothing_after_a_free_holds_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -304,24 +314,24 @@ cases! {
     a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_call_this_check_cannot_read_between_two_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_through_a_pointer_the_check_does_not_follow: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // Three programs with one `free` each, and the boundary between two
-    // reasons a report can be unproven. In the first two nothing established a
-    // free at all, so the diagnostic says what this check lost rather than
-    // that the value may have been freed already: `p` was given a constant and
-    // holds no site, and `*pp` is a pointer this check follows locals rather
-    // than the targets of. The third reaches the same caret with a site an
-    // opaque call was handed, where `helper` may really have freed it, and it
-    // keeps the older words. It is the only case whose suspicion rests on
-    // nothing but the callee: every other program that keeps those words has
-    // a `free` in it that this check saw. Answering `Unproven::Lost`
-    // where the sites disagree fails it, along with everything else that
-    // keeps them.
+    // Two programs with one `free` each, and the boundary between two reasons
+    // a report can be unproven. In the first nothing established a free at
+    // all, so the diagnostic says what this check lost rather than that the
+    // value may have been freed already: `*pp` is a pointer this check follows
+    // locals rather than the targets of. The second reaches the same caret
+    // with a site an opaque call was handed, where `helper` may really have
+    // freed it, and it keeps the older words. It is the only case whose
+    // suspicion rests on nothing but the callee: every other program that
+    // keeps those words has a `free` in it that this check saw. Answering
+    // `Unproven::Lost` where the sites disagree fails it, along with
+    // everything else that keeps them.
     //
-    // Measured, on the two mutations that send the first two the other way:
-    // answering `Unproven::Disagreement` where this check lost the pointer,
-    // and reporting nothing there at all, each fail those two and the eleven
-    // cases whose text this issue changed, and nothing else in the suite.
-    a_free_of_a_pointer_that_never_held_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // **There were three, and the third has moved down beside the null
+    // constant.** `int *p = 0; free(p);` was here to hold the words a lost
+    // pointer gets, on the grounds that a local given a constant holds no
+    // site. ADR-0027's exemption now answers that program before the words are
+    // reached, so it says nothing at all and belongs with the other spelling
+    // of it.
     a_free_read_out_of_another_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the one this check is meant to say nothing about at all. C17
@@ -336,6 +346,30 @@ cases! {
     // stays silent and this case does not say otherwise. The comment on that
     // arm says where the other half belongs.
     a_free_of_a_null_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same program with the constant given a name first, which the clause
+    // does not distinguish and `clang` accepts identically. It is silent
+    // because the nullability check established the pointer is null and
+    // `asked` leaves such an argument out, which is ADR-0027; dropping that
+    // filter puts `this frees a pointer this check stopped following` back on
+    // a program C defines and fails this case.
+    a_free_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The two halves of what that exemption is allowed to rest on, one case
+    // each, because each is a way of getting the nullness right in form and
+    // wrong in fact, and being wrong there is a double free reported by
+    // nobody.
+    //
+    // The first is read through the escape mask. `p` is written through its
+    // own address, so the lattice still calls it null while the program has
+    // given it an allocation; reading the value rather than
+    // `Nullability::known` exempts both frees and this case goes silent.
+    //
+    // The second is asked where the free runs. `p` is established null at the
+    // entry of the block that frees it and is not null by the time the free is
+    // reached, so recording the row before the block's elements rather than
+    // after exempts a proved double free of `q`'s site. Measured: each
+    // mutation takes its own case to exit 0 and leaves the other reporting.
+    a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_that_stopped_being_null_before_the_free_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_alias_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
