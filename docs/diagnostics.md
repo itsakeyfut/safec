@@ -114,18 +114,22 @@ int g(void)  { int *p = 0; free(p); return 0; }
 ```
 
 `clang` accepts both. This compiler is silent about the first and says `this
-frees a pointer this check stopped following` about the second, which
-`--deny-unknown` makes an error. The difference is that a constant argument is
+frees a pointer this check stopped following` about the second, which is an
+error wherever a check runs. The difference is that a constant argument is
 recognised where it is written and a local that was given one reaches no site,
 and reaching no site is how this check spells having lost a pointer. So a
 pointer proved null and a pointer never followed arrive at the same place with
 nothing to tell them apart.
 
 That is a false positive rather than a silence, so it is the cheaper of the two
-failures and `--deny-unknown` is opt-in. Closing it needs the analysis to know
-that a local holds a null rather than nothing, which is
-[#133](https://github.com/itsakeyfut/safec/issues/133)'s work and not something
-a rule about spans can do.
+failures. It used to be opt-in as well, because promotion was: since
+[ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md)
+it fails the build unless the run asked for `--allow-unknown`, which is what
+raises the price of every unproven conclusion and makes
+[#133](https://github.com/itsakeyfut/safec/issues/133) worth more than it was.
+Closing it needs the analysis to know that a local holds a null rather than
+nothing, which is that issue's work and not something a rule about spans can
+do.
 
 **What `SC0402` not being emitted does not mean.** The check follows a pointer
 through a copy, through pointer arithmetic and into a controlling expression,
@@ -177,7 +181,7 @@ because neither is something this check proved: what it knows is that it
 stopped being able to follow the pointer. The second is the one rule of the
 three that can leave an `error` standing, because what it decides is which of
 two reports at one caret survives rather than what either of them concluded.
-`--deny-unknown` is what makes an unproven result fail a build, and
+An unproven result fails a build wherever a check runs, and
 [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) is why that is
 the policy's decision rather than the check's.
 

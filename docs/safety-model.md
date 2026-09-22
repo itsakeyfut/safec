@@ -85,11 +85,15 @@ Inference is what a check concludes; enforcement is what that means for the
 build. The two are separated by reporting the conclusion and deciding the
 severity in one place:
 
-| The analysis concluded | What is reported | Under `--deny-unknown` |
+| The analysis concluded | What is reported | Under `--allow-unknown` |
 |---|---|---|
 | Safe | nothing | nothing |
 | Unsafe | an error | an error |
-| Unknown | a warning | **an error** |
+| Unknown | **an error** | a warning |
+
+The first column of answers is the default, wherever a check runs at all. At
+`--safety off` nothing runs and there is no conclusion to report, so the table
+is about level 1 and upward.
 
 A check names its conclusion and never reads the policy. `DiagnosticSink` reads
 it, once, so no check can forget to apply it: a missed promotion would let the
@@ -97,14 +101,19 @@ compiler exit successfully on code it never managed to check, which is the worst
 thing it can do. See
 [ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md).
 
-**Which column is the default is an open question.** The table above, and the
-flag that resolves it in `crates/safec/src/cli.rs`, belong to a compiler that
-accepts every program and comments on it. This project asks instead that a
-program be rewritten until it can be proved, and under that reading a build
-that succeeded while something went unproven is a build that says nothing.
-[ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md)
-proposes that an unproven conclusion fail the build wherever a check runs, and
-nothing has changed here yet.
+**A build that succeeded is a claim.** Reporting `Unknown` as a warning by
+default would belong to a compiler that accepts every program and comments on
+it: a successful build would mean either that the program was proved or that
+the analysis gave up, with one exit code for both, and the distinction this
+section is built on would survive only in text somebody may not have read. This
+project asks instead that a program be rewritten until it can be proved, and
+`safec` says what to change. See
+[ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md),
+which also records what that costs: the false positive rate becomes something a
+user feels rather than something they can ignore, and the answer to it is the
+hatch in
+[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) and the
+annotations below, neither of which exists yet.
 
 `Unsafe` says that **some** execution of the function is undefined, not that
 every one is. A check here reads one function at a time, so a parameter ranges
@@ -151,26 +160,31 @@ A level says **which checks run**, and nothing else. It does not decide how
 loudly a check speaks: a result the analysis proved is an error at every level,
 because there is no safety argument for knowing something is wrong and saying it
 quietly. What varies is the result the analysis could *not* prove, and that is
-governed by `--deny-unknown` rather than by the level. See
-[Safe, Unsafe, Unknown](#safe-unsafe-unknown) above and
-[ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md).
+governed by the policy rather than by which checks a level selects. The level
+decides one thing about it: whether any check runs, and so whether there is a
+conclusion to promote. See [Safe, Unsafe, Unknown](#safe-unsafe-unknown) above,
+[ADR-0001](adr/0001-promote-unproven-results-in-the-sink.md) and
+[ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md).
 
-Level 5 is defined as leaving nothing `Unknown`, so `--safety strict` implies
-`--deny-unknown`.
+Level 5 is defined as leaving nothing `Unknown`, so `--allow-unknown` is refused
+beside `--safety strict` rather than ignored.
 
 For example:
+
+```bash
+safec --safety=off main.c
+```
+
+is the way in, and compiles ordinary C with nothing said about it, while:
 
 ```bash
 safec main.c
 ```
 
-could favor compatibility and diagnostics, while:
-
-```bash
-safec --safety=strict main.c
-```
-
-could require stronger guarantees.
+is level 1 and rejects what it cannot prove, because `--safety` defaults to
+`memory`. A program that is still being migrated asks for the middle with
+`--allow-unknown`, which reports the same conclusions and lets the build
+through.
 
 The exact safety-level design is intentionally undecided and should be explored during development.
 
