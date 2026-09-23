@@ -5,4 +5,4 @@ error[SC0106]: this is not a constant C allows
    │         ─┬  
    │          ╰── an octal constant has digits `0` to `7`
 ───╯
-  = note: C17 6.4.4.1 p1 gives the three bases their digits and lists the suffixes
+  = note: C17 6.4.4.1 p1 gives the three bases their digits and lists the suffixes, and 6.4.4.2 p1 spells a floating constant

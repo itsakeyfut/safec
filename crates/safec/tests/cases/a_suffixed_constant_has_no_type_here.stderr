@@ -1,0 +1,8 @@
+error[SC0305]: this compiler has no type for a suffixed constant
+   ╭─[ a_suffixed_constant_has_no_type_here.c:3:14 ]
+   │
+ 3 │     x = -6 / 3u;
+   │              ─┬  
+   │               ╰── this suffix asks for `unsigned int`, `long` or `long long`
+───╯
+  = note: C17 6.4.4.1 p5 gives a suffixed constant a type from a list this compiler has only `int` from, and the suffix decides what arithmetic on it means: C computes `-6 / 3u` as an unsigned division

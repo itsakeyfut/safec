@@ -700,13 +700,20 @@ impl Lowering<'_> {
     fn typed(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
         let span = self.ast.expr(id).span();
         let Some(ty) = self.types.of(id) else {
-            // A constant is the one expression `types.rs` reports about
-            // itself: it has no type exactly when the frontend could not read
-            // its spelling, and said so at this span with `SC0106` or
-            // `SC0305`. A second report here would put two carets on one
-            // problem, and its note would be false for `123abc`, which is the
-            // program's fault and not this compiler's. Every other untyped
-            // expression is a gap nobody has reported yet.
+            // The match below is the list of expressions `types.rs` reports
+            // about itself, and it grows with that list: a constant has no
+            // type exactly when the frontend could not read its spelling, and
+            // said so at this span with `SC0106` or `SC0305`. A second report
+            // here would put two carets on one problem, and its note would be
+            // false for `123abc`, which is the program's fault and not this
+            // compiler's. Every expression *not* in the list is a gap nobody
+            // has reported yet, which is what the message says.
+            //
+            // A character constant and anything a constant-expression
+            // evaluator refuses will each join it. Forgetting to add one is
+            // two carets on one problem, which the corpus catches by the byte
+            // on the next run, so a list kept here is cheaper than a second
+            // table in `Types` saying which ids were reported.
             if !matches!(self.ast.expr(id), Expr::Number { .. }) {
                 diagnostics.report(
                     Diagnostic::error("cannot compile an expression whose type is not known")
@@ -2758,13 +2765,7 @@ mod tests {
     /// says the operand reaches the IR rather than only the test.
     #[test]
     fn a_constant_reaches_the_ir_as_the_value_the_frontend_read() {
-        for (spelling, value) in [
-            ("42", 42),
-            ("0", 0),
-            ("0x10", 16),
-            ("010", 8),
-            ("0X10u", 16),
-        ] {
+        for (spelling, value) in [("42", 42), ("0", 0), ("0x10", 16), ("010", 8)] {
             let lowered = lowered(&format!("int f(void) {{\n    return {spelling};\n}}\n"));
             assert_eq!(codes(&lowered), Vec::<String>::new(), "{spelling}");
 
@@ -2797,7 +2798,13 @@ mod tests {
     /// the mutation below is the only one that reaches either half from here.
     ///
     /// Mutation: let `typed` report for an `Expr::Number` too. Two codes and
-    /// this fails, and nothing else in the suite does.
+    /// this fails, and so do the corpus cases
+    /// `a_constant_no_integer_type_here_can_hold`,
+    /// `a_spelling_that_is_not_a_constant` and
+    /// `a_suffixed_constant_has_no_type_here`, whose blessed stderr picks up
+    /// the second diagnostic. Three guards rather than one, which is worth
+    /// knowing because this test is the only one of the four that also says
+    /// the function is left a declaration.
     #[test]
     fn a_constant_the_frontend_could_not_read_is_reported_once_and_lowers_nothing() {
         for (spelling, code) in [

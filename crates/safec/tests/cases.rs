@@ -634,6 +634,11 @@ cases! {
     // constant at all is the program's, and `clang` refuses it too.
     a_constant_no_integer_type_here_can_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_spelling_that_is_not_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The suffix is refused rather than read, and the note says why: C
+    // computes `-6 / 3u` as an unsigned division. Reading `3u` as an `int`
+    // compiled this program to a signed division and reported nothing, which
+    // is the one shape this stage exists to stop.
+    a_suffixed_constant_has_no_type_here: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_comma_in_a_controlling_expression: ["--emit", "ast"],
     a_dangling_else: ["--emit", "ast"],
     a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

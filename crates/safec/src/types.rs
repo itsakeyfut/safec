@@ -35,14 +35,19 @@ use safec_ir::target::Integer;
 /// `docs/diagnostics.md` hands out a code by the topic of the problem rather
 /// than by the pass that finds it, and what is wrong with `09` is the shape of
 /// the token.
-const CONSTANT: Code = Code::new("SC0106");
+const MALFORMED_CONSTANT: Code = Code::new("SC0106");
 
 /// A constant this compiler has no type for, C17 6.4.4 p2.
 ///
-/// One code for a value too large and for a floating constant, because they
-/// are one rule met two ways: the value has to be in the range of its type,
-/// and the only types here are `int` and `char`. Same arrangement as
+/// One code for three messages, because they are one rule met three ways:
+/// 6.4.4.1 p5 picks a constant's type from a list, and this compiler has only
+/// `int` on it. A value too large, a suffix, and a floating constant are the
+/// three ways to ask for an entry that is not there. Same arrangement as
 /// `MISMATCH` below, for the same reason.
+///
+/// Every one of the three is a program `clang` compiles, which is what makes
+/// the code's wording this compiler's own gap rather than the program's
+/// fault. The spelling that is no constant at all is the other code.
 const NO_TYPE: Code = Code::new("SC0305");
 
 /// A value of the wrong type, C17 6.5.16.1 p1.
@@ -105,10 +110,11 @@ impl Types {
 ///
 /// Takes `int_range` rather than a whole [`safec_ir::target::Target`] because
 /// that is all it reads: whether an integer constant's value is in the range
-/// of the one integer type this compiler has. ADR-0013 puts the target below
-/// the frontend on the grounds that the lowering would otherwise need it to
-/// build a type at all; no type is built from this one, so the same argument
-/// is what limits it to a range.
+/// of the one integer type this compiler has. ADR-0013 asks that a stage be
+/// given only what it reads, and its *Only what something reads* section names
+/// this stage as the second reader of `int`'s width. A diagnostic that turns
+/// on a width is a divergence from `docs/architecture.md`'s output table,
+/// recorded there.
 pub fn check(
     sources: &SourceMap,
     ast: &mut Ast,
@@ -606,16 +612,17 @@ impl Checker<'_> {
 
     /// The type and the value of an integer constant, C17 6.4.4.1.
     ///
-    /// Both at once, because `read` answers both from one pass over the
-    /// spelling and because a constant with no type has no value either.
+    /// Both at once, because `read_number` answers both from one pass over
+    /// the spelling and because a constant with no type has no value either.
     ///
-    /// The type is `int` whenever the value fits one. 6.4.4.1 p5 asks for the
-    /// first type in a list that holds it, and this compiler has no other
+    /// The type is `int`, and only ever `int`. 6.4.4.1 p5 asks for the first
+    /// type in a list that holds the value, and this compiler has no other
     /// integer type to offer: there is no `unsigned int` and no `long` in
-    /// [`Type`] or in [`Integer`], so a suffix is validated and then
-    /// discarded. `docs/frontend.md` records that divergence and what it
-    /// costs, which is that `4294967295u` and `2147483648` are refused here
-    /// and compiled by `clang`.
+    /// [`Type`] or in [`Integer`]. So a constant that p5's table would give
+    /// one of those is refused rather than read as an `int`, which is what
+    /// [`Reading::Suffixed`] is for: the suffix is not decoration, it decides
+    /// what arithmetic on the constant means, and C computes `-6 / 3u` as an
+    /// unsigned division. `docs/frontend.md` records the divergence.
     ///
     /// Nothing that reaches a diagnostic below is the file's own text, which
     /// is what RK-002 in the review knowledge bank asks of a new message: the
@@ -627,10 +634,10 @@ impl Checker<'_> {
         span: Span,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<TypeId> {
-        // `Read` is matched exhaustively so that a fifth answer has to be
+        // `Reading` is matched exhaustively so that a sixth answer has to be
         // given a report rather than falling into one written for another.
-        let reported = match read(self.sources.snippet(span)) {
-            Read::Integer(value) => {
+        let reported = match read_number(self.sources.snippet(span)) {
+            Reading::Integer(value) => {
                 // `holds` takes an `i128`, and a value that does not fit one
                 // does not fit `int` either, so the conversion failing is the
                 // same answer as the range check failing.
@@ -645,13 +652,15 @@ impl Checker<'_> {
                     None => TOO_LARGE,
                 }
             }
-            Read::TooLarge => TOO_LARGE,
-            Read::Floating => FLOATING,
-            Read::Malformed(why) => Reported {
-                code: CONSTANT,
+            Reading::Suffixed => SUFFIXED,
+            Reading::TooLarge => TOO_LARGE,
+            Reading::Floating => FLOATING,
+            Reading::Malformed(why) => Reported {
+                code: MALFORMED_CONSTANT,
                 message: "this is not a constant C allows",
                 label: why,
-                note: "C17 6.4.4.1 p1 gives the three bases their digits and lists the suffixes",
+                note: "C17 6.4.4.1 p1 gives the three bases their digits and lists the suffixes, \
+                       and 6.4.4.2 p1 spells a floating constant",
             },
         };
 
@@ -697,15 +706,37 @@ const FLOATING: Reported = Reported {
            floating type",
 };
 
+/// A well-formed integer constant whose suffix asks for a type there is none
+/// of here.
+///
+/// A refusal and not a silent `int`. The suffix is not decoration: 6.4.4.1 p5
+/// makes `3u` an `unsigned int`, and 6.3.1.8's conversions then make `-6 / 3u`
+/// an unsigned division, which is 1431655763 rather than -2. Reading it as an
+/// `int` would compile that program to a signed division and report nothing,
+/// which is the one thing this stage exists to stop.
+const SUFFIXED: Reported = Reported {
+    code: NO_TYPE,
+    message: "this compiler has no type for a suffixed constant",
+    label: "this suffix asks for `unsigned int`, `long` or `long long`",
+    note: "C17 6.4.4.1 p5 gives a suffixed constant a type from a list this compiler has only \
+           `int` from, and the suffix decides what arithmetic on it means: C computes `-6 / 3u` \
+           as an unsigned division",
+};
+
 /// What reading the text of a numeric constant comes to, C17 6.4.4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Read {
-    /// The value, with no type attached. Which type C would give it is
-    /// 6.4.4.1 p5's table, and this compiler has only `int` to offer.
+enum Reading {
+    /// The value of a constant with no suffix, which 6.4.4.1 p5 gives the
+    /// first type in a list that holds it. `int` is the only entry here.
     Integer(u128),
+    /// A well-formed constant whose suffix asks for a type off the end of
+    /// that list. See [`SUFFIXED`].
+    Suffixed,
     /// More than a `u128` holds, which no type here could.
     TooLarge,
-    /// A well-formed floating constant, C17 6.4.4.2.
+    /// A well-formed floating constant, C17 6.4.4.2. Checked against that
+    /// paragraph's grammar rather than guessed at from a `.`, because `1e`
+    /// and `0x1.8` have the shape and are not constants at all.
     Floating,
     /// None of those, so 6.4.4 p2 has no type to give it. The string says
     /// which part of the spelling is wrong, and is this compiler's own words
@@ -717,9 +748,11 @@ enum Read {
 const NOT_OCTAL: &str = "an octal constant has digits `0` to `7`";
 /// A base prefix with nothing after it.
 const NO_DIGITS: &str = "a hexadecimal constant needs at least one digit after the `0x`";
+/// A `.` or an exponent, on something C17 6.4.4.2 p1 does not spell that way.
+const NOT_FLOATING: &str = "an exponent needs a digit, and a hexadecimal floating constant needs \
+                            an exponent";
 /// Everything else: a digit of no base, or a suffix C does not have.
-const NOT_A_CONSTANT: &str =
-    "this is not a digit of the constant's base, and not a suffix C allows";
+const NOT_A_DIGIT: &str = "this is not a digit of the constant's base, and not a suffix C allows";
 
 /// Read what a numeric constant is worth, C17 6.4.4.1.
 ///
@@ -732,11 +765,18 @@ const NOT_A_CONSTANT: &str =
 /// RK-004 in the review knowledge bank is what asks for that to be said out
 /// loud rather than assumed, because the `char::is_*` family next to it
 /// answers for Unicode where C means ASCII.
-fn read(text: &str) -> Read {
+fn read_number(text: &str) -> Reading {
     // 6.4.4.2 p1 gives a floating constant a `.`, or an exponent: `e`/`E` for
     // a decimal and `p`/`P` for a hexadecimal. The base has to be known before
     // the marker can be looked for, because `e` is a hexadecimal digit and
     // `0xe1` is 225.
+    //
+    // Having one of those is what makes a spelling *meant* as a floating
+    // constant; whether it is one is `is_floating`'s question, and the two
+    // are separate because the answers are blamed on different people. `1.5`
+    // is a constant C gives a type and this compiler has none for; `1e` is
+    // not a constant at all, and telling its author that floating constants
+    // are unsupported would be a false reason for a true refusal.
     let hex = text.strip_prefix("0x").or_else(|| text.strip_prefix("0X"));
     let exponent = if hex.is_some() {
         ['p', 'P']
@@ -744,7 +784,11 @@ fn read(text: &str) -> Read {
         ['e', 'E']
     };
     if text.contains('.') || hex.unwrap_or(text).contains(exponent) {
-        return Read::Floating;
+        return if is_floating(text) {
+            Reading::Floating
+        } else {
+            Reading::Malformed(NOT_FLOATING)
+        };
     }
 
     // 6.4.4.1 p1: the prefix decides the base, and a leading `0` with nothing
@@ -794,22 +838,25 @@ fn read(text: &str) -> Read {
         // is read as the start of a suffix. Naming the real mistake is worth
         // three lines: a leading zero on a written-out number is the way this
         // one gets made.
-        return Read::Malformed(if radix == 8 && suffix.starts_with(['8', '9']) {
+        return Reading::Malformed(if radix == 8 && suffix.starts_with(['8', '9']) {
             NOT_OCTAL
         } else {
-            NOT_A_CONSTANT
+            NOT_A_DIGIT
         });
     }
 
-    if digits.is_empty() {
-        // `0` alone, and `0u`: an octal constant whose digits are just the
-        // leading zero. `0x` alone has nothing after its prefix and is not a
-        // constant at all.
-        return if radix == 8 {
-            Read::Integer(0)
-        } else {
-            Read::Malformed(NO_DIGITS)
-        };
+    if digits.is_empty() && radix != 8 {
+        // `0x` alone has nothing after its prefix and is not a constant at
+        // all. A leading `0` with nothing after it is the octal constant
+        // zero, which falls through to the accumulation below.
+        return Reading::Malformed(NO_DIGITS);
+    }
+
+    // Answered after the spelling is known to be well formed, so that `1lL`
+    // is reported as the mistake it is rather than as a type this compiler
+    // does not have.
+    if !suffix.is_empty() {
+        return Reading::Suffixed;
     }
 
     let mut value: u128 = 0;
@@ -825,11 +872,69 @@ fn read(text: &str) -> Read {
             .and_then(|shifted| shifted.checked_add(u128::from(digit)))
         {
             Some(value) => value,
-            None => return Read::TooLarge,
+            None => return Reading::TooLarge,
         };
     }
 
-    Read::Integer(value)
+    Reading::Integer(value)
+}
+
+/// Whether `text` is a floating constant, C17 6.4.4.2 p1.
+///
+/// Called only for a spelling that has a `.` or an exponent marker, which is
+/// the whole of what makes one a candidate. What is left to answer is the
+/// grammar, and three of its clauses are the ones a reader loses:
+///
+/// * an `exponent-part` is a marker, an optional sign, and **at least one**
+///   digit, so `1e` and `1E+` are not constants;
+/// * a `hexadecimal-floating-constant` has a `binary-exponent-part` in both
+///   of its forms, so `0x1.8` is not one although `1.8` is;
+/// * the exponent's digits are decimal whatever the mantissa's base, so the
+///   `3` in `0x1p3` is three and not an invitation to read hexadecimal.
+///
+/// Measured against `clang 20.1.6 -std=c17 -pedantic-errors`, which reports
+/// `1e` as "exponent has no digits" and `0x1.8` as "hexadecimal floating
+/// constant requires an exponent".
+fn is_floating(text: &str) -> bool {
+    // 6.4.4.2 p1's `floating-suffix` is one of `f`, `F`, `l`, `L`, and there
+    // is at most one. Taken off first so that what remains is the number.
+    let body = text.strip_suffix(['f', 'F', 'l', 'L']).unwrap_or(text);
+
+    let (body, radix, marker) = match body.strip_prefix("0x").or_else(|| body.strip_prefix("0X")) {
+        Some(body) => (body, 16, ['p', 'P']),
+        None => (body, 10, ['e', 'E']),
+    };
+
+    let (mantissa, exponent) = match body.find(marker) {
+        Some(at) => (&body[..at], Some(&body[at + 1..])),
+        None => (body, None),
+    };
+
+    // The mantissa is a digit-sequence, or one with a single `.` in it.
+    let mut parts = mantissa.split('.');
+    let whole = parts.next().unwrap_or("");
+    let fraction = parts.next();
+    if parts.next().is_some() {
+        return false;
+    }
+
+    let digits = |part: &str| part.chars().all(|c| c.is_digit(radix));
+    if !digits(whole) || !fraction.is_none_or(digits) {
+        return false;
+    }
+    if whole.is_empty() && fraction.is_none_or(str::is_empty) {
+        return false;
+    }
+
+    match exponent {
+        Some(exponent) => {
+            let exponent = exponent.strip_prefix(['+', '-']).unwrap_or(exponent);
+            !exponent.is_empty() && exponent.bytes().all(|byte| byte.is_ascii_digit())
+        }
+        // No exponent at all: legal for a decimal constant that has the `.`
+        // instead, and for no hexadecimal one.
+        None => radix == 10 && fraction.is_some(),
+    }
 }
 
 #[cfg(test)]
@@ -945,6 +1050,17 @@ mod tests {
                 .filter_map(|diagnostic| diagnostic.code().map(Code::as_str))
                 .collect()
         }
+
+        /// Every label's message, so that a test can hold what a caret says
+        /// and not only which code said it.
+        fn labels(&self) -> Vec<&str> {
+            self.diagnostics
+                .diagnostics()
+                .iter()
+                .flat_map(Diagnostic::labels)
+                .map(Label::message)
+                .collect()
+        }
     }
 
     /// One program per spelling, so that a row is about one constant.
@@ -956,35 +1072,79 @@ mod tests {
         checked(&format!("int f(void) {{\n    return {spelling};\n}}\n"))
     }
 
-    /// An integer constant is worth what its base and its suffix say,
-    /// C17 6.4.4.1 p1.
+    /// An integer constant is worth what its base says, C17 6.4.4.1 p1.
     ///
     /// The values are written out rather than computed from the spellings,
     /// which is what RK-001 asks: a table that works the expectation out the
     /// way the code does agrees with the code however wrong both are.
+    ///
+    /// Every row is unsuffixed, because a suffix is refused rather than read:
+    /// `a_suffix_asks_for_a_type_this_compiler_does_not_have` is that half.
     ///
     /// Mutation: give the hexadecimal arm radix ten. `0x10` is ten and this
     /// fails. Mutation: give the octal arm radix ten. `010` is ten and this
     /// fails, along with most of the suite, because `0` stops being readable
     /// too.
     #[test]
-    fn an_integer_constant_is_worth_what_its_base_and_suffix_say() {
+    fn an_integer_constant_is_worth_what_its_base_says() {
         for (spelling, value) in [
             ("0", 0),
+            ("00", 0),
             ("16", 16),
             ("010", 8),
             ("0777", 511),
             ("0x10", 16),
-            ("0X10u", 16),
-            ("1u", 1),
-            ("1ul", 1),
-            ("1llu", 1),
-            ("0L", 0),
+            ("0X10", 16),
+            ("2147483647", 2147483647),
         ] {
             let checked = returning(spelling);
             assert_eq!(checked.messages(), Vec::<&str>::new(), "{spelling}");
             assert_eq!(checked.value_of(spelling), Some(value), "{spelling}");
             assert_eq!(checked.spelling(spelling), "int", "{spelling}");
+        }
+    }
+
+    /// Every suffix C17 6.4.4.1 p1 allows is refused, and refused as a type
+    /// this compiler lacks rather than as a spelling C lacks.
+    ///
+    /// The whole table is walked, written out as literals, because a suffix
+    /// arm is the contents of a table and nothing else checks them: a typo
+    /// turning `ULL` into `ULK` makes `1ULL` a malformed spelling rather than
+    /// an unsupported type, which is this compiler blaming the program for
+    /// its own gap. Measured: that typo passed the entire suite before this
+    /// test existed.
+    ///
+    /// **Refused rather than read.** A suffix decides what arithmetic on the
+    /// constant means. With `3u` read as an `int`, `-6 / 3u` compiles to a
+    /// signed division, and C17 6.3.1.8 makes it an unsigned one whose answer
+    /// is 1431655763 rather than -2. Measured against `clang 20.1.6 -std=c17
+    /// -pedantic-errors`, whose constant evaluator agrees.
+    ///
+    /// Mutation: read a suffixed constant as an `int` instead of answering
+    /// `Reading::Suffixed`. Every row stops being reported and this fails.
+    #[test]
+    fn a_suffix_asks_for_a_type_this_compiler_does_not_have() {
+        for suffix in [
+            "u", "U", "l", "L", "ll", "LL", "ul", "uL", "Ul", "UL", "lu", "lU", "Lu", "LU", "ull",
+            "uLL", "Ull", "ULL", "llu", "llU", "LLu", "LLU",
+        ] {
+            let spelling = format!("1{suffix}");
+            let checked = returning(&spelling);
+            assert_eq!(
+                checked.messages(),
+                ["this compiler has no type for a suffixed constant"],
+                "{spelling}"
+            );
+            assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
+            assert_eq!(checked.value_of(&spelling), None, "{spelling}");
+        }
+
+        // The zero of each base with a suffix on it, because those are the
+        // ones `a_pointer_takes_a_zero_and_not_a_one` used to accept as null
+        // pointer constants and no longer does.
+        for spelling in ["0L", "0u", "0UL", "0x0u"] {
+            let checked = returning(spelling);
+            assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
         }
     }
 
@@ -997,8 +1157,10 @@ mod tests {
     /// everything.
     ///
     /// Mutation: look for `e`/`E` in a hexadecimal constant too, by giving
-    /// both arms the same markers. `0xe1` is reported as a floating constant,
-    /// this fails, and nothing else in the suite does.
+    /// both arms the same markers. `0xe1` is reported as a floating constant
+    /// and this fails, along with
+    /// `a_floating_constant_is_reported_as_one_this_compiler_does_not_read_yet`,
+    /// whose `0x1p3` row stops being read as one.
     #[test]
     fn a_hexadecimal_digit_e_is_not_an_exponent() {
         let checked = returning("0xe1");
@@ -1017,34 +1179,40 @@ mod tests {
 
     /// A value outside `int` is reported rather than wrapped, C17 6.4.4 p2.
     ///
-    /// The first two are constants `clang 20.1.6 -std=c17 -pedantic-errors
+    /// The first is a constant `clang 20.1.6 -std=c17 -pedantic-errors
     /// --target=x86_64-pc-windows-msvc` accepts, which is why the message
     /// blames this compiler rather than the program: what is missing is
     /// `long`, not a well-formed constant. `docs/frontend.md` carries the
     /// divergence.
     ///
-    /// **The fourth is `u128::MAX` written out, and it is here for one line.**
-    /// `read` can return it, and a `u128` that large converted with `as`
-    /// rather than asked whether it fits an `i128` is -1, which `int` holds.
-    /// So the constant would be accepted, silently, as minus one: the same
-    /// shape as `010` lowering to ten, which is a plausible wrong number
-    /// rather than a refusal. Nothing else in the suite reaches that line,
-    /// because every other oversized spelling overflows the accumulation
-    /// first and is `Read::TooLarge` before any conversion happens.
+    /// **The last two are the two ways the carrier itself can be overrun, and
+    /// each is here for one line.**
     ///
-    /// Mutation: answer `true` from `Integer::holds`. The first two are
-    /// accepted with a value `int` does not hold and this fails. Mutation:
-    /// answer zero rather than `Read::TooLarge` on an overflow. The forty
-    /// nines become zero, nothing is reported, and this fails. Mutation:
-    /// replace `i128::try_from(value).ok()` with `Some(value as i128)`. The
-    /// fourth becomes `Constant -1` with nothing reported and this fails.
+    /// `u128::MAX` written out is what `read_number` returns when the
+    /// accumulation lands exactly on the top. Converted with `as` rather than
+    /// asked whether it fits an `i128` it is -1, which `int` holds, so the
+    /// constant would be accepted silently as minus one.
+    ///
+    /// `2^128` is one more, and it is congruent to zero. A wrapping
+    /// accumulator reaches the end of it holding zero, which `int` also
+    /// holds, so the constant would be accepted silently as nought. The forty
+    /// nines cannot catch that: they wrap to a number still outside `int`, so
+    /// they are reported either way. Both are the `010`-lowers-to-ten shape,
+    /// a plausible wrong number rather than a refusal.
+    ///
+    /// Mutation: answer `true` from `Integer::holds`. The first is accepted
+    /// with a value `int` does not hold and this fails. Mutation: accumulate
+    /// with `wrapping_mul` and `wrapping_add`. `2^128` becomes zero, nothing
+    /// is reported, and this fails. Mutation: replace
+    /// `i128::try_from(value).ok()` with `Some(value as i128)`. `u128::MAX`
+    /// becomes `Constant -1` with nothing reported and this fails.
     #[test]
     fn a_constant_no_type_here_can_hold_is_reported_and_has_no_value() {
         for spelling in [
             "2147483648",
-            "4294967295u",
             "9999999999999999999999999999999999999999",
             "340282366920938463463374607431768211455",
+            "340282366920938463463374607431768211456",
         ] {
             let checked = returning(spelling);
             assert_eq!(
@@ -1071,10 +1239,14 @@ mod tests {
     ///
     /// Mutation: report a floating constant as `TOO_LARGE`. The message is
     /// about a width rather than about a type that does not exist, and this
-    /// fails.
+    /// fails. Mutation: change `FLOATING`'s label. The label assertion below
+    /// fails, and nothing else in the suite does, which is why the label is
+    /// asserted here rather than left to a corpus case that does not exist.
     #[test]
     fn a_floating_constant_is_reported_as_one_this_compiler_does_not_read_yet() {
-        for spelling in ["1.5", "0.0", "1e5"] {
+        for spelling in [
+            "1.5", "0.0", ".5", "1.", "1e5", "1E+5", "0x1p3", "1.5f", "0x1.8p0",
+        ] {
             let checked = returning(spelling);
             assert_eq!(
                 checked.messages(),
@@ -1082,7 +1254,44 @@ mod tests {
                 "{spelling}"
             );
             assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
+            assert_eq!(
+                checked.labels(),
+                ["this is a floating constant"],
+                "{spelling}"
+            );
             assert_eq!(checked.value_of(spelling), None, "{spelling}");
+        }
+    }
+
+    /// A spelling with a `.` or an exponent that C17 6.4.4.2 p1 does not
+    /// spell that way is the program's fault, not this compiler's gap.
+    ///
+    /// The distinction the whole two-code arrangement rests on, at the one
+    /// place it is easiest to lose: `1.5` is a constant C gives a type to and
+    /// this compiler has none for, so `SC0305` is honest; `1e` is not a
+    /// constant at all, and telling its author that floating constants are
+    /// unsupported would be a false reason for a true refusal.
+    ///
+    /// Every row is an error under `clang 20.1.6 -std=c17 -pedantic-errors
+    /// --target=x86_64-unknown-linux-gnu`, which reports `1e` as "exponent
+    /// has no digits" and `0x1.8` as "hexadecimal floating constant requires
+    /// an exponent". Measured, not recalled.
+    ///
+    /// Mutation: answer `Reading::Floating` for anything with a `.` or an
+    /// exponent marker, without checking the grammar. Every row starts
+    /// reporting `SC0305` and this fails.
+    #[test]
+    fn a_spelling_that_only_looks_like_a_floating_constant_is_the_programs_fault() {
+        for spelling in [
+            "1e", "1E+", "1e-", "0x1p", "0x1.8", "1.2.3", "0xp1", "1.5ll",
+        ] {
+            let checked = returning(spelling);
+            assert_eq!(
+                checked.messages(),
+                ["this is not a constant C allows"],
+                "{spelling}"
+            );
+            assert_eq!(checked.codes(), ["SC0106"], "{spelling}");
         }
     }
 
@@ -1096,8 +1305,10 @@ mod tests {
     /// Mutation: accept any suffix. `1lL`, `1uu`, `123abc` and `0b101` stop
     /// being reported and this fails. Mutation: answer `NOT_A_CONSTANT` for
     /// an octal digit out of range. `09` keeps its code and loses its label,
-    /// this fails, and nothing else in the suite does, which is what says the
-    /// label is guarded and not only the code.
+    /// and this fails along with the corpus case
+    /// `a_spelling_that_is_not_a_constant`, whose blessed stderr holds the
+    /// same label. Two guards, and both are about the label rather than the
+    /// code, which is what says the label is guarded at all.
     #[test]
     fn a_spelling_that_is_not_a_constant_is_the_programs_fault() {
         for (spelling, label) in [
@@ -1130,17 +1341,7 @@ mod tests {
                 "{spelling}"
             );
             assert_eq!(checked.codes(), ["SC0106"], "{spelling}");
-            assert_eq!(
-                checked
-                    .diagnostics
-                    .diagnostics()
-                    .iter()
-                    .flat_map(Diagnostic::labels)
-                    .map(Label::message)
-                    .collect::<Vec<_>>(),
-                [label],
-                "{spelling}"
-            );
+            assert_eq!(checked.labels(), [label], "{spelling}");
         }
     }
 
@@ -1201,12 +1402,18 @@ mod tests {
     /// Both halves in one test, because a test for the silence alone passes
     /// against a compiler that checks nothing.
     ///
+    /// The suffixed zeros `0u`, `0L` and `0UL` are C's null pointer constants
+    /// too and are not here, because a suffix is refused before this rule is
+    /// reached: `a_suffix_asks_for_a_type_this_compiler_does_not_have` holds
+    /// that, and holds those three spellings by name so that what left this
+    /// list is findable from where it went.
+    ///
     /// Mutation: have `is_null_pointer_constant` answer `false` always. The
     /// first program starts reporting and this fails. Mutation: have it answer
     /// `true` always. The second stops and this fails.
     #[test]
     fn a_pointer_takes_a_zero_and_not_a_one() {
-        for zero in ["0", "0x0", "0X0", "00", "0u", "0L", "0UL"] {
+        for zero in ["0", "0x0", "0X0", "00", "000"] {
             let checked = checked(&format!(
                 "int main(void) {{ int *p; p = {zero}; return 0; }}\n"
             ));
