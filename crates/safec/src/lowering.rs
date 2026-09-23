@@ -700,15 +700,33 @@ impl Lowering<'_> {
     fn typed(&mut self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
         let span = self.ast.expr(id).span();
         let Some(ty) = self.types.of(id) else {
-            diagnostics.report(
-                Diagnostic::error("cannot compile an expression whose type is not known")
-                    .with_code(LOWERING)
-                    .with_label(Label::primary(
-                        span,
-                        "nothing worked out what type this has",
-                    ))
-                    .with_note("this is a gap in this compiler rather than a fault in the program"),
-            );
+            // The match below is the list of expressions `types.rs` reports
+            // about itself, and it grows with that list: a constant has no
+            // type exactly when the frontend could not read its spelling, and
+            // said so at this span with `SC0106` or `SC0305`. A second report
+            // here would put two carets on one problem, and its note would be
+            // false for `123abc`, which is the program's fault and not this
+            // compiler's. Every expression *not* in the list is a gap nobody
+            // has reported yet, which is what the message says.
+            //
+            // A character constant and anything a constant-expression
+            // evaluator refuses will each join it. Forgetting to add one is
+            // two carets on one problem, which the corpus catches by the byte
+            // on the next run, so a list kept here is cheaper than a second
+            // table in `Types` saying which ids were reported.
+            if !matches!(self.ast.expr(id), Expr::Number { .. }) {
+                diagnostics.report(
+                    Diagnostic::error("cannot compile an expression whose type is not known")
+                        .with_code(LOWERING)
+                        .with_label(Label::primary(
+                            span,
+                            "nothing worked out what type this has",
+                        ))
+                        .with_note(
+                            "this is a gap in this compiler rather than a fault in the program",
+                        ),
+                );
+            }
             return None;
         };
 
@@ -1152,9 +1170,22 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
-            Expr::Number { span } => {
-                let span = *span;
-                values.push(Operand::Constant(self.constant(span, diagnostics)?));
+            Expr::Number { .. } => {
+                // Worked out by `types.rs`, where the base, the suffix and
+                // the range of `int` are all one question. A constant it
+                // could not read has no value and has already been reported,
+                // which is why nothing is said here.
+                //
+                // **The `?` cannot fire today**, and it stays anyway. A
+                // constant has no value exactly when it has no type, and
+                // `typed` above has already returned `None` for that, so
+                // replacing this with `unwrap_or(0)` breaks no test: measured.
+                // That is RK-064's shape, a line a stronger rule upstream
+                // answers for, and what it guards against is the day `typed`
+                // narrows. Writing the fallback instead would put a number
+                // nobody wrote into the IR, which is how `010` used to lower
+                // to ten.
+                values.push(Operand::Constant(self.types.value(id)?));
             }
             Expr::Identifier { .. } | Expr::Subscript { .. } => {
                 tasks.push(Task::Finish(id));
@@ -2004,46 +2035,6 @@ impl Lowering<'_> {
 
         named
     }
-
-    /// What an integer constant is worth.
-    ///
-    /// A decimal constant with no suffix, and a report for everything else.
-    /// The lexer takes a number to be a digit followed by whatever looks like
-    /// it belongs to one, so `0x10`, `1u`, `1.5` and a value too large for an
-    /// `i128` all arrive here as text, and reading them as decimals gives four
-    /// wrong answers with nothing said. `010` is the one that hides: C17
-    /// 6.4.4.1 p2 makes a leading `0` an octal constant, so it is eight, and a
-    /// decimal reading makes it ten. A plausible wrong number is worse than a
-    /// refusal, and worse again than a number nobody can produce.
-    ///
-    /// Working the value and the type out properly belongs to the frontend,
-    /// where 6.4.4.1's table decides which type a constant has. #76 is that
-    /// work; until it lands this stage reads what it can read and says so about
-    /// the rest.
-    fn constant(&mut self, span: Span, diagnostics: &mut DiagnosticSink) -> Option<i128> {
-        let text = self.sources.snippet(span);
-        // 6.4.4.1 p1: a decimal constant is a nonzero digit and more digits.
-        // `0` on its own is an octal constant and is zero read either way.
-        let decimal = text == "0"
-            || (text.starts_with(|c: char| c.is_ascii_digit() && c != '0')
-                && text.bytes().all(|byte| byte.is_ascii_digit()));
-
-        if let Some(value) = text.parse::<i128>().ok().filter(|_| decimal) {
-            return Some(value);
-        }
-
-        diagnostics.report(
-            Diagnostic::error("cannot compile this constant yet")
-                .with_code(LOWERING)
-                .with_label(Label::primary(span, "this is not a plain decimal constant"))
-                .with_note(
-                    "a leading zero makes a constant octal, so `010` read as a decimal would be \
-                     ten where C says eight, and a hexadecimal spelling, a suffix, a floating \
-                     constant or a value too large to hold would not be read as a number at all",
-                ),
-        );
-        None
-    }
 }
 
 /// Whether an operand is non-zero, as a value.
@@ -2128,6 +2119,23 @@ mod tests {
     /// does not produce. What is asserted below about a refusal is therefore
     /// always about a program the frontend accepted in silence.
     fn lowered(text: &str) -> Lowered {
+        compiled(text, true)
+    }
+
+    /// The same, for a program the frontend has already reported about.
+    ///
+    /// The gate `lowered` applies is right for everything else and wrong for
+    /// exactly one case: a constant `types.rs` could not read has no type, so
+    /// the frontend reports and the driver lowers anyway. What is asserted
+    /// through here is that this stage adds nothing to what was already said,
+    /// which is a claim about a tree that did not check.
+    fn lowered_after_a_report(text: &str) -> Lowered {
+        compiled(text, false)
+    }
+
+    /// Both of the above. `must_check` is the gate, and it is a parameter
+    /// rather than two copies of the pipeline.
+    fn compiled(text: &str, must_check: bool) -> Lowered {
         let mut sources = SourceMap::new();
         let file = sources.add_virtual("t.c", text);
         let mut diagnostics = DiagnosticSink::new();
@@ -2137,13 +2145,24 @@ mod tests {
         assert!(!diagnostics.has_errors(), "the input did not parse");
 
         let resolution = resolve(&sources, &ast, &mut diagnostics);
-        let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
-        assert!(!diagnostics.has_errors(), "the input did not check");
-
         // A target this test suite does not otherwise care about: what a
         // program lowers to does not turn on the machine, and the one test
-        // that is about the machine names its own.
+        // that is about the machine names its own. It reaches the type check
+        // as well now, because the range of `int` is what says whether a
+        // constant has a type.
         let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+        let types = check(
+            &sources,
+            &mut ast,
+            &resolution,
+            target.int(),
+            &mut diagnostics,
+        );
+        assert!(
+            !must_check || !diagnostics.has_errors(),
+            "the input did not check"
+        );
+
         let unit = lower(
             &sources,
             &ast,
@@ -2734,33 +2753,19 @@ mod tests {
         assert!(!function(&lowered, "f").is_defined());
     }
 
-    /// A constant is worth what C says it is worth, or it is not lowered.
+    /// A constant reaches the IR as the number `types.rs` read, whatever base
+    /// it was written in.
     ///
-    /// The lexer takes a number to be a digit and whatever follows that looks
-    /// like part of one, so every spelling below reaches this stage as text.
-    /// Read as decimals they give: sixteen as zero, one as zero, eight as ten,
-    /// and a constant too large as zero. The third is the dangerous one,
-    /// because ten is a number the program could have meant.
+    /// This stage no longer reads a spelling at all, so what is asserted is
+    /// that it asks and does not re-derive: `010` is eight here because
+    /// 6.4.4.1 p2 makes it eight there.
     ///
-    /// Mutation: read every constant with `parse().unwrap_or(0)`. `010` lowers
-    /// to ten with nothing reported and this fails.
+    /// Mutation: have the `Expr::Number` arm push `Operand::Constant(0)`.
+    /// This fails, and so do `the_mvp_lowers` and three others, which is what
+    /// says the operand reaches the IR rather than only the test.
     #[test]
-    fn a_constant_this_stage_cannot_read_is_not_guessed_at() {
-        for spelling in [
-            "0x10",
-            "1u",
-            "010",
-            "1.5",
-            "9999999999999999999999999999999999999999",
-        ] {
-            let lowered = lowered(&format!("int f(void) {{\n    return {spelling};\n}}\n"));
-            assert_eq!(codes(&lowered), ["SC0304"], "{spelling}");
-            assert!(!function(&lowered, "f").is_defined(), "{spelling}");
-        }
-
-        // What it can read, it reads: a plain decimal, and the zero that is an
-        // octal constant with the same value either way.
-        for (spelling, value) in [("42", 42), ("0", 0)] {
+    fn a_constant_reaches_the_ir_as_the_value_the_frontend_read() {
+        for (spelling, value) in [("42", 42), ("0", 0), ("0x10", 16), ("010", 8)] {
             let lowered = lowered(&format!("int f(void) {{\n    return {spelling};\n}}\n"));
             assert_eq!(codes(&lowered), Vec::<String>::new(), "{spelling}");
 
@@ -2771,7 +2776,48 @@ mod tests {
             let [returned] = assigns(block)[..] else {
                 panic!("{:?}", block.elements);
             };
-            assert_eq!(returned.value, Rvalue::Use(Operand::Constant(value)));
+            assert_eq!(
+                returned.value,
+                Rvalue::Use(Operand::Constant(value)),
+                "{spelling}"
+            );
+        }
+    }
+
+    /// A constant the frontend could not read is said once and lowered not at
+    /// all.
+    ///
+    /// Two halves, and the first is the one that is easy to lose. `types.rs`
+    /// has already pointed a caret at the spelling, so a report here would be
+    /// a second one at the same place, and for `123abc` its note would say the
+    /// fault is this compiler's when it is the program's.
+    ///
+    /// The second half, that `f` is left a declaration, is held by `typed`
+    /// rather than by the `Expr::Number` arm: the arm is never reached for
+    /// these programs, which its own comment says and which was measured. So
+    /// the mutation below is the only one that reaches either half from here.
+    ///
+    /// Mutation: let `typed` report for an `Expr::Number` too. Two codes and
+    /// this fails, and so do the corpus cases
+    /// `a_constant_no_integer_type_here_can_hold`,
+    /// `a_spelling_that_is_not_a_constant` and
+    /// `a_suffixed_constant_has_no_type_here`, whose blessed stderr picks up
+    /// the second diagnostic. Three guards rather than one, which is worth
+    /// knowing because this test is the only one of the four that also says
+    /// the function is left a declaration.
+    #[test]
+    fn a_constant_the_frontend_could_not_read_is_reported_once_and_lowers_nothing() {
+        for (spelling, code) in [
+            ("1.5", "SC0305"),
+            ("2147483648", "SC0305"),
+            ("9999999999999999999999999999999999999999", "SC0305"),
+            ("123abc", "SC0106"),
+            ("09", "SC0106"),
+        ] {
+            let lowered =
+                lowered_after_a_report(&format!("int f(void) {{\n    return {spelling};\n}}\n"));
+            assert_eq!(codes(&lowered), [code], "{spelling}");
+            assert!(!function(&lowered, "f").is_defined(), "{spelling}");
         }
     }
 

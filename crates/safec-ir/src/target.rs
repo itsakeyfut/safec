@@ -460,12 +460,17 @@ mod tests {
 
     /// A value anywhere an `i128` reaches converts without overflowing it.
     ///
-    /// A constant in the IR is whatever the source spelled, and this frontend
-    /// parses a decimal literal into an `i128` with no range check of its own,
-    /// so `int x = 170141183460469231731687303715884105727;` reaches here. An
-    /// implementation that shifted the value by `min` before folding it
-    /// overflowed the carrier and panicked, which is the one answer a compiler
-    /// must not give.
+    /// `Operand::Constant` is an `i128`, so a value anywhere in that range can
+    /// reach here from any producer of IR. An implementation that shifted the
+    /// value by `min` before folding it overflowed the carrier and panicked,
+    /// which is the one answer a compiler must not give.
+    ///
+    /// The frontend used to be such a producer, before #76: it parsed a decimal
+    /// literal into an `i128` with no range check, so
+    /// `int x = 170141183460469231731687303715884105727;` arrived here and
+    /// `crates/safec/tests/interp.rs` held a copy of this guard written in C.
+    /// `types.rs` now refuses that constant, so this is the only place the case
+    /// can be reached from, and the IR's carrier is why it still has to be.
     ///
     /// Mutation: write it as `(value - self.min()).rem_euclid(span) +
     /// self.min()`. The extremes panic with "attempt to subtract with

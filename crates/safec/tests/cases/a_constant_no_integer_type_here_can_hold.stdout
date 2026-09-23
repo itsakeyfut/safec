@@ -1,0 +1,3 @@
+Target "x86_64-pc-windows-msvc"
+Function a_constant_no_integer_type_here_can_hold.c:1:5 "main" declared
+  Local "_0" "int" return

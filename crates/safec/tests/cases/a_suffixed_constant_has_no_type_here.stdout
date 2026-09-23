@@ -1,0 +1,3 @@
+Target "x86_64-pc-windows-msvc"
+Function a_suffixed_constant_has_no_type_here.c:1:5 "main" declared
+  Local "_0" "int" return
