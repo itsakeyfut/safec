@@ -688,7 +688,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
 ///
 /// **Nothing in this module reads it.** [`crate::memory`] does, to exempt a
 /// free of a pointer this check established is null, which C17 7.22.3.3 p2
-/// makes a call that does nothing. ADR-0027 is that rule, and two of the three
+/// makes a call that does nothing. ADR-0027 is that rule, and three of the four
 /// conditions it names for an implementation are held here:
 ///
 /// - the answer is read through [`Nullability::known`], so a local whose
@@ -698,11 +698,15 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
 /// - it is recorded where the terminator runs rather than where the block
 ///   starts. `int *p = 0; free(q); p = q; free(p);` is established null at the
 ///   entry of the block that frees `p` and is not null where the free runs, and
-///   answering with the entry silences a proved double free.
+///   answering with the entry silences a proved double free;
+/// - it is recorded only where C has ordered the block's writes before the
+///   terminator that reads them, which the body says more about. This lattice
+///   has no notion of order and says so, and the check that reads this answer
+///   is built on one.
 ///
-/// The third is the caller's and is held by what this does not return: there is
-/// no answer here for a point inside a block, so nothing can reach the transfer
-/// with it.
+/// The fourth is the caller's and is held by what this does not return: there
+/// is no answer here for a point inside a block, so nothing can reach the
+/// transfer with it.
 ///
 /// **The replay lives here rather than in the module that asks**, so that there
 /// is one walk over this lattice. A second copy of "run the elements, then ask"
@@ -738,6 +742,29 @@ pub(crate) fn null_at_terminators(
             analysis.element(function, element, &mut known);
         }
 
+        // **C has to have ordered what this row rests on before the terminator
+        // that reads it.** [`Element::ArgumentsEvaluated`] is emitted where no
+        // unsequenced operator encloses the call, which is ADR-0026, so its
+        // absence says this call sits under an operator C has not ordered and
+        // the replay below walked past writes that may run after the call
+        // rather than before it. Without this, `int x = (p = 0, 1) + (free(p),
+        // 0);` exempts a free of a pointer the same full expression may not yet
+        // have set to null, and the free above it is a double free reported by
+        // nobody.
+        //
+        // **The block's last element, because the rule is about this
+        // terminator.** ADR-0010 makes a call end its block, so a block holds
+        // at most one call and the marker for it is always last: measured,
+        // `ArgumentsEvaluated` occurs 345 times across the corpus and all 345
+        // are immediately followed by their `Call`. Searching the whole block
+        // would answer the same on every program this compiler can build, so
+        // nothing holds the difference and nothing can; it is written this way
+        // because that is what the rule says.
+        let ordered = matches!(
+            block.elements.last(),
+            Some(Element::ArgumentsEvaluated { .. })
+        );
+
         // Before the terminator's own transfer, which is the position
         // [`findings`] reports from and the position the free is reached at.
         //
@@ -753,7 +780,8 @@ pub(crate) fn null_at_terminators(
         // zero is neither, so nothing about that program is the clause the
         // exemption rests on.
         for local in function.locals() {
-            null[id.index()][local.index()] = analysis.is_pointer(function, local)
+            null[id.index()][local.index()] = ordered
+                && analysis.is_pointer(function, local)
                 && analysis.known(&known, local) == Nullness::Null;
         }
     }

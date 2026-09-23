@@ -128,9 +128,11 @@ of a local the nullability check established is null, which are the two
 spellings of one program. It is wider than the clause in one place and narrower
 in another, both on purpose: the constant arm skips every constant rather than
 only zero, so `free(17)` is exempt from this check and is a constraint
-violation for the frontend to refuse, which is #154; and a local that does not
-hold a pointer is never established null, so `int x = 0; free(x);` is reported
-rather than exempted. See
+violation for the frontend to refuse, which is #154; a local that does not hold
+a pointer is never established null, so `int x = 0; free(x);` is reported rather
+than exempted; and neither is a free C has not ordered the assignment before, so
+`int x = (p = 0, 1) + (free(p), 0);` is reported although `p` is null on one of
+the two orders C allows. See
 [ADR-0027](adr/0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md).
 
 

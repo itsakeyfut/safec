@@ -79,8 +79,10 @@ it lands on `CLAUDE.md`'s list.** Everything else here only refuses to weaken a
 proof, which leaves a false positive on row 4. A free that is exempted is
 reported by nobody, so a `Nullness::Null` this compiler is wrong about is a
 real double free nothing says anything about, which is row 6. Three things
-keep it off that row and an implementation of the seam has to hold all three,
-which is why they are written here rather than left to be rediscovered:
+keep it off that row and an implementation of the seam has to hold all four,
+which is why they are written here rather than left to be rediscovered. The
+fourth was not here when the seam was first built, and an implementation
+holding the other three is what found it:
 
 * the nullness is read through the mask that answers `Unknown` for a local
   whose address escaped, which is `Nullability::known` and ADR-0017's shape on
@@ -89,6 +91,14 @@ which is why they are written here rather than left to be rediscovered:
   `int *p = 0; p = q; free(p); free(p);` is null at one of those points and not
   the other. Neither `Allocations::touching` nor `Analysis::terminator` is
   given a position today, so this is work rather than a lookup;
+* the nullness is one C has ordered before the free. This lattice has no notion
+  of order and says so, while the check that reads its answer is built on one:
+  ADR-0022 and ADR-0023 exist because the lowering's order inside a full
+  expression is not C's. `int x = (p = 0, 1) + (free(p), 0);` writes the null in
+  an operand C leaves unsequenced against the free, and exempting on it is a
+  double free reported by nobody. What says whether C ordered it is
+  `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no unsequenced
+  operator encloses the call;
 * the exemption skips the report, rather than clearing the local's sites. A
   cleared local reaches no site, and reaching no site is how this check spells
   having lost a pointer, which is a warning about the wrong thing.
@@ -142,8 +152,17 @@ is the mutation that fails it. C17 6.3.2.3 p3 is why: a null pointer constant is
 an integer constant expression converted to a pointer type, and an `int` lvalue
 holding zero is neither.
 
-The third condition is held by where the exemption is called from rather than
-by a case. `memory.rs::asked` is reached only from the walk that reports;
+`a_free_in_an_unsequenced_operand_is_not_exempt` holds the order: dropping the
+`ordered` term in `null_at_terminators` exempts a free C has not ordered the
+assignment before, and that case goes from exit 1 to exit 0 with nothing
+printed. **Every row of this table was re-measured after that term was added**,
+because narrowing a rule makes a table that was true before it false in silence,
+and all of them still fail what they name: the `made.is_some()` option fails 23
+cases, the filter fails three, the position fails four, and the mask, the
+pointer type, the projection and the order each fail one and only their own.
+
+The report-not-the-transfer condition is held by where the exemption is called
+from rather than by a case. `memory.rs::asked` is reached only from the walk that reports;
 `Analysis::terminator` has no access to the nullness, so a free of a pointer
 established null still marks its sites freed and still leaves the local holding
 them. What that costs is in the Consequences below.

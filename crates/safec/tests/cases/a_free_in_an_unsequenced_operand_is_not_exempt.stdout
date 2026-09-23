@@ -1,0 +1,61 @@
+Target "x86_64-pc-windows-msvc"
+Function a_free_in_an_unsequenced_operand_is_not_exempt.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_free_in_an_unsequenced_operand_is_not_exempt.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_free_in_an_unsequenced_operand_is_not_exempt.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "void"
+  Local "_7" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_free_in_an_unsequenced_operand_is_not_exempt.c:4:14 generated
+    Call a_free_in_an_unsequenced_operand_is_not_exempt.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_free_in_an_unsequenced_operand_is_not_exempt.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_free_in_an_unsequenced_operand_is_not_exempt.c:4:14 generated
+    ArgumentsEvaluated a_free_in_an_unsequenced_operand_is_not_exempt.c:5:5 generated
+    Call a_free_in_an_unsequenced_operand_is_not_exempt.c:5:5 "free" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_free_in_an_unsequenced_operand_is_not_exempt.c:5:5 generated
+    Operation a_free_in_an_unsequenced_operand_is_not_exempt.c:6:14 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation a_free_in_an_unsequenced_operand_is_not_exempt.c:6:14 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Call a_free_in_an_unsequenced_operand_is_not_exempt.c:6:27 "free" "bb3"
+      Destination "_6"
+      Copy "_1"
+  Block "bb3"
+    Operation a_free_in_an_unsequenced_operand_is_not_exempt.c:6:14 written
+      Destination "_7"
+      Binary "Add"
+        Constant 1
+        Constant 0
+    Operation a_free_in_an_unsequenced_operand_is_not_exempt.c:6:9 written
+      Destination "_4"
+      Use
+        Copy "_7"
+    Sequenced a_free_in_an_unsequenced_operand_is_not_exempt.c:6:14 generated
+    Operation a_free_in_an_unsequenced_operand_is_not_exempt.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_free_in_an_unsequenced_operand_is_not_exempt.c:7:12 generated
+    Return

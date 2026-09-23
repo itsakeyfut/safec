@@ -1,0 +1,10 @@
+error[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_free_in_an_unsequenced_operand_is_not_exempt.c:6:27 ]
+   │
+ 6 │     int x = (p = 0, 1) + (free(p), 0);
+   │                           ───┬───  
+   │                              ╰───── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

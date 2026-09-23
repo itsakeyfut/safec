@@ -384,6 +384,16 @@ cases! {
     // neither. `clang` refuses this program under 6.5.2.2 p2, which this
     // compiler does not do yet and #154 is about; until it does, what it
     // should not do is go quiet.
+    // And the free C has not ordered the assignment before. The operands of
+    // `+` are unsequenced, C17 6.5 p3, so on the order that runs the right one
+    // first this frees the pointer the line above already freed. The
+    // nullability lattice has no notion of order and says so; the marker that
+    // does is `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no
+    // unsequenced operator encloses the call, and its absence here is what
+    // refuses the exemption. Dropping that term reports nothing at all about a
+    // double free this check watched, which is the bottom row of `CLAUDE.md`'s
+    // list, and fails this case.
+    a_free_in_an_unsequenced_operand_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
