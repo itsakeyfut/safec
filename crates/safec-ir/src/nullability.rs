@@ -241,10 +241,22 @@ impl Nullability<'_> {
     ///   that, so the comparison is an element of this block, above the
     ///   terminator. Reaching it is what [`Analysis::edge`]'s block is for.
     ///
-    /// The walk obeys the rule that method states: it stops at a store through
-    /// a projection, because nothing in such an element says which local it
-    /// lands in, and stepping over one resolves a comparison the program has
-    /// already overwritten.
+    /// **A local something below the comparison may have changed is not
+    /// refined.** The walk records every local it steps over a write to, and
+    /// refuses the refinement if the comparison turns out to be about one of
+    /// them, because refining on a value the program has since overwritten is a
+    /// fact about a pointer that is no longer there. A store through a
+    /// projection is the one element that names no local, so it says every
+    /// local may have changed and the walk gives up where it stands.
+    ///
+    /// **The refusal is per local rather than positional**, and that is not a
+    /// refinement of taste. Stopping the walk at the first write to anything
+    /// reaches the second shape above as well: `if (p)` has no comparison to
+    /// stop above, so a walk that stops early never gets to the answer at the
+    /// end, and `int x = 5; if (p) { *p = x; }` loses the proof that makes
+    /// every null test in the language work. Measured: that program is reported
+    /// as an unproven dereference under the positional rule and is silent under
+    /// this one.
     fn tested(
         &self,
         function: &Function,
@@ -258,15 +270,61 @@ impl Nullability<'_> {
             return None;
         }
 
+        // Which locals something below the comparison may have changed. A
+        // refinement about one of them is about a value the branch no longer
+        // reads, and refusing it is the whole of this walk's give-up rule.
+        let mut changed = vec![false; function.locals().len()];
+
         for element in function.block(block).elements.iter().rev() {
-            let Element::Assign(operation) = element else {
-                continue;
+            // Every variant written out, and every field with it, for the
+            // reason `Analysis::element` gives: RK-018 in the review knowledge
+            // bank is a field added to a variant that already exists walking
+            // past an exhaustive match. The question here is whether anything
+            // below the comparison replaced what it read, so an element kind
+            // added later is exactly the thing that would have to answer.
+            let operation = match element {
+                Element::Assign(operation) => operation,
+                // None of them computes into a local, so none can have changed
+                // one, and there is nothing to record. **One arm rather than
+                // three**, so that this is one behaviour with one guard,
+                // `a_marker_between_a_comparison_and_its_branch_is_stepped_over`;
+                // split into three, two of them would be held by nothing.
+                // Giving up here instead would cost a refinement wherever a
+                // marker separates a comparison from its branch, which is a
+                // false positive on each of them.
+                Element::Evaluate {
+                    place: _,
+                    origin: _,
+                }
+                | Element::Sequenced { origin: _ }
+                | Element::ArgumentsEvaluated { origin: _ } => continue,
+                // Storage ending takes the object the comparison read away and
+                // storage beginning brings a different one, so either leaves
+                // the local holding something the comparison never saw. That
+                // is a change like any other and is recorded like one.
+                // `Analysis::element` answers `Nullness::Unknown` for both and
+                // `Analysis::edge` refines only a local that is `Unknown`, so
+                // the two do not cancel out: without this they would combine
+                // into a refinement about an object that is gone. One arm
+                // again, for the reason above.
+                Element::StorageLive { local, origin: _ }
+                | Element::StorageDead { origin: _, local } => {
+                    changed[local.index()] = true;
+                    continue;
+                }
             };
 
+            // A store through a projection may have landed in any local,
+            // because nothing in such an element says which one it lands in, so
+            // there is no single local to record and the walk cannot carry on.
             if !operation.place.projection.is_empty() {
                 return None;
             }
+            // A direct store says exactly which local it changed, so the walk
+            // carries on and the answer below is refused only if it turns out
+            // to be about this one.
             if operation.place.local != condition.local {
+                changed[operation.place.local.index()] = true;
                 continue;
             }
 
@@ -275,7 +333,7 @@ impl Nullability<'_> {
             // else, `int c = p != 0;` among them, is a value this analysis
             // cannot follow, and refining on a condition it did not read is
             // the one direction a refinement must not be wrong in.
-            return match &operation.value {
+            return (match &operation.value {
                 Rvalue::Binary { op, lhs, rhs } => self.compared_to_null(function, *op, lhs, rhs),
                 // C17 6.5.3.3 p5: "The expression `!E` is equivalent to
                 // `(0==E)`." So `if (!p)` is `if (p == 0)` written shorter, and
@@ -290,7 +348,13 @@ impl Nullability<'_> {
                     operand: _,
                 } => None,
                 Rvalue::Use(_) | Rvalue::Address(_) => None,
-            };
+            })
+            // **The refusal, and the only one this walk makes about a local it
+            // can name.** The comparison read this local above; everything
+            // between here and the branch has been recorded, so a local in
+            // that set is one the branch no longer reads the compared value
+            // from.
+            .filter(|(local, _)| !changed[local.index()]);
         }
 
         // Nothing in this block wrote it, so the branch tests the place itself.
