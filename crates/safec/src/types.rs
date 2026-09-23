@@ -27,6 +27,23 @@ use crate::ast::{
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use safec_ir::source::{SourceMap, Span};
+use safec_ir::target::Integer;
+
+/// A spelling that is not a constant C allows, C17 6.4.4.1 p1.
+///
+/// `SC01xx` and not `SC03xx` although this stage is the one that emits it:
+/// `docs/diagnostics.md` hands out a code by the topic of the problem rather
+/// than by the pass that finds it, and what is wrong with `09` is the shape of
+/// the token.
+const CONSTANT: Code = Code::new("SC0106");
+
+/// A constant this compiler has no type for, C17 6.4.4 p2.
+///
+/// One code for a value too large and for a floating constant, because they
+/// are one rule met two ways: the value has to be in the range of its type,
+/// and the only types here are `int` and `char`. Same arrangement as
+/// `MISMATCH` below, for the same reason.
+const NO_TYPE: Code = Code::new("SC0305");
 
 /// A value of the wrong type, C17 6.5.16.1 p1.
 ///
@@ -44,6 +61,7 @@ const ARGUMENTS: Code = Code::new("SC0303");
 #[derive(Clone, Debug)]
 pub struct Types {
     of: Vec<Option<TypeId>>,
+    value: Vec<Option<i128>>,
 }
 
 impl Types {
@@ -61,6 +79,21 @@ impl Types {
     pub fn of(&self, id: ExprId) -> Option<TypeId> {
         self.of[id.index()]
     }
+
+    /// What the integer constant `id` is worth, or `None` where it is not a
+    /// constant or is one this stage could not read.
+    ///
+    /// The two cases are one answer on purpose: a caller has nothing to do
+    /// differently, because a constant this stage could not read was reported
+    /// where it was read, and an expression that is not a constant has no
+    /// value to ask for. Both are "do not build an operand out of this".
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`Ast`].
+    pub fn value(&self, id: ExprId) -> Option<i128> {
+        self.value[id.index()]
+    }
 }
 
 /// Give every expression a type, and report the three constraints.
@@ -69,19 +102,29 @@ impl Types {
 /// wrote: the `int` of an integer constant, and the pointer that `&x` has.
 /// They go in the same arena as the rest, so that there is one representation
 /// of a type in this compiler rather than two.
+///
+/// Takes `int_range` rather than a whole [`safec_ir::target::Target`] because
+/// that is all it reads: whether an integer constant's value is in the range
+/// of the one integer type this compiler has. ADR-0013 puts the target below
+/// the frontend on the grounds that the lowering would otherwise need it to
+/// build a type at all; no type is built from this one, so the same argument
+/// is what limits it to a range.
 pub fn check(
     sources: &SourceMap,
     ast: &mut Ast,
     resolution: &Resolution,
+    int_range: Integer,
     diagnostics: &mut DiagnosticSink,
 ) -> Types {
     let mut checker = Checker {
         sources,
         resolution,
         types: vec![None; ast.expr_ids().count()],
+        values: vec![None; ast.expr_ids().count()],
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::Int),
+        int_range,
         returns: HashMap::new(),
     };
 
@@ -93,7 +136,10 @@ pub fn check(
         checker.check_return(ast, id, diagnostics);
     }
 
-    Types { of: checker.types }
+    Types {
+        of: checker.types,
+        value: checker.values,
+    }
 }
 
 /// What a `return` in this function has to be assignable to.
@@ -109,7 +155,12 @@ struct Checker<'a> {
     sources: &'a SourceMap,
     resolution: &'a Resolution,
     types: Vec<Option<TypeId>>,
+    /// What each integer constant is worth, filled by the same walk that
+    /// fills `types` and empty everywhere else.
+    values: Vec<Option<i128>>,
     int: TypeId,
+    /// The range of `int` on the target this run is for.
+    int_range: Integer,
     /// The value of each `return` that has one, and the function it is in.
     ///
     /// Collected before the walk so that the walk stays in one order. A
@@ -192,11 +243,7 @@ impl Checker<'_> {
         let expr = ast.expr(id).clone();
 
         match expr {
-            // C17 6.4.4.1 p5 gives an integer constant the first type in a
-            // list that fits it. Nothing here reads a suffix or knows a
-            // target's widths, and `int` is the first of that list, so it is
-            // the answer for every constant this compiler can read.
-            Expr::Number { .. } => Some(self.int),
+            Expr::Number { span } => self.constant(id, span, diagnostics),
             Expr::Identifier { .. } => {
                 Some(self.resolution.binding(self.resolution.resolved(id)?).ty)
             }
@@ -370,12 +417,7 @@ impl Checker<'_> {
             return;
         };
 
-        if self.assignable(
-            ast,
-            target,
-            source,
-            self.is_null_pointer_constant(ast, value),
-        ) != Some(false)
+        if self.assignable(ast, target, source, self.is_null_pointer_constant(value)) != Some(false)
         {
             return;
         }
@@ -411,7 +453,7 @@ impl Checker<'_> {
             ast,
             returning.ty,
             source,
-            self.is_null_pointer_constant(ast, value),
+            self.is_null_pointer_constant(value),
         ) != Some(false)
         {
             return;
@@ -553,20 +595,241 @@ impl Checker<'_> {
     /// `p = i` and reporting a `p = 1 - 1` nobody writes, the second costs
     /// less, and it stops costing anything the day a constant expression can
     /// be evaluated.
-    fn is_null_pointer_constant(&self, ast: &Ast, value: ExprId) -> bool {
-        let Expr::Number { span } = ast.expr(value) else {
-            return false;
+    ///
+    /// Read off the value rather than off the text: `constant` below is the
+    /// one place a spelling is turned into a number, so `0x0`, `00` and `0u`
+    /// are zero here because they are zero there. A second reading of the
+    /// text would be a second answer to drift from the first.
+    fn is_null_pointer_constant(&self, value: ExprId) -> bool {
+        self.values[value.index()] == Some(0)
+    }
+
+    /// The type and the value of an integer constant, C17 6.4.4.1.
+    ///
+    /// Both at once, because `read` answers both from one pass over the
+    /// spelling and because a constant with no type has no value either.
+    ///
+    /// The type is `int` whenever the value fits one. 6.4.4.1 p5 asks for the
+    /// first type in a list that holds it, and this compiler has no other
+    /// integer type to offer: there is no `unsigned int` and no `long` in
+    /// [`Type`] or in [`Integer`], so a suffix is validated and then
+    /// discarded. `docs/frontend.md` records that divergence and what it
+    /// costs, which is that `4294967295u` and `2147483648` are refused here
+    /// and compiled by `clang`.
+    ///
+    /// Nothing that reaches a diagnostic below is the file's own text, which
+    /// is what RK-002 in the review knowledge bank asks of a new message: the
+    /// span is what points at the spelling, and the words are this
+    /// compiler's.
+    fn constant(
+        &mut self,
+        id: ExprId,
+        span: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        // `Read` is matched exhaustively so that a fifth answer has to be
+        // given a report rather than falling into one written for another.
+        let reported = match read(self.sources.snippet(span)) {
+            Read::Integer(value) => {
+                // `holds` takes an `i128`, and a value that does not fit one
+                // does not fit `int` either, so the conversion failing is the
+                // same answer as the range check failing.
+                match i128::try_from(value)
+                    .ok()
+                    .filter(|value| self.int_range.holds(*value))
+                {
+                    Some(value) => {
+                        self.values[id.index()] = Some(value);
+                        return Some(self.int);
+                    }
+                    None => TOO_LARGE,
+                }
+            }
+            Read::TooLarge => TOO_LARGE,
+            Read::Floating => FLOATING,
+            Read::Malformed(why) => Reported {
+                code: CONSTANT,
+                message: "this is not a constant C allows",
+                label: why,
+                note: "C17 6.4.4.1 p1 gives the three bases their digits and lists the suffixes",
+            },
         };
 
-        let text = self.sources.snippet(*span);
-        let digits = text.trim_end_matches(['u', 'U', 'l', 'L']);
-        let digits = digits
-            .strip_prefix("0x")
-            .or_else(|| digits.strip_prefix("0X"))
-            .unwrap_or(digits);
-
-        !digits.is_empty() && digits.bytes().all(|digit| digit == b'0')
+        diagnostics.report(
+            Diagnostic::error(reported.message)
+                .with_code(reported.code)
+                .with_label(Label::primary(span, reported.label))
+                .with_note(reported.note),
+        );
+        None
     }
+}
+
+/// What a constant this stage could not read is reported as.
+///
+/// A value rather than four arguments, so that the arm that picks one is a
+/// choice between whole diagnostics and cannot pair one message with another
+/// one's note.
+#[derive(Clone, Copy)]
+struct Reported {
+    code: Code,
+    message: &'static str,
+    label: &'static str,
+    note: &'static str,
+}
+
+/// A value outside the range of the only integer type this compiler has.
+const TOO_LARGE: Reported = Reported {
+    code: NO_TYPE,
+    message: "no integer type this compiler has can hold this constant",
+    label: "this needs a type wider than `int`",
+    note: "C17 6.4.4.1 p5 gives a constant the first type in a list that holds it; this compiler \
+           has only `int`, and 6.4.4 p2 requires a constant's value to be in the range of its \
+           type",
+};
+
+/// A constant with a fractional part or an exponent, C17 6.4.4.2.
+const FLOATING: Reported = Reported {
+    code: NO_TYPE,
+    message: "this compiler does not read floating constants yet",
+    label: "this is a floating constant",
+    note: "C17 6.4.4.2 gives it `double`, `float` or `long double`, and this compiler has no \
+           floating type",
+};
+
+/// What reading the text of a numeric constant comes to, C17 6.4.4.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Read {
+    /// The value, with no type attached. Which type C would give it is
+    /// 6.4.4.1 p5's table, and this compiler has only `int` to offer.
+    Integer(u128),
+    /// More than a `u128` holds, which no type here could.
+    TooLarge,
+    /// A well-formed floating constant, C17 6.4.4.2.
+    Floating,
+    /// None of those, so 6.4.4 p2 has no type to give it. The string says
+    /// which part of the spelling is wrong, and is this compiler's own words
+    /// rather than any of the file's.
+    Malformed(&'static str),
+}
+
+/// An octal digit that is not one.
+const NOT_OCTAL: &str = "an octal constant has digits `0` to `7`";
+/// A base prefix with nothing after it.
+const NO_DIGITS: &str = "a hexadecimal constant needs at least one digit after the `0x`";
+/// Everything else: a digit of no base, or a suffix C does not have.
+const NOT_A_CONSTANT: &str =
+    "this is not a digit of the constant's base, and not a suffix C allows";
+
+/// Read what a numeric constant is worth, C17 6.4.4.1.
+///
+/// `text` is a preprocessing number as `lexer.rs::scan_number` delimits one,
+/// which is wider than the set of valid constants: deciding which of these a
+/// spelling is, is exactly this function's job.
+///
+/// Every digit test is `char::is_digit`, which is ASCII whatever the radix:
+/// `to_digit` beneath it reads `0`-`9`, `a`-`z` and `A`-`Z` and nothing else.
+/// RK-004 in the review knowledge bank is what asks for that to be said out
+/// loud rather than assumed, because the `char::is_*` family next to it
+/// answers for Unicode where C means ASCII.
+fn read(text: &str) -> Read {
+    // 6.4.4.2 p1 gives a floating constant a `.`, or an exponent: `e`/`E` for
+    // a decimal and `p`/`P` for a hexadecimal. The base has to be known before
+    // the marker can be looked for, because `e` is a hexadecimal digit and
+    // `0xe1` is 225.
+    let hex = text.strip_prefix("0x").or_else(|| text.strip_prefix("0X"));
+    let exponent = if hex.is_some() {
+        ['p', 'P']
+    } else {
+        ['e', 'E']
+    };
+    if text.contains('.') || hex.unwrap_or(text).contains(exponent) {
+        return Read::Floating;
+    }
+
+    // 6.4.4.1 p1: the prefix decides the base, and a leading `0` with nothing
+    // to prefix is the octal constant zero.
+    let (digits, radix) = match hex {
+        Some(digits) => (digits, 16),
+        None => match text.strip_prefix('0') {
+            Some(digits) => (digits, 8),
+            None => (text, 10),
+        },
+    };
+
+    // Whatever tail is not a digit of the base has to be a suffix, so the two
+    // are one split rather than two scans. `find` answers in bytes at a
+    // character boundary, which is what `split_at` needs.
+    let split = digits
+        .find(|c: char| !c.is_digit(radix))
+        .unwrap_or(digits.len());
+    let (digits, suffix) = digits.split_at(split);
+
+    if !matches!(
+        suffix,
+        "" | "u"
+            | "U"
+            | "l"
+            | "L"
+            | "ll"
+            | "LL"
+            | "ul"
+            | "uL"
+            | "Ul"
+            | "UL"
+            | "lu"
+            | "lU"
+            | "Lu"
+            | "LU"
+            | "ull"
+            | "uLL"
+            | "Ull"
+            | "ULL"
+            | "llu"
+            | "llU"
+            | "LLu"
+            | "LLU"
+    ) {
+        // `08` and `09` land here, because `8` is not an octal digit and so
+        // is read as the start of a suffix. Naming the real mistake is worth
+        // three lines: a leading zero on a written-out number is the way this
+        // one gets made.
+        return Read::Malformed(if radix == 8 && suffix.starts_with(['8', '9']) {
+            NOT_OCTAL
+        } else {
+            NOT_A_CONSTANT
+        });
+    }
+
+    if digits.is_empty() {
+        // `0` alone, and `0u`: an octal constant whose digits are just the
+        // leading zero. `0x` alone has nothing after its prefix and is not a
+        // constant at all.
+        return if radix == 8 {
+            Read::Integer(0)
+        } else {
+            Read::Malformed(NO_DIGITS)
+        };
+    }
+
+    let mut value: u128 = 0;
+    for byte in digits.bytes() {
+        let digit = char::from(byte)
+            .to_digit(radix)
+            .expect("a digit of the base, which is what the split above left here");
+        // Checked, so that nothing wraps and nothing clamps: a constant this
+        // cannot accumulate is one no type here could hold, and saying so is
+        // the whole point of reading it.
+        value = match value
+            .checked_mul(u128::from(radix))
+            .and_then(|shifted| shifted.checked_add(u128::from(digit)))
+        {
+            Some(value) => value,
+            None => return Read::TooLarge,
+        };
+    }
+
+    Read::Integer(value)
 }
 
 #[cfg(test)]
@@ -576,6 +839,7 @@ mod tests {
     use crate::lexer::lex;
     use crate::parser::parse;
     use crate::sema::resolve;
+    use safec_ir::target::Target;
 
     struct Checked {
         ast: Ast,
@@ -597,7 +861,19 @@ mod tests {
             diagnostics.diagnostics()
         );
         let resolution = resolve(&sources, &ast, &mut diagnostics);
-        let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
+        // Named rather than taken from the host: what a constant's type is
+        // turns on the range of `int`, so a test that did not name a target
+        // would be asserting about whichever machine ran it. RK-011 is the
+        // entry. `int` is 32 bits on every row of `Target::ALL`, which is
+        // what makes one triple enough here.
+        let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+        let types = check(
+            &sources,
+            &mut ast,
+            &resolution,
+            target.int(),
+            &mut diagnostics,
+        );
 
         Checked {
             ast,
@@ -636,12 +912,223 @@ mod tests {
             }
         }
 
+        /// What the constant written as `text` is worth.
+        ///
+        /// Found the same way and under the same rule as `spelling`: it has
+        /// to be the only expression written that way.
+        fn value_of(&self, text: &str) -> Option<i128> {
+            let written: Vec<ExprId> = self
+                .ast
+                .expr_ids()
+                .filter(|&id| self.sources.snippet(self.ast.expr(id).span()) == text)
+                .collect();
+
+            let [id] = written[..] else {
+                panic!("{text:?} is {} expressions, not one", written.len());
+            };
+
+            self.types.value(id)
+        }
+
         fn messages(&self) -> Vec<&str> {
             self.diagnostics
                 .diagnostics()
                 .iter()
                 .map(Diagnostic::message)
                 .collect()
+        }
+
+        fn codes(&self) -> Vec<&str> {
+            self.diagnostics
+                .diagnostics()
+                .iter()
+                .filter_map(|diagnostic| diagnostic.code().map(Code::as_str))
+                .collect()
+        }
+    }
+
+    /// One program per spelling, so that a row is about one constant.
+    ///
+    /// `return` and not a declaration, because an initializer is not checked
+    /// against the assignment constraint yet (#205) and a row that reported
+    /// twice would be reporting about that rather than about the constant.
+    fn returning(spelling: &str) -> Checked {
+        checked(&format!("int f(void) {{\n    return {spelling};\n}}\n"))
+    }
+
+    /// An integer constant is worth what its base and its suffix say,
+    /// C17 6.4.4.1 p1.
+    ///
+    /// The values are written out rather than computed from the spellings,
+    /// which is what RK-001 asks: a table that works the expectation out the
+    /// way the code does agrees with the code however wrong both are.
+    ///
+    /// Mutation: give the hexadecimal arm radix ten. `0x10` is ten and this
+    /// fails. Mutation: give the octal arm radix ten. `010` is ten and this
+    /// fails, along with most of the suite, because `0` stops being readable
+    /// too.
+    #[test]
+    fn an_integer_constant_is_worth_what_its_base_and_suffix_say() {
+        for (spelling, value) in [
+            ("0", 0),
+            ("16", 16),
+            ("010", 8),
+            ("0777", 511),
+            ("0x10", 16),
+            ("0X10u", 16),
+            ("1u", 1),
+            ("1ul", 1),
+            ("1llu", 1),
+            ("0L", 0),
+        ] {
+            let checked = returning(spelling);
+            assert_eq!(checked.messages(), Vec::<&str>::new(), "{spelling}");
+            assert_eq!(checked.value_of(spelling), Some(value), "{spelling}");
+            assert_eq!(checked.spelling(spelling), "int", "{spelling}");
+        }
+    }
+
+    /// `e` is a hexadecimal digit before it is an exponent marker.
+    ///
+    /// The half of `read` a reader would get wrong: 6.4.4.2 p1 spells a
+    /// decimal's exponent `e` and a hexadecimal's `p`, so the base has to be
+    /// settled before the marker is looked for. Both directions are here,
+    /// because a rule that only refused would pass against one that refused
+    /// everything.
+    ///
+    /// Mutation: look for `e`/`E` in a hexadecimal constant too, by giving
+    /// both arms the same markers. `0xe1` is reported as a floating constant,
+    /// this fails, and nothing else in the suite does.
+    #[test]
+    fn a_hexadecimal_digit_e_is_not_an_exponent() {
+        let checked = returning("0xe1");
+        assert_eq!(checked.messages(), Vec::<&str>::new());
+        assert_eq!(checked.value_of("0xe1"), Some(225));
+
+        for spelling in ["1e5", "0e1", "0x1p3"] {
+            let checked = returning(spelling);
+            assert_eq!(
+                checked.messages(),
+                ["this compiler does not read floating constants yet"],
+                "{spelling}"
+            );
+        }
+    }
+
+    /// A value outside `int` is reported rather than wrapped, C17 6.4.4 p2.
+    ///
+    /// All three are constants `clang 20.1.6 -std=c17 -pedantic-errors
+    /// --target=x86_64-pc-windows-msvc` accepts, which is why the message
+    /// blames this compiler rather than the program: what is missing is
+    /// `long`, not a well-formed constant. `docs/frontend.md` carries the
+    /// divergence.
+    ///
+    /// Mutation: answer `true` from `Integer::holds`. The first two are
+    /// accepted with a value `int` does not hold and this fails. Mutation:
+    /// answer zero rather than `Read::TooLarge` on an overflow. The forty
+    /// nines become zero, nothing is reported, and this fails.
+    #[test]
+    fn a_constant_no_type_here_can_hold_is_reported_and_has_no_value() {
+        for spelling in [
+            "2147483648",
+            "4294967295u",
+            "9999999999999999999999999999999999999999",
+        ] {
+            let checked = returning(spelling);
+            assert_eq!(
+                checked.messages(),
+                ["no integer type this compiler has can hold this constant"],
+                "{spelling}"
+            );
+            assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
+            assert_eq!(checked.value_of(spelling), None, "{spelling}");
+            assert_eq!(checked.spelling(spelling), "?", "{spelling}");
+        }
+
+        // The edge is the edge: `int` is 32 bits on the named target, so one
+        // less than the reported value is an ordinary constant.
+        let checked = returning("2147483647");
+        assert_eq!(checked.messages(), Vec::<&str>::new());
+        assert_eq!(checked.value_of("2147483647"), Some(2147483647));
+    }
+
+    /// A floating constant is this compiler's gap, not the program's fault.
+    ///
+    /// `1.5` is typed `int` today with nothing said, which is the silent
+    /// wrong answer this replaces.
+    ///
+    /// Mutation: report a floating constant as `TOO_LARGE`. The message is
+    /// about a width rather than about a type that does not exist, and this
+    /// fails.
+    #[test]
+    fn a_floating_constant_is_reported_as_one_this_compiler_does_not_read_yet() {
+        for spelling in ["1.5", "0.0", "1e5"] {
+            let checked = returning(spelling);
+            assert_eq!(
+                checked.messages(),
+                ["this compiler does not read floating constants yet"],
+                "{spelling}"
+            );
+            assert_eq!(checked.codes(), ["SC0305"], "{spelling}");
+            assert_eq!(checked.value_of(spelling), None, "{spelling}");
+        }
+    }
+
+    /// A spelling that is no constant at all is the program's fault.
+    ///
+    /// Each row was measured against `clang 20.1.6 -std=c17
+    /// -pedantic-errors --target=x86_64-pc-windows-msvc`, which reports every
+    /// one of them as an error; `-pedantic-errors` is the flag that makes the
+    /// answer C's rather than clang's, which is RK-032.
+    ///
+    /// Mutation: accept any suffix. `1lL`, `1uu`, `123abc` and `0b101` stop
+    /// being reported and this fails. Mutation: answer `NOT_A_CONSTANT` for
+    /// an octal digit out of range. `09` keeps its code and loses its label,
+    /// this fails, and nothing else in the suite does, which is what says the
+    /// label is guarded and not only the code.
+    #[test]
+    fn a_spelling_that_is_not_a_constant_is_the_programs_fault() {
+        for (spelling, label) in [
+            (
+                "123abc",
+                "this is not a digit of the constant's base, and not a suffix C allows",
+            ),
+            (
+                "1lL",
+                "this is not a digit of the constant's base, and not a suffix C allows",
+            ),
+            (
+                "1uu",
+                "this is not a digit of the constant's base, and not a suffix C allows",
+            ),
+            (
+                "0b101",
+                "this is not a digit of the constant's base, and not a suffix C allows",
+            ),
+            ("09", "an octal constant has digits `0` to `7`"),
+            (
+                "0x",
+                "a hexadecimal constant needs at least one digit after the `0x`",
+            ),
+        ] {
+            let checked = returning(spelling);
+            assert_eq!(
+                checked.messages(),
+                ["this is not a constant C allows"],
+                "{spelling}"
+            );
+            assert_eq!(checked.codes(), ["SC0106"], "{spelling}");
+            assert_eq!(
+                checked
+                    .diagnostics
+                    .diagnostics()
+                    .iter()
+                    .flat_map(Diagnostic::labels)
+                    .map(Label::message)
+                    .collect::<Vec<_>>(),
+                [label],
+                "{spelling}"
+            );
         }
     }
 

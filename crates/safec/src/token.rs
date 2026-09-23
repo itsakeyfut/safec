@@ -11,6 +11,11 @@
 //! follows from its base, its suffix, and the first type it fits in, which are
 //! questions for a stage that knows the target's type sizes. A token carrying a
 //! value would force the scanner to answer them.
+//!
+//! That stage is [`crate::types`], which is given the range of `int` and
+//! answers both: `Types::value` is what a constant is worth, and `Types::of`
+//! is the `int` it gets or the nothing it gets instead. `docs/frontend.md`
+//! says which spellings are read and which are refused.
 
 use std::mem;
 

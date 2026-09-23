@@ -49,7 +49,7 @@ use safec_ir::memory::{self, Kind, Unproven};
 use safec_ir::nullability;
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
-use safec_ir::target::Target;
+use safec_ir::target::{Integer, Target};
 use safec_llvm::emit::Refusal;
 
 // Code generation takes `SC08xx`, which `docs/diagnostics.md` allocates. One
@@ -388,9 +388,14 @@ pub fn compile(options: &Options) -> Compiled {
         match &mut artifact {
             Emitted::Tokens(out) => dump_tokens(&source, &tokens, out),
             Emitted::Ast(out) => {
-                let Some(analysed) =
-                    analysed(&sources, file, &tokens, read_whole, &mut diagnostics)
-                else {
+                let Some(analysed) = analysed(
+                    &sources,
+                    file,
+                    &tokens,
+                    read_whole,
+                    options.target.int(),
+                    &mut diagnostics,
+                ) else {
                     continue;
                 };
                 dump_ast(&sources, &analysed.ast, out);
@@ -579,6 +584,7 @@ fn analysed(
     file: FileId,
     tokens: &[Token],
     read_whole: usize,
+    int_range: Integer,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<Analysed> {
     if diagnostics.error_count() != read_whole {
@@ -591,7 +597,7 @@ fn analysed(
     }
 
     let resolution = resolve(sources, &ast, diagnostics);
-    let types = check(sources, &mut ast, &resolution, diagnostics);
+    let types = check(sources, &mut ast, &resolution, int_range, diagnostics);
 
     Some(Analysed {
         ast,
@@ -613,7 +619,14 @@ fn lowered(
     options: &Options,
     diagnostics: &mut DiagnosticSink,
 ) -> Option<TranslationUnit> {
-    let analysed = analysed(sources, file, tokens, read_whole, diagnostics)?;
+    let analysed = analysed(
+        sources,
+        file,
+        tokens,
+        read_whole,
+        options.target.int(),
+        diagnostics,
+    )?;
     // Nothing to lower from a tree whose names and types are not known: the IR
     // would be built out of what the frontend could not work out, and the
     // lowering says so about each piece rather than saying it once here.

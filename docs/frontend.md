@@ -115,6 +115,56 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
+### What an integer constant is worth, and what type it is not
+
+The scan settles where a constant ends and stops there. `crates/safec/src/types.rs`
+is what reads it, because deciding the type needs the range of `int` and the
+scan is below the target. Three bases, C17 6.4.4.1 p1: a leading `0x` or `0X`
+is hexadecimal, a leading `0` is octal, and anything else is decimal, so `010`
+is eight. The suffixes of p1 are read far enough to reject a spelling C does not
+have, and then discarded.
+
+**Discarded, because there is no type to give them to.** 6.4.4.1 p5 asks for
+the first type in a list that holds the value, and the list is `int`,
+`unsigned int`, `long`, and so on. `crates/safec/src/ast.rs`'s `Type` has `Int`,
+`Char`, `Void` and the types derived from them, and
+`crates/safec-ir/src/target.rs`'s `Target` answers `int()` and `char()`. There
+is no `unsigned int` and no `long` for p5's table to select, so every constant
+that has a type here has `int`, and every constant that does not is reported.
+This is the divergence, and it is the whole of it.
+
+What it costs is the first two rows below. Measured against
+`clang 20.1.6 --target=x86_64-unknown-linux-gnu`, as the tables above are.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `int x = 2147483648;` | `error[SC0305]` | accepts | accepts |
+| `int x = 4294967295u;` | `error[SC0305]` | accepts | accepts |
+| `int x = 1.5;` | `error[SC0305]` | accepts | accepts |
+| `int x = 09;` | `error[SC0106]` | error | error |
+| `int x = 1lL;` | `error[SC0106]` | error | error |
+| `int x = 0b101;` | `error[SC0106]` | accepts | error |
+
+**The first three are gaps and the last three are not.** `SC0305` says this
+compiler has no type for a constant C gives one to, which is what the paragraph
+above is about; a floating constant is the same sentence with no floating type
+in it. `SC0106` says the spelling is not a constant at all, and `clang` refuses
+each of those too. `0b101` is the row that shows why the fourth column is there:
+a binary constant is C23, `clang` takes it as an extension, and only
+`-pedantic-errors` answers for C17. RK-032 in the review knowledge bank is what
+that column exists for.
+
+A value beyond `INT_MAX` is reported as this compiler's gap rather than as a
+violation of 6.4.4 p2, although the two are the same sentence read against this
+implementation's type list. Blaming the program would be telling someone whose
+program `clang` compiles that they wrote it wrong, when what is missing is
+`long`. `int x = -2147483648;` is inside that: the constant is 2147483648 and
+the minus is an operator, so the smallest `int` cannot be written yet.
+
+Character constants (6.4.4.4) are not here, because the parser builds no
+expression for one: `crates/safec/src/parser.rs`'s `primary` reads a number and
+an identifier, and a character constant is refused as `expected an expression`.
+
 ### What the lowering refuses
 
 The frontend accepts these and `crates/safec/src/lowering.rs` cannot build IR
@@ -126,7 +176,6 @@ a declaration. They are gaps rather than decisions, and each one is a program
 |---|---|
 | `int a[3];`, or any array or function type | the IR holds `int`, `char`, `void` and pointers to them |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
-| `0x10`, `010`, `1u`, `1.5`, a constant too large to hold | the value is worked out here and only a plain decimal is read, which #76 moves into the frontend where the type of a constant is decided too |
 | `1 = 2` | C17 6.5.16 p2 wants a modifiable lvalue and nothing checks that yet, so the first thing to notice is a stage that needs somewhere to write |
 | a second definition of one name | C17 6.9 p5 allows one, and nothing before this stage counts them |
 

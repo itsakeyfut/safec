@@ -45,7 +45,13 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let mut ast = parse(file, &tokens, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
-    let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
+    let types = check(
+        &sources,
+        &mut ast,
+        &resolution,
+        target.int(),
+        &mut diagnostics,
+    );
     let unit = lower(
         &sources,
         &ast,
@@ -462,8 +468,14 @@ fn a_trap_points_at_what_stopped_it() {
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let mut ast = parse(file, &tokens, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
-    let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+    let types = check(
+        &sources,
+        &mut ast,
+        &resolution,
+        target.int(),
+        &mut diagnostics,
+    );
     let unit = lower(
         &sources,
         &ast,
@@ -502,8 +514,14 @@ fn a_trap_on_a_call_points_at_the_call() {
     let tokens = lex(file, sources.file(file), &mut diagnostics);
     let mut ast = parse(file, &tokens, &mut diagnostics);
     let resolution = resolve_names(&sources, &ast, &mut diagnostics);
-    let types = check(&sources, &mut ast, &resolution, &mut diagnostics);
     let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
+    let types = check(
+        &sources,
+        &mut ast,
+        &resolution,
+        target.int(),
+        &mut diagnostics,
+    );
     let unit = lower(
         &sources,
         &ast,
@@ -828,30 +846,6 @@ fn an_argument_is_converted_to_its_parameter_s_type() {
         ran_for("aarch64-unknown-linux-gnu", program),
         Ok(Value::Int(200)),
     );
-}
-
-/// A constant too large for any type converts rather than killing the run.
-///
-/// The frontend parses a decimal literal into an `i128` with no range check of
-/// its own, which `lowering.rs::constant` records, so a number near the top of
-/// the carrier reaches the conversion at an assignment. Before the conversion
-/// was written to fold first, that panicked with "attempt to subtract with
-/// overflow": the one answer a compiler must not give, on a `.c` file with
-/// nothing else unusual in it.
-///
-/// What it answers is not a claim about C. `2^127 - 1` has no type in C17
-/// 6.4.4.1 p5 at all, and `types.rs` knowingly calls every integer constant an
-/// `int`, which `docs/frontend.md` records. What is asserted here is that the
-/// run ends rather than dies.
-///
-/// Mutation: subtract `min` from the value before taking the remainder. This
-/// panics and the test fails.
-#[test]
-fn a_constant_at_the_top_of_the_carrier_does_not_kill_the_run() {
-    let huge =
-        ran("int main(void) { int x; x = 170141183460469231731687303715884105727; return x; }\n");
-
-    assert_eq!(huge, Ok(Value::Int(-1)), "the low 32 bits of all ones");
 }
 
 /// Negating the smallest `int` stops, because the result is not one.
