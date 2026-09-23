@@ -1,0 +1,64 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int **"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "void"
+  Local "_7" "void"
+  Block "bb0" entry
+    Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:4:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:4:14 generated
+    Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:5:16 written
+      Destination "_3"
+      Address
+        Place "_1"
+    Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:5:16 generated
+    Call a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:6:11 "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:6:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:6:5 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:6:5 generated
+    ArgumentsEvaluated a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:7:5 generated
+    Call a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:7:5 "free" "bb2"
+      Destination "_6"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:7:5 generated
+    ArgumentsEvaluated a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 generated
+    Call a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 "free" "bb3"
+      Destination "_7"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 generated
+    Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:9:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:9:12 generated
+    Return

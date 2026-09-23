@@ -212,14 +212,20 @@ impl Nullability<'_> {
     /// says anything about a pointer. Without this, the temporary a `&&`
     /// computes into would be refined as though it were the pointer under it.
     ///
-    /// **Nothing holds this and it is worth saying so.** Measured: making it
-    /// answer `true` for everything leaves the whole workspace green. What it
-    /// prevents is a non-pointer local being given a nullness, and a
-    /// non-pointer local is never dereferenced in well-formed IR, so no report
-    /// moves. A test for it could not fail, which is worse than none. It stays
-    /// because a value whose states are about pointers should not be written
-    /// about things that are not pointers, and because the day this lattice
-    /// keys on something a `Ty` can distinguish, the rule will already be here.
+    /// **Something holds this now, and it did not used to.** For the branch this
+    /// is written beside, nothing does: making it answer `true` for everything
+    /// left the whole workspace green, because what it prevents there is a
+    /// non-pointer local being given a nullness and a non-pointer local is
+    /// never dereferenced in well-formed IR, so no report moved. It stayed on
+    /// the ground that a value whose states are about pointers should not be
+    /// written about things that are not pointers.
+    ///
+    /// [`null_at_terminators`] is the caller that made that ground
+    /// load-bearing: a nullness the memory check reads decides whether a `free`
+    /// is reported at all, so an `int` holding zero being called null is a
+    /// diagnostic that disappears. Mutation: drop the call there.
+    /// `a_free_of_an_int_that_holds_zero_is_not_exempt` fails, and nothing else
+    /// in the suite moves.
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
@@ -671,6 +677,177 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     findings.dedup_by(|later, earlier| later.at == earlier.at);
 
     findings
+}
+
+/// Which locals this check established are null where each block's terminator
+/// runs.
+///
+/// Indexed by [`BlockId::index`], a row of one `bool` per local. A block no
+/// execution reaches holds a row of `false`, which says nothing was established
+/// about those locals rather than that something was.
+///
+/// **Nothing in this module reads it.** [`crate::memory`] does, to exempt a
+/// free of a pointer this check established is null, which C17 7.22.3.3 p2
+/// makes a call that does nothing. ADR-0027 is that rule, and three of the four
+/// conditions it names for an implementation are held here:
+///
+/// - the answer is read through [`Nullability::known`], so a local whose
+///   address escaped answers nothing at all. A raw read of the value would
+///   exempt a free of a pointer a store this check cannot follow has since
+///   replaced, which is a double free reported by nobody;
+/// - it is recorded where the terminator runs rather than where the block
+///   starts. `int *p = 0; free(q); p = q; free(p);` is established null at the
+///   entry of the block that frees `p` and is not null where the free runs, and
+///   answering with the entry silences a proved double free;
+/// - it is recorded only where C has ordered the block's writes before the
+///   terminator that reads them, which the body says more about. This lattice
+///   has no notion of order and says so, and the check that reads this answer
+///   is built on one.
+///
+/// The fourth is the caller's and is held by what this does not return: there
+/// is no answer here for a point inside a block, so nothing can reach the
+/// transfer with it.
+///
+/// **The replay lives here rather than in the module that asks**, so that there
+/// is one walk over this lattice. A second copy of "run the elements, then ask"
+/// would agree today and stop agreeing the day [`Analysis::element`] learns
+/// something new, with nothing failing when it does.
+pub(crate) fn null_at_terminators(
+    unit: &TranslationUnit,
+    function: &Function,
+    cfg: &Cfg,
+) -> NullAtTerminators {
+    let analysis = Nullability {
+        unit,
+        locals: function.locals().len(),
+        escaped: escaped_in(function),
+    };
+    let solution = solve(&analysis, function, cfg);
+
+    let mut null = vec![vec![false; function.locals().len()]; function.blocks().len()];
+
+    for &id in cfg.order() {
+        // What a `None` says is that no execution reaches this block, and the
+        // row of `false` it keeps says nothing was established there, which is
+        // the answer that exempts nothing. Nothing holds that and nothing can:
+        // the caller walks the reachable blocks, so a row filled with `true`
+        // here changes no program. It is the answer that is right about a
+        // block rather than the answer that is convenient.
+        let Some(mut known) = solution.value(id).cloned() else {
+            continue;
+        };
+
+        let block = function.block(id);
+        for element in &block.elements {
+            analysis.element(function, element, &mut known);
+        }
+
+        // **C has to have ordered what this row rests on before the terminator
+        // that reads it**, which is ADR-0027's fourth condition and is where
+        // the program that needs it is written out. The replay above is what
+        // makes it necessary: it walks every element of the block without
+        // asking whether C put any of them before the call at the end.
+        //
+        // [`Element::ArgumentsEvaluated`] is the answer already in the IR.
+        // ADR-0026 emits it only where no unsequenced operator encloses the
+        // call, so this is the same test as the lowering's `at_root`, and that
+        // is why it is **sufficient** rather than merely suggestive: `at_root`
+        // holds only when every ancestor of the call sequences its operands, so
+        // everything before the call in this block is ordered before it, and a
+        // later sibling cannot be in this block because ADR-0010 makes the call
+        // end it.
+        //
+        // **The block's last element, because the rule is about this
+        // terminator.** A call ends its block, so a block holds at most one
+        // call and the marker for it is always last; measured over the corpus,
+        // every occurrence is immediately followed by its `Call`. Searching the
+        // whole block would answer the same on every program this compiler can
+        // build, so nothing holds the difference and nothing can. How many
+        // occurrences there are is not written here, for RK-028's reason.
+        //
+        // **A block with no elements is not ordered either**, which is the
+        // `None` this answers `false` for and is reached by a program rather
+        // than by tidiness: a call ends a block, so an ordinary call between
+        // the two unsequenced operands leaves the free at the terminator of an
+        // empty one.
+        // `a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` is
+        // that program, and adding `| None` here leaves it silent about a
+        // double free and fails nothing else.
+        //
+        // **Accepting [`Element::Sequenced`] here as well is held by nothing.**
+        // Measured: it leaves the whole workspace green, because a block whose
+        // last element is that marker and whose terminator is a call is a
+        // shape no program here builds. It is refused anyway, because the
+        // markers conclude different things and ADR-0026 is where the
+        // difference is written.
+        //
+        // **This zeroes the whole row rather than one local**, so a null
+        // established in an earlier, properly ordered statement is refused the
+        // exemption along with everything else in a block whose call is not at
+        // the root. That is a false positive on well-defined C and ADR-0027's
+        // Consequences carry the programs.
+        let ordered = matches!(
+            block.elements.last(),
+            Some(Element::ArgumentsEvaluated { .. })
+        );
+
+        // Before the terminator's own transfer, which is the position
+        // [`findings`] reports from and the position the free is reached at.
+        //
+        // **A local that does not hold a pointer is never established null
+        // here, whatever the lattice says about it.** [`Nullability::nullness_of`]
+        // answers [`Nullness::Null`] for a constant zero without asking what it
+        // is being assigned to, which costs nothing where the answer is only
+        // read about a dereference and costs a diagnostic here: `int x = 0;
+        // free(x);` was reported as a pointer this check stopped following and
+        // went silent when the exemption started reading these rows. C17
+        // 6.3.2.3 p3 makes a null pointer constant an *integer constant
+        // expression* converted to a pointer type, and an `int` lvalue holding
+        // zero is neither, so nothing about that program is the clause the
+        // exemption rests on.
+        for local in function.locals() {
+            null[id.index()][local.index()] = ordered
+                && analysis.is_pointer(function, local)
+                && analysis.known(&known, local) == Nullness::Null;
+        }
+    }
+
+    NullAtTerminators { rows: null }
+}
+
+/// What [`null_at_terminators`] answered, keyed by the two things it is about.
+///
+/// **A named type rather than the `Vec<Vec<bool>>` it holds**, because the
+/// consumer is a rule that can go quiet. `docs/roadmap.md` queues three more
+/// analyses against this framework and each will want to hand a settled fact to
+/// a sibling the same way, so a reader of `memory::reported` would soon be
+/// given several `&[bool]` that no type tells apart: measured, adding a second
+/// one and passing the two in the wrong order builds with no warning at all,
+/// and what fails is a named test rather than the compiler. `CLAUDE.md` ranks
+/// those the other way round, and this is the row the exemption belongs on.
+///
+/// Both axes are named for the same reason. A bare row is indexed by a local,
+/// a bare table by a block, and `null[block.index()]` and `null[local.index()]`
+/// are both `usize`: the wrong one is a panic where the lengths differ and a
+/// silent wrong exemption where they do not.
+pub(crate) struct NullAtTerminators {
+    /// One row per block, one `bool` per local, both in the order the function
+    /// hands its ids out.
+    rows: Vec<Vec<bool>>,
+}
+
+impl NullAtTerminators {
+    /// Whether this check established that `local` is null where `block`'s
+    /// terminator runs.
+    ///
+    /// # Panics
+    ///
+    /// If either id belongs to a different function than the one this was built
+    /// for, which is the only way to be out of range and is a caller's mistake
+    /// rather than an input's.
+    pub(crate) fn established(&self, block: BlockId, local: LocalId) -> bool {
+        self.rows[block.index()][local.index()]
+    }
 }
 
 /// How much a conclusion outranks another where both stand at one caret.

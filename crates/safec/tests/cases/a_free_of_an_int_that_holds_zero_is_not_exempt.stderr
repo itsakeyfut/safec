@@ -1,7 +1,7 @@
 error[SC0401]: this frees a pointer this check stopped following
-   ╭─[ a_pointer_set_to_nothing_after_a_free_holds_nothing.c:7:5 ]
+   ╭─[ a_free_of_an_int_that_holds_zero_is_not_exempt.c:4:5 ]
    │
- 7 │     free(p);
+ 4 │     free(x);
    │     ───┬───  
    │        ╰───── this check cannot say what this points at
 ───╯

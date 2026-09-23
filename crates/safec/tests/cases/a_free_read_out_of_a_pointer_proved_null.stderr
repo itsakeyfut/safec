@@ -1,0 +1,19 @@
+error[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_free_read_out_of_a_pointer_proved_null.c:4:5 ]
+   │
+ 4 │     free(*pp);
+   │     ────┬────  
+   │         ╰────── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_free_read_out_of_a_pointer_proved_null.c:4:5 ]
+   │
+ 4 │     free(*pp);
+   │     ────┬────  
+   │         ╰────── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

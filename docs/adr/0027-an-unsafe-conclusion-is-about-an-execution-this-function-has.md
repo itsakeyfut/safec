@@ -55,11 +55,9 @@ A pointer the analysis established *is* null is the one thing that removes a fre
 from the question, because then no execution frees anything. That is the rule
 `Allocations::touching` already applies to `free(0)` with this clause quoted,
 and extending it to a local the nullability analysis proved null is the seam
-#188 builds. That arm is wider than the clause and says so: it skips every
+#188 built. That arm is wider than the clause and says so: it skips every
 constant, `free(17)` included, which is #154's to answer rather than this
-rule's, so what #188 extends is the principle here and not that arm's reach.
-Until #188 lands, such a free is reported as a pointer this check stopped
-following, which is #188's subject and not this record's.
+rule's, so what #188 extended is the principle here and not that arm's reach.
 
 The second option was rejected on a measurement rather than on taste: because a
 `malloc` result is `Nullness::Unknown`, it turns `a_value_freed_twice` into a
@@ -81,8 +79,10 @@ it lands on `CLAUDE.md`'s list.** Everything else here only refuses to weaken a
 proof, which leaves a false positive on row 4. A free that is exempted is
 reported by nobody, so a `Nullness::Null` this compiler is wrong about is a
 real double free nothing says anything about, which is row 6. Three things
-keep it off that row and an implementation of the seam has to hold all three,
-which is why they are written here rather than left to be rediscovered:
+keep it off that row and an implementation of the seam has to hold all four,
+which is why they are written here rather than left to be rediscovered. The
+fourth was not here when the seam was first built, and an implementation
+holding the other three is what found it:
 
 * the nullness is read through the mask that answers `Unknown` for a local
   whose address escaped, which is `Nullability::known` and ADR-0017's shape on
@@ -91,6 +91,17 @@ which is why they are written here rather than left to be rediscovered:
   `int *p = 0; p = q; free(p); free(p);` is null at one of those points and not
   the other. Neither `Allocations::touching` nor `Analysis::terminator` is
   given a position today, so this is work rather than a lookup;
+* the nullness is one C has ordered before the free. This lattice has no notion
+  of order and says so, while the check that reads its answer is built on one:
+  ADR-0022 and ADR-0023 exist because the lowering's order inside a full
+  expression is not C's. `int x = (p = 0, 1) + (free(p), 0);` writes the null in
+  an operand C leaves unsequenced against the free's read of the same pointer,
+  which C17 6.5 p2 makes undefined outright rather than undefined on one of the
+  orders; exempting it is this compiler going silent about a program C does not
+  define. What says whether C ordered it is `Element::ArgumentsEvaluated`, which
+  ADR-0026 emits only where no unsequenced operator encloses the call. **What
+  that marker answers is narrower than the condition**, and the Consequences say
+  what the difference costs;
 * the exemption skips the report, rather than clearing the local's sites. A
   cleared local reaches no site, and reaching no site is how this check spells
   having lost a pointer, which is a warning about the wrong thing.
@@ -113,10 +124,63 @@ rule that reads call sites, which is interprocedural and exists in no phase of
 anybody who narrows this rule has to rewrite an expectation whose name states
 what is being given up, and finds this record from there.
 
-The first option is held by nothing today, because nothing in
-`crates/safec-ir/src/memory.rs` reads `crates/safec-ir/src/nullability.rs`: the
-seam does not exist yet. #188 is where it is built, and the case that will hold
-this half is the one that issue names.
+**The exemption is held by three corpus cases**, one per condition above, and
+each of them is exit 1 becoming exit 0 under its own mutation, which is the
+direction that matters. `a_free_of_a_pointer_proved_null` is the rule itself:
+dropping the filter in `memory.rs::reported` puts `this frees a pointer this
+check stopped following` back on a program C defines, and fails it along with
+`a_pointer_set_to_nothing_after_a_free_holds_nothing` and
+`a_local_given_nothing_forgets_the_set_it_freed`, which are the two spellings
+of `free(p); p = 0; free(p);` the corpus keeps.
+`a_pointer_proved_null_before_its_address_escaped_is_not_exempt` holds the
+mask: reading the lattice rather than `Nullability::known` in
+`nullability.rs::null_at_terminators` exempts both frees of a local a store
+this check cannot follow has given an allocation, and that case goes silent.
+`a_pointer_that_stopped_being_null_before_the_free_is_not_exempt` holds the
+position: recording the row before a block's elements rather than after exempts
+a **proved** double free, and that case goes silent too. The position mutation
+is not discriminating: it takes the three exemption cases down with it, because
+a row read before the block's elements is not the row any of them needs either.
+The mask mutation is the one that fails a single case.
+
+A fourth case holds something the three conditions above do not say and an
+implementation has to know anyway: the nullness is about a pointer.
+`Nullability::nullness_of` calls a constant zero null without asking what it is
+assigned to, which costs nothing where the answer is read about a dereference
+and costs a diagnostic when it is read to exempt a free, so `int x = 0;
+free(x);` went silent. `a_free_of_an_int_that_holds_zero_is_not_exempt` is the
+case, and dropping the `is_pointer` call in `nullability.rs::null_at_terminators`
+is the mutation that fails it. C17 6.3.2.3 p3 is why: a null pointer constant is
+an integer constant expression converted to a pointer type, and an `int` lvalue
+holding zero is neither.
+
+`a_free_in_an_unsequenced_operand_is_not_exempt` and
+`a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` hold the order,
+and it takes both: dropping the `ordered` term in `null_at_terminators` fails
+the two of them together, because the first reaches the term through a block
+whose last element is an ordinary operation and the second through a block with
+no elements at all, which a call between the two operands produces. The
+narrower mutation, answering `true` for that empty block, fails the second
+alone.
+
+**Every row of this table was re-measured after that term was added**, because
+narrowing a rule makes a table that was true before it false in silence. All of
+them still fail what they name, and no row was found to have stopped reaching
+what it is about.
+
+**No row here says how many tests it breaks, and that is deliberate.** RK-028
+in the review knowledge bank is a count of exactly this kind: it is a fact about
+a suite that grows every week, and this record carried one for a fortnight
+before three separate measurements of the same mutation answered 22, 23 and 24.
+A row names the case it is about, and where a mutation takes neighbours down
+with it the row says which neighbours and why, which is the part a later reader
+can check.
+
+The report-not-the-transfer condition is held by where the exemption is called
+from rather than by a case. `memory.rs::asked` is reached only from the walk that reports;
+`Analysis::terminator` has no access to the nullness, so a free of a pointer
+established null still marks its sites freed and still leaves the local holding
+them. What that costs is in the Consequences below.
 
 ### Consequences
 
@@ -127,6 +191,34 @@ this half is the one that issue names.
 * Bad, because `safec` rejects a program that is well defined as written, and a
   reader who checks the whole translation unit can see that the only caller
   passes a null pointer.
+* Bad, because the exemption is applied to the report and not to the transfer,
+  so a free of a pointer established null still marks the sites it reaches
+  freed. On the arm of `if (p == 0)` that freed nothing, the sites are freed
+  all the same, and a later use of one of them is reported. That is a false
+  positive on row 4, taken deliberately: the alternative is a transfer that
+  believes a nullness, and a nullness this compiler is wrong about would then
+  be a real free nobody recorded, which is the bottom row.
+* Bad, for the same reason, in the other reader of what a call frees.
+  `memory.rs::used_before` carries a read forwards to a `free` it is unordered
+  against and asks `Allocations::touching` without the filter, so such a read
+  is reported unsequenced against a free that does nothing. It takes a branch
+  that establishes the null to reach at all, and it is row 4 again. #219 is
+  where that is written down.
+* Bad, because the marker the fourth condition reads answers a narrower question
+  than the condition states. `Element::ArgumentsEvaluated` is emitted where no
+  unsequenced operator encloses the *call*, so the exemption reaches a free at
+  the root of its full expression and no other, whatever C has ordered. A null
+  established in an earlier full expression, which C17 6.8 p4 sequences
+  unconditionally, buys nothing if the free sits under an unsequenced operator:
+  `p = 0; y = (free(p), 0);` and `p = 0; y = g(0) + (free(p), 0);` are both well
+  defined, are exit 0 under `clang -target x86_64-pc-windows-msvc -std=c17
+  -pedantic-errors -Wall -fsyntax-only`, and are `error[SC0401]` here. So is
+  `int x = (p = 0, free(p), 1) + 2;`, where a comma has ordered the assignment
+  before the free inside the operand and the enclosing `+` is what removes the
+  marker. All three are row 4. Asking the question per local, rather than
+  zeroing the row for the block, would close the class and needs the ordering to
+  cross a block edge, which is a lattice dimension; no program in the corpus
+  asks for it.
 * What would reverse this: an interprocedural phase that can say what a function
   is called with. At that point a parameter stops ranging over every value and
   the quantifier this record fixes is the wrong one, and the case named above is
@@ -173,5 +265,5 @@ this half is the one that issue names.
 * [ADR-0020](./0020-a-free-of-a-may-set-is-a-fact-about-the-set.md), which is the
   other rule about when a free is a proof, and answers a different question: what
   a set of sites says, rather than what an execution is.
-* Issues #137, where the measurements above were made, and #188, which builds the
+* Issues #137, where the measurements above were made, and #188, which built the
   seam this record's exemption is applied through.

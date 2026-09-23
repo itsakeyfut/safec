@@ -104,32 +104,40 @@ happened. The code does not change: the reader who greps `SC0401` is looking
 for everything this check said about freeing, and where it gave up is part of
 that.
 
-**What that third one currently swallows is a null this check could have
+**What that third one no longer swallows is a null this check could have
 proved.** C17 7.22.3.3 p2 defines `free` of a null pointer as doing nothing, so
 these two programs are the same program:
 
 ```c
+void free(void *p);
+
 int f(void)  { free(0); return 0; }
 int g(void)  { int *p = 0; free(p); return 0; }
 ```
 
-`clang` accepts both. This compiler is silent about the first and says `this
-frees a pointer this check stopped following` about the second, which is an
-error wherever a check runs. The difference is that a constant argument is
-recognised where it is written and a local that was given one reaches no site,
-and reaching no site is how this check spells having lost a pointer. So a
-pointer proved null and a pointer never followed arrive at the same place with
+`clang` accepts both, and so does this compiler. The declaration is part of the
+program rather than decoration: without it C17 6.5.2.2 has no prototype to
+check the call against, and both compilers refuse the file before either of
+them has an opinion about the free. It used to be silent about the
+first and to say `this frees a pointer this check stopped following` about the
+second, an error wherever a check runs, because a constant argument is
+recognised where it is written while a local that was given one reaches no
+site, and reaching no site is how this check spells having lost a pointer. A
+pointer proved null and a pointer never followed arrived at the same place with
 nothing to tell them apart.
 
-That is a false positive rather than a silence, so it is the cheaper of the two
-failures. It used to be opt-in as well, because promotion was: since
-[ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md)
-it fails the build unless the run asked for `--allow-unknown`, which is what
-raises the price of every unproven conclusion and makes
-[#133](https://github.com/itsakeyfut/safec/issues/133) worth more than it was.
-Closing it needs the analysis to know that a local holds a null rather than
-nothing, which is that issue's work and not something a rule about spans can
-do.
+What tells them apart is the nullability check: a free whose argument that
+check established is null is left out of the report, and nothing weaker exempts
+one. Both halves of that are
+[ADR-0027](adr/0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md),
+which is also where the conditions the exemption rests on are written down,
+because an exemption is the half of a rule that can go quiet.
+
+**What still gets those words is a pointer that really was lost**, and that is
+what the third reason is for: `free(*pp)` names a place this check follows
+locals rather than the targets of, and a local whose address escaped is
+answered the same way however plainly the program reads. Neither is a null this
+compiler established, and neither is exempt.
 
 **What `SC0402` not being emitted does not mean.** The check follows a pointer
 through a copy, through pointer arithmetic and into a controlling expression,
