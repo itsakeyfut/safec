@@ -394,6 +394,14 @@ cases! {
     // double free this check watched, which is the bottom row of `CLAUDE.md`'s
     // list, and fails this case.
     a_free_in_an_unsequenced_operand_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same defect where the block holding the free has no elements at all.
+    // A call ends a block, so the `g(0)` between the two operands puts the
+    // write in one block and the free at the terminator of the next, and that
+    // block carries neither a marker nor anything else. The rule reads
+    // `elements.last()`, so this is the `None` arm, and it is the only case
+    // that reaches it: treating `None` as ordered leaves this program silent
+    // about the double free and fails nothing else.
+    a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

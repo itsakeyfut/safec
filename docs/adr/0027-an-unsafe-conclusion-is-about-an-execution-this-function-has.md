@@ -155,7 +155,10 @@ holding zero is neither.
 `a_free_in_an_unsequenced_operand_is_not_exempt` holds the order: dropping the
 `ordered` term in `null_at_terminators` exempts a free C has not ordered the
 assignment before, and that case goes from exit 1 to exit 0 with nothing
-printed. **Every row of this table was re-measured after that term was added**,
+printed. `a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` holds
+the half of that term the first case cannot reach, a block with no elements at
+all, which a call between the two operands produces; answering `true` for it
+fails that case and nothing else. **Every row of this table was re-measured after that term was added**,
 because narrowing a rule makes a table that was true before it false in silence,
 and all of them still fail what they name: the `made.is_some()` option fails 23
 cases, the filter fails three, the position fails four, and the mask, the

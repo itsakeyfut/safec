@@ -760,6 +760,22 @@ pub(crate) fn null_at_terminators(
         // would answer the same on every program this compiler can build, so
         // nothing holds the difference and nothing can; it is written this way
         // because that is what the rule says.
+        //
+        // **A block with no elements is not ordered either**, which is the
+        // `None` this `matches!` answers `false` for and is reached by a
+        // program rather than by tidiness: a call ends a block, so
+        // `(p = 0, 1) + (g(0) + (free(p), 0))` puts the write in one block and
+        // the free at the terminator of an empty one.
+        // `a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` is
+        // that program, and adding `| None` here leaves it silent about a
+        // double free and fails nothing else.
+        //
+        // **Accepting [`Element::Sequenced`] here as well is held by nothing.**
+        // Measured: it leaves the whole workspace green, because a block whose
+        // last element is that marker and whose terminator is a call is a
+        // shape no program here builds. It is refused anyway, because the
+        // markers conclude different things and ADR-0026 is where the
+        // difference is written.
         let ordered = matches!(
             block.elements.last(),
             Some(Element::ArgumentsEvaluated { .. })
