@@ -125,8 +125,11 @@ mask: reading the lattice rather than `Nullability::known` in
 this check cannot follow has given an allocation, and that case goes silent.
 `a_pointer_that_stopped_being_null_before_the_free_is_not_exempt` holds the
 position: recording the row before a block's elements rather than after exempts
-a **proved** double free, and that case goes silent too. Measured, each of the
-last two fails on its own mutation and the other keeps reporting.
+a **proved** double free, and that case goes silent too. Measured, each of the last
+two fails on its own mutation and the other keeps reporting. The position
+mutation is the one that is not discriminating: it takes the three exemption
+cases down with it, because a row read before the block's elements is not the
+row any of them needs either. Only the mask mutation fails one case alone.
 
 A fourth case holds something the three conditions above do not say and an
 implementation has to know anyway: the nullness is about a pointer.

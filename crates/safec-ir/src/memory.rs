@@ -38,10 +38,10 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
+    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
     TranslationUnit, Ty,
 };
-use crate::nullability;
+use crate::nullability::{self, NullAtTerminators};
 use crate::source::{SourceMap, Span};
 
 /// What this check can read in a callee's name.
@@ -1037,8 +1037,8 @@ impl Allocations<'_> {
     /// **What they may disagree about is which arguments are handed here**, and
     /// exactly one thing does it: `asked` leaves out a pointer the nullability
     /// check established is null, because C says such a call does nothing, and
-    /// only the walk that reports asks that. See ADR-0027, and `reported` for
-    /// why the transfer is deliberately not told.
+    /// only the walk that reports asks that. See ADR-0027, and `asked` for why
+    /// the transfer is deliberately not told.
     fn touching<'o>(
         arguments: impl IntoIterator<Item = &'o Operand>,
         known: &Known,
@@ -2037,8 +2037,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 dereferenced_in_terminator(&block.terminator),
                 &known,
             );
-            if let Some(finding) = reported(&analysis, &block.terminator, &known, &null[id.index()])
-            {
+            if let Some(finding) = reported(&analysis, &block.terminator, &known, &null, id) {
                 findings.push(finding);
             }
             // After the free's own finding, which is the one whose caret is
@@ -2262,7 +2261,8 @@ fn reported(
     analysis: &Allocations<'_>,
     terminator: &Terminator,
     known: &Known,
-    null: &[bool],
+    null: &NullAtTerminators,
+    block: BlockId,
 ) -> Option<Finding> {
     let Terminator::Call {
         callee,
@@ -2281,7 +2281,7 @@ fn reported(
 
     let verdict = verdict(
         Kind::DoubleFree,
-        Allocations::touching(asked(arguments, null), known),
+        Allocations::touching(asked(arguments, null, block), known),
         known,
     )?;
 
@@ -2320,10 +2320,14 @@ fn reported(
 /// lost, which is silence, and that is the right answer to a call C says does
 /// nothing. What is lost still arrives as a `Reached::Lost` from the arguments
 /// that were asked about.
-fn asked<'o>(arguments: &'o [Operand], null: &'o [bool]) -> impl Iterator<Item = &'o Operand> + 'o {
+fn asked<'o>(
+    arguments: &'o [Operand],
+    null: &'o NullAtTerminators,
+    block: BlockId,
+) -> impl Iterator<Item = &'o Operand> + 'o {
     arguments
         .iter()
-        .filter(move |argument| !established_null(argument, null))
+        .filter(move |argument| !established_null(argument, null, block))
 }
 
 /// Whether this argument is a pointer this compiler established is null where
@@ -2342,9 +2346,9 @@ fn asked<'o>(arguments: &'o [Operand], null: &'o [bool]) -> impl Iterator<Item =
 /// and cannot be**: answering `true` for a constant changes no program,
 /// because `touching` has already skipped every one of them before this is
 /// asked. It is written out so the arm says which rule owns it.
-fn established_null(argument: &Operand, null: &[bool]) -> bool {
+fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId) -> bool {
     match argument {
-        Operand::Copy(place) if place.projection.is_empty() => null[place.local.index()],
+        Operand::Copy(place) if place.projection.is_empty() => null.established(block, place.local),
         Operand::Copy(_) | Operand::Constant(_) => false,
     }
 }

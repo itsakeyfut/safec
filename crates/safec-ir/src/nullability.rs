@@ -712,7 +712,7 @@ pub(crate) fn null_at_terminators(
     unit: &TranslationUnit,
     function: &Function,
     cfg: &Cfg,
-) -> Vec<Vec<bool>> {
+) -> NullAtTerminators {
     let analysis = Nullability {
         unit,
         locals: function.locals().len(),
@@ -758,7 +758,42 @@ pub(crate) fn null_at_terminators(
         }
     }
 
-    null
+    NullAtTerminators { rows: null }
+}
+
+/// What [`null_at_terminators`] answered, keyed by the two things it is about.
+///
+/// **A named type rather than the `Vec<Vec<bool>>` it holds**, because the
+/// consumer is a rule that can go quiet. `docs/roadmap.md` queues three more
+/// analyses against this framework and each will want to hand a settled fact to
+/// a sibling the same way, so a reader of `memory::reported` would soon be
+/// given several `&[bool]` that no type tells apart: measured, adding a second
+/// one and passing the two in the wrong order builds with no warning at all,
+/// and what fails is a named test rather than the compiler. `CLAUDE.md` ranks
+/// those the other way round, and this is the row the exemption belongs on.
+///
+/// Both axes are named for the same reason. A bare row is indexed by a local,
+/// a bare table by a block, and `null[block.index()]` and `null[local.index()]`
+/// are both `usize`: the wrong one is a panic where the lengths differ and a
+/// silent wrong exemption where they do not.
+pub(crate) struct NullAtTerminators {
+    /// One row per block, one `bool` per local, both in the order the function
+    /// hands its ids out.
+    rows: Vec<Vec<bool>>,
+}
+
+impl NullAtTerminators {
+    /// Whether this check established that `local` is null where `block`'s
+    /// terminator runs.
+    ///
+    /// # Panics
+    ///
+    /// If either id belongs to a different function than the one this was built
+    /// for, which is the only way to be out of range and is a caller's mistake
+    /// rather than an input's.
+    pub(crate) fn established(&self, block: BlockId, local: LocalId) -> bool {
+        self.rows[block.index()][local.index()]
+    }
 }
 
 /// How much a conclusion outranks another where both stand at one caret.
