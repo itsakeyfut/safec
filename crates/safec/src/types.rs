@@ -1017,22 +1017,34 @@ mod tests {
 
     /// A value outside `int` is reported rather than wrapped, C17 6.4.4 p2.
     ///
-    /// All three are constants `clang 20.1.6 -std=c17 -pedantic-errors
+    /// The first two are constants `clang 20.1.6 -std=c17 -pedantic-errors
     /// --target=x86_64-pc-windows-msvc` accepts, which is why the message
     /// blames this compiler rather than the program: what is missing is
     /// `long`, not a well-formed constant. `docs/frontend.md` carries the
     /// divergence.
     ///
+    /// **The fourth is `u128::MAX` written out, and it is here for one line.**
+    /// `read` can return it, and a `u128` that large converted with `as`
+    /// rather than asked whether it fits an `i128` is -1, which `int` holds.
+    /// So the constant would be accepted, silently, as minus one: the same
+    /// shape as `010` lowering to ten, which is a plausible wrong number
+    /// rather than a refusal. Nothing else in the suite reaches that line,
+    /// because every other oversized spelling overflows the accumulation
+    /// first and is `Read::TooLarge` before any conversion happens.
+    ///
     /// Mutation: answer `true` from `Integer::holds`. The first two are
     /// accepted with a value `int` does not hold and this fails. Mutation:
     /// answer zero rather than `Read::TooLarge` on an overflow. The forty
-    /// nines become zero, nothing is reported, and this fails.
+    /// nines become zero, nothing is reported, and this fails. Mutation:
+    /// replace `i128::try_from(value).ok()` with `Some(value as i128)`. The
+    /// fourth becomes `Constant -1` with nothing reported and this fails.
     #[test]
     fn a_constant_no_type_here_can_hold_is_reported_and_has_no_value() {
         for spelling in [
             "2147483648",
             "4294967295u",
             "9999999999999999999999999999999999999999",
+            "340282366920938463463374607431768211455",
         ] {
             let checked = returning(spelling);
             assert_eq!(
