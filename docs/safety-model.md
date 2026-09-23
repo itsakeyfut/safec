@@ -125,7 +125,12 @@ analysis established rather than one it could not rule out, so a pointer proved
 null is exempt and a pointer nothing is known about is not. That exemption
 reaches a free whose argument is written as a null pointer constant and a free
 of a local the nullability check established is null, which are the two
-spellings of one program. See
+spellings of one program. It is wider than the clause in one place and narrower
+in another, both on purpose: the constant arm skips every constant rather than
+only zero, so `free(17)` is exempt from this check and is a constraint
+violation for the frontend to refuse, which is #154; and a local that does not
+hold a pointer is never established null, so `int x = 0; free(x);` is reported
+rather than exempted. See
 [ADR-0027](adr/0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md).
 
 

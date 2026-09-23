@@ -374,6 +374,17 @@ cases! {
     // it with `pp`'s own nullness takes the `SC0401` off this case and leaves
     // the `SC0403` alone. Measured: dropping the `projection.is_empty()` guard
     // in `established_null` fails this case and nothing else in the suite.
+    // And the local the exemption may not call null at all, because it does
+    // not hold a pointer. `nullness_of` answers `Null` for a constant zero
+    // without asking what it is assigned to, which costs nothing where the
+    // answer is only read about a dereference; read to exempt a free, it took
+    // the `SC0401` off this program and left nothing in its place. C17 6.3.2.3
+    // p3 makes a null pointer constant an integer constant expression
+    // converted to a pointer type, and an `int` lvalue holding zero is
+    // neither. `clang` refuses this program under 6.5.2.2 p2, which this
+    // compiler does not do yet and #154 is about; until it does, what it
+    // should not do is go quiet.
+    a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_that_stopped_being_null_before_the_free_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

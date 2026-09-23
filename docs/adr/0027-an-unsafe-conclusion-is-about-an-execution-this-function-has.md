@@ -128,6 +128,17 @@ position: recording the row before a block's elements rather than after exempts
 a **proved** double free, and that case goes silent too. Measured, each of the
 last two fails on its own mutation and the other keeps reporting.
 
+A fourth case holds something the three conditions above do not say and an
+implementation has to know anyway: the nullness is about a pointer.
+`Nullability::nullness_of` calls a constant zero null without asking what it is
+assigned to, which costs nothing where the answer is read about a dereference
+and costs a diagnostic when it is read to exempt a free, so `int x = 0;
+free(x);` went silent. `a_free_of_an_int_that_holds_zero_is_not_exempt` is the
+case, and dropping the `is_pointer` call in `nullability.rs::null_at_terminators`
+is the mutation that fails it. C17 6.3.2.3 p3 is why: a null pointer constant is
+an integer constant expression converted to a pointer type, and an `int` lvalue
+holding zero is neither.
+
 The third condition is held by where the exemption is called from rather than
 by a case. `memory.rs::asked` is reached only from the walk that reports;
 `Analysis::terminator` has no access to the nullness, so a free of a pointer

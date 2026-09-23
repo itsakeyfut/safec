@@ -212,14 +212,20 @@ impl Nullability<'_> {
     /// says anything about a pointer. Without this, the temporary a `&&`
     /// computes into would be refined as though it were the pointer under it.
     ///
-    /// **Nothing holds this and it is worth saying so.** Measured: making it
-    /// answer `true` for everything leaves the whole workspace green. What it
-    /// prevents is a non-pointer local being given a nullness, and a
-    /// non-pointer local is never dereferenced in well-formed IR, so no report
-    /// moves. A test for it could not fail, which is worse than none. It stays
-    /// because a value whose states are about pointers should not be written
-    /// about things that are not pointers, and because the day this lattice
-    /// keys on something a `Ty` can distinguish, the rule will already be here.
+    /// **Something holds this now, and it did not used to.** For the branch this
+    /// is written beside, nothing does: making it answer `true` for everything
+    /// left the whole workspace green, because what it prevents there is a
+    /// non-pointer local being given a nullness and a non-pointer local is
+    /// never dereferenced in well-formed IR, so no report moved. It stayed on
+    /// the ground that a value whose states are about pointers should not be
+    /// written about things that are not pointers.
+    ///
+    /// [`null_at_terminators`] is the caller that made that ground
+    /// load-bearing: a nullness the memory check reads decides whether a `free`
+    /// is reported at all, so an `int` holding zero being called null is a
+    /// diagnostic that disappears. Mutation: drop the call there.
+    /// `a_free_of_an_int_that_holds_zero_is_not_exempt` fails, and nothing else
+    /// in the suite moves.
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         matches!(self.unit.ty(function.local(local)), Ty::Pointer(_))
     }
@@ -734,8 +740,21 @@ pub(crate) fn null_at_terminators(
 
         // Before the terminator's own transfer, which is the position
         // [`findings`] reports from and the position the free is reached at.
+        //
+        // **A local that does not hold a pointer is never established null
+        // here, whatever the lattice says about it.** [`Nullability::nullness_of`]
+        // answers [`Nullness::Null`] for a constant zero without asking what it
+        // is being assigned to, which costs nothing where the answer is only
+        // read about a dereference and costs a diagnostic here: `int x = 0;
+        // free(x);` was reported as a pointer this check stopped following and
+        // went silent when the exemption started reading these rows. C17
+        // 6.3.2.3 p3 makes a null pointer constant an *integer constant
+        // expression* converted to a pointer type, and an `int` lvalue holding
+        // zero is neither, so nothing about that program is the clause the
+        // exemption rests on.
         for local in function.locals() {
-            null[id.index()][local.index()] = analysis.known(&known, local) == Nullness::Null;
+            null[id.index()][local.index()] = analysis.is_pointer(function, local)
+                && analysis.known(&known, local) == Nullness::Null;
         }
     }
 

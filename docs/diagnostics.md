@@ -109,11 +109,16 @@ proved.** C17 7.22.3.3 p2 defines `free` of a null pointer as doing nothing, so
 these two programs are the same program:
 
 ```c
+void free(void *p);
+
 int f(void)  { free(0); return 0; }
 int g(void)  { int *p = 0; free(p); return 0; }
 ```
 
-`clang` accepts both, and so does this compiler. It used to be silent about the
+`clang` accepts both, and so does this compiler. The declaration is part of the
+program rather than decoration: without it C17 6.5.2.2 has no prototype to
+check the call against, and both compilers refuse the file before either of
+them has an opinion about the free. It used to be silent about the
 first and to say `this frees a pointer this check stopped following` about the
 second, an error wherever a check runs, because a constant argument is
 recognised where it is written while a local that was given one reaches no
