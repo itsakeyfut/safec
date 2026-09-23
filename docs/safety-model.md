@@ -130,9 +130,11 @@ in another, both on purpose: the constant arm skips every constant rather than
 only zero, so `free(17)` is exempt from this check and is a constraint
 violation for the frontend to refuse, which is #154; a local that does not hold
 a pointer is never established null, so `int x = 0; free(x);` is reported rather
-than exempted; and neither is a free C has not ordered the assignment before, so
-`int x = (p = 0, 1) + (free(p), 0);` is reported although `p` is null on one of
-the two orders C allows. See
+than exempted; and neither is a free that is not at the root of its full
+expression, so `int x = (p = 0, 1) + (free(p), 0);` is reported, and so is
+`int x = 1 + (free(p), 0);` after an earlier `p = 0;` although C defines it.
+The first of those two is undefined by C17 6.5 p2, not merely undefined on one
+of the orders, and the second is the false positive the rule costs. See
 [ADR-0027](adr/0027-an-unsafe-conclusion-is-about-an-execution-this-function-has.md).
 
 

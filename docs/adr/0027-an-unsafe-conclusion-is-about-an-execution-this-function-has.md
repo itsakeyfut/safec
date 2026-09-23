@@ -95,10 +95,13 @@ holding the other three is what found it:
   of order and says so, while the check that reads its answer is built on one:
   ADR-0022 and ADR-0023 exist because the lowering's order inside a full
   expression is not C's. `int x = (p = 0, 1) + (free(p), 0);` writes the null in
-  an operand C leaves unsequenced against the free, and exempting on it is a
-  double free reported by nobody. What says whether C ordered it is
-  `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no unsequenced
-  operator encloses the call;
+  an operand C leaves unsequenced against the free's read of the same pointer,
+  which C17 6.5 p2 makes undefined outright rather than undefined on one of the
+  orders; exempting it is this compiler going silent about a program C does not
+  define. What says whether C ordered it is `Element::ArgumentsEvaluated`, which
+  ADR-0026 emits only where no unsequenced operator encloses the call. **What
+  that marker answers is narrower than the condition**, and the Consequences say
+  what the difference costs;
 * the exemption skips the report, rather than clearing the local's sites. A
   cleared local reaches no site, and reaching no site is how this check spells
   having lost a pointer, which is a warning about the wrong thing.
@@ -135,11 +138,10 @@ mask: reading the lattice rather than `Nullability::known` in
 this check cannot follow has given an allocation, and that case goes silent.
 `a_pointer_that_stopped_being_null_before_the_free_is_not_exempt` holds the
 position: recording the row before a block's elements rather than after exempts
-a **proved** double free, and that case goes silent too. Measured, each of the last
-two fails on its own mutation and the other keeps reporting. The position
-mutation is the one that is not discriminating: it takes the three exemption
-cases down with it, because a row read before the block's elements is not the
-row any of them needs either. Only the mask mutation fails one case alone.
+a **proved** double free, and that case goes silent too. The position mutation
+is not discriminating: it takes the three exemption cases down with it, because
+a row read before the block's elements is not the row any of them needs either.
+The mask mutation is the one that fails a single case.
 
 A fourth case holds something the three conditions above do not say and an
 implementation has to know anyway: the nullness is about a pointer.
@@ -152,17 +154,27 @@ is the mutation that fails it. C17 6.3.2.3 p3 is why: a null pointer constant is
 an integer constant expression converted to a pointer type, and an `int` lvalue
 holding zero is neither.
 
-`a_free_in_an_unsequenced_operand_is_not_exempt` holds the order: dropping the
-`ordered` term in `null_at_terminators` exempts a free C has not ordered the
-assignment before, and that case goes from exit 1 to exit 0 with nothing
-printed. `a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` holds
-the half of that term the first case cannot reach, a block with no elements at
-all, which a call between the two operands produces; answering `true` for it
-fails that case and nothing else. **Every row of this table was re-measured after that term was added**,
-because narrowing a rule makes a table that was true before it false in silence,
-and all of them still fail what they name: the `made.is_some()` option fails 23
-cases, the filter fails three, the position fails four, and the mask, the
-pointer type, the projection and the order each fail one and only their own.
+`a_free_in_an_unsequenced_operand_is_not_exempt` and
+`a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` hold the order,
+and it takes both: dropping the `ordered` term in `null_at_terminators` fails
+the two of them together, because the first reaches the term through a block
+whose last element is an ordinary operation and the second through a block with
+no elements at all, which a call between the two operands produces. The
+narrower mutation, answering `true` for that empty block, fails the second
+alone.
+
+**Every row of this table was re-measured after that term was added**, because
+narrowing a rule makes a table that was true before it false in silence. All of
+them still fail what they name, and no row was found to have stopped reaching
+what it is about.
+
+**No row here says how many tests it breaks, and that is deliberate.** RK-028
+in the review knowledge bank is a count of exactly this kind: it is a fact about
+a suite that grows every week, and this record carried one for a fortnight
+before three separate measurements of the same mutation answered 22, 23 and 24.
+A row names the case it is about, and where a mutation takes neighbours down
+with it the row says which neighbours and why, which is the part a later reader
+can check.
 
 The report-not-the-transfer condition is held by where the exemption is called
 from rather than by a case. `memory.rs::asked` is reached only from the walk that reports;
@@ -192,6 +204,21 @@ them. What that costs is in the Consequences below.
   is reported unsequenced against a free that does nothing. It takes a branch
   that establishes the null to reach at all, and it is row 4 again. #219 is
   where that is written down.
+* Bad, because the marker the fourth condition reads answers a narrower question
+  than the condition states. `Element::ArgumentsEvaluated` is emitted where no
+  unsequenced operator encloses the *call*, so the exemption reaches a free at
+  the root of its full expression and no other, whatever C has ordered. A null
+  established in an earlier full expression, which C17 6.8 p4 sequences
+  unconditionally, buys nothing if the free sits under an unsequenced operator:
+  `p = 0; y = (free(p), 0);` and `p = 0; y = g(0) + (free(p), 0);` are both well
+  defined, are exit 0 under `clang -target x86_64-pc-windows-msvc -std=c17
+  -pedantic-errors -Wall -fsyntax-only`, and are `error[SC0401]` here. So is
+  `int x = (p = 0, free(p), 1) + 2;`, where a comma has ordered the assignment
+  before the free inside the operand and the enclosing `+` is what removes the
+  marker. All three are row 4. Asking the question per local, rather than
+  zeroing the row for the block, would close the class and needs the ordering to
+  cross a block edge, which is a lattice dimension; no program in the corpus
+  asks for it.
 * What would reverse this: an interprocedural phase that can say what a function
   is called with. At that point a parameter stops ranging over every value and
   the quantifier this record fixes is the wrong one, and the case named above is

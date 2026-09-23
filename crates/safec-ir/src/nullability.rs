@@ -743,29 +743,33 @@ pub(crate) fn null_at_terminators(
         }
 
         // **C has to have ordered what this row rests on before the terminator
-        // that reads it.** [`Element::ArgumentsEvaluated`] is emitted where no
-        // unsequenced operator encloses the call, which is ADR-0026, so its
-        // absence says this call sits under an operator C has not ordered and
-        // the replay below walked past writes that may run after the call
-        // rather than before it. Without this, `int x = (p = 0, 1) + (free(p),
-        // 0);` exempts a free of a pointer the same full expression may not yet
-        // have set to null, and the free above it is a double free reported by
-        // nobody.
+        // that reads it**, which is ADR-0027's fourth condition and is where
+        // the program that needs it is written out. The replay above is what
+        // makes it necessary: it walks every element of the block without
+        // asking whether C put any of them before the call at the end.
+        //
+        // [`Element::ArgumentsEvaluated`] is the answer already in the IR.
+        // ADR-0026 emits it only where no unsequenced operator encloses the
+        // call, so this is the same test as the lowering's `at_root`, and that
+        // is why it is **sufficient** rather than merely suggestive: `at_root`
+        // holds only when every ancestor of the call sequences its operands, so
+        // everything before the call in this block is ordered before it, and a
+        // later sibling cannot be in this block because ADR-0010 makes the call
+        // end it.
         //
         // **The block's last element, because the rule is about this
-        // terminator.** ADR-0010 makes a call end its block, so a block holds
-        // at most one call and the marker for it is always last: measured,
-        // `ArgumentsEvaluated` occurs 345 times across the corpus and all 345
-        // are immediately followed by their `Call`. Searching the whole block
-        // would answer the same on every program this compiler can build, so
-        // nothing holds the difference and nothing can; it is written this way
-        // because that is what the rule says.
+        // terminator.** A call ends its block, so a block holds at most one
+        // call and the marker for it is always last; measured over the corpus,
+        // every occurrence is immediately followed by its `Call`. Searching the
+        // whole block would answer the same on every program this compiler can
+        // build, so nothing holds the difference and nothing can. How many
+        // occurrences there are is not written here, for RK-028's reason.
         //
         // **A block with no elements is not ordered either**, which is the
-        // `None` this `matches!` answers `false` for and is reached by a
-        // program rather than by tidiness: a call ends a block, so
-        // `(p = 0, 1) + (g(0) + (free(p), 0))` puts the write in one block and
-        // the free at the terminator of an empty one.
+        // `None` this answers `false` for and is reached by a program rather
+        // than by tidiness: a call ends a block, so an ordinary call between
+        // the two unsequenced operands leaves the free at the terminator of an
+        // empty one.
         // `a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt` is
         // that program, and adding `| None` here leaves it silent about a
         // double free and fails nothing else.
@@ -776,6 +780,12 @@ pub(crate) fn null_at_terminators(
         // shape no program here builds. It is refused anyway, because the
         // markers conclude different things and ADR-0026 is where the
         // difference is written.
+        //
+        // **This zeroes the whole row rather than one local**, so a null
+        // established in an earlier, properly ordered statement is refused the
+        // exemption along with everything else in a block whose call is not at
+        // the root. That is a false positive on well-defined C and ADR-0027's
+        // Consequences carry the programs.
         let ordered = matches!(
             block.elements.last(),
             Some(Element::ArgumentsEvaluated { .. })
