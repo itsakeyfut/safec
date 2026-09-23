@@ -124,33 +124,52 @@ is hexadecimal, a leading `0` is octal, and anything else is decimal, so `010`
 is eight. The suffixes of p1 are read far enough to reject a spelling C does not
 have, and then discarded.
 
-**Discarded, because there is no type to give them to.** 6.4.4.1 p5 asks for
-the first type in a list that holds the value, and the list is `int`,
+**Rejected, because there is no type to give them to.** 6.4.4.1 p5 asks for the
+first type in a list that holds the value, and the list is `int`,
 `unsigned int`, `long`, and so on. `crates/safec/src/ast.rs`'s `Type` has `Int`,
 `Char`, `Void` and the types derived from them, and
 `crates/safec-ir/src/target.rs`'s `Target` answers `int()` and `char()`. There
-is no `unsigned int` and no `long` for p5's table to select, so every constant
-that has a type here has `int`, and every constant that does not is reported.
-This is the divergence, and it is the whole of it.
+is no `unsigned int` and no `long` for p5's table to select, so `int` is the
+only type a constant can get here, and a constant p5 would give any other is
+reported rather than read as an `int`.
 
-What it costs is the first two rows below. Measured against
+**A suffix is not decoration, which is why it is refused rather than dropped.**
+It decides what arithmetic on the constant means: 6.4.4.1 p5 makes `3u` an
+`unsigned int`, 6.3.1.8's conversions then make `-6 / 3u` an unsigned division,
+and its value is 1431655763 and not -2. An earlier version of this section said
+the suffix was read and then discarded, and priced the divergence entirely in
+refused programs; that was false, and what it left out was the expensive half.
+Discarding it compiled `-6 / 3u` to a signed division and `2147483647l + 1l` to
+a 32-bit `add nsw`, both silently. A refusal is visible and a wrongly-signed
+division is not.
+
+What the missing types cost is the rows below. Measured against
 `clang 20.1.6 --target=x86_64-unknown-linux-gnu`, as the tables above are.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int x = 2147483648;` | `error[SC0305]` | accepts | accepts |
-| `int x = 4294967295u;` | `error[SC0305]` | accepts | accepts |
+| `int x = 1u;` | `error[SC0305]` | accepts | accepts |
+| `int x = 0L;` | `error[SC0305]` | accepts | accepts |
 | `int x = 1.5;` | `error[SC0305]` | accepts | accepts |
 | `int x = 09;` | `error[SC0106]` | error | error |
 | `int x = 1lL;` | `error[SC0106]` | error | error |
+| `int x = 1e;` | `error[SC0106]` | error | error |
+| `int x = 0x1.8;` | `error[SC0106]` | error | error |
 | `int x = 0b101;` | `error[SC0106]` | accepts | error |
 
-**The first three are gaps and the last three are not.** `SC0305` says this
-compiler has no type for a constant C gives one to, which is what the paragraph
-above is about; a floating constant is the same sentence with no floating type
-in it. `SC0106` says the spelling is not a constant at all, and `clang` refuses
-each of those too. `0b101` is the row that shows why the fourth column is there:
-a binary constant is C23, `clang` takes it as an extension, and only
+**The first four are gaps and the rest are not.** `SC0305` says this compiler
+has no type for a constant C gives one to, which is what the paragraphs above
+are about; a floating constant is the same sentence with no floating type in
+it. `SC0106` says the spelling is not a constant at all, and `clang` refuses
+each of those too.
+
+The last four are where that line is easiest to draw wrongly, so each is
+measured rather than reasoned about. `1e` has an exponent with no digits and
+`0x1.8` is a hexadecimal floating constant with no binary exponent, both of
+which 6.4.4.2 p1 declines to spell, so they are the program's mistake and not a
+type this compiler is short of. `0b101` shows why the fourth column is there: a
+binary constant is C23, `clang` takes it as an extension, and only
 `-pedantic-errors` answers for C17. RK-032 in the review knowledge bank is what
 that column exists for.
 
@@ -160,6 +179,14 @@ implementation's type list. Blaming the program would be telling someone whose
 program `clang` compiles that they wrote it wrong, when what is missing is
 `long`. `int x = -2147483648;` is inside that: the constant is 2147483648 and
 the minus is an operator, so the smallest `int` cannot be written yet.
+
+**Whether `SC0305` fires depends on the target**, because it is decided against
+the range of `int`. [`architecture.md`](architecture.md)'s output table says a
+diagnostic depends on neither the host nor the target, and this is a divergence
+from it, recorded there as well. Nothing observes it today: `int` is 32 bits on
+every row of `Target::ALL`. It becomes observable the day `long` is in that
+table, because `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
+`x86_64-unknown-linux-gnu`.
 
 Character constants (6.4.4.4) are not here, because the parser builds no
 expression for one: `crates/safec/src/parser.rs`'s `primary` reads a number and

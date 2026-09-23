@@ -98,6 +98,15 @@ needs a width to detect an overflow at, not because it is expected to vary.
 What does vary is whether `char` carries a sign, and
 `aarch64-unknown-linux-gnu` is where.
 
+The interpreter is no longer the only reader. #76 gave `types::check` the range
+of `int`, because C17 6.4.4.1 p5 decides a constant's type by which type holds
+its value and that is the target's question. This does not reverse the decision
+above: what `check` is handed is one `Integer` and not a `Target`, and it builds
+no type from it, so the cost this record priced against *`Ty` carries the width*
+is not paid. What it does change is that a **diagnostic** now turns on a width,
+which `docs/architecture.md`'s output table did not allow for; that divergence
+is recorded there and in `docs/frontend.md` rather than reopening this record.
+
 **A pointer's width is not here**, and that is the rule rather than an
 oversight. Nothing can observe one: the artifact prints `int *` rather than a
 size, there is no `sizeof`, and the interpreter refuses pointer arithmetic.
@@ -126,6 +135,14 @@ undefined, `a_value_too_large_for_its_destination_is_converted` for the one that
 is not, and `what_a_char_holds_follows_the_target` for the fact that makes a
 target a target: `c = 200` answers `-56` on `x86_64-pc-windows-msvc` and `200`
 on `aarch64-unknown-linux-gnu`.
+
+**A case whose diagnostics can turn on a width has to name a target too**, not
+only one that emits the IR. `SC0305` is decided against the range of `int`, so
+since #76 the set is wider than "cases that emit the IR"; the two new constant
+cases name `x86_64-pc-windows-msvc` for that reason. No `--emit ast` case
+carries a constant large enough to notice today, and `int` is 32 bits on every
+row of `Target::ALL`, so this is a requirement on cases yet to be written
+rather than a hole in the ones that exist.
 
 The host claim is the corpus's. Nine cases name a target explicitly and their
 `.stdout` begins with `Target "x86_64-pc-windows-msvc"`, so a change that

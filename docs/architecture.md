@@ -101,7 +101,10 @@ Three, and saying so is part of the intent rather than a caveat on it.
   `#[non_exhaustive]`, so however many kinds are given words of their own, some
   failure will always fall through to what the operating system said.
 
-### Two known divergences
+### Three known divergences
+
+The first two are about the host. The third is about the target, and it is the
+table's other column.
 
 `cannot read` puts the operating system's message in a note, so it reads
 `The system cannot find the file specified. (os error 2)` on Windows and
@@ -125,6 +128,27 @@ taken on purpose, because `clang` knows what is wrong with a module and this
 compiler does not, and [ADR-0015](adr/0015-make-an-object-by-spawning-clang.md)
 argues it. What follows from it is that these two diagnostics can never join the
 corpus, which compares bytes this compiler wrote.
+
+The third is `SC0305`, which says that no integer type this compiler has can
+hold a constant. Whether it fires is decided against the range of `int`, so it
+is a diagnostic that depends on the target, which the table above says a
+diagnostic does not. See
+[frontend.md](frontend.md), *What an integer constant is worth*.
+
+This one is not taken on purpose and is not the shape of the other two: what a
+constant's type is turns on the target under C17 6.4.4.1 p5, so the dependency
+is C's rather than this compiler's, and the row above was written before
+anything read a width in the frontend. Nothing observes it yet, because `int`
+is 32 bits on every row of `Target::ALL`. It becomes observable when `long`
+arrives, since `long` is 32 bits on `x86_64-pc-windows-msvc` and 64 on
+`x86_64-unknown-linux-gnu`, and the corpus is where it will show: a case whose
+stderr can turn on a width has to name a `--target`, and the `--emit ast` cases
+do not.
+
+The shape of the fix is to split the table's diagnostics row into what a
+diagnostic *says*, which depends on neither, and whether it *fires*, which may
+depend on the target. That is a change to this document rather than to the
+compiler, and it is left until `long` makes the distinction load-bearing.
 
 ## What Defines the Safety IR
 
