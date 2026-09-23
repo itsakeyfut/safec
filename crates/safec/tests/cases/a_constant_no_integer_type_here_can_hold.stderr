@@ -1,0 +1,8 @@
+error[SC0305]: no integer type this compiler has can hold this constant
+   ╭─[ a_constant_no_integer_type_here_can_hold.c:3:9 ]
+   │
+ 3 │     x = 2147483648;
+   │         ─────┬────  
+   │              ╰────── this needs a type wider than `int`
+───╯
+  = note: C17 6.4.4.1 p5 gives a constant the first type in a list that holds it; this compiler has only `int`, and 6.4.4 p2 requires a constant's value to be in the range of its type

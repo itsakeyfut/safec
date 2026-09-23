@@ -625,6 +625,15 @@ cases! {
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],
+    // The two codes a constant this compiler cannot read is reported under,
+    // and `--emit safety-ir` rather than `--emit ast` because what each one
+    // pins is that there is exactly one report. `types.rs` says it and the
+    // lowering says nothing more, which is only visible on a run that lowers.
+    // A value `int` does not hold is this compiler's gap, and `clang 20.1.6
+    // -std=c17 -pedantic-errors` compiles this program; a spelling that is no
+    // constant at all is the program's, and `clang` refuses it too.
+    a_constant_no_integer_type_here_can_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_spelling_that_is_not_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_comma_in_a_controlling_expression: ["--emit", "ast"],
     a_dangling_else: ["--emit", "ast"],
     a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
