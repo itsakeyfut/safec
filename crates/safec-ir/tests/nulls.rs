@@ -7,11 +7,12 @@
 //! another frontend can.
 //!
 //! **That is the whole reason this file exists rather than more corpus cases.**
-//! Two rules in `safec_ir::nullability` cannot be reached by a C program this
-//! frontend lowers: it never puts a store through a pointer between a
-//! comparison and the branch that reads it, and it gives each scope's variable
-//! a local of its own rather than reusing one across a storage boundary.
-//! Measured, both of them. ADR-0011 makes the Clang adapter a reader of this
+//! Rules in `safec_ir::nullability` that no C program this frontend lowers can
+//! reach: it puts nothing at all between a comparison and the branch that
+//! reads it, whether a store through a pointer, a store to a local, a storage
+//! boundary or a sequence-point marker, and it gives each scope's variable a
+//! local of its own rather than reusing one across such a boundary.
+//! Measured, all of them. ADR-0011 makes the Clang adapter a reader of this
 //! IR without going through `safec`'s frontend, so an unreachable rule today is
 //! a reachable one then, and a rule nothing can break is a rule nobody can
 //! trust.
@@ -175,6 +176,263 @@ fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
     // refined had this check been allowed to read it.
     assert_eq!(found[1].conclusion, Conclusion::Unknown);
     assert_eq!(found[1].at, names.at[3]);
+}
+
+/// A comparison the block overwrote the pointer under is a comparison about a
+/// value the branch no longer reads.
+///
+/// `c = (p != 0); p = q; if (c) { *p = 1; }` is the shape. The comparison read
+/// what `p` held above the store, and the arm is reached with whatever `q`
+/// held, which nothing here established. Refining `p` on that arm is this
+/// compiler proving something about a pointer that is no longer there.
+///
+/// **`Ne` rather than `Eq`, so the wrong answer is the quiet one.**
+/// `Nullness::NonNull` has no conclusion at all, so a refinement made here
+/// deletes the write's finding rather than changing it, and what this asserts
+/// is that the finding is still there. The other order is the one #220 is
+/// filed about, where the wrong answer instead exempts a `free` in
+/// `safec_ir::memory` and reports nothing; both are the same walk being wrong
+/// about the same thing, and this is the half that can be asserted without a
+/// `malloc`.
+///
+/// **This compiler's own frontend cannot produce it**: measured over the
+/// corpus, no block whose branch reads a bare local has anything at all
+/// between that local's write and the terminator.
+///
+/// Mutation: have `Nullability::tested` step over a direct store without
+/// recording the local it changed. The comparison above it is resolved and
+/// nothing refuses the answer, `p` is refined to non-null on the taken arm,
+/// the write through it is reported by nobody, and this fails with no findings
+/// where it expects one. Dropping the `filter` that applies the record fails
+/// this and `a_comparison_above_a_storage_boundary_refines_nothing` together,
+/// which is right: one refusal, two ways of reaching it.
+#[test]
+fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer, pointer]);
+
+    // `_1` is `p`, `_2` is `q`, and the return place is `_0`.
+    let p = function.parameters().next().expect("a first parameter");
+    let q = function.parameters().nth(1).expect("a second parameter");
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(p)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin: Origin::Written(names.at[0]),
+                }),
+                // `p = q`. An ordinary store, naming a local directly, below
+                // the comparison that read the local it names.
+                Element::Assign(Operation {
+                    place: Place::local(p),
+                    value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                    origin: Origin::Written(names.at[1]),
+                }),
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    // The write through `p` on the taken arm. Nothing established what `q`
+    // held, so nothing is established about `p` where it is written through.
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[3]);
+}
+
+/// A comparison a storage boundary separates from its branch is about an object
+/// the arm no longer holds.
+///
+/// `c = (p != 0); StorageDead(p); StorageLive(p); if (c) { *p = 1; }` is the
+/// shape, and it is the neighbouring half of
+/// `storage_beginning_or_ending_leaves_a_pointer_holding_nothing_known`: that
+/// one is the transfer answering for a boundary it walks over, this one is the
+/// backwards walk answering for a boundary it would otherwise step past. The
+/// object the comparison read is gone and a different one is in the local, so
+/// the comparison says nothing about what the arm dereferences.
+///
+/// `p` is a local rather than a parameter, because a parameter's storage does
+/// not end.
+///
+/// **This compiler's own frontend cannot produce it**, for the reason the
+/// module doc gives: each scope's variable gets a local of its own.
+///
+/// **Both markers are one arm, and this test is that arm's whole guard.**
+/// They conclude the same thing about the local they name, so writing them as
+/// one behaviour is what keeps one test enough; split into two, whichever half
+/// this block does not reach first would be held by nothing.
+///
+/// Mutation: have `Nullability::tested` step over a storage boundary without
+/// recording the local it changed. `p` is refined to non-null on the taken
+/// arm, the write through it is reported by nobody, and this fails with no
+/// findings where it expects one.
+#[test]
+fn a_comparison_above_a_storage_boundary_refines_nothing() {
+    let (_sources, names) = sources();
+    let (mut unit, mut function, int) = a_unit(&names, &[]);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let p = function.push_local(pointer);
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(p)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin: Origin::Written(names.at[0]),
+                }),
+                // The scope `p` was compared in ends and another begins, both
+                // generated: no source text says either, which is ADR-0012.
+                Element::StorageDead {
+                    local: p,
+                    origin: Origin::Generated(names.at[1]),
+                },
+                Element::StorageLive {
+                    local: p,
+                    origin: Origin::Generated(names.at[1]),
+                },
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[3]);
+}
+
+/// A marker between a comparison and its branch is stepped over, and the
+/// refinement survives it.
+///
+/// `c = (p != 0); Sequenced; if (c) { *p = 1; } else { *p = 2; }` is the shape.
+/// `Element::Sequenced` says where C ordered one evaluation before another and
+/// computes into no local, so it cannot have replaced what the comparison read,
+/// and the walk has to go past it rather than give up.
+///
+/// **This is the only direction the refusal rule can be wrong in that nothing
+/// else here asserts.** Its siblings all assert that a refinement is *not*
+/// made; this one asserts that one still is, which is what a walk that gave up
+/// on everything would take away. That direction has been wrong here once:
+/// stopping the walk at the first write to any local, rather than recording
+/// which local it changed, took the proof out of `int x = 5; if (p) { *p = x; }`
+/// and reported it as an unproven dereference. The three markers are one arm
+/// for the same reason the storage pair is, so this is that arm's whole guard.
+///
+/// Both arms are written through, so that the assertion is what each arm
+/// concluded rather than a count of nothing. The taken arm has `p` proved not
+/// null and is reported by nobody; the other arm has it proved null and is the
+/// one finding.
+///
+/// Mutation: have `Nullability::tested` give up at a marker instead of
+/// stepping over it. Neither arm is refined, both writes are reported as
+/// unproven, and this fails with two findings where it expects one.
+#[test]
+fn a_marker_between_a_comparison_and_its_branch_is_stepped_over() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let p = function.parameters().next().expect("a first parameter");
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(p)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin: Origin::Written(names.at[0]),
+                }),
+                // Nobody writes a sequence point, so it carries the span of
+                // what asked for it, which here is the branch below.
+                Element::Sequenced {
+                    origin: Origin::Generated(names.at[2]),
+                },
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[1])]));
+    function.fill_block(untaken, goto(after, vec![write_through(p, names.at[3])]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    // Only the arm the comparison proved `p` null on. The other arm's write is
+    // through a pointer this check proved is not null, which is nothing to say.
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3]);
 }
 
 /// Storage beginning or ending leaves a local holding nothing this check knows.
