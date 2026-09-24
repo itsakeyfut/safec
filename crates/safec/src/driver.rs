@@ -233,6 +233,14 @@ pub fn compile(options: &Options) -> Compiled {
         diagnostics.report(Diagnostic::error("no input files"));
     }
 
+    // Once per run and before any input is read, because a check that did not
+    // run has nowhere to say so from: the safety gate is inside `lowered`, which
+    // two artifacts never reach and four levels have nothing behind. See
+    // ADR-0035.
+    if let Some(diagnostic) = undelivered(options) {
+        diagnostics.report(diagnostic);
+    }
+
     // A module is one translation unit, and this compiler makes one artifact
     // per run. Appending a second unit to the first is not a module with
     // duplicates in it: `int f(int);` in one input and `int f(int x) { ... }`
@@ -669,6 +677,128 @@ fn lowered(
     }
 
     Some(unit)
+}
+
+/// What a run asked for above what it can deliver, as what a user reads.
+///
+/// `None` where the run delivers what it asked for, which is every run that
+/// named no level: [`Cli::into_options`] resolves an unnamed one to what the
+/// artifact can carry, so asked and delivered agree by construction and a user
+/// who configured nothing is told nothing.
+///
+/// [`Cli::into_options`]: crate::cli::Cli::into_options
+///
+/// **Built with [`Diagnostic::concluded`] rather than [`Diagnostic::error`]**,
+/// because a check that never ran established nothing, and that is what an
+/// unproven conclusion means. The severity is then the sink's, taken once from
+/// the policy, so `--allow-unknown` governs this the way it governs every other
+/// unproven result rather than through a second reading of the policy here. See
+/// ADR-0035, and ADR-0001 for why that place is the sink.
+///
+/// **No code and no label.** `docs/diagnostics.md` gives a code to a class of
+/// program a reader can search for, and this is a fact about the invocation:
+/// there is no program to point at, and a run refused here may never read one.
+///
+/// **Every string here names a command-line flag, and that is an assumption
+/// rather than a rule.** It holds while the command line is the only front door,
+/// which `docs/diagnostics.md` licenses for a fact about the invocation. The
+/// Clang adapter builds an [`Options`] with no command line behind it:
+/// `EmitKind::default_safety` is why it cannot reach this by defaulting, but a
+/// caller that sets the pair itself is told to change flags it does not have.
+/// Whoever writes that adapter decides what it reads instead, and there is one
+/// caller today, so nothing is abstracted for it here.
+///
+/// **Two axes, twice over.** The gate is one of them and what it says is the
+/// other, and the second was got wrong here first.
+///
+/// Mutation: compare `options.safety` against `SafetyLevel::IMPLEMENTED` instead
+/// of against [`Options::delivered`], which drops the artifact half of the gate.
+/// `an_artifact_that_stops_before_the_ir_delivers_no_checks` fails and
+/// `a_level_with_no_checks_behind_it_is_not_delivered` stays green.
+///
+/// Mutation: choose the note and the remedy with a single `if
+/// options.emit.reaches_the_ir()`, which is how this shipped to review. Then a
+/// run whose level *and* artifact both fall short says one of the two and its
+/// remedy sends the reader to `--emit safety-ir`, which is refused again for the
+/// other reason. `both_reasons_a_level_can_go_undelivered_are_said_at_once`
+/// fails and the two single-cause cases stay green.
+///
+/// Both are the shape `CLAUDE.md` calls the worst defect this project has had,
+/// and the second is what guarding against it in one place and not the next
+/// costs: ADR-0034 makes a remedy the change that would make the program
+/// compile, so a remedy answering one of two causes is a promise the run breaks.
+fn undelivered(options: &Options) -> Option<Diagnostic> {
+    let asked = options.safety;
+    let delivered = options.delivered();
+    if delivered == asked {
+        return None;
+    }
+
+    // **Both causes can hold at once, so both are said.** The artifact stopping
+    // before the IR and the level having nothing behind it are independent, and
+    // `--emit ast --safety strict` is both. An `if/else` here said whichever was
+    // written first, which is the two-axis mistake this function's own doc
+    // comment warns about, one level over from the gate that avoids it.
+    let stops_short = !options.emit.reaches_the_ir();
+    let unimplemented = asked > SafetyLevel::IMPLEMENTED;
+    let mut notes = Vec::new();
+    if stops_short {
+        notes.push(format!(
+            "`--emit {}` stops before the Safety IR every check reads",
+            options.emit.spelling()
+        ));
+    }
+    if unimplemented {
+        notes.push(format!(
+            "`{}` is the highest level with checks behind it",
+            SafetyLevel::IMPLEMENTED.spelling()
+        ));
+    }
+    debug_assert!(
+        !notes.is_empty(),
+        "a run delivers less than it asked for only through one of these two"
+    );
+
+    // **The remedy is worked out from what this run delivers, not from whichever
+    // cause was written first.** ADR-0034 makes a remedy the change that would
+    // make the program compile, so a remedy answering one of two causes is a
+    // promise this run breaks: `--emit ast --safety strict` used to be told to
+    // ask for `--emit safety-ir`, which is refused again for the other reason.
+    let mut ways = vec![format!("ask for `--safety {}`", delivered.spelling())];
+    if stops_short {
+        // Raising the artifact is the other way, and the level has to come with
+        // it: an artifact that reaches the IR still cannot deliver a level
+        // nothing implements.
+        ways.push(if unimplemented {
+            format!(
+                "`--emit safety-ir --safety {}`",
+                SafetyLevel::IMPLEMENTED.spelling()
+            )
+        } else {
+            "`--emit safety-ir`".to_owned()
+        });
+    }
+    // Not offered to a run that already gave it, which is advice to do what has
+    // been done, and not offered beside the level that is defined as leaving
+    // nothing unknown, where `Cli::check` refuses the pair. Following a remedy
+    // into an argument conflict is the same broken promise as following one into
+    // this diagnostic again.
+    if !options.allow_unknown && asked < SafetyLevel::Strict {
+        ways.push("`--allow-unknown` while a program is being migrated".to_owned());
+    }
+
+    let mut diagnostic = Diagnostic::concluded(
+        Conclusion::Unknown,
+        format!(
+            "`--safety {}` asks for more than this run delivers",
+            asked.spelling()
+        ),
+        Remedy::new(ways.join(", or ")),
+    )?;
+    for note in notes {
+        diagnostic = diagnostic.with_note(note);
+    }
+    Some(diagnostic)
 }
 
 /// What a memory check concluded, as what a user reads.
@@ -2013,11 +2143,21 @@ mod tests {
         false
     }
 
+    /// An invocation for the tests that are about reading inputs and producing
+    /// artifacts rather than about safety.
+    ///
+    /// `Off` beside a `Tokens` artifact because the pair has to be coherent: a
+    /// run asking for `memory` from an artifact that stops before the IR is
+    /// asking for a level it cannot be given, and `undelivered` reports it. That
+    /// is what `Cli::into_options` resolves an unnamed `--safety` to for this
+    /// kind, so the fixture says what the command line would have said. Six
+    /// tests here failed on the day the report landed, every one of them on this
+    /// line rather than on its own subject.
     fn options(inputs: Vec<PathBuf>) -> Options {
         Options {
             inputs,
             output: None,
-            safety: SafetyLevel::Memory,
+            safety: SafetyLevel::Off,
             // The cheapest kind that still runs every stage of the loop. It
             // was `Executable` while nothing could produce one, which made it
             // the kind that did nothing; now the two kinds past `llvm-ir`
@@ -2219,13 +2359,22 @@ mod tests {
     /// options", which is what these deliberately are not since #209: the
     /// field is the request, and `Policy::new` is where it becomes an answer.
     ///
+    /// The level and the artifact are set here rather than taken from the
+    /// fixture, which asks for nothing: `Policy::new` reads the level, so a run
+    /// at `Off` has nothing to deny and both rows would answer `false` whatever
+    /// the sink was built from. `SafetyIr` beside it keeps the pair coherent, so
+    /// that this fixture is not also asking for a level its artifact cannot
+    /// deliver.
+    ///
     /// Mutation: build the sink with `DiagnosticSink::new()`. Both rows fail,
-    /// because the fixture compiles at `SafetyLevel::Memory`, where the default
-    /// is to deny.
+    /// because this compiles at `SafetyLevel::Memory`, where the default is to
+    /// deny.
     #[test]
     fn the_sink_is_built_from_the_options_the_run_was_given() {
         for allow_unknown in [false, true] {
             let mut options = options(Vec::new());
+            options.safety = SafetyLevel::Memory;
+            options.emit = EmitKind::SafetyIr;
             options.allow_unknown = allow_unknown;
 
             assert_eq!(
@@ -2990,6 +3139,122 @@ mod tests {
         let text = fs::read_to_string(written.path()).expect("the artifact was written");
         assert!(text.contains("\"a\""), "{text}");
         assert!(text.contains("\"b\""), "{text}");
+    }
+
+    /// The level is a fact about the invocation, so it is reported once and
+    /// before anything an input has to say.
+    ///
+    /// **A corpus case cannot hold either half.** The harness runs one file per
+    /// case, so a report made per input and a report made once per run look
+    /// identical to every case there is, and with one diagnostic in the output
+    /// there is no position to be wrong about. Two inputs with a lexical error
+    /// each is the smallest thing that separates them.
+    ///
+    /// Mutation: report inside the per-input loop rather than once before it.
+    /// The count fails with two, and nothing else in the workspace fails.
+    ///
+    /// Mutation: report after the input loop instead of before it. The position
+    /// fails with two, and again nothing else does. A reader meeting the
+    /// paragraph after a screenful of findings has no way to tell it is not
+    /// about the last of them.
+    #[test]
+    fn the_undelivered_level_is_reported_once_for_the_run_and_before_its_inputs() {
+        // Two inputs, each with a lexical error of its own, so that the
+        // undelivered report has something to be counted against and something
+        // to be positioned relative to. A corpus case cannot hold this: the
+        // harness runs one file per case, so a report made per input and a
+        // report made per run look identical to every one of them.
+        let first = TempFile::new("safec_undelivered_one.c", "int a = \"unterminated;\n");
+        let second = TempFile::new("safec_undelivered_two.c", "int b = \"unterminated;\n");
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.safety = SafetyLevel::Strict;
+
+        let reported = compile(&options).diagnostics;
+        let reported = reported.diagnostics();
+        let undelivered: Vec<usize> = reported
+            .iter()
+            .enumerate()
+            .filter(|(_, diagnostic)| diagnostic.message().starts_with("`--safety strict` asks"))
+            .map(|(at, _)| at)
+            .collect();
+
+        assert_eq!(
+            undelivered.len(),
+            1,
+            "the level is a fact about the invocation, not about an input: {reported:?}"
+        );
+        assert_eq!(undelivered[0], 0, "{reported:?}");
+        assert!(
+            reported.len() > 1,
+            "the inputs reported nothing, so neither assertion above was tested"
+        );
+    }
+
+    /// The level this compiler says it implements runs a check the level below it
+    /// does not.
+    ///
+    /// **This is what stops [`SafetyLevel::IMPLEMENTED`] moving ahead of the
+    /// checks.** Moving it alone leaves `undelivered` silent about a level
+    /// nothing checks, and silence there *means* the level was delivered, so
+    /// `int *foo(void) { int x = 42; return &x; }` at `--safety lifetime` would
+    /// exit 0 with an empty stderr. Measured: that mutation fails five tests,
+    /// and the other four are three `.stderr` files and a table row, every one
+    /// of which reads as an expectation to re-bless rather than as a check that
+    /// is missing.
+    ///
+    /// It does not say *which* check the top level owes, because that cannot be
+    /// written before the check exists. It says the top level earns its place by
+    /// reporting something the one below it does not, which is true of every
+    /// level this ladder will ever have.
+    ///
+    /// Mutation: move [`SafetyLevel::IMPLEMENTED`] up one without wiring a check
+    /// for the level it moves to. This fails, and it is the only one of the five
+    /// failures that says something is absent rather than stale.
+    #[test]
+    fn the_implemented_level_runs_a_check_the_level_below_it_does_not() {
+        let levels = SafetyLevel::value_variants();
+        let top = levels
+            .iter()
+            .position(|level| *level == SafetyLevel::IMPLEMENTED)
+            .expect("the implemented level is one of the levels");
+        assert!(
+            top > 0,
+            "`IMPLEMENTED` is the level that runs nothing, so it claims nothing"
+        );
+        let below = levels[top - 1];
+
+        // A double free, which the lowest implemented level proves today. The
+        // program belongs to the level below the one being claimed only in the
+        // sense that it is what the *existing* checks catch; that is the point,
+        // because a program for a check nobody has written cannot be the fixture.
+        let input = TempFile::new(
+            "safec_implemented_level.c",
+            "void *malloc(int n);
+void free(void *p);
+int main(void) {
+    int *p = malloc(8);
+    free(p);
+    free(p);
+    return 0;
+}
+",
+        );
+        let mut options = options(vec![input.path().to_path_buf()]);
+        options.emit = EmitKind::SafetyIr;
+
+        options.safety = SafetyLevel::IMPLEMENTED;
+        let at_top = compile(&options).diagnostics.diagnostics().len();
+        options.safety = below;
+        let at_below = compile(&options).diagnostics.diagnostics().len();
+
+        assert!(
+            at_top > at_below,
+            "{:?} reported {at_top} and {below:?} reported {at_below}: the level              this compiler says it implements runs no check the one below it does              not, so `IMPLEMENTED` has moved ahead of them",
+            SafetyLevel::IMPLEMENTED
+        );
     }
 
     /// The rule, over every kind there is: a run over a program this compiler

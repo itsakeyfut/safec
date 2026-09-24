@@ -641,6 +641,55 @@ fn a_run_that_reported_an_error_leaves_no_object() {
     );
 }
 
+/// A migrating build asks for a level nothing implements and still gets an
+/// object.
+///
+/// **ADR-0035's headline consequence, pinned rather than inferred.** The record
+/// says `--safety lifetime` can go into a build file today and start enforcing
+/// when the checks land; nothing held that, because all of its corpus cases ask
+/// for a dump. The property composes out of two that are tested separately, that
+/// the severity comes from the sink and that the write rule keys on
+/// `has_errors`, so the risk was low rather than absent: a change that
+/// special-cased the undelivered report's severity, or gave it an artifact kind
+/// to look at, would break the one thing the record promises and nothing would
+/// have said so.
+///
+/// Mutation: build the undelivered report with `Diagnostic::error` rather than
+/// `Diagnostic::concluded`. The run exits 1 and leaves no object, and both of
+/// the assertions below fail.
+#[test]
+fn a_migrating_build_still_makes_an_object() {
+    if !clang_or_skip("what a migrating build leaves behind") {
+        return;
+    }
+
+    let scratch = Scratch::new("migrating_object");
+    scratch.source("mvp.c", MVP);
+
+    let output = safec(
+        &[
+            "--emit",
+            "object",
+            "--safety",
+            "lifetime",
+            "--allow-unknown",
+            "mvp.c",
+        ],
+        scratch.path(),
+    );
+
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+    assert!(
+        said.contains("asks for more than this run delivers"),
+        "the run was not told what it had not established: {said}"
+    );
+    assert!(
+        scratch.path().join("mvp.o").exists(),
+        "a migrating build left no object: {said}"
+    );
+}
+
 /// The name an object is given is refused when it is the name of the input.
 ///
 /// This compiler does not look at an extension to decide what an input is, so

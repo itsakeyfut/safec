@@ -55,5 +55,13 @@ pub enum Conclusion {
     /// exists to remove. Whether it fails a build is the policy's to say, which
     /// is why a check that reaches this does not need to know what the policy
     /// of the run it is part of is.
+    ///
+    /// **Wider than "a check ran and could not decide", since ADR-0035.** A run
+    /// asked for a safety level nothing can deliver is reported through this
+    /// value too, by `safec`'s driver rather than by a check: nothing was
+    /// established about that level, and that is a true sentence in this
+    /// vocabulary even where no check existed to establish it. Whoever wires the
+    /// lifetime, ownership or thread checks meets this value here first, so it is
+    /// said here and not only in the record.
     Unknown,
 }

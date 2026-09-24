@@ -35,13 +35,22 @@ pub struct Cli {
     pub output: Option<PathBuf>,
 
     /// How much of the safety model to enforce.
-    #[arg(
-        long,
-        value_enum,
-        value_name = "LEVEL",
-        default_value_t = SafetyLevel::Memory
-    )]
-    pub safety: SafetyLevel,
+    ///
+    /// Defaults to what the artifact asked for can carry: `memory` where
+    /// `--emit` reaches the Safety IR, and `off` for `tokens` and `ast`, which
+    /// stop in the frontend and so run no check at all. Naming a level this run
+    /// cannot deliver is reported rather than ignored. See ADR-0035.
+    ///
+    // `Option` rather than a clap default, so that resolving it is something
+    // `Cli::into_options` cannot omit. A default printed here would be one
+    // value, and one value is false for two of the six artifacts.
+    //
+    // A `//` comment rather than a `///` one: clap prints a doc comment into long
+    // help verbatim, so this paragraph reached a user's terminal along with an
+    // unrendered `[`Cli::into_options`]`. Nothing above it is addressed to a
+    // maintainer, and nothing here is addressed to a user.
+    #[arg(long, value_enum, value_name = "LEVEL")]
+    pub safety: Option<SafetyLevel>,
 
     /// The artifact to produce.
     #[arg(
@@ -111,8 +120,17 @@ impl Cli {
     /// there is no source text to put a caret into.
     ///
     /// [`Policy::new`]: crate::diagnostics::Policy::new
+    ///
+    /// Asked of the level the user *named*, which narrows nothing: an unnamed
+    /// one resolves to `memory` or `off` in [`Self::into_options`] and neither
+    /// reaches here. Still `>=` rather than `==`, because the ladder is
+    /// cumulative and a level added above `strict` would owe this refusal too.
     pub fn check(&self) -> Result<(), clap::Error> {
-        if self.allow_unknown && self.safety >= SafetyLevel::Strict {
+        if self
+            .safety
+            .is_some_and(|level| level >= SafetyLevel::Strict)
+            && self.allow_unknown
+        {
             return Err(Self::as_invoked().error(
                 ErrorKind::ArgumentConflict,
                 "--allow-unknown cannot be used with --safety strict, \
@@ -148,10 +166,11 @@ impl Cli {
 
     /// Resolve the arguments into the options the compiler runs on.
     ///
-    /// The mapping is one to one today. It exists so that the compiler depends
-    /// on [`Options`] rather than on a clap type, and it is where defaults that
-    /// have to be computed, such as an output path derived from the inputs,
-    /// will be worked out.
+    /// Not a one to one mapping. It exists so that the compiler depends on
+    /// [`Options`] rather than on a clap type, and it is where a default that
+    /// has to be computed is worked out: `--safety` is one, because what a run
+    /// can be held to depends on which artifact it asked for. An output path
+    /// derived from the inputs would be another.
     pub fn into_options(self) -> Options {
         // Destructured rather than read field by field, so that a field added
         // to `Cli` and forgotten here is a compile error instead of an argument
@@ -169,7 +188,13 @@ impl Cli {
         Options {
             inputs,
             output,
-            safety,
+            // Asked of the artifact rather than worked out here, so that a
+            // caller with no command line behind it resolves this the same way:
+            // the Clang adapter is that caller and ADR-0004 is the precedent.
+            // `EmitKind::default_safety` carries why the default is not one
+            // constant, and why it is `memory` rather than
+            // `SafetyLevel::IMPLEMENTED`.
+            safety: safety.unwrap_or(emit.default_safety()),
             emit,
             // clap answered for the spelling against `Target::ALL`, so the only
             // way here is a triple that table holds.
@@ -249,7 +274,11 @@ mod tests {
             let name = level.to_possible_value().unwrap();
             let name = name.get_name();
             let cli = Cli::try_parse_from(["safec", "--safety", name, "a.c"]).unwrap();
-            assert_eq!(cli.safety, *level, "--safety {name} did not round trip");
+            assert_eq!(
+                cli.safety,
+                Some(*level),
+                "--safety {name} did not round trip"
+            );
         }
     }
 
@@ -280,14 +309,57 @@ mod tests {
         assert_eq!(cli.emit, EmitKind::Executable);
     }
 
+    /// `--safety` answers `None` rather than a level, because clap no longer
+    /// supplies one: what a run defaults to depends on the artifact it asked
+    /// for, and `the_default_level_is_what_the_artifact_can_carry` is where the
+    /// resolved answer is held. Asserting a level here would put the default in
+    /// two places.
     #[test]
     fn a_bare_invocation_uses_the_documented_defaults() {
         let cli = Cli::try_parse_from(["safec", "main.c"]).unwrap();
-        assert_eq!(cli.safety, SafetyLevel::Memory);
+        assert_eq!(cli.safety, None);
         assert_eq!(cli.emit, EmitKind::Executable);
         assert_eq!(cli.color, ColorMode::Auto);
         assert_eq!(cli.output, None);
         assert!(!cli.allow_unknown);
+    }
+
+    /// What an unnamed `--safety` resolves to, for every artifact.
+    ///
+    /// Driven by the roster, because the answer is a property of the kind and a
+    /// kind added later acquires one whether or not anybody wrote it down.
+    ///
+    /// Two assertions per row on purpose. The first is that clap supplies no
+    /// level, which is what makes the second [`Cli::into_options`]'s answer
+    /// rather than a default printed in two places; without it a clap default
+    /// could be reintroduced and the second assertion would still hold.
+    ///
+    /// Mutation: resolve `None` to `SafetyLevel::Memory` unconditionally. The
+    /// `tokens` and `ast` rows fail.
+    ///
+    /// **What this does not hold**: resolving to `SafetyLevel::IMPLEMENTED`
+    /// instead of `Memory` fails nothing, because they are equal today. They are
+    /// not the same thing, and the comment at the resolution says why. Nothing
+    /// can hold that until a second level lands, which is the change that has to
+    /// read it.
+    #[test]
+    fn the_default_level_is_what_the_artifact_can_carry() {
+        for kind in EmitKind::value_variants() {
+            let spelling = kind.spelling();
+            let cli = Cli::try_parse_from(["safec", "--emit", spelling.as_str(), "a.c"])
+                .expect("every kind is a value `--emit` takes");
+
+            assert_eq!(cli.safety, None, "{kind:?}: clap supplied a level");
+            assert_eq!(
+                cli.into_options().safety,
+                if kind.reaches_the_ir() {
+                    SafetyLevel::Memory
+                } else {
+                    SafetyLevel::Off
+                },
+                "{kind:?}"
+            );
+        }
     }
 
     #[test]
@@ -306,7 +378,7 @@ mod tests {
     #[test]
     fn accepts_an_explicit_safety_level_before_the_inputs() {
         let cli = Cli::try_parse_from(["safec", "--safety", "lifetime", "a.c", "b.c"]).unwrap();
-        assert_eq!(cli.safety, SafetyLevel::Lifetime);
+        assert_eq!(cli.safety, Some(SafetyLevel::Lifetime));
         assert_eq!(cli.inputs, [PathBuf::from("a.c"), PathBuf::from("b.c")]);
     }
 

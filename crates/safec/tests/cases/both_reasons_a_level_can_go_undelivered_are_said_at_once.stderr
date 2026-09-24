@@ -1,0 +1,5 @@
+error: `--safety strict` asks for more than this run delivers
+  = note: `--emit ast` stops before the Safety IR every check reads
+  = note: `memory` is the highest level with checks behind it
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: ask for `--safety off`, or `--emit safety-ir --safety memory`

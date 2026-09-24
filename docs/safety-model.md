@@ -179,6 +179,20 @@ conclusion to promote. See [Safe, Unsafe, Unknown](#safe-unsafe-unknown) above,
 Level 5 is defined as leaving nothing `Unknown`, so `--allow-unknown` is refused
 beside `--safety strict` rather than ignored.
 
+**A level can be asked for and not delivered**, and two independent things cause
+it: the checks a level selects may not exist yet, which is true of every level
+above 1 today, and the artifact may stop before the Safety IR the checks read,
+which is true of `--emit tokens` and `--emit ast`. A run therefore delivers the
+lowest of three things, the level it asked for, the highest level with checks
+behind it, and what its artifact can carry. Where that is below what was asked
+for, the run reports what it did not establish, as a conclusion it could not
+prove rather than as a refusal, so `--allow-unknown` is what a program still
+being migrated reaches for here as well. It follows that the level a run
+defaults to is what its artifact can carry rather than one level for all of
+them: `--emit ast` claims nothing about safety and says nothing.
+[ADR-0035](adr/0035-a-level-a-run-cannot-deliver-is-a-conclusion-it-could-not-prove.md)
+has the reasoning and the four options it rejected.
+
 For example:
 
 ```bash

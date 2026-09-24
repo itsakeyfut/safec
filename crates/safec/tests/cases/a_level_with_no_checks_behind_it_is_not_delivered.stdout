@@ -1,0 +1,14 @@
+Target "x86_64-pc-windows-msvc"
+Function a_level_with_no_checks_behind_it_is_not_delivered.c:1:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation a_level_with_no_checks_behind_it_is_not_delivered.c:1:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_level_with_no_checks_behind_it_is_not_delivered.c:2:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_level_with_no_checks_behind_it_is_not_delivered.c:2:12 generated
+    Return

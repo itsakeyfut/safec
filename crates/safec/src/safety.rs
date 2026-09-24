@@ -44,6 +44,43 @@ pub enum SafetyLevel {
 }
 
 impl SafetyLevel {
+    /// The highest level whose checks exist.
+    ///
+    /// One name rather than the comparison spelled out wherever the question is
+    /// asked. The driver runs the memory and nullability checks at
+    /// [`Self::Memory`]; every level above it selects checks that do not exist,
+    /// and what a run is told about that is ADR-0035.
+    ///
+    /// **A fact about the compiler, where `Options::delivered` is a fact about
+    /// one run.** The two were one word until a review pointed out that the
+    /// wrong one is a type-correct shortcut at every call site, which is the
+    /// substitution ADR-0035's headline mutation exists to catch.
+    ///
+    /// **Moving this is the last step of landing a level, not the only one.**
+    /// The checks have to exist, a gate in `driver::lowered` has to run them,
+    /// `options.rs`'s table has to answer for the new row, and three corpus
+    /// expectations have to be re-blessed. Moving it alone leaves the compiler
+    /// silent about a level nothing checks, and here silence *means* the level
+    /// was delivered, which is the bottom row of `CLAUDE.md`'s list.
+    /// `driver.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not`
+    /// is what refuses that: the four expectations that also change read as
+    /// housekeeping, and that one reads as the check that is missing.
+    pub const IMPLEMENTED: Self = Self::Memory;
+
+    /// How `--safety` spells this level.
+    ///
+    /// Asked of the `ValueEnum` derive rather than answered by a table beside
+    /// it, for the reason [`crate::options::EmitKind::spelling`] gives: a second
+    /// spelling of the same thing is a second thing to keep in step, and this
+    /// one is read by a user in a diagnostic while the other decides what they
+    /// may type.
+    pub fn spelling(self) -> String {
+        self.to_possible_value()
+            .expect("every level is a value `--safety` takes")
+            .get_name()
+            .to_owned()
+    }
+
     /// The numeric level, as used in the design documents.
     ///
     /// Diagnostics use this to tell the user which level a check belongs to.
@@ -96,6 +133,44 @@ mod tests {
                 position as u8,
                 "{level:?} is out of step with its position"
             );
+        }
+    }
+
+    /// Every level's spelling, as the command line takes it.
+    ///
+    /// **Two of the six reach [`SafetyLevel::spelling`] from nowhere else.** Its
+    /// only caller is the undelivered report, and no corpus case asks for
+    /// `ownership` or `thread`, so those two were never spelled by anything.
+    /// Measured: special-casing `Ownership` inside `spelling` to answer
+    /// `wrong-spelling` left the entire workspace green, which put a diagnostic
+    /// naming a flag the user never typed one edit away.
+    ///
+    /// Written out rather than compared against `to_possible_value`, which is
+    /// what `spelling` is implemented in terms of. That comparison holds for
+    /// whatever the derive happens to say and is RK-001's shape; this table is a
+    /// definition of what a user may type.
+    ///
+    /// Mutation: answer any other string for any one variant. This fails, naming
+    /// it, and nothing else in the workspace does.
+    #[test]
+    fn every_safety_level_is_spelled_the_way_the_command_line_takes_it() {
+        const ROWS: [(SafetyLevel, &str); 6] = [
+            (SafetyLevel::Off, "off"),
+            (SafetyLevel::Memory, "memory"),
+            (SafetyLevel::Lifetime, "lifetime"),
+            (SafetyLevel::Ownership, "ownership"),
+            (SafetyLevel::Thread, "thread"),
+            (SafetyLevel::Strict, "strict"),
+        ];
+
+        assert_eq!(
+            ROWS.len(),
+            SafetyLevel::value_variants().len(),
+            "a safety level was added and this table did not answer for it"
+        );
+
+        for (level, spelling) in ROWS {
+            assert_eq!(level.spelling(), spelling, "{level:?}");
         }
     }
 }
