@@ -77,9 +77,9 @@ points somewhere real and is not the thing `free` takes: C17 7.22.3.3 p2 makes
 freeing anything but what an allocation function returned undefined, and
 `free(p + 1)` reaches the allocation `p` does. The fix is different again: a
 double free is a mistake about ownership, a use after free one about lifetime,
-and this is a mistake about which value was handed over. One program can carry
-both it and `SC0401` at one caret, `int *q = p + 1; free(q); free(p);`, and
-does, because the two are different questions about the same call.
+and this is a mistake about which value was handed over. One call can carry
+both it and `SC0401` at one caret, the second in `free(p); free(p + 1);`,
+because the two are different questions about the same call.
 [ADR-0036](adr/0036-a-pointer-carries-where-in-its-allocation-it-points.md)
 records what is proved and what is left unproven.
 

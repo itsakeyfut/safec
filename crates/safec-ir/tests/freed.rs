@@ -1765,7 +1765,8 @@ fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
 /// A pointer subtracted from a constant is not proved to be off the start.
 ///
 /// C17 6.5.6 p3 allows a pointer only on the left of a `-`, so `1 - p` is not
-/// `p` moved by one, and nothing in p9 says where it points. `+` is the
+/// `p` moved by one, and p8, which is about an integer added to or subtracted
+/// from a pointer, says nothing about where it points. `+` is the
 /// operator either side of which the pointer may stand. See ADR-0036.
 ///
 /// Mutation: in `memory.rs::offset_of`, let `-` take its constant on either

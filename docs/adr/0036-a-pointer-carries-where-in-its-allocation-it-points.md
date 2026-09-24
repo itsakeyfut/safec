@@ -55,7 +55,7 @@ Chosen option: **an offset per local with three values, reported under
 `Held` gains `offset: Offset`. The only door into anything but `Zero` is
 `Rvalue::Binary`, through `built_from`, which answers it last in `offset_of`:
 `NonZero` where the operator is `+`, or `-` with the pointer on the left
-(C17 6.5.6 p3, p8, p9), exactly one operand was followed, the other is a
+(C17 6.5.6 p3 and p8), exactly one operand was followed, the other is a
 constant that is **read** and is not zero, and the followed operand was itself
 at the start; `Unknown` otherwise. A call's destination and a parameter are
 the start of what they stand for, a copy carries what it copied, and every other

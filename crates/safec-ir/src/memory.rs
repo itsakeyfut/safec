@@ -1017,9 +1017,9 @@ fn built_from(
 /// `Offset::NonZero` where all of these hold, and `Offset::Unknown` otherwise:
 ///
 /// * the operator is `+`, or `-` with the followed operand on the left. C17
-///   6.5.6 p8 keeps `P + N` and `N + P` inside the object `P` points into, p9
-///   is the same with the sign turned round, and p3 allows a pointer only on
-///   the left of a `-`.
+///   6.5.6 p8 keeps `P + N`, `N + P` and `P - N` inside the object `P` points
+///   into, since it is about an integer added to or subtracted from a pointer,
+///   and p3 allows a pointer only on the left of a `-`.
 /// * exactly one operand was followed. Two is `p - q`, which 6.5.6 p9 makes a
 ///   `ptrdiff_t` rather than a pointer, or a shape no C program builds.
 /// * the other operand is a constant, and **the constant is read rather than
@@ -2409,8 +2409,8 @@ fn verdict(
 /// One finding per call and question rather than one per site: a local may
 /// point at several allocations where a branch put them there, and two carets
 /// on one `free` say one thing twice. **Two questions, though, and one caret
-/// can carry both**: `int *q = p + 1; free(q); free(p);` frees one allocation
-/// twice and the first time through a pointer that is not its start.
+/// can carry both**: in `free(p); free(p + 1);` the second call frees an
+/// allocation already freed, and through a pointer that is not its start.
 ///
 /// The double free first, so that a caret carrying both reads `SC0401` above
 /// `SC0404`: the sort at the end of [`findings`] is stable and the two share a
@@ -2501,10 +2501,13 @@ fn reported(
 ///   followed, and [`verdict`] already answers [`Unproven::Lost`] for the same
 ///   call. [`Allocations::touching`] pushes a `Reached::Lost` for an argument
 ///   whose local reaches no site, so this rule is reached with nothing in hand
-///   only after a `SetFreed`, and the arm above answers that too. **The two
-///   hold each other**: removing either leaves the whole workspace green, and
-///   removing both fails `a_free_after_an_offset_that_kept_the_set_is_proved`.
-///   See ADR-0036.
+///   in two ways only. One is after a `SetFreed`, which the arm above answers
+///   too: **the two hold each other**, so removing either leaves the whole
+///   workspace green, and removing both fails
+///   `a_free_after_an_offset_that_kept_the_set_is_proved`. The other is a
+///   constant argument, `free(0)`, which `touching` skips and so hands this
+///   nothing at all; [`reported`] then hands this `Offset::Zero`, which says
+///   nothing either. See ADR-0036.
 ///
 /// **A parameter is proved on, and that is sound.** `void f(int *p) { free(p +
 /// 1); }` can only free the start of an object if a caller passed a `p` one
