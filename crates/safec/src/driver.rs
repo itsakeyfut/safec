@@ -699,6 +699,15 @@ fn lowered(
 /// program a reader can search for, and this is a fact about the invocation:
 /// there is no program to point at, and a run refused here may never read one.
 ///
+/// **Every string here names a command-line flag, and that is an assumption
+/// rather than a rule.** It holds while the command line is the only front door,
+/// which `docs/diagnostics.md` licenses for a fact about the invocation. The
+/// Clang adapter builds an [`Options`] with no command line behind it:
+/// `EmitKind::default_safety` is why it cannot reach this by defaulting, but a
+/// caller that sets the pair itself is told to change flags it does not have.
+/// Whoever writes that adapter decides what it reads instead, and there is one
+/// caller today, so nothing is abstracted for it here.
+///
 /// **Two axes, twice over.** The gate is one of them and what it says is the
 /// other, and the second was got wrong here first.
 ///
