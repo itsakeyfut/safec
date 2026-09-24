@@ -1,0 +1,9 @@
+error[SC0404]: this frees a pointer that is not the start of an allocation
+    ╭─[ a_free_past_the_start_of_either_of_two_allocations_names_neither.c:12:5 ]
+    │
+ 12 │     free(p + 1);
+    │     ─────┬─────  
+    │          ╰─────── not the start of the allocation
+────╯
+  = note: this check belongs to safety level 1
+  = help: free the pointer the allocation was made with, and keep the offset in a variable of its own

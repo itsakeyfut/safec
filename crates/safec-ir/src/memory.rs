@@ -2499,7 +2499,12 @@ fn reported(
 ///   there is nothing left to be an offset into.
 /// * no site at all. A local that reaches nothing is one this check never
 ///   followed, and [`verdict`] already answers [`Unproven::Lost`] for the same
-///   call.
+///   call. [`Allocations::touching`] pushes a `Reached::Lost` for an argument
+///   whose local reaches no site, so this rule is reached with nothing in hand
+///   only after a `SetFreed`, and the arm above answers that too. **The two
+///   hold each other**: removing either leaves the whole workspace green, and
+///   removing both fails `a_free_after_an_offset_that_kept_the_set_is_proved`.
+///   See ADR-0036.
 ///
 /// **A parameter is proved on, and that is sound.** `void f(int *p) { free(p +
 /// 1); }` can only free the start of an object if a caller passed a `p` one
@@ -2517,7 +2522,7 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
             Reached::Site(site) => sites.push(*site),
             // `SetFreed` is answered twice: `Known::reached_by` clears the
             // sites whenever it answers it, so the rule below this loop says
-            // the same. Written here so the arm says which rule owns it.
+            // the same. The doc comment above says what holds the pair.
             Reached::SetFreed(_) | Reached::Lost => return None,
         }
     }

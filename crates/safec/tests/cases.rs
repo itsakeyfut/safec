@@ -421,6 +421,24 @@ cases! {
     // The join, both ways. Two paths that each moved the pointer off the start
     // are both off it, whatever the distances; one that did not leaves the
     // answer open.
+    // `+` with the constant on the left, which C17 6.5.6 p8 makes the same
+    // addition. Mutation: in `memory.rs::offset_of`, drop the arm that reads
+    // the constant on the left. This fails with the proof down to `may`.
+    a_free_of_a_constant_plus_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer moved off the start and back is at the start again, and this
+    // check carries no distance to know it, so the second move proves nothing.
+    // The program is one C defines. Mutation: in `offset_of`, stop requiring
+    // the followed operand to be at the start. This fails with a proved
+    // `SC0404` about a free C defines.
+    a_free_of_a_pointer_moved_back_to_the_start_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Two allocations, one offset, and no `allocated here`: naming either line
+    // would be a caret on an allocation the value may not hold, RK-035. Both
+    // are made before the branch rather than on its arms: allocated on an arm,
+    // each site meets the other arm's `Live(None)` at the join and arrives with
+    // no line to name, so the fold has nothing to get wrong. Mutation: in `memory.rs::interior`, fold `made` by keeping the first
+    // site's, or by keeping the last site's. Each fails on the label, and both
+    // directions are measured because RK-038 is a fold guarded on one side.
+    a_free_past_the_start_of_either_of_two_allocations_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_offset_on_both_arms_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_offset_on_one_arm_only_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The two that must stay silent. The first is ADR-0021's fold reaching this

@@ -122,11 +122,24 @@ for RK-028's reason.
   `crates/safec-ir/tests/freed.rs`, alone.
 * any operator accepted beside a constant:
   `a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start`, alone.
+* `+` no longer reading a constant on its left:
+  `a_free_of_a_constant_plus_a_pointer`, alone, down to `may`.
+* `offset_of` no longer requiring the followed operand to be at the start:
+  `a_free_of_a_pointer_moved_back_to_the_start_is_not_proved`, alone, which
+  becomes a proved `SC0404` about a free C defines.
+* `interior` folding `made` by keeping the first site's, and separately by
+  keeping the last site's:
+  `a_free_past_the_start_of_either_of_two_allocations_names_neither` each
+  time, on the `allocated here` it gains. Its two allocations are made before
+  the branch, because made on its arms each site meets the other arm's
+  `Live(None)` at the join and neither mutation has anything to act on, which
+  is RK-038.
+* `Held::joined` leaving the field alone:
+  `a_free_offset_on_one_arm_only_is_not_proved`, alone.
 * `Offset::joined` answering `Unknown` for two `NonZero`s:
   `a_free_offset_on_both_arms_is_still_proved`, alone.
 * `Offset::joined` answering `Zero` for a `Zero` and a `NonZero`:
   `a_free_offset_on_one_arm_only_is_not_proved`, alone, which goes silent.
-* `Held::joined` leaving the field alone: the same case, alone.
 * `Held::clear` answering `Unknown`: `a_free_of_an_allocation_made_on_one_arm_only`
   among a great many, because `Held::hold` joins its argument into what the
   cleared local answers and so every call's destination turns `Unknown`.
@@ -144,12 +157,18 @@ for RK-028's reason.
   `an_offset_by_a_second_pointer_loses_the_proof`, whose two findings share a
   caret and come out in the other order.
 
+**Held by a pair, and by nothing one at a time.** `interior`'s
+`Reached::SetFreed` arm and its rule that no site answers nothing each cover
+the other: `Known::reached_by` clears the sites whenever it answers `SetFreed`,
+and `Allocations::touching` pushes a `Reached::Lost` for an argument reaching
+no site. Removing either alone leaves the workspace green; removing both fails
+`a_free_after_an_offset_that_kept_the_set_is_proved`,
+`an_offset_by_an_integer_local_keeps_the_proof` and
+`an_offset_by_an_integer_parameter_keeps_the_proof`, which RK-039 says to name
+as a pair rather than read as unguarded.
+
 **Held by nothing, and each says which rule is answering instead.**
 
-* `interior`'s `Reached::SetFreed` arm. `Known::reached_by` clears the sites
-  whenever it answers `SetFreed`, so the rule below it, that a free reaching no
-  site answers nothing, gives the same answer. It is written so the arm says
-  which rule owns the case.
 * `Held::hold` joining its argument rather than assigning it. Both callers hold
   on a local `Held::clear` or `Held::none` has just left at `Zero`, and `Zero`
   joined with `Zero` is `Zero`.
@@ -157,9 +176,6 @@ for RK-028's reason.
   the other caller is a write through a pointer, whose target has always
   escaped, so `interior` never reads it: the escape is answering, which is
   RK-064's shape.
-* `offset_of` requiring the followed operand to be at the start, and
-  `interior`'s fold of `made` over the sites. No case at this commit moves a
-  pointer twice or frees an offset into two allocations.
 
 ### Consequences
 
