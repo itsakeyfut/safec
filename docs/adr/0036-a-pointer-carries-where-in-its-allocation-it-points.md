@@ -117,6 +117,10 @@ for RK-028's reason.
   above that are proved and `a_free_offset_on_both_arms_is_still_proved`, and
   nothing else.
 * the constant test turned to `== 0`: the same four.
+* the constant not read at all, every constant taken for a move:
+  `a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start` in
+  `crates/safec-ir/tests/freed.rs`, alone. No C reaches it, because ADR-0021's
+  fold leaves no literal zero in the IR, so it is written by hand.
 * `-` taking its constant on either side:
   `a_pointer_subtracted_from_a_constant_is_not_proved_to_be_off_the_start` in
   `crates/safec-ir/tests/freed.rs`, alone.

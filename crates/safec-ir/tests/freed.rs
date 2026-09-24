@@ -1762,6 +1762,29 @@ fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
     assert_eq!(found[0].unproven, Some(Unproven::Offset));
 }
 
+/// A pointer plus a literal zero is not proved to be off the start.
+///
+/// ADR-0021 folds `p + 0` away where the C frontend builds the IR, so no C
+/// program reaches this, and `docs/c-family.md` records that nothing enforces
+/// the fold. An IR from a frontend that skipped it hands the check this shape,
+/// and reading the constant is what keeps a zero from being taken for a move.
+/// It answers `Unknown`, as every offset `offset_of` cannot call non-zero does:
+/// a suspicion about a free of the start, which is row 4, where assuming the
+/// constant moved the pointer would be a false proof. See ADR-0036.
+///
+/// Mutation: in `memory.rs::offset_of`, answer `true` for every constant rather
+/// than reading it. The free becomes `Conclusion::Unsafe` and this fails on
+/// that field.
+#[test]
+fn a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start() {
+    let found = freed_after(|to, p, at, then| stepped_by(to, p, 0, at, then));
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::InteriorFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].unproven, Some(Unproven::Offset));
+}
+
 /// A pointer subtracted from a constant is not proved to be off the start.
 ///
 /// C17 6.5.6 p3 allows a pointer only on the left of a `-`, so `1 - p` is not
