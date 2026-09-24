@@ -699,6 +699,28 @@ cases! {
     edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     compound_assignment: ["--emit", "ast"],
+    // The same two operators, at the one type whose operation does not happen
+    // at `int`. C17 6.5.6 p8 makes `p + 1` a pointer, and ADR-0030 has the
+    // memory check read a local's declared type to tell the pointer operand of
+    // an addition from the integer beside it and drop the integer, so a
+    // temporary declared `int` holding an allocation is one that check can be
+    // handed and not see. `--emit safety-ir` because the declaration being
+    // pinned is the IR's: `compound_assignment` and `increment` pin the tree
+    // these are read from and stop there, and the tree is where this is right.
+    //
+    // Mutation: have `lowering.rs::promoted` answer `Ty::Int` for a pointer
+    // place again. These two fail and nothing else in the suite does, which is
+    // why they are here: the fix is invisible to every other case.
+    a_compound_assignment_on_a_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_increment_of_a_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the same through a projection, because `promoted` is handed the
+    // whole place rather than its base local: `*pp` is an `int *` where `pp`
+    // is an `int **`, and the two cases above cannot tell the difference
+    // because their places have no projection at all.
+    //
+    // Mutation: have `promoted` ask about `Place::local(place.local)` instead
+    // of `place`. Only this case fails.
+    a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     conditional: ["--emit", "ast"],
     empty_character_constant: ["--emit", "tokens"],
     empty_parameter_list: ["--emit", "ast"],

@@ -1479,7 +1479,7 @@ impl Lowering<'_> {
                         // `E += 1`, which 6.5.16.2 p3 makes `E = E + 1`. So the
                         // step happens at the promoted type, the same as a
                         // compound assignment above, and for the same reason.
-                        let stepped = self.promoted(builder);
+                        let stepped = self.promoted(builder, &place);
                         builder.push(Operation {
                             place: Place::local(stepped),
                             value: Rvalue::Binary {
@@ -1546,7 +1546,7 @@ impl Lowering<'_> {
                     // IR and the addition is checked at the width C performs it
                     // at rather than at the width it is stored into.
                     Some(op) => {
-                        let computed = self.promoted(builder);
+                        let computed = self.promoted(builder, &place);
                         builder.push(Operation {
                             place: Place::local(computed),
                             value: Rvalue::Binary {
@@ -1957,25 +1957,71 @@ impl Lowering<'_> {
         Some(builder.function.push_local(ty))
     }
 
-    /// A temporary of the type an arithmetic operation is performed at.
+    /// A temporary of the type an operation is performed at.
     ///
-    /// `int`, always, because C17 6.3.1.1 p2 promotes every integer type this
-    /// frontend has to it and 6.5.16.2 p3 makes `E1 op= E2` mean `E1 = E1 op
-    /// E2`, which puts the operation at the promoted type and the narrowing in
-    /// the assignment. `types.rs` says the same about `a + b` and is where this
-    /// stops being a constant: the day `long` parses, the promoted type of a
-    /// pair is a question again.
+    /// `int` where the place holds a number, because C17 6.3.1.1 p2 promotes
+    /// every integer type this frontend has to it and 6.5.16.2 p3 makes `E1
+    /// op= E2` mean `E1 = E1 op E2`, which puts the operation at the promoted
+    /// type and the narrowing in the assignment. `types.rs` says the same
+    /// about `a + b` and is where this stops being a constant: the day `long`
+    /// parses, the promoted type of a pair is a question again, because C
+    /// performs the operation at what the usual arithmetic conversions give
+    /// the pair rather than at what promoting the left operand gives. `void`
+    /// takes this arm to keep the `match` total and is not an answer about C:
+    /// 6.5.16.2 p1 wants an arithmetic or a pointer left operand and `void` is
+    /// neither, so `*v += 1` on a `void *` is a program this frontend accepts
+    /// only because nothing checks that clause. #226.
     ///
-    /// Without this, `c += 100` on a `char` writes its addition straight into
+    /// Without that, `c += 100` on a `char` writes its addition straight into
     /// an 8-bit place, and the interpreter reads that place's type as the width
     /// the operation happened at. C says 200 is an ordinary `int` there and the
     /// truncation to `char` is a conversion, so a run that stopped would be
     /// reporting a defined program as undefined. ADR-0013 rests on an
     /// operation's destination carrying the promoted type; this is what makes
     /// that true where no expression node does.
-    fn promoted(&mut self, builder: &mut Builder) -> LocalId {
-        let int = self.unit.push_type(Ty::Int);
-        builder.function.push_local(int)
+    ///
+    /// **The place's own type where that is a pointer**, because C17 6.5.6 p8
+    /// makes `p + i` a pointer rather than a number, and the obligation
+    /// [`Operation`] states is to carry the type C performs the operation at,
+    /// whichever type that is. What `int` costs here is not a wrong value:
+    /// ADR-0030 has the memory check read a local's declared type to tell the
+    /// pointer operand of an addition from the integer beside it, and drop the
+    /// integer, so a temporary declared `int` holding `p + i` is an allocation
+    /// that check can be handed and not see. Nothing was being lost while this
+    /// answered `int`, because that temporary has one use and no expression
+    /// this frontend builds puts it beside a pointer operand; the requirement
+    /// was broken all the same, and the set of expressions grows every phase.
+    /// `docs/c-family.md` is where it is written down, and what it costs.
+    ///
+    /// [`TranslationUnit::place_ty`] answers `None` for an `Index` projection,
+    /// which nothing builds, and for a `Deref` through something that is not a
+    /// pointer. What excludes the second is not [`Lowering::begin_place`]'s own
+    /// reading, which pushes a `Deref` without asking what it dereferences: it
+    /// is the `typed` call that begins it, because `types.rs` gives `*x` no
+    /// type where `x` is a number, so the expression is refused before a place
+    /// exists. A fallback to `int` here would put the silence above back for a
+    /// place nobody could name; a panic says which one.
+    ///
+    /// The whole place is asked about rather than its base local, because
+    /// `*pp` on an `int **` is an `int *` and the operation happens at what
+    /// the place holds.
+    fn promoted(&mut self, builder: &mut Builder, place: &Place) -> LocalId {
+        let ty = self
+            .unit
+            .place_ty(&builder.function, place)
+            .expect("a place this lowering built has a type");
+
+        // Written out rather than spelled `matches!`, for the reason
+        // `memory.rs::Allocations::is_pointer` gives: a kind of type nobody has
+        // added yet is not a number, and `error[E0004]` here is what asks a
+        // fourth kind whether an operation on it happens at its own type.
+        match self.unit.ty(ty) {
+            Ty::Pointer(_) => builder.function.push_local(ty),
+            Ty::Int | Ty::Char | Ty::Void => {
+                let int = self.unit.push_type(Ty::Int);
+                builder.function.push_local(int)
+            }
+        }
     }
 
     /// The local an identifier means.
