@@ -2602,6 +2602,19 @@ fn used_before(
     // still hold where the exemption had newly arrived. This turns that same
     // day into a named panic over the corpus, which is row 3 of the failure
     // list rather than row 4.
+    //
+    // **What holds it is the build, and only that.** `null` and `block` reach
+    // this function for this expression and for nothing else, so deleting the
+    // assertion is `error: unused variable` twice over and the gate runs
+    // clippy with `-D warnings`. Measured.
+    //
+    // **The condition itself is held by nothing**, and that is not an
+    // oversight to be closed later. No input makes it fire: removing the
+    // `pending.clear()` that condition 2 rests on leaves every corpus program
+    // passing through here untroubled, and so does removing the ordering
+    // condition beside it. Weakening this `any` to `all` breaks no test.
+    // What it is worth is what it is checked on, which is every program the
+    // corpus can build, on every debug run.
     debug_assert!(
         !frees
             || known.pending.is_empty()
