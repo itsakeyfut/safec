@@ -3090,6 +3090,58 @@ mod tests {
         assert!(text.contains("\"b\""), "{text}");
     }
 
+    /// The level is a fact about the invocation, so it is reported once and
+    /// before anything an input has to say.
+    ///
+    /// **A corpus case cannot hold either half.** The harness runs one file per
+    /// case, so a report made per input and a report made once per run look
+    /// identical to every case there is, and with one diagnostic in the output
+    /// there is no position to be wrong about. Two inputs with a lexical error
+    /// each is the smallest thing that separates them.
+    ///
+    /// Mutation: report inside the per-input loop rather than once before it.
+    /// The count fails with two, and nothing else in the workspace fails.
+    ///
+    /// Mutation: report after the input loop instead of before it. The position
+    /// fails with two, and again nothing else does. A reader meeting the
+    /// paragraph after a screenful of findings has no way to tell it is not
+    /// about the last of them.
+    #[test]
+    fn the_undelivered_level_is_reported_once_for_the_run_and_before_its_inputs() {
+        // Two inputs, each with a lexical error of its own, so that the
+        // undelivered report has something to be counted against and something
+        // to be positioned relative to. A corpus case cannot hold this: the
+        // harness runs one file per case, so a report made per input and a
+        // report made per run look identical to every one of them.
+        let first = TempFile::new("safec_undelivered_one.c", "int a = \"unterminated;\n");
+        let second = TempFile::new("safec_undelivered_two.c", "int b = \"unterminated;\n");
+        let mut options = options(vec![
+            first.path().to_path_buf(),
+            second.path().to_path_buf(),
+        ]);
+        options.safety = SafetyLevel::Strict;
+
+        let reported = compile(&options).diagnostics;
+        let reported = reported.diagnostics();
+        let undelivered: Vec<usize> = reported
+            .iter()
+            .enumerate()
+            .filter(|(_, diagnostic)| diagnostic.message().starts_with("`--safety strict` asks"))
+            .map(|(at, _)| at)
+            .collect();
+
+        assert_eq!(
+            undelivered.len(),
+            1,
+            "the level is a fact about the invocation, not about an input: {reported:?}"
+        );
+        assert_eq!(undelivered[0], 0, "{reported:?}");
+        assert!(
+            reported.len() > 1,
+            "the inputs reported nothing, so neither assertion above was tested"
+        );
+    }
+
     /// The rule, over every kind there is: a run over a program this compiler
     /// can compile answers with something for every one of them. Driven by
     /// `EmitKind::value_variants` rather than by a list, so a kind added
