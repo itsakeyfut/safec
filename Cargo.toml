@@ -32,3 +32,15 @@ opt-level = 2
 missing_docs = "warn"
 missing_debug_implementations = "warn"
 unreachable_pub = "warn"
+
+# This compiler analyses memory safety in someone else's language, so it is
+# written in safe Rust itself, and that is a claim worth holding rather than
+# remembering.
+#
+# `forbid` rather than `deny`, because `deny` is turned off by an `allow` in
+# whichever file wants one and the point of this is that the reversal is not
+# local. Held by the lint rather than by a search over the sources, because a
+# search matches text and this matches the language: `unsafe` inside a macro
+# expansion, inside a string literal, or split across a line break is a
+# difference between the two, and only one of them is right about which is which.
+unsafe_code = "forbid"
