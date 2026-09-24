@@ -46,6 +46,31 @@ pub struct Options {
     pub color: ColorMode,
 }
 
+impl Options {
+    /// The level this run can be held to, which is never above the one it asked
+    /// for.
+    ///
+    /// Two independent things lower it and the answer is the lowest of the
+    /// three: [`SafetyLevel::DELIVERED`] is the highest level with checks behind
+    /// it, and an artifact that does not reach the IR runs no check at all
+    /// whatever the level was. Both are the same sentence to whoever reads the
+    /// report, which is why this is one function rather than two conditions at
+    /// the site that reports. Two conditions there is the shape `CLAUDE.md`
+    /// calls the worst defect this project has had, and there are two axes here
+    /// rather than one. See ADR-0035.
+    ///
+    /// `min` for the level and a `match` inside
+    /// [`EmitKind::reaches_the_ir`] for the kind, because the levels are
+    /// cumulative and ordered on purpose while [`EmitKind`] deliberately is not.
+    pub fn delivered(&self) -> SafetyLevel {
+        if self.emit.reaches_the_ir() {
+            self.safety.min(SafetyLevel::DELIVERED)
+        } else {
+            SafetyLevel::Off
+        }
+    }
+}
+
 /// An artifact the compiler can produce.
 ///
 /// The variants are declared in pipeline order, from the first stage of the
@@ -140,6 +165,25 @@ impl EmitKind {
         match self {
             Self::Tokens | Self::Ast | Self::SafetyIr | Self::LlvmIr | Self::Object => false,
             Self::Executable => true,
+        }
+    }
+
+    /// Whether making this artifact builds the Safety IR, which is what every
+    /// safety check reads.
+    ///
+    /// The kinds that answer `false` stop in the frontend, so no check runs for
+    /// them however high a level the run asked for. That is a fact about the
+    /// artifact rather than about the program, and ADR-0035 is what a run says
+    /// about it.
+    ///
+    /// Exhaustive for the reason [`Self::spans_inputs`] gives, and this enum has
+    /// no `Ord` so the question cannot be spelled as a comparison instead. A
+    /// comparison would answer "past the last stage that reads the IR" and never
+    /// "before the first one", and the pipeline grows at both ends.
+    pub fn reaches_the_ir(self) -> bool {
+        match self {
+            Self::Tokens | Self::Ast => false,
+            Self::SafetyIr | Self::LlvmIr | Self::Object | Self::Executable => true,
         }
     }
 
@@ -271,6 +315,134 @@ mod tests {
                 !kind.survives_an_error() || kind.spans_inputs(),
                 "{kind:?} is written when a run fails and cannot take the several inputs that is the only reason on record for writing one"
             );
+        }
+    }
+
+    /// Which artifacts are made by building the Safety IR.
+    ///
+    /// Written out rather than asked of the `match`, because a test that asks
+    /// the implementation what it says holds for whatever it says, which is
+    /// RK-001 in the review knowledge bank. This table is the definition.
+    ///
+    /// The length check covers the kind nobody has written yet: adding one
+    /// without answering for it here fails by name rather than passing quietly.
+    ///
+    /// Mutation: answer `true` for `Ast`. This fails naming the kind, and the
+    /// corpus case `an_artifact_that_stops_before_the_ir_delivers_no_checks`
+    /// fails with it.
+    #[test]
+    fn every_emit_kind_says_whether_it_reaches_the_ir() {
+        const ROWS: [(EmitKind, bool); 6] = [
+            (EmitKind::Tokens, false),
+            (EmitKind::Ast, false),
+            (EmitKind::SafetyIr, true),
+            (EmitKind::LlvmIr, true),
+            (EmitKind::Object, true),
+            (EmitKind::Executable, true),
+        ];
+
+        assert_eq!(
+            ROWS.len(),
+            EmitKind::value_variants().len(),
+            "an emit kind was added and this table did not answer for it"
+        );
+
+        for (kind, reaches) in ROWS {
+            assert_eq!(kind.reaches_the_ir(), reaches, "{kind:?}");
+        }
+    }
+
+    /// A kind that is a program reaches the IR.
+    ///
+    /// **The reason made checkable.** A program is compiled code and this
+    /// compiler has no route from source to code that goes round the Safety IR,
+    /// so the table above is not free to answer `false` here for a kind that
+    /// answers `true` to [`EmitKind::is_a_program`], whatever that kind turns
+    /// out to be.
+    ///
+    /// Driven by the roster rather than by a list, which is what covers the kind
+    /// nobody has written: `error[E0004]` makes somebody add an arm and nothing
+    /// whatsoever makes the arm they add correct, which is RK-015.
+    ///
+    /// Mutation: answer `false` from `reaches_the_ir` for `Executable`. This
+    /// fails, naming the kind.
+    #[test]
+    fn a_kind_that_is_a_program_reaches_the_ir() {
+        for kind in EmitKind::value_variants() {
+            assert!(
+                !kind.is_a_program() || kind.reaches_the_ir(),
+                "{kind:?} is a program, and there is no route to one that goes round the IR"
+            );
+        }
+    }
+
+    /// What a run can be held to, for every level against both answers to
+    /// whether its artifact reaches the IR.
+    ///
+    /// The rows are written out rather than computed from
+    /// [`SafetyLevel::DELIVERED`], for the reason
+    /// `every_emit_kind_says_whether_it_reaches_the_ir` gives. The day
+    /// `DELIVERED` moves, this table is what has to be edited to say so, which
+    /// is the point of it: that edit is how the change that lands the next level
+    /// finds out it owes one here.
+    ///
+    /// Mutation: drop the `min` and answer `self.safety`. Every row above
+    /// `memory` in the reaching column fails.
+    ///
+    /// Mutation: answer `self.safety.min(SafetyLevel::DELIVERED)` in both arms,
+    /// which drops the artifact question. Every row above `off` in the stopping
+    /// column fails.
+    #[test]
+    fn a_run_is_delivered_no_more_than_the_levels_with_checks_behind_it() {
+        // The level asked for, what a run delivers when its artifact reaches the
+        // IR, and what it delivers when the artifact stops before it.
+        const ROWS: [(SafetyLevel, SafetyLevel, SafetyLevel); 6] = [
+            (SafetyLevel::Off, SafetyLevel::Off, SafetyLevel::Off),
+            (SafetyLevel::Memory, SafetyLevel::Memory, SafetyLevel::Off),
+            (SafetyLevel::Lifetime, SafetyLevel::Memory, SafetyLevel::Off),
+            (
+                SafetyLevel::Ownership,
+                SafetyLevel::Memory,
+                SafetyLevel::Off,
+            ),
+            (SafetyLevel::Thread, SafetyLevel::Memory, SafetyLevel::Off),
+            (SafetyLevel::Strict, SafetyLevel::Memory, SafetyLevel::Off),
+        ];
+
+        assert_eq!(
+            ROWS.len(),
+            SafetyLevel::value_variants().len(),
+            "a safety level was added and this table did not answer for it"
+        );
+
+        for (asked, reaching, stopping) in ROWS {
+            assert_eq!(
+                options(asked, EmitKind::SafetyIr).delivered(),
+                reaching,
+                "{asked:?}, artifact reaches the IR"
+            );
+            assert_eq!(
+                options(asked, EmitKind::Ast).delivered(),
+                stopping,
+                "{asked:?}, artifact stops before the IR"
+            );
+        }
+    }
+
+    /// One invocation, for the two fields [`Options::delivered`] reads.
+    ///
+    /// The rest is whatever builds: nothing here looks at an input, a target or
+    /// a colour, and naming a triple would make the answer look as though it
+    /// depended on one.
+    fn options(safety: SafetyLevel, emit: EmitKind) -> Options {
+        Options {
+            inputs: Vec::new(),
+            output: None,
+            safety,
+            emit,
+            target: Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+            allow_unknown: false,
+            color: ColorMode::Never,
         }
     }
 }

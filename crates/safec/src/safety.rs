@@ -44,6 +44,34 @@ pub enum SafetyLevel {
 }
 
 impl SafetyLevel {
+    /// The highest level with checks behind it.
+    ///
+    /// One name rather than the comparison spelled out wherever the question is
+    /// asked, so that landing the next axis of the model is moving this and
+    /// nothing else. The driver runs the memory and nullability checks at
+    /// [`Self::Memory`]; every level above it selects checks that do not exist,
+    /// and what a run is told about that is ADR-0035.
+    ///
+    /// Moving this is what expires the corpus case pinning an undeliverable
+    /// level: its expected output stops matching, so whoever implements the
+    /// lifetime checks has to come back here rather than be trusted to
+    /// remember.
+    pub const DELIVERED: Self = Self::Memory;
+
+    /// How `--safety` spells this level.
+    ///
+    /// Asked of the `ValueEnum` derive rather than answered by a table beside
+    /// it, for the reason [`crate::options::EmitKind::spelling`] gives: a second
+    /// spelling of the same thing is a second thing to keep in step, and this
+    /// one is read by a user in a diagnostic while the other decides what they
+    /// may type.
+    pub fn spelling(self) -> String {
+        self.to_possible_value()
+            .expect("every level is a value `--safety` takes")
+            .get_name()
+            .to_owned()
+    }
+
     /// The numeric level, as used in the design documents.
     ///
     /// Diagnostics use this to tell the user which level a check belongs to.
