@@ -1,0 +1,59 @@
+Target "x86_64-pc-windows-msvc"
+Function a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Block "bb0" entry
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:27 generated
+    Call a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:27 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:23 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:27 generated
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:49 written
+      Destination "_4"
+      Address
+        Place "_1"
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:44 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:49 generated
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:53 written
+      Destination "_5"
+      Binary "Add"
+        Copy "_3"
+          Deref
+        Constant 1
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:53 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:53 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:53 generated
+    Operation a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:63 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:70 generated
+    Return

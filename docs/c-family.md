@@ -273,10 +273,20 @@ with the local declared as a pointer produces a proved use after free.
 `crates/safec-ir/tests/freed.rs` holds that boundary, so that closing it later
 fails a named test rather than passing quietly. That test is about the check
 rather than about the frontend, so it did not move when `promoted` was fixed;
-what moved is that no C program reaches its shape through a compound assignment
-or an increment. `a_compound_assignment_on_a_pointer_computes_into_a_pointer`
-and `an_increment_of_a_pointer_computes_into_a_pointer` in
-`crates/safec/tests/cases` are what say so.
+what moved is that no **conforming** C program reaches its shape through a
+compound assignment or an increment.
+`a_compound_assignment_on_a_pointer_computes_into_a_pointer`,
+`an_increment_of_a_pointer_computes_into_a_pointer` and
+`a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer`
+in `crates/safec/tests/cases` are what say so.
+
+**Conforming is load-bearing there, and nothing enforces it.** C17 6.5.16.2 p1
+is what allows a pointer left operand for `+=` and `-=` and an arithmetic one
+otherwise, p2 is the same constraint for every other compound assignment, and
+`types.rs` deliberately runs no constraint check for any of them.
+Measured: `int *p; int i = 0; i += p;` is accepted in silence and builds a local
+declared `int` holding an addition with a pointer operand, which is exactly the
+shape above. It is #226.
 
 **A fifth arrived with**
 [ADR-0031](adr/0031-a-write-this-check-cannot-pin-down-replaces-what-an-escaped-local-holds.md),

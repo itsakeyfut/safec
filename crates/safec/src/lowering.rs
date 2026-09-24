@@ -1964,7 +1964,13 @@ impl Lowering<'_> {
     /// op= E2` mean `E1 = E1 op E2`, which puts the operation at the promoted
     /// type and the narrowing in the assignment. `types.rs` says the same
     /// about `a + b` and is where this stops being a constant: the day `long`
-    /// parses, the promoted type of a pair is a question again.
+    /// parses, the promoted type of a pair is a question again, because C
+    /// performs the operation at what the usual arithmetic conversions give
+    /// the pair rather than at what promoting the left operand gives. `void`
+    /// takes this arm to keep the `match` total and is not an answer about C:
+    /// 6.5.16.2 p1 wants an arithmetic or a pointer left operand and `void` is
+    /// neither, so `*v += 1` on a `void *` is a program this frontend accepts
+    /// only because nothing checks that clause. #226.
     ///
     /// Without that, `c += 100` on a `char` writes its addition straight into
     /// an 8-bit place, and the interpreter reads that place's type as the width
@@ -1981,14 +1987,24 @@ impl Lowering<'_> {
     /// ADR-0030 has the memory check read a local's declared type to tell the
     /// pointer operand of an addition from the integer beside it, and drop the
     /// integer, so a temporary declared `int` holding `p + i` is an allocation
-    /// that check can be handed and not see. `docs/c-family.md` is where that
-    /// requirement on the IR is written down, and what it costs to break it.
+    /// that check can be handed and not see. Nothing was being lost while this
+    /// answered `int`, because that temporary has one use and no expression
+    /// this frontend builds puts it beside a pointer operand; the requirement
+    /// was broken all the same, and the set of expressions grows every phase.
+    /// `docs/c-family.md` is where it is written down, and what it costs.
     ///
     /// [`TranslationUnit::place_ty`] answers `None` for an `Index` projection,
     /// which nothing builds, and for a `Deref` through something that is not a
-    /// pointer, which [`Lowering::begin_place`] refuses before a place exists.
-    /// A fallback to `int` here would put the silence above back for a place
-    /// nobody could name; a panic says which one.
+    /// pointer. What excludes the second is not [`Lowering::begin_place`]'s own
+    /// reading, which pushes a `Deref` without asking what it dereferences: it
+    /// is the `typed` call that begins it, because `types.rs` gives `*x` no
+    /// type where `x` is a number, so the expression is refused before a place
+    /// exists. A fallback to `int` here would put the silence above back for a
+    /// place nobody could name; a panic says which one.
+    ///
+    /// The whole place is asked about rather than its base local, because
+    /// `*pp` on an `int **` is an `int *` and the operation happens at what
+    /// the place holds.
     fn promoted(&mut self, builder: &mut Builder, place: &Place) -> LocalId {
         let ty = self
             .unit

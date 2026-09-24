@@ -713,6 +713,14 @@ cases! {
     // why they are here: the fix is invisible to every other case.
     a_compound_assignment_on_a_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_increment_of_a_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the same through a projection, because `promoted` is handed the
+    // whole place rather than its base local: `*pp` is an `int *` where `pp`
+    // is an `int **`, and the two cases above cannot tell the difference
+    // because their places have no projection at all.
+    //
+    // Mutation: have `promoted` ask about `Place::local(place.local)` instead
+    // of `place`. Only this case fails.
+    a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     conditional: ["--emit", "ast"],
     empty_character_constant: ["--emit", "tokens"],
     empty_parameter_list: ["--emit", "ast"],
