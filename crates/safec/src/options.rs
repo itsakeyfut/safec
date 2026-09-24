@@ -51,7 +51,7 @@ impl Options {
     /// for.
     ///
     /// Two independent things lower it and the answer is the lowest of the
-    /// three: [`SafetyLevel::DELIVERED`] is the highest level with checks behind
+    /// three: [`SafetyLevel::IMPLEMENTED`] is the highest level with checks behind
     /// it, and an artifact that does not reach the IR runs no check at all
     /// whatever the level was. Both are the same sentence to whoever reads the
     /// report, which is why this is one function rather than two conditions at
@@ -64,7 +64,7 @@ impl Options {
     /// cumulative and ordered on purpose while [`EmitKind`] deliberately is not.
     pub fn delivered(&self) -> SafetyLevel {
         if self.emit.reaches_the_ir() {
-            self.safety.min(SafetyLevel::DELIVERED)
+            self.safety.min(SafetyLevel::IMPLEMENTED)
         } else {
             SafetyLevel::Off
         }
@@ -184,6 +184,37 @@ impl EmitKind {
         match self {
             Self::Tokens | Self::Ast => false,
             Self::SafetyIr | Self::LlvmIr | Self::Object | Self::Executable => true,
+        }
+    }
+
+    /// The safety level a run defaults to when it asks for this artifact.
+    ///
+    /// The default is the highest level the artifact can carry rather than one
+    /// constant: a kind that stops before the IR runs no check, so a constant
+    /// `memory` was false for two of the six and turned a `--safety` nobody typed
+    /// into a claim nothing answered. See ADR-0035.
+    ///
+    /// **Here rather than inside `Cli::into_options`, so that a caller which
+    /// never saw a command line can ask.** This module's own doc comment says the
+    /// Clang adapter will build an [`Options`] directly, and ADR-0004 put the
+    /// `--allow-unknown` resolution on `Policy::new` for that reason rather than
+    /// in the CLI. A resolution reachable only through clap is one such a caller
+    /// answers differently, or not at all, and then gets a report naming flags it
+    /// has no command line to have typed.
+    ///
+    /// `Memory` spelled out rather than [`SafetyLevel::IMPLEMENTED`], which is
+    /// equal to it today and is not the same thing. `IMPLEMENTED` rises when a
+    /// level lands, and a default that rose with it would reject programs that
+    /// built the day before, which is what `docs/safety-model.md` opens by
+    /// refusing: the ladder is for migrating existing C, not for moving under
+    /// it. Raising
+    /// this is a decision about the way in, not a consequence of implementing a
+    /// check.
+    pub fn default_safety(self) -> SafetyLevel {
+        if self.reaches_the_ir() {
+            SafetyLevel::Memory
+        } else {
+            SafetyLevel::Off
         }
     }
 
@@ -380,16 +411,16 @@ mod tests {
     /// whether its artifact reaches the IR.
     ///
     /// The rows are written out rather than computed from
-    /// [`SafetyLevel::DELIVERED`], for the reason
+    /// [`SafetyLevel::IMPLEMENTED`], for the reason
     /// `every_emit_kind_says_whether_it_reaches_the_ir` gives. The day
-    /// `DELIVERED` moves, this table is what has to be edited to say so, which
+    /// `IMPLEMENTED` moves, this table is what has to be edited to say so, which
     /// is the point of it: that edit is how the change that lands the next level
     /// finds out it owes one here.
     ///
     /// Mutation: drop the `min` and answer `self.safety`. Every row above
     /// `memory` in the reaching column fails.
     ///
-    /// Mutation: answer `self.safety.min(SafetyLevel::DELIVERED)` in both arms,
+    /// Mutation: answer `self.safety.min(SafetyLevel::IMPLEMENTED)` in both arms,
     /// which drops the artifact question. Every row above `off` in the stopping
     /// column fails.
     #[test]

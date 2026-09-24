@@ -183,24 +183,13 @@ impl Cli {
         Options {
             inputs,
             output,
-            // The level a run defaults to is the highest one its *artifact* can
-            // carry rather than one constant: `--emit tokens` and `--emit ast`
-            // stop before the IR every check reads, so a constant `memory` made
-            // the default false for two of the six kinds and turned a
-            // `--safety` nobody typed into a claim nothing answered.
-            //
-            // `Memory` spelled out rather than `SafetyLevel::DELIVERED`, which
-            // is equal to it today and is not the same thing. `DELIVERED` rises
-            // when a phase lands, and a default that rises with it would make
-            // every new phase reject programs that built the day before, which
-            // is what `docs/safety-model.md` opens by refusing: the ladder is
-            // for migrating existing C, not for moving under it. Raising this
-            // is a decision about the way in, not a follow-on.
-            safety: safety.unwrap_or(if emit.reaches_the_ir() {
-                SafetyLevel::Memory
-            } else {
-                SafetyLevel::Off
-            }),
+            // Asked of the artifact rather than worked out here, so that a
+            // caller with no command line behind it resolves this the same way:
+            // the Clang adapter is that caller and ADR-0004 is the precedent.
+            // `EmitKind::default_safety` carries why the default is not one
+            // constant, and why it is `memory` rather than
+            // `SafetyLevel::IMPLEMENTED`.
+            safety: safety.unwrap_or(emit.default_safety()),
             emit,
             // clap answered for the spelling against `Target::ALL`, so the only
             // way here is a triple that table holds.
@@ -343,7 +332,7 @@ mod tests {
     /// Mutation: resolve `None` to `SafetyLevel::Memory` unconditionally. The
     /// `tokens` and `ast` rows fail.
     ///
-    /// **What this does not hold**: resolving to `SafetyLevel::DELIVERED`
+    /// **What this does not hold**: resolving to `SafetyLevel::IMPLEMENTED`
     /// instead of `Memory` fails nothing, because they are equal today. They are
     /// not the same thing, and the comment at the resolution says why. Nothing
     /// can hold that until a second level lands, which is the change that has to

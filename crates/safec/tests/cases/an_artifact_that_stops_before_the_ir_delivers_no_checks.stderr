@@ -1,4 +1,4 @@
 error: `--safety memory` asks for more than this run delivers
-  = note: this run delivers `off`: `--emit ast` stops before the Safety IR every check reads
+  = note: `--emit ast` stops before the Safety IR every check reads
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: ask for `--emit safety-ir`, or `--safety off`
+  = help: ask for `--safety off`, or `--emit safety-ir`, or `--allow-unknown` while a program is being migrated

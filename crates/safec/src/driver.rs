@@ -699,12 +699,25 @@ fn lowered(
 /// program a reader can search for, and this is a fact about the invocation:
 /// there is no program to point at, and a run refused here may never read one.
 ///
-/// Mutation: compare `options.safety` against `SafetyLevel::DELIVERED` here
-/// instead of against [`Options::delivered`], which drops the artifact half.
+/// **Two axes, twice over.** The gate is one of them and what it says is the
+/// other, and the second was got wrong here first.
+///
+/// Mutation: compare `options.safety` against `SafetyLevel::IMPLEMENTED` instead
+/// of against [`Options::delivered`], which drops the artifact half of the gate.
 /// `an_artifact_that_stops_before_the_ir_delivers_no_checks` fails and
-/// `a_level_with_no_checks_behind_it_is_not_delivered` stays green, which is the
-/// two-axis version of the defect `CLAUDE.md` calls the worst this project has
-/// had.
+/// `a_level_with_no_checks_behind_it_is_not_delivered` stays green.
+///
+/// Mutation: choose the note and the remedy with a single `if
+/// options.emit.reaches_the_ir()`, which is how this shipped to review. Then a
+/// run whose level *and* artifact both fall short says one of the two and its
+/// remedy sends the reader to `--emit safety-ir`, which is refused again for the
+/// other reason. `both_reasons_a_level_can_go_undelivered_are_said_at_once`
+/// fails and the two single-cause cases stay green.
+///
+/// Both are the shape `CLAUDE.md` calls the worst defect this project has had,
+/// and the second is what guarding against it in one place and not the next
+/// costs: ADR-0034 makes a remedy the change that would make the program
+/// compile, so a remedy answering one of two causes is a promise the run breaks.
 fn undelivered(options: &Options) -> Option<Diagnostic> {
     let asked = options.safety;
     let delivered = options.delivered();
@@ -712,42 +725,71 @@ fn undelivered(options: &Options) -> Option<Diagnostic> {
         return None;
     }
 
-    // Two reasons reach here and the note says which, because the remedies are
-    // not interchangeable: one is answered by asking for less, the other by
-    // asking for a different artifact.
-    let (note, remedy) = if options.emit.reaches_the_ir() {
-        (
-            format!(
-                "this run delivers `{}`, which is the highest level with checks behind it",
-                delivered.spelling()
-            ),
-            format!(
-                "ask for `--safety {}`, or `--allow-unknown` while a program is being migrated",
-                delivered.spelling()
-            ),
-        )
-    } else {
-        (
-            format!(
-                "this run delivers `{}`: `--emit {}` stops before the Safety IR every check reads",
-                delivered.spelling(),
-                options.emit.spelling()
-            ),
-            "ask for `--emit safety-ir`, or `--safety off`".to_owned(),
-        )
-    };
+    // **Both causes can hold at once, so both are said.** The artifact stopping
+    // before the IR and the level having nothing behind it are independent, and
+    // `--emit ast --safety strict` is both. An `if/else` here said whichever was
+    // written first, which is the two-axis mistake this function's own doc
+    // comment warns about, one level over from the gate that avoids it.
+    let stops_short = !options.emit.reaches_the_ir();
+    let unimplemented = asked > SafetyLevel::IMPLEMENTED;
+    let mut notes = Vec::new();
+    if stops_short {
+        notes.push(format!(
+            "`--emit {}` stops before the Safety IR every check reads",
+            options.emit.spelling()
+        ));
+    }
+    if unimplemented {
+        notes.push(format!(
+            "`{}` is the highest level with checks behind it",
+            SafetyLevel::IMPLEMENTED.spelling()
+        ));
+    }
+    debug_assert!(
+        !notes.is_empty(),
+        "a run delivers less than it asked for only through one of these two"
+    );
 
-    Some(
-        Diagnostic::concluded(
-            Conclusion::Unknown,
+    // **The remedy is worked out from what this run delivers, not from whichever
+    // cause was written first.** ADR-0034 makes a remedy the change that would
+    // make the program compile, so a remedy answering one of two causes is a
+    // promise this run breaks: `--emit ast --safety strict` used to be told to
+    // ask for `--emit safety-ir`, which is refused again for the other reason.
+    let mut ways = vec![format!("ask for `--safety {}`", delivered.spelling())];
+    if stops_short {
+        // Raising the artifact is the other way, and the level has to come with
+        // it: an artifact that reaches the IR still cannot deliver a level
+        // nothing implements.
+        ways.push(if unimplemented {
             format!(
-                "`--safety {}` asks for more than this run delivers",
-                asked.spelling()
-            ),
-            Remedy::new(remedy),
-        )?
-        .with_note(note),
-    )
+                "`--emit safety-ir --safety {}`",
+                SafetyLevel::IMPLEMENTED.spelling()
+            )
+        } else {
+            "`--emit safety-ir`".to_owned()
+        });
+    }
+    // Not offered to a run that already gave it, which is advice to do what has
+    // been done, and not offered beside the level that is defined as leaving
+    // nothing unknown, where `Cli::check` refuses the pair. Following a remedy
+    // into an argument conflict is the same broken promise as following one into
+    // this diagnostic again.
+    if !options.allow_unknown && asked < SafetyLevel::Strict {
+        ways.push("`--allow-unknown` while a program is being migrated".to_owned());
+    }
+
+    let mut diagnostic = Diagnostic::concluded(
+        Conclusion::Unknown,
+        format!(
+            "`--safety {}` asks for more than this run delivers",
+            asked.spelling()
+        ),
+        Remedy::new(ways.join(", or ")),
+    )?;
+    for note in notes {
+        diagnostic = diagnostic.with_note(note);
+    }
+    Some(diagnostic)
 }
 
 /// What a memory check concluded, as what a user reads.
@@ -3139,6 +3181,70 @@ mod tests {
         assert!(
             reported.len() > 1,
             "the inputs reported nothing, so neither assertion above was tested"
+        );
+    }
+
+    /// The level this compiler says it implements runs a check the level below it
+    /// does not.
+    ///
+    /// **This is what stops [`SafetyLevel::IMPLEMENTED`] moving ahead of the
+    /// checks.** Moving it alone leaves `undelivered` silent about a level
+    /// nothing checks, and silence there *means* the level was delivered, so
+    /// `int *foo(void) { int x = 42; return &x; }` at `--safety lifetime` would
+    /// exit 0 with an empty stderr. Measured: that mutation fails five tests,
+    /// and the other four are three `.stderr` files and a table row, every one
+    /// of which reads as an expectation to re-bless rather than as a check that
+    /// is missing.
+    ///
+    /// It does not say *which* check the top level owes, because that cannot be
+    /// written before the check exists. It says the top level earns its place by
+    /// reporting something the one below it does not, which is true of every
+    /// level this ladder will ever have.
+    ///
+    /// Mutation: move [`SafetyLevel::IMPLEMENTED`] up one without wiring a check
+    /// for the level it moves to. This fails, and it is the only one of the five
+    /// failures that says something is absent rather than stale.
+    #[test]
+    fn the_implemented_level_runs_a_check_the_level_below_it_does_not() {
+        let levels = SafetyLevel::value_variants();
+        let top = levels
+            .iter()
+            .position(|level| *level == SafetyLevel::IMPLEMENTED)
+            .expect("the implemented level is one of the levels");
+        assert!(
+            top > 0,
+            "`IMPLEMENTED` is the level that runs nothing, so it claims nothing"
+        );
+        let below = levels[top - 1];
+
+        // A double free, which the lowest implemented level proves today. The
+        // program belongs to the level below the one being claimed only in the
+        // sense that it is what the *existing* checks catch; that is the point,
+        // because a program for a check nobody has written cannot be the fixture.
+        let input = TempFile::new(
+            "safec_implemented_level.c",
+            "void *malloc(int n);
+void free(void *p);
+int main(void) {
+    int *p = malloc(8);
+    free(p);
+    free(p);
+    return 0;
+}
+",
+        );
+        let mut options = options(vec![input.path().to_path_buf()]);
+        options.emit = EmitKind::SafetyIr;
+
+        options.safety = SafetyLevel::IMPLEMENTED;
+        let at_top = compile(&options).diagnostics.diagnostics().len();
+        options.safety = below;
+        let at_below = compile(&options).diagnostics.diagnostics().len();
+
+        assert!(
+            at_top > at_below,
+            "{:?} reported {at_top} and {below:?} reported {at_below}: the level              this compiler says it implements runs no check the one below it does              not, so `IMPLEMENTED` has moved ahead of them",
+            SafetyLevel::IMPLEMENTED
         );
     }
 

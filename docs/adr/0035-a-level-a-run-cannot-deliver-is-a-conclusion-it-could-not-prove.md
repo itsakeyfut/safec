@@ -95,7 +95,7 @@ workspace with `--no-fail-fast`.
 
 **The two axes, which is the half this record exists for.** In
 `driver.rs::undelivered`, compare `options.safety` against
-`SafetyLevel::DELIVERED` rather than against `Options::delivered`, which keeps
+`SafetyLevel::IMPLEMENTED` rather than against `Options::delivered`, which keeps
 the level axis and drops the artifact one. Exactly one test fails,
 `an_artifact_that_stops_before_the_ir_delivers_no_checks`, while
 `a_level_with_no_checks_behind_it_is_not_delivered` stays green. That asymmetry
@@ -128,9 +128,9 @@ which the only unit test is
 answer rather than noise: it is every dump in the corpus reporting that the old
 default was false for it.
 
-**What nothing holds.** Resolving an unnamed level to `SafetyLevel::DELIVERED`
+**What nothing holds.** Resolving an unnamed level to `SafetyLevel::IMPLEMENTED`
 instead of `Memory` fails nothing, because the two are equal today. They are not
-the same thing: `DELIVERED` rises when a level lands, and a default that rose
+the same thing: `IMPLEMENTED` rises when a level lands, and a default that rose
 with it would reject programs that built the day before, which is what the ladder
 exists to prevent. The comment at the resolution says so and no test can, until a
 second level exists, which is the change that has to read it.

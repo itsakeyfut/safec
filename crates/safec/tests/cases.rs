@@ -559,7 +559,7 @@ cases! {
     // wrong.
     //
     // Mutation: in `driver.rs::undelivered`, compare `options.safety` against
-    // `SafetyLevel::DELIVERED` rather than against `Options::delivered`, which
+    // `SafetyLevel::IMPLEMENTED` rather than against `Options::delivered`, which
     // drops the artifact half. The second fails and the first stays green, which
     // is the shape `CLAUDE.md` calls the worst defect this project has had: two
     // axes, and a gate that answers one of them.
@@ -583,6 +583,21 @@ cases! {
     an_artifact_that_stops_before_the_ir_delivers_no_checks: ["--emit", "ast", "--safety", "memory"],
     a_level_that_was_not_asked_for_is_not_reported: ["--emit", "ast", "--safety", "off"],
     a_migrating_run_is_told_what_was_not_established_and_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "lifetime", "--allow-unknown"],
+    // Both causes at once, which the two above have one each of. A review found
+    // the report speaking whichever cause was written first, and its remedy
+    // sending the reader to `--emit safety-ir`, which is refused again for the
+    // other reason: ADR-0034 makes a remedy the change that would make the
+    // program compile, so half of that one was a promise this run breaks.
+    //
+    // Mutation: choose the note and the remedy with one `if` on
+    // `options.emit.reaches_the_ir()`, as it was written. This fails and the two
+    // single-cause cases stay green, which is the shape of the defect rather
+    // than its size.
+    //
+    // Mutation: offer `--allow-unknown` whatever the level. This fails: the
+    // level here is `strict` and `Cli::check` refuses that pair, so following
+    // the remedy is an argument conflict rather than a build.
+    both_reasons_a_level_can_go_undelivered_are_said_at_once: ["--emit", "ast", "--safety", "strict"],
     a_double_free_is_found_on_a_backend_run: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     a_discarded_dereference_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     // `pp[0]` is `*pp`, and the backend can write `*pp`. It used to refuse
