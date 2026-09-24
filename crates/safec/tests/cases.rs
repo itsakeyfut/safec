@@ -102,7 +102,9 @@ cases! {
     // 6.5.2.2 p10's first sentence orders before the call unconditionally. The
     // carried read has to stop at that point like it stops at any other, so
     // neither of these gets an `SC0402`; the `SC0403` each still carries is the
-    // nullability check answering a different question. The second reaches the
+    // nullability check answering a different question, and the `SC0404` is
+    // ADR-0036's, because an offset read through a pointer is not one this
+    // check can evaluate. The second reaches the
     // same place through a nested call, which is the spelling where the read is
     // further from the free than an operand of it.
     //
@@ -406,6 +408,45 @@ cases! {
     a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_that_stopped_being_null_before_the_free_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free of a pointer that is not the start of its allocation, which C17
+    // 7.22.3.3 p2 makes undefined and which this check once followed to the
+    // allocation and said nothing about. See ADR-0036. The first three are the
+    // proof: a constant offset either way, and the increment the issue that
+    // found this was written about. The fourth is the offset this check cannot
+    // evaluate, which is unproven and so an error in this compilation.
+    a_free_of_a_pointer_past_the_start_of_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_of_a_pointer_an_increment_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_of_a_pointer_before_the_start_of_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_of_a_pointer_offset_by_an_integer_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The join, both ways. Two paths that each moved the pointer off the start
+    // are both off it, whatever the distances; one that did not leaves the
+    // answer open.
+    // `+` with the constant on the left, which C17 6.5.6 p8 makes the same
+    // addition. Mutation: in `memory.rs::offset_of`, drop the arm that reads
+    // the constant on the left. This fails with the proof down to `may`.
+    a_free_of_a_constant_plus_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer moved off the start and back is at the start again, and this
+    // check carries no distance to know it, so the second move proves nothing.
+    // The program is one C defines. Mutation: in `offset_of`, stop requiring
+    // the followed operand to be at the start. This fails with a proved
+    // `SC0404` about a free C defines.
+    a_free_of_a_pointer_moved_back_to_the_start_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Two allocations, one offset, and no `allocated here`: naming either line
+    // would be a caret on an allocation the value may not hold, RK-035. Both
+    // are made before the branch rather than on its arms: allocated on an arm,
+    // each site meets the other arm's `Live(None)` at the join and arrives with
+    // no line to name, so the fold has nothing to get wrong. Mutation: in `memory.rs::interior`, fold `made` by keeping the first
+    // site's, or by keeping the last site's. Each fails on the label, and both
+    // directions are measured because RK-038 is a fold guarded on one side.
+    a_free_past_the_start_of_either_of_two_allocations_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_offset_on_both_arms_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_offset_on_one_arm_only_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The two that must stay silent. The first is ADR-0021's fold reaching this
+    // check as no arithmetic at all, and guards that record rather than anything
+    // here. The second is what a local holding no site answers, on one of the
+    // commonest shapes in C: a path that holds null meeting one that allocated.
+    a_free_of_a_pointer_plus_zero_is_a_free_of_the_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_of_an_allocation_made_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_replaced_through_its_alias_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

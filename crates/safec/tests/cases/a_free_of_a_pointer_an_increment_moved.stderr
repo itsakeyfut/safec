@@ -1,0 +1,13 @@
+error[SC0404]: this frees a pointer that is not the start of an allocation
+   ╭─[ a_free_of_a_pointer_an_increment_moved.c:6:5 ]
+   │
+ 4 │     int *p = malloc(8);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── not the start of the allocation
+───╯
+  = note: this check belongs to safety level 1
+  = help: free the pointer the allocation was made with, and keep the offset in a variable of its own

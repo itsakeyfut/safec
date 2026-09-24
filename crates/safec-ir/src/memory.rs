@@ -1,14 +1,15 @@
-//! Whether a program frees one allocation twice, or uses one after it was
-//! freed.
+//! Whether a program frees one allocation twice, uses one after it was freed,
+//! or frees a pointer that is not the start of one.
 //!
 //! The first checks on [the safety model]'s memory axis, and the first thing
 //! this compiler says about what a C program *does* rather than about how it is
 //! written.
 //!
-//! **Two answers out of one walk.** They read one lattice: what a free does to
+//! **Three answers out of one walk.** They read one lattice: what a free does to
 //! a site is what makes a later use of it a defect, so computing the states
 //! twice would be the same computation twice and a second chance for the two
-//! copies to disagree. [`Kind`] is how the caller tells them apart.
+//! copies to disagree. The third asks a free where in its allocation the
+//! pointer is, which is ADR-0036. [`Kind`] is how the caller tells them apart.
 //!
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
@@ -38,8 +39,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
-    TranslationUnit, Ty,
+    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue,
+    Terminator, TranslationUnit, Ty,
 };
 use crate::nullability::{self, NullAtTerminators};
 use crate::source::{SourceMap, Span};
@@ -165,6 +166,44 @@ impl SiteState {
             },
             _ => Self::Unknown,
         }
+    }
+}
+
+/// Where in the allocations it holds a local's value points.
+///
+/// **Three values, because this check can be certain in both directions.**
+/// C17 7.22.3.3 p2 makes a `free` of anything but the pointer an allocation
+/// function returned undefined, and `p + 1` reaches the same allocation `p`
+/// does, so which allocation a value reaches cannot say whether freeing it is
+/// defined. A constant offset can, and one this check cannot evaluate cannot.
+/// See ADR-0036.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Offset {
+    /// The start of every site this local holds, and what a local holding no
+    /// site answers.
+    Zero,
+    /// A non-zero distance from the start of every site it holds.
+    NonZero,
+    /// This check cannot say which.
+    Unknown,
+}
+
+impl Offset {
+    /// The two together, which is `Unknown` unless they agree.
+    ///
+    /// **`NonZero` survives a join, and that is not slack.** Two paths that
+    /// each moved the pointer off the start both arrive off the start, whatever
+    /// the two distances were, so `if (c) q = p + 1; else q = p + 2; free(q);`
+    /// stays a proof.
+    ///
+    /// **`Zero` is not an identity here**, although it is what a local holding
+    /// no site answers. `int *q = 0; if (c) q = p + 1; free(q);` joins a path
+    /// holding nothing with one off the start and answers `Unknown`, which is a
+    /// warning on a program that frees null on one path and an interior
+    /// pointer on the other. That is row 4 rather than row 6, and ADR-0036
+    /// records it as what three values cost.
+    fn joined(self, other: Self) -> Self {
+        if self == other { self } else { Self::Unknown }
     }
 }
 
@@ -320,6 +359,18 @@ struct Held {
     ///
     /// [`writes_to`]: Held::writes_to
     writes_elsewhere: bool,
+    /// Where in every site above this local's value points.
+    ///
+    /// **One answer for the whole set rather than one per site**, because
+    /// arithmetic applies its offset to the whole may-set at once: a row per
+    /// site would answer the same thing in every column. It also keeps this
+    /// struct at two square tables, which is the condition [`Held::sites`]
+    /// names for reaching for a packed bitset.
+    ///
+    /// [`Held::hold`] takes it as an argument, so that a new producer of a site
+    /// cannot be written without answering where in it the value points. See
+    /// ADR-0036.
+    offset: Offset,
 }
 
 impl Held {
@@ -331,12 +382,30 @@ impl Held {
             freed: None,
             writes_to: vec![false; sites],
             writes_elsewhere: true,
+            // Nothing held, so nothing to be off the start of. `Unknown` here
+            // would be a warning about an offset nobody wrote, on every path
+            // that holds nothing and, through `Held::hold`'s join, on every
+            // parameter. See ADR-0036.
+            offset: Offset::Zero,
         }
     }
 
-    /// Also hold this site.
-    fn hold(&mut self, site: usize) {
+    /// Also hold this site, at this offset into it.
+    ///
+    /// **The offset is an argument so that it cannot be forgotten.** A site
+    /// arrives from a call's destination or from a parameter, each of which is
+    /// the start of whatever it stands for, and a third producer written later
+    /// has to say the same or something else: dropping the argument is
+    /// `error[E0061]` at every call site. See ADR-0036.
+    ///
+    /// **Joined rather than assigned, and nothing tells the two apart today.**
+    /// Both callers hold on a local [`Held::none`] or [`Held::clear`] has just
+    /// left at `Zero`, and `Zero` joined with `Zero` is `Zero`. A caller that
+    /// holds a second site on a local already holding one is where they part,
+    /// and the join is the answer that cannot claim more than both said.
+    fn hold(&mut self, site: usize, offset: Offset) {
         self.sites[site] = true;
+        self.offset = self.offset.joined(offset);
     }
 
     /// Every site held, in order.
@@ -364,6 +433,7 @@ impl Held {
             freed,
             writes_to,
             writes_elsewhere,
+            offset,
         } = self;
         sites.fill(false);
         *lost = false;
@@ -372,6 +442,8 @@ impl Held {
         // What a local is given ends the claim that this check knew where a
         // write through it landed, along with the set that claim was about.
         *writes_elsewhere = true;
+        // What `Held::none` answers, for its reason.
+        *offset = Offset::Zero;
     }
 
     /// Also hold everything that one holds, where two paths meet.
@@ -393,7 +465,9 @@ impl Held {
             freed,
             writes_to,
             writes_elsewhere,
+            offset,
         } = self;
+        *offset = offset.joined(other.offset);
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -439,7 +513,16 @@ impl Held {
             freed,
             writes_to,
             writes_elsewhere,
+            offset,
         } = self;
+
+        // **Where the result points is the fold's to say, and not this
+        // method's**, for the reason the line below gives about the proof:
+        // what decides it is which operand was the pointer and what the other
+        // one was, and this sees neither. [`built_from`] assigns over it. The
+        // one other caller is a write through a pointer, whose target has
+        // escaped and so is never asked. See ADR-0036.
+        *offset = Offset::Unknown;
 
         // **A second operand takes the proof with it.** What
         // [`Self::freed`] is worth is that freeing this local again takes the
@@ -869,11 +952,15 @@ impl Known {
 /// may be either, and [`Held::accumulated`] drops the proof for the reason
 /// written there.
 ///
+/// **Where in its sites the result points is answered last**, by
+/// [`offset_of`], and it is the one thing here that turns on the operator.
+///
 /// One function with two callers, because the same question is asked where a
 /// value is assigned and where one is written through a pointer, and RK-052 in
 /// the review knowledge bank is one rule in two places drifting apart inside
 /// the change that touches one of them.
 fn built_from(
+    op: BinOp,
     operands: [&Operand; 2],
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
@@ -920,7 +1007,49 @@ fn built_from(
         reached.freed = value.points_to[one].freed;
     }
 
+    reached.offset = offset_of(op, operands, &followed, value);
+
     reached
+}
+
+/// Where the result of a binary operation points in the sites it reaches.
+///
+/// `Offset::NonZero` where all of these hold, and `Offset::Unknown` otherwise:
+///
+/// * the operator is `+`, or `-` with the followed operand on the left. C17
+///   6.5.6 p8 keeps `P + N`, `N + P` and `P - N` inside the object `P` points
+///   into, since it is about an integer added to or subtracted from a pointer,
+///   and p3 allows a pointer only on the left of a `-`.
+/// * exactly one operand was followed. Two is `p - q`, which 6.5.6 p9 makes a
+///   `ptrdiff_t` rather than a pointer, or a shape no C program builds.
+/// * the other operand is a constant, and **the constant is read rather than
+///   assumed non-zero**. ADR-0021 folds `p + 0` away where the IR is built, and
+///   `docs/c-family.md` records that nothing enforces it, so an IR from a
+///   frontend that skipped the fold would hand this a literal zero. Answering
+///   `Unknown` there is row 4, where assuming would be row 6. RK-067 is leaning
+///   on an invariant nobody enforces.
+/// * the followed operand is itself at the start. `q = p + 1; r = q - 1;` has
+///   `r` back at the start, and nothing here carries a distance to know it.
+///
+/// Every other operator answers `Unknown`, a `*` included: C17 6.5.5 p2 gives
+/// it arithmetic operands only, and a hand-built IR can hold one anyway. See
+/// ADR-0036.
+fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[usize], value: &Known) -> Offset {
+    let [one] = followed[..] else {
+        return Offset::Unknown;
+    };
+
+    let moved = match (op, operands) {
+        (BinOp::Add | BinOp::Sub, [Operand::Copy(_), Operand::Constant(by)])
+        | (BinOp::Add, [Operand::Constant(by), Operand::Copy(_)]) => *by != 0,
+        _ => false,
+    };
+
+    if moved && value.points_to[one].offset == Offset::Zero {
+        Offset::NonZero
+    } else {
+        Offset::Unknown
+    }
 }
 
 /// Distrust every escaped local a write through this place may have reached.
@@ -1147,7 +1276,9 @@ impl Analysis for Allocations<'_> {
         // takes it back, which a join can do once, so it is one more step per
         // site and the number below is not changed for it. That is slack being
         // spent rather than a bound being re-derived, and the paragraph below
-        // is why that is acceptable here.
+        // is why that is acceptable here. Where a local points in its sites
+        // moves from `Zero` or `NonZero` to `Unknown` at a join and never back,
+        // once per local, and the per-local term below counts that step.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -1177,7 +1308,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 2 + locals * (locals + 7) + positions * (locals + 1)
+        locals * locals * 2 + locals * (locals + 8) + positions * (locals + 1)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1198,8 +1329,12 @@ impl Analysis for Allocations<'_> {
         // A parameter holds whatever the caller passed, which is a thing this
         // function can free and did not make. The module comment says why one
         // has to be a site of its own.
+        //
+        // At its start, because the site stands for whatever the caller passed
+        // and not for an allocation behind it. ADR-0036 says why a free of
+        // `p + 1` is still proved on that reading.
         for &parameter in &self.parameters {
-            known.points_to[parameter.index()].hold(parameter.index());
+            known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
         }
 
         known
@@ -1400,8 +1535,8 @@ impl Analysis for Allocations<'_> {
                         // review built the shape by hand, and carried an edge
                         // through `qq + 7` that the arm one level up had just
                         // been taught to drop.
-                        Rvalue::Binary { op: _, lhs, rhs } => {
-                            let mut reached = built_from([lhs, rhs], value, |local| {
+                        Rvalue::Binary { op, lhs, rhs } => {
+                            let mut reached = built_from(*op, [lhs, rhs], value, |local| {
                                 self.is_pointer(function, local)
                             });
                             reached.writes_to.fill(false);
@@ -1545,9 +1680,10 @@ impl Analysis for Allocations<'_> {
                     //
                     // Read before the write, so `p = p + 1` keeps what `p`
                     // held rather than clearing it and unioning the result.
-                    Rvalue::Binary { op: _, lhs, rhs } => {
-                        let mut reached =
-                            built_from([lhs, rhs], value, |local| self.is_pointer(function, local));
+                    Rvalue::Binary { op, lhs, rhs } => {
+                        let mut reached = built_from(*op, [lhs, rhs], value, |local| {
+                            self.is_pointer(function, local)
+                        });
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
                         // points into, which is why the allocation comes along.
@@ -1848,7 +1984,9 @@ impl Analysis for Allocations<'_> {
         // would report a double free for code that allocates each time round.
         value.clear(place.local);
         let site = place.local.index();
-        value.points_to[site].hold(site);
+        // At its start: the site is whatever the call handed back, so the
+        // value is that value and not an offset into it.
+        value.points_to[site].hold(site, Offset::Zero);
         // **The span only where this check saw an allocation.** Every call's
         // destination is a site, because a call this cannot read may hand back
         // anything and a site is how that is tracked. But `allocated here` is a
@@ -1867,12 +2005,12 @@ impl Analysis for Allocations<'_> {
     }
 }
 
-/// Which of the two things this check answers about a finding is.
+/// Which of the three things this check answers about a finding is.
 ///
-/// One walk over one lattice, so this is not two checks and `docs/diagnostics.md`
-/// says so where it hands the two their codes. What differs is the question:
-/// the codes and the words are different, and the thing a caret lands on is a
-/// call in one and a dereference in the other.
+/// One walk over one lattice, so this is not three checks and
+/// `docs/diagnostics.md` says so where it hands them their codes. What differs
+/// is the question: the codes and the words are different, and the thing a
+/// caret lands on is a call in two of them and a dereference in the other.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -1880,6 +2018,12 @@ pub enum Kind {
     DoubleFree,
     /// `free(p); *p = 42;`
     UseAfterFree,
+    /// `free(p + 1);`
+    ///
+    /// Named for what it catches and not for every invalid free: this is a
+    /// pointer into an allocation this check followed, and `free(17)` or a
+    /// free of a local's address is not reported under it. See ADR-0036.
+    InteriorFree,
 }
 
 /// One thing this check concluded, and where.
@@ -1931,8 +2075,8 @@ pub struct Finding {
 
 /// Why a finding could not be proven.
 ///
-/// **Three reasons and not two, because one of them is about this check and
-/// the other two are about the program.** A reader told a value may have been
+/// **Four reasons and not two, because one of them is about this check and
+/// the others are about the program.** A reader told a value may have been
 /// freed already is being told something was established somewhere; where this
 /// check lost the pointer, nothing was, and saying it anyway is a claim about
 /// a program that nobody worked out. Which words each reason gets is
@@ -1964,6 +2108,10 @@ pub enum Unproven {
     Lost,
     /// C has not said which order runs. See ADR-0022.
     Unsequenced,
+    /// A pointer this check followed was moved by something it cannot
+    /// evaluate, so whether it is still at the start of its allocation is not
+    /// known. Only [`Kind::InteriorFree`] carries it. See ADR-0036.
+    Offset,
 }
 
 /// Every double free this unit contains, and every one it cannot rule out.
@@ -2037,9 +2185,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 dereferenced_in_terminator(&block.terminator),
                 &known,
             );
-            if let Some(finding) = reported(&analysis, &block.terminator, &known, &null, id) {
-                findings.push(finding);
-            }
+            findings.extend(reported(&analysis, &block.terminator, &known, &null, id));
             // After the free's own finding, which is the one whose caret is
             // here: what this adds are reports about carets further back, and a
             // reader meets them in the order the sort at the end puts them in
@@ -2199,6 +2345,10 @@ fn verdict(
     let ordered = match kind {
         Kind::DoubleFree => true,
         Kind::UseAfterFree => earliest.is_some_and(|freed| freed.sequenced),
+        // Never asked: `interior` answers that one without folding frees at
+        // all. `true` because a pointer that is not the start of an
+        // allocation is the wrong thing to hand `free` whatever ran first.
+        Kind::InteriorFree => true,
     };
 
     match earliest {
@@ -2256,16 +2406,22 @@ fn verdict(
 
 /// What this terminator is worth reporting as a free, if anything.
 ///
-/// One finding per call rather than one per site: a local may point at several
-/// allocations where a branch put them there, and two carets on one `free` say
-/// one thing twice.
+/// One finding per call and question rather than one per site: a local may
+/// point at several allocations where a branch put them there, and two carets
+/// on one `free` say one thing twice. **Two questions, though, and one caret
+/// can carry both**: in `free(p); free(p + 1);` the second call frees an
+/// allocation already freed, and through a pointer that is not its start.
+///
+/// The double free first, so that a caret carrying both reads `SC0401` above
+/// `SC0404`: the sort at the end of [`findings`] is stable and the two share a
+/// span. See ADR-0036.
 fn reported(
     analysis: &Allocations<'_>,
     terminator: &Terminator,
     known: &Known,
     null: &NullAtTerminators,
     block: BlockId,
-) -> Option<Finding> {
+) -> Vec<Finding> {
     let Terminator::Call {
         callee,
         arguments,
@@ -2274,26 +2430,130 @@ fn reported(
         origin,
     } = terminator
     else {
-        return None;
+        return Vec::new();
     };
 
     if analysis.callee(*callee) != Callee::Frees {
-        return None;
+        return Vec::new();
     }
 
-    let verdict = verdict(
-        Kind::DoubleFree,
-        Allocations::touching(asked(arguments, null, block), known),
-        known,
-    )?;
+    // **One answer to what the arguments reached feeds both questions**,
+    // because the two have to agree about it, and two walks deciding it is
+    // RK-052's shape. The offset is read beside it from the same `asked`, so an
+    // argument established null is left out of both or of neither.
+    let reached = Allocations::touching(asked(arguments, null, block), known);
+    let offset = asked(arguments, null, block)
+        .filter_map(|argument| match argument {
+            Operand::Copy(place) if place.projection.is_empty() => {
+                Some(known.points_to[place.local.index()].offset)
+            }
+            // A constant frees nothing and a projection is already a
+            // `Reached::Lost` above, which `interior` answers nothing for.
+            Operand::Copy(_) | Operand::Constant(_) => None,
+        })
+        .reduce(Offset::joined)
+        .unwrap_or(Offset::Zero);
 
-    Some(Finding {
-        kind: Kind::DoubleFree,
+    let finding = |kind, verdict: Verdict| Finding {
+        kind,
         conclusion: verdict.conclusion,
         at: origin.span(),
         freed: verdict.freed,
         made: verdict.made,
         unproven: verdict.unproven,
+    };
+
+    // Asked first because `verdict` takes what was reached by value; pushed
+    // second, for the reason above.
+    let inside = interior(&reached, offset, known);
+
+    let mut found = Vec::new();
+    if let Some(verdict) = verdict(Kind::DoubleFree, reached, known) {
+        found.push(finding(Kind::DoubleFree, verdict));
+    }
+    if let Some(verdict) = inside {
+        found.push(finding(Kind::InteriorFree, verdict));
+    }
+    found
+}
+
+/// Whether a free hands `free` something other than the start of what it
+/// reached.
+///
+/// C17 7.22.3.3 p2 makes a `free` of anything but a pointer an allocation
+/// function returned undefined, and `p + 1` reaches the allocation `p` does,
+/// so [`verdict`] cannot see this: the sites are the same and so are their
+/// states. What differs is [`Held::offset`].
+///
+/// Nothing, where any of these holds:
+///
+/// * a [`Reached::Lost`] is among them. ADR-0017 makes [`Known::reached_by`]
+///   answer it for an escaped local that holds sites, so `int **pp = &p; *pp =
+///   p + 1; free(p);` never reaches the offset at all, and neither does
+///   anything a call this check cannot read may have written. The offset is a
+///   positive claim about a local and the address-taken set is what stops it
+///   being believed, which is RK-061. **That rule is what covers this line**,
+///   and the day something narrows what an escaped local is reported as, this
+///   line stops being covered: RK-064.
+/// * a [`Reached::SetFreed`] is. The sites are gone from `reached` by then, so
+///   there is nothing left to be an offset into.
+/// * no site at all. A local that reaches nothing is one this check never
+///   followed, and [`verdict`] already answers [`Unproven::Lost`] for the same
+///   call. [`Allocations::touching`] pushes a `Reached::Lost` for an argument
+///   whose local reaches no site, so this rule is reached with nothing in hand
+///   in two ways only. One is after a `SetFreed`, which the arm above answers
+///   too: **the two hold each other**, so removing either leaves the whole
+///   workspace green, and removing both fails
+///   `a_free_after_an_offset_that_kept_the_set_is_proved`. The other is a
+///   constant argument, `free(0)`, which `touching` skips and so hands this
+///   nothing at all; [`reported`] then hands this `Offset::Zero`, which says
+///   nothing either. See ADR-0036.
+///
+/// **A parameter is proved on, and that is sound.** `void f(int *p) { free(p +
+/// 1); }` can only free the start of an object if a caller passed a `p` one
+/// element before the start of one, which C17 6.5.6 p8 already makes
+/// undefined, so every conforming caller leaves this call undefined. ADR-0027
+/// is the record that says a conclusion is about an execution this function
+/// has.
+///
+/// `freed` is `None` whatever the answer: what this reports is not about a free
+/// that already happened.
+fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdict> {
+    let mut sites = Vec::new();
+    for entry in reached {
+        match entry {
+            Reached::Site(site) => sites.push(*site),
+            // `SetFreed` is answered twice: `Known::reached_by` clears the
+            // sites whenever it answers it, so the rule below this loop says
+            // the same. The doc comment above says what holds the pair.
+            Reached::SetFreed(_) | Reached::Lost => return None,
+        }
+    }
+
+    let (&first, rest) = sites.split_first()?;
+
+    // The allocation, where every site agrees about it, which is RK-035: naming
+    // one of several as the one freed is a caret on an allocation the value
+    // may not hold.
+    let made_of = |site: usize| match known.state[site] {
+        SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+        SiteState::Unknown => None,
+    };
+    let made = rest
+        .iter()
+        .fold(made_of(first), |made, &site| same(made, made_of(site)));
+
+    let (conclusion, unproven) = match offset {
+        Offset::Zero => return None,
+        Offset::NonZero => (Conclusion::Unsafe, None),
+        Offset::Unknown => (Conclusion::Unknown, Some(Unproven::Offset)),
+    };
+
+    Some(Verdict {
+        conclusion,
+        freed: None,
+        made,
+        unproven,
     })
 }
 

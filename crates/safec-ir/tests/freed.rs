@@ -1682,7 +1682,9 @@ fn an_offset_by_a_second_pointer_loses_the_proof() {
 
     let found = concluded(unit, &sources, function);
 
-    assert_eq!(found.len(), 1, "{found:?}");
+    // The second is ADR-0036's and not this test's subject: `q + r` is not an
+    // offset this check can evaluate.
+    assert_eq!(found.len(), 2, "{found:?}");
     assert_eq!(found[0].kind, Kind::DoubleFree);
     assert_eq!(
         found[0].conclusion,
@@ -1690,6 +1692,125 @@ fn an_offset_by_a_second_pointer_loses_the_proof() {
         "the proof does not survive a second operand"
     );
     assert_eq!(found[0].at, names.at[5]);
+    assert_eq!(found[1].kind, Kind::InteriorFree);
+    assert_eq!(found[1].unproven, Some(Unproven::Offset));
+}
+
+/// `to = lhs op rhs;`, in a block that falls through to `then`.
+///
+/// For the operations ADR-0036 has to answer for and the C frontend never
+/// builds on a pointer: C17 6.5.5 p2 gives `*` arithmetic operands only, and
+/// 6.5.6 p3 allows a pointer only on the left of a `-`.
+fn operated(to: LocalId, op: BinOp, [lhs, rhs]: [Operand; 2], at: Span, then: BlockId) -> Block {
+    Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(to),
+            value: Rvalue::Binary { op, lhs, rhs },
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Goto(then),
+    }
+}
+
+/// What `free` is handed after `operation` builds `moved` out of an
+/// allocation: an allocation, then the operation, then the free.
+fn freed_after(
+    operation: impl FnOnce(LocalId, LocalId, Span, BlockId) -> Block,
+) -> Vec<memory::Finding> {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let p = function.push_local(types.ptr);
+    let moved = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let operate = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, p, names.at[0], operate));
+    function.fill_block(operate, operation(moved, p, names.at[1], release));
+    function.fill_block(release, free(&callees, moved, names.at[2], exit));
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    concluded(unit, &sources, function)
+}
+
+/// A pointer scaled by a constant is not proved to be off the start.
+///
+/// `p * 2` is not pointer arithmetic, so C17 6.5.6 p8 says nothing about where
+/// it points and a constant beside it proves nothing. Only `+` and `-` move a
+/// pointer by a distance this check can read. See ADR-0036.
+///
+/// Mutation: in `memory.rs::offset_of`, accept any operator beside a non-zero
+/// constant. The free becomes `Conclusion::Unsafe` and this fails on that
+/// field.
+#[test]
+fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
+    let found = freed_after(|to, p, at, then| {
+        operated(
+            to,
+            BinOp::Mul,
+            [Operand::Copy(Place::local(p)), Operand::Constant(2)],
+            at,
+            then,
+        )
+    });
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::InteriorFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].unproven, Some(Unproven::Offset));
+}
+
+/// A pointer plus a literal zero is not proved to be off the start.
+///
+/// ADR-0021 folds `p + 0` away where the C frontend builds the IR, so no C
+/// program reaches this, and `docs/c-family.md` records that nothing enforces
+/// the fold. An IR from a frontend that skipped it hands the check this shape,
+/// and reading the constant is what keeps a zero from being taken for a move.
+/// It answers `Unknown`, as every offset `offset_of` cannot call non-zero does:
+/// a suspicion about a free of the start, which is row 4, where assuming the
+/// constant moved the pointer would be a false proof. See ADR-0036.
+///
+/// Mutation: in `memory.rs::offset_of`, answer `true` for every constant rather
+/// than reading it. The free becomes `Conclusion::Unsafe` and this fails on
+/// that field.
+#[test]
+fn a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start() {
+    let found = freed_after(|to, p, at, then| stepped_by(to, p, 0, at, then));
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::InteriorFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].unproven, Some(Unproven::Offset));
+}
+
+/// A pointer subtracted from a constant is not proved to be off the start.
+///
+/// C17 6.5.6 p3 allows a pointer only on the left of a `-`, so `1 - p` is not
+/// `p` moved by one, and p8, which is about an integer added to or subtracted
+/// from a pointer, says nothing about where it points. `+` is the
+/// operator either side of which the pointer may stand. See ADR-0036.
+///
+/// Mutation: in `memory.rs::offset_of`, let `-` take its constant on either
+/// side, the way `+` does. The free becomes `Conclusion::Unsafe` and this
+/// fails on that field.
+#[test]
+fn a_pointer_subtracted_from_a_constant_is_not_proved_to_be_off_the_start() {
+    let found = freed_after(|to, p, at, then| {
+        operated(
+            to,
+            BinOp::Sub,
+            [Operand::Constant(1), Operand::Copy(Place::local(p))],
+            at,
+            then,
+        )
+    });
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::InteriorFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].unproven, Some(Unproven::Offset));
 }
 
 /// An index that is itself a freed pointer is a site the result still reaches.
@@ -1916,12 +2037,16 @@ fn an_addition_of_two_integers_carries_what_both_hold() {
 
     let found = concluded(unit, &sources, function);
 
-    assert_eq!(found.len(), 1, "{found:?}");
+    // The second is ADR-0036's and not this test's subject: two operands both
+    // contributed, so where in the allocation the sum points is not known.
+    assert_eq!(found.len(), 2, "{found:?}");
     assert_eq!(found[0].kind, Kind::DoubleFree);
     assert_eq!(found[0].conclusion, Conclusion::Unsafe);
     assert_eq!(found[0].at, names.at[3]);
     assert_eq!(found[0].freed, Some(names.at[2]));
     assert_eq!(found[0].made, Some(names.at[0]));
+    assert_eq!(found[1].kind, Kind::InteriorFree);
+    assert_eq!(found[1].unproven, Some(Unproven::Offset));
 }
 
 /// The address of a dereference names no local a write through it lands in.

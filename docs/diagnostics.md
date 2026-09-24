@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -58,18 +58,30 @@ records why the prefix is this one and what was rejected.
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
 the question about, in the order it names them, so they were reserved before
-anything could emit from them. The first of the four now does, three times:
+anything could emit from them. The first of the four now does, four times:
 `SC0401` is a value freed where it may already have been freed, `SC0402` is
-a value used where it may already have been freed, and `SC0403` is a value read
-or written through a pointer that may be null. They are the first codes in
-this compiler that say something about what a program does rather than about
-how it is written.
+a value used where it may already have been freed, `SC0403` is a value read
+or written through a pointer that may be null, and `SC0404` is a value freed
+through a pointer that may not be the start of its allocation. They are the
+first codes in this compiler that say something about what a program does
+rather than about how it is written.
 
 **`SC0403` is a third class of program and not a third severity.** The other
 two are about a pointer that pointed somewhere once and no longer does; this is
 about one that may never have pointed anywhere. A reader filtering on a code is
 looking for programs to fix, and the fix for a use after free is about where the
 `free` went while the fix for this is a test the source does not have.
+
+**`SC0404` is a fourth class, for the same reason.** It is about a pointer that
+points somewhere real and is not the thing `free` takes: C17 7.22.3.3 p2 makes
+freeing anything but what an allocation function returned undefined, and
+`free(p + 1)` reaches the allocation `p` does. The fix is different again: a
+double free is a mistake about ownership, a use after free one about lifetime,
+and this is a mistake about which value was handed over. One call can carry
+both it and `SC0401` at one caret, the second in `free(p); free(p + 1);`,
+because the two are different questions about the same call.
+[ADR-0036](adr/0036-a-pointer-carries-where-in-its-allocation-it-points.md)
+records what is proved and what is left unproven.
 
 **Either can be a proof or a suspicion, and freeing more than one allocation
 at once is where the difference is easiest to misread.** A local that may hold
@@ -267,7 +279,7 @@ The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
 all, so the code is attached where the diagnostic is built.
 
 **The safety checks' codes are a third kind and are why the count needs a
-second command.** `SC0401` and `SC0402` are built by `memory_finding` and
+second command.** `SC0401`, `SC0402` and `SC0404` are built by `memory_finding` and
 `SC0403` by `nullability_finding`, each with
 `Diagnostic::concluded` rather than `Diagnostic::error`, because what
 a safety check answers is a [conclusion](safety-model.md#safe-unsafe-unknown)
