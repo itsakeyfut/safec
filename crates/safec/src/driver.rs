@@ -92,6 +92,16 @@ const USE_AFTER_FREE: Code = Code::new("SC0402");
 /// once, and this is about one that may never have.
 const NULL_DEREFERENCE: Code = Code::new("SC0403");
 
+/// A value freed through a pointer that is not the start of an allocation.
+///
+/// A code of its own rather than `DOUBLE_FREE`'s, because the fix is different:
+/// a double free is a mistake about ownership, a use after free one about
+/// lifetime, and this is a mistake about which value was handed to `free`. It
+/// is also not `NULL_DEREFERENCE`'s, which is about a pointer that may point
+/// nowhere, where this one points somewhere real that `free` does not take.
+/// See ADR-0036.
+const INTERIOR_FREE: Code = Code::new("SC0404");
+
 /// What to change where this check stopped following a pointer.
 ///
 /// **It names no cause, and that is the whole of its design.**
@@ -879,10 +889,14 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
         // keeps the remedy it had. `DISAGREEMENT_REMEDY` asks for the free
         // conditionally, so it stays true of a double free that arrives this
         // way if one ever does.
+        // `Unproven::Offset` is here and in the `UseAfterFree` row below
+        // although neither kind can carry it: `memory::interior` is the only
+        // producer and it builds only an `InteriorFree`. Named rather than
+        // taken by `_`, for the reason above.
         (
             Kind::DoubleFree,
             Conclusion::Unknown,
-            Some(Unproven::Disagreement | Unproven::Unsequenced) | None,
+            Some(Unproven::Disagreement | Unproven::Unsequenced | Unproven::Offset) | None,
         ) => (
             DOUBLE_FREE,
             "this may free a value that was freed already",
@@ -907,11 +921,43 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "used here, perhaps after the free",
             UNSEQUENCED_REMEDY,
         ),
-        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Disagreement) | None) => (
+        (
+            Kind::UseAfterFree,
+            Conclusion::Unknown,
+            Some(Unproven::Disagreement | Unproven::Offset) | None,
+        ) => (
             USE_AFTER_FREE,
             "this may use a value after it was freed",
             "used here, perhaps after the free",
             DISAGREEMENT_REMEDY,
+        ),
+        (Kind::InteriorFree, Conclusion::Unsafe, _) => (
+            INTERIOR_FREE,
+            "this frees a pointer that is not the start of an allocation",
+            "not the start of the allocation",
+            "free the pointer the allocation was made with, and keep the offset in a variable \
+             of its own",
+        ),
+        // **The remedy is conditional because the offset may really be
+        // zero.** What this check could not evaluate is the offset, not the
+        // program, and an instruction that holds only where the offset is not
+        // zero has to say so, which is RK-036 and `DISAGREEMENT_REMEDY`'s own
+        // reason.
+        //
+        // Every reason named, although only `Offset` arrives: the other three
+        // come out of `verdict`, which `memory::interior` does not call.
+        (
+            Kind::InteriorFree,
+            Conclusion::Unknown,
+            Some(
+                Unproven::Offset | Unproven::Lost | Unproven::Disagreement | Unproven::Unsequenced,
+            )
+            | None,
+        ) => (
+            INTERIOR_FREE,
+            "this may free a pointer that is not the start of an allocation",
+            "this offset may not be zero",
+            "free the pointer the allocation was made with if this offset can be non-zero",
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so

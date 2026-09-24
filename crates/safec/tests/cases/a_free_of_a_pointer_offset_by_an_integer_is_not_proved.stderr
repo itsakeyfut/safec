@@ -1,0 +1,13 @@
+error[SC0404]: this may free a pointer that is not the start of an allocation
+   ╭─[ a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:5:5 ]
+   │
+ 4 │     int *p = malloc(8);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 5 │     free(p + i);
+   │     ─────┬─────  
+   │          ╰─────── this offset may not be zero
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero
