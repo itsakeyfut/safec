@@ -55,9 +55,11 @@ impl Options {
     /// it, and an artifact that does not reach the IR runs no check at all
     /// whatever the level was. Both are the same sentence to whoever reads the
     /// report, which is why this is one function rather than two conditions at
-    /// the site that reports. Two conditions there is the shape `CLAUDE.md`
-    /// calls the worst defect this project has had, and there are two axes here
-    /// rather than one. See ADR-0035.
+    /// the site that reports. Answering two axes with two conditions is the
+    /// shape `CLAUDE.md` calls the worst defect this project has had, and
+    /// `driver.rs::undelivered` shipped to review with exactly that in its note
+    /// and its remedy while this function was avoiding it in the gate. See
+    /// ADR-0035.
     ///
     /// `min` for the level and a `match` inside
     /// [`EmitKind::reaches_the_ir`] for the kind, because the levels are

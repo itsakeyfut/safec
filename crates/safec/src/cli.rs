@@ -41,9 +41,14 @@ pub struct Cli {
     /// stop in the frontend and so run no check at all. Naming a level this run
     /// cannot deliver is reported rather than ignored. See ADR-0035.
     ///
-    /// An `Option` rather than a clap default, so that resolving it is something
-    /// [`Cli::into_options`] cannot omit. A default printed here would be one
-    /// value, and one value is false for two of the six artifacts.
+    // `Option` rather than a clap default, so that resolving it is something
+    // `Cli::into_options` cannot omit. A default printed here would be one
+    // value, and one value is false for two of the six artifacts.
+    //
+    // A `//` comment rather than a `///` one: clap prints a doc comment into long
+    // help verbatim, so this paragraph reached a user's terminal along with an
+    // unrendered `[`Cli::into_options`]`. Nothing above it is addressed to a
+    // maintainer, and nothing here is addressed to a user.
     #[arg(long, value_enum, value_name = "LEVEL")]
     pub safety: Option<SafetyLevel>,
 

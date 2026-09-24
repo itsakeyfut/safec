@@ -90,10 +90,16 @@ no corpus expectation changes at all.
 
 ### Confirmation
 
-Seven mutations, each applied on its own and each measured by running the whole
-workspace with `--no-fail-fast`.
+Every mutation below was applied on its own and measured by running the whole
+workspace with `--no-fail-fast`. No total is given: this repository has had a
+count in prose about code elsewhere go wrong four times, twice in this change,
+and one of these mutations is measured against two tests. **Four of the sections
+are here because a tier-2 review found what the first pass did not reach**, and
+they are the four whose subject is what the report says rather than what the
+gate decides.
 
-**The two axes, which is the half this record exists for.** In
+**The two axes, twice: the gate and what it says.** The second was got wrong and
+shipped to review. In
 `driver.rs::undelivered`, compare `options.safety` against
 `SafetyLevel::IMPLEMENTED` rather than against `Options::delivered`, which keeps
 the level axis and drops the artifact one. Exactly one test fails,
@@ -127,6 +133,42 @@ which the only unit test is
 `cli.rs::the_default_level_is_what_the_artifact_can_carry`. The loudness is the
 answer rather than noise: it is every dump in the corpus reporting that the old
 default was false for it.
+
+**The reporting of those axes.** Choosing the note and the remedy with one `if
+options.emit.reaches_the_ir()`, which is how this shipped, fails
+`both_reasons_a_level_can_go_undelivered_are_said_at_once` while the two
+single-cause cases stay green. A run whose level and artifact both fall short was
+told one of the two, and its remedy sent the reader to `--emit safety-ir`, which
+is refused again for the other reason. ADR-0034 makes a remedy the change that
+would make the program compile, so half of it was a promise the run breaks.
+Offering `--allow-unknown` whatever the level fails the same case: `Cli::check`
+refuses that pair at `strict`, so following the advice was an argument conflict.
+
+**The level this compiler says it implements.** Moving
+`SafetyLevel::IMPLEMENTED` up one without wiring a check for the level it moves to
+fails five tests, and only
+`driver.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not` says
+something is absent. The other four are three `.stderr` files and a table row,
+every one of which reads as an expectation to re-bless, and re-blessing them ships
+a run that exits 0 with an empty stderr on `int *foo(void) { int x = 42; return
+&x; }` at `--safety lifetime`, where the silence now means the level was
+delivered. That is the bottom row of `CLAUDE.md`'s list reached through
+housekeeping, and it is what this record claimed the expiring corpus case
+prevented. It did not; it only asked for an edit.
+
+**The level a user reads.** Special-casing one variant inside
+`SafetyLevel::spelling` fails
+`every_safety_level_is_spelled_the_way_the_command_line_takes_it`. Before that
+table it failed nothing: `ownership` and `thread` reach `spelling` from nowhere,
+because no case asks for them, so a diagnostic naming a flag the user never typed
+was one edit away.
+
+**The consequence this record leads with.** Building the report with
+`Diagnostic::error` rather than `Diagnostic::concluded` fails
+`object.rs::a_migrating_build_still_makes_an_object`, which is `--safety lifetime
+--allow-unknown --emit object` exiting 0 with a real object beside the warning.
+Every corpus case here asks for a dump, so "can go into a build file today" was
+inferred from two separately tested properties rather than held by anything.
 
 **What nothing holds.** Resolving an unnamed level to `SafetyLevel::IMPLEMENTED`
 instead of `Memory` fails nothing, because the two are equal today. They are not
@@ -256,5 +298,8 @@ defect, and its table entry says so.
   the rule in the same change, and
   [`diagnostics.md`](../diagnostics.md) for the three kinds of diagnostic.
 * `crates/safec/src/cli.rs`, `crates/safec/src/options.rs`,
-  `crates/safec/src/safety.rs` and `crates/safec/src/driver.rs` are the four
-  files this touches.
+  `crates/safec/src/safety.rs` and `crates/safec/src/driver.rs` carry the
+  behaviour. `crates/safec/src/diagnostics/render.rs` and
+  `crates/safec-ir/src/analysis.rs` carry comments this decision made false: the
+  first counted the producers of an unproven conclusion, the second said what the
+  value means.

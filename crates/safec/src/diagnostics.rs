@@ -133,6 +133,11 @@ pub enum Certainty {
     /// The analysis could not prove the code safe, and could not prove it wrong
     /// either. The unknown of the three-valued model, and the thing an
     /// annotation exists to remove.
+    ///
+    /// **Also what a level nobody implemented amounts to**, since ADR-0035:
+    /// `driver::undelivered` reaches this through [`Diagnostic::concluded`] for a
+    /// run asking to be held to checks that do not exist, which is the limit case
+    /// of unproven rather than a fourth certainty.
     Unproven,
 }
 

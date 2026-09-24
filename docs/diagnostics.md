@@ -277,6 +277,16 @@ the one that reads the conclusion. The finding is made in `crates/safec-ir`,
 which cannot see a `Diagnostic` either, and for the same reason as the
 backend's.
 
+**There is a fourth kind, and it crosses the two above.** `driver.rs`'s
+`undelivered` says that a run asked to be held to a level it cannot deliver. That
+is a fact about the invocation, so by the rule above it carries no code and has no
+span, and it is built with `Diagnostic::concluded` all the same, because a check
+that never ran established nothing and being unable to establish something is a
+[conclusion](safety-model.md#safe-unsafe-unknown). So `concluded` is no longer the
+same question as "what a safety check answers": two of its three call sites are
+checks and the third is the invocation. ADR-0035 is the decision and says what it
+costs.
+
 **The count is checked by nobody and has been wrong twice.** It said six while
 `driver.rs` built seven, from the change that added a refusal without coming
 back here; and a comment beside the code in that file counted the uncoded ones
@@ -286,19 +296,23 @@ count goes down as well as up: `--emit executable` removed `the compilation
 pipeline is not implemented yet`, which nothing could reach once every kind
 produced something. **It has since been wrong a third time**, found by a review
 of the change that added `SC0401`: it said ten of eleven while the file built
-twelve.
+twelve. **And a fourth time**, found by two review lenses independently on the
+change that added `undelivered`: the second command below answered three while
+this document said two and called them what a check answers.
 
 A number in prose about code in another file is exactly RK-017's shape, and two
 commands settle this one, which is one more than it used to take:
 
 ```sh
 grep -c "Diagnostic::error("     crates/safec/src/driver.rs   # the twelve
-grep -c "Diagnostic::concluded(" crates/safec/src/driver.rs   # what a check answers
+grep -c "Diagnostic::concluded(" crates/safec/src/driver.rs   # the three: two checks, one invocation
 ```
 
 The second exists because a safety check does not build its diagnostic the same
 way, and a count that runs only the first will be wrong again the moment the
-next check lands.
+next check lands. Its comment says how the three divide rather than only how many
+there are, because the number alone was true while the sentence beside it was
+not.
 
 The open parenthesis is not decoration. Without it both commands count the
 prose beside the code as well as the code, and the second went from answering
