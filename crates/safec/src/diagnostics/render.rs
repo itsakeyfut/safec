@@ -302,10 +302,13 @@ fn certainty_note(diagnostic: &Diagnostic) -> Option<String> {
                 .to_owned()
         } else {
             // Still a warning, so this is advice rather than an explanation,
-            // and here the origin *is* knowable: both producers of an unproven
-            // conclusion sit inside the safety gate in `driver::lowered`, so a
-            // run below it has none to report and the only way to this arm is
-            // having asked for it.
+            // and here the origin *is* knowable: every producer of an unproven
+            // conclusion is reached only by a run that asked to be checked, so
+            // naming the flag is not a guess. Two of the three sit inside the
+            // safety gate in `driver::lowered`, which a run below it never
+            // reaches. The third is `driver::undelivered`, which answers nothing
+            // unless a level was asked for that the run cannot deliver, and an
+            // unasked level resolves to one it can. See ADR-0035.
             "this could not be proven; it is an error without `--allow-unknown`".to_owned()
         }
     })

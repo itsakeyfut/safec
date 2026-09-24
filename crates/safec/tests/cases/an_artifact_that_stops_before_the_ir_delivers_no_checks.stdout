@@ -1,0 +1,20 @@
+Declaration an_artifact_that_stops_before_the_ir_delivers_no_checks.c:1:1 "malloc" "void *(int)"
+  Parameter an_artifact_that_stops_before_the_ir_delivers_no_checks.c:1:14 "n" "int"
+Declaration an_artifact_that_stops_before_the_ir_delivers_no_checks.c:2:1 "free" "void (void *)"
+  Parameter an_artifact_that_stops_before_the_ir_delivers_no_checks.c:2:11 "p" "void *"
+Function an_artifact_that_stops_before_the_ir_delivers_no_checks.c:4:1 "main" "int (void)"
+  Compound an_artifact_that_stops_before_the_ir_delivers_no_checks.c:4:16
+    Declaration an_artifact_that_stops_before_the_ir_delivers_no_checks.c:5:5 "p" "int *"
+      Call an_artifact_that_stops_before_the_ir_delivers_no_checks.c:5:14
+        Identifier an_artifact_that_stops_before_the_ir_delivers_no_checks.c:5:14 "malloc"
+        Number an_artifact_that_stops_before_the_ir_delivers_no_checks.c:5:21 "8"
+    Expression an_artifact_that_stops_before_the_ir_delivers_no_checks.c:6:5
+      Call an_artifact_that_stops_before_the_ir_delivers_no_checks.c:6:5
+        Identifier an_artifact_that_stops_before_the_ir_delivers_no_checks.c:6:5 "free"
+        Identifier an_artifact_that_stops_before_the_ir_delivers_no_checks.c:6:10 "p"
+    Expression an_artifact_that_stops_before_the_ir_delivers_no_checks.c:7:5
+      Call an_artifact_that_stops_before_the_ir_delivers_no_checks.c:7:5
+        Identifier an_artifact_that_stops_before_the_ir_delivers_no_checks.c:7:5 "free"
+        Identifier an_artifact_that_stops_before_the_ir_delivers_no_checks.c:7:10 "p"
+    Return an_artifact_that_stops_before_the_ir_delivers_no_checks.c:8:5
+      Number an_artifact_that_stops_before_the_ir_delivers_no_checks.c:8:12 "0"

@@ -1,0 +1,4 @@
+warning: `--safety lifetime` asks for more than this run delivers
+  = note: this run delivers `memory`, which is the highest level with checks behind it
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: ask for `--safety memory`, or `--allow-unknown` while a program is being migrated

@@ -553,6 +553,36 @@ cases! {
     // that is not promoted has no observer outside the renderer's own tests.
     an_unproven_free_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     an_unproven_use_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+    // What a run is told when the level it asked for is not the level it gets,
+    // which is ADR-0035. Two independent things lower it, so two of these are
+    // one cause each and two are the edges that a gate on one cause alone gets
+    // wrong.
+    //
+    // Mutation: in `driver.rs::undelivered`, compare `options.safety` against
+    // `SafetyLevel::DELIVERED` rather than against `Options::delivered`, which
+    // drops the artifact half. The second fails and the first stays green, which
+    // is the shape `CLAUDE.md` calls the worst defect this project has had: two
+    // axes, and a gate that answers one of them.
+    //
+    // Mutation: answer the conclusion `Unsafe` rather than `Unknown`, which is
+    // how `Diagnostic::concluded` builds an error instead. All three of the
+    // reporting cases fail and the fourth is the one whose `.exit` goes from 0
+    // to 1: the conclusion is the whole of what lets `--allow-unknown` reach
+    // this report.
+    //
+    // **The third is documentation rather than a discriminating guard, and that
+    // is measured rather than hoped.** It is the only case anywhere that names a
+    // satisfiable level beside an artifact that carries no check, so nothing
+    // else pins the combination; but every mutation tried on the gate fails it
+    // together with all 76 bare dump cases rather than alone. Reporting on the
+    // artifact without asking the level fails 84 tests, this among them. There
+    // is no mutation that isolates it, because the derived default already makes
+    // a bare dump resolve to `off`, so "report above `off`" and "report when
+    // delivered differs" agree on every input in the corpus.
+    a_level_with_no_checks_behind_it_is_not_delivered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+    an_artifact_that_stops_before_the_ir_delivers_no_checks: ["--emit", "ast", "--safety", "memory"],
+    a_level_that_was_not_asked_for_is_not_reported: ["--emit", "ast", "--safety", "off"],
+    a_migrating_run_is_told_what_was_not_established_and_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "lifetime", "--allow-unknown"],
     a_double_free_is_found_on_a_backend_run: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     a_discarded_dereference_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     // `pp[0]` is `*pp`, and the backend can write `*pp`. It used to refuse

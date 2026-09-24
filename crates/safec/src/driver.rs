@@ -233,6 +233,14 @@ pub fn compile(options: &Options) -> Compiled {
         diagnostics.report(Diagnostic::error("no input files"));
     }
 
+    // Once per run and before any input is read, because a check that did not
+    // run has nowhere to say so from: the safety gate is inside `lowered`, which
+    // two artifacts never reach and four levels have nothing behind. See
+    // ADR-0035.
+    if let Some(diagnostic) = undelivered(options) {
+        diagnostics.report(diagnostic);
+    }
+
     // A module is one translation unit, and this compiler makes one artifact
     // per run. Appending a second unit to the first is not a module with
     // duplicates in it: `int f(int);` in one input and `int f(int x) { ... }`
@@ -669,6 +677,77 @@ fn lowered(
     }
 
     Some(unit)
+}
+
+/// What a run asked for above what it can deliver, as what a user reads.
+///
+/// `None` where the run delivers what it asked for, which is every run that
+/// named no level: [`Cli::into_options`] resolves an unnamed one to what the
+/// artifact can carry, so asked and delivered agree by construction and a user
+/// who configured nothing is told nothing.
+///
+/// [`Cli::into_options`]: crate::cli::Cli::into_options
+///
+/// **Built with [`Diagnostic::concluded`] rather than [`Diagnostic::error`]**,
+/// because a check that never ran established nothing, and that is what an
+/// unproven conclusion means. The severity is then the sink's, taken once from
+/// the policy, so `--allow-unknown` governs this the way it governs every other
+/// unproven result rather than through a second reading of the policy here. See
+/// ADR-0035, and ADR-0001 for why that place is the sink.
+///
+/// **No code and no label.** `docs/diagnostics.md` gives a code to a class of
+/// program a reader can search for, and this is a fact about the invocation:
+/// there is no program to point at, and a run refused here may never read one.
+///
+/// Mutation: compare `options.safety` against `SafetyLevel::DELIVERED` here
+/// instead of against [`Options::delivered`], which drops the artifact half.
+/// `an_artifact_that_stops_before_the_ir_delivers_no_checks` fails and
+/// `a_level_with_no_checks_behind_it_is_not_delivered` stays green, which is the
+/// two-axis version of the defect `CLAUDE.md` calls the worst this project has
+/// had.
+fn undelivered(options: &Options) -> Option<Diagnostic> {
+    let asked = options.safety;
+    let delivered = options.delivered();
+    if delivered == asked {
+        return None;
+    }
+
+    // Two reasons reach here and the note says which, because the remedies are
+    // not interchangeable: one is answered by asking for less, the other by
+    // asking for a different artifact.
+    let (note, remedy) = if options.emit.reaches_the_ir() {
+        (
+            format!(
+                "this run delivers `{}`, which is the highest level with checks behind it",
+                delivered.spelling()
+            ),
+            format!(
+                "ask for `--safety {}`, or `--allow-unknown` while a program is being migrated",
+                delivered.spelling()
+            ),
+        )
+    } else {
+        (
+            format!(
+                "this run delivers `{}`: `--emit {}` stops before the Safety IR every check reads",
+                delivered.spelling(),
+                options.emit.spelling()
+            ),
+            "ask for `--emit safety-ir`, or `--safety off`".to_owned(),
+        )
+    };
+
+    Some(
+        Diagnostic::concluded(
+            Conclusion::Unknown,
+            format!(
+                "`--safety {}` asks for more than this run delivers",
+                asked.spelling()
+            ),
+            Remedy::new(remedy),
+        )?
+        .with_note(note),
+    )
 }
 
 /// What a memory check concluded, as what a user reads.
@@ -2013,11 +2092,21 @@ mod tests {
         false
     }
 
+    /// An invocation for the tests that are about reading inputs and producing
+    /// artifacts rather than about safety.
+    ///
+    /// `Off` beside a `Tokens` artifact because the pair has to be coherent: a
+    /// run asking for `memory` from an artifact that stops before the IR is
+    /// asking for a level it cannot be given, and `undelivered` reports it. That
+    /// is what `Cli::into_options` resolves an unnamed `--safety` to for this
+    /// kind, so the fixture says what the command line would have said. Six
+    /// tests here failed on the day the report landed, every one of them on this
+    /// line rather than on its own subject.
     fn options(inputs: Vec<PathBuf>) -> Options {
         Options {
             inputs,
             output: None,
-            safety: SafetyLevel::Memory,
+            safety: SafetyLevel::Off,
             // The cheapest kind that still runs every stage of the loop. It
             // was `Executable` while nothing could produce one, which made it
             // the kind that did nothing; now the two kinds past `llvm-ir`
@@ -2219,13 +2308,22 @@ mod tests {
     /// options", which is what these deliberately are not since #209: the
     /// field is the request, and `Policy::new` is where it becomes an answer.
     ///
+    /// The level and the artifact are set here rather than taken from the
+    /// fixture, which asks for nothing: `Policy::new` reads the level, so a run
+    /// at `Off` has nothing to deny and both rows would answer `false` whatever
+    /// the sink was built from. `SafetyIr` beside it keeps the pair coherent, so
+    /// that this fixture is not also asking for a level its artifact cannot
+    /// deliver.
+    ///
     /// Mutation: build the sink with `DiagnosticSink::new()`. Both rows fail,
-    /// because the fixture compiles at `SafetyLevel::Memory`, where the default
-    /// is to deny.
+    /// because this compiles at `SafetyLevel::Memory`, where the default is to
+    /// deny.
     #[test]
     fn the_sink_is_built_from_the_options_the_run_was_given() {
         for allow_unknown in [false, true] {
             let mut options = options(Vec::new());
+            options.safety = SafetyLevel::Memory;
+            options.emit = EmitKind::SafetyIr;
             options.allow_unknown = allow_unknown;
 
             assert_eq!(
