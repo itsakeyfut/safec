@@ -2599,22 +2599,31 @@ fn used_before(
     // mutation can break, which `CLAUDE.md` calls decoration, and because it
     // would go quiet on its own the day the ordering term widens: it would
     // exempt a read without anybody asking whether ADR-0027's four conditions
-    // still hold where the exemption had newly arrived. This turns that same
-    // day into a named panic over the corpus, which is row 3 of the failure
-    // list rather than row 4.
+    // still hold where the exemption had newly arrived.
     //
-    // **What holds it is the build, and only that.** `null` and `block` reach
-    // this function for this expression and for nothing else, so deleting the
-    // assertion is `error: unused variable` twice over and the gate runs
-    // clippy with `-D warnings`. Measured.
+    // **This junction is one the corpus reaches**, which is what makes the
+    // assertion worth its line. Deleting the `known.pending.is_empty()`
+    // disjunct panics `a_free_of_a_pointer_proved_null`,
+    // `a_local_given_nothing_forgets_the_set_it_freed` and
+    // `a_pointer_set_to_nothing_after_a_free_holds_nothing`: all three reach
+    // here with an argument this check established null, and an empty
+    // `pending` is the only reason nothing is reported about it.
     //
-    // **The condition itself is held by nothing**, and that is not an
-    // oversight to be closed later. No input makes it fire: removing the
-    // `pending.clear()` that condition 2 rests on leaves every corpus program
-    // passing through here untroubled, and so does removing the ordering
-    // condition beside it. Weakening this `any` to `all` breaks no test.
-    // What it is worth is what it is checked on, which is every program the
-    // corpus can build, on every debug run.
+    // **What it will not do is catch the widening it is written for, on the
+    // corpus.** Forcing `nullability`'s `ordered` true panics nothing; it
+    // fails `a_free_in_an_unsequenced_operand_is_not_exempt` and
+    // `..._across_a_call_is_not_exempt`, which go from `error[SC0401]` to exit
+    // 0 with nothing said. So the widening is already guarded, one row above
+    // what this offers, and what this adds is a debug run on a program the
+    // corpus does not have: a read carried through a *second* pointer, so that
+    // ADR-0025's refinement does not clean the one being freed.
+    //
+    // Two further measurements, so that the next reader does not repeat them.
+    // Weakening this `any` to `all` breaks nothing. Deleting the assertion
+    // leaves `null` and `block` unused, which is two warnings, and errors only
+    // because the gate runs clippy with `-D warnings`; deleting the two
+    // parameters along with it compiles clean. That is a guard against
+    // forgetting rather than against deciding.
     debug_assert!(
         !frees
             || known.pending.is_empty()

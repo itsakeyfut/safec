@@ -222,13 +222,23 @@ them. What that costs is in the Consequences below.
   -pedantic-errors -Wall -fsyntax-only`, and are `error[SC0401]` here. So is
   `int x = (p = 0, free(p), 1) + 2;`, where a comma has ordered the assignment
   before the free inside the operand and the enclosing `+` is what removes the
-  marker. All three are row 4. The program on #219,
-  `if (p == 0) { return g(*p) + (free(p), 0); }`, is a fourth: the null is
-  established by the branch rather than by an assignment, and the enclosing `+`
-  removes the marker just the same. Asking the question per local, rather than
+  marker. All three are row 4. Asking the question per local, rather than
   zeroing the row for the block, would close the class and needs the ordering to
   cross a block edge, which is a lattice dimension; no program in the corpus
   asks for it.
+* Bad, and separately from the marker, because [ADR-0025] refines a pointer to
+  non-null at a dereference. `if (p == 0) { return g(*p) + (free(p), 0); }` is
+  the program on #219, and it is *not* an instance of the bullet above:
+  measured, forcing the marker condition true leaves it unexempted all the
+  same, because reading `*p` has already made `p` non-null for the rest of the
+  path. The read it then reports as racing the free is row 4 and survives both
+  of the fixes above. What it takes to be the class this record's exemption is
+  about is a read through an alias, so that the refinement lands on the alias
+  and not on the pointer being freed: `int *r = p; if (p == 0) { return g(*r) +
+  (free(p), 0); }` is that program, and it is reported here and compiled by
+  `clang`.
+
+  [ADR-0025]: 0025-a-dereference-that-was-reported-refines-the-pointer.md
 * What would reverse this: an interprocedural phase that can say what a function
   is called with. At that point a parameter stops ranging over every value and
   the quantifier this record fixes is the wrong one, and the case named above is
