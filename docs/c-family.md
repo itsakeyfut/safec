@@ -253,13 +253,17 @@ addition from the integer beside it, and drops the integer, so **a local that
 may hold an allocation has to be declared as a pointer**. C17 6.5.6 p8 is what
 makes that sound for a program whose types are what C requires.
 
-Two shapes break it today and neither involves a cast. `Lowering::promoted`
-gives a compound assignment's temporary `Ty::Int` whatever the left operand is,
-so `p += i` writes pointer arithmetic into a local declared `int`; nothing is
-lost, because no expression puts that temporary beside a pointer operand, and
-the requirement is broken all the same. And an initializer is never checked
-against the assignment constraint, so `int n = p;` is accepted in silence where
-`n = p;` is `error[SC0302]`.
+One shape breaks it today and it involves no cast: an initializer is never
+checked against the assignment constraint, so `int n = p;` is accepted in
+silence where `n = p;` is `error[SC0302]`. That is #205.
+
+There were two. `Lowering::promoted` gave the temporary of a compound
+assignment and of `++` or `--` the type `Ty::Int` whatever the place held, so
+`p += i` and `p++` each wrote pointer arithmetic into a local declared `int`.
+Nothing was lost by it, because no expression this frontend can build puts that
+temporary beside a pointer operand, and the requirement was broken all the
+same. It now answers the place's own type where that is a pointer, which is
+what C17 6.5.6 p8 says the operation happens at.
 
 **What an omission costs here is a silence, which is the worst of the four.**
 Measured on hand-built IR: a `malloc` into a local declared `int`, added to a
@@ -267,8 +271,12 @@ pointer that holds nothing, produces no finding at all where the same program
 with the local declared as a pointer produces a proved use after free.
 `an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer` in
 `crates/safec-ir/tests/freed.rs` holds that boundary, so that closing it later
-fails a named test rather than passing quietly, and #204 and #205 are the two
-shapes above.
+fails a named test rather than passing quietly. That test is about the check
+rather than about the frontend, so it did not move when `promoted` was fixed;
+what moved is that no C program reaches its shape through a compound assignment
+or an increment. `a_compound_assignment_on_a_pointer_computes_into_a_pointer`
+and `an_increment_of_a_pointer_computes_into_a_pointer` in
+`crates/safec/tests/cases` are what say so.
 
 **A fifth arrived with**
 [ADR-0031](adr/0031-a-write-this-check-cannot-pin-down-replaces-what-an-escaped-local-holds.md),
