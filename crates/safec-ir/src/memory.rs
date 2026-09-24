@@ -2052,6 +2052,8 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 &analysis,
                 &block.terminator,
                 &known,
+                &null,
+                id,
             );
         }
     }
@@ -2527,12 +2529,44 @@ fn say(
 /// live: it answers `None` here, correctly, to a different question. RK-055 in
 /// the review knowledge bank is one judgement point inheriting a rule written
 /// for the other question, which is the mistake in the other direction.
+///
+/// **It asks [`Allocations::touching`] over the arguments themselves, where
+/// [`reported`] asks it over [`asked`], and the two cannot be made to agree
+/// because they can never both have something to say.** ADR-0027's exemption
+/// takes an argument out wherever [`NullAtTerminators::established`] holds, and
+/// three lines put that answer and this walk in different programs:
+///
+/// 1. `nullability::null_at_terminators` zeroes a block's whole row unless
+///    `block.elements.last()` is [`Element::ArgumentsEvaluated`], which is
+///    ADR-0027's ordering condition;
+/// 2. [`Allocations::element`] answers that same element by clearing
+///    [`Known::pending`], because C17 6.5.2.2 p10 orders a call's arguments
+///    before the call;
+/// 3. this runs after every element of the block and reports only out of
+///    `pending`.
+///
+/// So where a row can exempt anything the marker is last, `pending` was just
+/// emptied, and there is nothing here to report; and where this reports, the
+/// free is under an unsequenced operator, the marker is absent, and the row is
+/// `false` for every local. The `Callee::Opaque` half is the same `pending`
+/// reached through the same elements.
+///
+/// **Written because it was measured and not because it follows**, which is
+/// RK-050: the filter was added here, and the reproducer on #219 and the whole
+/// workspace suite came back byte for byte the same. The `debug_assert!` below
+/// is what keeps that true, because a paragraph does not.
+///
+/// What would make the filter live is an ordering term asked per local across a
+/// block edge rather than per block, which is a lattice dimension and is
+/// ADR-0027's own Consequences rather than this function's.
 fn used_before(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
     analysis: &Allocations<'_>,
     terminator: &Terminator,
     known: &Known,
+    null: &NullAtTerminators,
+    block: BlockId,
 ) {
     let Terminator::Call {
         callee,
@@ -2556,6 +2590,26 @@ fn used_before(
         // is a read this call has nothing to say about.
         Callee::Allocates => return,
     };
+
+    // The machine behind the paragraph above. Placed here because this is
+    // where the two rules would have met: `frees` is decided and `touching` is
+    // about to be asked over arguments no exemption has been applied to.
+    //
+    // An assertion rather than the filter, because the filter is a line no
+    // mutation can break, which `CLAUDE.md` calls decoration, and because it
+    // would go quiet on its own the day the ordering term widens: it would
+    // exempt a read without anybody asking whether ADR-0027's four conditions
+    // still hold where the exemption had newly arrived. This turns that same
+    // day into a named panic over the corpus, which is row 3 of the failure
+    // list rather than row 4.
+    debug_assert!(
+        !frees
+            || known.pending.is_empty()
+            || !arguments
+                .iter()
+                .any(|argument| established_null(argument, null, block)),
+        "a read was carried to a free of a pointer established null: `asked` now reaches this walk"
+    );
 
     let touched = Allocations::touching(arguments.iter(), known);
     let taken: Vec<usize> = named(&touched).collect();

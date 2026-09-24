@@ -198,12 +198,19 @@ them. What that costs is in the Consequences below.
   positive on row 4, taken deliberately: the alternative is a transfer that
   believes a nullness, and a nullness this compiler is wrong about would then
   be a real free nobody recorded, which is the bottom row.
-* Bad, for the same reason, in the other reader of what a call frees.
-  `memory.rs::used_before` carries a read forwards to a `free` it is unordered
-  against and asks `Allocations::touching` without the filter, so such a read
-  is reported unsequenced against a free that does nothing. It takes a branch
-  that establishes the null to reach at all, and it is row 4 again. #219 is
-  where that is written down.
+* Not bad in the other reader of what a call frees, although it reads as
+  though it should be. `memory.rs::used_before` carries a read forwards to a
+  `free` it is unordered against and asks `Allocations::touching` without the
+  filter, and #219 was filed because a program exists where that reports a read
+  as racing a free of a pointer this check proved null. **The report is real
+  and the filter is not what is missing**: the exemption and that walk are
+  mutually exclusive by construction, because the marker the fourth condition
+  reads is also what clears `Known::pending`, which is the only thing that walk
+  reports out of. Where a row can exempt anything there is nothing pending to
+  report, and where something is pending the row is `false` for every local.
+  Adding the filter there was measured and moved no program. `used_before`'s
+  own doc comment carries the three lines and a `debug_assert!` holds them;
+  what the program on #219 is really an instance of is the bullet below.
 * Bad, because the marker the fourth condition reads answers a narrower question
   than the condition states. `Element::ArgumentsEvaluated` is emitted where no
   unsequenced operator encloses the *call*, so the exemption reaches a free at
@@ -215,7 +222,10 @@ them. What that costs is in the Consequences below.
   -pedantic-errors -Wall -fsyntax-only`, and are `error[SC0401]` here. So is
   `int x = (p = 0, free(p), 1) + 2;`, where a comma has ordered the assignment
   before the free inside the operand and the enclosing `+` is what removes the
-  marker. All three are row 4. Asking the question per local, rather than
+  marker. All three are row 4. The program on #219,
+  `if (p == 0) { return g(*p) + (free(p), 0); }`, is a fourth: the null is
+  established by the branch rather than by an assignment, and the enclosing `+`
+  removes the marker just the same. Asking the question per local, rather than
   zeroing the row for the block, would close the class and needs the ordering to
   cross a block edge, which is a lattice dimension; no program in the corpus
   asks for it.
