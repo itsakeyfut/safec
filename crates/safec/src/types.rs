@@ -2600,6 +2600,8 @@ int main(void) {{
     /// `p - v`, `v + v` and `n - v` rows gain one. Mutation: cite p2 for `-`.
     /// The `v - 1` row fails. Mutation: drop the note from
     /// `compound_assignment`. The `+=` and `-=` rows lose theirs. Mutation:
+    /// drop the `+=` and `-=` test from `compound_assignment`'s note. `v *= 2`
+    /// gains one, and `*=` refuses a pointer whatever it points to. Mutation:
     /// swap two of `unsteppable`'s reasons. The rows for those two fail.
     #[test]
     fn a_pointer_refused_for_what_it_points_to_says_why() {
@@ -2631,6 +2633,7 @@ int main(void) {{
             ("p - v;", ""),
             ("v + v;", ""),
             ("n - v;", ""),
+            ("v *= 2;", ""),
         ] {
             let checked = checked(&format!(
                 "void g(void);
