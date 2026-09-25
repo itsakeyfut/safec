@@ -419,8 +419,8 @@ impl Checker<'_> {
                 self.is_null_pointer_constant(lhs),
                 self.is_null_pointer_constant(rhs),
             );
-            if self.binary_operable(ast, op, left, right, nulls) == Some(false) {
-                self.report_operands(ast, op, (lhs, left), (rhs, right), diagnostics);
+            if let Some(Err(refused)) = self.binary_operable(ast, op, left, right, nulls) {
+                self.report_operands(ast, op, refused, (lhs, left), (rhs, right), diagnostics);
             }
         }
 
@@ -503,12 +503,13 @@ impl Checker<'_> {
     /// agree today; they are kept apart because a floating type would make
     /// them differ, and this is where it would have to.
     ///
-    /// `None` where this does not answer. A pointer operand of `+` or `-` to
-    /// `void`, to a function or to an array of unknown length is #235's, for
-    /// the reason [`Checker::compound_assignable`] gives. An array or a
-    /// function never arrives, because `decayed` converted it; one that did
-    /// would be a conversion missed, and answering it would be a report about
-    /// ordinary C.
+    /// A refusal says why, because a pointer to `void` is refused by `+` for
+    /// what it points to and not for being a pointer, and a report that does
+    /// not say so contradicts what its reader knows about `+`.
+    ///
+    /// `None` where this does not answer. An array or a function never
+    /// arrives, because `decayed` converted it; one that did would be a
+    /// conversion missed, and answering it would be a report about ordinary C.
     fn binary_operable(
         &self,
         ast: &Ast,
@@ -516,7 +517,7 @@ impl Checker<'_> {
         left: TypeId,
         right: TypeId,
         (left_is_null, right_is_null): (bool, bool),
-    ) -> Option<bool> {
+    ) -> Option<Result<(), Refused>> {
         let (Some(left), Some(right)) = (OperandClass::of(ast, left), OperandClass::of(ast, right))
         else {
             return None;
@@ -524,71 +525,73 @@ impl Checker<'_> {
 
         match op {
             // 6.5.5 p2.
-            BinOp::Mul | BinOp::Div => Some(matches!(
+            BinOp::Mul | BinOp::Div => Some(pairing(matches!(
                 (left, right),
                 (OperandClass::Arithmetic, OperandClass::Arithmetic)
-            )),
+            ))),
             // 6.5.5 p2 for `%`, 6.5.7 p2 and 6.5.10 p2 to 6.5.12 p2.
             BinOp::Rem | BinOp::Shl | BinOp::Shr | BinOp::BitAnd | BinOp::BitXor | BinOp::BitOr => {
-                Some(matches!(
+                Some(pairing(matches!(
                     (left, right),
                     (OperandClass::Arithmetic, OperandClass::Arithmetic)
-                ))
+                )))
             }
             // 6.5.6 p2.
             BinOp::Add => match (left, right) {
-                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
-                (OperandClass::Pointer(pointee), OperandClass::Arithmetic)
-                | (OperandClass::Arithmetic, OperandClass::Pointer(pointee)) => {
-                    steppable(ast, pointee)
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(Ok(())),
+                (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
+                    Some(stepping(ast, pointee, true))
                 }
-                _ => Some(false),
+                (OperandClass::Arithmetic, OperandClass::Pointer(pointee)) => {
+                    Some(stepping(ast, pointee, false))
+                }
+                _ => Some(pairing(false)),
             },
             // 6.5.6 p3, which allows the pointer only on the left.
             BinOp::Sub => match (left, right) {
-                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(Ok(())),
                 (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
-                    steppable(ast, pointee)
+                    Some(stepping(ast, pointee, true))
                 }
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     // Both pointees are asked: `int[3]` is compatible with
                     // `int[]`, and only one of them is complete.
                     if ast.compatible(left, right) {
-                        steppable(ast, left).and(steppable(ast, right))
+                        Some(stepping(ast, left, true).and(stepping(ast, right, false)))
                     } else {
-                        Some(false)
+                        Some(pairing(false))
                     }
                 }
-                _ => Some(false),
+                _ => Some(pairing(false)),
             },
             // 6.5.8 p2: an object type, so two pointers to functions are
             // refused however alike they are, and an integer is refused beside
             // a pointer even when it is zero.
-            BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => match (left, right) {
-                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
-                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => Some(
-                    ast.compatible(left, right) && !matches!(ast.ty(left), Type::Function { .. }),
-                ),
-                _ => Some(false),
-            },
+            BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => Some(pairing(match (left, right) {
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
+                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
+                    ast.compatible(left, right) && !matches!(ast.ty(left), Type::Function { .. })
+                }
+                _ => false,
+            })),
             // 6.5.9 p2. The `void *` case wants an object type on the other
             // side, which C17 6.2.5 p1 makes every type but a function.
-            BinOp::Eq | BinOp::Ne => match (left, right) {
-                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
-                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => Some(
+            BinOp::Eq | BinOp::Ne => Some(pairing(match (left, right) {
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
+                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     ast.compatible(left, right)
                         || is_void_beside_an_object(ast, left, right)
-                        || is_void_beside_an_object(ast, right, left),
-                ),
-                (OperandClass::Pointer(_), OperandClass::Arithmetic) => Some(right_is_null),
-                (OperandClass::Arithmetic, OperandClass::Pointer(_)) => Some(left_is_null),
-                _ => Some(false),
-            },
+                        || is_void_beside_an_object(ast, right, left)
+                }
+                (OperandClass::Pointer(_), OperandClass::Arithmetic) => right_is_null,
+                (OperandClass::Arithmetic, OperandClass::Pointer(_)) => left_is_null,
+                _ => false,
+            })),
             // 6.5.13 p2 and 6.5.14 p2: each operand a scalar, whatever the
             // other is.
-            BinOp::LogAnd | BinOp::LogOr => {
-                Some(!matches!(left, OperandClass::Void) && !matches!(right, OperandClass::Void))
-            }
+            BinOp::LogAnd | BinOp::LogOr => Some(pairing(
+                !matches!(left, OperandClass::Void) && !matches!(right, OperandClass::Void),
+            )),
         }
     }
 
@@ -602,21 +605,26 @@ impl Checker<'_> {
     /// its type in no pairing at all, and otherwise the right one, read
     /// against the left the way `assignment` reads a value against its place:
     /// in `p == 1` neither operand is wrong alone, and `1` is what does not
-    /// fit beside `p`.
+    /// fit beside `p`. A pointer refused for what it points to is wrong alone,
+    /// whichever side it is on, and the note says why.
     fn report_operands(
         &self,
         ast: &Ast,
         op: BinOp,
+        refused: Refused,
         (lhs, left): (ExprId, TypeId),
         (rhs, right): (ExprId, TypeId),
         diagnostics: &mut DiagnosticSink,
     ) {
         let left_spelled = self.spelled(ast, left);
         let right_spelled = self.spelled(ast, right);
-        let left_is_refused = match ast.ty(left) {
-            Type::Void => true,
-            Type::Pointer(_) => !takes_a_pointer(op),
-            Type::Int | Type::Char | Type::Array { .. } | Type::Function { .. } => false,
+        let left_is_refused = match refused {
+            Refused::Pointee { left, .. } => left,
+            Refused::Pairing => match ast.ty(left) {
+                Type::Void => true,
+                Type::Pointer(_) => !takes_a_pointer(op),
+                Type::Int | Type::Char | Type::Array { .. } | Type::Function { .. } => false,
+            },
         };
         let (primary, secondary) = if left_is_refused {
             ((lhs, &left_spelled), (rhs, &right_spelled))
@@ -624,21 +632,31 @@ impl Checker<'_> {
             ((rhs, &right_spelled), (lhs, &left_spelled))
         };
 
-        diagnostics.report(
-            Diagnostic::error(format!(
-                "`{}` cannot take `{left_spelled}` and `{right_spelled}`",
-                op.as_str()
-            ))
-            .with_code(OPERANDS)
-            .with_label(Label::primary(
-                ast.expr(primary.0).span(),
-                format!("this is `{}`", primary.1),
-            ))
-            .with_label(Label::secondary(
-                ast.expr(secondary.0).span(),
-                format!("this is `{}`", secondary.1),
-            )),
-        );
+        let mut diagnostic = Diagnostic::error(format!(
+            "`{}` cannot take `{left_spelled}` and `{right_spelled}`",
+            op.as_str()
+        ))
+        .with_code(OPERANDS)
+        .with_label(Label::primary(
+            ast.expr(primary.0).span(),
+            format!("this is `{}`", primary.1),
+        ))
+        .with_label(Label::secondary(
+            ast.expr(secondary.0).span(),
+            format!("this is `{}`", secondary.1),
+        ));
+        if let Refused::Pointee { why, .. } = refused {
+            // p2 is the addition's paragraph and p3 the subtraction's, and
+            // each says "complete object type" for itself.
+            let clause = if op == BinOp::Sub {
+                "C17 6.5.6 p3"
+            } else {
+                "C17 6.5.6 p2"
+            };
+            diagnostic = diagnostic.with_note(stepping_note(why, clause));
+        }
+
+        diagnostics.report(diagnostic);
     }
 
     /// The type an operand has after the conversions C17 6.3.2.1 makes.
@@ -724,6 +742,18 @@ impl Checker<'_> {
             return;
         }
 
+        // p1 takes a pointer with an integer for `+=` and `-=`, so a refused
+        // pair of that shape was refused for what the pointer points to, and
+        // is the one refusal that needs saying why.
+        let why = match (ast.ty(target), ast.ty(source)) {
+            (Type::Pointer(pointee), Type::Int | Type::Char)
+                if matches!(op, BinOp::Add | BinOp::Sub) =>
+            {
+                unsteppable(ast, *pointee)
+            }
+            _ => None,
+        };
+
         let target_spelled = self.spelled(ast, target);
         let source_spelled = self.spelled(ast, source);
         let (primary, secondary) = if !matches!(ast.ty(source), Type::Int | Type::Char) {
@@ -732,21 +762,24 @@ impl Checker<'_> {
             ((place, &target_spelled), (value, &source_spelled))
         };
 
-        diagnostics.report(
-            Diagnostic::error(format!(
-                "`{}=` cannot take `{target_spelled}` and `{source_spelled}`",
-                op.as_str()
-            ))
-            .with_code(OPERANDS)
-            .with_label(Label::primary(
-                ast.expr(primary.0).span(),
-                format!("this is `{}`", primary.1),
-            ))
-            .with_label(Label::secondary(
-                ast.expr(secondary.0).span(),
-                format!("this is `{}`", secondary.1),
-            )),
-        );
+        let mut diagnostic = Diagnostic::error(format!(
+            "`{}=` cannot take `{target_spelled}` and `{source_spelled}`",
+            op.as_str()
+        ))
+        .with_code(OPERANDS)
+        .with_label(Label::primary(
+            ast.expr(primary.0).span(),
+            format!("this is `{}`", primary.1),
+        ))
+        .with_label(Label::secondary(
+            ast.expr(secondary.0).span(),
+            format!("this is `{}`", secondary.1),
+        ));
+        if let Some(why) = why {
+            diagnostic = diagnostic.with_note(stepping_note(why, "C17 6.5.16.2 p1"));
+        }
+
+        diagnostics.report(diagnostic);
     }
 
     /// Whether `place op= value` meets C17 6.5.16.2's constraints, where the
@@ -765,14 +798,14 @@ impl Checker<'_> {
     /// function as the value, which 6.3.2.1 p3 and p4 turn into a pointer
     /// before either paragraph looks at it.
     ///
-    /// `None` where this does not answer. A pointer to `void`, to a function
-    /// or to an array of unknown length is not a pointer to a complete object
-    /// type, so `v += 1` breaks p1, but `v + 1` breaks 6.5.6 p2 by the same
-    /// sentence and nothing checks that either: answering one spelling and not
-    /// the other would be one rule with two answers, so both are #235's. An
-    /// array or a function as the place is refused by 6.5.16 p2, which wants a
-    /// modifiable lvalue, and that is not this rule; `assignable` leaves it for
-    /// the same reason.
+    /// A pointer to `void`, to a function or to an array of unknown length is
+    /// not a pointer to a complete object type, so `v += 1` breaks p1, and
+    /// `v + 1` breaks 6.5.6 p2 by the same sentence; [`unsteppable`] answers
+    /// both.
+    ///
+    /// `None` where this does not answer. An array or a function as the place
+    /// is refused by 6.5.16 p2, which wants a modifiable lvalue, and that is
+    /// not this rule; `assignable` leaves it for the same reason.
     fn compound_assignable(
         &self,
         ast: &Ast,
@@ -783,7 +816,7 @@ impl Checker<'_> {
         match (ast.ty(target), ast.ty(source)) {
             (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
             (Type::Pointer(pointee), Type::Int | Type::Char) => match op {
-                BinOp::Add | BinOp::Sub => steppable(ast, *pointee),
+                BinOp::Add | BinOp::Sub => Some(unsteppable(ast, *pointee).is_none()),
                 // A comparison and a logical operator have no compound
                 // form, so the parser never builds one here. They are listed
                 // rather than caught by a wildcard so that a new operator
@@ -1080,16 +1113,50 @@ impl OperandClass {
     }
 }
 
-/// Whether C17 6.5.6 p2 lets a pointer to `pointee` take an integer step:
-/// only a pointer to a complete object type may.
+/// Why C17 6.5.6 does not let a pointer to `pointee` take a step, or `None`
+/// where it does: only a pointer to a complete object type may.
 ///
-/// `None` for the pointees that are not one, because #235 answers for both
-/// spellings of that rule at once: `v + 1` and `v += 1`. One function so that
-/// the two spellings cannot be given different answers before then.
-fn steppable(ast: &Ast, pointee: TypeId) -> Option<bool> {
+/// One function for `v + 1` and `v += 1`, so that the two spellings of one
+/// rule cannot be given different answers. The reason is written here rather
+/// than spelled from `pointee`, because a spelled type can carry the file's
+/// own bytes (RK-002) and none of the three needs the type to be read.
+fn unsteppable(ast: &Ast, pointee: TypeId) -> Option<&'static str> {
     match ast.ty(pointee) {
-        Type::Void | Type::Function { .. } | Type::Array { length: None, .. } => None,
-        Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => Some(true),
+        Type::Void => Some("`void` has no size"),
+        Type::Function { .. } => Some("a function is not an object"),
+        Type::Array { length: None, .. } => Some("an array of unknown length has no size"),
+        Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => None,
+    }
+}
+
+/// The note for a pointer refused for what it points to: why, and the
+/// paragraph that says so.
+fn stepping_note(why: &str, clause: &str) -> String {
+    format!("a pointer steps by the size of what it points to, and {why} ({clause})")
+}
+
+/// Why [`Checker::binary_operable`] refused a pair of operands.
+#[derive(Clone, Copy)]
+enum Refused {
+    /// The operator's clause takes no such pairing of operand types.
+    Pairing,
+    /// C17 6.5.6 takes the pairing, and a pointer in it points to something
+    /// it cannot step over. `left` says which operand, and `why` is
+    /// [`unsteppable`]'s answer.
+    Pointee { left: bool, why: &'static str },
+}
+
+/// A pairing the operator's clause takes, or refuses whatever it points to.
+fn pairing(taken: bool) -> Result<(), Refused> {
+    if taken { Ok(()) } else { Err(Refused::Pairing) }
+}
+
+/// Whether a pointer to `pointee`, on the `left` or not, can take the step
+/// 6.5.6 would make.
+fn stepping(ast: &Ast, pointee: TypeId, left: bool) -> Result<(), Refused> {
+    match unsteppable(ast, pointee) {
+        None => Ok(()),
+        Some(why) => Err(Refused::Pointee { left, why }),
     }
 }
 
@@ -1513,6 +1580,15 @@ mod tests {
                 .iter()
                 .flat_map(Diagnostic::labels)
                 .map(Label::message)
+                .collect()
+        }
+
+        fn notes(&self) -> Vec<&str> {
+            self.diagnostics
+                .diagnostics()
+                .iter()
+                .flat_map(Diagnostic::notes)
+                .map(String::as_str)
                 .collect()
         }
     }
@@ -2058,14 +2134,14 @@ error[SC0302]: no problems found
     /// takes one at all.
     ///
     /// One program with the silences and a report together, so the silences
-    /// are asserted against a run that does report. `v += 1` is silent
-    /// because a `void` pointee is #235's, for both spellings.
+    /// are asserted against a run that does report. `v += 1` reports, because
+    /// `void` is not a complete object type and p1 asks for a pointer to one.
     ///
     /// Mutation: have `compound_assignable` answer `Some(false)` for a
     /// pointer with `+=` or `-=`. `p += 1` and `p -= 1` start reporting.
-    /// Mutation: have it answer `Some(false)` for a `void` pointee. `v += 1`
-    /// starts reporting. Mutation: give the report `MISMATCH`. The code
-    /// fails.
+    /// Mutation: have it answer `Some(true)` for a pointer with `+=` or `-=`
+    /// whatever it points to. `v += 1` goes silent. Mutation: give the report
+    /// `MISMATCH`. The code fails.
     #[test]
     fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
         let checked = checked(
@@ -2086,8 +2162,14 @@ error[SC0302]: no problems found
 ",
         );
 
-        assert_eq!(checked.messages(), ["`*=` cannot take `int *` and `int`"]);
-        assert_eq!(checked.codes(), ["SC0306"]);
+        assert_eq!(
+            checked.messages(),
+            [
+                "`+=` cannot take `void *` and `int`",
+                "`*=` cannot take `int *` and `int`"
+            ]
+        );
+        assert_eq!(checked.codes(), ["SC0306", "SC0306"]);
     }
 
     /// Every operator and every pair of operand types 6.5.16.2 answers for,
@@ -2104,7 +2186,9 @@ error[SC0302]: no problems found
     /// The `c += p` row goes silent, and that is a local declared `char`
     /// holding an addition over a pointer, which ADR-0030 drops. Mutation:
     /// refuse a pointer to a pointer or to an array of known length. Their
-    /// rows start reporting. Mutation: answer `None` for a `void` place or a
+    /// rows start reporting. Mutation: have `unsteppable` answer `None` for
+    /// an array of unknown length, `void` or a function. The `q += 1`,
+    /// `v -= 1` or `fp -= 1` row goes silent. Mutation: answer `None` for a `void` place or a
     /// `void`, array or function value. Those rows go silent. Mutation: pick
     /// the primary label by whether the value is a pointer, as this did
     /// before. The `void` and array value rows name the place.
@@ -2163,7 +2247,21 @@ error[SC0302]: no problems found
             ),
             ("pp += 1;", "", ""),
             ("pa -= 1;", "", ""),
-            ("q += 1;", "", ""),
+            (
+                "q += 1;",
+                "`+=` cannot take `int (*)[]` and `int`",
+                "this is `int (*)[]`",
+            ),
+            (
+                "v -= 1;",
+                "`-=` cannot take `void *` and `int`",
+                "this is `void *`",
+            ),
+            (
+                "fp -= 1;",
+                "`-=` cannot take `void (*)(void)` and `int`",
+                "this is `void (*)(void)`",
+            ),
         ] {
             let checked = checked(&format!(
                 "void g(void);
@@ -2176,6 +2274,7 @@ int main(void) {{
     int **pp;
     int (*pa)[2];
     int (*q)[];
+    void (*fp)(void);
     {statement}
     return 0;
 }}
@@ -2198,8 +2297,7 @@ int main(void) {{
     /// A row is `(expression, message, primary label)`, and an empty message
     /// is an expression that must stay silent. The silences are every pairing
     /// C allows, so a clause answered too strictly fails here as surely as one
-    /// answered too loosely. `v + 1` is silent because a `void` pointee is
-    /// #235's, for both spellings.
+    /// answered too loosely.
     ///
     /// Mutation: have `binary` stop calling `binary_operable`. Every reporting
     /// row goes silent. Mutation: have the `==` arm answer `false` for a
@@ -2223,6 +2321,14 @@ int main(void) {{
     /// or `!=`, `&&` and `||` into its `false` arm. `p >> 1`, `p != 1`,
     /// `p && g()` and `p || g()` name the wrong operand. Mutation: refuse a
     /// `char` on the left alone. `c[0] * p` names `c[0]`.
+    ///
+    /// A pointer to something with no size is refused by `+` and `-`, C17
+    /// 6.5.6 p2 and p3, and named whichever side it is on. Mutation: have the
+    /// `+` arm answer `Ok` for a pointer and an integer whatever it points to.
+    /// `v + 1`, `1 + v`, `g + 1` and `u + 1` go silent. Mutation: ask only the
+    /// left pointee of a subtraction of two pointers. `pa - u` goes silent.
+    /// Mutation: pick the primary label by `Refused::Pairing`'s rule for a
+    /// `Refused::Pointee` too. `v + 1` and `u - pa` name the wrong operand.
     #[test]
     fn a_binary_operator_answers_for_every_operator_and_operand() {
         for (expression, message, primary) in [
@@ -2415,7 +2521,47 @@ int main(void) {{
             ("g == g", "", ""),
             ("p && q", "", ""),
             ("p || n", "", ""),
-            ("v + 1", "", ""),
+            (
+                "v + 1",
+                "`+` cannot take `void *` and `int`",
+                "this is `void *`",
+            ),
+            (
+                "1 + v",
+                "`+` cannot take `int` and `void *`",
+                "this is `void *`",
+            ),
+            (
+                "v - 1",
+                "`-` cannot take `void *` and `int`",
+                "this is `void *`",
+            ),
+            (
+                "v - v",
+                "`-` cannot take `void *` and `void *`",
+                "this is `void *`",
+            ),
+            (
+                "g + 1",
+                "`+` cannot take `void (*)(void)` and `int`",
+                "this is `void (*)(void)`",
+            ),
+            (
+                "u + 1",
+                "`+` cannot take `int (*)[]` and `int`",
+                "this is `int (*)[]`",
+            ),
+            (
+                "pa - u",
+                "`-` cannot take `int (*)[2]` and `int (*)[]`",
+                "this is `int (*)[]`",
+            ),
+            (
+                "u - pa",
+                "`-` cannot take `int (*)[]` and `int (*)[2]`",
+                "this is `int (*)[]`",
+            ),
+            ("pa - pa", "", ""),
         ] {
             let checked = checked(&format!(
                 "void g(void);
@@ -2426,6 +2572,8 @@ int main(void) {{
     void *v;
     int n;
     int a[2];
+    int (*pa)[2];
+    int (*u)[];
     {expression};
     return 0;
 }}
@@ -2438,6 +2586,70 @@ int main(void) {{
                 assert_eq!(checked.messages(), [message], "{expression}");
                 assert_eq!(checked.codes(), ["SC0306"], "{expression}");
                 assert_eq!(checked.labels().first(), Some(&primary), "{expression}");
+            }
+        }
+    }
+
+    /// A pointer refused for what it points to says so, with the paragraph of
+    /// the spelling that refused it, and a pointer refused for the pairing it
+    /// is in says nothing more than the pairing: `p - v` is two pointers that
+    /// are not compatible, and a note about `void` having no size would be a
+    /// reason that is false there.
+    ///
+    /// Mutation: attach the note to every refusal with a pointer operand. The
+    /// `p - v`, `v + v` and `n - v` rows gain one. Mutation: cite p2 for `-`.
+    /// The `v - 1` row fails. Mutation: drop the note from
+    /// `compound_assignment`. The `+=` and `-=` rows lose theirs. Mutation:
+    /// swap two of `unsteppable`'s reasons. The rows for those two fail.
+    #[test]
+    fn a_pointer_refused_for_what_it_points_to_says_why() {
+        for (code, note) in [
+            (
+                "v + 1;",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.6 p2)",
+            ),
+            (
+                "v - 1;",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.6 p3)",
+            ),
+            (
+                "g + 1;",
+                "a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.6 p2)",
+            ),
+            (
+                "u + 1;",
+                "a pointer steps by the size of what it points to, and an array of unknown length has no size (C17 6.5.6 p2)",
+            ),
+            (
+                "v += 1;",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.16.2 p1)",
+            ),
+            (
+                "u -= 1;",
+                "a pointer steps by the size of what it points to, and an array of unknown length has no size (C17 6.5.16.2 p1)",
+            ),
+            ("p - v;", ""),
+            ("v + v;", ""),
+            ("n - v;", ""),
+        ] {
+            let checked = checked(&format!(
+                "void g(void);
+int main(void) {{
+    int *p;
+    void *v;
+    int n;
+    int (*u)[];
+    {code}
+    return 0;
+}}
+"
+            ));
+
+            assert_eq!(checked.codes(), ["SC0306"], "{code}");
+            if note.is_empty() {
+                assert_eq!(checked.notes(), Vec::<&str>::new(), "{code}");
+            } else {
+                assert_eq!(checked.notes(), [note], "{code}");
             }
         }
     }

@@ -814,6 +814,17 @@ cases! {
     an_additive_operand_c_does_not_allow: ["--emit", "ast"],
     a_void_operand_is_refused_by_every_binary_operator: ["--emit", "ast"],
     every_binary_operator_takes_what_c_allows: ["--emit", "ast"],
+    // C17 6.5.6 p2 and 6.5.16.2 p1: `+` and `+=` step only a pointer to a
+    // complete object type, and `void` and a function are not one. `clang`
+    // accepts all three as a GNU extension unless `-pedantic-errors`, which
+    // is why `docs/frontend.md` lists them. The last two lines are the
+    // control: a pointer to `int` is stepped in both spellings in silence.
+    //
+    // Mutation: have `unsteppable` answer `None` for `void`. Lines 3 and 4 go
+    // silent. For a function, line 6 does. Mutation: drop the note from either
+    // report. Its lines lose it. Mutation: have `unsteppable` refuse `int`.
+    // The control reports.
+    arithmetic_on_a_pointer_to_something_with_no_size: ["--emit", "ast"],
     // Why the rule matters past the message, as for the initializer below:
     // `i = p * 1` writes a multiplication over an `int *` into a local
     // declared `int`, which is the shape `docs/c-family.md`'s fourth
