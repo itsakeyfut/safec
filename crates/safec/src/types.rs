@@ -1711,6 +1711,53 @@ int main(void) {
         );
     }
 
+    /// Every declarator of a declaration is checked, not only the first, and
+    /// one with no initializer does not end the search.
+    ///
+    /// `m` is written first on purpose: it is the trivial value a list of one
+    /// would pass every other test with, which is RK-076's shape.
+    ///
+    /// Mutation: have `initializers` read `declarators.iter().take(1)`.
+    /// Mutation: have it `break` rather than `continue` at a declarator with
+    /// no initializer. Either way `n` stops being checked and this fails.
+    #[test]
+    fn every_declarator_of_a_declaration_has_its_initializer_checked() {
+        let checked = checked(
+            "int main(void) { int *p = 0; int m, n = p; return 0; }
+",
+        );
+
+        assert_eq!(checked.messages(), ["cannot initialize `int` with `int *`"]);
+    }
+
+    /// An initializer and a `return` are reported where they are written,
+    /// among the other diagnostics, rather than after all of them.
+    ///
+    /// Mutation: run `check_received` in a loop of its own after the walk that
+    /// works out the types. The assignment moves ahead of the initializer and
+    /// this fails.
+    #[test]
+    fn an_initializer_and_a_return_are_reported_in_the_order_they_are_written() {
+        let checked = checked(
+            "int main(void) {
+    int *p = 0;
+    int n = p;
+    n = p;
+    return p;
+}
+",
+        );
+
+        assert_eq!(
+            checked.messages(),
+            [
+                "cannot initialize `int` with `int *`",
+                "cannot assign `int *` to `int`",
+                "cannot return `int *` from a function returning `int`",
+            ]
+        );
+    }
+
     /// Every place a `return` can be written, which is every place a statement
     /// can hold another.
     ///
