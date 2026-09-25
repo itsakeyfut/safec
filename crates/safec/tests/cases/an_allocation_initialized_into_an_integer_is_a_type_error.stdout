@@ -1,0 +1,72 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_initialized_into_an_integer_is_a_type_error.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_allocation_initialized_into_an_integer_is_a_type_error.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_allocation_initialized_into_an_integer_is_a_type_error.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "void"
+  Local "_5" "int *"
+  Local "_6" "void *"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated an_allocation_initialized_into_an_integer_is_a_type_error.c:4:14 generated
+    Call an_allocation_initialized_into_an_integer_is_a_type_error.c:4:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation an_allocation_initialized_into_an_integer_is_a_type_error.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:4:14 generated
+    Operation an_allocation_initialized_into_an_integer_is_a_type_error.c:5:9 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:5:13 generated
+    ArgumentsEvaluated an_allocation_initialized_into_an_integer_is_a_type_error.c:6:5 generated
+    Call an_allocation_initialized_into_an_integer_is_a_type_error.c:6:5 "free" "bb2"
+      Destination "_4"
+      Copy "_1"
+  Block "bb2"
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:6:5 generated
+    ArgumentsEvaluated an_allocation_initialized_into_an_integer_is_a_type_error.c:7:17 generated
+    Call an_allocation_initialized_into_an_integer_is_a_type_error.c:7:17 "malloc" "bb3"
+      Destination "_6"
+      Constant 4
+  Block "bb3"
+    Operation an_allocation_initialized_into_an_integer_is_a_type_error.c:7:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:7:17 generated
+    Operation an_allocation_initialized_into_an_integer_is_a_type_error.c:8:14 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_5"
+        Copy "_3"
+    Operation an_allocation_initialized_into_an_integer_is_a_type_error.c:8:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:8:14 generated
+    ArgumentsEvaluated an_allocation_initialized_into_an_integer_is_a_type_error.c:9:5 generated
+    Call an_allocation_initialized_into_an_integer_is_a_type_error.c:9:5 "free" "bb4"
+      Destination "_9"
+      Copy "_7"
+  Block "bb4"
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:9:5 generated
+    Operation an_allocation_initialized_into_an_integer_is_a_type_error.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocation_initialized_into_an_integer_is_a_type_error.c:10:12 generated
+    Return

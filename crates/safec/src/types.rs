@@ -2,8 +2,8 @@
 //!
 //! The second half of the stage `docs/architecture.md` draws between the AST
 //! and the typed AST. `sema.rs` says which declaration a name means; this says
-//! what type each expression has, and reports an assignment, a `return` and a
-//! call whose types C17 forbids.
+//! what type each expression has, and reports an assignment, an initializer, a
+//! `return` and a call whose types C17 forbids.
 //!
 //! **A type this stage cannot work out is `None`, and `None` reports nothing.**
 //! The other constraints of 6.5 are not checked here, so plenty of expressions
@@ -22,7 +22,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use crate::ast::{
-    Ast, BinOp, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type, TypeId, UnOp, spell_type,
+    Ast, BinOp, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId, UnOp,
+    spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -52,11 +53,12 @@ const NO_TYPE: Code = Code::new("SC0305");
 
 /// A value of the wrong type, C17 6.5.16.1 p1.
 ///
-/// One code for an assignment and for a `return`, because 6.8.6.4 p3 makes
-/// them one rule: a returned value is converted as if it were assigned to an
-/// object of the return type. What differs is the message, which is the same
-/// reason `parser.rs`'s `EXPECTED` is one code for every shape of syntax
-/// error.
+/// One code for an assignment, an initializer and a `return`, because C17
+/// makes them one rule: 6.7.9 p11 gives an initializer "the same type
+/// constraints and conversions as for simple assignment", and 6.8.6.4 p3
+/// converts a returned value as if it were assigned to an object of the
+/// return type. What differs is the message, which is the same reason
+/// `parser.rs`'s `EXPECTED` is one code for every shape of syntax error.
 const MISMATCH: Code = Code::new("SC0302");
 
 /// A call whose argument count is not the parameter count, C17 6.5.2.2 p2.
@@ -131,15 +133,15 @@ pub fn check(
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::Int),
         int_range,
-        returns: HashMap::new(),
+        receivers: HashMap::new(),
     };
 
-    checker.collect_returns(ast);
+    checker.collect_receivers(ast);
 
     for id in ast.expr_ids().collect::<Vec<_>>() {
         let ty = checker.type_of(ast, id, diagnostics);
         checker.types[id.index()] = ty;
-        checker.check_return(ast, id, diagnostics);
+        checker.check_received(ast, id, diagnostics);
     }
 
     Types {
@@ -157,6 +159,25 @@ struct Returning {
     name: Span,
 }
 
+/// What a value has to be assignable to, and what a report about it says.
+///
+/// Two variants of one thing rather than two maps, because C17 makes them
+/// one rule (see `MISMATCH`) and because one walk finds both: a second walk
+/// would be a second recursion over every statement, and an arm dropped from
+/// either would be a silence that the other's test could not see.
+#[derive(Clone, Copy)]
+enum Receiving {
+    /// C17 6.8.6.4 p3.
+    Return(Returning),
+    /// C17 6.7.9 p11.
+    Initializer {
+        /// The type the declarator derived.
+        ty: TypeId,
+        /// The span of the declarator's name, which is the place.
+        name: Span,
+    },
+}
+
 struct Checker<'a> {
     sources: &'a SourceMap,
     resolution: &'a Resolution,
@@ -167,21 +188,29 @@ struct Checker<'a> {
     int: TypeId,
     /// The range of `int` on the target this run is for.
     int_range: Integer,
-    /// The value of each `return` that has one, and the function it is in.
+    /// The value of each `return` that has one and of each initializer, and
+    /// what it has to be assignable to.
     ///
     /// Collected before the walk so that the walk stays in one order. A
-    /// `return` is a statement and the types are worked out over the arena, so
-    /// without this the returns would be reported after every expression
-    /// rather than among them, and a reader would find them out of order.
-    returns: HashMap<ExprId, Returning>,
+    /// `return` and a declaration are statements and the types are worked out
+    /// over the arena, so without this they would be reported after every
+    /// expression rather than among them, and a reader would find them out of
+    /// order. One map is enough because no expression is both.
+    receivers: HashMap<ExprId, Receiving>,
 }
 
 impl Checker<'_> {
-    /// Find every `return` with a value, and what it has to be assignable to.
-    fn collect_returns(&mut self, ast: &Ast) {
+    /// Find every `return` with a value and every initializer, and what each
+    /// has to be assignable to.
+    fn collect_receivers(&mut self, ast: &Ast) {
         for item in ast.items() {
-            let Item::Function(function) = item else {
-                continue;
+            let function = match item {
+                Item::Function(function) => function,
+                Item::Declaration { declarators, .. } => {
+                    self.initializers(declarators);
+                    continue;
+                }
+                Item::Error { .. } => continue,
             };
             let Type::Function { returns, .. } = ast.ty(function.ty) else {
                 // A definition whose declarator derived something else is a
@@ -189,7 +218,7 @@ impl Checker<'_> {
                 continue;
             };
 
-            self.returns_in(
+            self.receivers_in(
                 ast,
                 function.body,
                 Returning {
@@ -200,36 +229,60 @@ impl Checker<'_> {
         }
     }
 
-    /// Every `return` under one statement.
+    /// Every `return` and every initializer under one statement.
     ///
     /// A recursion, bounded by `parser::MAX_NESTING` the way every statement
     /// walk here is, and exhaustive so that a statement kind that can hold
     /// another has to be answered for rather than silently dropping the
-    /// returns inside it.
-    fn returns_in(&mut self, ast: &Ast, id: StmtId, returning: Returning) {
+    /// returns and initializers inside it.
+    fn receivers_in(&mut self, ast: &Ast, id: StmtId, returning: Returning) {
         match ast.stmt(id) {
             Stmt::Return { value, .. } => {
                 if let Some(value) = *value {
-                    self.returns.insert(value, returning);
+                    self.receivers.insert(value, Receiving::Return(returning));
                 }
             }
+            Stmt::Declaration { declarators, .. } => self.initializers(declarators),
             Stmt::Compound { body, .. } => {
                 for &statement in body {
-                    self.returns_in(ast, statement, returning);
+                    self.receivers_in(ast, statement, returning);
                 }
             }
             Stmt::If {
                 then, otherwise, ..
             } => {
-                self.returns_in(ast, *then, returning);
+                self.receivers_in(ast, *then, returning);
                 if let Some(otherwise) = *otherwise {
-                    self.returns_in(ast, otherwise, returning);
+                    self.receivers_in(ast, otherwise, returning);
                 }
             }
             Stmt::While { body, .. } | Stmt::For { body, .. } => {
-                self.returns_in(ast, *body, returning);
+                self.receivers_in(ast, *body, returning);
             }
-            Stmt::Declaration { .. } | Stmt::Expression { .. } | Stmt::Error { .. } => {}
+            Stmt::Expression { .. } | Stmt::Error { .. } => {}
+        }
+    }
+
+    /// The initializer of each declarator that has one.
+    ///
+    /// The name falls back to the whole declaration where there is none. The
+    /// parser always gives an init-declarator one, and the field is an
+    /// `Option` only because a parameter may be abstract, but answering
+    /// `None` by skipping the declarator would be a check that goes silent on
+    /// a case nobody can see.
+    fn initializers(&mut self, declarators: &[InitDeclarator]) {
+        for declarator in declarators {
+            let Some(init) = declarator.init else {
+                continue;
+            };
+            let declaration = &declarator.declaration;
+            self.receivers.insert(
+                init,
+                Receiving::Initializer {
+                    ty: declaration.ty,
+                    name: declaration.name.unwrap_or(declaration.span),
+                },
+            );
         }
     }
 
@@ -446,40 +499,53 @@ impl Checker<'_> {
         );
     }
 
-    /// C17 6.8.6.4 p3, which is 6.5.16.1 p1 with the return type as the place.
-    fn check_return(&mut self, ast: &Ast, value: ExprId, diagnostics: &mut DiagnosticSink) {
-        let Some(returning) = self.returns.get(&value).copied() else {
+    /// C17 6.8.6.4 p3 and 6.7.9 p11, each of which is 6.5.16.1 p1 with
+    /// another place: the return type, or the declarator being initialized.
+    fn check_received(&mut self, ast: &Ast, value: ExprId, diagnostics: &mut DiagnosticSink) {
+        let Some(receiving) = self.receivers.get(&value).copied() else {
             return;
         };
         let Some(source) = self.types[value.index()] else {
             return;
         };
+        let target = match receiving {
+            Receiving::Return(returning) => returning.ty,
+            Receiving::Initializer { ty, .. } => ty,
+        };
 
-        if self.assignable(
-            ast,
-            returning.ty,
-            source,
-            self.is_null_pointer_constant(value),
-        ) != Some(false)
+        if self.assignable(ast, target, source, self.is_null_pointer_constant(value)) != Some(false)
         {
             return;
         }
 
-        diagnostics.report(
-            Diagnostic::error(format!(
-                "cannot return `{}` from a function returning `{}`",
-                self.spelled(ast, source),
-                self.spelled(ast, returning.ty)
-            ))
-            .with_code(MISMATCH)
-            .with_label(Label::primary(
-                ast.expr(value).span(),
-                format!("this is `{}`", self.spelled(ast, source)),
-            ))
-            .with_label(Label::secondary(
+        let source_spelled = self.spelled(ast, source);
+        let target_spelled = self.spelled(ast, target);
+        let (message, place, place_label) = match receiving {
+            Receiving::Return(returning) => (
+                format!(
+                    "cannot return `{source_spelled}` from a function returning `{target_spelled}`"
+                ),
                 returning.name,
-                format!("declared to return `{}`", self.spelled(ast, returning.ty)),
-            )),
+                format!("declared to return `{target_spelled}`"),
+            ),
+            // The words of `assignment`'s place label, because the name is
+            // the place. The message is the declaration's own, so that it
+            // describes what was written rather than an `=` expression.
+            Receiving::Initializer { name, .. } => (
+                format!("cannot initialize `{target_spelled}` with `{source_spelled}`"),
+                name,
+                format!("this holds `{target_spelled}`"),
+            ),
+        };
+
+        diagnostics.report(
+            Diagnostic::error(message)
+                .with_code(MISMATCH)
+                .with_label(Label::primary(
+                    ast.expr(value).span(),
+                    format!("this is `{source_spelled}`"),
+                ))
+                .with_label(Label::secondary(place, place_label)),
         );
     }
 
@@ -1064,10 +1130,6 @@ mod tests {
     }
 
     /// One program per spelling, so that a row is about one constant.
-    ///
-    /// `return` and not a declaration, because an initializer is not checked
-    /// against the assignment constraint yet (#205) and a row that reported
-    /// twice would be reporting about that rather than about the constant.
     fn returning(spelling: &str) -> Checked {
         checked(&format!("int f(void) {{\n    return {spelling};\n}}\n"))
     }
@@ -1600,12 +1662,109 @@ error[SC0302]: no problems found
         assert_eq!(checked.messages(), Vec::<&str>::new());
     }
 
+    /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at
+    /// file scope and in a block, with the words a declaration was written in.
+    ///
+    /// One program with the silences and the reports together, so that the
+    /// silences are asserted against a run that does report and cannot pass by
+    /// checking nothing. The silences are a null pointer constant, and a
+    /// `void *` both ways, which is the implicit conversion RK-068 is about.
+    ///
+    /// Mutation: have `collect_receivers` skip an `Item::Declaration`. The
+    /// file-scope report goes and this fails; nothing else in the suite
+    /// declares at file scope with a mismatch. Mutation: pass `false` for
+    /// `source_is_null` in `check_received`. `int *g = 0;` starts reporting
+    /// and this fails. Mutation: give the initializer the `Return` arm's
+    /// place label. The labels fail.
+    #[test]
+    fn an_initializer_in_either_scope_is_held_to_the_rule_for_assignment() {
+        let checked = checked(
+            "int h;
+int *g = 0;
+void *v = 0;
+int *w = v;
+int *q = h;
+int main(void) {
+    char c = 1;
+    int *p = w;
+    char *s = p;
+    return 0;
+}
+",
+        );
+
+        assert_eq!(
+            checked.messages(),
+            [
+                "cannot initialize `int *` with `int`",
+                "cannot initialize `char *` with `int *`",
+            ]
+        );
+        assert_eq!(
+            checked.labels(),
+            [
+                "this is `int`",
+                "this holds `int *`",
+                "this is `int *`",
+                "this holds `char *`",
+            ]
+        );
+    }
+
+    /// Every declarator of a declaration is checked, not only the first, and
+    /// one with no initializer does not end the search.
+    ///
+    /// `m` is written first on purpose: it is the trivial value a list of one
+    /// would pass every other test with, which is RK-076's shape.
+    ///
+    /// Mutation: have `initializers` read `declarators.iter().take(1)`.
+    /// Mutation: have it `break` rather than `continue` at a declarator with
+    /// no initializer. Either way `n` stops being checked and this fails.
+    #[test]
+    fn every_declarator_of_a_declaration_has_its_initializer_checked() {
+        let checked = checked(
+            "int main(void) { int *p = 0; int m, n = p; return 0; }
+",
+        );
+
+        assert_eq!(checked.messages(), ["cannot initialize `int` with `int *`"]);
+    }
+
+    /// An initializer and a `return` are reported where they are written,
+    /// among the other diagnostics, rather than after all of them.
+    ///
+    /// Mutation: run `check_received` in a loop of its own after the walk that
+    /// works out the types. The assignment moves ahead of the initializer and
+    /// this fails.
+    #[test]
+    fn an_initializer_and_a_return_are_reported_in_the_order_they_are_written() {
+        let checked = checked(
+            "int main(void) {
+    int *p = 0;
+    int n = p;
+    n = p;
+    return p;
+}
+",
+        );
+
+        assert_eq!(
+            checked.messages(),
+            [
+                "cannot initialize `int` with `int *`",
+                "cannot assign `int *` to `int`",
+                "cannot return `int *` from a function returning `int`",
+            ]
+        );
+    }
+
     /// Every place a `return` can be written, which is every place a statement
     /// can hold another.
     ///
-    /// Mutation: drop any arm of `Checker::returns_in` that recurses. The
+    /// Mutation: drop any arm of `Checker::receivers_in` that recurses. The
     /// `return` under it stops being checked, the list is short by one, and
-    /// this fails.
+    /// this fails. Every initializer under that arm stops being checked with
+    /// it, which is why the two are found by one walk: see `Receiving`.
     #[test]
     fn a_return_is_found_wherever_it_is_written() {
         let checked = checked(
