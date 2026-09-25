@@ -1,0 +1,72 @@
+error[SC0306]: `==` cannot take `int *` and `int`
+   ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:4:14 ]
+   │
+ 4 │     r = p == 1;
+   │         ┬    ┬  
+   │         ╰─────── this is `int *`
+   │              │  
+   │              ╰── this is `int`
+───╯
+error[SC0306]: `<` cannot take `int *` and `int`
+   ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:5:13 ]
+   │
+ 5 │     r = p < n;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `<` cannot take `int *` and `int`
+   ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:6:13 ]
+   │
+ 6 │     r = p < 0;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `==` cannot take `int *` and `char *`
+   ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:7:14 ]
+   │
+ 7 │     r = p == c;
+   │         ┬    ┬  
+   │         ╰─────── this is `int *`
+   │              │  
+   │              ╰── this is `char *`
+───╯
+error[SC0306]: `<` cannot take `int *` and `char *`
+   ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:8:13 ]
+   │
+ 8 │     r = p < c;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `char *`
+───╯
+error[SC0306]: `<` cannot take `void (*)(void)` and `void (*)(void)`
+   ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:9:13 ]
+   │
+ 9 │     r = g < g;
+   │         ┬   ┬  
+   │         ╰────── this is `void (*)(void)`
+   │             │  
+   │             ╰── this is `void (*)(void)`
+───╯
+error[SC0306]: `==` cannot take `void *` and `void (*)(void)`
+    ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:10:14 ]
+    │
+ 10 │     r = v == g;
+    │         ┬    ┬  
+    │         ╰─────── this is `void *`
+    │              │  
+    │              ╰── this is `void (*)(void)`
+────╯
+error[SC0306]: `==` cannot take `int *` and `int`
+    ╭─[ a_comparison_of_a_pointer_with_what_c_does_not_allow.c:11:14 ]
+    │
+ 11 │     r = p == 1 - 1;
+    │         ┬    ──┬──  
+    │         ╰─────────── this is `int *`
+    │                │    
+    │                ╰──── this is `int`
+────╯

@@ -1,0 +1,27 @@
+error[SC0306]: `-` cannot take `int` and `int *`
+   ╭─[ an_additive_operand_c_does_not_allow.c:3:13 ]
+   │
+ 3 │     r = n - p;
+   │         ┬   ┬  
+   │         ╰────── this is `int`
+   │             │  
+   │             ╰── this is `int *`
+───╯
+error[SC0306]: `+` cannot take `int *` and `int *`
+   ╭─[ an_additive_operand_c_does_not_allow.c:4:13 ]
+   │
+ 4 │     r = p + q;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int *`
+───╯
+error[SC0306]: `-` cannot take `int *` and `char *`
+   ╭─[ an_additive_operand_c_does_not_allow.c:5:13 ]
+   │
+ 5 │     r = p - c;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `char *`
+───╯

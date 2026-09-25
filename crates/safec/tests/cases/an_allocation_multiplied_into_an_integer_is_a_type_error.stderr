@@ -1,0 +1,18 @@
+error[SC0306]: `*` cannot take `int *` and `int`
+   ╭─[ an_allocation_multiplied_into_an_integer_is_a_type_error.c:2:46 ]
+   │
+ 2 │ int f(void) { int *p = malloc(8); int i; i = p * 1; int j; j = p & 1; return i + j; }
+   │                                              ┬   ┬  
+   │                                              ╰────── this is `int *`
+   │                                                  │  
+   │                                                  ╰── this is `int`
+───╯
+error[SC0306]: `&` cannot take `int *` and `int`
+   ╭─[ an_allocation_multiplied_into_an_integer_is_a_type_error.c:2:64 ]
+   │
+ 2 │ int f(void) { int *p = malloc(8); int i; i = p * 1; int j; j = p & 1; return i + j; }
+   │                                                                ┬   ┬  
+   │                                                                ╰────── this is `int *`
+   │                                                                    │  
+   │                                                                    ╰── this is `int`
+───╯

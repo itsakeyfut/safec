@@ -796,6 +796,35 @@ cases! {
     multiplying_a_pointer_in_place: ["--emit", "ast"],
     shifting_a_pointer_in_place: ["--emit", "ast"],
     subtracting_a_pointer_from_a_pointer_in_place: ["--emit", "ast"],
+    // C17 6.5.5 to 6.5.14, one clause per operator: the same `SC0306`, for a
+    // binary operator. Every row but `p == 1 - 1` is an error under `clang
+    // --target=x86_64-unknown-linux-gnu -std=c17 -pedantic-errors`, and that
+    // one is `docs/frontend.md`'s null pointer constant table. The control
+    // holds every pairing the clauses allow, so a clause answered too strictly
+    // fails as surely as one answered too loosely; the unit test
+    // `a_binary_operator_answers_for_every_operator_and_operand` holds the
+    // same rows one at a time.
+    //
+    // Mutation: have `types.rs::Checker::binary` stop calling
+    // `binary_operable`. The first four go silent and exit 0. Mutation: have
+    // the `==` arm refuse a null pointer constant, or the relational arm two
+    // pointers. The control reports.
+    a_pointer_is_not_an_arithmetic_operand: ["--emit", "ast"],
+    a_comparison_of_a_pointer_with_what_c_does_not_allow: ["--emit", "ast"],
+    an_additive_operand_c_does_not_allow: ["--emit", "ast"],
+    a_void_operand_is_refused_by_every_binary_operator: ["--emit", "ast"],
+    every_binary_operator_takes_what_c_allows: ["--emit", "ast"],
+    // Why the rule matters past the message, as for the initializer below:
+    // `i = p * 1` writes a multiplication over an `int *` into a local
+    // declared `int`, which is the shape `docs/c-family.md`'s fourth
+    // requirement forbids. `--emit safety-ir` so that the run reaches the
+    // lowering, which a type error does not stop.
+    //
+    // Mutation: have `binary` stop calling `binary_operable`. The `.stderr`
+    // goes empty and the `.exit` goes to 0. Mutation: answer `None` rather
+    // than `int` for a refused operation. `SC0304` joins each report,
+    // calling the program a gap in this compiler.
+    an_allocation_multiplied_into_an_integer_is_a_type_error: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Why the rule matters past the message. ADR-0030 has the memory check
     // drop the operand of an addition that is declared `int`, so an
     // allocation reaching `i` through this initializer is one that check is
