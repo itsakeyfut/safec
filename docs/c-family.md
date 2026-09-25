@@ -253,9 +253,12 @@ addition from the integer beside it, and drops the integer, so **a local that
 may hold an allocation has to be declared as a pointer**. C17 6.5.6 p8 is what
 makes that sound for a program whose types are what C requires.
 
-One shape breaks it today and it involves no cast: an initializer is never
-checked against the assignment constraint, so `int n = p;` is accepted in
-silence where `n = p;` is `error[SC0302]`. That is #205.
+One shape broke it with no cast at all: an initializer was not checked
+against the assignment constraint, so `int n = p;` was accepted in silence
+where `n = p;` was `error[SC0302]`. It is now that error too, which was #205,
+and `initializing_with_the_wrong_type` and
+`an_allocation_initialized_into_an_integer_is_a_type_error` in
+`crates/safec/tests/cases` hold it.
 
 There were two. `Lowering::promoted` gave the temporary of a compound
 assignment and of `++` or `--` the type `Ty::Int` whatever the place held, so
@@ -316,12 +319,12 @@ program C defines that ADR-0031 removed, and never a silence. That is the
 opposite of the requirement above it, which is why the two are written as two:
 they read the same `Ty` and they fail in opposite directions.
 
-This compiler's own frontend breaks it today, by the same shape that breaks the
-fourth. `char **alias = *outer;` is accepted in silence where `alias = *outer;`
-is `error[SC0302]`, which is #205, and a write through that `alias` is then
-narrowed away from an `int *` local that it may have reached. Measured, and the
-answer is the `error[SC0402]` this compiler gave before ADR-0031 rather than
-anything quieter.
+This compiler's own frontend broke it by the same shape that broke the fourth.
+`char **alias = *outer;` was accepted in silence where `alias = *outer;` is
+`error[SC0302]`, and a write through that `alias` was then narrowed away from
+an `int *` local that it may have reached. Measured, and the answer was the
+`error[SC0402]` this compiler gave before ADR-0031 rather than anything
+quieter. The initializer is now `error[SC0302]` as well, which was #205.
 
 That is the same discipline the accepted records already use:
 [ADR-0003](adr/0003-pass-the-source-map-to-each-render-call.md) is confirmed by
