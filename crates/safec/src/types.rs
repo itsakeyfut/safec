@@ -546,8 +546,10 @@ impl Checker<'_> {
                     steppable(ast, pointee)
                 }
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
+                    // Both pointees are asked: `int[3]` is compatible with
+                    // `int[]`, and only one of them is complete.
                     if ast.compatible(left, right) {
-                        steppable(ast, left)
+                        steppable(ast, left).and(steppable(ast, right))
                     } else {
                         Some(false)
                     }
