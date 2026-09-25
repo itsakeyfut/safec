@@ -1,0 +1,81 @@
+error[SC0306]: `*` cannot take `int *` and `int`
+   ╭─[ a_pointer_is_not_an_arithmetic_operand.c:4:9 ]
+   │
+ 4 │     r = p * 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `/` cannot take `int *` and `int`
+   ╭─[ a_pointer_is_not_an_arithmetic_operand.c:5:9 ]
+   │
+ 5 │     r = p / 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `%` cannot take `int *` and `int`
+   ╭─[ a_pointer_is_not_an_arithmetic_operand.c:6:9 ]
+   │
+ 6 │     r = p % 2;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `<<` cannot take `int *` and `int`
+   ╭─[ a_pointer_is_not_an_arithmetic_operand.c:7:9 ]
+   │
+ 7 │     r = p << 1;
+   │         ┬    ┬  
+   │         ╰─────── this is `int *`
+   │              │  
+   │              ╰── this is `int`
+───╯
+error[SC0306]: `>>` cannot take `int` and `int *`
+   ╭─[ a_pointer_is_not_an_arithmetic_operand.c:8:14 ]
+   │
+ 8 │     r = 1 >> p;
+   │         ┬    ┬  
+   │         ╰─────── this is `int`
+   │              │  
+   │              ╰── this is `int *`
+───╯
+error[SC0306]: `&` cannot take `int *` and `int`
+   ╭─[ a_pointer_is_not_an_arithmetic_operand.c:9:9 ]
+   │
+ 9 │     r = p & 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `^` cannot take `int *` and `int`
+    ╭─[ a_pointer_is_not_an_arithmetic_operand.c:10:9 ]
+    │
+ 10 │     r = p ^ 1;
+    │         ┬   ┬  
+    │         ╰────── this is `int *`
+    │             │  
+    │             ╰── this is `int`
+────╯
+error[SC0306]: `|` cannot take `int *` and `int`
+    ╭─[ a_pointer_is_not_an_arithmetic_operand.c:11:9 ]
+    │
+ 11 │     r = p | 1;
+    │         ┬   ┬  
+    │         ╰────── this is `int *`
+    │             │  
+    │             ╰── this is `int`
+────╯
+error[SC0306]: `*` cannot take `int *` and `int`
+    ╭─[ a_pointer_is_not_an_arithmetic_operand.c:12:9 ]
+    │
+ 12 │     r = a * 1;
+    │         ┬   ┬  
+    │         ╰────── this is `int *`
+    │             │  
+    │             ╰── this is `int`
+────╯

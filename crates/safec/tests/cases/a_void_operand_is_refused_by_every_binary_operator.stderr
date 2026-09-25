@@ -1,0 +1,36 @@
+error[SC0306]: `*` cannot take `void` and `int`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:4:9 ]
+   │
+ 4 │     r = g() * 1;
+   │         ─┬─   ┬  
+   │          ╰─────── this is `void`
+   │               │  
+   │               ╰── this is `int`
+───╯
+error[SC0306]: `+` cannot take `int` and `void`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:5:13 ]
+   │
+ 5 │     r = n + g();
+   │         ┬   ─┬─  
+   │         ╰──────── this is `int`
+   │              │   
+   │              ╰─── this is `void`
+───╯
+error[SC0306]: `==` cannot take `void` and `int`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:6:9 ]
+   │
+ 6 │     r = g() == 1;
+   │         ─┬─    ┬  
+   │          ╰──────── this is `void`
+   │                │  
+   │                ╰── this is `int`
+───╯
+error[SC0306]: `&&` cannot take `void` and `int`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:7:9 ]
+   │
+ 7 │     r = g() && 1;
+   │         ─┬─    ┬  
+   │          ╰──────── this is `void`
+   │                │  
+   │                ╰── this is `int`
+───╯

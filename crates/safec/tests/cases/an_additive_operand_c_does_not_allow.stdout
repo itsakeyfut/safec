@@ -1,0 +1,27 @@
+Function an_additive_operand_c_does_not_allow.c:1:1 "f" "int (int *, int *, char *, int)"
+  Parameter an_additive_operand_c_does_not_allow.c:1:7 "p" "int *"
+  Parameter an_additive_operand_c_does_not_allow.c:1:15 "q" "int *"
+  Parameter an_additive_operand_c_does_not_allow.c:1:23 "c" "char *"
+  Parameter an_additive_operand_c_does_not_allow.c:1:32 "n" "int"
+  Compound an_additive_operand_c_does_not_allow.c:1:39
+    Declaration an_additive_operand_c_does_not_allow.c:2:5 "r" "int"
+    Expression an_additive_operand_c_does_not_allow.c:3:5
+      Assign an_additive_operand_c_does_not_allow.c:3:5 "="
+        Identifier an_additive_operand_c_does_not_allow.c:3:5 "r"
+        Binary an_additive_operand_c_does_not_allow.c:3:9 "-"
+          Identifier an_additive_operand_c_does_not_allow.c:3:9 "n"
+          Identifier an_additive_operand_c_does_not_allow.c:3:13 "p"
+    Expression an_additive_operand_c_does_not_allow.c:4:5
+      Assign an_additive_operand_c_does_not_allow.c:4:5 "="
+        Identifier an_additive_operand_c_does_not_allow.c:4:5 "r"
+        Binary an_additive_operand_c_does_not_allow.c:4:9 "+"
+          Identifier an_additive_operand_c_does_not_allow.c:4:9 "p"
+          Identifier an_additive_operand_c_does_not_allow.c:4:13 "q"
+    Expression an_additive_operand_c_does_not_allow.c:5:5
+      Assign an_additive_operand_c_does_not_allow.c:5:5 "="
+        Identifier an_additive_operand_c_does_not_allow.c:5:5 "r"
+        Binary an_additive_operand_c_does_not_allow.c:5:9 "-"
+          Identifier an_additive_operand_c_does_not_allow.c:5:9 "p"
+          Identifier an_additive_operand_c_does_not_allow.c:5:13 "c"
+    Return an_additive_operand_c_does_not_allow.c:6:5
+      Identifier an_additive_operand_c_does_not_allow.c:6:12 "r"

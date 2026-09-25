@@ -1,0 +1,61 @@
+Function a_pointer_is_not_an_arithmetic_operand.c:1:1 "f" "int (int *)"
+  Parameter a_pointer_is_not_an_arithmetic_operand.c:1:7 "p" "int *"
+  Compound a_pointer_is_not_an_arithmetic_operand.c:1:15
+    Declaration a_pointer_is_not_an_arithmetic_operand.c:2:5 "a" "int[2]"
+    Declaration a_pointer_is_not_an_arithmetic_operand.c:3:5 "r" "int"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:4:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:4:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:4:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:4:9 "*"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:4:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:4:13 "1"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:5:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:5:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:5:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:5:9 "/"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:5:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:5:13 "1"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:6:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:6:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:6:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:6:9 "%"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:6:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:6:13 "2"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:7:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:7:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:7:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:7:9 "<<"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:7:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:7:14 "1"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:8:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:8:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:8:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:8:9 ">>"
+          Number a_pointer_is_not_an_arithmetic_operand.c:8:9 "1"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:8:14 "p"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:9:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:9:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:9:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:9:9 "&"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:9:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:9:13 "1"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:10:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:10:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:10:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:10:9 "^"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:10:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:10:13 "1"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:11:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:11:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:11:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:11:9 "|"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:11:9 "p"
+          Number a_pointer_is_not_an_arithmetic_operand.c:11:13 "1"
+    Expression a_pointer_is_not_an_arithmetic_operand.c:12:5
+      Assign a_pointer_is_not_an_arithmetic_operand.c:12:5 "="
+        Identifier a_pointer_is_not_an_arithmetic_operand.c:12:5 "r"
+        Binary a_pointer_is_not_an_arithmetic_operand.c:12:9 "*"
+          Identifier a_pointer_is_not_an_arithmetic_operand.c:12:9 "a"
+          Number a_pointer_is_not_an_arithmetic_operand.c:12:13 "1"
+    Return a_pointer_is_not_an_arithmetic_operand.c:13:5
+      Identifier a_pointer_is_not_an_arithmetic_operand.c:13:12 "r"
