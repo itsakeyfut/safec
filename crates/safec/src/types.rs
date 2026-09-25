@@ -64,6 +64,14 @@ const MISMATCH: Code = Code::new("SC0302");
 /// A call whose argument count is not the parameter count, C17 6.5.2.2 p2.
 const ARGUMENTS: Code = Code::new("SC0303");
 
+/// An operand an operator does not take, C17 6.5.16.2 p1 and p2.
+///
+/// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
+/// is refused because `*=` does not take a pointer, whatever `p` holds. A
+/// code is never reassigned, so the two are kept apart from the start. The
+/// binary operators' constraints are the same kind of rule and are #236.
+const OPERANDS: Code = Code::new("SC0306");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -311,11 +319,13 @@ impl Checker<'_> {
             Expr::Assign {
                 op, place, value, ..
             } => {
-                // Only a plain `=`. A compound assignment is 6.5.16.2, whose
-                // constraints are its own: `p += 1` is legal for a pointer and
-                // would be reported by the rule below.
-                if op.is_none() {
-                    self.assignment(ast, place, value, diagnostics);
+                // Two rules, because C17 has two: a plain `=` is 6.5.16.1,
+                // and a compound assignment is 6.5.16.2, whose constraints
+                // are its own. `p += 1` is legal for a pointer and the first
+                // rule would report it.
+                match op {
+                    None => self.assignment(ast, place, value, diagnostics),
+                    Some(op) => self.compound_assignment(ast, op, place, value, diagnostics),
                 }
                 // 6.5.16 p3: the type is "the type the left operand would have
                 // after lvalue conversion", which is the place's own while
@@ -497,6 +507,113 @@ impl Checker<'_> {
                 format!("this holds `{}`", self.spelled(ast, target)),
             )),
         );
+    }
+
+    /// C17 6.5.16.2, for a compound assignment.
+    ///
+    /// The primary label is the operand the rule refuses: the value when it
+    /// is a pointer, and the place otherwise. That is exact while `int`,
+    /// `char` and pointers are the only types either side can have, because
+    /// then a refused value is always a pointer and a refused place with an
+    /// integer value is always a pointer too.
+    fn compound_assignment(
+        &mut self,
+        ast: &Ast,
+        op: BinOp,
+        place: ExprId,
+        value: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let (Some(target), Some(source)) = (self.types[place.index()], self.types[value.index()])
+        else {
+            return;
+        };
+
+        if self.compound_assignable(ast, op, target, source) != Some(false) {
+            return;
+        }
+
+        let target_spelled = self.spelled(ast, target);
+        let source_spelled = self.spelled(ast, source);
+        let (primary, secondary) = if matches!(ast.ty(source), Type::Pointer(_)) {
+            ((value, &source_spelled), (place, &target_spelled))
+        } else {
+            ((place, &target_spelled), (value, &source_spelled))
+        };
+
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`{}=` cannot take `{target_spelled}` and `{source_spelled}`",
+                op.as_str()
+            ))
+            .with_code(OPERANDS)
+            .with_label(Label::primary(
+                ast.expr(primary.0).span(),
+                format!("this is `{}`", primary.1),
+            ))
+            .with_label(Label::secondary(
+                ast.expr(secondary.0).span(),
+                format!("this is `{}`", secondary.1),
+            )),
+        );
+    }
+
+    /// Whether `place op= value` meets C17 6.5.16.2's constraints, where the
+    /// place is a `target` and the value a `source`.
+    ///
+    /// p1 lets `+=` and `-=` take a pointer to a complete object type on the
+    /// left and an integer on the right, and p2 wants both operands of every
+    /// other compound assignment arithmetic and "consistent with" the binary
+    /// operator's own constraints, which for `%=`, the shifts and the bitwise
+    /// operators means integer. Every arithmetic type this compiler has is an
+    /// integer type, so the two readings of p2 agree today; a floating type
+    /// would make them differ, and this is where it would have to.
+    ///
+    /// `None` where this does not answer. A pointer to `void` or to a function
+    /// is not a pointer to a complete object type, so `v += 1` breaks p1, but
+    /// `v + 1` breaks 6.5.6 p2 by the same sentence and nothing checks that
+    /// either: answering one spelling and not the other would be one rule
+    /// with two answers, so both are #235's. An array, a function or `void` as
+    /// an operand is `None` for the reason `assignable` gives.
+    fn compound_assignable(
+        &self,
+        ast: &Ast,
+        op: BinOp,
+        target: TypeId,
+        source: TypeId,
+    ) -> Option<bool> {
+        match (ast.ty(target), ast.ty(source)) {
+            (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
+            (Type::Pointer(pointee), Type::Int | Type::Char) => match op {
+                BinOp::Add | BinOp::Sub => match ast.ty(*pointee) {
+                    Type::Void | Type::Function { .. } => None,
+                    Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => Some(true),
+                },
+                // A comparison and a logical operator have no compound
+                // form, so the parser never builds one here. They are listed
+                // rather than caught by a wildcard so that a new operator
+                // has to be answered for.
+                BinOp::Mul
+                | BinOp::Div
+                | BinOp::Rem
+                | BinOp::Shl
+                | BinOp::Shr
+                | BinOp::Lt
+                | BinOp::Gt
+                | BinOp::Le
+                | BinOp::Ge
+                | BinOp::Eq
+                | BinOp::Ne
+                | BinOp::BitAnd
+                | BinOp::BitXor
+                | BinOp::BitOr
+                | BinOp::LogAnd
+                | BinOp::LogOr => Some(false),
+            },
+            (Type::Int | Type::Char | Type::Pointer(_), Type::Pointer(_)) => Some(false),
+            (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
+            | (_, Type::Void | Type::Array { .. } | Type::Function { .. }) => None,
+        }
     }
 
     /// C17 6.8.6.4 p3 and 6.7.9 p11, each of which is 6.5.16.1 p1 with
@@ -1653,13 +1770,51 @@ error[SC0302]: no problems found
     /// A compound assignment is C17 6.5.16.2, whose constraints are its own:
     /// `p += 1` is how a pointer is advanced.
     ///
-    /// Mutation: check every `Assign` rather than only the plain one. This
-    /// fails with a diagnostic about correct C.
+    /// Mutation: have the compound arm of `type_of` call `assignment` rather
+    /// than `compound_assignment`. This fails with a diagnostic about correct
+    /// C.
     #[test]
     fn a_compound_assignment_is_not_the_rule_for_a_plain_one() {
         let checked = checked("int main(void) { int *p; p += 1; return 0; }\n");
 
         assert_eq!(checked.messages(), Vec::<&str>::new());
+    }
+
+    /// C17 6.5.16.2 refuses a pointer only where it says so: `+=` and `-=`
+    /// take one on the left with an integer on the right, and nothing else
+    /// takes one at all.
+    ///
+    /// One program with the silences and a report together, so the silences
+    /// are asserted against a run that does report. `v += 1` is silent
+    /// because a `void` pointee is #235's, for both spellings.
+    ///
+    /// Mutation: have `compound_assignable` answer `Some(false)` for a
+    /// pointer with `+=` or `-=`. `p += 1` and `p -= 1` start reporting.
+    /// Mutation: have it answer `Some(false)` for a `void` pointee. `v += 1`
+    /// starts reporting. Mutation: give the report `MISMATCH`. The code
+    /// fails.
+    #[test]
+    fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
+        let checked = checked(
+            "int main(void) {
+    int *p;
+    int i;
+    char c;
+    void *v;
+    p += 1;
+    p -= 1;
+    i += 1;
+    c *= 2;
+    i <<= 1;
+    v += 1;
+    p *= 2;
+    return 0;
+}
+",
+        );
+
+        assert_eq!(checked.messages(), ["`*=` cannot take `int *` and `int`"]);
+        assert_eq!(checked.codes(), ["SC0306"]);
     }
 
     /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at

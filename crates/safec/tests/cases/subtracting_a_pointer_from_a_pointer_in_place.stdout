@@ -1,0 +1,10 @@
+Function subtracting_a_pointer_from_a_pointer_in_place.c:1:1 "main" "int (void)"
+  Compound subtracting_a_pointer_from_a_pointer_in_place.c:1:16
+    Declaration subtracting_a_pointer_from_a_pointer_in_place.c:1:18 "p" "int *"
+    Declaration subtracting_a_pointer_from_a_pointer_in_place.c:1:26 "q" "int *"
+    Expression subtracting_a_pointer_from_a_pointer_in_place.c:1:34
+      Assign subtracting_a_pointer_from_a_pointer_in_place.c:1:34 "-="
+        Identifier subtracting_a_pointer_from_a_pointer_in_place.c:1:34 "p"
+        Identifier subtracting_a_pointer_from_a_pointer_in_place.c:1:39 "q"
+    Return subtracting_a_pointer_from_a_pointer_in_place.c:1:42
+      Number subtracting_a_pointer_from_a_pointer_in_place.c:1:49 "0"

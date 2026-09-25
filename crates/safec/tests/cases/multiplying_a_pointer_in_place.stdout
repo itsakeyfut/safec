@@ -1,0 +1,9 @@
+Function multiplying_a_pointer_in_place.c:1:1 "main" "int (void)"
+  Compound multiplying_a_pointer_in_place.c:1:16
+    Declaration multiplying_a_pointer_in_place.c:1:18 "p" "int *"
+    Expression multiplying_a_pointer_in_place.c:1:26
+      Assign multiplying_a_pointer_in_place.c:1:26 "*="
+        Identifier multiplying_a_pointer_in_place.c:1:26 "p"
+        Number multiplying_a_pointer_in_place.c:1:31 "2"
+    Return multiplying_a_pointer_in_place.c:1:34
+      Number multiplying_a_pointer_in_place.c:1:41 "0"
