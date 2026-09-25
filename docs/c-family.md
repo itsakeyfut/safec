@@ -283,13 +283,15 @@ compound assignment or an increment.
 `a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer`
 in `crates/safec/tests/cases` are what say so.
 
-**Conforming is load-bearing there, and nothing enforces it.** C17 6.5.16.2 p1
-is what allows a pointer left operand for `+=` and `-=` and an arithmetic one
-otherwise, p2 is the same constraint for every other compound assignment, and
-`types.rs` deliberately runs no constraint check for any of them.
-Measured: `int *p; int i = 0; i += p;` is accepted in silence and builds a local
-declared `int` holding an addition with a pointer operand, which is exactly the
-shape above. It is #226.
+**Conforming is load-bearing there, and only partly enforced.** C17 6.5.16.2
+p1 is what allows a pointer left operand for `+=` and `-=` and an arithmetic one
+otherwise, and p2 is the same constraint for every other compound assignment.
+`int *p; int i = 0; i += p;` was accepted in silence and built a local declared
+`int` holding an addition with a pointer operand, which is exactly the shape
+above; it is now `error[SC0306]`, which was #226. The binary operators are not
+checked yet: `int i; i = p * 1;` is accepted in silence and writes a
+multiplication over an `int *` into a local declared `int`, measured. That is
+#236, and until it lands this requirement is still one C source can break.
 
 **A fifth arrived with**
 [ADR-0031](adr/0031-a-write-this-check-cannot-pin-down-replaces-what-an-escaped-local-holds.md),
