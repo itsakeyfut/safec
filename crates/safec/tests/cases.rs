@@ -776,6 +776,21 @@ cases! {
     array_declaration: ["--emit", "ast"],
     array_length_is_not_evaluated: ["--emit", "ast"],
     assigning_the_wrong_type: ["--emit", "ast"],
+    // C17 6.7.9 p11 gives an initializer the constraints of simple
+    // assignment, so the spelling a declaration uses is the same rule.
+    //
+    // Mutation: have `types.rs::Checker::receivers_in` insert nothing for a
+    // `Stmt::Declaration`. The `SC0302` goes from both of these and both fail.
+    initializing_with_the_wrong_type: ["--emit", "ast"],
+    // Why the rule matters past the message. ADR-0030 has the memory check
+    // drop the operand of an addition that is declared `int`, so an
+    // allocation reaching `i` through this initializer is one that check is
+    // handed and cannot see. `--emit safety-ir` so that the run reaches it,
+    // which a type error does not stop. Under the mutation above the
+    // `SC0302` goes and so does anything about `p`: what is left is
+    // `SC0404` about `free(r)`, measured, where the same program answered
+    // `SC0401` about `p` before ADR-0030.
+    an_allocation_initialized_into_an_integer_is_a_type_error: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     block_declaration: ["--emit", "ast"],
     block_declaration_without_a_semicolon: ["--emit", "ast"],
     block_function_declaration: ["--emit", "ast"],

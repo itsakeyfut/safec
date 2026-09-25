@@ -1,0 +1,23 @@
+error[SC0302]: cannot initialize `int` with `int *`
+   ╭─[ an_allocation_initialized_into_an_integer_is_a_type_error.c:5:13 ]
+   │
+ 5 │     int i = p;
+   │         ┬   ┬  
+   │         ╰────── this holds `int`
+   │             │  
+   │             ╰── this is `int *`
+───╯
+error[SC0404]: this may free a pointer that is not the start of an allocation
+   ╭─[ an_allocation_initialized_into_an_integer_is_a_type_error.c:9:5 ]
+   │
+ 7 │     int *base = malloc(4);
+   │                 ────┬────  
+   │                     ╰────── allocated here
+   │ 
+ 9 │     free(r);
+   │     ───┬───  
+   │        ╰───── this offset may not be zero
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero

@@ -1,0 +1,7 @@
+Function initializing_with_the_wrong_type.c:1:1 "main" "int (void)"
+  Compound initializing_with_the_wrong_type.c:1:16
+    Declaration initializing_with_the_wrong_type.c:1:18 "p" "int *"
+    Declaration initializing_with_the_wrong_type.c:1:26 "n" "int"
+      Identifier initializing_with_the_wrong_type.c:1:34 "p"
+    Return initializing_with_the_wrong_type.c:1:37
+      Number initializing_with_the_wrong_type.c:1:44 "0"

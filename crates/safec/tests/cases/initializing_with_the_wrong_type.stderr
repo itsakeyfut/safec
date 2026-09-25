@@ -1,0 +1,9 @@
+error[SC0302]: cannot initialize `int` with `int *`
+   ╭─[ initializing_with_the_wrong_type.c:1:34 ]
+   │
+ 1 │ int main(void) { int *p; int n = p; return 0; }
+   │                              ┬   ┬  
+   │                              ╰────── this holds `int`
+   │                                  │  
+   │                                  ╰── this is `int *`
+───╯
