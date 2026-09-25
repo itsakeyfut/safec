@@ -1,9 +1,10 @@
-//! The type of every expression, and the three constraints C puts on one.
+//! The type of every expression, and the constraints C puts on one that this
+//! stage checks.
 //!
 //! The second half of the stage `docs/architecture.md` draws between the AST
 //! and the typed AST. `sema.rs` says which declaration a name means; this says
-//! what type each expression has, and reports an assignment, an initializer, a
-//! `return` and a call whose types C17 forbids.
+//! what type each expression has, and reports an assignment, a compound
+//! assignment, an initializer, a `return` and a call whose types C17 forbids.
 //!
 //! **A type this stage cannot work out is `None`, and `None` reports nothing.**
 //! The other constraints of 6.5 are not checked here, so plenty of expressions
@@ -111,7 +112,7 @@ impl Types {
     }
 }
 
-/// Give every expression a type, and report the three constraints.
+/// Give every expression a type, and report the constraints this stage checks.
 ///
 /// Takes `&mut Ast` because two of the types it works out are types nobody
 /// wrote: the `int` of an integer constant, and the pointer that `&x` has.
@@ -512,10 +513,10 @@ impl Checker<'_> {
     /// C17 6.5.16.2, for a compound assignment.
     ///
     /// The primary label is the operand the rule refuses: the value when it
-    /// is a pointer, and the place otherwise. That is exact while `int`,
-    /// `char` and pointers are the only types either side can have, because
-    /// then a refused value is always a pointer and a refused place with an
-    /// integer value is always a pointer too.
+    /// is not arithmetic, and the place otherwise. That is exact while `int`
+    /// and `char` are the only arithmetic types, because a refused pair with
+    /// an arithmetic value is then always one whose place is what p1 or p2
+    /// does not take.
     fn compound_assignment(
         &mut self,
         ast: &Ast,
@@ -535,7 +536,7 @@ impl Checker<'_> {
 
         let target_spelled = self.spelled(ast, target);
         let source_spelled = self.spelled(ast, source);
-        let (primary, secondary) = if matches!(ast.ty(source), Type::Pointer(_)) {
+        let (primary, secondary) = if !matches!(ast.ty(source), Type::Int | Type::Char) {
             ((value, &source_spelled), (place, &target_spelled))
         } else {
             ((place, &target_spelled), (value, &source_spelled))
@@ -569,12 +570,19 @@ impl Checker<'_> {
     /// integer type, so the two readings of p2 agree today; a floating type
     /// would make them differ, and this is where it would have to.
     ///
-    /// `None` where this does not answer. A pointer to `void` or to a function
-    /// is not a pointer to a complete object type, so `v += 1` breaks p1, but
-    /// `v + 1` breaks 6.5.6 p2 by the same sentence and nothing checks that
-    /// either: answering one spelling and not the other would be one rule
-    /// with two answers, so both are #235's. An array, a function or `void` as
-    /// an operand is `None` for the reason `assignable` gives.
+    /// `void` is neither arithmetic nor a pointer, so `*v += 1` on a `void *`
+    /// breaks p1 or p2 whichever operator it is. So does an array or a
+    /// function as the value, which 6.3.2.1 p3 and p4 turn into a pointer
+    /// before either paragraph looks at it.
+    ///
+    /// `None` where this does not answer. A pointer to `void`, to a function
+    /// or to an array of unknown length is not a pointer to a complete object
+    /// type, so `v += 1` breaks p1, but `v + 1` breaks 6.5.6 p2 by the same
+    /// sentence and nothing checks that either: answering one spelling and not
+    /// the other would be one rule with two answers, so both are #235's. An
+    /// array or a function as the place is refused by 6.5.16 p2, which wants a
+    /// modifiable lvalue, and that is not this rule; `assignable` leaves it for
+    /// the same reason.
     fn compound_assignable(
         &self,
         ast: &Ast,
@@ -586,7 +594,7 @@ impl Checker<'_> {
             (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
             (Type::Pointer(pointee), Type::Int | Type::Char) => match op {
                 BinOp::Add | BinOp::Sub => match ast.ty(*pointee) {
-                    Type::Void | Type::Function { .. } => None,
+                    Type::Void | Type::Function { .. } | Type::Array { length: None, .. } => None,
                     Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => Some(true),
                 },
                 // A comparison and a logical operator have no compound
@@ -610,9 +618,12 @@ impl Checker<'_> {
                 | BinOp::LogAnd
                 | BinOp::LogOr => Some(false),
             },
-            (Type::Int | Type::Char | Type::Pointer(_), Type::Pointer(_)) => Some(false),
-            (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
-            | (_, Type::Void | Type::Array { .. } | Type::Function { .. }) => None,
+            (Type::Array { .. } | Type::Function { .. }, _) => None,
+            (
+                Type::Int | Type::Char | Type::Pointer(_) | Type::Void,
+                Type::Pointer(_) | Type::Void | Type::Array { .. } | Type::Function { .. },
+            )
+            | (Type::Void, Type::Int | Type::Char) => Some(false),
         }
     }
 
@@ -1815,6 +1826,107 @@ error[SC0302]: no problems found
 
         assert_eq!(checked.messages(), ["`*=` cannot take `int *` and `int`"]);
         assert_eq!(checked.codes(), ["SC0306"]);
+    }
+
+    /// Every operator and every pair of operand types 6.5.16.2 answers for,
+    /// each in a program of its own, with the message and the primary label
+    /// written out rather than worked out (RK-001).
+    ///
+    /// A row is `(statement, message, primary label)`, and an empty message is
+    /// a statement that must stay silent. The primary label is the first one,
+    /// and it names the operand the rule refuses.
+    ///
+    /// Mutation: move any of `/`, `%`, `>>`, `&`, `^` or `|` into the arm
+    /// that lets a pointer take an integer. Its row goes silent. Mutation:
+    /// answer `None` or `Some(true)` for a `char` place and a pointer value.
+    /// The `c += p` row goes silent, and that is a local declared `char`
+    /// holding an addition over a pointer, which ADR-0030 drops. Mutation:
+    /// refuse a pointer to a pointer or to an array of known length. Their
+    /// rows start reporting. Mutation: answer `None` for a `void` place or a
+    /// `void`, array or function value. Those rows go silent. Mutation: pick
+    /// the primary label by whether the value is a pointer, as this did
+    /// before. The `void` and array value rows name the place.
+    #[test]
+    fn a_compound_assignment_answers_for_every_operator_and_operand() {
+        for (statement, message, primary) in [
+            (
+                "p /= 2;",
+                "`/=` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "p %= 2;",
+                "`%=` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "p >>= 1;",
+                "`>>=` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "p &= 1;",
+                "`&=` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "p ^= 1;",
+                "`^=` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "p |= 1;",
+                "`|=` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "c += p;",
+                "`+=` cannot take `char` and `int *`",
+                "this is `int *`",
+            ),
+            (
+                "*v += 1;",
+                "`+=` cannot take `void` and `int`",
+                "this is `void`",
+            ),
+            (
+                "i += g();",
+                "`+=` cannot take `int` and `void`",
+                "this is `void`",
+            ),
+            (
+                "i += a;",
+                "`+=` cannot take `int` and `int[2]`",
+                "this is `int[2]`",
+            ),
+            ("pp += 1;", "", ""),
+            ("pa -= 1;", "", ""),
+            ("q += 1;", "", ""),
+        ] {
+            let checked = checked(&format!(
+                "void g(void);
+int main(void) {{
+    int *p;
+    char c;
+    void *v;
+    int i;
+    int a[2];
+    int **pp;
+    int (*pa)[2];
+    int (*q)[];
+    {statement}
+    return 0;
+}}
+"
+            ));
+
+            if message.is_empty() {
+                assert_eq!(checked.messages(), Vec::<&str>::new(), "{statement}");
+            } else {
+                assert_eq!(checked.messages(), [message], "{statement}");
+                assert_eq!(checked.labels().first(), Some(&primary), "{statement}");
+            }
+        }
     }
 
     /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at
