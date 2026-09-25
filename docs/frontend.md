@@ -201,6 +201,7 @@ an identifier, and a character constant is refused as `expected an expression`.
 | `int *p = -0;` | `error[SC0302]` | accepts | accepts |
 | `p = 1 - 1;` with `int *p` | `error[SC0302]` | accepts | accepts |
 | `p == 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
+| `p == -0` with `int *p` | `error[SC0306]` | accepts | accepts |
 
 **These are refused on purpose.** C17 6.3.2.3 p3 makes any integer
 constant expression with the value 0 a null pointer constant, and nothing here

@@ -397,7 +397,10 @@ impl Checker<'_> {
     /// every operator but `+` and `-` is still `int` beside it. `None` there
     /// hands the lowering an expression it cannot type, and its `SC0304`
     /// joins `SC0305` in `a_suffixed_constant_has_no_type_here`, whose point is
-    /// that there is one report; that case fails if this answers `None`.
+    /// that there is one report; that case fails if this answers `None`. The
+    /// cost is kept from before: `p = nowhere * 1` is reported as an
+    /// undeclared name and then as an `int` given to a pointer, an `int` this
+    /// stage made up.
     fn binary(
         &mut self,
         ast: &mut Ast,
@@ -427,7 +430,9 @@ impl Checker<'_> {
         // fine and this compiler is not, which is false here. The cost is
         // that `p = p * 1` is reported twice, the second time as an `int`
         // given to a pointer, and both reports are about a program that is
-        // wrong.
+        // wrong. `+` and `-` are the exception, because `additive` has no
+        // type to give `n - p` or `p + q` whether or not it is refused, so
+        // those two do get the `SC0304` and its false note.
         match op {
             BinOp::Add | BinOp::Sub => {
                 let (left, right) = operands?;
