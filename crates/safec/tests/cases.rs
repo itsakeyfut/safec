@@ -806,7 +806,7 @@ cases! {
     // same rows one at a time.
     //
     // Mutation: have `types.rs::Checker::binary` stop calling
-    // `binary_operands`. The first four go silent and exit 0. Mutation: have
+    // `binary_operable`. The first four go silent and exit 0. Mutation: have
     // the `==` arm refuse a null pointer constant, or the relational arm two
     // pointers. The control reports.
     a_pointer_is_not_an_arithmetic_operand: ["--emit", "ast"],
@@ -820,7 +820,7 @@ cases! {
     // requirement forbids. `--emit safety-ir` so that the run reaches the
     // lowering, which a type error does not stop.
     //
-    // Mutation: have `binary` stop calling `binary_operands`. The `.stderr`
+    // Mutation: have `binary` stop calling `binary_operable`. The `.stderr`
     // goes empty and the `.exit` goes to 0. Mutation: answer `None` rather
     // than `int` for a refused operation. `SC0304` joins each report,
     // calling the program a gap in this compiler.

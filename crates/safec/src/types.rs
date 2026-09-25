@@ -416,7 +416,7 @@ impl Checker<'_> {
                 self.is_null_pointer_constant(lhs),
                 self.is_null_pointer_constant(rhs),
             );
-            if self.binary_operands(ast, op, left, right, nulls) == Some(false) {
+            if self.binary_operable(ast, op, left, right, nulls) == Some(false) {
                 self.report_operands(ast, op, (lhs, left), (rhs, right), diagnostics);
             }
         }
@@ -504,7 +504,7 @@ impl Checker<'_> {
     /// function never arrives, because `decayed` converted it; one that did
     /// would be a conversion missed, and answering it would be a report about
     /// ordinary C.
-    fn binary_operands(
+    fn binary_operable(
         &self,
         ast: &Ast,
         op: BinOp,
@@ -512,7 +512,8 @@ impl Checker<'_> {
         right: TypeId,
         (left_is_null, right_is_null): (bool, bool),
     ) -> Option<bool> {
-        let (Some(left), Some(right)) = (Operand::of(ast, left), Operand::of(ast, right)) else {
+        let (Some(left), Some(right)) = (OperandClass::of(ast, left), OperandClass::of(ast, right))
+        else {
             return None;
         };
 
@@ -520,29 +521,33 @@ impl Checker<'_> {
             // 6.5.5 p2.
             BinOp::Mul | BinOp::Div => Some(matches!(
                 (left, right),
-                (Operand::Arithmetic, Operand::Arithmetic)
+                (OperandClass::Arithmetic, OperandClass::Arithmetic)
             )),
             // 6.5.5 p2 for `%`, 6.5.7 p2 and 6.5.10 p2 to 6.5.12 p2.
             BinOp::Rem | BinOp::Shl | BinOp::Shr | BinOp::BitAnd | BinOp::BitXor | BinOp::BitOr => {
                 Some(matches!(
                     (left, right),
-                    (Operand::Arithmetic, Operand::Arithmetic)
+                    (OperandClass::Arithmetic, OperandClass::Arithmetic)
                 ))
             }
             // 6.5.6 p2.
             BinOp::Add => match (left, right) {
-                (Operand::Arithmetic, Operand::Arithmetic) => Some(true),
-                (Operand::Pointer(pointee), Operand::Arithmetic)
-                | (Operand::Arithmetic, Operand::Pointer(pointee)) => steps(ast, pointee),
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
+                (OperandClass::Pointer(pointee), OperandClass::Arithmetic)
+                | (OperandClass::Arithmetic, OperandClass::Pointer(pointee)) => {
+                    steppable(ast, pointee)
+                }
                 _ => Some(false),
             },
             // 6.5.6 p3, which allows the pointer only on the left.
             BinOp::Sub => match (left, right) {
-                (Operand::Arithmetic, Operand::Arithmetic) => Some(true),
-                (Operand::Pointer(pointee), Operand::Arithmetic) => steps(ast, pointee),
-                (Operand::Pointer(left), Operand::Pointer(right)) => {
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
+                (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
+                    steppable(ast, pointee)
+                }
+                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     if ast.compatible(left, right) {
-                        steps(ast, left)
+                        steppable(ast, left)
                     } else {
                         Some(false)
                     }
@@ -553,8 +558,8 @@ impl Checker<'_> {
             // refused however alike they are, and an integer is refused beside
             // a pointer even when it is zero.
             BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => match (left, right) {
-                (Operand::Arithmetic, Operand::Arithmetic) => Some(true),
-                (Operand::Pointer(left), Operand::Pointer(right)) => Some(
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
+                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => Some(
                     ast.compatible(left, right) && !matches!(ast.ty(left), Type::Function { .. }),
                 ),
                 _ => Some(false),
@@ -562,25 +567,25 @@ impl Checker<'_> {
             // 6.5.9 p2. The `void *` case wants an object type on the other
             // side, which C17 6.2.5 p1 makes every type but a function.
             BinOp::Eq | BinOp::Ne => match (left, right) {
-                (Operand::Arithmetic, Operand::Arithmetic) => Some(true),
-                (Operand::Pointer(left), Operand::Pointer(right)) => Some(
+                (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(true),
+                (OperandClass::Pointer(left), OperandClass::Pointer(right)) => Some(
                     ast.compatible(left, right)
                         || is_void_beside_an_object(ast, left, right)
                         || is_void_beside_an_object(ast, right, left),
                 ),
-                (Operand::Pointer(_), Operand::Arithmetic) => Some(right_is_null),
-                (Operand::Arithmetic, Operand::Pointer(_)) => Some(left_is_null),
+                (OperandClass::Pointer(_), OperandClass::Arithmetic) => Some(right_is_null),
+                (OperandClass::Arithmetic, OperandClass::Pointer(_)) => Some(left_is_null),
                 _ => Some(false),
             },
             // 6.5.13 p2 and 6.5.14 p2: each operand a scalar, whatever the
             // other is.
             BinOp::LogAnd | BinOp::LogOr => {
-                Some(!matches!(left, Operand::Void) && !matches!(right, Operand::Void))
+                Some(!matches!(left, OperandClass::Void) && !matches!(right, OperandClass::Void))
             }
         }
     }
 
-    /// Report a binary operator given operands [`Checker::binary_operands`]
+    /// Report a binary operator given operands [`Checker::binary_operable`]
     /// refused. Each operand is its expression and its type after
     /// [`Checker::decayed`], which is what is spelled, because it is what the
     /// operator was given: `a * 1` on an `int[2]` says `int *`.
@@ -771,7 +776,7 @@ impl Checker<'_> {
         match (ast.ty(target), ast.ty(source)) {
             (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
             (Type::Pointer(pointee), Type::Int | Type::Char) => match op {
-                BinOp::Add | BinOp::Sub => steps(ast, *pointee),
+                BinOp::Add | BinOp::Sub => steppable(ast, *pointee),
                 // A comparison and a logical operator have no compound
                 // form, so the parser never builds one here. They are listed
                 // rather than caught by a wildcard so that a new operator
@@ -1046,7 +1051,7 @@ impl Checker<'_> {
 /// Which of C17 6.2.5's classes an operand is in, as far as a binary operator
 /// asks.
 #[derive(Clone, Copy)]
-enum Operand {
+enum OperandClass {
     /// 6.2.5 p18. Every one this compiler has is an integer type too.
     Arithmetic,
     /// 6.2.5 p20, with what it points to.
@@ -1055,7 +1060,7 @@ enum Operand {
     Void,
 }
 
-impl Operand {
+impl OperandClass {
     /// `None` for an array or a function, which 6.3.2.1 converts before an
     /// operator sees it, so that one arriving here is not answered.
     fn of(ast: &Ast, ty: TypeId) -> Option<Self> {
@@ -1074,7 +1079,7 @@ impl Operand {
 /// `None` for the pointees that are not one, because #235 answers for both
 /// spellings of that rule at once: `v + 1` and `v += 1`. One function so that
 /// the two spellings cannot be given different answers before then.
-fn steps(ast: &Ast, pointee: TypeId) -> Option<bool> {
+fn steppable(ast: &Ast, pointee: TypeId) -> Option<bool> {
     match ast.ty(pointee) {
         Type::Void | Type::Function { .. } | Type::Array { length: None, .. } => None,
         Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => Some(true),
@@ -2189,7 +2194,7 @@ int main(void) {{
     /// answered too loosely. `v + 1` is silent because a `void` pointee is
     /// #235's, for both spellings.
     ///
-    /// Mutation: have `binary` stop calling `binary_operands`. Every reporting
+    /// Mutation: have `binary` stop calling `binary_operable`. Every reporting
     /// row goes silent. Mutation: have the `==` arm answer `false` for a
     /// pointer beside an integer. `p == 0` and `0 == p` start reporting;
     /// answer `left_is_null` on both sides and `p == 0` alone does. Mutation:
