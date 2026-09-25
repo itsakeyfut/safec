@@ -1948,10 +1948,13 @@ fn an_index_written_on_the_left_still_carries_the_pointer() {
 /// enforced, or the day the rule stops needing it, a named test says so rather
 /// than passing quietly.
 ///
-/// Two shapes in this tree break the requirement and neither is a cast: #204
-/// is the lowering's own compound-assignment temporary, and #205 is an
-/// initializer that is never checked against the assignment constraint. Both
-/// are why this test says `is dropped` rather than `cannot happen`.
+/// Two shapes in this tree broke the requirement and neither was a cast: #204,
+/// the lowering's own compound-assignment temporary, and #205, an initializer
+/// that was not checked against the assignment constraint. Both are fixed. A
+/// third is not: nothing checks a compound assignment's constraints, so
+/// `i += p` builds this shape from C source in silence (#226). That, and a
+/// type error not stopping a run before this check does, are why this test
+/// says `is dropped` rather than `cannot happen`.
 ///
 /// Mutation: none from inside this file, for the reason
 /// `an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` gives about
@@ -1963,7 +1966,7 @@ fn an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer() {
     let (sources, names) = sources();
     let (unit, mut function, types, callees) = a_unit(&names, 0);
     // The requirement this program breaks: a `malloc` into a local that is not
-    // a pointer. No conforming C reaches it through this frontend today; #205
+    // a pointer. No conforming C reaches it through this frontend today; #226
     // is the hole that does, and a hand-built unit needs no hole.
     let holder = function.push_local(types.int);
     let beside = function.push_local(types.ptr);
