@@ -288,10 +288,17 @@ p1 is what allows a pointer left operand for `+=` and `-=` and an arithmetic one
 otherwise, and p2 is the same constraint for every other compound assignment.
 `int *p; int i = 0; i += p;` was accepted in silence and built a local declared
 `int` holding an addition with a pointer operand, which is exactly the shape
-above; it is now `error[SC0306]`, which was #226. The binary operators are not
-checked yet: `int i; i = p * 1;` is accepted in silence and writes a
-multiplication over an `int *` into a local declared `int`, measured. That is
-#236, and until it lands this requirement is still one C source can break.
+above; it is now `error[SC0306]`, which was #226. `int i; i = p * 1;` was
+the same shape through a binary operator, accepted in silence and measured
+writing a multiplication over an `int *` into a local declared `int`; every
+binary operator's operands are now checked against its own clause of C17 6.5.5
+to 6.5.14, so it is `error[SC0306]` too, which was #236.
+`an_allocation_multiplied_into_an_integer_is_a_type_error` in
+`crates/safec/tests/cases` holds it. A cast would reach the shape, and the
+grammar has none. `i = -p;` is accepted and breaks C17 6.5.3.3 p1, but it is
+not this shape: the memory check follows no allocation through a unary
+operator. Nothing enforces the requirement at the IR boundary, so an adapter
+that accepts such a program still has to answer for it.
 
 **A fifth arrived with**
 [ADR-0031](adr/0031-a-write-this-check-cannot-pin-down-replaces-what-an-escaped-local-holds.md),
