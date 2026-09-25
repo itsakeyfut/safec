@@ -2213,6 +2213,16 @@ int main(void) {{
     /// primary label on the left always. `1 >> p`, `n - p` and `p == 1` name
     /// the wrong operand; on the right always, and `p * 1` and `g() * 1` do.
     /// Mutation: spell the undecayed types. The `a * 1` row names `int[2]`.
+    ///
+    /// Every operator has a row that it refuses, because the four relational
+    /// operators share one arm and a mutation that splits them is otherwise
+    /// seen only through `<`. Mutation: answer `Some(true)` for `>`, `<=` and
+    /// `>=` alone. `p > 1`, `p >= c` and `g <= g` go silent. Mutation: answer
+    /// `Some(true)` for a `void` operand of a relational operator. `g() < 1`
+    /// goes silent. Mutation: move `>>` into `takes_a_pointer`'s `true` arm,
+    /// or `!=`, `&&` and `||` into its `false` arm. `p >> 1`, `p != 1`,
+    /// `p && g()` and `p || g()` name the wrong operand. Mutation: refuse a
+    /// `char` on the left alone. `c[0] * p` names `c[0]`.
     #[test]
     fn a_binary_operator_answers_for_every_operator_and_operand() {
         for (expression, message, primary) in [
@@ -2341,6 +2351,51 @@ int main(void) {{
                 "`==` cannot take `void` and `int`",
                 "this is `void`",
             ),
+            (
+                "g() < 1",
+                "`<` cannot take `void` and `int`",
+                "this is `void`",
+            ),
+            (
+                "p >> 1",
+                "`>>` cannot take `int *` and `int`",
+                "this is `int *`",
+            ),
+            (
+                "c[0] * p",
+                "`*` cannot take `char` and `int *`",
+                "this is `int *`",
+            ),
+            (
+                "p > 1",
+                "`>` cannot take `int *` and `int`",
+                "this is `int`",
+            ),
+            (
+                "p >= c",
+                "`>=` cannot take `int *` and `char *`",
+                "this is `char *`",
+            ),
+            (
+                "g <= g",
+                "`<=` cannot take `void (*)(void)` and `void (*)(void)`",
+                "this is `void (*)(void)`",
+            ),
+            (
+                "p != 1",
+                "`!=` cannot take `int *` and `int`",
+                "this is `int`",
+            ),
+            (
+                "p && g()",
+                "`&&` cannot take `int *` and `void`",
+                "this is `void`",
+            ),
+            (
+                "p || g()",
+                "`||` cannot take `int *` and `void`",
+                "this is `void`",
+            ),
             ("n * c[0]", "", ""),
             ("n % 2 << 1 & 3 ^ 4 | 5", "", ""),
             ("p - q", "", ""),
@@ -2349,6 +2404,8 @@ int main(void) {{
             ("p - 1", "", ""),
             ("a + 1", "", ""),
             ("p < q", "", ""),
+            ("p > q", "", ""),
+            ("p <= q", "", ""),
             ("v >= v", "", ""),
             ("p == q", "", ""),
             ("p == 0", "", ""),

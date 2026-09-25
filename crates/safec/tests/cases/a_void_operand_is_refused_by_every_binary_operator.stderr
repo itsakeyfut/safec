@@ -7,30 +7,156 @@ error[SC0306]: `*` cannot take `void` and `int`
    │               │  
    │               ╰── this is `int`
 ───╯
-error[SC0306]: `+` cannot take `int` and `void`
-   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:5:13 ]
+error[SC0306]: `/` cannot take `void` and `int`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:5:9 ]
    │
- 5 │     r = n + g();
+ 5 │     r = g() / 1;
+   │         ─┬─   ┬  
+   │          ╰─────── this is `void`
+   │               │  
+   │               ╰── this is `int`
+───╯
+error[SC0306]: `%` cannot take `void` and `int`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:6:9 ]
+   │
+ 6 │     r = g() % 1;
+   │         ─┬─   ┬  
+   │          ╰─────── this is `void`
+   │               │  
+   │               ╰── this is `int`
+───╯
+error[SC0306]: `+` cannot take `int` and `void`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:7:13 ]
+   │
+ 7 │     r = n + g();
    │         ┬   ─┬─  
    │         ╰──────── this is `int`
    │              │   
    │              ╰─── this is `void`
 ───╯
+error[SC0306]: `-` cannot take `int` and `void`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:8:13 ]
+   │
+ 8 │     r = n - g();
+   │         ┬   ─┬─  
+   │         ╰──────── this is `int`
+   │              │   
+   │              ╰─── this is `void`
+───╯
+error[SC0306]: `<<` cannot take `void` and `int`
+   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:9:9 ]
+   │
+ 9 │     r = g() << 1;
+   │         ─┬─    ┬  
+   │          ╰──────── this is `void`
+   │                │  
+   │                ╰── this is `int`
+───╯
+error[SC0306]: `>>` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:10:9 ]
+    │
+ 10 │     r = g() >> 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯
+error[SC0306]: `<` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:11:9 ]
+    │
+ 11 │     r = g() < 1;
+    │         ─┬─   ┬  
+    │          ╰─────── this is `void`
+    │               │  
+    │               ╰── this is `int`
+────╯
+error[SC0306]: `>` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:12:9 ]
+    │
+ 12 │     r = g() > 1;
+    │         ─┬─   ┬  
+    │          ╰─────── this is `void`
+    │               │  
+    │               ╰── this is `int`
+────╯
+error[SC0306]: `<=` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:13:9 ]
+    │
+ 13 │     r = g() <= 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯
+error[SC0306]: `>=` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:14:9 ]
+    │
+ 14 │     r = g() >= 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯
 error[SC0306]: `==` cannot take `void` and `int`
-   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:6:9 ]
-   │
- 6 │     r = g() == 1;
-   │         ─┬─    ┬  
-   │          ╰──────── this is `void`
-   │                │  
-   │                ╰── this is `int`
-───╯
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:15:9 ]
+    │
+ 15 │     r = g() == 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯
+error[SC0306]: `!=` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:16:9 ]
+    │
+ 16 │     r = g() != 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯
+error[SC0306]: `&` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:17:9 ]
+    │
+ 17 │     r = g() & 1;
+    │         ─┬─   ┬  
+    │          ╰─────── this is `void`
+    │               │  
+    │               ╰── this is `int`
+────╯
+error[SC0306]: `^` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:18:9 ]
+    │
+ 18 │     r = g() ^ 1;
+    │         ─┬─   ┬  
+    │          ╰─────── this is `void`
+    │               │  
+    │               ╰── this is `int`
+────╯
+error[SC0306]: `|` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:19:9 ]
+    │
+ 19 │     r = g() | 1;
+    │         ─┬─   ┬  
+    │          ╰─────── this is `void`
+    │               │  
+    │               ╰── this is `int`
+────╯
 error[SC0306]: `&&` cannot take `void` and `int`
-   ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:7:9 ]
-   │
- 7 │     r = g() && 1;
-   │         ─┬─    ┬  
-   │          ╰──────── this is `void`
-   │                │  
-   │                ╰── this is `int`
-───╯
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:20:9 ]
+    │
+ 20 │     r = g() && 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯
+error[SC0306]: `||` cannot take `void` and `int`
+    ╭─[ a_void_operand_is_refused_by_every_binary_operator.c:21:9 ]
+    │
+ 21 │     r = g() || 1;
+    │         ─┬─    ┬  
+    │          ╰──────── this is `void`
+    │                │  
+    │                ╰── this is `int`
+────╯

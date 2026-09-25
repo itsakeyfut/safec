@@ -13,23 +13,121 @@ Function a_void_operand_is_refused_by_every_binary_operator.c:2:1 "f" "int (int)
     Expression a_void_operand_is_refused_by_every_binary_operator.c:5:5
       Assign a_void_operand_is_refused_by_every_binary_operator.c:5:5 "="
         Identifier a_void_operand_is_refused_by_every_binary_operator.c:5:5 "r"
-        Binary a_void_operand_is_refused_by_every_binary_operator.c:5:9 "+"
-          Identifier a_void_operand_is_refused_by_every_binary_operator.c:5:9 "n"
-          Call a_void_operand_is_refused_by_every_binary_operator.c:5:13
-            Identifier a_void_operand_is_refused_by_every_binary_operator.c:5:13 "g"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:5:9 "/"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:5:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:5:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:5:15 "1"
     Expression a_void_operand_is_refused_by_every_binary_operator.c:6:5
       Assign a_void_operand_is_refused_by_every_binary_operator.c:6:5 "="
         Identifier a_void_operand_is_refused_by_every_binary_operator.c:6:5 "r"
-        Binary a_void_operand_is_refused_by_every_binary_operator.c:6:9 "=="
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:6:9 "%"
           Call a_void_operand_is_refused_by_every_binary_operator.c:6:9
             Identifier a_void_operand_is_refused_by_every_binary_operator.c:6:9 "g"
-          Number a_void_operand_is_refused_by_every_binary_operator.c:6:16 "1"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:6:15 "1"
     Expression a_void_operand_is_refused_by_every_binary_operator.c:7:5
       Assign a_void_operand_is_refused_by_every_binary_operator.c:7:5 "="
         Identifier a_void_operand_is_refused_by_every_binary_operator.c:7:5 "r"
-        Binary a_void_operand_is_refused_by_every_binary_operator.c:7:9 "&&"
-          Call a_void_operand_is_refused_by_every_binary_operator.c:7:9
-            Identifier a_void_operand_is_refused_by_every_binary_operator.c:7:9 "g"
-          Number a_void_operand_is_refused_by_every_binary_operator.c:7:16 "1"
-    Return a_void_operand_is_refused_by_every_binary_operator.c:8:5
-      Identifier a_void_operand_is_refused_by_every_binary_operator.c:8:12 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:7:9 "+"
+          Identifier a_void_operand_is_refused_by_every_binary_operator.c:7:9 "n"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:7:13
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:7:13 "g"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:8:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:8:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:8:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:8:9 "-"
+          Identifier a_void_operand_is_refused_by_every_binary_operator.c:8:9 "n"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:8:13
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:8:13 "g"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:9:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:9:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:9:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:9:9 "<<"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:9:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:9:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:9:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:10:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:10:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:10:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:10:9 ">>"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:10:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:10:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:10:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:11:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:11:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:11:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:11:9 "<"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:11:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:11:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:11:15 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:12:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:12:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:12:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:12:9 ">"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:12:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:12:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:12:15 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:13:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:13:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:13:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:13:9 "<="
+          Call a_void_operand_is_refused_by_every_binary_operator.c:13:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:13:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:13:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:14:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:14:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:14:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:14:9 ">="
+          Call a_void_operand_is_refused_by_every_binary_operator.c:14:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:14:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:14:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:15:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:15:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:15:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:15:9 "=="
+          Call a_void_operand_is_refused_by_every_binary_operator.c:15:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:15:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:15:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:16:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:16:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:16:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:16:9 "!="
+          Call a_void_operand_is_refused_by_every_binary_operator.c:16:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:16:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:16:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:17:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:17:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:17:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:17:9 "&"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:17:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:17:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:17:15 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:18:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:18:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:18:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:18:9 "^"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:18:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:18:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:18:15 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:19:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:19:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:19:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:19:9 "|"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:19:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:19:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:19:15 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:20:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:20:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:20:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:20:9 "&&"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:20:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:20:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:20:16 "1"
+    Expression a_void_operand_is_refused_by_every_binary_operator.c:21:5
+      Assign a_void_operand_is_refused_by_every_binary_operator.c:21:5 "="
+        Identifier a_void_operand_is_refused_by_every_binary_operator.c:21:5 "r"
+        Binary a_void_operand_is_refused_by_every_binary_operator.c:21:9 "||"
+          Call a_void_operand_is_refused_by_every_binary_operator.c:21:9
+            Identifier a_void_operand_is_refused_by_every_binary_operator.c:21:9 "g"
+          Number a_void_operand_is_refused_by_every_binary_operator.c:21:16 "1"
+    Return a_void_operand_is_refused_by_every_binary_operator.c:22:5
+      Identifier a_void_operand_is_refused_by_every_binary_operator.c:22:12 "r"
