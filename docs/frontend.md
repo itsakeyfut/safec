@@ -192,6 +192,24 @@ Character constants (6.4.4.4) are not here, because the parser builds no
 expression for one: `crates/safec/src/parser.rs`'s `primary` reads a number and
 an identifier, and a character constant is refused as `expected an expression`.
 
+### Which zero is a null pointer constant
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `int *p = 0;` | accepts | accepts | accepts |
+| `int *p = 1 - 1;` | `error[SC0302]` | accepts | accepts |
+| `int *p = -0;` | `error[SC0302]` | accepts | accepts |
+| `p = 1 - 1;` with `int *p` | `error[SC0302]` | accepts | accepts |
+
+**These are refused on purpose.** C17 6.3.2.3 p3 makes any integer
+constant expression with the value 0 a null pointer constant, and nothing here
+evaluates a constant expression, so only a literal zero is recognised as one.
+The alternative was not reporting an integer given to a pointer at all, which
+is the mistake the check exists for; `types.rs::is_null_pointer_constant` says
+why the false report costs less. C17 6.7.9 p11 gives an initializer the
+constraints of simple assignment, so the two spellings answer alike. The rows
+stop being refused the day a constant expression can be evaluated.
+
 ### What the lowering refuses
 
 The frontend accepts these and `crates/safec/src/lowering.rs` cannot build IR
