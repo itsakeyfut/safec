@@ -1,0 +1,9 @@
+error[SC0306]: `-=` cannot take `int *` and `int *`
+   ╭─[ subtracting_a_pointer_from_a_pointer_in_place.c:1:39 ]
+   │
+ 1 │ int main(void) { int *p; int *q; p -= q; return 0; }
+   │                                  ┬    ┬  
+   │                                  ╰─────── this is `int *`
+   │                                       │  
+   │                                       ╰── this is `int *`
+───╯

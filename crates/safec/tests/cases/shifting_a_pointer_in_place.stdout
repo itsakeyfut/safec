@@ -1,0 +1,9 @@
+Function shifting_a_pointer_in_place.c:1:1 "main" "int (void)"
+  Compound shifting_a_pointer_in_place.c:1:16
+    Declaration shifting_a_pointer_in_place.c:1:18 "p" "int *"
+    Expression shifting_a_pointer_in_place.c:1:26
+      Assign shifting_a_pointer_in_place.c:1:26 "<<="
+        Identifier shifting_a_pointer_in_place.c:1:26 "p"
+        Number shifting_a_pointer_in_place.c:1:32 "1"
+    Return shifting_a_pointer_in_place.c:1:35
+      Number shifting_a_pointer_in_place.c:1:42 "0"

@@ -1,0 +1,9 @@
+error[SC0306]: `<<=` cannot take `int *` and `int`
+   ╭─[ shifting_a_pointer_in_place.c:1:26 ]
+   │
+ 1 │ int main(void) { int *p; p <<= 1; return 0; }
+   │                          ┬     ┬  
+   │                          ╰──────── this is `int *`
+   │                                │  
+   │                                ╰── this is `int`
+───╯

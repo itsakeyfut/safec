@@ -1969,8 +1969,8 @@ impl Lowering<'_> {
     /// the pair rather than at what promoting the left operand gives. `void`
     /// takes this arm to keep the `match` total and is not an answer about C:
     /// 6.5.16.2 p1 wants an arithmetic or a pointer left operand and `void` is
-    /// neither, so `*v += 1` on a `void *` is a program this frontend accepts
-    /// only because nothing checks that clause. #226.
+    /// neither, so `*v += 1` on a `void *` is `error[SC0306]` in `types.rs`
+    /// and reaches here only because a type error does not stop the run.
     ///
     /// Without that, `c += 100` on a `char` writes its addition straight into
     /// an 8-bit place, and the interpreter reads that place's type as the width

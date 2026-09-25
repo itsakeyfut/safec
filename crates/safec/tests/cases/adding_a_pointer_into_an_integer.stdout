@@ -1,0 +1,11 @@
+Function adding_a_pointer_into_an_integer.c:1:1 "main" "int (void)"
+  Compound adding_a_pointer_into_an_integer.c:1:16
+    Declaration adding_a_pointer_into_an_integer.c:1:18 "p" "int *"
+    Declaration adding_a_pointer_into_an_integer.c:1:26 "i" "int"
+      Number adding_a_pointer_into_an_integer.c:1:34 "0"
+    Expression adding_a_pointer_into_an_integer.c:1:37
+      Assign adding_a_pointer_into_an_integer.c:1:37 "+="
+        Identifier adding_a_pointer_into_an_integer.c:1:37 "i"
+        Identifier adding_a_pointer_into_an_integer.c:1:42 "p"
+    Return adding_a_pointer_into_an_integer.c:1:45
+      Number adding_a_pointer_into_an_integer.c:1:52 "0"

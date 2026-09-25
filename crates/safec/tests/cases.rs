@@ -782,6 +782,20 @@ cases! {
     // Mutation: have `types.rs::Checker::receivers_in` insert nothing for a
     // `Stmt::Declaration`. The `SC0302` goes from both of these and both fail.
     initializing_with_the_wrong_type: ["--emit", "ast"],
+    // C17 6.5.16.2's two constraints, which are not the rule for a plain
+    // `=`: `p += 1` is allowed and holds `a_compound_assignment_on_a_pointer_
+    // computes_into_a_pointer` silent. The first and the last put the primary
+    // caret on the value, the middle two on the place, because that is the
+    // operand the rule refuses.
+    //
+    // Mutation: have `types.rs::Checker::type_of` stop calling
+    // `compound_assignment`. All four go silent and exit 0. Mutation: put the
+    // primary label on the value always. The middle two move their caret.
+    // Mutation: put it on the place always. The outer two move theirs.
+    adding_a_pointer_into_an_integer: ["--emit", "ast"],
+    multiplying_a_pointer_in_place: ["--emit", "ast"],
+    shifting_a_pointer_in_place: ["--emit", "ast"],
+    subtracting_a_pointer_from_a_pointer_in_place: ["--emit", "ast"],
     // Why the rule matters past the message. ADR-0030 has the memory check
     // drop the operand of an addition that is declared `int`, so an
     // allocation reaching `i` through this initializer is one that check is
