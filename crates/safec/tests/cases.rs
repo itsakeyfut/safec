@@ -740,6 +740,9 @@ cases! {
     a_nonnull_on_a_return_type_is_refused: ["--emit", "ast"],
     a_nonnull_on_a_parameter_of_a_function_pointer_is_refused: ["--emit", "ast"],
     a_nonnull_on_a_parameter_of_a_block_scope_function_is_refused: ["--emit", "ast"],
+    // The disagreement `lowering.rs::agree` refuses, both ways round.
+    declarations_that_disagree_about_nonnull_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

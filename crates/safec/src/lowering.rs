@@ -47,6 +47,19 @@ use safec_ir::target::Target;
 /// that can happen.
 const LOWERING: Code = Code::new("SC0304");
 
+/// Two declarations of one function that disagree about `_Nonnull`.
+///
+/// Refused rather than resolved, because the declaration a caller sees is the
+/// one its call is checked against, and a header that leaves the promise out is
+/// how a caller in another translation unit goes unchecked while the body
+/// believes it. See ADR-0037. `clang` carries it from one declaration to the
+/// next in silence.
+///
+/// Here rather than in `types.rs`, because [`Lowering::declare_one`] is the one
+/// place several declarations become one function, and a second answer to which
+/// declarations are the same function would be a second place to drift.
+const DISAGREEING_ANNOTATION: Code = Code::new("SC0307");
+
 /// Build the IR of one translation unit.
 ///
 /// Every function that can be lowered is, whatever the ones beside it did: a
@@ -499,15 +512,63 @@ impl Lowering<'_> {
         // A name declared twice is one function. The first declaration is
         // the one whose span the IR carries, which is where a reader of a
         // diagnostic about the callee is pointed.
-        if !self.functions.contains_key(self.sources.snippet(name)) {
-            let id = self
-                .unit
-                .push_function(Function::declaration_with_parameters(
-                    name, returns, lowered,
-                ));
-            self.functions
-                .insert(self.sources.snippet(name).to_owned(), id);
+        match self.functions.get(self.sources.snippet(name)) {
+            None => {
+                let id = self
+                    .unit
+                    .push_function(Function::declaration_with_parameters(
+                        name, returns, lowered,
+                    ));
+                self.functions
+                    .insert(self.sources.snippet(name).to_owned(), id);
+            }
+            Some(&id) => self.agree(id, name, &lowered, diagnostics),
         }
+    }
+
+    /// Refuse a later declaration of a function that disagrees with the first
+    /// about which parameters are `_Nonnull`. See [`DISAGREEING_ANNOTATION`].
+    ///
+    /// Position by position, over as many parameters as both have. A
+    /// declaration with a different count is a different disagreement, which is
+    /// #57's and is not answered here.
+    fn agree(
+        &mut self,
+        id: FuncId,
+        name: Span,
+        later: &[Parameter],
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let first = self.unit.function(id);
+        let differs = first.parameters().zip(later).find(|(local, parameter)| {
+            first.nonnull(*local).is_some() != parameter.nonnull.is_some()
+        });
+        let Some((local, parameter)) = differs else {
+            return;
+        };
+
+        // The primary label goes on the `_Nonnull` that one of the two wrote,
+        // because it is the only token either declaration has that says what
+        // differs. The other declaration is pointed at by its name.
+        let (said, silent, silent_label) = match (first.nonnull(local), parameter.nonnull) {
+            (Some(said), _) => (said, name, "this declaration does not"),
+            (None, Some(said)) => (said, first.name, "the first declaration does not"),
+            (None, None) => unreachable!("the two were found to differ"),
+        };
+
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "the declarations of `{}` disagree about `_Nonnull`",
+                self.sources.snippet(name)
+            ))
+            .with_code(DISAGREEING_ANNOTATION)
+            .with_label(Label::primary(said, "one declaration says `_Nonnull` here"))
+            .with_label(Label::secondary(silent, silent_label))
+            .with_note(
+                "every declaration of a function has to agree about `_Nonnull`, because \
+                 a caller is checked against the declaration it sees",
+            ),
+        );
     }
 
     /// The declaration a call is checked against, and the locals a body starts
