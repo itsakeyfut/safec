@@ -2,11 +2,12 @@ void *malloc(int n);
 void free(void *p);
 void *memcpy(void *d, void *s, int n);
 
-int main(void) {
-    int *q = malloc(4);
+int f(void) {
     int *p = malloc(4);
-    memcpy(&q, &p, 8);
-    free(q);
+    int *r = p;
+    int *z = malloc(4);
+    memcpy(&p, &z, 8);
     free(p);
+    *r = 1;
     return 0;
 }

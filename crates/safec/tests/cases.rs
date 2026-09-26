@@ -873,8 +873,15 @@ cases! {
     what_a_call_returned_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `memset` frees nothing and still exposes what it was handed.
     what_memset_was_handed_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // `memcpy` can be handed a local's address and write a pointer into it.
+    // `memcpy` can be handed a local's address and write a pointer into it,
+    // so a free through that local proves nothing about what a sharer holds.
     a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A loop through one call writes one site, and what the call returns may
+    // be what was freed through that site last turn.
+    a_call_in_a_loop_may_hand_back_what_was_freed_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A write two levels down is not recorded as contents, so it exposes what
+    // it carries at once.
+    a_pointer_stored_two_levels_down_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Refused and well defined: two costs ADR-0039 accepts, pinned so that a
     // change to either is seen. The first is #253.
     a_free_on_reallocs_failure_branch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
