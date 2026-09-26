@@ -1,3 +1,3 @@
 Hatch what_a_hatch_concluded_is_listed_in_the_order_it_was_written.c:5:5 "raw"
-  Conclusion what_a_hatch_concluded_is_listed_in_the_order_it_was_written.c:6:9 "SC0403" "unproven" "this may dereference a null pointer"
-  Conclusion what_a_hatch_concluded_is_listed_in_the_order_it_was_written.c:9:5 "SC0401" "unproven" "this may free a value that was freed already"
+  Conclusion what_a_hatch_concluded_is_listed_in_the_order_it_was_written.c:6:9 "SC0403" "unknown" "this may dereference a null pointer"
+  Conclusion what_a_hatch_concluded_is_listed_in_the_order_it_was_written.c:9:5 "SC0401" "unknown" "this may free a value that was freed already"

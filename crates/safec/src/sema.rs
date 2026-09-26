@@ -77,9 +77,22 @@ pub struct Binding {
 pub struct Resolution {
     bindings: Vec<Binding>,
     resolved: HashMap<ExprId, BindingId>,
+    /// Every attribute this stage accepted as a hatch, by where it was written.
+    hatches: Vec<Span>,
 }
 
 impl Resolution {
+    /// Whether `attribute` is one this stage accepted as a hatch.
+    ///
+    /// Asked by the lowering, so that what makes a function a hatch is this
+    /// stage's verdict rather than an attribute being present. A refused one
+    /// still reaches the lowering, because the lowering runs after a name this
+    /// stage could not resolve, and `--emit safety-ir` and `--emit hatches` are
+    /// still written on the run that refused it. See ADR-0038.
+    pub fn is_hatch(&self, attribute: Attribute) -> bool {
+        self.hatches.contains(&attribute.span)
+    }
+
     /// The binding `id` names.
     ///
     /// # Panics
@@ -114,6 +127,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         resolution: Resolution {
             bindings: Vec::new(),
             resolved: HashMap::new(),
+            hatches: Vec::new(),
         },
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
@@ -180,14 +194,11 @@ impl Resolver<'_> {
     ///
     /// Here rather than in the parser, which reads the shape and not the text:
     /// [`Attribute`] says why. The string is compared as written, quotes
-    /// included, so `"safec_" "unchecked"` never gets here and an escape that
-    /// spells the same bytes is refused. Both are row 4, and neither is a
-    /// spelling anybody writes.
+    /// included, so an escape that spells the same bytes is refused, which is
+    /// row 4 and not a spelling anybody writes.
     ///
-    /// The lowering does not ask again. A refused attribute still reaches it,
-    /// because the lowering runs after a name this stage could not resolve, and
-    /// it makes that function a hatch; the run has already failed with this
-    /// report, so nothing it concludes about the hatch builds.
+    /// What it accepts is recorded, and [`Resolution::is_hatch`] is the only
+    /// thing that makes a function a hatch.
     ///
     /// [`Attribute`]: crate::ast::Attribute
     fn attribute(&mut self, attribute: Attribute, diagnostics: &mut DiagnosticSink) {
@@ -196,6 +207,7 @@ impl Resolver<'_> {
         } else if self.sources.snippet(attribute.argument) != "\"safec_unchecked\"" {
             attribute.argument
         } else {
+            self.resolution.hatches.push(attribute.span);
             return;
         };
 

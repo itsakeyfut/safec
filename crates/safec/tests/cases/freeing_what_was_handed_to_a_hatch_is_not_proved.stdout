@@ -5,7 +5,7 @@ Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:1:7 "malloc" declare
 Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:2:6 "free" declared
   Local "_0" "void" return
   Local "_1" "void *" parameter
-Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:5:6 "keep" unchecked
+Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:5:6 "keep" hatch
   Local "_0" "void" return
   Local "_1" "int *" parameter
   Block "bb0" entry

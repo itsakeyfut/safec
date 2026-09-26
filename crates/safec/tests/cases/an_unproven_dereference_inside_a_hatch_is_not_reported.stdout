@@ -1,5 +1,5 @@
 Target "x86_64-pc-windows-msvc"
-Function an_unproven_dereference_inside_a_hatch_is_not_reported.c:2:5 "raw" unchecked
+Function an_unproven_dereference_inside_a_hatch_is_not_reported.c:2:5 "raw" hatch
   Local "_0" "int" return
   Local "_1" "int *" parameter
   Block "bb0" entry

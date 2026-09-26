@@ -841,8 +841,8 @@ pub struct Function {
     locals: Vec<TyId>,
     /// One per parameter, in the order they were declared.
     nonnull: Vec<Option<Span>>,
-    /// Where the attribute that made this a hatch was written, if one was.
-    hatch: Option<Span>,
+    /// Whether this is a hatch.
+    hatch: bool,
     body: Body,
 }
 
@@ -882,12 +882,12 @@ impl Function {
             name,
             locals,
             nonnull,
-            hatch: None,
+            hatch: false,
             body: Body::Defined(Vec::new()),
         }
     }
 
-    /// This function, as a hatch declared at `at`.
+    /// This function, as a hatch.
     ///
     /// A hatch claims nothing about its body: what a check could not prove in
     /// it is a statement about the hatch rather than about the program, and a
@@ -898,14 +898,17 @@ impl Function {
     ///
     /// If this is a declaration. What a hatch says is about a body, and a
     /// function with none has nothing for it to say it about.
-    pub fn unchecked(mut self, at: Span) -> Self {
+    ///
+    /// **Not "unchecked".** Every check runs over a hatch's body as over any
+    /// other; what differs is where an unproven conclusion goes.
+    pub fn hatched(mut self) -> Self {
         assert!(self.is_defined(), "a declaration cannot be a hatch");
-        self.hatch = Some(at);
+        self.hatch = true;
         self
     }
 
-    /// Where this was declared a hatch, or `None` if it was not.
-    pub fn hatch(&self) -> Option<Span> {
+    /// Whether this is a hatch.
+    pub fn hatch(&self) -> bool {
         self.hatch
     }
 

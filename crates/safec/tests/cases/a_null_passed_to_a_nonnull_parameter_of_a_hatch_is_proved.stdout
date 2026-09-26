@@ -1,5 +1,5 @@
 Target "x86_64-pc-windows-msvc"
-Function a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:2:5 "raw" unchecked
+Function a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:2:5 "raw" hatch
   Local "_0" "int" return
   Local "_1" "int *" parameter _Nonnull
   Block "bb0" entry

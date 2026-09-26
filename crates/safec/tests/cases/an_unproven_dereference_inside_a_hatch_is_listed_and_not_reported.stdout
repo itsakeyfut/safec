@@ -1,2 +1,2 @@
 Hatch an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported.c:2:5 "raw"
-  Conclusion an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported.c:3:5 "SC0403" "unproven" "this may dereference a null pointer"
+  Conclusion an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported.c:3:5 "SC0403" "unknown" "this may dereference a null pointer"

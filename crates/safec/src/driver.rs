@@ -760,7 +760,7 @@ fn route(
     hatched: &mut Vec<Hatched>,
     diagnostics: &mut DiagnosticSink,
 ) {
-    let in_a_hatch = unit.function(concluded.function).hatch().is_some();
+    let in_a_hatch = unit.function(concluded.function).hatch();
     let reported = match concluded.conclusion {
         Conclusion::Unknown => !in_a_hatch,
         Conclusion::Safe | Conclusion::Unsafe => true,
@@ -778,7 +778,7 @@ fn route(
 ///
 /// One line per hatch, at its name, and one line per conclusion, at its caret,
 /// in the order a reader meets them in the file. Each conclusion says its
-/// code, whether it was proved, and its message. A hatch nothing was concluded
+/// code, what was concluded, and its message. A hatch nothing was concluded
 /// in is listed all the same, which is what makes this the count of them: at
 /// `--safety off` no check runs and every hatch is listed with nothing under
 /// it.
@@ -794,7 +794,7 @@ fn dump_hatches(
 ) {
     for id in unit.functions() {
         let function = unit.function(id);
-        if function.hatch().is_none() {
+        if !function.hatch() {
             continue;
         }
 
@@ -817,16 +817,18 @@ fn dump_hatches(
                 .diagnostic
                 .code()
                 .map_or(String::new(), |code| code.as_str().to_owned());
-            let proved = match concluded.conclusion {
-                Conclusion::Unsafe => "proved",
-                Conclusion::Unknown => "unproven",
+            // In `docs/safety-model.md`'s three words, so that the one a
+            // reader does not see here yet reads alike when it arrives.
+            let said = match concluded.conclusion {
                 Conclusion::Safe => "safe",
+                Conclusion::Unsafe => "unsafe",
+                Conclusion::Unknown => "unknown",
             };
             writeln!(
                 out,
                 " {:?} {:?} {:?}",
                 code,
-                proved,
+                said,
                 concluded.diagnostic.message()
             )
             .expect("writing to a string cannot fail");

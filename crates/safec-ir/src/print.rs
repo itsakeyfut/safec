@@ -204,8 +204,8 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
         // A hatch and a function the checks answer for read alike otherwise,
         // and what is said about one of them is not a claim about the program.
         // See ADR-0038.
-        if function.hatch().is_some() {
-            out.push_str(" unchecked");
+        if function.hatch() {
+            out.push_str(" hatch");
         }
         out.push('\n');
 

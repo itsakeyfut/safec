@@ -1,2 +1,2 @@
 Hatch a_function_after_a_hatch_is_still_answered_for.c:2:5 "raw"
-  Conclusion a_function_after_a_hatch_is_still_answered_for.c:3:5 "SC0403" "unproven" "this may dereference a null pointer"
+  Conclusion a_function_after_a_hatch_is_still_answered_for.c:3:5 "SC0403" "unknown" "this may dereference a null pointer"
