@@ -716,6 +716,21 @@ cases! {
     // the tree, a declaration's IR, and a definition read by the analysis.
     a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
     a_nonnull_parameter_of_a_declaration_reaches_the_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_declared_nonnull_is_dereferenced_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What the body stopped carrying, the caller carries.
+    a_null_constant_passed_to_a_nonnull_parameter_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_local_proved_null_passed_to_a_nonnull_parameter_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+    each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The two ways a caller discharges it, which are what keep the check from
+    // reporting every call.
+    a_tested_pointer_passed_to_a_nonnull_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_nonnull_parameter_passed_on_to_another_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What the body believes is a fact at its entry, and no more than that.
+    a_nonnull_parameter_whose_address_escaped_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_nonnull_parameter_given_a_null_in_the_body_is_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_null_passed_to_a_nonnull_parameter_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     // Everywhere it cannot apply, one case per reason `parser.rs::placed`
     // gives.
     a_nonnull_not_after_a_star_is_refused: ["--emit", "ast"],

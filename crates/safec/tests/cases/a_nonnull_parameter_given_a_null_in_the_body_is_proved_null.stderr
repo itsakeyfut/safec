@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:3:5 ]
+   │
+ 3 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

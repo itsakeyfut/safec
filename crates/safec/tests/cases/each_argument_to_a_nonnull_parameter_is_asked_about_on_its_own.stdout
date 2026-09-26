@@ -1,0 +1,23 @@
+Target "x86_64-pc-windows-msvc"
+Function each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:1:6 "two" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+  Local "_2" "int *" parameter _Nonnull
+Function each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 generated
+    Call each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 "two" "bb1"
+      Destination "_2"
+      Copy "_1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 generated
+    Operation each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:4:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:4:12 generated
+    Return

@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:1:6 "f"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+  Local "_2" "int *"
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:2:5 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:2:5 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Sequenced a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:2:5 generated
+    Operation a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:3:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:3:5 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_nonnull_parameter_given_a_null_in_the_body_is_proved_null.c:3:5 generated
+    Return

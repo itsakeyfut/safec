@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_nonnull_parameter_whose_address_escaped_is_not_proved.c:4:5 ]
+   │
+ 4 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

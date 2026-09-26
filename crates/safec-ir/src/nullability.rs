@@ -22,6 +22,11 @@
 //! here rather than linked, which is what this crate's other check does with
 //! its own.
 //!
+//! **A `_Nonnull` parameter is believed by its body and checked at every
+//! call.** It enters the lattice not null, and every argument passed to one is
+//! asked what a dereference is asked. What is believed is only what no call this
+//! crate can see reaches, which is ADR-0037.
+//!
 //! **Nothing here reports.** This builds a [`Conclusion`] and a span; `safec`
 //! turns one into a diagnostic, because this crate cannot see one, which is
 //! ADR-0011.
@@ -91,7 +96,7 @@ impl Nullness {
     }
 }
 
-/// One dereference this check concluded about, and where.
+/// One dereference, or one argument, this check concluded about, and where.
 ///
 /// Not a diagnostic: this crate cannot see one. What each conclusion costs a
 /// build is `Diagnostic::concluded`'s in `safec`, which is the one place that
@@ -105,10 +110,30 @@ impl Nullness {
 /// waits for something that needs it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Finding {
-    /// What this check concluded about the dereference.
+    /// What this check concluded about the pointer.
     pub conclusion: Conclusion,
-    /// Where a caret goes: the element or terminator that dereferences.
+    /// Where a caret goes: the element or terminator that dereferences, or
+    /// the call that passes the argument.
     pub at: Span,
+    /// Which question the conclusion answers.
+    pub asked: Asked,
+}
+
+/// Which question a [`Finding`] answers.
+///
+/// Two, because they are two different programs to fix and two different codes
+/// for a reader to search for: a read through a pointer that may be null, and
+/// a pointer that may be null handed to a parameter that promised it is not.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Asked {
+    /// Whether a pointer read or written through is null.
+    Dereference,
+    /// Whether an argument passed to a `_Nonnull` parameter is null.
+    Argument {
+        /// Where the parameter was declared `_Nonnull`, which is the promise
+        /// this argument is checked against.
+        promise: Span,
+    },
 }
 
 /// Which locals are known null, known not null, or neither.
@@ -124,6 +149,9 @@ struct Nullability<'a> {
     /// What a local's type is, so that a branch on an `int` is not read as a
     /// branch on a pointer.
     unit: &'a TranslationUnit,
+    /// The function this is about, for which of its parameters were declared
+    /// `_Nonnull`.
+    function: &'a Function,
     /// How many locals the function has, for the value's length.
     locals: usize,
     /// Which locals have their address taken anywhere in the function.
@@ -478,13 +506,25 @@ impl Analysis for Nullability<'_> {
         function.locals().len()
     }
 
-    /// Nothing known about anything.
+    /// Nothing known about anything, except a parameter declared `_Nonnull`.
     ///
-    /// A parameter's nullness is a caller's fact and this phase has nothing
-    /// that carries one, so `void f(int *p) { *p = 1; }` is a warning. The
-    /// annotation that removes it is the roadmap's next line and is #134.
+    /// A parameter's nullness is a caller's fact, so `void f(int *p) { *p =
+    /// 1; }` is not established here. `_Nonnull` is how a caller's fact is
+    /// carried: the body believes it, and every call this check can see is
+    /// asked whether it keeps it, which is ADR-0037.
+    ///
+    /// It is a fact at the entry and nowhere else. The body can replace it like
+    /// any other value, and a parameter whose address escapes answers
+    /// `Unknown` whatever it was declared, because every read goes through
+    /// [`Nullability::known`].
     fn on_entry(&self) -> Self::Value {
-        vec![Nullness::Unknown; self.locals]
+        let mut value = vec![Nullness::Unknown; self.locals];
+        for parameter in self.function.parameters() {
+            if self.function.nonnull(parameter).is_some() {
+                value[parameter.index()] = Nullness::NonNull;
+            }
+        }
+        value
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
@@ -653,7 +693,61 @@ fn report(
         .max_by_key(|conclusion| severity(*conclusion));
 
     if let Some(conclusion) = worst {
-        findings.push(Finding { conclusion, at });
+        findings.push(Finding {
+            conclusion,
+            at,
+            asked: Asked::Dereference,
+        });
+    }
+}
+
+/// One finding for each argument a call passes to a `_Nonnull` parameter,
+/// unless it is established not null.
+///
+/// The dereference's question, asked of an argument, and asked at the same
+/// point: before the terminator's transfer, so a call's own destination is
+/// written after, and `q = g(q)` asks about the `q` that was passed.
+///
+/// **This is the second reader of `Nullness::NonNull`, and for it being wrong
+/// is a silence.** A dereference reads it too, and every place that mints it
+/// was made sound for that reader: an address, a dereference that did not trap
+/// (ADR-0025), a branch that tested the pointer, and a `_Nonnull` parameter.
+/// The argument is read where the dereference is, so each stays sound here for
+/// the same reason. RK-071 is what happens when a second reader assumes that
+/// rather than checks it.
+///
+/// One per argument rather than the worst per call, because each argument has
+/// its own promise to point at.
+fn report_arguments(
+    analysis: &Nullability<'_>,
+    findings: &mut Vec<Finding>,
+    terminator: &Terminator,
+    known: &[Nullness],
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return;
+    };
+
+    let callee = analysis.unit.function(*callee);
+    for (argument, parameter) in arguments.iter().zip(callee.parameters()) {
+        let Some(promise) = callee.nonnull(parameter) else {
+            continue;
+        };
+        let passed = analysis.nullness_of(&Rvalue::Use(argument.clone()), known);
+        if let Some(conclusion) = passed.concluded() {
+            findings.push(Finding {
+                conclusion,
+                at: origin.span(),
+                asked: Asked::Argument { promise },
+            });
+        }
     }
 }
 
@@ -682,6 +776,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
 
         let analysis = Nullability {
             unit,
+            function,
             locals: function.locals().len(),
             escaped: escaped_in(function),
         };
@@ -715,6 +810,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                 dereferenced_in_terminator(&block.terminator),
                 &known,
             );
+            report_arguments(&analysis, &mut findings, &block.terminator, &known);
         }
     }
 
@@ -738,7 +834,12 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // written first and measured unreachable: inverting it, and deleting it,
     // each left the whole suite green while a panic in this body failed nine
     // cases, so the body runs and the promotion never fires.
-    findings.dedup_by(|later, earlier| later.at == earlier.at);
+    //
+    // **The question is part of the key.** A call that passes two arguments
+    // to two `_Nonnull` parameters has one caret and two promises, and a
+    // dereference inside a call's arguments shares its caret with the call.
+    // Each of those is a different thing to say.
+    findings.dedup_by(|later, earlier| later.at == earlier.at && later.asked == earlier.asked);
 
     findings
 }
@@ -783,6 +884,7 @@ pub(crate) fn null_at_terminators(
 ) -> NullAtTerminators {
     let analysis = Nullability {
         unit,
+        function,
         locals: function.locals().len(),
         escaped: escaped_in(function),
     };

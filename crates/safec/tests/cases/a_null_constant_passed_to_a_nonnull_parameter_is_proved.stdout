@@ -1,0 +1,20 @@
+Target "x86_64-pc-windows-msvc"
+Function a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:1:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+Function a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:3:5 generated
+    Call a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:3:5 "g" "bb1"
+      Destination "_1"
+      Constant 0
+  Block "bb1"
+    Sequenced a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:3:5 generated
+    Operation a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:4:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_null_constant_passed_to_a_nonnull_parameter_is_proved.c:4:12 generated
+    Return
