@@ -689,9 +689,11 @@ impl Parser<'_> {
         self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
         self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
 
-        if !self.check(TokenKind::Identifier) {
-            return self.unread(self.peek().span, diagnostics);
-        }
+        // Whatever is here is taken as the name, identifier or not. What is not
+        // a name is refused all the same: `__attribute__(())` by the `(` it
+        // lacks after it, at the same caret, and `__attribute__((1("x")))` by
+        // `sema::resolve`, which compares it with `annotate`. A test here that
+        // it is an identifier was measured to be one no mutation could break.
         let name = self.advance().span;
 
         if !self.eat(TokenKind::Punct(Punct::LeftParen)) {
