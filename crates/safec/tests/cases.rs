@@ -804,6 +804,16 @@ cases! {
     // What a hatch may have done to what it was handed is assumed to be the
     // worst, because it cannot yet say otherwise: ADR-0032's default.
     freeing_what_was_handed_to_a_hatch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A hatch's body is the one whose unproven conclusions are not reported,
+    // so what the caller cannot see it do is assumed to be the worst: every
+    // allocation still live is unproven after a call to one. Mutation: drop
+    // the loop over `value.state` in `memory.rs`'s `Callee::Opaque` arm; the
+    // first two fail, and the first is a use after free going silent.
+    what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: make that loop mark every site rather than the live ones; this
+    // fails, a proved double free becoming unproven.
+    a_free_proved_before_a_call_to_a_hatch_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // An attribute `sema::resolve` refused is not a hatch, even on the run that
     // is written anyway. Mutation: have the lowering mark a hatch wherever an
     // attribute is present; this fails.

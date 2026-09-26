@@ -1,0 +1,16 @@
+error[SC0401]: this frees a value that was freed already
+    ╭─[ a_free_proved_before_a_call_to_a_hatch_stays_proved.c:12:5 ]
+    │
+  9 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+ 10 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 12 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

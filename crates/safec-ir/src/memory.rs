@@ -1937,6 +1937,26 @@ impl Analysis for Allocations<'_> {
                     value.state[site] = SiteState::Unknown;
                 }
 
+                // **A hatch may have reached anything, so every allocation
+                // still live is unproven after it.** The loop above is about
+                // the sites the arguments name, and this check does not follow
+                // a pointer stored into memory it does not model: `*box = p;
+                // drop_inner(box);` hands the callee `p`'s allocation one
+                // level down, where no argument names it. Everywhere else that
+                // gap is answered by the callee's own body being checked, and
+                // a hatch's body is the one whose unproven conclusions are
+                // listed rather than reported. So what the body cannot answer
+                // the caller assumes the worst of, which is ADR-0032's default
+                // with nothing declared to narrow it. A proved free stays
+                // proved: nothing a callee does un-frees it. See ADR-0038.
+                if self.unit.function(*callee).hatch() {
+                    for state in &mut value.state {
+                        if let SiteState::Live(_) = state {
+                            *state = SiteState::Unknown;
+                        }
+                    }
+                }
+
                 // **What it was handed is not all it can reach.** The loop
                 // above is about the allocations the arguments name; this is
                 // about the *locals* whose addresses are out there, which this
