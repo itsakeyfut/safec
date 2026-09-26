@@ -663,7 +663,7 @@ impl Parser<'_> {
             self.spend();
             self.advance();
             // One, and only directly after the `*`, which is where `clang`
-            // reads it. A second is an unexpected token like any other.
+            // reads it. A second is left for `core`, which refuses it.
             let nonnull = self
                 .check(TokenKind::Annotation(Annotation::Nonnull))
                 .then(|| self.advance().span);
@@ -709,13 +709,21 @@ impl Parser<'_> {
 
         // `int _Nonnull x;` is the one place a reader who knows the word but
         // not its position will write it, and "expected a name" would say
-        // nothing about why.
+        // nothing about why. The other way to arrive here is a second one
+        // after the first, which is after a `*` and needs its own words:
+        // telling that reader to write it after the `*` is telling them what
+        // they did. `clang` warns about the duplicate and reads one.
         if self.check(TokenKind::Annotation(Annotation::Nonnull)) {
+            let label = if self.previous().kind == TokenKind::Annotation(Annotation::Nonnull) {
+                "a pointer takes one `_Nonnull`, and this is the second"
+            } else {
+                "`_Nonnull` is written after the `*` of the pointer it qualifies"
+            };
             self.report_at(
                 self.peek().span,
                 MISPLACED_ANNOTATION,
                 "`_Nonnull` cannot apply here",
-                "`_Nonnull` is written after the `*` of the pointer it qualifies",
+                label,
                 diagnostics,
             );
             return None;

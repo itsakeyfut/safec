@@ -746,6 +746,9 @@ cases! {
     // Everywhere it cannot apply, one case per reason `parser.rs::placed`
     // gives.
     a_nonnull_not_after_a_star_is_refused: ["--emit", "ast"],
+    // The second of two after one `*`. Mutation: give it the label above;
+    // only this case fails.
+    a_second_nonnull_on_one_pointer_is_refused: ["--emit", "ast"],
     a_nonnull_on_a_pointer_inside_a_parameter_is_refused: ["--emit", "ast"],
     a_nonnull_on_a_file_scope_object_is_refused: ["--emit", "ast"],
     a_nonnull_on_a_local_is_refused: ["--emit", "ast"],

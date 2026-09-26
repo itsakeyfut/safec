@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_second_nonnull_on_one_pointer_is_refused.c:1:23 ]
+   │
+ 1 │ void g(int * _Nonnull _Nonnull p);
+   │                       ────┬───  
+   │                           ╰───── a pointer takes one `_Nonnull`, and this is the second
+───╯
