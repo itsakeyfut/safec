@@ -37,7 +37,7 @@
 //! costs against `clang`, which fills it.
 
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::token::{Keyword, Punct, Token, TokenKind};
+use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
 use safec_ir::source::{FileId, SourceFile, Span};
 
 // Lexical diagnostics take `SC01xx`, which `docs/diagnostics.md` allocates. A
@@ -148,15 +148,19 @@ impl<'a> Lexer<'a> {
         self.scan_unknown(diagnostics)
     }
 
-    /// An identifier, or the keyword it is spelled the same as.
+    /// An identifier, or the keyword or annotation it is spelled the same as.
     fn scan_word(&mut self) -> TokenKind {
         let start = self.offset;
         while self.peek().is_some_and(is_identifier_continue) {
             self.bump();
         }
-        match Keyword::from_spelling(&self.text[start..self.offset]) {
-            Some(keyword) => TokenKind::Keyword(keyword),
-            None => TokenKind::Identifier,
+        let word = &self.text[start..self.offset];
+        if let Some(keyword) = Keyword::from_spelling(word) {
+            TokenKind::Keyword(keyword)
+        } else if let Some(annotation) = Annotation::from_spelling(word) {
+            TokenKind::Annotation(annotation)
+        } else {
+            TokenKind::Identifier
         }
     }
 
@@ -558,6 +562,28 @@ mod tests {
             ]
         );
         assert_eq!(scan.texts(), ["int", "main", "void_", "x1", "_y", "borrow"]);
+    }
+
+    /// `_Nonnull` is an annotation and the words beside it are not.
+    ///
+    /// The spelling is matched whole, as a keyword is: `_Nonnullx` and
+    /// `Nonnull` are names a program may use, and `_nonnull` differs in the
+    /// letter C17 7.1.3 p1 reserves on. Mutation: have `scan_word` never ask
+    /// `Annotation::from_spelling`, and the first row fails.
+    #[test]
+    fn a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not() {
+        let scan = scan("_Nonnull _Nonnullx Nonnull _nonnull");
+
+        assert_eq!(
+            scan.kinds(),
+            [
+                TokenKind::Annotation(Annotation::Nonnull),
+                TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::Eof,
+            ]
+        );
     }
 
     /// A number is delimited the way C delimits a preprocessing number, which

@@ -49,6 +49,13 @@ pub enum TokenKind {
     Keyword(Keyword),
     /// A word that is not.
     Identifier,
+    /// A word this compiler reads as a safety annotation.
+    ///
+    /// Not a [`Keyword`], which is the C17 set and is tested against it. Every
+    /// spelling here begins with an underscore and an uppercase letter, which
+    /// C17 7.1.3 p1 reserves to the implementation, so reading one as an
+    /// annotation takes no name away from a conforming program.
+    Annotation(Annotation),
     /// A numeric constant, as C delimits one.
     ///
     /// This is a *preprocessing number*: a digit, or a `.` and a digit,
@@ -101,6 +108,7 @@ impl TokenKind {
         match self {
             Self::Keyword(_) => "keyword",
             Self::Identifier => "identifier",
+            Self::Annotation(_) => "annotation",
             Self::Number => "number",
             Self::String => "string",
             Self::Character => "character",
@@ -217,6 +225,27 @@ impl Keyword {
     /// against an intuition.
     pub fn from_spelling(word: &str) -> Option<Self> {
         Self::ALL.iter().copied().find(|kw| kw.as_str() == word)
+    }
+}
+
+spellings! {
+    /// A word this compiler reads as a safety annotation.
+    ///
+    /// `_Nonnull` is `clang`'s spelling, written where `clang` writes it:
+    /// after the `*` of the pointer it qualifies. ADR-0037 says why this
+    /// spelling and what it means.
+    Annotation {
+        Nonnull => "_Nonnull",
+    }
+}
+
+impl Annotation {
+    /// The annotation spelled `word`, if any.
+    pub fn from_spelling(word: &str) -> Option<Self> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|annotation| annotation.as_str() == word)
     }
 }
 
@@ -502,6 +531,18 @@ mod tests {
                  which makes a scan of it consume nothing"
             );
         }
+    }
+
+    /// The annotation table, written out for the reason the keyword table is.
+    ///
+    /// `from_spelling` is `as_str` read backwards, so a round trip holds for any
+    /// spelling. A typo here is an annotation nobody can write, and every use
+    /// of it in a program becomes a name.
+    #[test]
+    fn the_annotation_table_is_the_spellings_this_compiler_reads() {
+        let spellings: Vec<_> = Annotation::ALL.iter().map(|a| a.as_str()).collect();
+
+        assert_eq!(spellings, ["_Nonnull"]);
     }
 
     /// Every spelling in the table is the one C uses, and no two variants share
