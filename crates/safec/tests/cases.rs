@@ -790,6 +790,15 @@ cases! {
     an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
     // Mutation: answer `!in_a_hatch` for `Unsafe` in `route`; this fails.
     a_proved_double_free_inside_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // The silent direction of getting the function wrong: a conclusion about
+    // a function after a hatch, credited to the hatch, is not reported. The
+    // hatch is the unit's first function so that a finding naming the first
+    // one lands on it. Mutation: have either check's `Finding::function` name
+    // `unit.functions().next()`; this fails.
+    a_function_after_a_hatch_is_still_answered_for: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // The two checks' conclusions interleaved by caret, where each check's own
+    // come out in a run. Mutation: drop the sort in `dump_hatches`; this fails.
+    what_a_hatch_concluded_is_listed_in_the_order_it_was_written: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
     // The boundary is the prototype, and the checked side reads it.
     a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What a hatch may have done to what it was handed is assumed to be the

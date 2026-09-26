@@ -262,11 +262,13 @@ impl EmitKind {
     /// only `Tokens`, `LlvmIr` and, once #144 added a case for it, `SafetyIr`
     /// change an answer.
     ///
-    /// **`Ast` is held by nothing**, and says the same as `SafetyIr` for the
-    /// same reason. One case holds the rule and a second differing in one word
-    /// would be a test of the corpus rather than of this. What is left for that
-    /// arm is `error[E0004]`, which makes somebody answer for a kind and, as
-    /// RK-015 in the review knowledge bank puts it, nothing more than that.
+    /// **`Ast` is held by nothing**, and neither is `Hatches`, measured by
+    /// moving it across. Each says the same as `SafetyIr` for the same reason:
+    /// a listing of what could be read is still true of what could be read.
+    /// One case holds the rule and a second differing in one word would be a
+    /// test of the corpus rather than of this. What is left for those arms is
+    /// `error[E0004]`, which makes somebody answer for a kind and, as RK-015 in
+    /// the review knowledge bank puts it, nothing more than that.
     ///
     /// **Asked of the file and not of the stream.** `--emit llvm-ir` with no
     /// `-o` still writes its module to the artifact stream on a run that
