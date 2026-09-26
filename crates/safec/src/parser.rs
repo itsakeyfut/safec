@@ -680,10 +680,11 @@ impl Parser<'_> {
     /// `__attribute__((name("argument")))`, the one shape of it this parser
     /// reads. See [`Attribute`] for what is left to `sema::resolve`.
     ///
-    /// Everything else inside the parentheses is refused with
+    /// Everything else inside the inner parentheses is refused with
     /// [`UNREAD_ATTRIBUTE`]: an attribute with no argument, one whose argument
-    /// is not a string, and a list of more than one. Each is an attribute that
-    /// is not the hatch's, and telling which from the shape alone needs no text.
+    /// is not a string, one with more than one argument or string, and a list
+    /// of more than one attribute. Each is an attribute that is not the
+    /// hatch's, and telling which from the shape alone needs no text.
     fn attribute(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Attribute> {
         let start = self.advance().span;
         self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
@@ -703,12 +704,16 @@ impl Parser<'_> {
             return self.unread(self.peek().span, diagnostics);
         }
         let argument = self.advance().span;
-        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
-
-        if self.check(TokenKind::Punct(Punct::Comma)) {
+        // A second argument, or a second string that C would join to the
+        // first, is not the hatch's one string: `clang` reads both, and a
+        // `SC0201` there would call valid GNU C malformed.
+        if !self.eat(TokenKind::Punct(Punct::RightParen)) {
             return self.unread(self.peek().span, diagnostics);
         }
-        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+        // A second attribute in the list, for the same reason.
+        if !self.eat(TokenKind::Punct(Punct::RightParen)) {
+            return self.unread(self.peek().span, diagnostics);
+        }
         self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
 
         Some(Attribute {

@@ -832,6 +832,8 @@ cases! {
     an_attribute_with_nothing_in_it_is_refused: ["--emit", "ast"],
     an_attribute_whose_argument_is_not_a_string_is_refused: ["--emit", "ast"],
     an_attribute_list_of_more_than_one_is_refused: ["--emit", "ast"],
+    an_attribute_with_a_second_argument_is_refused: ["--emit", "ast"],
+    an_attribute_whose_string_is_two_strings_is_refused: ["--emit", "ast"],
     an_attribute_other_than_annotate_is_refused: ["--emit", "ast"],
     an_annotation_other_than_the_hatch_is_refused: ["--emit", "ast"],
     a_second_attribute_before_a_definition_is_refused: ["--emit", "ast"],
