@@ -115,6 +115,27 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
+Two more are where the type checker declines an extension.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `v + 1` with `void *v` | `error[SC0306]` | accepts | `error: arithmetic on a pointer to void is a GNU extension` |
+| `fp + 1` with `int (*fp)(void)` | `error[SC0306]` | accepts | `error: arithmetic on a pointer to the function type 'int (void)' is a GNU extension` |
+
+**Both are constraint violations, and this compiler takes neither extension.** C17
+6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
+same of `-`, and 6.5.16.2 p1 says it of `+=` and `-=`; `void` is incomplete
+and a function is not an object. `clang` gives each a size of one unless asked
+to be pedantic. `-=` and `v - v` answer the same, because
+`types.rs::unsteppable` is the one place the additive operators and their
+compound assignments ask. `++`, `--` and a subscript are the same rule by C17
+6.5.2.4 p2, 6.5.3.1 p2 and 6.5.2.1 p1, and do not ask yet: `v++` and `v[1]`
+pass the type checker, and what refuses them later is about something else,
+`SC0801` about the backend and, for `v[1]`, `SC0403` about a null pointer
+([#242](https://github.com/itsakeyfut/safec/issues/242)). A pointer to an array
+of unknown length is refused by the same rule and is not a row, because `clang`
+refuses it too, with or without `-pedantic-errors`.
+
 ### What an integer constant is worth, and what type it is not
 
 The scan settles where a constant ends and stops there. `crates/safec/src/types.rs`
