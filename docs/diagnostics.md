@@ -47,7 +47,7 @@ records why the prefix is this one and what was rejected.
 |---|---|---|
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106` |
-| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204` |
+| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307` |
 | `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405` |
 | `SC05xx` | lifetime | none yet |
@@ -84,6 +84,17 @@ broke. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-check
 is the decision. The two frontend refusals that come with it, `SC0204` for a
 `_Nonnull` where it cannot apply and `SC0307` for two declarations that
 disagree about one, are in [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read).
+
+**A hatch moves an unproven conclusion rather than removing it.** Inside a
+function definition declared a hatch, an `SC04xx` that could not be proved is
+not reported: it is written by `--emit hatches` under that hatch instead,
+because it is a statement about the hatch and not about the program. One that
+was proved is reported as it would be anywhere. The code does not change in
+either place, so a reader searching for `SC0403` finds it in the listing as
+well. [ADR-0038](adr/0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
+is the decision. `SC0204` also refuses the hatch's attribute where it cannot
+apply, and `SC0205` is an attribute this compiler does not read, which is every
+one but the hatch's; both are in [`frontend.md`](frontend.md#where-the-hatch-is-read).
 
 **`SC0404` is a fourth class, for the same reason.** It is about a pointer that
 points somewhere real and is not the thing `free` takes: C17 7.22.3.3 p2 makes

@@ -44,7 +44,7 @@ use crate::sema::{Resolution, resolve};
 use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
-use safec_ir::ir::TranslationUnit;
+use safec_ir::ir::{FuncId, TranslationUnit};
 use safec_ir::memory::{self, Kind, Unproven};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
@@ -385,6 +385,7 @@ pub fn compile(options: &Options) -> Compiled {
         EmitKind::Tokens => Emitted::Tokens(String::new()),
         EmitKind::Ast => Emitted::Ast(String::new()),
         EmitKind::SafetyIr => Emitted::SafetyIr(String::new()),
+        EmitKind::Hatches => Emitted::Hatches(String::new()),
         EmitKind::LlvmIr => Emitted::LlvmIr(String::new()),
         EmitKind::Object => Emitted::Object(Vec::new()),
         EmitKind::Executable => Emitted::Program {
@@ -427,7 +428,7 @@ pub fn compile(options: &Options) -> Compiled {
                 dump_ast(&sources, &analysed.ast, out);
             }
             Emitted::SafetyIr(out) => {
-                let Some(unit) = lowered(
+                let Some((unit, _)) = lowered(
                     &sources,
                     file,
                     &tokens,
@@ -439,8 +440,21 @@ pub fn compile(options: &Options) -> Compiled {
                 };
                 dump_ir(&sources, &unit, out);
             }
+            Emitted::Hatches(out) => {
+                let Some((unit, hatched)) = lowered(
+                    &sources,
+                    file,
+                    &tokens,
+                    read_whole,
+                    options,
+                    &mut diagnostics,
+                ) else {
+                    continue;
+                };
+                dump_hatches(&sources, &unit, &hatched, out);
+            }
             Emitted::LlvmIr(out) => {
-                let Some(unit) = lowered(
+                let Some((unit, _)) = lowered(
                     &sources,
                     file,
                     &tokens,
@@ -453,7 +467,7 @@ pub fn compile(options: &Options) -> Compiled {
                 out.push_str(&module(&sources, &unit, options.target, &mut diagnostics));
             }
             Emitted::Object(out) => {
-                let Some(unit) = lowered(
+                let Some((unit, _)) = lowered(
                     &sources,
                     file,
                     &tokens,
@@ -482,7 +496,7 @@ pub fn compile(options: &Options) -> Compiled {
                 }
             }
             Emitted::Program { modules, .. } => {
-                let Some(unit) = lowered(
+                let Some((unit, _)) = lowered(
                     &sources,
                     file,
                     &tokens,
@@ -542,6 +556,8 @@ enum Emitted {
     Ast(String),
     /// What `--emit safety-ir` asked for.
     SafetyIr(String),
+    /// What `--emit hatches` asked for.
+    Hatches(String),
     /// What `--emit llvm-ir` asked for.
     LlvmIr(String),
     /// What `--emit object` asked for.
@@ -569,9 +585,11 @@ enum Emitted {
 impl Emitted {
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            Self::Tokens(text) | Self::Ast(text) | Self::SafetyIr(text) | Self::LlvmIr(text) => {
-                text.into_bytes()
-            }
+            Self::Tokens(text)
+            | Self::Ast(text)
+            | Self::SafetyIr(text)
+            | Self::Hatches(text)
+            | Self::LlvmIr(text) => text.into_bytes(),
             Self::Object(bytes) | Self::Program { bytes, .. } => bytes,
         }
     }
@@ -644,7 +662,7 @@ fn lowered(
     read_whole: usize,
     options: &Options,
     diagnostics: &mut DiagnosticSink,
-) -> Option<TranslationUnit> {
+) -> Option<(TranslationUnit, Vec<Hatched>)> {
     let analysed = analysed(
         sources,
         file,
@@ -677,10 +695,16 @@ fn lowered(
     // purpose, so a level above this one runs this check too, and there is
     // nothing below `Off`. `EmitKind` is the other case and deliberately has no
     // `Ord` at all.
+    let mut hatched = Vec::new();
     if options.safety >= SafetyLevel::Memory {
         for finding in memory::findings(sources, &unit) {
             if let Some(diagnostic) = memory_finding(&finding) {
-                diagnostics.report(diagnostic);
+                let concluded = Concluded {
+                    function: finding.function,
+                    conclusion: finding.conclusion,
+                    diagnostic,
+                };
+                route(&unit, concluded, &mut hatched, diagnostics);
             }
         }
         // A second analysis rather than a second question for the first: one
@@ -689,12 +713,138 @@ fn lowered(
         // lattice that shares nothing with theirs.
         for finding in nullability::findings(&unit) {
             if let Some(diagnostic) = nullability_finding(&finding) {
-                diagnostics.report(diagnostic);
+                let concluded = Concluded {
+                    function: finding.function,
+                    conclusion: finding.conclusion,
+                    diagnostic,
+                };
+                route(&unit, concluded, &mut hatched, diagnostics);
             }
         }
     }
 
-    Some(unit)
+    Some((unit, hatched))
+}
+
+/// What a check concluded, as a diagnostic, and the function it was concluded
+/// in.
+///
+/// One type for both checks, so that [`route`] is one rule rather than a copy
+/// in each loop. RK-052 in the review knowledge bank is what two copies cost.
+#[derive(Clone)]
+struct Concluded {
+    function: FuncId,
+    conclusion: Conclusion,
+    diagnostic: Diagnostic,
+}
+
+/// A conclusion drawn inside a hatch, kept for `--emit hatches`.
+type Hatched = Concluded;
+
+/// Report a conclusion, or keep it for the listing where it was drawn inside a
+/// hatch and could not be proved.
+///
+/// **What a hatch changes is what a conclusion is about, not what it
+/// concluded.** Every conclusion inside a hatch is kept for the listing,
+/// whatever it was. One that could not be proved is not reported as well,
+/// because it is a statement about the hatch and not about the program. One
+/// that was proved is reported as it would be anywhere: a hatch is for what
+/// cannot be proved, and a program proved undefined on some execution is not
+/// that. See ADR-0038.
+///
+/// Every conclusion written out rather than a comparison, so that a fourth one
+/// is answered for here by `error[E0004]`.
+fn route(
+    unit: &TranslationUnit,
+    concluded: Concluded,
+    hatched: &mut Vec<Hatched>,
+    diagnostics: &mut DiagnosticSink,
+) {
+    let in_a_hatch = unit.function(concluded.function).hatch();
+    let reported = match concluded.conclusion {
+        Conclusion::Unknown => !in_a_hatch,
+        Conclusion::Safe | Conclusion::Unsafe => true,
+    };
+
+    if in_a_hatch {
+        hatched.push(concluded.clone());
+    }
+    if reported {
+        diagnostics.report(concluded.diagnostic);
+    }
+}
+
+/// Every hatch in `unit`, and under each what the checks concluded inside it.
+///
+/// One line per hatch, at its name, and one line per conclusion, at its caret,
+/// in the order a reader meets them in the file. Each conclusion says its
+/// code, what was concluded, and its message. A hatch nothing was concluded
+/// in is listed all the same, which is what makes this the count of them: at
+/// `--safety off` no check runs and every hatch is listed with nothing under
+/// it.
+///
+/// Every line begins with [`dump_node`], so a file's name is escaped the way it
+/// is in every other artifact, and the function's name is the file's text and
+/// is written with `{:?}` for the reason RK-002 gives.
+fn dump_hatches(
+    sources: &SourceMap,
+    unit: &TranslationUnit,
+    hatched: &[Hatched],
+    out: &mut String,
+) {
+    for id in unit.functions() {
+        let function = unit.function(id);
+        if !function.hatch() {
+            continue;
+        }
+
+        dump_node(sources, "Hatch", function.name, 0, out);
+        writeln!(out, " {:?}", quoted(sources, function.name))
+            .expect("writing to a string cannot fail");
+
+        let mut inside: Vec<&Hatched> = hatched
+            .iter()
+            .filter(|concluded| concluded.function == id)
+            .collect();
+        inside.sort_by_key(|concluded| {
+            let at = caret(&concluded.diagnostic);
+            (at.file().index(), at.start())
+        });
+
+        for concluded in inside {
+            dump_node(sources, "Conclusion", caret(&concluded.diagnostic), 1, out);
+            let code = concluded
+                .diagnostic
+                .code()
+                .map_or(String::new(), |code| code.as_str().to_owned());
+            // In `docs/safety-model.md`'s three words, so that the one a
+            // reader does not see here yet reads alike when it arrives.
+            let said = match concluded.conclusion {
+                Conclusion::Safe => "safe",
+                Conclusion::Unsafe => "unsafe",
+                Conclusion::Unknown => "unknown",
+            };
+            writeln!(
+                out,
+                " {:?} {:?} {:?}",
+                code,
+                said,
+                concluded.diagnostic.message()
+            )
+            .expect("writing to a string cannot fail");
+        }
+    }
+}
+
+/// Where a check's diagnostic puts its caret.
+///
+/// Every one `memory_finding` and `nullability_finding` build has a primary
+/// label, because a conclusion is about a place in the program.
+fn caret(diagnostic: &Diagnostic) -> Span {
+    diagnostic
+        .primary_label()
+        .expect("a check's diagnostic points at what it concluded about")
+        .span()
 }
 
 /// What a run asked for above what it can deliver, as what a user reads.
@@ -1123,7 +1273,11 @@ fn destination(options: &Options) -> Option<PathBuf> {
     // kind added and forgotten in a list is answered by no arm and goes to the
     // stream, which for a kind with a default name is silent and wrong.
     match options.emit {
-        EmitKind::Tokens | EmitKind::Ast | EmitKind::SafetyIr | EmitKind::LlvmIr => None,
+        EmitKind::Tokens
+        | EmitKind::Ast
+        | EmitKind::SafetyIr
+        | EmitKind::Hatches
+        | EmitKind::LlvmIr => None,
         EmitKind::Object => {
             let mut named = options.inputs.first()?.file_stem()?.to_os_string();
             named.push(".o");
@@ -1602,6 +1756,19 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
                 spell_type(sources, ast, function.ty)
             )
             .expect("writing to a string cannot fail");
+            // The name and the string as written, because the tree records what
+            // was read and `sema::resolve` is what says whether it is a hatch.
+            // Both are the file's text, written with `{:?}` for the reason
+            // RK-002 gives.
+            if let Some(attribute) = function.attribute {
+                write!(
+                    out,
+                    " __attribute__ {:?} {:?}",
+                    quoted(sources, attribute.name),
+                    quoted(sources, attribute.argument)
+                )
+                .expect("writing to a string cannot fail");
+            }
             out.push('\n');
             dump_parameters(sources, ast, function.ty, depth + 1, out);
             dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
@@ -3373,9 +3540,13 @@ int main(void) {
             return;
         }
 
+        // `add` is a hatch because `--emit hatches` lists hatches, and a
+        // program with none is one it rightly answers nothing for. Every other
+        // kind makes the same thing of it either way.
         let file = TempFile::new(
             "safec_driver_emit_every.c",
-            "int add(int a, int b) { return a + b; }
+            "__attribute__((annotate(\"safec_unchecked\")))
+int add(int a, int b) { return a + b; }
 int main(void) { return add(1, 2); }
 ",
         );
@@ -3535,6 +3706,7 @@ int main(void) { return add(1, 2); }
             name: Span::new(first, 4, 9),
             body,
             span: Span::new(first, 0, 29),
+            attribute: None,
         }));
 
         let mut out = String::new();

@@ -1,0 +1,6 @@
+Function a_hatch_is_read_into_the_tree.c:2:1 "raw" "int (int *)" __attribute__ "annotate" "\"safec_unchecked\""
+  Parameter a_hatch_is_read_into_the_tree.c:2:9 "p" "int *"
+  Compound a_hatch_is_read_into_the_tree.c:2:17
+    Return a_hatch_is_read_into_the_tree.c:3:5
+      Unary a_hatch_is_read_into_the_tree.c:3:12 "*"
+        Identifier a_hatch_is_read_into_the_tree.c:3:13 "p"

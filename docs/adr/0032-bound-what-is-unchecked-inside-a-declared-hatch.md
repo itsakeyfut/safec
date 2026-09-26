@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-22
 decision-makers: itsakeyfut
 ---
@@ -95,28 +95,28 @@ before Phase 5 has written one annotation would be deciding it with no evidence.
 
 ### Confirmation
 
-**Nothing guards this today, and that is the honest answer.** There is no hatch
-in the tree. There is one annotation, `_Nonnull`, and it is this record's
-boundary promise at the scale of one declaration:
-[ADR-0037](./0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
-is that decision and its Confirmation is what guards it. It guards the promise
-and not a region, which is what this record decides, so it is not this
-record's guard.
+**The stance is built, as a hatch that is a function definition.**
+[ADR-0038](./0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
+is the form and the spelling, and its Confirmation carries every mutation and
+the case it fails. The two guards this record asked for are among them.
 
-What would guard it is the first check that reads a hatch. The guard to build
-with it is a test that a hatch does **not** change what a check concluded, only
-what the conclusion is about: a program whose hatch is removed and whose
-boundary promise stays must still be rejected. The mutation is to make the hatch
-suppress the report instead, and if the suite stays green then the suppression
-option was taken by accident.
+That a hatch changes what a conclusion is about and not what it concluded:
+having `driver.rs::route` keep nothing for `--emit hatches`, which is the
+suppression this record rules out, fails
+`an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported`. Its twin,
+`the_same_dereference_outside_a_hatch_is_reported`, is the same body without
+the hatch, and is refused.
 
-The default decided above needs a guard of its own: a region that declared no
-effects, followed by a use of an allocation it could have reached, has to
-report. The mutation is to leave what such a region could reach alone. If the
-suite stays green, the permissive default was built and nothing said so.
+That a hatch which declared no effects assumes the worst: having
+`memory.rs::Allocations::callee` answer that a call to a hatch touches nothing
+fails `freeing_what_was_handed_to_a_hatch_is_not_proved`. A definition cannot
+declare effects at all yet, so every hatch is this case.
 
-This section is to be rewritten in the change that lands the first hatch, not
-afterwards. RK-017 in the review knowledge bank is what happens otherwise.
+**The region half is not built.** A hatch that is a stretch of statements
+inside a function, and the vocabulary for either form to narrow what it may do,
+are [#249](https://github.com/itsakeyfut/safec/issues/249). The paragraph above
+on what a region assumes on the way out is guarded by nothing until that lands,
+and the change that lands it owes this section a row.
 
 ### Consequences
 
@@ -165,8 +165,8 @@ afterwards. RK-017 in the review knowledge bank is what happens otherwise.
 
 ## More Information
 
-* [`docs/safety-model.md`](../safety-model.md), which this serves and which has
-  no hatch in it today.
+* [`docs/safety-model.md`](../safety-model.md#hatches), which this serves and
+  which says what a hatch is now.
 * [ADR-0033](./0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md),
   which depends on this one: rejecting every unproven result is only usable if
   there is somewhere to put what cannot be proved.

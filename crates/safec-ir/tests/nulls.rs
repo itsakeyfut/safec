@@ -640,3 +640,55 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
     assert_eq!(found[1].conclusion, Conclusion::Unknown);
     assert_eq!(found[1].at, names.at[1]);
 }
+
+/// Two functions that share a caret are asked about apart.
+///
+/// The findings of a whole unit are sorted by caret and then folded where two
+/// say the same thing at one, and a driver decides what to do with each by the
+/// function it names: one inside a hatch is listed rather than reported. So a
+/// fold that ignored the function would let the first function's finding stand
+/// for the second's, and where the first is a hatch the second's unproven
+/// dereference would go unreported.
+///
+/// **This compiler's own frontend cannot produce it**: no two of its functions
+/// share a span. A fragment `#include`d into two bodies would, and so could
+/// the Clang adapter, which reads this IR without this frontend.
+///
+/// Mutation: drop `later.function == earlier.function` from the key in
+/// `nullability::findings`' `dedup_by`. The two findings fold into the first
+/// function's, and this fails with one where it expects two.
+#[test]
+fn two_functions_that_share_a_caret_are_asked_about_apart() {
+    let (_map, names) = sources();
+    let (mut unit, _, int) = a_unit(&names, &[]);
+    let pointer = unit.push_type(Ty::Pointer(int));
+
+    for hatch in [true, false] {
+        let mut function = Function::new(names.function, int, [pointer]);
+        let p = function.parameters().next().expect("one parameter");
+        let entry = function.reserve_block();
+        function.fill_block(
+            entry,
+            Block {
+                elements: vec![write_through(p, names.at[0])],
+                terminator: Terminator::Return,
+            },
+        );
+        if hatch {
+            function = function.hatched();
+        }
+        unit.push_function(function);
+    }
+
+    let found = nullability::findings(&unit);
+
+    let functions: Vec<_> = found.iter().map(|finding| finding.function).collect();
+    assert_eq!(found.len(), 2, "{found:?}");
+    assert_ne!(functions[0], functions[1], "{found:?}");
+    assert!(
+        found
+            .iter()
+            .all(|finding| finding.conclusion == Conclusion::Unknown && finding.at == names.at[0]),
+        "{found:?}"
+    );
+}

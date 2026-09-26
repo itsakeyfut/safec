@@ -1,0 +1,7 @@
+error[SC0204]: `__attribute__` cannot apply here
+   ╭─[ a_second_attribute_before_a_definition_is_refused.c:1:46 ]
+   │
+ 1 │ __attribute__((annotate("safec_unchecked"))) __attribute__((annotate("safec_unchecked")))
+   │                                              ──────┬──────  
+   │                                                    ╰──────── it is read once, before a function definition at file scope
+───╯

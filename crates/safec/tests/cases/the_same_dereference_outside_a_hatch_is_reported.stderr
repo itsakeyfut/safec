@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ the_same_dereference_outside_a_hatch_is_reported.c:2:5 ]
+   │
+ 2 │     return *p;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

@@ -282,9 +282,11 @@ it can.
 * [#134](https://github.com/itsakeyfut/safec/issues/134), where the design
   comment carries the detail this record leaves out.
 * [ADR-0032](./0032-bound-what-is-unchecked-inside-a-declared-hatch.md), whose
-  boundary promise this is at the scale of one declaration, and which stays
-  `proposed` until [#210](https://github.com/itsakeyfut/safec/issues/210) lands a
-  region.
+  boundary promise this is at the scale of one declaration.
+  [#210](https://github.com/itsakeyfut/safec/issues/210) built its hatch as a
+  function definition, and
+  [ADR-0038](./0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
+  is that decision.
 * [ADR-0033](./0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md),
   which is why an unannotated parameter costs a build.
 * [`docs/safety-model.md`](../safety-model.md#annotations), whose sketch this

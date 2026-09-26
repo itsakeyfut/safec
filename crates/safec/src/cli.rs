@@ -256,6 +256,7 @@ mod tests {
                 "tokens",
                 "ast",
                 "safety-ir",
+                "hatches",
                 "llvm-ir",
                 "object",
                 "executable"

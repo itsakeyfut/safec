@@ -773,6 +773,77 @@ cases! {
     // is reported beside the refusal.
     a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // A hatch: a function definition whose unproven conclusions are listed
+    // rather than reported. See ADR-0038, whose Confirmation names the
+    // mutation each of these fails under.
+    //
+    // One case per stage it passes through, for RK-033's reason: the tree, the
+    // IR, and the listing.
+    a_hatch_is_read_into_the_tree: ["--emit", "ast"],
+    // The pair the record is about: one body, reported outside a hatch and
+    // not inside one. Mutation: have `Lowering::body` never call
+    // `Function::unchecked`; the first of the two fails.
+    an_unproven_dereference_inside_a_hatch_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    the_same_dereference_outside_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: have `route` keep nothing in `hatched`, which is the hatch as
+    // a suppression; this fails.
+    an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: answer `!in_a_hatch` for `Unsafe` in `route`; this fails.
+    a_proved_double_free_inside_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // The silent direction of getting the function wrong: a conclusion about
+    // a function after a hatch, credited to the hatch, is not reported. The
+    // hatch is the unit's first function so that a finding naming the first
+    // one lands on it. Mutation: have either check's `Finding::function` name
+    // `unit.functions().next()`; this fails.
+    a_function_after_a_hatch_is_still_answered_for: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // The two checks' conclusions interleaved by caret, where each check's own
+    // come out in a run. Mutation: drop the sort in `dump_hatches`; this fails.
+    what_a_hatch_concluded_is_listed_in_the_order_it_was_written: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // The boundary is the prototype, and the checked side reads it.
+    a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a hatch may have done to what it was handed is assumed to be the
+    // worst, because it cannot yet say otherwise: ADR-0032's default.
+    freeing_what_was_handed_to_a_hatch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A hatch's body is the one whose unproven conclusions are not reported,
+    // so what the caller cannot see it do is assumed to be the worst: every
+    // allocation still live is unproven after a call to one. Mutation: drop
+    // the loop over `value.state` in `memory.rs`'s `Callee::Opaque` arm; the
+    // first two fail, and the first is a use after free going silent.
+    what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: make that loop mark every site rather than the live ones; this
+    // fails, a proved double free becoming unproven.
+    a_free_proved_before_a_call_to_a_hatch_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `&&` writes both operands at one caret. Mutation: keep the first finding
+    // at a caret in `nullability::findings`' `dedup_by` rather than the worst;
+    // this fails, and the proved dereference builds.
+    a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // An attribute `sema::resolve` refused is not a hatch, even on the run that
+    // is written anyway. Mutation: have the lowering mark a hatch wherever an
+    // attribute is present; this fails.
+    an_unproven_dereference_behind_a_refused_attribute_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: have `dump_hatches` list every hatch's conclusions under each;
+    // this fails.
+    each_hatch_lists_only_what_was_concluded_inside_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // The listing is the count of hatches, whether or not a check ran.
+    every_hatch_is_listed_at_safety_off_with_nothing_under_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
+    a_program_with_no_hatch_lists_none: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // Everywhere it cannot apply, and every attribute that is not it: one case
+    // per place `parser.rs` and `sema.rs` refuse one.
+    a_hatch_on_a_declaration_is_refused: ["--emit", "ast"],
+    an_attribute_with_no_argument_is_refused: ["--emit", "ast"],
+    an_attribute_with_nothing_in_it_is_refused: ["--emit", "ast"],
+    an_attribute_whose_argument_is_not_a_string_is_refused: ["--emit", "ast"],
+    an_attribute_list_of_more_than_one_is_refused: ["--emit", "ast"],
+    an_attribute_with_a_second_argument_is_refused: ["--emit", "ast"],
+    an_attribute_whose_string_is_two_strings_is_refused: ["--emit", "ast"],
+    an_attribute_other_than_annotate_is_refused: ["--emit", "ast"],
+    an_annotation_other_than_the_hatch_is_refused: ["--emit", "ast"],
+    a_second_attribute_before_a_definition_is_refused: ["--emit", "ast"],
+    an_attribute_after_a_specifier_is_refused: ["--emit", "ast"],
+    an_attribute_in_a_block_is_refused: ["--emit", "ast"],
+    an_attribute_on_a_parameter_is_refused: ["--emit", "ast"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

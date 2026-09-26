@@ -1,0 +1,3 @@
+Hatch each_hatch_lists_only_what_was_concluded_inside_it.c:2:5 "raw"
+  Conclusion each_hatch_lists_only_what_was_concluded_inside_it.c:3:5 "SC0403" "unknown" "this may dereference a null pointer"
+Hatch each_hatch_lists_only_what_was_concluded_inside_it.c:7:5 "quiet"

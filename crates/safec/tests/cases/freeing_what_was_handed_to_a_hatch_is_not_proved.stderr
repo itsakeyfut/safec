@@ -1,0 +1,10 @@
+error[SC0401]: this may free a value that was freed already
+    ╭─[ freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 ]
+    │
+ 11 │     free(p);
+    │     ───┬───  
+    │        ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

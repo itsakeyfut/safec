@@ -111,9 +111,7 @@ project asks instead that a program be rewritten until it can be proved, and
 [ADR-0033](adr/0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md),
 which also records what that costs: the false positive rate becomes something a
 user feels rather than something they can ignore, and the answer to it is the
-hatch in
-[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md), which
-does not exist yet, and the annotations below, of which one does.
+hatch and the annotation below.
 
 `Unsafe` says that **some** execution of the function is undefined, not that
 every one is. A check here reads one function at a time, so a parameter ranges
@@ -284,9 +282,49 @@ Safety-checked C
 
 This should be explored experimentally rather than decided prematurely.
 
-What an annotation cannot reach is code this compiler never checked: another
-translation unit, the C library, inline assembly, an allocator. Something has
-to hold what is trusted there, or the levels above have nothing to stand on.
-[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md)
-proposes a declared region that claims nothing about its body and carries a
-promise at its boundary, and decides the stance rather than the syntax.
+### Hatches
+
+What an annotation cannot reach is code whose safety no check can establish:
+an allocator, a call into a library nobody annotated, a stretch of pointer work
+the analysis loses track of. Something has to hold what is trusted there, or
+the levels above have nothing to stand on.
+[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) decides
+the stance: a declared hatch claims nothing about its body, carries a promise at
+its boundary, and the checked side reads the promise.
+
+**A hatch is a function definition.** Written before one,
+
+```c
+__attribute__((annotate("safec_unchecked")))
+int raw(int *p) { return *p; }
+```
+
+it changes what a conclusion inside the body is about, and not what the check
+concluded. The checks run over the body as over any other. What they could not
+prove there is not reported, because it is a statement about the hatch rather
+than about the program, and `--emit hatches` lists it under the hatch instead.
+What they proved is reported as it would be anywhere, because a hatch is for
+what cannot be proved and a program proved undefined is not that. The same
+command lists every hatch, so the set of them is something an audit can count.
+[ADR-0038](adr/0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
+has the reasoning and the forms it rejected, and
+[`frontend.md`](frontend.md#where-the-hatch-is-read) says where it is read.
+
+**Its boundary is its prototype.** A `_Nonnull` parameter of a hatch is
+checked at every call in the translation unit, as any other is. A caller
+assumes the worst of what the hatch may have done: after a call to one, every
+allocation the caller still holds live is unproven, whether or not the hatch
+was handed it, because what a hatch can reach through memory is not something
+this check follows and its body is the one whose unproven conclusions are not
+reported. An allocation already proved freed stays proved. A hatch cannot
+yet say otherwise; declaring what it writes and frees, and a hatch that is a
+region inside a function rather than a whole one, are
+[#249](https://github.com/itsakeyfut/safec/issues/249).
+
+**So the guarantee is conditional, and says on what.** A program that builds
+is proved outside its hatches, given the promises at their boundaries. A
+promise that is wrong is not detected: nothing checks a hatch's body against
+its prototype, and a caller in another translation unit is not checked against
+a `_Nonnull` either. That is the cost of having somewhere to put what cannot be
+proved, and what bounds it is that each hatch is written at a named place, in a
+list a command can print.

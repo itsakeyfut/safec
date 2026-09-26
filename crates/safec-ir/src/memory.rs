@@ -1122,6 +1122,8 @@ fn named(reached: &[Reached]) -> impl Iterator<Item = usize> + '_ {
 struct Allocations<'a> {
     sources: &'a SourceMap,
     unit: &'a TranslationUnit,
+    /// The function this is the analysis of, which every finding names.
+    function: FuncId,
     /// How many locals the function has, which is how many sites there can be.
     locals: usize,
     /// The locals a caller filled, which are sites because an allocation can
@@ -1935,6 +1937,26 @@ impl Analysis for Allocations<'_> {
                     value.state[site] = SiteState::Unknown;
                 }
 
+                // **A hatch may have reached anything, so every allocation
+                // still live is unproven after it.** The loop above is about
+                // the sites the arguments name, and this check does not follow
+                // a pointer stored into memory it does not model: `*box = p;
+                // drop_inner(box);` hands the callee `p`'s allocation one
+                // level down, where no argument names it. Everywhere else that
+                // gap is answered by the callee's own body being checked, and
+                // a hatch's body is the one whose unproven conclusions are
+                // listed rather than reported. So what the body cannot answer
+                // the caller assumes the worst of, which is ADR-0032's default
+                // with nothing declared to narrow it. A proved free stays
+                // proved: nothing a callee does un-frees it. See ADR-0038.
+                if self.unit.function(*callee).hatch() {
+                    for state in &mut value.state {
+                        if let SiteState::Live(_) = state {
+                            *state = SiteState::Unknown;
+                        }
+                    }
+                }
+
                 // **What it was handed is not all it can reach.** The loop
                 // above is about the allocations the arguments name; this is
                 // about the *locals* whose addresses are out there, which this
@@ -2035,6 +2057,12 @@ pub enum Kind {
 /// answers it, and ADR-0001 is why there is only one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
+    /// The function it was concluded in.
+    ///
+    /// What lets a driver tell a conclusion about a hatch from one about the
+    /// program. The span alone cannot say, because nothing here maps a span
+    /// back to the function whose body holds it. See ADR-0038.
+    pub function: FuncId,
     /// Which of the two this is.
     pub kind: Kind,
     /// What that check concluded.
@@ -2126,8 +2154,8 @@ pub enum Unproven {
 pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
     let mut findings = Vec::new();
 
-    for id in unit.functions() {
-        let function = unit.function(id);
+    for func in unit.functions() {
+        let function = unit.function(func);
         // A declaration has no blocks, and `Function::blocks` panics rather
         // than answering for one.
         if !function.is_defined() {
@@ -2137,6 +2165,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
         let analysis = Allocations {
             sources,
             unit,
+            function: func,
             locals: function.locals().len(),
             parameters: function.parameters().collect(),
         };
@@ -2174,6 +2203,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     &mut said,
                     dereferenced_in_element(element),
                     &known,
+                    func,
                 );
                 analysis.element(function, element, &mut known);
             }
@@ -2186,6 +2216,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 &mut said,
                 dereferenced_in_terminator(&block.terminator),
                 &known,
+                func,
             );
             findings.extend(reported(&analysis, &block.terminator, &known, &null, id));
             // After the free's own finding, which is the one whose caret is
@@ -2457,6 +2488,7 @@ fn reported(
         .unwrap_or(Offset::Zero);
 
     let finding = |kind, verdict: Verdict| Finding {
+        function: analysis.function,
         kind,
         conclusion: verdict.conclusion,
         at: origin.span(),
@@ -2659,6 +2691,7 @@ fn used(
     said: &mut Vec<(Span, Place, usize)>,
     at: Option<(Span, Vec<&Place>)>,
     known: &Known,
+    function: FuncId,
 ) {
     let Some((at, dereferenced)) = at else {
         return;
@@ -2689,6 +2722,7 @@ fn used(
             said,
             place,
             Finding {
+                function,
                 kind: Kind::UseAfterFree,
                 conclusion: verdict.conclusion,
                 at,
@@ -2928,6 +2962,7 @@ fn used_before(
             said,
             place,
             Finding {
+                function: analysis.function,
                 kind: Kind::UseAfterFree,
                 conclusion: Conclusion::Unknown,
                 at: read.at,

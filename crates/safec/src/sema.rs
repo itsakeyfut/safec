@@ -20,9 +20,11 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    Ast, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId,
+    Ast, Attribute, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId,
+    Type, TypeId,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::parser::{UNREAD_ATTRIBUTE, UNREAD_ATTRIBUTE_LABEL};
 use safec_ir::source::{SourceMap, Span};
 
 /// A name used where nothing declares it.
@@ -75,9 +77,22 @@ pub struct Binding {
 pub struct Resolution {
     bindings: Vec<Binding>,
     resolved: HashMap<ExprId, BindingId>,
+    /// Every attribute this stage accepted as a hatch, by where it was written.
+    hatches: Vec<Span>,
 }
 
 impl Resolution {
+    /// Whether `attribute` is one this stage accepted as a hatch.
+    ///
+    /// Asked by the lowering, so that what makes a function a hatch is this
+    /// stage's verdict rather than an attribute being present. A refused one
+    /// still reaches the lowering, because the lowering runs after a name this
+    /// stage could not resolve, and `--emit safety-ir` and `--emit hatches` are
+    /// still written on the run that refused it. See ADR-0038.
+    pub fn is_hatch(&self, attribute: Attribute) -> bool {
+        self.hatches.contains(&attribute.span)
+    }
+
     /// The binding `id` names.
     ///
     /// # Panics
@@ -112,6 +127,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         resolution: Resolution {
             bindings: Vec::new(),
             resolved: HashMap::new(),
+            hatches: Vec::new(),
         },
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
@@ -147,6 +163,9 @@ impl Resolver<'_> {
     fn item(&mut self, item: &Item, diagnostics: &mut DiagnosticSink) {
         match item {
             Item::Function(function) => {
+                if let Some(attribute) = function.attribute {
+                    self.attribute(attribute, diagnostics);
+                }
                 self.walk_type(function.ty, diagnostics);
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
@@ -169,6 +188,34 @@ impl Resolver<'_> {
             }
             Item::Error { .. } => {}
         }
+    }
+
+    /// Refuse an attribute that is not `annotate("safec_unchecked")`.
+    ///
+    /// Here rather than in the parser, which reads the shape and not the text:
+    /// [`Attribute`] says why. The string is compared as written, quotes
+    /// included, so an escape that spells the same bytes is refused, which is
+    /// row 4 and not a spelling anybody writes.
+    ///
+    /// What it accepts is recorded, and [`Resolution::is_hatch`] is the only
+    /// thing that makes a function a hatch.
+    ///
+    /// [`Attribute`]: crate::ast::Attribute
+    fn attribute(&mut self, attribute: Attribute, diagnostics: &mut DiagnosticSink) {
+        let refused = if self.sources.snippet(attribute.name) != "annotate" {
+            attribute.name
+        } else if self.sources.snippet(attribute.argument) != "\"safec_unchecked\"" {
+            attribute.argument
+        } else {
+            self.resolution.hatches.push(attribute.span);
+            return;
+        };
+
+        diagnostics.report(
+            Diagnostic::error("safec does not read this attribute")
+                .with_code(UNREAD_ATTRIBUTE)
+                .with_label(Label::primary(refused, UNREAD_ATTRIBUTE_LABEL)),
+        );
     }
 
     /// Every declarator of one declaration, in the order they were written.

@@ -1,0 +1,17 @@
+error[SC0205]: safec does not read this attribute
+   ╭─[ an_unproven_dereference_behind_a_refused_attribute_is_still_reported.c:1:25 ]
+   │
+ 1 │ __attribute__((annotate("unchecked")))
+   │                         ─────┬─────  
+   │                              ╰─────── the one attribute it reads is `annotate("safec_unchecked")`
+───╯
+error[SC0403]: this may dereference a null pointer
+   ╭─[ an_unproven_dereference_behind_a_refused_attribute_is_still_reported.c:3:5 ]
+   │
+ 3 │     return *p;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

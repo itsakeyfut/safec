@@ -627,6 +627,9 @@ impl Lowering<'_> {
                 continue;
             };
             let (name, ty, body) = (function.name, function.ty, function.body);
+            let hatch = function
+                .attribute
+                .is_some_and(|attribute| self.resolution.is_hatch(attribute));
 
             let Some(id) = self.functions.get(self.sources.snippet(name)).copied() else {
                 continue;
@@ -651,7 +654,7 @@ impl Lowering<'_> {
                 );
                 continue;
             }
-            let Some(built) = self.body(name, ty, body, diagnostics) else {
+            let Some(built) = self.body(name, ty, body, hatch, diagnostics) else {
                 continue;
             };
 
@@ -660,11 +663,15 @@ impl Lowering<'_> {
     }
 
     /// One function's blocks, or nothing where something could not be lowered.
+    ///
+    /// `hatch` is whether `sema::resolve` accepted the attribute written before
+    /// it as a hatch. See ADR-0038.
     fn body(
         &mut self,
         name: Span,
         ty: TypeId,
         body: StmtId,
+        hatch: bool,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Function> {
         let Type::Function {
@@ -676,7 +683,10 @@ impl Lowering<'_> {
         };
         let (returns, parameters) = (*returns, parameters.clone());
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
-        let function = Function::with_parameters(name, returns, lowered);
+        let mut function = Function::with_parameters(name, returns, lowered);
+        if hatch {
+            function = function.hatched();
+        }
 
         // A parameter is a local before the body's first statement, and its
         // name is how the body reaches it.

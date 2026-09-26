@@ -98,6 +98,13 @@ pub enum EmitKind {
     Ast,
     /// The Safety IR, the central abstraction the analyses operate on.
     SafetyIr,
+    /// Every hatch, and what the checks concluded inside each.
+    ///
+    /// A conclusion a check could not prove inside a hatch is not reported,
+    /// because it is about the hatch rather than about the program, and this is
+    /// where it goes instead. It is also how the hatches in a program are
+    /// counted. See ADR-0038.
+    Hatches,
     /// LLVM IR, in textual form.
     LlvmIr,
     /// An object file.
@@ -150,7 +157,7 @@ impl EmitKind {
     /// not a `matches!`.
     pub fn spans_inputs(self) -> bool {
         match self {
-            Self::Tokens | Self::Ast | Self::SafetyIr | Self::Executable => true,
+            Self::Tokens | Self::Ast | Self::SafetyIr | Self::Hatches | Self::Executable => true,
             Self::LlvmIr | Self::Object => false,
         }
     }
@@ -165,7 +172,12 @@ impl EmitKind {
     /// Exhaustive for the reason [`Self::spans_inputs`] gives.
     pub fn is_a_program(self) -> bool {
         match self {
-            Self::Tokens | Self::Ast | Self::SafetyIr | Self::LlvmIr | Self::Object => false,
+            Self::Tokens
+            | Self::Ast
+            | Self::SafetyIr
+            | Self::Hatches
+            | Self::LlvmIr
+            | Self::Object => false,
             Self::Executable => true,
         }
     }
@@ -185,7 +197,7 @@ impl EmitKind {
     pub fn reaches_the_ir(self) -> bool {
         match self {
             Self::Tokens | Self::Ast => false,
-            Self::SafetyIr | Self::LlvmIr | Self::Object | Self::Executable => true,
+            Self::SafetyIr | Self::Hatches | Self::LlvmIr | Self::Object | Self::Executable => true,
         }
     }
 
@@ -250,11 +262,13 @@ impl EmitKind {
     /// only `Tokens`, `LlvmIr` and, once #144 added a case for it, `SafetyIr`
     /// change an answer.
     ///
-    /// **`Ast` is held by nothing**, and says the same as `SafetyIr` for the
-    /// same reason. One case holds the rule and a second differing in one word
-    /// would be a test of the corpus rather than of this. What is left for that
-    /// arm is `error[E0004]`, which makes somebody answer for a kind and, as
-    /// RK-015 in the review knowledge bank puts it, nothing more than that.
+    /// **`Ast` is held by nothing**, and neither is `Hatches`, measured by
+    /// moving it across. Each says the same as `SafetyIr` for the same reason:
+    /// a listing of what could be read is still true of what could be read.
+    /// One case holds the rule and a second differing in one word would be a
+    /// test of the corpus rather than of this. What is left for those arms is
+    /// `error[E0004]`, which makes somebody answer for a kind and, as RK-015 in
+    /// the review knowledge bank puts it, nothing more than that.
     ///
     /// **Asked of the file and not of the stream.** `--emit llvm-ir` with no
     /// `-o` still writes its module to the artifact stream on a run that
@@ -288,7 +302,7 @@ impl EmitKind {
     /// Exhaustive for the reason [`Self::spans_inputs`] gives.
     pub fn survives_an_error(self) -> bool {
         match self {
-            Self::Tokens | Self::Ast | Self::SafetyIr => true,
+            Self::Tokens | Self::Ast | Self::SafetyIr | Self::Hatches => true,
             Self::LlvmIr | Self::Object | Self::Executable => false,
         }
     }
@@ -365,10 +379,11 @@ mod tests {
     /// fails with it.
     #[test]
     fn every_emit_kind_says_whether_it_reaches_the_ir() {
-        const ROWS: [(EmitKind, bool); 6] = [
+        const ROWS: [(EmitKind, bool); 7] = [
             (EmitKind::Tokens, false),
             (EmitKind::Ast, false),
             (EmitKind::SafetyIr, true),
+            (EmitKind::Hatches, true),
             (EmitKind::LlvmIr, true),
             (EmitKind::Object, true),
             (EmitKind::Executable, true),

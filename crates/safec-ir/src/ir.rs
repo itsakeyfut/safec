@@ -841,6 +841,8 @@ pub struct Function {
     locals: Vec<TyId>,
     /// One per parameter, in the order they were declared.
     nonnull: Vec<Option<Span>>,
+    /// Whether this is a hatch.
+    hatch: bool,
     body: Body,
 }
 
@@ -880,8 +882,34 @@ impl Function {
             name,
             locals,
             nonnull,
+            hatch: false,
             body: Body::Defined(Vec::new()),
         }
+    }
+
+    /// This function, as a hatch.
+    ///
+    /// A hatch claims nothing about its body: what a check could not prove in
+    /// it is a statement about the hatch rather than about the program, and a
+    /// driver lists it rather than reporting it. What a check concludes does
+    /// not change. See ADR-0038.
+    ///
+    /// # Panics
+    ///
+    /// If this is a declaration. What a hatch says is about a body, and a
+    /// function with none has nothing for it to say it about.
+    ///
+    /// **Not "unchecked".** Every check runs over a hatch's body as over any
+    /// other; what differs is where an unproven conclusion goes.
+    pub fn hatched(mut self) -> Self {
+        assert!(self.is_defined(), "a declaration cannot be a hatch");
+        self.hatch = true;
+        self
+    }
+
+    /// Whether this is a hatch.
+    pub fn hatch(&self) -> bool {
+        self.hatch
     }
 
     /// A function this translation unit calls and does not contain.

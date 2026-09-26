@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported.c:4:12 ]
+   │
+ 4 │     return *p && *q;
+   │            ────┬───  
+   │                ╰───── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

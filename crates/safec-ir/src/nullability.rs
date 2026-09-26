@@ -35,7 +35,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, BlockId, Element, Function, LocalId, Operand, Place, Rvalue, Terminator,
+    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator,
     TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
@@ -110,6 +110,9 @@ impl Nullness {
 /// waits for something that needs it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Finding {
+    /// The function it was concluded in, for the reason
+    /// [`crate::memory::Finding::function`] gives.
+    pub function: FuncId,
     /// What this check concluded about the pointer.
     pub conclusion: Conclusion,
     /// Where a caret goes: the element or terminator that dereferences, or
@@ -682,6 +685,7 @@ fn report(
     findings: &mut Vec<Finding>,
     dereferenced: Option<(Span, Vec<&Place>)>,
     known: &[Nullness],
+    function: FuncId,
 ) {
     let Some((at, places)) = dereferenced else {
         return;
@@ -694,6 +698,7 @@ fn report(
 
     if let Some(conclusion) = worst {
         findings.push(Finding {
+            function,
             conclusion,
             at,
             asked: Asked::Dereference,
@@ -737,6 +742,7 @@ fn report_arguments(
     findings: &mut Vec<Finding>,
     terminator: &Terminator,
     known: &[Nullness],
+    function: FuncId,
 ) {
     // Every terminator written out rather than `let ... else`, so that a
     // second way to call a function has to be answered for here. A call
@@ -773,6 +779,7 @@ fn report_arguments(
         };
         if let Some(conclusion) = passed.concluded() {
             findings.push(Finding {
+                function,
                 conclusion,
                 at: origin.span(),
                 asked: Asked::Argument { promise },
@@ -796,8 +803,8 @@ fn report_arguments(
 pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     let mut findings = Vec::new();
 
-    for id in unit.functions() {
-        let function = unit.function(id);
+    for func in unit.functions() {
+        let function = unit.function(func);
         // A declaration has no blocks, and `Function::blocks` panics rather
         // than answering for one.
         if !function.is_defined() {
@@ -830,6 +837,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                     &mut findings,
                     dereferenced_in_element(element),
                     &known,
+                    func,
                 );
                 analysis.element(function, element, &mut known);
             }
@@ -839,8 +847,9 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                 &mut findings,
                 dereferenced_in_terminator(&block.terminator),
                 &known,
+                func,
             );
-            report_arguments(&analysis, &mut findings, &block.terminator, &known);
+            report_arguments(&analysis, &mut findings, &block.terminator, &known, func);
         }
     }
 
@@ -856,20 +865,33 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // answered nothing, so this only reaches the locals that refinement cannot
     // help, which is the escaped ones.
     //
-    // The first survives, and it cannot be the milder one. `report` has
-    // already taken the worst of the places one element dereferences, and the
-    // second element a statement lowers to names only the local the first
-    // wrote, which by then is either proved non-null and reported by nothing
-    // or masked by the escape and reported as unproven. A promotion here was
-    // written first and measured unreachable: inverting it, and deleting it,
-    // each left the whole suite green while a panic in this body failed nine
-    // cases, so the body runs and the promotion never fires.
+    // **The worst survives, not the first.** `report` takes the worst of the
+    // places one element dereferences, but two elements can share a caret and
+    // disagree: `*p && *q` writes both operands at the whole expression's span,
+    // so an unproven `*p` and a proved `*q` arrive as two findings at one
+    // caret, the unproven one first. Keeping the first reported a proof as a
+    // suspicion, and inside a hatch, where a suspicion is listed rather than
+    // reported, a proved null dereference built and ran. `memory::say` answers
+    // the same shape with `supersedes`; this is the same rule.
     //
     // **The question is part of the key.** A call that passes two arguments
     // to two `_Nonnull` parameters has one caret and two promises, and a
     // dereference inside a call's arguments shares its caret with the call.
     // Each of those is a different thing to say.
-    findings.dedup_by(|later, earlier| later.at == earlier.at && later.asked == earlier.asked);
+    //
+    // **So is the function.** The sort above is over the whole unit, and a
+    // finding is routed by the function it names: two functions sharing a
+    // caret, which one `#include`d fragment would do, must not fold one into
+    // the other, or a hatch's could absorb an ordinary function's.
+    findings.dedup_by(|later, earlier| {
+        let same = later.function == earlier.function
+            && later.at == earlier.at
+            && later.asked == earlier.asked;
+        if same && severity(later.conclusion) > severity(earlier.conclusion) {
+            std::mem::swap(later, earlier);
+        }
+        same
+    });
 
     findings
 }
