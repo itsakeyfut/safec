@@ -731,6 +731,10 @@ cases! {
     // believes. Mutation: zip the arguments with the parameters in
     // `report_arguments`; only this case fails, and it goes silent.
     a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `g(*pp)` asks two questions at one caret: whether `pp` is null, and
+    // whether what it holds is. Mutation: skip an argument with a projection
+    // in `report_arguments`; only this case fails, losing the `SC0405`.
+    an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The two ways a caller discharges it, which are what keep the check from
     // reporting every call.
     a_tested_pointer_passed_to_a_nonnull_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
