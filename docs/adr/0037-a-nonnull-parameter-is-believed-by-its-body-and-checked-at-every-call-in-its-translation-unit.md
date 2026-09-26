@@ -231,7 +231,8 @@ it can.
   been evaluated, so `g(q, q = &x)` with `q` null is silent. C17 6.5 p2 makes
   that call undefined, since one argument writes what another reads with nothing
   ordering them, and `h(*q, q = &x)` is silent on the dereference side in the
-  same way. Found by review and not answered here.
+  same way. Found by review and not answered here; it is
+  [#247](https://github.com/itsakeyfut/safec/issues/247).
 * Bad, because it is stricter than `clang` in two places a user will meet:
   `clang` inherits `_Nonnull` from one declaration to another in silence, and
   accepts it on a local or a return type. Both are refused here, at every level.

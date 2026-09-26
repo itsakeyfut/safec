@@ -718,7 +718,7 @@ fn report(
 /// `g(q, q = &x)` asks about `q` after the second argument wrote it, and a null
 /// `q` is silent. C17 6.5 p2 makes that call undefined, and `h(*q, q = &x)` is
 /// silent on the dereference side for the same reason. ADR-0037 records it as
-/// a consequence. RK-071 is what happens when a second reader assumes the first
+/// a consequence, and #247 is the fix. RK-071 is what happens when a second reader assumes the first
 /// one's soundness rather than checks it.
 ///
 /// One per argument rather than the worst per call, because each argument has
