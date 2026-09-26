@@ -718,6 +718,15 @@ fn report(
 ///
 /// One per argument rather than the worst per call, because each argument has
 /// its own promise to point at.
+///
+/// **Walked over the parameters, not over the arguments.** A call written
+/// through `void g();` passes however many arguments it likes, and C17 6.5.2.2
+/// p6 makes a call with fewer than the definition takes undefined, so the
+/// parameter it left out holds nothing anybody chose. The body believes it all
+/// the same. So a `_Nonnull` parameter with no argument is one this check did
+/// not establish, and is reported as that. Zipping the two lists instead was
+/// how this shipped to review, and it left `void g(); void h(void) { g(); }`
+/// silent against a body that dereferences its parameter.
 fn report_arguments(
     analysis: &Nullability<'_>,
     findings: &mut Vec<Finding>,
@@ -736,11 +745,14 @@ fn report_arguments(
     };
 
     let callee = analysis.unit.function(*callee);
-    for (argument, parameter) in arguments.iter().zip(callee.parameters()) {
+    for (index, parameter) in callee.parameters().enumerate() {
         let Some(promise) = callee.nonnull(parameter) else {
             continue;
         };
-        let passed = analysis.nullness_of(&Rvalue::Use(argument.clone()), known);
+        let passed = match arguments.get(index) {
+            Some(argument) => analysis.nullness_of(&Rvalue::Use(argument.clone()), known),
+            None => Nullness::Unknown,
+        };
         if let Some(conclusion) = passed.concluded() {
             findings.push(Finding {
                 conclusion,

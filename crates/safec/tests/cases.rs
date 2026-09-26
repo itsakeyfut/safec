@@ -727,6 +727,10 @@ cases! {
     a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A call through `void g();` passes nothing for a parameter the body
+    // believes. Mutation: zip the arguments with the parameters in
+    // `report_arguments`; only this case fails, and it goes silent.
+    a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The two ways a caller discharges it, which are what keep the check from
     // reporting every call.
     a_tested_pointer_passed_to_a_nonnull_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
