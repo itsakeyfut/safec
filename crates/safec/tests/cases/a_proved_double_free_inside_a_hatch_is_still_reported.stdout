@@ -1,0 +1,2 @@
+Hatch a_proved_double_free_inside_a_hatch_is_still_reported.c:5:5 "twice"
+  Conclusion a_proved_double_free_inside_a_hatch_is_still_reported.c:8:5 "SC0401" "proved" "this frees a value that was freed already"

@@ -780,12 +780,24 @@ cases! {
     // One case per stage it passes through, for RK-033's reason: the tree, the
     // IR, and the listing.
     a_hatch_is_read_into_the_tree: ["--emit", "ast"],
+    // The pair the record is about: one body, reported outside a hatch and
+    // not inside one. Mutation: have `Lowering::body` never call
+    // `Function::unchecked`; the first of the two fails.
+    an_unproven_dereference_inside_a_hatch_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     the_same_dereference_outside_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: have `route` keep nothing in `hatched`, which is the hatch as
+    // a suppression; this fails.
+    an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: answer `!in_a_hatch` for `Unsafe` in `route`; this fails.
+    a_proved_double_free_inside_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
     // The boundary is the prototype, and the checked side reads it.
     a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What a hatch may have done to what it was handed is assumed to be the
     // worst, because it cannot yet say otherwise: ADR-0032's default.
     freeing_what_was_handed_to_a_hatch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The listing is the count of hatches, whether or not a check ran.
+    every_hatch_is_listed_at_safety_off_with_nothing_under_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
+    a_program_with_no_hatch_lists_none: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
     // Everywhere it cannot apply, and every attribute that is not it: one case
     // per place `parser.rs` and `sema.rs` refuse one.
     a_hatch_on_a_declaration_is_refused: ["--emit", "ast"],

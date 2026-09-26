@@ -35,7 +35,7 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, BlockId, Element, Function, LocalId, Operand, Place, Rvalue, Terminator,
+    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator,
     TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
@@ -110,6 +110,9 @@ impl Nullness {
 /// waits for something that needs it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Finding {
+    /// The function it was concluded in, for the reason
+    /// [`crate::memory::Finding::function`] gives.
+    pub function: FuncId,
     /// What this check concluded about the pointer.
     pub conclusion: Conclusion,
     /// Where a caret goes: the element or terminator that dereferences, or
@@ -682,6 +685,7 @@ fn report(
     findings: &mut Vec<Finding>,
     dereferenced: Option<(Span, Vec<&Place>)>,
     known: &[Nullness],
+    function: FuncId,
 ) {
     let Some((at, places)) = dereferenced else {
         return;
@@ -694,6 +698,7 @@ fn report(
 
     if let Some(conclusion) = worst {
         findings.push(Finding {
+            function,
             conclusion,
             at,
             asked: Asked::Dereference,
@@ -737,6 +742,7 @@ fn report_arguments(
     findings: &mut Vec<Finding>,
     terminator: &Terminator,
     known: &[Nullness],
+    function: FuncId,
 ) {
     // Every terminator written out rather than `let ... else`, so that a
     // second way to call a function has to be answered for here. A call
@@ -773,6 +779,7 @@ fn report_arguments(
         };
         if let Some(conclusion) = passed.concluded() {
             findings.push(Finding {
+                function,
                 conclusion,
                 at: origin.span(),
                 asked: Asked::Argument { promise },
@@ -796,8 +803,8 @@ fn report_arguments(
 pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     let mut findings = Vec::new();
 
-    for id in unit.functions() {
-        let function = unit.function(id);
+    for func in unit.functions() {
+        let function = unit.function(func);
         // A declaration has no blocks, and `Function::blocks` panics rather
         // than answering for one.
         if !function.is_defined() {
@@ -830,6 +837,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                     &mut findings,
                     dereferenced_in_element(element),
                     &known,
+                    func,
                 );
                 analysis.element(function, element, &mut known);
             }
@@ -839,8 +847,9 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                 &mut findings,
                 dereferenced_in_terminator(&block.terminator),
                 &known,
+                func,
             );
-            report_arguments(&analysis, &mut findings, &block.terminator, &known);
+            report_arguments(&analysis, &mut findings, &block.terminator, &known, func);
         }
     }
 
