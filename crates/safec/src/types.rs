@@ -540,10 +540,10 @@ impl Checker<'_> {
             BinOp::Add => match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(Ok(())),
                 (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
-                    Some(stepping(ast, pointee, true))
+                    Some(pointee_steppable(ast, pointee, true))
                 }
                 (OperandClass::Arithmetic, OperandClass::Pointer(pointee)) => {
-                    Some(stepping(ast, pointee, false))
+                    Some(pointee_steppable(ast, pointee, false))
                 }
                 _ => Some(pairing(false)),
             },
@@ -551,13 +551,16 @@ impl Checker<'_> {
             BinOp::Sub => match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(Ok(())),
                 (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
-                    Some(stepping(ast, pointee, true))
+                    Some(pointee_steppable(ast, pointee, true))
                 }
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     // Both pointees are asked: `int[3]` is compatible with
                     // `int[]`, and only one of them is complete.
                     if ast.compatible(left, right) {
-                        Some(stepping(ast, left, true).and(stepping(ast, right, false)))
+                        Some(
+                            pointee_steppable(ast, left, true)
+                                .and(pointee_steppable(ast, right, false)),
+                        )
                     } else {
                         Some(pairing(false))
                     }
@@ -619,7 +622,7 @@ impl Checker<'_> {
         let left_spelled = self.spelled(ast, left);
         let right_spelled = self.spelled(ast, right);
         let left_is_refused = match refused {
-            Refused::Pointee { left, .. } => left,
+            Refused::Pointee { on_left, .. } => on_left,
             Refused::Pairing => match ast.ty(left) {
                 Type::Void => true,
                 Type::Pointer(_) => !takes_a_pointer(op),
@@ -1141,9 +1144,9 @@ enum Refused {
     /// The operator's clause takes no such pairing of operand types.
     Pairing,
     /// C17 6.5.6 takes the pairing, and a pointer in it points to something
-    /// it cannot step over. `left` says which operand, and `why` is
+    /// it cannot step over. `on_left` says which operand, and `why` is
     /// [`unsteppable`]'s answer.
-    Pointee { left: bool, why: &'static str },
+    Pointee { on_left: bool, why: &'static str },
 }
 
 /// `Ok` where the operator's clause takes the pairing of operand types, and
@@ -1152,12 +1155,12 @@ fn pairing(taken: bool) -> Result<(), Refused> {
     if taken { Ok(()) } else { Err(Refused::Pairing) }
 }
 
-/// Whether a pointer to `pointee`, on the `left` or not, can take the step
-/// 6.5.6 would make.
-fn stepping(ast: &Ast, pointee: TypeId, left: bool) -> Result<(), Refused> {
+/// `Ok` where a pointer to `pointee` can take the step 6.5.6 would make, and
+/// [`Refused::Pointee`] where it cannot, naming the operand by `on_left`.
+fn pointee_steppable(ast: &Ast, pointee: TypeId, on_left: bool) -> Result<(), Refused> {
     match unsteppable(ast, pointee) {
         None => Ok(()),
-        Some(why) => Err(Refused::Pointee { left, why }),
+        Some(why) => Err(Refused::Pointee { on_left, why }),
     }
 }
 
