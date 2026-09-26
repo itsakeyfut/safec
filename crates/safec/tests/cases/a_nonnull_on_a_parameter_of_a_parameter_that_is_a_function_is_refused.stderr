@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_on_a_parameter_of_a_parameter_that_is_a_function_is_refused.c:1:20 ]
+   │
+ 1 │ void f(int g(int * _Nonnull p));
+   │                    ────┬───  
+   │                        ╰───── this is a parameter of a function type, not of a declared function
+───╯

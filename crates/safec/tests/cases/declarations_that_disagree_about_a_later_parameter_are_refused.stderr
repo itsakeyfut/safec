@@ -1,0 +1,11 @@
+error[SC0307]: the declarations of `g` disagree about `_Nonnull`
+   ╭─[ declarations_that_disagree_about_a_later_parameter_are_refused.c:2:32 ]
+   │
+ 1 │ void g(int * _Nonnull a, int *b);
+   │      ┬  
+   │      ╰── the first declaration does not
+ 2 │ void g(int * _Nonnull a, int * _Nonnull b) {
+   │                                ────┬───  
+   │                                    ╰───── one declaration says `_Nonnull` here
+───╯
+  = note: every declaration of a function has to agree about `_Nonnull`, because a caller is checked against the declaration it sees
