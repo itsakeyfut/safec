@@ -1701,7 +1701,10 @@ impl Analysis for Allocations<'_> {
                 // neither an allocation nor a local's address. A write that
                 // may land in followed locals records nothing here: their
                 // addresses escaped, and what they hold is in every call's
-                // reach. See ADR-0039.
+                // reach. A store into a local aggregate, once fields and
+                // indices are lowered, has no targets and lands in the
+                // exposing branch, which is row 4 until it is recorded inside
+                // the local instead. See ADR-0039.
                 if !operation.place.projection.is_empty() {
                     let carried: Vec<usize> = self
                         .carried(function, &operation.value, value)

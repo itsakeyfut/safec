@@ -4,7 +4,7 @@ date: 2026-09-26
 decision-makers: itsakeyfut
 ---
 
-# An allocation code this check cannot read may reach is exposed for good, and a call this check cannot read may return any exposed allocation
+# An allocation code this check cannot read may reach stays exposed while it lives, and a call this check cannot read may return any exposed allocation
 
 ## Context and Problem Statement
 
@@ -65,10 +65,10 @@ exposed allocation, and a record of what each allocation may contain.**
 code this check cannot read: named by an argument of an opaque call, returned by
 one, held by a local whose address escaped (a local an argument points at is
 one), contained in an exposed allocation, or stored through a pointer this
-check cannot say where it lands. The mark is a union at a join and survives everything but a
-rebirth of the site. At every opaque call the call's reach is added to it,
-closed over contents, and every exposed allocation still live becomes
-unproven. A proved free stays proved. This covers all four routes review found
+check cannot say where it lands. The mark is a union at a join and survives
+everything but a rebirth of the site. At every opaque call the call's reach is
+added to it, closed over what each exposed allocation holds, and every exposed
+allocation still live becomes unproven. A proved free stays proved. This covers all four routes review found
 and both of #250's programs, and it costs one corpus case its wording and
 nothing else.
 
@@ -97,9 +97,12 @@ from 0.49 s to 0.71 s. The bitset is left to
 [#173](https://github.com/itsakeyfut/safec/issues/173), and the number is
 written where the table is.
 
-**The library, by name.** `realloc` makes its first argument unproven rather
-than freed, since C17 7.22.3.5 p4 leaves the old object alone when it fails, and
-returns a fresh allocation. `memset`, `memcpy`, `memmove`, `strcpy`,
+**The library, by name.** `calloc` and `aligned_alloc` are read as `malloc` is,
+since C17 7.22.3 p1 gives all three the same guarantee: the start of an object
+disjoint from any other. `realloc` makes its first argument unproven rather than
+freed, since 7.22.3.5 p3 leaves the old object alone when it fails with a
+nonzero size, and returns a fresh allocation holding what the old one held
+(p2). `memset`, `memcpy`, `memmove`, `strcpy`,
 `strncpy`, `strcat` and `strncat` free nothing and return their first argument,
 which C17 7.24.2 to 7.24.6 say of each; what they are handed is exposed, because
 they copy bytes and a pointer is bytes. Measured, this is what builds
@@ -109,6 +112,18 @@ they copy bytes and a pointer is bytes. Measured, this is what builds
 made and freed itself is a fresh allocation to this rule, and silent: #252.
 `realloc`'s failure branch, `if (q == 0) free(p);`, is unproven because nothing
 ties the result's nullness to the argument: [#253](https://github.com/itsakeyfut/safec/issues/253).
+
+**What this does not reach, found by review, and written down.** A pointer read
+out of memory, `q = *tab`, holds no site, which is ADR-0017's belief about it;
+this rule reads "holds no site" as "reaches nothing", so handing such a pointer
+to a call exposes nothing it points at, and neither does copying it from one
+allocation to another. An allocation a parameter holds is not exposed at entry,
+though the caller had it. Both were silent on `main` too, and both need a
+decision this record does not take:
+[#254](https://github.com/itsakeyfut/safec/issues/254). And a store into a local
+aggregate, which Phase 9 brings as a projection other than one `Deref`, has no
+targets and exposes what it carries at the store; recording it inside the local
+instead is the fix, and its shape waits for how fields are lowered.
 
 ### Confirmation
 
@@ -126,10 +141,13 @@ Leaving the escaped locals out fails
 `a_call_handed_an_address_may_return_what_is_behind_it` and
 `a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call`.
 
-**Exposure.** No closure over contents, and never recording contents at a
-write, each fail
+**Exposure.** No closure over what an allocation holds, and never recording it
+at a write, each fail
 `a_pointer_stored_on_one_arm_is_reached_through_what_holds_it` and the heap
-case. Closing only from the sites a call has just marked fails
+case. A closure that stops after one step fails
+`a_pointer_two_tables_deep_is_reached_through_both` alone, and recording into
+only the first allocation a pointer may hold fails
+`a_pointer_stored_through_either_of_two_tables_is_inside_both` alone. Closing only from the sites a call has just marked fails
 `a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call` alone,
 which is the join RK-044 describes, and which mutating the first version of
 this change found as a silence. An unplaced write exposing nothing fails
@@ -156,25 +174,36 @@ the result itself fails `what_a_call_returned_is_unproven_after_a_later_call`.
 **The library.** Reading none of the seven functions that return their first
 argument by name fails `what_memset_returns_is_the_allocation_it_was_handed`,
 `memcpy_frees_neither_of_its_arguments` and
-`what_strcpy_returns_is_the_allocation_it_was_handed`. Their arm not exposing
+`what_strcpy_returns_is_the_allocation_it_was_handed`, and leaving out any one
+of the other four fails
+`what_the_other_library_copies_return_is_what_they_were_handed`. Their arm not
+exposing
 what it is handed fails
 `what_memset_was_handed_is_unproven_after_a_later_call`; not replacing what an
 escaped local holds fails
 `a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it`
 alone; not returning the first argument fails the `memset` and `strcpy` cases.
-Not reading `realloc` by name fails its four cases; proving its argument freed
+Not reading `realloc` by name fails its cases; proving its argument freed
 rather than unproven fails
 `a_free_on_reallocs_failure_branch_is_not_proved`, whose `SC0401` would claim
-what C17 7.22.3.5 p4 contradicts; not asking its argument whether it was freed
+what C17 7.22.3.5 p3 contradicts; not asking its argument whether it was freed
 fails `a_freed_pointer_handed_to_realloc_is_freed_twice`; asking its size too
-fails `the_size_realloc_is_handed_is_not_asked_whether_it_was_freed`.
+fails `the_size_realloc_is_handed_is_not_asked_whether_it_was_freed`; not
+carrying what the old object held fails
+`a_table_realloc_grew_still_holds_what_it_held`, which reading `realloc` by name
+had made silent before review; and `what_realloc_returns_is_named_where_it_was_allocated`,
+`a_pointer_freed_before_realloc_stays_freed_after_it` and
+`a_pointer_into_an_allocation_handed_to_realloc_is_not_its_start` pin its label,
+a proved free across it, and its offset. Not reading `calloc` or `aligned_alloc`
+by name fails the case named for each.
 
 **ADR-0029 still holds.** Dropping its `Known::replaced` from the opaque arm
 fails the four cases its Confirmation names, measured after this change, so the
 exposed mark did not make them vacuous (RK-048).
 
-**What nothing holds.** Clearing a reborn site's contents, for the reason its
-comment gives; and `Analysis::height`, as for every other term in it.
+**What nothing holds.** Clearing what a reborn site holds, for the reason its
+comment gives; `realloc` being asked about its first argument only in its
+transfer, which no C program can show since its size holds no allocation; and `Analysis::height`, as for every other term in it.
 
 ### Consequences
 
@@ -187,6 +216,8 @@ comment gives; and `Analysis::height`, as for every other term in it.
   until #173.
 * Bad, because a callee returning what it freed itself is believed (#252), and
   `realloc`'s failure branch is refused (#253).
+* Bad, because a pointer read out of memory, and a parameter's allocation, are
+  not exposed, so a use after free through either still builds (#254).
 * What would reverse this: summaries of functions this translation unit
   defines, which would let a call's result be what its body returns rather than
   anything exposed.
@@ -195,8 +226,9 @@ comment gives; and `Analysis::height`, as for every other term in it.
 
 ### One exposed mark
 
-* Good, because every route a pointer takes to unread code ends in the same
-  place, so a route nobody listed is not a silence.
+* Good, because every route this check can name ends in the same place, so a
+  route nobody listed is not a silence. A pointer it cannot name, one read out
+  of memory, is the exception, and #254.
 * Bad, because it never forgets.
 
 ### Marking routes one at a time

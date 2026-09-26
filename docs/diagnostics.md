@@ -130,7 +130,7 @@ read could reach may have been freed by that callee. What a call can reach is
 more than its arguments: once code this check cannot read may reach an
 allocation it stays exposed, every such call after it may free it, and a
 pointer any such call returns may be it.
-[ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-is-exposed-for-good.md)
+[ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)
 is that rule. Those read `this may free a
 value that was freed already` and `this may use a value after it was freed`,
 and a reader is being told there is something to suspect.
