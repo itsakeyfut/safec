@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-26
 decision-makers: itsakeyfut
 ---
@@ -14,10 +14,9 @@ the phase beside it: whether an annotation is trusted or checked. A trusted
 annotation that is wrong turns `Unknown` into `Safe` with nothing said, which is
 the bottom row of `CLAUDE.md`'s failure list.
 
-The nullability check answers `Unknown` for every parameter today, because a
-parameter's nullness is a caller's fact and nothing carries one:
-`Nullability::on_entry` in `crates/safec-ir/src/nullability.rs` says so and
-names [#134](https://github.com/itsakeyfut/safec/issues/134). Under
+Before this record, the nullability check answered `Unknown` for every
+parameter, because a parameter's nullness is a caller's fact and nothing carried
+one. Under
 [ADR-0033](./0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md)
 that is an error by default, so `void f(int *p) { *p = 1; }` does not build, and
 there is nothing a user can write to say what they know.
@@ -25,8 +24,9 @@ there is nothing a user can write to say what they know.
 [ADR-0032](./0032-bound-what-is-unchecked-inside-a-declared-hatch.md) decided
 the stance for a region: a promise at a boundary, read by the checked side, and
 said that a trusted annotation is that boundary at the scale of one declaration.
-This record is that sentence made concrete, and it is `proposed` because nothing
-in the tree reads it yet.
+This record is that sentence made concrete.
+[#134](https://github.com/itsakeyfut/safec/issues/134) landed it, and the status
+moved with it.
 
 ## Decision Drivers
 
@@ -106,24 +106,65 @@ option with no row 6 in it, and the one nobody would write an annotation for.
 
 ### Confirmation
 
-**Nothing guards this yet, and the record is `proposed` for that reason.**
-[#134](https://github.com/itsakeyfut/safec/issues/134) lands it, and this
-section is to be rewritten in that change rather than after it. RK-017 in the
-review knowledge bank is what happens otherwise.
+Every mutation below was applied on its own, the whole workspace was run with
+`--no-fail-fast`, and the file was restored from a copy rather than from git.
+The tests named are the ones that failed; how many there were is not written
+down, for RK-028's reason. The cases are in `crates/safec/tests/cases`.
 
-What has to guard it, from the design on that issue:
+**Believed by the body.** `Nullability::on_entry` in
+`crates/safec-ir/src/nullability.rs` never reading `Function::nonnull` fails
+`a_parameter_declared_nonnull_is_dereferenced_in_silence` and
+`a_nonnull_parameter_passed_on_to_another_is_silent`. The unannotated half of
+the pair is every `SC0403` on a parameter the corpus already had.
 
-* a call passing a null to a `_Nonnull` parameter is reported. Mutation: never
-  ask about a call's arguments. This is the mutation the decision is about,
-  because it is the one that makes the compiler believe something nobody
-  proved.
-* a `_Nonnull` parameter dereferenced in the body is not reported, beside the
-  same function without it, which is. Mutation: accept the annotation and never
-  read it at entry.
-* a `_Nonnull` parameter whose address is taken is still reported. Mutation:
-  read the entry fact past the escape mask.
-* two declarations that disagree about `_Nonnull` are refused. Mutation: skip
-  the comparison.
+**Checked at every call.** This is the mutation the decision is about, because
+it is the one that makes the compiler believe something nobody proved. Deleting
+the `report_arguments` call from `nullability::findings` fails
+`a_null_constant_passed_to_a_nonnull_parameter_is_proved`,
+`a_local_proved_null_passed_to_a_nonnull_parameter_is_proved`,
+`a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_not_proved`,
+its `--allow-unknown` sibling, and
+`each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own`. Reporting
+only a proved null there, and dropping the unproven one, fails the last three of
+those. Keying `findings`' `dedup_by` on the caret alone fails the last one
+alone, which is two promises at one call collapsing into one report.
+
+**Believed at the entry and nowhere else.** Having `Nullability::known` answer
+`NonNull` for any parameter declared `_Nonnull`, ahead of the escape mask, is
+the edit that believes the annotation over what the body did, and it fails
+`a_nonnull_parameter_whose_address_escaped_is_not_proved` and
+`a_nonnull_parameter_given_a_null_in_the_body_is_proved_null`.
+
+**Carried to the IR.** `Lowering::body` building with `Function::new` rather
+than `Function::with_parameters` fails the definition's cases, and
+`Lowering::declare_one` building with `Function::declaration` rather than
+`Function::declaration_with_parameters` fails every call case, among them
+`a_nonnull_parameter_of_a_declaration_reaches_the_ir`. The parser keeping the
+`_Nonnull` token and dropping its span fails every case above and
+`a_nonnull_parameter_is_read_into_the_tree`. Not printing it in the tree fails
+that case alone; not printing it in the IR fails every case that emits the IR.
+`the_annotation_table_is_the_spellings_this_compiler_reads` in
+`crates/safec/src/token.rs` holds the spelling, and
+`a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not` in
+`crates/safec/src/lexer.rs` fails when `scan_word` never asks for one.
+
+**Refused where it cannot apply.** Deleting the call to `Parser::placed` fails
+the six `a_nonnull_on_..._is_refused` cases, one per reason that function gives.
+`a_nonnull_not_after_a_star_is_refused` is held by `Parser::core` instead, which
+is the other place `SC0204` is reported.
+
+**Every declaration agrees.** Replacing the call to `Lowering::agree` with
+nothing fails `declarations_that_disagree_about_nonnull_are_refused` and
+`a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused`,
+which are the two orders.
+
+**What nothing holds.** That `--safety off` ignores the annotation is held by the
+level gate every check already sits behind rather than by anything of this
+record's: `a_null_passed_to_a_nonnull_parameter_is_silent_at_safety_off`
+documents the row and there is no mutation of this change that it alone fails.
+A call through a function pointer is not checked, and cannot be reached, because
+the lowering refuses it with `SC0304`; *What would reverse this* below is the day
+it can.
 
 ### Consequences
 

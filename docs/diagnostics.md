@@ -47,9 +47,9 @@ records why the prefix is this one and what was rejected.
 |---|---|---|
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106` |
-| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203` |
-| `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404` |
+| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204` |
+| `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -58,12 +58,13 @@ records why the prefix is this one and what was rejected.
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
 the question about, in the order it names them, so they were reserved before
-anything could emit from them. The first of the four now does, four times:
+anything could emit from them. The first of the four now does, five times:
 `SC0401` is a value freed where it may already have been freed, `SC0402` is
 a value used where it may already have been freed, `SC0403` is a value read
-or written through a pointer that may be null, and `SC0404` is a value freed
-through a pointer that may not be the start of its allocation. They are the
-first codes in this compiler that say something about what a program does
+or written through a pointer that may be null, `SC0404` is a value freed
+through a pointer that may not be the start of its allocation, and `SC0405` is
+a pointer that may be null passed to a parameter declared `_Nonnull`. They are
+the first codes in this compiler that say something about what a program does
 rather than about how it is written.
 
 **`SC0403` is a third class of program and not a third severity.** The other
@@ -71,6 +72,18 @@ two are about a pointer that pointed somewhere once and no longer does; this is
 about one that may never have pointed anywhere. A reader filtering on a code is
 looking for programs to fix, and the fix for a use after free is about where the
 `free` went while the fix for this is a test the source does not have.
+
+**`SC0405` asks `SC0403`'s question somewhere else, and is a class of its own
+for the reason the two above are.** A parameter declared `_Nonnull` is believed
+by the function's body, so the read that would have been `SC0403` inside it is
+not reported there; what it rests on is that every call this compiler sees
+passes a pointer it established is not null, and `SC0405` is that call when it
+does not. The fix is at the call, or at the promise if the promise was wrong,
+and never inside the body. It carries a second label at the `_Nonnull` it
+broke. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-this-compiler-sees.md)
+is the decision. The two frontend refusals that come with it, `SC0204` for a
+`_Nonnull` where it cannot apply and `SC0307` for two declarations that
+disagree about one, are in [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read).
 
 **`SC0404` is a fourth class, for the same reason.** It is about a pointer that
 points somewhere real and is not the thing `free` takes: C17 7.22.3.3 p2 makes
@@ -280,7 +293,7 @@ all, so the code is attached where the diagnostic is built.
 
 **The safety checks' codes are a third kind and are why the count needs a
 second command.** `SC0401`, `SC0402` and `SC0404` are built by `memory_finding` and
-`SC0403` by `nullability_finding`, each with
+`SC0403` and `SC0405` by `nullability_finding`, each with
 `Diagnostic::concluded` rather than `Diagnostic::error`, because what
 a safety check answers is a [conclusion](safety-model.md#safe-unsafe-unknown)
 and the severity follows from it: the same finding is an error or a warning

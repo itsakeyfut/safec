@@ -234,6 +234,51 @@ constraints of simple assignment, so the two spellings answer alike, and C17
 integer, so a comparison answers alike too. The rows stop being refused the day
 a constant expression can be evaluated.
 
+### Where the nonnull annotation is read
+
+`_Nonnull` is `clang`'s nullability qualifier, and the one annotation this
+compiler reads. It is not C: C17 7.1.3 p1 reserves every identifier that begins
+with an underscore and an uppercase letter to the implementation, which is what
+lets a compiler read one without taking a name from a conforming program, and
+is also why `-pedantic-errors` refuses it as an extension. What it means here is
+[ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-this-compiler-sees.md):
+the body of a function believes it of a parameter, and every call is checked
+against it.
+
+So it is read in one place, after the `*` of a parameter's own pointer in a
+function declared at file scope, and refused everywhere else. `clang` reads it
+in more places than that, because there it is a qualifier on any pointer type
+and means nothing it has to check.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `void g(int * _Nonnull p);` | accepts | accepts | error: an extension |
+| `void g(int _Nonnull p);` | `error[SC0204]` | error: not a pointer | error |
+| `void g(int * _Nonnull * p);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull q;` at file scope or in a block | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull f(void);` | `error[SC0204]` | accepts | error: an extension |
+| `void g(void (*callback)(int * _Nonnull p));` | `error[SC0204]` | accepts | error: an extension |
+| `void g(int * _Nonnull p);` inside a block | `error[SC0204]` | accepts | error: an extension |
+| `void g(int *p);` then `void g(int * _Nonnull p) { ... }` | `error[SC0307]` | accepts | error: an extension |
+| `g(0)` with `g` as in the first row | `error[SC0405]` | warning: null passed | error: an extension |
+| `int *q = 0; g(q);` | `error[SC0405]` | accepts | error: an extension |
+
+Measured against `clang 20.1.6 -std=c17 --target=x86_64-unknown-linux-gnu`, as
+the tables above are. **Every refusal here is a decision rather than a gap**, and
+each is the same one: an annotation read where it means nothing is a promise
+written down and dropped, and a reader who wrote it would believe it held. The
+two declarations disagreeing is refused rather than inherited, which is what
+`clang` does, because a caller is checked against the declaration it sees. The
+last two rows are the check rather than the frontend, and `clang`'s answer to
+them is the reason the check exists: it warns about a literal null and says
+nothing about a local that holds one.
+
+The same measurement found what `_Nonnull` does to code, which is nothing:
+`clang -O2` emits the same IR for a function with and without it, where
+`__attribute__((nonnull))` deletes the function's own test of the pointer. So
+replacing `clang` with this compiler changes what a program is told, and not what
+it does.
+
 ### What the lowering refuses
 
 The frontend accepts these and `crates/safec/src/lowering.rs` cannot build IR
