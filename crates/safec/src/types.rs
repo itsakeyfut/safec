@@ -2900,6 +2900,37 @@ int main(void) {{
         }
     }
 
+    /// A refused increment or subscript keeps the type it would have had, as
+    /// a refused `+=` does, so that the lowering is not handed an expression
+    /// with no type and does not add an `SC0304` calling a wrong program this
+    /// compiler's gap.
+    ///
+    /// Mutation: have `increment` answer `None` after its report. The `++`
+    /// and `--` rows fail. Mutation: have `subscript` answer `None` after its
+    /// report. The `[]` rows fail. Nothing else in the suite noticed either.
+    #[test]
+    fn a_refused_increment_or_subscript_keeps_its_type() {
+        for (code, written, ty) in [
+            ("v++;", "v++", "void *"),
+            ("--v;", "--v", "void *"),
+            ("v[1];", "v[1]", "void"),
+            ("u[0];", "u[0]", "int[]"),
+        ] {
+            let checked = checked(&format!(
+                "int main(void) {{
+    void *v;
+    int (*u)[];
+    {code}
+    return 0;
+}}
+"
+            ));
+
+            assert_eq!(checked.codes(), ["SC0306"], "{code}");
+            assert_eq!(checked.spelling(written), ty, "{code}");
+        }
+    }
+
     /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at
     /// file scope and in a block, with the words a declaration was written in.
     ///
