@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-26
 decision-makers: itsakeyfut
 ---
@@ -62,10 +62,10 @@ Chosen: **an exposed mark per allocation, a call's result that may be any
 exposed allocation, and a record of what each allocation may contain.**
 
 **Exposed.** An allocation is exposed once a pointer to it may be reached by
-code this check cannot read: named by an argument of an opaque call, held by a
-local an argument points at, held by a local whose address escaped, contained
-in an exposed allocation, or stored through a pointer this check cannot say
-where it lands. The mark is a union at a join and survives everything but a
+code this check cannot read: named by an argument of an opaque call, returned by
+one, held by a local whose address escaped (a local an argument points at is
+one), contained in an exposed allocation, or stored through a pointer this
+check cannot say where it lands. The mark is a union at a join and survives everything but a
 rebirth of the site. At every opaque call the call's reach is added to it,
 closed over contents, and every exposed allocation still live becomes
 unproven. A proved free stays proved. This covers all four routes review found
@@ -73,9 +73,12 @@ and both of #250's programs, and it costs one corpus case its wording and
 nothing else.
 
 **What a call returns.** A fresh allocation, or any exposed one, at an offset
-nobody said. That catches a pointer handed to one call and returned by
-another, which is ordinary registry code. It costs `show(p); q = make(); *q`:
-`q` may be `p`, and is unproven. Returning only what the call's own arguments
+nobody said; and it is exposed itself, since the callee had it. That catches a
+pointer handed to one call and returned by another, which is ordinary registry
+code. It costs `show(p); q = make(); *q`: `q` may be `p`, and is unproven; and
+`q = make(); log_line(); *q`, since `log_line` may free what `make` kept; and a
+loop that frees what a call returns each turn, since the next turn's call may
+return it again. Returning only what the call's own arguments
 reach keeps that program and leaves the registry silent; asked, and the row-6
 direction was ranked below.
 
@@ -109,21 +112,77 @@ ties the result's nullness to the argument: [#253](https://github.com/itsakeyfut
 
 ### Confirmation
 
-**Nothing guards this yet; the record is `proposed`.** #250 lands it and
-rewrites this section with what it measured. Each program in the two probe sets
-becomes a corpus case, and the mutation for each rule has to fail a named one:
-not setting the mark for each of its five sources, not closing over contents,
-not unproving at the call, unproving a proved free, dropping the mark at a join
-or keeping it through a rebirth, the result holding only its fresh site or only
-what its arguments reach, a reborn exposed site proved live, each library
-function read as opaque, and `realloc` proving its argument freed.
+Every mutation below was applied on its own to the tree as committed, the whole
+workspace was run with `--no-fail-fast`, and the file was restored from git. The
+tests named are the ones that failed; how many there were is not written down,
+for RK-028's reason. The cases are in `crates/safec/tests/cases` and every
+mutation is in `crates/safec-ir/src/memory.rs`.
+
+**What a call reaches.** Leaving the arguments out of `Known::reach_of` fails
+`what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it`
+and `a_call_may_return_what_it_was_handed`, #250's two programs, among others.
+Leaving the escaped locals out fails
+`what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it`,
+`a_call_handed_an_address_may_return_what_is_behind_it` and
+`a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call`.
+
+**Exposure.** No closure over contents, and never recording contents at a
+write, each fail
+`a_pointer_stored_on_one_arm_is_reached_through_what_holds_it` and the heap
+case. Closing only from the sites a call has just marked fails
+`a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call` alone,
+which is the join RK-044 describes, and which mutating the first version of
+this change found as a silence. An unplaced write exposing nothing fails
+`a_pointer_stored_two_levels_down_is_reached_through_what_holds_it` alone.
+Dropping either half of the join fails a one-arm case alone. Keeping the mark
+through a rebirth fails
+`an_allocation_made_again_at_a_site_is_not_the_one_exposed_before` alone, by a
+false positive.
+
+**At the call.** Not unproving the exposed allocations fails every case that
+reads one after a call. Unproving a proved free as well fails
+`a_free_proved_before_a_call_stays_proved_after_it` alone.
+
+**What a call returns.** Not holding the exposed sites fails
+`a_call_may_return_what_an_earlier_call_was_handed`,
+`a_call_may_return_what_it_was_handed` and
+`a_call_after_an_allocation_was_exposed_may_return_it`, the last being the cost
+the rule accepts. Holding them at `Offset::Zero` loses the `SC0404` of
+`a_call_may_return_what_an_earlier_call_was_handed` and of the loop case.
+Proving a reborn exposed site live fails
+`a_call_in_a_loop_may_hand_back_what_was_freed_last_turn` alone. Not exposing
+the result itself fails `what_a_call_returned_is_unproven_after_a_later_call`.
+
+**The library.** Reading none of the seven functions that return their first
+argument by name fails `what_memset_returns_is_the_allocation_it_was_handed`,
+`memcpy_frees_neither_of_its_arguments` and
+`what_strcpy_returns_is_the_allocation_it_was_handed`. Their arm not exposing
+what it is handed fails
+`what_memset_was_handed_is_unproven_after_a_later_call`; not replacing what an
+escaped local holds fails
+`a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it`
+alone; not returning the first argument fails the `memset` and `strcpy` cases.
+Not reading `realloc` by name fails its four cases; proving its argument freed
+rather than unproven fails
+`a_free_on_reallocs_failure_branch_is_not_proved`, whose `SC0401` would claim
+what C17 7.22.3.5 p4 contradicts; not asking its argument whether it was freed
+fails `a_freed_pointer_handed_to_realloc_is_freed_twice`; asking its size too
+fails `the_size_realloc_is_handed_is_not_asked_whether_it_was_freed`.
+
+**ADR-0029 still holds.** Dropping its `Known::replaced` from the opaque arm
+fails the four cases its Confirmation names, measured after this change, so the
+exposed mark did not make them vacuous (RK-048).
+
+**What nothing holds.** Clearing a reborn site's contents, for the reason its
+comment gives; and `Analysis::height`, as for every other term in it.
 
 ### Consequences
 
 * Good, because the six silences #250 and its review measured are reported,
   and the library idioms `main` refused build.
 * Bad, because an allocation handed to any call this check cannot read makes
-  every later call's result doubtful: row 4, and the one a user will meet most.
+  every later call's result doubtful, and a call's result is doubtful after the
+  next call: row 4, and the one a user will meet most.
 * Bad, because the memory check costs about half again in memory and time,
   until #173.
 * Bad, because a callee returning what it freed itself is believed (#252), and
