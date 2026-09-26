@@ -56,7 +56,10 @@ use crate::source::{SourceMap, Span};
 /// that defines its own `free` has no behaviour C defines. `clang -std=c17
 /// -pedantic-errors` does not diagnose one, measured, so a program that does it
 /// anyway is read wrongly here and there is no way to tell from inside.
-#[derive(Clone, Copy, PartialEq, Eq)]
+/// **No `PartialEq`**, so that every reader is a `match` and a new kind is
+/// `error[E0004]` wherever it has to be answered. A comparison lets it through
+/// in silence: the rule for what an opaque call returns was once gated by one.
+#[derive(Clone, Copy)]
 enum Callee {
     /// C17 7.22.3.3's `free`.
     Frees,
@@ -330,7 +333,7 @@ struct Held {
     /// cent more. A packed bitset is the answer when a third square field
     /// arrives or when somebody hits this on real code.
     ///
-    /// **The third square field has arrived**: [`Known::contents`]. Measured on
+    /// **The third square field has arrived**: [`Known::inside`]. Measured on
     /// a 456-line function with 150 allocations, release build, peak memory
     /// went from 485 MB to 711 MB and time from 0.49 s to 0.71 s. The bitset is
     /// #173's; the number is here so that it is a decision rather than a
@@ -674,7 +677,7 @@ struct Known {
     /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
     /// exposed `tab`. Square in the locals, which is [`Held::sites`]' condition
     /// for a packed bitset. See ADR-0039.
-    contents: Vec<Vec<bool>>,
+    inside: Vec<Vec<bool>>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -860,7 +863,7 @@ impl Known {
             state,
             escaped: _,
             exposed,
-            contents,
+            inside,
             pending,
         } = self;
 
@@ -875,13 +878,13 @@ impl Known {
         // yet. What an opaque call's destination may still be is the call
         // transfer's to say, after this. See ADR-0039.
         //
-        // **Clearing `contents` is held by nothing**, measured: a site is
+        // **Clearing `inside` is held by nothing**, measured: a site is
         // reborn only by a loop through the same call, and the body that
         // stored into the old allocation stores into the new one on the same
         // turn, so a stale row never adds a site the closure would not add
         // anyway. It is kept because it is what the value means.
         exposed[site] = false;
-        contents[site].fill(false);
+        inside[site].fill(false);
 
         // **A read of the allocation this site used to name is not a read of
         // the one it names now.** Left standing, a free of the new allocation
@@ -948,7 +951,7 @@ impl Known {
             .filter(|&site| self.exposed[site])
             .collect();
         while let Some(site) = pending.pop() {
-            for (held, &in_it) in self.contents[site].iter().enumerate() {
+            for (held, &in_it) in self.inside[site].iter().enumerate() {
                 if in_it && !self.exposed[held] {
                     self.exposed[held] = true;
                     pending.push(held);
@@ -960,7 +963,7 @@ impl Known {
     /// Every exposed allocation still live is unproven, because the call being
     /// made may free it. A proved free stays proved: no call un-frees an
     /// allocation. See ADR-0039.
-    fn unprove_exposed(&mut self) {
+    fn unproved_exposed(&mut self) {
         for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
             if exposed && matches!(state, SiteState::Live(_)) {
                 *state = SiteState::Unknown;
@@ -1260,7 +1263,7 @@ impl Allocations<'_> {
     /// hold.
     ///
     /// One answer for every reader of it: the write that lands in a followed
-    /// local, and the contents or exposure a write into memory records.
+    /// local, and what a write into memory records as inside an allocation or exposes.
     /// RK-052 in the review knowledge bank is one rule in two places drifting.
     ///
     /// **A `match` rather than an `if let`, so a fifth kind of rvalue has to
@@ -1497,7 +1500,7 @@ impl Analysis for Allocations<'_> {
             // parameter included: what a caller holds is its own local.
             escaped: vec![false; self.locals],
             exposed: vec![false; self.locals],
-            contents: vec![vec![false; self.locals]; self.locals],
+            inside: vec![vec![false; self.locals]; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -1529,7 +1532,7 @@ impl Analysis for Allocations<'_> {
             state,
             escaped,
             exposed,
-            contents,
+            inside,
             pending,
         } = into;
 
@@ -1553,7 +1556,7 @@ impl Analysis for Allocations<'_> {
         for (here, there) in exposed.iter_mut().zip(&from.exposed) {
             *here = *here || *there;
         }
-        for (row, other) in contents.iter_mut().zip(&from.contents) {
+        for (row, other) in inside.iter_mut().zip(&from.inside) {
             for (here, there) in row.iter_mut().zip(other) {
                 *here = *here || *there;
             }
@@ -1691,7 +1694,7 @@ impl Analysis for Allocations<'_> {
                 }
 
                 // **Into the allocations the pointer holds, what the write
-                // carries is their contents**, exposed whenever they are, by
+                // carries is inside them**, exposed whenever they are, by
                 // [`Known::expose`]'s closure. A write this check cannot place
                 // exposes what it carries at once: one deeper than one `Deref`,
                 // which has no targets, or one through a pointer that holds
@@ -1717,7 +1720,7 @@ impl Analysis for Allocations<'_> {
                     } else {
                         for container in &containers {
                             for &site in &carried {
-                                value.contents[*container][site] = true;
+                                value.inside[*container][site] = true;
                             }
                         }
                     }
@@ -2145,7 +2148,7 @@ impl Analysis for Allocations<'_> {
                 // See ADR-0039.
                 let reach = value.reach_of(sites());
                 value.expose(reach);
-                value.unprove_exposed();
+                value.unproved_exposed();
 
                 // **A hatch may have reached anything, so every allocation
                 // still live is unproven after it.** The loop above is about
@@ -2260,23 +2263,26 @@ impl Analysis for Allocations<'_> {
         // p2, so what a pointer stored in the old one may hold, the new one
         // may. Reborn with nothing in it, a table grown by `realloc` and then
         // handed to a call exposed nothing it held. See ADR-0039.
-        if kind == Callee::Reallocates {
-            let old: Vec<usize> = handed
-                .iter()
-                .filter_map(|argument| match argument {
-                    Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
-                    Operand::Copy(_) | Operand::Constant(_) => None,
-                })
-                .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
-                .filter(|&old| old != site)
-                .collect();
-            for old in old {
-                for held in 0..value.contents.len() {
-                    if value.contents[old][held] {
-                        value.contents[site][held] = true;
+        match kind {
+            Callee::Reallocates => {
+                let old: Vec<usize> = handed
+                    .iter()
+                    .filter_map(|argument| match argument {
+                        Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
+                        Operand::Copy(_) | Operand::Constant(_) => None,
+                    })
+                    .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
+                    .filter(|&old| old != site)
+                    .collect();
+                for old in old {
+                    for held in 0..value.inside.len() {
+                        if value.inside[old][held] {
+                            value.inside[site][held] = true;
+                        }
                     }
                 }
             }
+            Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {}
         }
         // **Or any allocation code this check cannot read may reach**, which a
         // call it cannot read may hand back: `stash(p); q = fetch();` may make
@@ -2285,19 +2291,22 @@ impl Analysis for Allocations<'_> {
         // the result is as doubtful as what it may be and never less, which is
         // what RK-045 in the review knowledge bank asks of a widened set. See
         // ADR-0039.
-        if kind == Callee::Opaque {
-            let exposed: Vec<usize> = (0..value.exposed.len())
-                .filter(|&other| other != site && value.exposed[other])
-                .collect();
-            for other in exposed {
-                value.points_to[site].hold(other, Offset::Unknown);
+        match kind {
+            Callee::Opaque => {
+                let exposed: Vec<usize> = (0..value.exposed.len())
+                    .filter(|&other| other != site && value.exposed[other])
+                    .collect();
+                for other in exposed {
+                    value.points_to[site].hold(other, Offset::Unknown);
+                }
+                if was_exposed {
+                    value.state[site] = SiteState::Unknown;
+                }
+                // **And what it returns is exposed**: the callee had the pointer,
+                // and may have kept it where the next call can reach it.
+                value.expose([site]);
             }
-            if was_exposed {
-                value.state[site] = SiteState::Unknown;
-            }
-            // **And what it returns is exposed**: the callee had the pointer,
-            // and may have kept it where the next call can reach it.
-            value.expose([site]);
+            Callee::Frees | Callee::Allocates | Callee::Reallocates | Callee::ReturnsFirst => {}
         }
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
