@@ -814,6 +814,24 @@ enum Body {
     Defined(Vec<Option<Block>>),
 }
 
+/// One parameter, as a call is checked against it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Parameter {
+    /// Its type, which is the type of the local it becomes.
+    pub ty: TyId,
+    /// Where `_Nonnull` was written on it, if it was.
+    ///
+    /// A promise rather than a type: the body may believe it and every call
+    /// is checked against it, which is ADR-0037. A span rather than a `bool`,
+    /// because a report about a call points at the promise it broke.
+    pub nonnull: Option<Span>,
+}
+
+/// A parameter declared with nothing but its type.
+fn unannotated(ty: TyId) -> Parameter {
+    Parameter { ty, nonnull: None }
+}
+
 /// One function's IR.
 #[derive(Clone, Debug)]
 pub struct Function {
@@ -821,7 +839,8 @@ pub struct Function {
     pub name: Span,
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
-    parameters: usize,
+    /// One per parameter, in the order they were declared.
+    nonnull: Vec<Option<Span>>,
     body: Body,
 }
 
@@ -832,15 +851,35 @@ impl Function {
     /// they are the locals that follow the return place and nothing else may
     /// come between: an interface that let a caller interleave them would have
     /// an invariant to remember instead of a shape that holds it.
+    ///
+    /// None of them carries `_Nonnull`. [`Function::with_parameters`] is the
+    /// one that can say one does.
     pub fn new(name: Span, returns: TyId, parameters: impl IntoIterator<Item = TyId>) -> Self {
+        Self::with_parameters(name, returns, parameters.into_iter().map(unannotated))
+    }
+
+    /// [`Function::new`], with what each parameter was declared as.
+    ///
+    /// A second constructor rather than [`Function::new`] taking anything that
+    /// converts into a [`Parameter`]: that was tried and is `error[E0283]` at
+    /// every `Function::new(at, int, [])`, because an empty array gives the
+    /// compiler no type to infer.
+    pub fn with_parameters(
+        name: Span,
+        returns: TyId,
+        parameters: impl IntoIterator<Item = Parameter>,
+    ) -> Self {
         let mut locals = vec![returns];
-        locals.extend(parameters);
-        let parameters = locals.len() - 1;
+        let mut nonnull = Vec::new();
+        for parameter in parameters {
+            locals.push(parameter.ty);
+            nonnull.push(parameter.nonnull);
+        }
 
         Self {
             name,
             locals,
-            parameters,
+            nonnull,
             body: Body::Defined(Vec::new()),
         }
     }
@@ -854,9 +893,36 @@ impl Function {
         returns: TyId,
         parameters: impl IntoIterator<Item = TyId>,
     ) -> Self {
-        let mut declared = Self::new(name, returns, parameters);
+        Self::declaration_with_parameters(name, returns, parameters.into_iter().map(unannotated))
+    }
+
+    /// [`Function::declaration`], with what each parameter was declared as.
+    pub fn declaration_with_parameters(
+        name: Span,
+        returns: TyId,
+        parameters: impl IntoIterator<Item = Parameter>,
+    ) -> Self {
+        let mut declared = Self::with_parameters(name, returns, parameters);
         declared.body = Body::Declared;
         declared
+    }
+
+    /// Where `_Nonnull` was written on the parameter `local` is, or `None` if
+    /// it was not, or if `local` is not a parameter.
+    ///
+    /// # Panics
+    ///
+    /// If `local` came from a different [`Function`].
+    pub fn nonnull(&self, local: LocalId) -> Option<Span> {
+        assert!(
+            local.index() < self.locals.len(),
+            "no local {}",
+            local.index()
+        );
+        match local.index() {
+            0 => None,
+            index => self.nonnull.get(index - 1).copied().flatten(),
+        }
     }
 
     /// Whether the body is here.
@@ -895,7 +961,7 @@ impl Function {
 
     /// The parameters, in the order they were declared.
     pub fn parameters(&self) -> impl Iterator<Item = LocalId> + use<> {
-        (1..=self.parameters as u32).map(LocalId)
+        (1..=self.nonnull.len() as u32).map(LocalId)
     }
 
     /// Add a local, and hand back the id that names it.

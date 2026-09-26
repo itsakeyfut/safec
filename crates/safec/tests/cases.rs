@@ -715,6 +715,7 @@ cases! {
     // One case per stage the annotation passes through, for RK-033's reason:
     // the tree, a declaration's IR, and a definition read by the analysis.
     a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
+    a_nonnull_parameter_of_a_declaration_reaches_the_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Everywhere it cannot apply, one case per reason `parser.rs::placed`
     // gives.
     a_nonnull_not_after_a_star_is_refused: ["--emit", "ast"],

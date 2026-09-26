@@ -33,8 +33,8 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use crate::types::Types;
 use safec_ir::ir::{
-    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
-    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
+    Parameter, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -502,7 +502,9 @@ impl Lowering<'_> {
         if !self.functions.contains_key(self.sources.snippet(name)) {
             let id = self
                 .unit
-                .push_function(Function::declaration(name, returns, lowered));
+                .push_function(Function::declaration_with_parameters(
+                    name, returns, lowered,
+                ));
             self.functions
                 .insert(self.sources.snippet(name).to_owned(), id);
         }
@@ -512,24 +514,30 @@ impl Lowering<'_> {
     /// with.
     ///
     /// Local 0 is the return place and the parameters follow it, which is what
-    /// [`Function::new`] lays out. An empty parameter list is lowered as no
-    /// parameters: C17 6.7.6.3 p14 makes `()` say nothing about the count
-    /// rather than say there are none, and the IR has no way to spell "not
-    /// said". Nothing here reads it, because a call carries the arguments it
-    /// passes, and `types.rs` is where the count is checked.
+    /// [`Function::with_parameters`] lays out. Each carries the `_Nonnull` its
+    /// declaration wrote, which is what a call is checked against.
+    ///
+    /// An empty parameter list is lowered as no parameters: C17 6.7.6.3 p14
+    /// makes `()` say nothing about the count rather than say there are none,
+    /// and the IR has no way to spell "not said". Nothing here reads it,
+    /// because a call carries the arguments it passes, and `types.rs` is where
+    /// the count is checked.
     fn signature(
         &mut self,
         name: Span,
         returns: TypeId,
         parameters: &Parameters,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<(TyId, Vec<TyId>)> {
+    ) -> Option<(TyId, Vec<Parameter>)> {
         let returns = self.ty(name, returns, diagnostics)?;
         let mut lowered = Vec::new();
         if let Parameters::Prototype(parameters) = parameters {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
-                lowered.push(self.ty(at, parameter.ty, diagnostics)?);
+                lowered.push(Parameter {
+                    ty: self.ty(at, parameter.ty, diagnostics)?,
+                    nonnull: parameter.nonnull,
+                });
             }
         }
 
@@ -592,7 +600,7 @@ impl Lowering<'_> {
         };
         let (returns, parameters) = (*returns, parameters.clone());
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
-        let function = Function::new(name, returns, lowered);
+        let function = Function::with_parameters(name, returns, lowered);
 
         // A parameter is a local before the body's first statement, and its
         // name is how the body reaches it.
