@@ -236,7 +236,7 @@ a constant expression can be evaluated.
 
 ### Where the nonnull annotation is read
 
-`_Nonnull` is what `clang` calls a type nullability specifier, and the one
+`_Nonnull` is what `clang` calls a type nullability specifier, and the first
 annotation this compiler reads. It is not C, and `-pedantic-errors` refuses it
 for that reason, as an extension. C17 7.1.3 p1 reserves every identifier that
 begins with an underscore and an uppercase letter to the implementation, which
@@ -277,6 +277,57 @@ the language. The
 last two rows are the check rather than the frontend, and `clang`'s answer to
 them is the reason the check exists: it warns about a literal null and says
 nothing about a local that holds one.
+
+### Where the hatch is read
+
+A hatch is a function definition whose body the checks answer for without
+the answer being a claim about the program: what they could not prove inside
+it is listed by `--emit hatches` rather than reported.
+[ADR-0038](adr/0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
+is the decision, and [`safety-model.md`](safety-model.md#annotations) says what
+it means for a guarantee. It is spelled with GNU C's attribute syntax:
+
+```c
+__attribute__((annotate("safec_unchecked")))
+int raw(int *p) { return *p; }
+```
+
+`__attribute__` begins with two underscores, which C17 7.1.3 p1 reserves to the
+implementation, so reading it takes no name from a conforming program. `clang`
+keeps the string in a table beside the function and emits the same code for
+the body, measured at `-O2`; the one difference is that the function loses
+`local_unnamed_addr`, because the table takes its address. So the program means
+the same thing under both compilers.
+
+It is read in one form and one place: that attribute, alone in its list, before
+the specifiers of a function definition at file scope. Every other attribute is
+refused rather than skipped, because skipping one changes what the program
+means without saying so, and ADR-0037 measured `clang` deleting a test on the
+strength of `nonnull`. The parser reads the shape and `sema::resolve` reads the
+name and the string, because comparing text is not the parser's (ADR-0006);
+both refuse with the same code.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| the example above | accepts | accepts | accepts |
+| the same attribute before `int raw(int *p);` | `error[SC0204]` | accepts | accepts |
+| two of them before one definition | `error[SC0204]` | accepts | accepts |
+| after a specifier: `int __attribute__((...)) raw(...)` | `error[SC0204]` | accepts | accepts |
+| before a declaration in a block | `error[SC0204]` | accepts | accepts |
+| before a parameter | `error[SC0204]` | accepts | accepts |
+| `__attribute__((noreturn))` | `error[SC0205]` | accepts | accepts |
+| `__attribute__(())` | `error[SC0205]` | accepts | accepts |
+| `__attribute__((annotate(1)))` | `error[SC0205]` | error: not a string | error |
+| `__attribute__((annotate("safec_unchecked"), noreturn))` | `error[SC0205]` | accepts | accepts |
+| `__attribute__((section("text")))` | `error[SC0205]` | accepts | accepts |
+| `__attribute__((annotate("unchecked")))` | `error[SC0205]` | accepts | accepts |
+
+Measured against `clang 20.1.6 -std=c17 --target=x86_64-unknown-linux-gnu`, as
+the tables above are. Unlike `_Nonnull`, `-pedantic-errors` accepts every form
+`clang` does, because an attribute is an extension it does not diagnose. The
+refusals are decisions for the reason the `_Nonnull` ones are, and like them
+they hold at every safety level: `--safety off` still reads the hatch, and
+`--emit hatches` still lists it, with nothing under it because no check ran.
 
 The same measurement found what `_Nonnull` does to code, which is nothing:
 `clang -O2` emits the same IR for a function with and without it, where
