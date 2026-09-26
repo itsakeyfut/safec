@@ -1,0 +1,82 @@
+error[SC0306]: `++` cannot take `void *`
+   ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:4:5 ]
+   │
+ 4 │     v++;
+   │     ┬  
+   │     ╰── this is `void *`
+───╯
+  = note: a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.2.4 p2)
+error[SC0306]: `--` cannot take `void *`
+   ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:5:7 ]
+   │
+ 5 │     --v;
+   │       ┬  
+   │       ╰── this is `void *`
+───╯
+  = note: a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.3.1 p2)
+error[SC0306]: `++` cannot take `int (*)[]`
+   ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:6:5 ]
+   │
+ 6 │     q++;
+   │     ┬  
+   │     ╰── this is `int (*)[]`
+───╯
+  = note: a pointer steps by the size of what it points to, and an array of unknown length has no size (C17 6.5.2.4 p2)
+error[SC0306]: `--` cannot take `void (*)(void)`
+   ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:7:5 ]
+   │
+ 7 │     h--;
+   │     ┬  
+   │     ╰── this is `void (*)(void)`
+───╯
+  = note: a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.4 p2)
+error[SC0306]: `[]` cannot take `void *` and `int`
+   ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:8:5 ]
+   │
+ 8 │     v[1];
+   │     ┬ ┬  
+   │     ╰──── this is `void *`
+   │       │  
+   │       ╰── this is `int`
+───╯
+  = note: a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `int (*)[]` and `int`
+   ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:9:5 ]
+   │
+ 9 │     q[0];
+   │     ┬ ┬  
+   │     ╰──── this is `int (*)[]`
+   │       │  
+   │       ╰── this is `int`
+───╯
+  = note: a pointer steps by the size of what it points to, and an array of unknown length has no size (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `int` and `void *`
+    ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:10:7 ]
+    │
+ 10 │     1[v];
+    │     ┬ ┬  
+    │     ╰──── this is `int`
+    │       │  
+    │       ╰── this is `void *`
+────╯
+  = note: a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `void (*)(void)` and `int`
+    ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:11:5 ]
+    │
+ 11 │     g[1];
+    │     ┬ ┬  
+    │     ╰──── this is `void (*)(void)`
+    │       │  
+    │       ╰── this is `int`
+────╯
+  = note: a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `int` and `void (*)(void)`
+    ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:12:7 ]
+    │
+ 12 │     1[g];
+    │     ┬ ┬  
+    │     ╰──── this is `int`
+    │       │  
+    │       ╰── this is `void (*)(void)`
+────╯
+  = note: a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)

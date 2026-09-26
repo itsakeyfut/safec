@@ -1,0 +1,60 @@
+Declaration a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:1:1 "g" "void (void)"
+Function a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:2:1 "f" "int (void *, int (*)[], void (*)(void), int *)"
+  Parameter a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:2:7 "v" "void *"
+  Parameter a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:2:16 "q" "int (*)[]"
+  Parameter a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:2:28 "h" "void (*)(void)"
+  Parameter a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:2:45 "p" "int *"
+  Compound a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:2:53
+    Declaration a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:3:5 "a" "int[2]"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:4:5
+      Unary a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:4:5 postfix "++"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:4:5 "v"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:5:5
+      Unary a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:5:5 prefix "--"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:5:7 "v"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:6:5
+      Unary a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:6:5 postfix "++"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:6:5 "q"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:7:5
+      Unary a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:7:5 postfix "--"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:7:5 "h"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:8:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:8:5
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:8:5 "v"
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:8:7 "1"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:9:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:9:5
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:9:5 "q"
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:9:7 "0"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:10:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:10:5
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:10:5 "1"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:10:7 "v"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:11:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:11:5
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:11:5 "g"
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:11:7 "1"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:12:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:12:5
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:12:5 "1"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:12:7 "g"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:13:5
+      Unary a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:13:5 postfix "++"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:13:5 "p"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:14:5
+      Unary a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:14:5 prefix "--"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:14:7 "p"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:15:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:15:5
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:15:5 "p"
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:15:7 "1"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:16:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:16:5
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:16:5 "1"
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:16:7 "p"
+    Expression a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:17:5
+      Subscript a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:17:5
+        Identifier a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:17:5 "a"
+        Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:17:7 "1"
+    Return a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:18:5
+      Number a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:18:12 "0"

@@ -4,8 +4,8 @@
 //! The second half of the stage `docs/architecture.md` draws between the AST
 //! and the typed AST. `sema.rs` says which declaration a name means; this says
 //! what type each expression has, and reports an assignment, a compound
-//! assignment, an initializer, a `return`, a call and a binary operator whose
-//! types C17 forbids.
+//! assignment, an initializer, a `return`, a call, a binary operator, an
+//! increment and a subscript whose types C17 forbids.
 //!
 //! **A type this stage cannot work out is `None`, and `None` reports nothing.**
 //! The other constraints of 6.5 are not checked here, so plenty of expressions
@@ -67,7 +67,9 @@ const MISMATCH: Code = Code::new("SC0302");
 const ARGUMENTS: Code = Code::new("SC0303");
 
 /// An operand an operator does not take, C17 6.5.5 p2 to 6.5.14 p2 for a
-/// binary operator and 6.5.16.2 p1 and p2 for a compound assignment.
+/// binary operator, 6.5.16.2 p1 and p2 for a compound assignment, 6.5.2.4 p2
+/// and 6.5.3.1 p2 for an increment or a decrement, and 6.5.2.1 p1 for a
+/// subscript.
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
 /// is refused because `*=` does not take a pointer, whatever `p` holds. A
@@ -316,7 +318,7 @@ impl Checker<'_> {
             Expr::Identifier { .. } => {
                 Some(self.resolution.binding(self.resolution.resolved(id)?).ty)
             }
-            Expr::Unary { op, operand, .. } => self.unary(ast, op, operand),
+            Expr::Unary { op, operand, .. } => self.unary(ast, op, operand, diagnostics),
             Expr::Binary { op, lhs, rhs, .. } => self.binary(ast, op, lhs, rhs, diagnostics),
             Expr::Assign {
                 op, place, value, ..
@@ -337,13 +339,7 @@ impl Checker<'_> {
             // 6.5.17 p2: the result of a comma is the value of the right
             // operand, and its type.
             Expr::Comma { rhs, .. } => self.types[rhs.index()],
-            // 6.5.2.1 p2 makes `a[i]` mean `*(a + i)`, so its type is what the
-            // base points at or holds.
-            Expr::Subscript { base, .. } => match ast.ty(self.types[base.index()]?) {
-                Type::Pointer(pointee) => Some(*pointee),
-                Type::Array { element, .. } => Some(*element),
-                Type::Int | Type::Char | Type::Void | Type::Function { .. } => None,
-            },
+            Expr::Subscript { base, index, .. } => self.subscript(ast, base, index, diagnostics),
             Expr::Call {
                 callee, arguments, ..
             } => self.call(ast, id, callee, &arguments, diagnostics),
@@ -361,15 +357,21 @@ impl Checker<'_> {
         }
     }
 
-    fn unary(&mut self, ast: &mut Ast, op: UnOp, operand: ExprId) -> Option<TypeId> {
-        let operand = self.types[operand.index()];
+    fn unary(
+        &mut self,
+        ast: &mut Ast,
+        op: UnOp,
+        operand: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let operand_ty = self.types[operand.index()];
 
         match op {
             // 6.5.3.2 p3: `&x` is a pointer to the type of `x`. The type
             // itself is one nobody wrote, so it is pushed.
-            UnOp::AddrOf => Some(ast.push_type(Type::Pointer(operand?))),
+            UnOp::AddrOf => Some(ast.push_type(Type::Pointer(operand_ty?))),
             // p4: `*p` is what `p` points at.
-            UnOp::Deref => match ast.ty(operand?) {
+            UnOp::Deref => match ast.ty(operand_ty?) {
                 Type::Pointer(pointee) => Some(*pointee),
                 Type::Int
                 | Type::Char
@@ -377,17 +379,161 @@ impl Checker<'_> {
                 | Type::Array { .. }
                 | Type::Function { .. } => None,
             },
-            // 6.5.2.4 p2 and 6.5.3.1 p2: an increment is the value of its
-            // operand, so `p++` on a pointer is a pointer and not an `int`.
-            UnOp::PreInc | UnOp::PreDec | UnOp::PostInc | UnOp::PostDec => operand,
+            // Each form cites its own paragraph, the one that sends it to the
+            // additive operators, and the arms are split so that the clause is
+            // chosen where the variant is matched.
+            UnOp::PostInc | UnOp::PostDec => {
+                self.increment(ast, op, operand, "C17 6.5.2.4 p2", diagnostics)
+            }
+            UnOp::PreInc | UnOp::PreDec => {
+                self.increment(ast, op, operand, "C17 6.5.3.1 p2", diagnostics)
+            }
             // 6.5.3.3: the integer promotions of 6.3.1.1 make the result of
             // `+`, `-` and `~` an `int` for every operand this compiler can
             // write, and p5 makes `!` an `int` outright. Still `None` for an
             // operand nothing typed, because an operand that is not a number
             // at all makes an expression with no type rather than an `int`,
             // and `p = -nowhere` reported twice while this said otherwise.
-            UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => operand.map(|_| self.int),
+            UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => operand_ty.map(|_| self.int),
         }
+    }
+
+    /// C17 6.5.2.4 and 6.5.3.1: the type of an increment or a decrement of
+    /// `operand`, and whether a pointer there can take the step. `clause` is
+    /// the paragraph of the form that was written.
+    ///
+    /// The type is the operand's, so `p++` on a pointer is a pointer and not
+    /// an `int`. It is answered whether or not the increment is refused, for
+    /// the reason [`Checker::binary`] gives.
+    ///
+    /// p2 of either clause sends an increment to 6.5.6 and 6.5.16.2 for its
+    /// constraints, because `++E` is `E += 1`, so a pointer `v += 1` refuses
+    /// is refused here by the same function, [`unsteppable`]. It is not
+    /// reported as that `+=`, though: the message would name an operator and
+    /// an `int` the reader never wrote, and the `int` would have nowhere to
+    /// put its label. One type and one label, because there is one operand.
+    ///
+    /// The operand is not decayed: an array or a function there breaks p1's
+    /// modifiable lvalue, which is not this rule, and decaying it would report
+    /// it in this rule's words.
+    fn increment(
+        &self,
+        ast: &Ast,
+        op: UnOp,
+        operand: ExprId,
+        clause: &str,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let ty = self.types[operand.index()]?;
+
+        if let Type::Pointer(pointee) = ast.ty(ty) {
+            if let Some(why) = unsteppable(ast, *pointee) {
+                let spelled = self.spelled(ast, ty);
+                diagnostics.report(
+                    Diagnostic::error(format!("`{}` cannot take `{spelled}`", op.as_str()))
+                        .with_code(OPERANDS)
+                        .with_label(Label::primary(
+                            ast.expr(operand).span(),
+                            format!("this is `{spelled}`"),
+                        ))
+                        .with_note(stepping_note(why, clause)),
+                );
+            }
+        }
+
+        Some(ty)
+    }
+
+    /// C17 6.5.2.1: the type of `base[index]`, and whether a pointer in it
+    /// points to something a step can be taken over.
+    ///
+    /// The type is what the base points at or holds, because p2 makes `a[i]`
+    /// mean `*(a + i)`. It is answered whether or not the subscript is
+    /// refused, for the reason [`Checker::binary`] gives, but only where the
+    /// base is the pointer or the array: `1[v]` and `g[1]` have no type
+    /// whether refused or not, because the base is an integer or a function,
+    /// and the lowering adds its `SC0304` to their report. Typing them means
+    /// reading the pointer off either operand, which the lowering does not
+    /// do either, and is not this change.
+    ///
+    /// p1 wants one operand a pointer to a complete object type and the other
+    /// an integer. Only the first half is checked, and only where the second
+    /// holds: a pointer beside an integer is asked [`unsteppable`], the
+    /// function `v + 1` asks, whichever side it was written on, since `1[v]`
+    /// is valid C. Two pointers, or none, break p1 too and are not reported
+    /// yet. The operands are decayed first, because 6.3.2.1 converts an array
+    /// or a function before `[]` sees it, and a function `g` is refused in
+    /// `g[1]` only as the pointer it becomes.
+    fn subscript(
+        &mut self,
+        ast: &mut Ast,
+        base: ExprId,
+        index: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        if let (Some(left), Some(right)) = (self.types[base.index()], self.types[index.index()]) {
+            let (left, right) = (self.decayed(ast, left), self.decayed(ast, right));
+            let refused = match (OperandClass::of(ast, left), OperandClass::of(ast, right)) {
+                (Some(OperandClass::Pointer(pointee)), Some(OperandClass::Arithmetic)) => {
+                    pointee_steppable(ast, pointee, true).err()
+                }
+                (Some(OperandClass::Arithmetic), Some(OperandClass::Pointer(pointee))) => {
+                    pointee_steppable(ast, pointee, false).err()
+                }
+                _ => None,
+            };
+            if let Some(Refused::Pointee { on_left, why }) = refused {
+                self.report_subscript(ast, (base, left), (index, right), on_left, why, diagnostics);
+            }
+        }
+
+        match ast.ty(self.types[base.index()]?) {
+            Type::Pointer(pointee) => Some(*pointee),
+            Type::Array { element, .. } => Some(*element),
+            Type::Int | Type::Char | Type::Void | Type::Function { .. } => None,
+        }
+    }
+
+    /// Report a subscript whose pointer [`unsteppable`] refused. Each operand
+    /// is its expression and its type after [`Checker::decayed`], and
+    /// `on_left` says whether the pointer is the base.
+    ///
+    /// The shape of [`Checker::report_operands`]: both types in the order they
+    /// were written, and the primary label on the pointer whichever side it
+    /// is on, because a pointer refused for what it points to is wrong alone.
+    /// Labelling the base instead would point at an innocent `1` in `1[v]`.
+    fn report_subscript(
+        &self,
+        ast: &Ast,
+        (base, left): (ExprId, TypeId),
+        (index, right): (ExprId, TypeId),
+        on_left: bool,
+        why: &'static str,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let left_spelled = self.spelled(ast, left);
+        let right_spelled = self.spelled(ast, right);
+        let (primary, secondary) = if on_left {
+            ((base, &left_spelled), (index, &right_spelled))
+        } else {
+            ((index, &right_spelled), (base, &left_spelled))
+        };
+
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`[]` cannot take `{left_spelled}` and `{right_spelled}`"
+            ))
+            .with_code(OPERANDS)
+            .with_label(Label::primary(
+                ast.expr(primary.0).span(),
+                format!("this is `{}`", primary.1),
+            ))
+            .with_label(Label::secondary(
+                ast.expr(secondary.0).span(),
+                format!("this is `{}`", secondary.1),
+            ))
+            .with_note(stepping_note(why, "C17 6.5.2.1 p1")),
+        );
     }
 
     /// C17 6.5.5 to 6.5.14: the type of a binary operation, and whether its
@@ -671,7 +817,8 @@ impl Checker<'_> {
     /// about ordinary C. The pointer it makes is a type nobody wrote, so it is
     /// pushed.
     ///
-    /// Only [`Checker::binary`] asks. `assignable` deliberately does not:
+    /// Only [`Checker::binary`] and [`Checker::subscript`] ask. `assignable`
+    /// deliberately does not:
     /// an array source there is silence today, and converting it would add a
     /// check this issue was not asked for rather than remove a false one.
     fn decayed(&mut self, ast: &mut Ast, ty: TypeId) -> TypeId {
@@ -1119,8 +1266,10 @@ impl OperandClass {
 /// Why C17 6.5.6 does not let a pointer to `pointee` take a step, or `None`
 /// where it does: only a pointer to a complete object type may.
 ///
-/// One function for `v + 1` and `v += 1`, so that the two spellings of one
-/// rule cannot be given different answers. The reason is written here rather
+/// One function for `v + 1`, `v += 1`, `v++` and `v[1]`, so that the four
+/// spellings of one rule cannot be given different answers: C17 6.5.2.4 p2
+/// and 6.5.3.1 p2 define an increment as `+= 1`, and 6.5.2.1 p1 gives a
+/// subscript the same constraint. The reason is written here rather
 /// than spelled from `pointee`, because a spelled type can carry the file's
 /// own bytes (RK-002) and none of the three needs the type to be read.
 fn unsteppable(ast: &Ast, pointee: TypeId) -> Option<&'static str> {
@@ -1138,12 +1287,13 @@ fn stepping_note(why: &str, clause: &str) -> String {
     format!("a pointer steps by the size of what it points to, and {why} ({clause})")
 }
 
-/// Why [`Checker::binary_operable`] refused a pair of operands.
+/// Why [`Checker::binary_operable`] or [`Checker::subscript`] refused a pair
+/// of operands.
 #[derive(Clone, Copy)]
 enum Refused {
     /// The operator's clause takes no such pairing of operand types.
     Pairing,
-    /// C17 6.5.6 takes the pairing, and a pointer in it points to something
+    /// C17 6.5.6 or 6.5.2.1 takes the pairing, and a pointer in it points to something
     /// it cannot step over. `on_left` says which operand, and `why` is
     /// [`unsteppable`]'s answer.
     Pointee { on_left: bool, why: &'static str },
@@ -1155,8 +1305,9 @@ fn pairing(taken: bool) -> Result<(), Refused> {
     if taken { Ok(()) } else { Err(Refused::Pairing) }
 }
 
-/// `Ok` where a pointer to `pointee` can take the step 6.5.6 would make, and
-/// [`Refused::Pointee`] where it cannot, naming the operand by `on_left`.
+/// `Ok` where a pointer to `pointee` can take the step 6.5.6 or 6.5.2.1 would
+/// make, and [`Refused::Pointee`] where it cannot, naming the operand by
+/// `on_left`.
 fn pointee_steppable(ast: &Ast, pointee: TypeId, on_left: bool) -> Result<(), Refused> {
     match unsteppable(ast, pointee) {
         None => Ok(()),
@@ -2658,6 +2809,140 @@ int main(void) {{
             } else {
                 assert_eq!(checked.notes(), [note], "{code}");
             }
+        }
+    }
+
+    /// An increment and a subscript are held to the step rule `v + 1` is, by
+    /// C17 6.5.2.4 p2, 6.5.3.1 p2 and 6.5.2.1 p1, each with the message, the
+    /// primary label and the paragraph of its own spelling, and a pointer to
+    /// an `int` or an array of `int` steps in silence in both.
+    ///
+    /// Mutation: have `increment` stop asking `unsteppable`. The `++` and `--`
+    /// rows fail. Mutation: have `subscript` stop asking it. The `[]` rows
+    /// fail. Mutation: have `subscript` ask only when the base is the pointer.
+    /// `1[v]` fails. Mutation: put the primary label on the base always.
+    /// `1[v]`'s label fails. Mutation: drop `decayed` from the base in
+    /// `subscript`. `g[1]` fails, and from the index, `1[g]`. Mutation: swap
+    /// the two increments' clauses. `v++` and `--v` fail. Mutation: have
+    /// `unsteppable` refuse `int`. The silent rows fail.
+    #[test]
+    fn an_increment_and_a_subscript_take_the_step_the_additive_operators_do() {
+        for (code, message, primary, note) in [
+            (
+                "v++;",
+                "`++` cannot take `void *`",
+                "this is `void *`",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.2.4 p2)",
+            ),
+            (
+                "--v;",
+                "`--` cannot take `void *`",
+                "this is `void *`",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.3.1 p2)",
+            ),
+            (
+                "fp--;",
+                "`--` cannot take `void (*)(void)`",
+                "this is `void (*)(void)`",
+                "a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.4 p2)",
+            ),
+            (
+                "++u;",
+                "`++` cannot take `int (*)[]`",
+                "this is `int (*)[]`",
+                "a pointer steps by the size of what it points to, and an array of unknown length has no size (C17 6.5.3.1 p2)",
+            ),
+            (
+                "v[1];",
+                "`[]` cannot take `void *` and `int`",
+                "this is `void *`",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.2.1 p1)",
+            ),
+            (
+                "1[v];",
+                "`[]` cannot take `int` and `void *`",
+                "this is `void *`",
+                "a pointer steps by the size of what it points to, and `void` has no size (C17 6.5.2.1 p1)",
+            ),
+            (
+                "u[0];",
+                "`[]` cannot take `int (*)[]` and `int`",
+                "this is `int (*)[]`",
+                "a pointer steps by the size of what it points to, and an array of unknown length has no size (C17 6.5.2.1 p1)",
+            ),
+            (
+                "g[1];",
+                "`[]` cannot take `void (*)(void)` and `int`",
+                "this is `void (*)(void)`",
+                "a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)",
+            ),
+            (
+                "1[g];",
+                "`[]` cannot take `int` and `void (*)(void)`",
+                "this is `void (*)(void)`",
+                "a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)",
+            ),
+            ("p++;", "", "", ""),
+            ("--p;", "", "", ""),
+            ("p[1];", "", "", ""),
+            ("1[p];", "", "", ""),
+            ("a[1];", "", "", ""),
+        ] {
+            let checked = checked(&format!(
+                "void g(void);
+int main(void) {{
+    int *p;
+    void *v;
+    void (*fp)(void);
+    int (*u)[];
+    int a[2];
+    {code}
+    return 0;
+}}
+"
+            ));
+
+            if message.is_empty() {
+                assert_eq!(checked.messages(), Vec::<&str>::new(), "{code}");
+            } else {
+                assert_eq!(checked.messages(), [message], "{code}");
+                assert_eq!(checked.codes(), ["SC0306"], "{code}");
+                assert_eq!(checked.labels().first(), Some(&primary), "{code}");
+                assert_eq!(checked.notes(), [note], "{code}");
+            }
+        }
+    }
+
+    /// A refused increment or subscript keeps the type it would have had, as
+    /// a refused `+=` does, so that the lowering is not handed an expression
+    /// with no type and does not add an `SC0304` calling a wrong program this
+    /// compiler's gap. Every subscript row has the pointer as its base,
+    /// because `1[v]` and `g[1]` have no type to keep; `Checker::subscript`
+    /// says why.
+    ///
+    /// Mutation: have `increment` answer `None` after its report. The `++`
+    /// and `--` rows fail. Mutation: have `subscript` answer `None` after its
+    /// report. The `[]` rows fail. Nothing else in the suite noticed either.
+    #[test]
+    fn a_refused_increment_or_subscript_keeps_its_type() {
+        for (code, written, ty) in [
+            ("v++;", "v++", "void *"),
+            ("--v;", "--v", "void *"),
+            ("v[1];", "v[1]", "void"),
+            ("u[0];", "u[0]", "int[]"),
+        ] {
+            let checked = checked(&format!(
+                "int main(void) {{
+    void *v;
+    int (*u)[];
+    {code}
+    return 0;
+}}
+"
+            ));
+
+            assert_eq!(checked.codes(), ["SC0306"], "{code}");
+            assert_eq!(checked.spelling(written), ty, "{code}");
         }
     }
 
