@@ -822,6 +822,9 @@ cases! {
     // is written anyway. Mutation: have the lowering mark a hatch wherever an
     // attribute is present; this fails.
     an_unproven_dereference_behind_a_refused_attribute_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: have `dump_hatches` list every hatch's conclusions under each;
+    // this fails.
+    each_hatch_lists_only_what_was_concluded_inside_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
     // The listing is the count of hatches, whether or not a check ran.
     every_hatch_is_listed_at_safety_off_with_nothing_under_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     a_program_with_no_hatch_lists_none: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
