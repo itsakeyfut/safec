@@ -1,0 +1,15 @@
+error[SC0401]: this frees a value that was freed already
+   ╭─[ a_freed_pointer_handed_to_realloc_is_freed_twice.c:8:14 ]
+   │
+ 6 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 7 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 8 │     int *q = realloc(p, 8);
+   │              ──────┬──────  
+   │                    ╰──────── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

@@ -844,6 +844,79 @@ cases! {
     an_attribute_in_a_block_is_refused: ["--emit", "ast"],
     an_attribute_on_a_parameter_is_refused: ["--emit", "ast"],
 
+    // What code this check cannot read may reach: an allocation is exposed
+    // once it may, every opaque call unproves every exposed one, and may
+    // return any of them. See ADR-0039, whose Confirmation names the mutation
+    // each of these fails under.
+    //
+    // Reported, each a use after free or a double free for some definition
+    // of the callees C permits.
+    what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_may_return_what_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_handed_an_address_may_return_what_is_behind_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_may_return_what_an_earlier_call_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_in_a_loop_may_return_what_it_returned_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_stored_on_one_arm_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_proved_before_a_call_stays_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    the_old_pointer_realloc_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_freed_pointer_handed_to_realloc_is_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A local whose address a call kept earlier is reached by every call
+    // after it, handed anything or nothing.
+    a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Exposed on one arm and holding the pointer on the other: the closure
+    // over contents has to run over every exposed allocation, not only the
+    // ones a call has just marked.
+    a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The callee had what it returned, and may have kept it.
+    what_a_call_returned_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `memset` frees nothing and still exposes what it was handed.
+    what_memset_was_handed_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `memcpy` can be handed a local's address and write a pointer into it,
+    // so a free through that local proves nothing about what a sharer holds.
+    a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A loop through one call writes one site, and what the call returns may
+    // be what was freed through that site last turn.
+    a_call_in_a_loop_may_hand_back_what_was_freed_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A write two levels down is not recorded as contents, so it exposes what
+    // it carries at once.
+    a_pointer_stored_two_levels_down_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The closure over what an allocation holds goes as deep as the tables
+    // do. Mutation: stop pushing what `Known::expose` newly marks; this fails.
+    a_pointer_two_tables_deep_is_reached_through_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer that holds two allocations stores into both. Mutation: record
+    // into the first container only; this fails.
+    a_pointer_stored_through_either_of_two_tables_is_inside_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Refused and well defined: two costs ADR-0039 accepts, pinned so that a
+    // change to either is seen. The first is #253.
+    a_free_on_reallocs_failure_branch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_after_an_allocation_was_exposed_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Built.
+    what_memset_returns_is_the_allocation_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    memcpy_frees_neither_of_its_arguments: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_strcpy_returns_is_the_allocation_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Every spelling of the family read by name. Mutation: drop any one of
+    // `memmove`, `strncpy`, `strcat` or `strncat` from `Allocations::callee`;
+    // this fails.
+    what_the_other_library_copies_return_is_what_they_were_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_no_call_can_reach_stays_proved_across_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_made_again_at_a_site_is_not_the_one_exposed_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `realloc`'s size is not asked whether it was freed.
+    the_size_realloc_is_handed_is_not_asked_whether_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `realloc` read by name: the new object holds what the old one held,
+    // what it returns is named where it was allocated, a proved free before
+    // it stays proved, and a pointer into an allocation is asked about as
+    // `free` asks about one.
+    a_table_realloc_grew_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_realloc_returns_is_named_where_it_was_allocated: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_freed_before_realloc_stays_freed_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_into_an_allocation_handed_to_realloc_is_not_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // C17 7.22.3 p1 holds `calloc` and `aligned_alloc` to what `malloc` is.
+    what_calloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_aligned_alloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

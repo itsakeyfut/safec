@@ -1,0 +1,10 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:21:5 ]
+    │
+ 21 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

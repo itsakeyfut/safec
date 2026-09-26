@@ -1,0 +1,10 @@
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_free_on_reallocs_failure_branch_is_not_proved.c:12:9 ]
+    │
+ 12 │         free(p);
+    │         ───┬───  
+    │            ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

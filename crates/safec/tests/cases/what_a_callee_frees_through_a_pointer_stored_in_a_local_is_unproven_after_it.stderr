@@ -1,0 +1,10 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:14:5 ]
+    │
+ 14 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

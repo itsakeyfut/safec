@@ -1,0 +1,108 @@
+Target "x86_64-pc-windows-msvc"
+Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:3:6 "get" declared
+  Local "_0" "int *" return
+Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "void"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:6:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:6:13 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 written
+      Destination "_2"
+      Binary "Lt"
+        Copy "_1"
+        Constant 2
+    Branch a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 "bb2" "bb3"
+      Copy "_2"
+  Block "bb2"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 generated
+    StorageLive a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:9 generated "_3"
+    ArgumentsEvaluated a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:18 generated
+    Call a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:18 "get" "bb4"
+      Destination "_4"
+  Block "bb3"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:7:12 generated
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:16:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:16:12 generated
+    Return
+  Block "bb4"
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:14 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:8:18 generated
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 generated
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:10:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:10:20 generated
+    Return
+  Block "bb6"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 generated
+    Goto "bb7"
+  Block "bb7"
+    StorageLive a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:12:9 generated "_6"
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:12:13 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:12:17 generated
+    ArgumentsEvaluated a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 generated
+    Call a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 "free" "bb8"
+      Destination "_7"
+      Copy "_3"
+  Block "bb8"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:13:9 generated
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:14:13 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_1"
+        Copy "_6"
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:14:9 written
+      Destination "_1"
+      Use
+        Copy "_8"
+    Operation a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:14:9 written
+      Destination "_9"
+      Use
+        Copy "_1"
+    Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:14:9 generated
+    StorageDead a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:15:5 generated "_6"
+    StorageDead a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:15:5 generated "_3"
+    Goto "bb1"

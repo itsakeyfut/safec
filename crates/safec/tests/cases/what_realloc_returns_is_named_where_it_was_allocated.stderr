@@ -1,0 +1,15 @@
+error[SC0401]: this frees a value that was freed already
+    ╭─[ what_realloc_returns_is_named_where_it_was_allocated.c:12:5 ]
+    │
+ 10 │     int *q = realloc(p, 8);
+    │              ──────┬──────  
+    │                    ╰──────── allocated here
+ 11 │     free(q);
+    │     ───┬───  
+    │        ╰───── freed here
+ 12 │     free(q);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

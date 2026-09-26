@@ -1,0 +1,144 @@
+Target "x86_64-pc-windows-msvc"
+Function a_table_realloc_grew_still_holds_what_it_held.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_table_realloc_grew_still_holds_what_it_held.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_table_realloc_grew_still_holds_what_it_held.c:3:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+Function a_table_realloc_grew_still_holds_what_it_held.c:4:6 "drop_inner" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "void"
+  Block "bb0" entry
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:6:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:7:14 generated
+    Call a_table_realloc_grew_still_holds_what_it_held.c:7:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:7:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:7:14 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:8:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_table_realloc_grew_still_holds_what_it_held.c:8:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:8:9 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:9:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:11:17 generated
+    Call a_table_realloc_grew_still_holds_what_it_held.c:11:17 "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:11:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:11:17 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:12:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_table_realloc_grew_still_holds_what_it_held.c:12:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:12:9 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:13:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:12:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:15:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:15:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:15:5 generated
+    ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:16:20 generated
+    Call a_table_realloc_grew_still_holds_what_it_held.c:16:20 "realloc" "bb9"
+      Destination "_9"
+      Copy "_4"
+      Constant 16
+  Block "bb9"
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:16:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:16:20 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:17:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_table_realloc_grew_still_holds_what_it_held.c:17:9 "bb10" "bb11"
+      Copy "_10"
+  Block "bb10"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:17:9 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:18:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:18:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:17:9 generated
+    Goto "bb12"
+  Block "bb12"
+    ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:20:5 generated
+    Call a_table_realloc_grew_still_holds_what_it_held.c:20:5 "drop_inner" "bb13"
+      Destination "_11"
+      Copy "_8"
+  Block "bb13"
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:20:5 generated
+    Operation a_table_realloc_grew_still_holds_what_it_held.c:21:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_table_realloc_grew_still_holds_what_it_held.c:21:12 generated
+    Return

@@ -1,0 +1,13 @@
+error[SC0404]: this frees a pointer that is not the start of an allocation
+    ╭─[ a_pointer_into_an_allocation_handed_to_realloc_is_not_its_start.c:10:14 ]
+    │
+  6 │     int *p = malloc(8);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 10 │     int *q = realloc(p + 1, 16);
+    │              ─────────┬────────  
+    │                       ╰────────── not the start of the allocation
+────╯
+  = note: this check belongs to safety level 1
+  = help: free the pointer the allocation was made with, and keep the offset in a variable of its own
