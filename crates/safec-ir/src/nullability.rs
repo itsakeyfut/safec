@@ -733,15 +733,28 @@ fn report_arguments(
     terminator: &Terminator,
     known: &[Nullness],
 ) {
-    let Terminator::Call {
-        callee,
-        arguments,
-        destination: _,
-        then: _,
-        origin,
-    } = terminator
-    else {
-        return;
+    // Every terminator written out rather than `let ... else`, so that a
+    // second way to call a function has to be answered for here. A call
+    // through a pointer is the one the roadmap brings, and passed by in
+    // silence it would be every argument to a `_Nonnull` parameter unasked.
+    // RK-018 is the same shape one level down.
+    let (callee, arguments, origin) = match terminator {
+        Terminator::Call {
+            callee,
+            arguments,
+            destination: _,
+            then: _,
+            origin,
+        } => (callee, arguments, origin),
+        Terminator::Goto(_)
+        | Terminator::Branch {
+            condition: _,
+            then: _,
+            otherwise: _,
+            origin: _,
+        }
+        | Terminator::Return
+        | Terminator::Abnormal { to: _ } => return,
     };
 
     let callee = analysis.unit.function(*callee);
