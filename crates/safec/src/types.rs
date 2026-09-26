@@ -1146,7 +1146,8 @@ enum Refused {
     Pointee { left: bool, why: &'static str },
 }
 
-/// A pairing the operator's clause takes, or refuses whatever it points to.
+/// `Ok` where the operator's clause takes the pairing of operand types, and
+/// [`Refused::Pairing`] where it does not.
 fn pairing(taken: bool) -> Result<(), Refused> {
     if taken { Ok(()) } else { Err(Refused::Pairing) }
 }
