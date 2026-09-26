@@ -1,0 +1,2 @@
+Function an_annotation_other_than_the_hatch_is_refused.c:2:1 "stop" "void (void)" __attribute__ "annotate" "\"unchecked\""
+  Compound an_annotation_other_than_the_hatch_is_refused.c:2:17

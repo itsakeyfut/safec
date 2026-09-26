@@ -20,9 +20,11 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    Ast, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId,
+    Ast, Attribute, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId,
+    Type, TypeId,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
+use crate::parser::{UNREAD_ATTRIBUTE, UNREAD_ATTRIBUTE_LABEL};
 use safec_ir::source::{SourceMap, Span};
 
 /// A name used where nothing declares it.
@@ -147,6 +149,9 @@ impl Resolver<'_> {
     fn item(&mut self, item: &Item, diagnostics: &mut DiagnosticSink) {
         match item {
             Item::Function(function) => {
+                if let Some(attribute) = function.attribute {
+                    self.attribute(attribute, diagnostics);
+                }
                 self.walk_type(function.ty, diagnostics);
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
@@ -169,6 +174,36 @@ impl Resolver<'_> {
             }
             Item::Error { .. } => {}
         }
+    }
+
+    /// Refuse an attribute that is not `annotate("safec_unchecked")`.
+    ///
+    /// Here rather than in the parser, which reads the shape and not the text:
+    /// [`Attribute`] says why. The string is compared as written, quotes
+    /// included, so `"safec_" "unchecked"` never gets here and an escape that
+    /// spells the same bytes is refused. Both are row 4, and neither is a
+    /// spelling anybody writes.
+    ///
+    /// The lowering does not ask again. A refused attribute still reaches it,
+    /// because the lowering runs after a name this stage could not resolve, and
+    /// it makes that function a hatch; the run has already failed with this
+    /// report, so nothing it concludes about the hatch builds.
+    ///
+    /// [`Attribute`]: crate::ast::Attribute
+    fn attribute(&mut self, attribute: Attribute, diagnostics: &mut DiagnosticSink) {
+        let refused = if self.sources.snippet(attribute.name) != "annotate" {
+            attribute.name
+        } else if self.sources.snippet(attribute.argument) != "\"safec_unchecked\"" {
+            attribute.argument
+        } else {
+            return;
+        };
+
+        diagnostics.report(
+            Diagnostic::error("safec does not read this attribute")
+                .with_code(UNREAD_ATTRIBUTE)
+                .with_label(Label::primary(refused, UNREAD_ATTRIBUTE_LABEL)),
+        );
     }
 
     /// Every declarator of one declaration, in the order they were written.

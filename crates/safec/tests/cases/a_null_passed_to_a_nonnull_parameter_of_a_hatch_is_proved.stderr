@@ -1,0 +1,13 @@
+error[SC0405]: this passes a null pointer to a parameter declared `_Nonnull`
+   ╭─[ a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 ]
+   │
+ 2 │ int raw(int * _Nonnull p) {
+   │               ────┬───  
+   │                   ╰───── the parameter is declared `_Nonnull` here
+   │ 
+ 7 │     return raw(0);
+   │            ───┬──  
+   │               ╰──── this is null when it is passed
+───╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer to an object here, or remove `_Nonnull` from the parameter

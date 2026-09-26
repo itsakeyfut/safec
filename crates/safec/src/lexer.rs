@@ -564,15 +564,17 @@ mod tests {
         assert_eq!(scan.texts(), ["int", "main", "void_", "x1", "_y", "borrow"]);
     }
 
-    /// `_Nonnull` is an annotation and the words beside it are not.
+    /// `_Nonnull` and `__attribute__` are annotations and the words beside them
+    /// are not.
     ///
     /// The spelling is matched whole, as a keyword is: `_Nonnullx` and
     /// `Nonnull` are names a program may use, and `_nonnull` differs in the
-    /// letter C17 7.1.3 p1 reserves on. Mutation: have `scan_word` never ask
+    /// letter C17 7.1.3 p1 reserves on. `__attribute` is reserved too and is
+    /// not this compiler's to read. Mutation: have `scan_word` never ask
     /// `Annotation::from_spelling`, and the first row fails.
     #[test]
     fn a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not() {
-        let scan = scan("_Nonnull _Nonnullx Nonnull _nonnull");
+        let scan = scan("_Nonnull _Nonnullx Nonnull _nonnull __attribute__ __attribute");
 
         assert_eq!(
             scan.kinds(),
@@ -580,6 +582,8 @@ mod tests {
                 TokenKind::Annotation(Annotation::Nonnull),
                 TokenKind::Identifier,
                 TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::Annotation(Annotation::Attribute),
                 TokenKind::Identifier,
                 TokenKind::Eof,
             ]

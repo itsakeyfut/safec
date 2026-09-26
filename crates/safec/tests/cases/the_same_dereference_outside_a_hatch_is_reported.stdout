@@ -1,0 +1,12 @@
+Target "x86_64-pc-windows-msvc"
+Function the_same_dereference_outside_a_hatch_is_reported.c:1:5 "raw"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Block "bb0" entry
+    Operation the_same_dereference_outside_a_hatch_is_reported.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced the_same_dereference_outside_a_hatch_is_reported.c:2:12 generated
+    Return

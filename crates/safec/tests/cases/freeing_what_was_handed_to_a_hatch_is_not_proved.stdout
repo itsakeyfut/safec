@@ -1,0 +1,51 @@
+Target "x86_64-pc-windows-msvc"
+Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:5:6 "keep" unchecked
+  Local "_0" "void" return
+  Local "_1" "int *" parameter
+  Block "bb0" entry
+    Return
+Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "void"
+  Local "_4" "void"
+  Block "bb0" entry
+    Operation freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 generated
+    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 generated
+    ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 generated
+    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 "keep" "bb2"
+      Destination "_3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 generated
+    ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 generated
+    Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 "free" "bb3"
+      Destination "_4"
+      Copy "_1"
+  Block "bb3"
+    Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 generated
+    Operation freeing_what_was_handed_to_a_hatch_is_not_proved.c:12:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:12:12 generated
+    Return

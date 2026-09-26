@@ -1602,6 +1602,19 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
                 spell_type(sources, ast, function.ty)
             )
             .expect("writing to a string cannot fail");
+            // The name and the string as written, because the tree records what
+            // was read and `sema::resolve` is what says whether it is a hatch.
+            // Both are the file's text, written with `{:?}` for the reason
+            // RK-002 gives.
+            if let Some(attribute) = function.attribute {
+                write!(
+                    out,
+                    " __attribute__ {:?} {:?}",
+                    quoted(sources, attribute.name),
+                    quoted(sources, attribute.argument)
+                )
+                .expect("writing to a string cannot fail");
+            }
             out.push('\n');
             dump_parameters(sources, ast, function.ty, depth + 1, out);
             dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
@@ -3535,6 +3548,7 @@ int main(void) { return add(1, 2); }
             name: Span::new(first, 4, 9),
             body,
             span: Span::new(first, 0, 29),
+            attribute: None,
         }));
 
         let mut out = String::new();

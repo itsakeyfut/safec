@@ -52,9 +52,10 @@ pub enum TokenKind {
     /// A word this compiler reads as a safety annotation.
     ///
     /// Not a [`Keyword`], which is the C17 set and is tested against it. Every
-    /// spelling here begins with an underscore and an uppercase letter, which
-    /// C17 7.1.3 p1 reserves to the implementation, so reading one as an
-    /// annotation takes no name away from a conforming program.
+    /// spelling here begins with an underscore and either an uppercase letter
+    /// or a second underscore, which C17 7.1.3 p1 reserves to the
+    /// implementation, so reading one as an annotation takes no name away from
+    /// a conforming program.
     Annotation(Annotation),
     /// A numeric constant, as C delimits one.
     ///
@@ -234,8 +235,13 @@ spellings! {
     /// `_Nonnull` is `clang`'s spelling, written where `clang` writes it:
     /// after the `*` of the pointer it qualifies. ADR-0037 says why this
     /// spelling and what it means.
+    ///
+    /// `__attribute__` is GNU C's, and is read in one form only, the one that
+    /// declares a function definition a hatch. ADR-0038 says why that form and
+    /// what it means.
     Annotation {
         Nonnull => "_Nonnull",
+        Attribute => "__attribute__",
     }
 }
 
@@ -542,7 +548,7 @@ mod tests {
     fn the_annotation_table_is_the_spellings_this_compiler_reads() {
         let spellings: Vec<_> = Annotation::ALL.iter().map(|a| a.as_str()).collect();
 
-        assert_eq!(spellings, ["_Nonnull"]);
+        assert_eq!(spellings, ["_Nonnull", "__attribute__"]);
     }
 
     /// Every spelling in the table is the one C uses, and no two variants share

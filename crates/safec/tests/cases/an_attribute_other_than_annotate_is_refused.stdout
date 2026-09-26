@@ -1,0 +1,2 @@
+Function an_attribute_other_than_annotate_is_refused.c:2:1 "stop" "void (void)" __attribute__ "section" "\"text\""
+  Compound an_attribute_other_than_annotate_is_refused.c:2:17

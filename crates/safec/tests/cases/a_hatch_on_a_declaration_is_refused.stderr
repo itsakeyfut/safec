@@ -1,0 +1,7 @@
+error[SC0204]: `__attribute__` cannot apply here
+   ╭─[ a_hatch_on_a_declaration_is_refused.c:1:1 ]
+   │
+ 1 │ __attribute__((annotate("safec_unchecked")))
+   │ ──────────────────────┬─────────────────────  
+   │                       ╰─────────────────────── a hatch is a function definition, and this declaration has no body
+───╯

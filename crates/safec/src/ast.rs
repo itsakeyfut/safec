@@ -570,7 +570,34 @@ pub struct Function {
     /// The body, which is always a compound statement.
     pub body: StmtId,
     /// The whole definition, from the type to the closing brace.
+    ///
+    /// It begins at the specifiers, not at a hatch's attribute before them.
     pub span: Span,
+    /// The `__attribute__` written before the definition, which is what makes
+    /// it a hatch, or `None` if none was.
+    ///
+    /// Only a definition carries one: the parser refuses it on a declaration,
+    /// because what a hatch says is about a body. See ADR-0038.
+    pub attribute: Option<Attribute>,
+}
+
+/// `__attribute__((name("argument")))`, written before a function definition.
+///
+/// The one shape of GNU C's attribute syntax the parser reads, and it reads the
+/// shape only. Whether the name is `annotate` and the argument is
+/// `"safec_unchecked"`, the one spelling this compiler gives a meaning, is
+/// asked by `sema::resolve`, which refuses anything else: comparing the text
+/// here would be the parser reaching for the source, which ADR-0006 keeps as
+/// the signal for something else. `resolve` runs for every artifact that reads
+/// this, so nothing downstream meets an attribute nobody compared.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Attribute {
+    /// From `__attribute__` through the last `)`.
+    pub span: Span,
+    /// The attribute's name.
+    pub name: Span,
+    /// The string literal it was given, quotes included.
+    pub argument: Span,
 }
 
 /// Something at the top level of a translation unit.
@@ -1513,7 +1540,8 @@ mod tests {
                 ty: TypeId(0),
                 name: s,
                 body: StmtId(0),
-                span: s
+                span: s,
+                attribute: None,
             })
             .name(),
             "Function"

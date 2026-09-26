@@ -773,6 +773,33 @@ cases! {
     // is reported beside the refusal.
     a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // A hatch: a function definition whose unproven conclusions are listed
+    // rather than reported. See ADR-0038, whose Confirmation names the
+    // mutation each of these fails under.
+    //
+    // One case per stage it passes through, for RK-033's reason: the tree, the
+    // IR, and the listing.
+    a_hatch_is_read_into_the_tree: ["--emit", "ast"],
+    the_same_dereference_outside_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The boundary is the prototype, and the checked side reads it.
+    a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a hatch may have done to what it was handed is assumed to be the
+    // worst, because it cannot yet say otherwise: ADR-0032's default.
+    freeing_what_was_handed_to_a_hatch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Everywhere it cannot apply, and every attribute that is not it: one case
+    // per place `parser.rs` and `sema.rs` refuse one.
+    a_hatch_on_a_declaration_is_refused: ["--emit", "ast"],
+    an_attribute_with_no_argument_is_refused: ["--emit", "ast"],
+    an_attribute_with_nothing_in_it_is_refused: ["--emit", "ast"],
+    an_attribute_whose_argument_is_not_a_string_is_refused: ["--emit", "ast"],
+    an_attribute_list_of_more_than_one_is_refused: ["--emit", "ast"],
+    an_attribute_other_than_annotate_is_refused: ["--emit", "ast"],
+    an_annotation_other_than_the_hatch_is_refused: ["--emit", "ast"],
+    a_second_attribute_before_a_definition_is_refused: ["--emit", "ast"],
+    an_attribute_after_a_specifier_is_refused: ["--emit", "ast"],
+    an_attribute_in_a_block_is_refused: ["--emit", "ast"],
+    an_attribute_on_a_parameter_is_refused: ["--emit", "ast"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

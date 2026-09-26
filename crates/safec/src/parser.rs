@@ -22,8 +22,8 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, BinOp, Declaration, Expr, ExprId, Function, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Type, TypeId, UnOp,
+    Ast, Attribute, BinOp, Declaration, Expr, ExprId, Function, InitDeclarator, Item, Parameters,
+    Stmt, StmtId, Type, TypeId, UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
@@ -61,9 +61,13 @@ const TOO_DEEP: Code = Code::new("SC0202");
 /// gap from a decision.
 const BRACED_INITIALIZER: Code = Code::new("SC0203");
 
-/// `_Nonnull` written where it cannot apply.
+/// `_Nonnull` or `__attribute__` written where it cannot apply.
 ///
-/// It applies to one thing, the pointer a parameter of a declared function
+/// `__attribute__` applies before a function definition at file scope, and
+/// nowhere else, because the one form of it this compiler reads makes that
+/// definition a hatch and a hatch is about a body. See ADR-0038.
+///
+/// `_Nonnull` applies to one thing, the pointer a parameter of a declared function
 /// holds, because that is the one place ADR-0037 gives it a meaning: the body
 /// believes it and every call is checked against it. Anywhere else it would be
 /// read and mean nothing, which is a promise written down and silently dropped,
@@ -74,6 +78,26 @@ const BRACED_INITIALIZER: Code = Code::new("SC0203");
 /// knows what a declarator declares: whether it is a parameter, and whether the
 /// function type a parameter list belongs to is the declared function's own.
 const MISPLACED_ANNOTATION: Code = Code::new("SC0204");
+
+/// An attribute this compiler does not read.
+///
+/// `__attribute__` is read in one form, the hatch ADR-0038 decides, and
+/// anything else written with it is refused rather than skipped. A skipped
+/// attribute is one whose meaning this compiler changed without saying so, and
+/// ADR-0037 measured `clang` deleting a test the author wrote on the strength of
+/// `nonnull`.
+///
+/// Its own code rather than [`MISPLACED_ANNOTATION`], because it is a different
+/// program to fix: that one is a known word in the wrong place, and this is a
+/// word this compiler does not know. Reported from two stages. This one refuses
+/// what the shape alone shows; `sema::resolve` refuses a name that is not
+/// `annotate` and a string that is not `"safec_unchecked"`, because comparing
+/// text is not the parser's. See [`Attribute`].
+pub(crate) const UNREAD_ATTRIBUTE: Code = Code::new("SC0205");
+
+/// What [`UNREAD_ATTRIBUTE`] says under its caret, from either stage.
+pub(crate) const UNREAD_ATTRIBUTE_LABEL: &str =
+    "the one attribute it reads is `annotate(\"safec_unchecked\")`";
 
 /// How deep this parser will go before it declines.
 ///
@@ -453,15 +477,27 @@ impl Parser<'_> {
     /// of a definition derived a function type is 6.9.1 p2's constraint, and a
     /// constraint is checked later.
     fn item(&mut self, diagnostics: &mut DiagnosticSink) -> Item {
+        let first = self.peek().span;
+
+        // Before the specifiers, and outside the span of what follows it, which
+        // `Function::span` says begins at the specifiers.
+        let attribute = if self.check(TokenKind::Annotation(Annotation::Attribute)) {
+            let Some(attribute) = self.attribute(diagnostics) else {
+                return Item::Error { span: first };
+            };
+            Some(attribute)
+        } else {
+            None
+        };
         let start = self.peek().span;
 
         let Some(declared) = self.declared(Declares::FileScope, diagnostics) else {
-            return Item::Error { span: start };
+            return Item::Error { span: first };
         };
 
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
             let Some(body) = self.compound(diagnostics) else {
-                return Item::Error { span: start };
+                return Item::Error { span: first };
             };
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
@@ -470,7 +506,23 @@ impl Parser<'_> {
                 name: declared.name,
                 body,
                 span,
+                attribute,
             });
+        }
+
+        // Refused here, where the missing body is first known, rather than
+        // read and dropped: a declaration marked as a hatch says nothing this
+        // compiler can act on, and a promise written down and silently ignored
+        // is what `MISPLACED_ANNOTATION` exists to refuse.
+        if let Some(attribute) = attribute {
+            self.report_at(
+                attribute.span,
+                MISPLACED_ANNOTATION,
+                "`__attribute__` cannot apply here",
+                "a hatch is a function definition, and this declaration has no body",
+                diagnostics,
+            );
+            return Item::Error { span: first };
         }
 
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
@@ -625,8 +677,68 @@ impl Parser<'_> {
         Some(Some(self.assignment(diagnostics)))
     }
 
+    /// `__attribute__((name("argument")))`, the one shape of it this parser
+    /// reads. See [`Attribute`] for what is left to `sema::resolve`.
+    ///
+    /// Everything else inside the parentheses is refused with
+    /// [`UNREAD_ATTRIBUTE`]: an attribute with no argument, one whose argument
+    /// is not a string, and a list of more than one. Each is an attribute that
+    /// is not the hatch's, and telling which from the shape alone needs no text.
+    fn attribute(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Attribute> {
+        let start = self.advance().span;
+        self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
+        self.expect(TokenKind::Punct(Punct::LeftParen), "`(`", diagnostics)?;
+
+        if !self.check(TokenKind::Identifier) {
+            return self.unread(self.peek().span, diagnostics);
+        }
+        let name = self.advance().span;
+
+        if !self.eat(TokenKind::Punct(Punct::LeftParen)) {
+            return self.unread(name, diagnostics);
+        }
+        if !self.check(TokenKind::String) {
+            return self.unread(self.peek().span, diagnostics);
+        }
+        let argument = self.advance().span;
+        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+
+        if self.check(TokenKind::Punct(Punct::Comma)) {
+            return self.unread(self.peek().span, diagnostics);
+        }
+        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+        self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
+
+        Some(Attribute {
+            span: Span::new(self.file, start.start(), self.previous().span.end()),
+            name,
+            argument,
+        })
+    }
+
+    /// Refuse an attribute this compiler does not read, at `at`.
+    fn unread(&mut self, at: Span, diagnostics: &mut DiagnosticSink) -> Option<Attribute> {
+        self.report_at(
+            at,
+            UNREAD_ATTRIBUTE,
+            "safec does not read this attribute",
+            UNREAD_ATTRIBUTE_LABEL,
+            diagnostics,
+        );
+        None
+    }
+
     /// The declaration specifiers, of which this stage reads one.
+    ///
+    /// `__attribute__` arrives here wherever a declaration begins with it
+    /// other than at file scope, and a second one after the first arrives here
+    /// too: [`Parser::item`] reads one and hands the rest to this.
     fn specifiers(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+        if self.check(TokenKind::Annotation(Annotation::Attribute)) {
+            self.misplaced_attribute(diagnostics);
+            return None;
+        }
+
         let Some(ty) = specifier(self.peek().kind) else {
             self.report(
                 "expected a declaration",
@@ -729,12 +841,30 @@ impl Parser<'_> {
             return None;
         }
 
+        // After a specifier or a `*`, which GNU C allows and this compiler
+        // does not read.
+        if self.check(TokenKind::Annotation(Annotation::Attribute)) {
+            self.misplaced_attribute(diagnostics);
+            return None;
+        }
+
         if named {
             self.report("expected a name", "a name is missing here", diagnostics);
             return None;
         }
 
         Some((None, Vec::new()))
+    }
+
+    /// Refuse the `__attribute__` that is there, which is not before a
+    /// function definition at file scope.
+    fn misplaced_attribute(&mut self, diagnostics: &mut DiagnosticSink) {
+        self.report_as(
+            MISPLACED_ANNOTATION,
+            "`__attribute__` cannot apply here",
+            "it is read once, before a function definition at file scope",
+            diagnostics,
+        );
     }
 
     /// Whether the `(` that is there opens a parenthesised declarator rather
@@ -1004,7 +1134,12 @@ impl Parser<'_> {
                     // statement, and a declaration is not a statement in C.
                     // Which of the two is here is decided by the same
                     // `specifier` the declaration reads with.
-                    let item = if specifier(parser.peek().kind).is_some() {
+                    // `__attribute__` goes with the declarations, where
+                    // `specifiers` refuses it by name, rather than to the
+                    // expressions, which would call it a missing one.
+                    let item = if specifier(parser.peek().kind).is_some()
+                        || parser.check(TokenKind::Annotation(Annotation::Attribute))
+                    {
                         parser.declaration_statement(diagnostics)
                     } else {
                         parser.statement(diagnostics)

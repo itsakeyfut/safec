@@ -1,0 +1,7 @@
+error[SC0204]: `__attribute__` cannot apply here
+   ╭─[ an_attribute_on_a_parameter_is_refused.c:1:10 ]
+   │
+ 1 │ int same(__attribute__((annotate("safec_unchecked"))) int x) {
+   │          ──────┬──────  
+   │                ╰──────── it is read once, before a function definition at file scope
+───╯

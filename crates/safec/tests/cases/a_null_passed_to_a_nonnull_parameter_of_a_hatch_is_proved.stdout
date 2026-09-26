@@ -1,0 +1,31 @@
+Target "x86_64-pc-windows-msvc"
+Function a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:2:5 "raw" unchecked
+  Local "_0" "int" return
+  Local "_1" "int *" parameter _Nonnull
+  Block "bb0" entry
+    Operation a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:3:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:3:12 generated
+    Return
+Function a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:6:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Block "bb0" entry
+    Operation a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:6:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 generated
+    Call a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 "raw" "bb1"
+      Destination "_1"
+      Constant 0
+  Block "bb1"
+    Operation a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved.c:7:12 generated
+    Return
