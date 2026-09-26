@@ -84,6 +84,7 @@ pub fn lower(
         locals: HashMap::new(),
         scopes: Vec::new(),
         functions: HashMap::new(),
+        prototypes: HashMap::new(),
         refused: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
@@ -127,6 +128,15 @@ struct Lowering<'a> {
     /// text, they are one, which is what C means by them and what
     /// `sema.rs::lookup` already compares.
     functions: HashMap<String, FuncId>,
+    /// The first prototype each file-scope name was declared with: where its
+    /// name was, and which of its parameters were `_Nonnull`.
+    ///
+    /// Not [`Lowering::functions`]' entry, which is the first *declaration*:
+    /// `void g();` declares no parameters (C17 6.7.6.3 p14), so every later
+    /// declaration would agree with it, and `void g(); void g(int *p);` above a
+    /// `_Nonnull` definition passed in silence. That was found by review.
+    /// See [`DISAGREEING_ANNOTATION`].
+    prototypes: HashMap<String, (Span, Vec<Option<Span>>)>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -509,50 +519,55 @@ impl Lowering<'_> {
             return;
         };
 
+        // Before the function is recorded, because `lowered` moves into it.
+        // `()` says nothing about the parameters, so it has nothing to agree
+        // or disagree with, which is why only a prototype is asked.
+        if let Parameters::Prototype(_) = parameters {
+            self.agree(name, &lowered, diagnostics);
+        }
+
         // A name declared twice is one function. The first declaration is
         // the one whose span the IR carries, which is where a reader of a
         // diagnostic about the callee is pointed.
-        match self.functions.get(self.sources.snippet(name)) {
-            None => {
-                let id = self
-                    .unit
-                    .push_function(Function::declaration_with_parameters(
-                        name, returns, lowered,
-                    ));
-                self.functions
-                    .insert(self.sources.snippet(name).to_owned(), id);
-            }
-            Some(&id) => self.agree(id, name, &lowered, diagnostics),
+        if !self.functions.contains_key(self.sources.snippet(name)) {
+            let id = self
+                .unit
+                .push_function(Function::declaration_with_parameters(
+                    name, returns, lowered,
+                ));
+            self.functions
+                .insert(self.sources.snippet(name).to_owned(), id);
         }
     }
 
-    /// Refuse a later declaration of a function that disagrees with the first
-    /// about which parameters are `_Nonnull`. See [`DISAGREEING_ANNOTATION`].
+    /// Refuse a prototype of a function that disagrees with the first prototype
+    /// of it about which parameters are `_Nonnull`, or record this one as the
+    /// first. See [`DISAGREEING_ANNOTATION`].
     ///
     /// Position by position, over as many parameters as both have. A
     /// declaration with a different count is a different disagreement, which is
     /// #57's and is not answered here.
-    fn agree(
-        &mut self,
-        id: FuncId,
-        name: Span,
-        later: &[Parameter],
-        diagnostics: &mut DiagnosticSink,
-    ) {
-        let first = self.unit.function(id);
-        let differs = first.parameters().zip(later).find(|(local, parameter)| {
-            first.nonnull(*local).is_some() != parameter.nonnull.is_some()
-        });
-        let Some((local, parameter)) = differs else {
+    fn agree(&mut self, name: Span, later: &[Parameter], diagnostics: &mut DiagnosticSink) {
+        let key = self.sources.snippet(name);
+        let Some((first_name, first)) = self.prototypes.get(key) else {
+            let promises = later.iter().map(|parameter| parameter.nonnull).collect();
+            self.prototypes.insert(key.to_owned(), (name, promises));
+            return;
+        };
+        let differs = first
+            .iter()
+            .zip(later)
+            .find(|(first, later)| first.is_some() != later.nonnull.is_some());
+        let Some((first, later)) = differs else {
             return;
         };
 
         // The primary label goes on the `_Nonnull` that one of the two wrote,
         // because it is the only token either declaration has that says what
         // differs. The other declaration is pointed at by its name.
-        let (said, silent, silent_label) = match (first.nonnull(local), parameter.nonnull) {
+        let (said, silent, silent_label) = match (*first, later.nonnull) {
             (Some(said), _) => (said, name, "this declaration does not"),
-            (None, Some(said)) => (said, first.name, "the first declaration does not"),
+            (None, Some(said)) => (said, *first_name, "the first prototype does not"),
             (None, None) => unreachable!("the two were found to differ"),
         };
 

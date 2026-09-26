@@ -3,7 +3,7 @@ error[SC0307]: the declarations of `g` disagree about `_Nonnull`
    │
  1 │ void g(int * _Nonnull a, int *b);
    │      ┬  
-   │      ╰── the first declaration does not
+   │      ╰── the first prototype does not
  2 │ void g(int * _Nonnull a, int * _Nonnull b) {
    │                                ────┬───  
    │                                    ╰───── one declaration says `_Nonnull` here

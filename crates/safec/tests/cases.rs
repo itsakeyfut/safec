@@ -757,6 +757,14 @@ cases! {
     a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Mutation: compare only the first parameter in `agree`; only this fails.
     declarations_that_disagree_about_a_later_parameter_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `void g();` declares no parameters, so it cannot be what the rest agree
+    // with. Mutation: have `declare_one` call `agree` for `()` as well; only
+    // this case fails, and it goes silent.
+    an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The promise on a declaration and not on the definition. The body is
+    // built from the definition, so it believes nothing and its dereference
+    // is reported beside the refusal.
+    a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
