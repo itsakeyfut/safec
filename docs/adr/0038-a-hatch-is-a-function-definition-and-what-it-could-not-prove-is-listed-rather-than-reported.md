@@ -38,7 +38,10 @@ drawn inside one goes.
 * What the analysis already does at a boundary. Every callee other than `free`
   and `malloc` is `Callee::Opaque` in `crates/safec-ir/src/memory.rs`, a
   function defined in the same translation unit included, so a caller already
-  assumes the worst of a call. A declaration hatch needs no new transfer.
+  assumes the worst of what a call can reach through its arguments. Review
+  found that this is not all a call can reach, and that a hatch needs one
+  transfer after all; the paragraph *What a call to a hatch leaves behind*
+  below is that.
 * Measured on `main` at `ff53a50`: a local whose address is taken to hand to a
   wrapper stays escaped for the rest of the function, so a later, unrelated
   opaque call takes its proof away. `int **pp = &p; other(); free(p);` is
@@ -126,8 +129,34 @@ the implementation would be the filter the record's guard is written against.
 **Believed and checked, as ADR-0037 answers it.** A hatch's boundary is its
 prototype. A `_Nonnull` parameter of a hatch is checked at every call in the
 translation unit, as any other is; what is believed is what the body does, and
-it is believed by nobody, because callers already assume the worst of every call
-they cannot read. #134's answer and this one are the same answer.
+it is believed by nobody, because a caller assumes the worst of it, as the next
+paragraph says. #134's answer and this one are the same answer.
+
+**What a call to a hatch leaves behind: every allocation still live is
+unproven.** Found by review. An opaque call makes unproven the allocations its
+arguments name and the locals whose address escaped, and nothing else: a
+pointer stored into memory this check does not model, `*box = p;
+drop_inner(box);`, reaches the callee where no argument names it, and the
+caller's `p` stayed proved live. For any other callee the program was refused
+anyway, by the callee's own body, whose unproven free is an error; inside a
+hatch that error is listed rather than reported, so the use after free in the
+caller built in silence. So a call to a hatch marks every allocation the
+caller still holds live as unproven, which is ADR-0032's default read with
+nothing declared: what the hatch could reach is not known, so it is all of it.
+An allocation already proved freed stays proved, since no callee un-frees one.
+What this costs is row 4: an allocation the hatch never saw is unproven after
+the call. The same gap for a callee that is not a hatch, and the pointer a call
+returns being taken as fresh, are
+[#250](https://github.com/itsakeyfut/safec/issues/250).
+
+**Only an attribute `sema::resolve` accepted makes a hatch.** It records the
+ones it accepts and the lowering asks it, rather than marking any function an
+attribute is written before. Found by review: a refused spelling is an error,
+but `--emit safety-ir` and `--emit hatches` are written on the run that
+refused it, and they showed the refused function as a hatch with its unproven
+conclusions moved out of the report. It also keeps a later spelling that means
+something else, such as the effects #249 adds, from making a hatch by being
+accepted.
 
 ### Confirmation
 
@@ -154,17 +183,39 @@ function: it is the silent direction, a conclusion about an ordinary function
 credited to a hatch and not reported. Before that case was written, the
 nullability half of this passed the whole suite.
 
-**Carried to the IR.** `Lowering::body` never calling `Function::unchecked`
+**Carried to the IR.** `Lowering::body` never calling `Function::hatched`
 fails every case above that has a hatch in it and
 `driver::tests::every_emit_kind_makes_something_of_a_program`. Not printing
-`unchecked` fails the cases that emit the IR of a hatch, and not printing the
-attribute in the tree fails `a_hatch_is_read_into_the_tree`.
+`hatch` fails the cases that emit the IR of a hatch, and not printing the
+attribute in the tree fails `a_hatch_is_read_into_the_tree`. The lowering
+marking a hatch wherever an attribute is present, rather than where
+`sema::resolve` accepted one, fails
+`an_unproven_dereference_behind_a_refused_attribute_is_still_reported` alone.
+
+**What a call to a hatch leaves behind.** Dropping the loop in `memory.rs`'s
+`Callee::Opaque` arm that marks every live allocation unproven after a call to
+a hatch fails `what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it`,
+which is a use after free going silent, and
+`an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too`. Marking every
+allocation, freed ones included, fails
+`a_free_proved_before_a_call_to_a_hatch_stays_proved` alone.
+
+**One caret, one answer.** `a && b` writes both operands at one caret, and the
+nullability check folds the findings there into one. Keeping the first rather
+than the worst fails
+`a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported`,
+which is a proved null dereference building. Folding across functions fails
+`two_functions_that_share_a_caret_are_asked_about_apart` in
+`crates/safec-ir/tests/nulls.rs`, hand-built because no two functions this
+frontend lowers share a caret.
 
 **The listing.** Listing every function rather than every hatch fails
 `a_program_with_no_hatch_lists_none` and
-`every_hatch_is_listed_at_safety_off_with_nothing_under_it`. Dropping the sort
+`every_hatch_is_listed_at_safety_off_with_nothing_under_it`. Listing every
+hatch's conclusions under each fails
+`each_hatch_lists_only_what_was_concluded_inside_it` alone. Dropping the sort
 fails `what_a_hatch_concluded_is_listed_in_the_order_it_was_written` alone, and
-calling a proof unproven fails the double-free case alone. File names in it are
+calling an `Unsafe` conclusion `unknown` fails the double-free case alone. File names in it are
 written by `print.rs::dump_node`, whose escaping is held by that file's own test.
 
 **The boundary.** Deleting the `report_arguments` call fails
@@ -176,7 +227,7 @@ conservative default at a hatch's boundary.
 
 **The spelling and where it is read.** Each refusal fails the case named for
 it and nothing else: on a declaration, a list of two, an argument that is not
-a string, before a specifier (a second attribute, a parameter, a block), after
+a string, a second argument or string, before a specifier (a second attribute, a parameter, a block), after
 a specifier, and a block sending it to the expressions. `sema::resolve` never
 comparing fails `an_attribute_other_than_annotate_is_refused` and
 `an_annotation_other_than_the_hatch_is_refused`, and comparing the name alone
@@ -197,6 +248,10 @@ parser says where such a name is refused instead.
   built and guarded, by ADR-0029, ADR-0031 and ADR-0037.
 * Good, because a program `clang` compiles keeps compiling under `clang`,
   `-pedantic-errors` included, and means the same thing.
+* Bad, because every allocation the caller holds live is unproven after a
+  call to a hatch, including those the hatch was never handed. That is row 4,
+  and it is what makes the hatch's boundary as conservative as ADR-0032 asks
+  until #249 lets a hatch say what it does not touch.
 * Bad, because a hatch that must write a caller's local costs that local its
   escape for the rest of the function, measured above.
 * Bad, because a hatch cannot yet say what it does not do, so anything handed to
@@ -206,6 +261,11 @@ parser says where such a name is refused instead.
   unit is not checked against a `_Nonnull`, as ADR-0037 says, and a hatch's body
   is not checked against anything.
 * Bad, because GCC's reading of `annotate` was not measured here.
+* Open, and found by review: what `--safety strict` does with a hatch. The
+  roadmap makes that level the one that leaves nothing `Unknown`, and a hatch is
+  where `Unknown` goes instead of the report, so the two meet. `route` does not
+  read the level today, and so a hatch lists at every level. Deciding it is for
+  the change that implements the level, and it is one parameter to `route`.
 * What would reverse this: a region hatch landing and making the definition
   form redundant, or a second compiler whose reading of the attribute changes
   what the program does.

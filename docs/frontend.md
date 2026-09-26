@@ -319,12 +319,22 @@ both refuse with the same code.
 | `__attribute__(())` | `error[SC0205]` | accepts | accepts |
 | `__attribute__((annotate(1)))` | `error[SC0205]` | error: not a string | error |
 | `__attribute__((annotate("safec_unchecked"), noreturn))` | `error[SC0205]` | accepts | accepts |
+| `__attribute__((annotate("safec_unchecked", 1)))` | `error[SC0205]` | accepts | accepts |
+| `__attribute__((annotate("safec_" "unchecked")))` | `error[SC0205]` | accepts | accepts |
 | `__attribute__((section("text")))` | `error[SC0205]` | accepts | accepts |
 | `__attribute__((annotate("unchecked")))` | `error[SC0205]` | accepts | accepts |
+| `__attribute((annotate("safec_unchecked")))` | `error[SC0201]` | accepts | accepts |
+| `int __attribute__ = 0;` in a block | `error[SC0204]` | error | error |
 
 Measured against `clang 20.1.6 -std=c17 --target=x86_64-unknown-linux-gnu`, as
 the tables above are. Unlike `_Nonnull`, `-pedantic-errors` accepts every form
-`clang` does, because an attribute is an extension it does not diagnose. The
+`clang` does, because an attribute is an extension it does not diagnose.
+Two rows are not this compiler reading attributes. `__attribute` is GNU C's
+other spelling of the same keyword, and here it is an ordinary name, so the
+line is a declaration that does not parse. `int __attribute__ = 0;` built
+before the hatch landed, because the word was a name, and is refused now;
+`clang` refuses it too, and C17 7.1.3 p2 makes declaring a reserved identifier
+undefined. The
 refusals are decisions for the reason the `_Nonnull` ones are, and like them
 they hold at every safety level: `--safety off` still reads the hatch, and
 `--emit hatches` still lists it, with nothing under it because no check ran.

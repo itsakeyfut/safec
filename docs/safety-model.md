@@ -312,9 +312,11 @@ has the reasoning and the forms it rejected, and
 
 **Its boundary is its prototype.** A `_Nonnull` parameter of a hatch is
 checked at every call in the translation unit, as any other is. A caller
-assumes the worst of what the hatch may have done to anything it was handed,
-because it assumes that of every call it cannot read: an allocation passed to a
-hatch may have been freed there, as far as the caller can tell. A hatch cannot
+assumes the worst of what the hatch may have done: after a call to one, every
+allocation the caller still holds live is unproven, whether or not the hatch
+was handed it, because what a hatch can reach through memory is not something
+this check follows and its body is the one whose unproven conclusions are not
+reported. An allocation already proved freed stays proved. A hatch cannot
 yet say otherwise; declaring what it writes and frees, and a hatch that is a
 region inside a function rather than a whole one, are
 [#249](https://github.com/itsakeyfut/safec/issues/249).
