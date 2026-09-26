@@ -865,20 +865,33 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // answered nothing, so this only reaches the locals that refinement cannot
     // help, which is the escaped ones.
     //
-    // The first survives, and it cannot be the milder one. `report` has
-    // already taken the worst of the places one element dereferences, and the
-    // second element a statement lowers to names only the local the first
-    // wrote, which by then is either proved non-null and reported by nothing
-    // or masked by the escape and reported as unproven. A promotion here was
-    // written first and measured unreachable: inverting it, and deleting it,
-    // each left the whole suite green while a panic in this body failed nine
-    // cases, so the body runs and the promotion never fires.
+    // **The worst survives, not the first.** `report` takes the worst of the
+    // places one element dereferences, but two elements can share a caret and
+    // disagree: `*p && *q` writes both operands at the whole expression's span,
+    // so an unproven `*p` and a proved `*q` arrive as two findings at one
+    // caret, the unproven one first. Keeping the first reported a proof as a
+    // suspicion, and inside a hatch, where a suspicion is listed rather than
+    // reported, a proved null dereference built and ran. `memory::say` answers
+    // the same shape with `supersedes`; this is the same rule.
     //
     // **The question is part of the key.** A call that passes two arguments
     // to two `_Nonnull` parameters has one caret and two promises, and a
     // dereference inside a call's arguments shares its caret with the call.
     // Each of those is a different thing to say.
-    findings.dedup_by(|later, earlier| later.at == earlier.at && later.asked == earlier.asked);
+    //
+    // **So is the function.** The sort above is over the whole unit, and a
+    // finding is routed by the function it names: two functions sharing a
+    // caret, which one `#include`d fragment would do, must not fold one into
+    // the other, or a hatch's could absorb an ordinary function's.
+    findings.dedup_by(|later, earlier| {
+        let same = later.function == earlier.function
+            && later.at == earlier.at
+            && later.asked == earlier.asked;
+        if same && severity(later.conclusion) > severity(earlier.conclusion) {
+            std::mem::swap(later, earlier);
+        }
+        same
+    });
 
     findings
 }

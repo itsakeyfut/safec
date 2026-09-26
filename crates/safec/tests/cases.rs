@@ -814,6 +814,10 @@ cases! {
     // Mutation: make that loop mark every site rather than the live ones; this
     // fails, a proved double free becoming unproven.
     a_free_proved_before_a_call_to_a_hatch_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `&&` writes both operands at one caret. Mutation: keep the first finding
+    // at a caret in `nullability::findings`' `dedup_by` rather than the worst;
+    // this fails, and the proved dereference builds.
+    a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
     // An attribute `sema::resolve` refused is not a hatch, even on the run that
     // is written anyway. Mutation: have the lowering mark a hatch wherever an
     // attribute is present; this fails.
