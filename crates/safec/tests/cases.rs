@@ -882,6 +882,12 @@ cases! {
     // A write two levels down is not recorded as contents, so it exposes what
     // it carries at once.
     a_pointer_stored_two_levels_down_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The closure over what an allocation holds goes as deep as the tables
+    // do. Mutation: stop pushing what `Known::expose` newly marks; this fails.
+    a_pointer_two_tables_deep_is_reached_through_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer that holds two allocations stores into both. Mutation: record
+    // into the first container only; this fails.
+    a_pointer_stored_through_either_of_two_tables_is_inside_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Refused and well defined: two costs ADR-0039 accepts, pinned so that a
     // change to either is seen. The first is #253.
     a_free_on_reallocs_failure_branch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -890,6 +896,10 @@ cases! {
     what_memset_returns_is_the_allocation_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     memcpy_frees_neither_of_its_arguments: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     what_strcpy_returns_is_the_allocation_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Every spelling of the family read by name. Mutation: drop any one of
+    // `memmove`, `strncpy`, `strcat` or `strncat` from `Allocations::callee`;
+    // this fails.
+    what_the_other_library_copies_return_is_what_they_were_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_no_call_can_reach_stays_proved_across_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_made_again_at_a_site_is_not_the_one_exposed_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -1,0 +1,171 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:3:6 "drop_inner" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:4:5 "pick" declared
+  Local "_0" "int" return
+Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int **"
+  Local "_11" "int"
+  Local "_12" "int **"
+  Local "_13" "int *"
+  Local "_14" "void"
+  Block "bb0" entry
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_stored_through_either_of_two_tables_is_inside_both.c:7:15 generated
+    Call a_pointer_stored_through_either_of_two_tables_is_inside_both.c:7:15 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:7:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:7:15 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:8:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_stored_through_either_of_two_tables_is_inside_both.c:8:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:8:9 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:9:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_stored_through_either_of_two_tables_is_inside_both.c:11:15 generated
+    Call a_pointer_stored_through_either_of_two_tables_is_inside_both.c:11:15 "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:11:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:11:15 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:12:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_pointer_stored_through_either_of_two_tables_is_inside_both.c:12:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:12:9 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:13:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:12:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_pointer_stored_through_either_of_two_tables_is_inside_both.c:15:14 generated
+    Call a_pointer_stored_through_either_of_two_tables_is_inside_both.c:15:14 "malloc" "bb9"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:15:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:15:14 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:16:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_pointer_stored_through_either_of_two_tables_is_inside_both.c:16:9 "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:16:9 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:17:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:17:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:16:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:19:11 written
+      Destination "_10"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:19:15 generated
+    ArgumentsEvaluated a_pointer_stored_through_either_of_two_tables_is_inside_both.c:20:9 generated
+    Call a_pointer_stored_through_either_of_two_tables_is_inside_both.c:20:9 "pick" "bb13"
+      Destination "_11"
+  Block "bb13"
+    Branch a_pointer_stored_through_either_of_two_tables_is_inside_both.c:20:9 "bb14" "bb15"
+      Copy "_11"
+  Block "bb14"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:20:9 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:21:9 written
+      Destination "_10"
+      Use
+        Copy "_4"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:21:9 written
+      Destination "_12"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:21:9 generated
+    Goto "bb16"
+  Block "bb15"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:20:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:23:5 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:23:5 written
+      Destination "_13"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:23:5 generated
+    ArgumentsEvaluated a_pointer_stored_through_either_of_two_tables_is_inside_both.c:24:5 generated
+    Call a_pointer_stored_through_either_of_two_tables_is_inside_both.c:24:5 "drop_inner" "bb17"
+      Destination "_14"
+      Copy "_4"
+  Block "bb17"
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:24:5 generated
+    Operation a_pointer_stored_through_either_of_two_tables_is_inside_both.c:25:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_pointer_stored_through_either_of_two_tables_is_inside_both.c:25:12 generated
+    Return
