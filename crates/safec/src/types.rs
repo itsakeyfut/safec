@@ -449,7 +449,12 @@ impl Checker<'_> {
     ///
     /// The type is what the base points at or holds, because p2 makes `a[i]`
     /// mean `*(a + i)`. It is answered whether or not the subscript is
-    /// refused, for the reason [`Checker::binary`] gives.
+    /// refused, for the reason [`Checker::binary`] gives, but only where the
+    /// base is the pointer or the array: `1[v]` and `g[1]` have no type
+    /// whether refused or not, because the base is an integer or a function,
+    /// and the lowering adds its `SC0304` to their report. Typing them means
+    /// reading the pointer off either operand, which the lowering does not
+    /// do either, and is not this change.
     ///
     /// p1 wants one operand a pointer to a complete object type and the other
     /// an integer. Only the first half is checked, and only where the second
@@ -1300,8 +1305,9 @@ fn pairing(taken: bool) -> Result<(), Refused> {
     if taken { Ok(()) } else { Err(Refused::Pairing) }
 }
 
-/// `Ok` where a pointer to `pointee` can take the step 6.5.6 would make, and
-/// [`Refused::Pointee`] where it cannot, naming the operand by `on_left`.
+/// `Ok` where a pointer to `pointee` can take the step 6.5.6 or 6.5.2.1 would
+/// make, and [`Refused::Pointee`] where it cannot, naming the operand by
+/// `on_left`.
 fn pointee_steppable(ast: &Ast, pointee: TypeId, on_left: bool) -> Result<(), Refused> {
     match unsteppable(ast, pointee) {
         None => Ok(()),
@@ -2903,7 +2909,9 @@ int main(void) {{
     /// A refused increment or subscript keeps the type it would have had, as
     /// a refused `+=` does, so that the lowering is not handed an expression
     /// with no type and does not add an `SC0304` calling a wrong program this
-    /// compiler's gap.
+    /// compiler's gap. Every subscript row has the pointer as its base,
+    /// because `1[v]` and `g[1]` have no type to keep; `Checker::subscript`
+    /// says why.
     ///
     /// Mutation: have `increment` answer `None` after its report. The `++`
     /// and `--` rows fail. Mutation: have `subscript` answer `None` after its
