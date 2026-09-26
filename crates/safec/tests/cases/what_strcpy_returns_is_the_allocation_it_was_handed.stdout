@@ -1,0 +1,127 @@
+Target "x86_64-pc-windows-msvc"
+Function what_strcpy_returns_is_the_allocation_it_was_handed.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function what_strcpy_returns_is_the_allocation_it_was_handed.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function what_strcpy_returns_is_the_allocation_it_was_handed.c:3:7 "strcpy" declared
+  Local "_0" "char *" return
+  Local "_1" "char *" parameter
+  Local "_2" "char *" parameter
+Function what_strcpy_returns_is_the_allocation_it_was_handed.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "char *"
+  Local "_2" "void *"
+  Local "_3" "char *"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "char"
+  Local "_8" "char *"
+  Local "_9" "char *"
+  Local "_10" "void"
+  Local "_11" "void"
+  Block "bb0" entry
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:6:15 generated
+    Call what_strcpy_returns_is_the_allocation_it_was_handed.c:6:15 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:6:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:6:15 generated
+    ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:7:15 generated
+    Call what_strcpy_returns_is_the_allocation_it_was_handed.c:7:15 "malloc" "bb2"
+      Destination "_4"
+      Constant 4
+  Block "bb2"
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:7:11 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:7:15 generated
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:8:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch what_strcpy_returns_is_the_allocation_it_was_handed.c:8:9 "bb3" "bb4"
+      Copy "_5"
+  Block "bb3"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:8:9 generated
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:9:16 generated
+    Return
+  Block "bb4"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:8:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:11:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch what_strcpy_returns_is_the_allocation_it_was_handed.c:11:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:11:9 generated
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:12:16 generated
+    Return
+  Block "bb7"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:14:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:14:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:14:5 generated
+    ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:15:15 generated
+    Call what_strcpy_returns_is_the_allocation_it_was_handed.c:15:15 "strcpy" "bb9"
+      Destination "_9"
+      Copy "_3"
+      Copy "_1"
+  Block "bb9"
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:15:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:15:15 generated
+    ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:16:5 generated
+    Call what_strcpy_returns_is_the_allocation_it_was_handed.c:16:5 "free" "bb10"
+      Destination "_10"
+      Copy "_1"
+  Block "bb10"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:16:5 generated
+    ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:17:5 generated
+    Call what_strcpy_returns_is_the_allocation_it_was_handed.c:17:5 "free" "bb11"
+      Destination "_11"
+      Copy "_8"
+  Block "bb11"
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:17:5 generated
+    Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:18:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:18:12 generated
+    Return

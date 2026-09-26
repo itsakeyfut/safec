@@ -1,0 +1,20 @@
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_call_may_return_what_an_earlier_call_was_handed.c:15:5 ]
+    │
+ 15 │     free(q);
+    │     ───┬───  
+    │        ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0404]: this may free a pointer that is not the start of an allocation
+    ╭─[ a_call_may_return_what_an_earlier_call_was_handed.c:15:5 ]
+    │
+ 15 │     free(q);
+    │     ───┬───  
+    │        ╰───── this offset may not be zero
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero

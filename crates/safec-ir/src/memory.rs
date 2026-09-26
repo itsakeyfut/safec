@@ -50,6 +50,8 @@ use crate::source::{SourceMap, Span};
 /// By name because nothing else is available: no annotation says what a
 /// function does to what it is passed. The one annotation there is,
 /// `_Nonnull`, says only that a parameter is not null, which is ADR-0037.
+/// Besides `malloc` and `free`, the names read are the library functions
+/// ADR-0039 lists, each for what its clause says it does to what it is handed.
 /// C17 7.1.3 reserves the identifiers the library declares, so a program
 /// that defines its own `free` has no behaviour C defines. `clang -std=c17
 /// -pedantic-errors` does not diagnose one, measured, so a program that does it
@@ -62,6 +64,20 @@ enum Callee {
     /// alone: it is otherwise an ordinary call, and an allocation is named by
     /// where it landed rather than by which function made it.
     Allocates,
+    /// C17 7.22.3.5's `realloc`.
+    ///
+    /// Its first argument may be freed, and is not when the call fails (p4), so
+    /// what it names becomes unproven rather than freed. What it returns is a
+    /// fresh allocation, as `malloc`'s is. See ADR-0039.
+    Reallocates,
+    /// A C library function that frees nothing and returns its first argument:
+    /// `memset`, `memcpy`, `memmove`, `strcpy`, `strncpy`, `strcat` and
+    /// `strncat`, whose clauses in C17 7.24.2 to 7.24.6 each say so.
+    ///
+    /// **What it is handed is exposed all the same**, because it copies bytes
+    /// and a pointer is bytes, and a local whose address it is handed may be
+    /// written through it. See ADR-0039.
+    ReturnsFirst,
     /// Anything else. It may free what it was passed and this cannot tell.
     Opaque,
 }
@@ -307,8 +323,13 @@ struct Held {
     /// around 2.8 GB and six seconds, against 1.5 GB and three before
     /// [`Held::writes_to`] was added; the field beside it costs about one per
     /// cent more. A packed bitset is the answer when a third square field
-    /// arrives or when somebody hits this on real code; until then the number
-    /// is here so that it is a decision rather than a discovery.
+    /// arrives or when somebody hits this on real code.
+    ///
+    /// **The third square field has arrived**: [`Known::contents`]. Measured on
+    /// a 456-line function with 150 allocations, release build, peak memory
+    /// went from 485 MB to 711 MB and time from 0.49 s to 0.71 s. The bitset is
+    /// #173's; the number is here so that it is a decision rather than a
+    /// discovery. See ADR-0039.
     sites: Vec<bool>,
     /// Whether this local may hold an allocation this check can no longer
     /// name.
@@ -395,15 +416,17 @@ impl Held {
     ///
     /// **The offset is an argument so that it cannot be forgotten.** A site
     /// arrives from a call's destination or from a parameter, each of which is
-    /// the start of whatever it stands for, and a third producer written later
-    /// has to say the same or something else: dropping the argument is
-    /// `error[E0061]` at every call site. See ADR-0036.
+    /// the start of whatever it stands for, or as what an opaque call may have
+    /// returned, which may point anywhere in it and says `Unknown`. A producer
+    /// written later has to say which: dropping the argument is `error[E0061]`
+    /// at every call site. See ADR-0036 and ADR-0039.
     ///
-    /// **Joined rather than assigned, and nothing tells the two apart today.**
-    /// Both callers hold on a local [`Held::none`] or [`Held::clear`] has just
-    /// left at `Zero`, and `Zero` joined with `Zero` is `Zero`. A caller that
-    /// holds a second site on a local already holding one is where they part,
-    /// and the join is the answer that cannot claim more than both said.
+    /// **Joined rather than assigned.** A call's destination and a parameter
+    /// hold on a local [`Held::none`] or [`Held::clear`] has just left at
+    /// `Zero`, where the two agree. An opaque call's result is where they part:
+    /// it holds its own site at `Zero` and then what the call may have
+    /// returned at `Unknown`, and the join makes the whole `Unknown`, which is
+    /// the answer that cannot claim more than both said.
     fn hold(&mut self, site: usize, offset: Offset) {
         self.sites[site] = true;
         self.offset = self.offset.joined(offset);
@@ -631,6 +654,22 @@ struct Known {
     /// no more proved than what it held before, because the write that put it
     /// there is not the only write that can reach it.
     escaped: Vec<bool>,
+    /// Per site, whether code this check cannot read may reach a pointer to it.
+    ///
+    /// **Once set, set for as long as the allocation lives**, because nothing
+    /// here can say that what an unread callee kept has gone: a pointer handed
+    /// to one call may be returned or freed by the next. Every opaque call
+    /// unproves every exposed allocation still live, and may return any of
+    /// them. See ADR-0039.
+    exposed: Vec<bool>,
+    /// Per site, the sites a pointer stored in that allocation may hold.
+    ///
+    /// What lets a pointer stored in the heap stay proved until something
+    /// that can reach the allocation holding it is handed to code this check
+    /// cannot read: `*tab = p; log_line();` leaves `p` alone, because nothing
+    /// exposed `tab`. Square in the locals, which is [`Held::sites`]' condition
+    /// for a packed bitset. See ADR-0039.
+    contents: Vec<Vec<bool>>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -815,6 +854,8 @@ impl Known {
             points_to,
             state,
             escaped: _,
+            exposed,
+            contents,
             pending,
         } = self;
 
@@ -825,6 +866,11 @@ impl Known {
         }
 
         state[site] = SiteState::Live(made);
+        // A new allocation has not been handed to anybody and holds nothing
+        // yet. What an opaque call's destination may still be is the call
+        // transfer's to say, after this. See ADR-0039.
+        exposed[site] = false;
+        contents[site].fill(false);
 
         // **A read of the allocation this site used to name is not a read of
         // the one it names now.** Left standing, a free of the new allocation
@@ -870,6 +916,59 @@ impl Known {
         for site in self.points_to[local].sites() {
             self.state[site] = SiteState::Unknown;
         }
+    }
+
+    /// Code this check cannot read may reach `sites`, and so everything a
+    /// pointer stored in them may hold, and so on.
+    ///
+    /// The closure runs here rather than where the mark is read, so that
+    /// [`Self::exposed`] alone answers the question everywhere. See ADR-0039.
+    fn expose(&mut self, sites: impl IntoIterator<Item = usize>) {
+        let mut pending: Vec<usize> = sites.into_iter().collect();
+        while let Some(site) = pending.pop() {
+            if std::mem::replace(&mut self.exposed[site], true) {
+                continue;
+            }
+            for (held, &in_it) in self.contents[site].iter().enumerate() {
+                if in_it && !self.exposed[held] {
+                    pending.push(held);
+                }
+            }
+        }
+    }
+
+    /// Every exposed allocation still live is unproven, because the call being
+    /// made may free it. A proved free stays proved: no call un-frees an
+    /// allocation. See ADR-0039.
+    fn unprove_exposed(&mut self) {
+        for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
+            if exposed && matches!(state, SiteState::Live(_)) {
+                *state = SiteState::Unknown;
+            }
+        }
+    }
+
+    /// Every site a call could reach through what it was handed: what the
+    /// arguments name, what the locals an argument points at hold, and what
+    /// every local whose address escaped holds, since the call may have been
+    /// handed that address earlier or by another route. See ADR-0039.
+    fn reach_of(&self, named: impl Iterator<Item = usize>, arguments: &[Operand]) -> Vec<usize> {
+        let mut reach: Vec<usize> = named.collect();
+        for argument in arguments {
+            if let Operand::Copy(source) = argument {
+                if source.projection.is_empty() {
+                    for target in self.written_through(source.local) {
+                        reach.extend(self.points_to[target].sites());
+                    }
+                }
+            }
+        }
+        for (local, &escaped) in self.escaped.iter().enumerate() {
+            if escaped {
+                reach.extend(self.points_to[local].sites());
+            }
+        }
+        reach
     }
 
     /// [`Self::unproved`] for every local at once.
@@ -1137,7 +1236,64 @@ impl Allocations<'_> {
         match self.sources.snippet(self.unit.function(id).name) {
             "free" => Callee::Frees,
             "malloc" => Callee::Allocates,
+            "realloc" => Callee::Reallocates,
+            "memset" | "memcpy" | "memmove" | "strcpy" | "strncpy" | "strcat" | "strncat" => {
+                Callee::ReturnsFirst
+            }
             _ => Callee::Opaque,
+        }
+    }
+
+    /// What a write through a pointer carries: the sites the written value may
+    /// hold.
+    ///
+    /// One answer for every reader of it: the write that lands in a followed
+    /// local, and the contents or exposure a write into memory records.
+    /// RK-052 in the review knowledge bank is one rule in two places drifting.
+    ///
+    /// **A `match` rather than an `if let`, so a fifth kind of rvalue has to
+    /// answer here too.** Every other reader of `Rvalue` in this crate is
+    /// exhaustive and `error[E0004]` is what asks them; this one was the
+    /// exception, and what a missed arm would mean is that a write through a
+    /// pointer silently carries nothing, which is a silence rather than a build
+    /// error. RK-018 is the same spelling one type over.
+    fn carried(&self, function: &Function, written_value: &Rvalue, value: &Known) -> Held {
+        match written_value {
+            // `*pp = q + 1;` arrives here as a copy, not as the arithmetic:
+            // the lowering puts the addition in a temporary and copies it
+            // out, and the direct assignment in `Allocations::element` has
+            // already given that temporary `q`'s sites.
+            Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
+                value.points_to[source.local.index()].clone()
+            }
+            // The arithmetic written straight into the place, which no C
+            // reaches for the reason above and another frontend may. The
+            // operands the types say contributed, for the reason the direct
+            // assignment's `Rvalue::Binary` arm gives, and the same question
+            // about the edge: this asked none of it until review built the
+            // shape by hand, and carried an edge through `qq + 7` that the
+            // direct assignment had just been taught to drop.
+            Rvalue::Binary { op, lhs, rhs } => {
+                let mut reached = built_from(*op, [lhs, rhs], value, |local| {
+                    self.is_pointer(function, local)
+                });
+                reached.writes_to.fill(false);
+                // Emptying the set says nothing on its own: an empty set is
+                // what a pointer this check never followed an address into
+                // has. Giving up on the set is saying so. See ADR-0028, and
+                // RK-052 for why this line is written beside its twin in the
+                // direct assignment's `Rvalue::Binary` arm rather than
+                // anywhere else.
+                reached.writes_elsewhere = true;
+                reached
+            }
+            // A constant, a read through a projection, a unary operator, an
+            // address. None is a pointer this check follows to an
+            // allocation, so the target is given nothing: a write this check
+            // cannot follow is not evidence that the old contents are gone.
+            Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
+                Held::none(value.points_to.len())
+            }
         }
     }
 
@@ -1282,6 +1438,10 @@ impl Analysis for Allocations<'_> {
         // is why that is acceptable here. Where a local points in its sites
         // moves from `Zero` or `NonZero` to `Unknown` at a join and never back,
         // once per local, and the per-local term below counts that step.
+        // Whether a site is exposed is one more bit per site that a join only
+        // sets, so one more step each; what each site may contain is a third
+        // square table that only grows at a join, one step per pair, and the
+        // first term gains a third square for it. See ADR-0039.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -1311,7 +1471,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 2 + locals * (locals + 8) + positions * (locals + 1)
+        locals * locals * 3 + locals * (locals + 9) + positions * (locals + 1)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1324,6 +1484,8 @@ impl Analysis for Allocations<'_> {
             // Nothing holds a local's address where a function starts, a
             // parameter included: what a caller holds is its own local.
             escaped: vec![false; self.locals],
+            exposed: vec![false; self.locals],
+            contents: vec![vec![false; self.locals]; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -1354,6 +1516,8 @@ impl Analysis for Allocations<'_> {
             points_to,
             state,
             escaped,
+            exposed,
+            contents,
             pending,
         } = into;
 
@@ -1369,6 +1533,18 @@ impl Analysis for Allocations<'_> {
         // meet: the other arm did not un-take it.
         for (here, there) in escaped.iter_mut().zip(&from.escaped) {
             *here = *here || *there;
+        }
+
+        // Exposed on one arm is exposed where the arms meet, and what an
+        // allocation may hold on either arm it may hold after them. A union,
+        // for the reason `escaped` is one. See ADR-0039.
+        for (here, there) in exposed.iter_mut().zip(&from.exposed) {
+            *here = *here || *there;
+        }
+        for (row, other) in contents.iter_mut().zip(&from.contents) {
+            for (here, there) in row.iter_mut().zip(other) {
+                *here = *here || *there;
+            }
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -1502,6 +1678,43 @@ impl Analysis for Allocations<'_> {
                     replaced_by(self.unit, function, &operation.place, value);
                 }
 
+                // **Into the allocations the pointer holds, what the write
+                // carries is their contents**, and exposed with them if they
+                // are. A write this check cannot place exposes what it carries
+                // at once: one deeper than one `Deref`, which has no targets,
+                // or one through a pointer holding no allocation that may land
+                // somewhere other than the locals it was seen pointing at. A
+                // write that lands in followed locals records nothing here:
+                // their addresses escaped, and what they hold is in every
+                // call's reach. See ADR-0039.
+                if !operation.place.projection.is_empty() {
+                    let carried: Vec<usize> = self
+                        .carried(function, &operation.value, value)
+                        .sites()
+                        .collect();
+                    let containers: Vec<usize> = if one_step {
+                        value.sites_of(operation.place.local).collect()
+                    } else {
+                        Vec::new()
+                    };
+                    let unplaced = containers.is_empty()
+                        && (targets.is_empty()
+                            || value.points_to[pointer].writes_elsewhere
+                            || value.escaped[pointer]);
+                    if unplaced {
+                        value.expose(carried);
+                    } else {
+                        for container in &containers {
+                            for &site in &carried {
+                                value.contents[*container][site] = true;
+                            }
+                        }
+                        if containers.iter().any(|&container| value.exposed[container]) {
+                            value.expose(carried);
+                        }
+                    }
+                }
+
                 if one_step {
                     if targets.is_empty() {
                         return;
@@ -1514,53 +1727,7 @@ impl Analysis for Allocations<'_> {
                     // a pointer that must, and telling those apart is
                     // ADR-0028.
                     //
-                    // **A `match` rather than an `if let`, so a fifth kind of
-                    // rvalue has to answer here too.** Every other reader of
-                    // `Rvalue` in this crate is exhaustive and `error[E0004]`
-                    // is what asks them; this one was the exception, and what
-                    // a missed arm would mean is that a write through a
-                    // pointer silently carries nothing, which is a silence
-                    // rather than a build error. RK-018 is the same spelling
-                    // one type over.
-                    let written = match &operation.value {
-                        // `*pp = q + 1;` arrives here as a copy, not as the
-                        // arithmetic: the lowering puts the addition in a
-                        // temporary and copies it out, and the arm above has
-                        // already given that temporary `q`'s sites.
-                        Rvalue::Use(Operand::Copy(source)) if source.projection.is_empty() => {
-                            value.points_to[source.local.index()].clone()
-                        }
-                        // The arithmetic written straight into the place, which
-                        // no C reaches for the reason above and another
-                        // frontend may. The operands the types say contributed,
-                        // for the reason the arm above gives, and the same
-                        // question about the edge: this asked none of it until
-                        // review built the shape by hand, and carried an edge
-                        // through `qq + 7` that the arm one level up had just
-                        // been taught to drop.
-                        Rvalue::Binary { op, lhs, rhs } => {
-                            let mut reached = built_from(*op, [lhs, rhs], value, |local| {
-                                self.is_pointer(function, local)
-                            });
-                            reached.writes_to.fill(false);
-                            // Emptying the set says nothing on its own: an
-                            // empty set is what a pointer this check never
-                            // followed an address into has. Giving up on the
-                            // set is saying so. See ADR-0028, and RK-052 for
-                            // why this line is written beside its twin below
-                            // rather than anywhere else.
-                            reached.writes_elsewhere = true;
-                            reached
-                        }
-                        // A constant, a read through a projection, a unary
-                        // operator, an address. None is a pointer this check
-                        // follows to an allocation, so the target is given
-                        // nothing: a write this check cannot follow is not
-                        // evidence that the old contents are gone.
-                        Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
-                            Held::none(value.points_to.len())
-                        }
-                    };
+                    let written = self.carried(function, &operation.value, value);
 
                     // **A write this check can be certain about replaces what
                     // the target held.** The set names one local and says it
@@ -1807,10 +1974,18 @@ impl Analysis for Allocations<'_> {
         // what it says is that this call touched something the check was not
         // following, which is a fact about the report rather than about the
         // lattice.
-        let touched = Self::touching(arguments.iter(), value);
+        let kind = self.callee(*callee);
+        // `realloc`'s size is not a pointer anything is freed through.
+        let handed = match kind {
+            Callee::Reallocates => &arguments[..arguments.len().min(1)],
+            Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {
+                &arguments[..]
+            }
+        };
+        let touched = Self::touching(handed.iter(), value);
         let sites = || named(&touched);
 
-        match self.callee(*callee) {
+        match kind {
             Callee::Frees => {
                 let reached: Vec<usize> = sites().collect();
 
@@ -1932,10 +2107,34 @@ impl Analysis for Allocations<'_> {
             // It does not free what it is passed, which is the whole of why the
             // name is read.
             Callee::Allocates => {}
+            // May have freed it, and has not if it failed. See ADR-0039.
+            Callee::Reallocates => {
+                for site in sites().collect::<Vec<_>>() {
+                    if let SiteState::Live(_) = value.state[site] {
+                        value.state[site] = SiteState::Unknown;
+                    }
+                }
+            }
+            // Frees nothing; what it is handed is out of this check's sight
+            // from now on, and a local whose address it is handed may have
+            // been written through it, as ADR-0029 says of an opaque call.
+            Callee::ReturnsFirst => {
+                let reach = value.reach_of(sites(), arguments);
+                value.expose(reach);
+                value.replaced(|_| true);
+            }
             Callee::Opaque => {
                 for site in sites().collect::<Vec<_>>() {
                     value.state[site] = SiteState::Unknown;
                 }
+
+                // **Everything this call could reach, and everything reached
+                // before it by code this check cannot read**, is unproven
+                // after it, because any of it may be what this call frees.
+                // See ADR-0039.
+                let reach = value.reach_of(sites(), arguments);
+                value.expose(reach);
+                value.unprove_exposed();
 
                 // **A hatch may have reached anything, so every allocation
                 // still live is unproven after it.** The loop above is about
@@ -1970,7 +2169,10 @@ impl Analysis for Allocations<'_> {
                 // *value*, which p2 of that subclause requires to be one an
                 // allocation function returned and which 7.22.3 requires to be
                 // disjoint from every other object. Neither is ever handed
-                // `&p`. That is the whole reason the name is read.
+                // `&p`. That is the whole reason the name is read. `realloc`
+                // is handed a pointer's value too, by 7.22.3.5 p2, and is not
+                // here either; the library functions that return their first
+                // argument can be handed `&p`, and do this in their own arm.
                 //
                 // **No test holds this**: marking at either arm leaves the
                 // whole workspace green, measured. The record says so rather
@@ -1994,11 +2196,26 @@ impl Analysis for Allocations<'_> {
             return;
         }
 
-        if self.callee(*callee) == Callee::Frees {
+        match kind {
             // `free` returns nothing. The local the lowering writes it into is
             // `void` and holds none of this, which is #135.
-            value.clear(place.local);
-            return;
+            Callee::Frees => {
+                value.clear(place.local);
+                return;
+            }
+            // What it returns is its first argument, unmoved: C17 7.24.2 to
+            // 7.24.6 say so of each. See ADR-0039.
+            Callee::ReturnsFirst => {
+                let first = match arguments.first() {
+                    Some(Operand::Copy(source)) if source.projection.is_empty() => {
+                        value.points_to[source.local.index()].clone()
+                    }
+                    Some(_) | None => Held::none(value.points_to.len()),
+                };
+                value.points_to[place.local.index()] = first;
+                return;
+            }
+            Callee::Allocates | Callee::Reallocates | Callee::Opaque => {}
         }
 
         // A call leaves behind something this function did not have before, and
@@ -2006,8 +2223,12 @@ impl Analysis for Allocations<'_> {
         // with what was there**: a second turn of a loop through the same call
         // is a second allocation, and carrying the first one's `Freed` across
         // would report a double free for code that allocates each time round.
-        value.clear(place.local);
         let site = place.local.index();
+        // Read before the rebirth clears it: a loop through this call writes
+        // this site every turn, and what the call returns may be last turn's
+        // allocation, exposed, which the site number cannot tell apart.
+        let was_exposed = value.exposed[site];
+        value.clear(place.local);
         // At its start: the site is whatever the call handed back, so the
         // value is that value and not an offset into it.
         value.points_to[site].hold(site, Offset::Zero);
@@ -2018,8 +2239,30 @@ impl Analysis for Allocations<'_> {
         // anything. Naming that line was a caret asserting something nothing
         // had established, so a site whose call is not `malloc` is `Live(None)`
         // and the diagnostic leaves the label off.
-        let made = (self.callee(*callee) == Callee::Allocates).then(|| origin.span());
+        let made = match kind {
+            Callee::Allocates | Callee::Reallocates => Some(origin.span()),
+            Callee::Opaque | Callee::Frees | Callee::ReturnsFirst => None,
+        };
         value.reborn(site, made);
+        // **Or any allocation code this check cannot read may reach**, which a
+        // call it cannot read may hand back: `stash(p); q = fetch();` may make
+        // `q` be `p`. At an offset nobody said, since what comes back may point
+        // into one. These are the allocations the call has just unproven, so
+        // the result is as doubtful as what it may be and never less, which is
+        // what RK-045 in the review knowledge bank asks of a widened set. See
+        // ADR-0039.
+        if kind == Callee::Opaque {
+            let exposed: Vec<usize> = (0..value.exposed.len())
+                .filter(|&other| other != site && value.exposed[other])
+                .collect();
+            for other in exposed {
+                value.points_to[site].hold(other, Offset::Unknown);
+            }
+            if was_exposed {
+                value.state[site] = SiteState::Unknown;
+                value.exposed[site] = true;
+            }
+        }
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
         // call into a fresh temporary and copies it out, so the copy above is
@@ -2466,9 +2709,14 @@ fn reported(
         return Vec::new();
     };
 
-    if analysis.callee(*callee) != Callee::Frees {
-        return Vec::new();
-    }
+    // What is handed to be freed: every argument of `free`, and the first of
+    // `realloc`, which C17 7.22.3.5 p3 holds to what `free` is held to. A
+    // `match` so that a new kind of callee answers here. See ADR-0039.
+    let arguments = match analysis.callee(*callee) {
+        Callee::Frees => &arguments[..],
+        Callee::Reallocates => &arguments[..arguments.len().min(1)],
+        Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => return Vec::new(),
+    };
 
     // **One answer to what the arguments reached feeds both questions**,
     // because the two have to agree about it, and two walks deciding it is
@@ -2881,10 +3129,13 @@ fn used_before(
     // row decided before it existed.
     let frees = match analysis.callee(*callee) {
         Callee::Frees => true,
-        Callee::Opaque => false,
+        // `realloc` may free what it was handed and may not, which is what an
+        // opaque call is to a read carried to it.
+        Callee::Reallocates | Callee::Opaque => false,
         // `malloc` frees nothing and takes no pointer, so a read carried to it
-        // is a read this call has nothing to say about.
-        Callee::Allocates => return,
+        // is a read this call has nothing to say about; the library functions
+        // that return their first argument free nothing either.
+        Callee::Allocates | Callee::ReturnsFirst => return,
     };
 
     // The machine behind the paragraph above. Placed here because this is

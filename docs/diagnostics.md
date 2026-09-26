@@ -125,8 +125,13 @@ through a dangling pointer are two classes of program to look for.
 **A suspicion says what was established, and where nothing was it says so.**
 There are three reasons either code can go out unproven, and two of them have a
 free behind them: a site the paths or the sites reaching a caret disagree
-about was really freed on one of them, and a site handed to a call this check
-cannot read may have been freed by that callee. Those read `this may free a
+about was really freed on one of them, and a site a call this check cannot
+read could reach may have been freed by that callee. What a call can reach is
+more than its arguments: once code this check cannot read may reach an
+allocation it stays exposed, every such call after it may free it, and a
+pointer any such call returns may be it.
+[ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-is-exposed-for-good.md)
+is that rule. Those read `this may free a
 value that was freed already` and `this may use a value after it was freed`,
 and a reader is being told there is something to suspect.
 
