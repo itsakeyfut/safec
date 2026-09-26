@@ -33,8 +33,8 @@ use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use crate::types::Types;
 use safec_ir::ir::{
-    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
-    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
+    Parameter, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -46,6 +46,19 @@ use safec_ir::target::Target;
 /// on the code wants "the IR could not be built" rather than a list of ways
 /// that can happen.
 const LOWERING: Code = Code::new("SC0304");
+
+/// Two declarations of one function that disagree about `_Nonnull`.
+///
+/// Refused rather than resolved, because the declaration a caller sees is the
+/// one its call is checked against, and a header that leaves the promise out is
+/// how a caller in another translation unit goes unchecked while the body
+/// believes it. See ADR-0037. `clang` carries it from one declaration to the
+/// next in silence.
+///
+/// Here rather than in `types.rs`, because [`Lowering::declare_one`] is the one
+/// place several declarations become one function, and a second answer to which
+/// declarations are the same function would be a second place to drift.
+const DISAGREEING_ANNOTATION: Code = Code::new("SC0307");
 
 /// Build the IR of one translation unit.
 ///
@@ -71,6 +84,7 @@ pub fn lower(
         locals: HashMap::new(),
         scopes: Vec::new(),
         functions: HashMap::new(),
+        prototypes: HashMap::new(),
         refused: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
@@ -114,6 +128,15 @@ struct Lowering<'a> {
     /// text, they are one, which is what C means by them and what
     /// `sema.rs::lookup` already compares.
     functions: HashMap<String, FuncId>,
+    /// The first prototype each file-scope name was declared with: where its
+    /// name was, and which of its parameters were `_Nonnull`.
+    ///
+    /// Not [`Lowering::functions`]' entry, which is the first *declaration*:
+    /// `void g();` declares no parameters (C17 6.7.6.3 p14), so every later
+    /// declaration would agree with it, and `void g(); void g(int *p);` above a
+    /// `_Nonnull` definition passed in silence. That was found by review.
+    /// See [`DISAGREEING_ANNOTATION`].
+    prototypes: HashMap<String, (Span, Vec<Option<Span>>)>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -496,40 +519,101 @@ impl Lowering<'_> {
             return;
         };
 
+        // Before the function is recorded, because `lowered` moves into it.
+        // `()` says nothing about the parameters, so it has nothing to agree
+        // or disagree with, which is why only a prototype is asked.
+        if let Parameters::Prototype(_) = parameters {
+            self.agree(name, &lowered, diagnostics);
+        }
+
         // A name declared twice is one function. The first declaration is
         // the one whose span the IR carries, which is where a reader of a
         // diagnostic about the callee is pointed.
         if !self.functions.contains_key(self.sources.snippet(name)) {
             let id = self
                 .unit
-                .push_function(Function::declaration(name, returns, lowered));
+                .push_function(Function::declaration_with_parameters(
+                    name, returns, lowered,
+                ));
             self.functions
                 .insert(self.sources.snippet(name).to_owned(), id);
         }
+    }
+
+    /// Refuse a prototype of a function that disagrees with the first prototype
+    /// of it about which parameters are `_Nonnull`, or record this one as the
+    /// first. See [`DISAGREEING_ANNOTATION`].
+    ///
+    /// Position by position, over as many parameters as both have. A
+    /// declaration with a different count is a different disagreement, which is
+    /// #57's and is not answered here.
+    fn agree(&mut self, name: Span, later: &[Parameter], diagnostics: &mut DiagnosticSink) {
+        let key = self.sources.snippet(name);
+        let Some((first_name, first)) = self.prototypes.get(key) else {
+            let promises = later.iter().map(|parameter| parameter.nonnull).collect();
+            self.prototypes.insert(key.to_owned(), (name, promises));
+            return;
+        };
+        let differs = first
+            .iter()
+            .zip(later)
+            .find(|(first, later)| first.is_some() != later.nonnull.is_some());
+        let Some((first, later)) = differs else {
+            return;
+        };
+
+        // The primary label goes on the `_Nonnull` that one of the two wrote,
+        // because it is the only token either declaration has that says what
+        // differs. The other declaration is pointed at by its name.
+        let (said, silent, silent_label) = match (*first, later.nonnull) {
+            (Some(said), _) => (said, name, "this declaration does not"),
+            (None, Some(said)) => (said, *first_name, "the first prototype does not"),
+            (None, None) => unreachable!("the two were found to differ"),
+        };
+
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "the declarations of `{}` disagree about `_Nonnull`",
+                self.sources.snippet(name)
+            ))
+            .with_code(DISAGREEING_ANNOTATION)
+            .with_label(Label::primary(said, "one declaration says `_Nonnull` here"))
+            .with_label(Label::secondary(silent, silent_label))
+            .with_note(
+                "every declaration of a function has to agree about `_Nonnull`, because \
+                 a caller is checked against the declaration it sees",
+            ),
+        );
     }
 
     /// The declaration a call is checked against, and the locals a body starts
     /// with.
     ///
     /// Local 0 is the return place and the parameters follow it, which is what
-    /// [`Function::new`] lays out. An empty parameter list is lowered as no
-    /// parameters: C17 6.7.6.3 p14 makes `()` say nothing about the count
-    /// rather than say there are none, and the IR has no way to spell "not
-    /// said". Nothing here reads it, because a call carries the arguments it
-    /// passes, and `types.rs` is where the count is checked.
+    /// [`Function::with_parameters`] lays out. Each carries the `_Nonnull` its
+    /// declaration wrote, which is what a call is checked against.
+    ///
+    /// An empty parameter list is lowered as no parameters: C17 6.7.6.3 p14
+    /// makes `()` say nothing about the count rather than say there are none,
+    /// and the IR has no way to spell "not said". Nothing here reads it,
+    /// because a call carries the arguments it passes, and `types.rs` is where
+    /// the count is checked.
     fn signature(
         &mut self,
         name: Span,
         returns: TypeId,
         parameters: &Parameters,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<(TyId, Vec<TyId>)> {
+    ) -> Option<(TyId, Vec<Parameter>)> {
         let returns = self.ty(name, returns, diagnostics)?;
         let mut lowered = Vec::new();
         if let Parameters::Prototype(parameters) = parameters {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
-                lowered.push(self.ty(at, parameter.ty, diagnostics)?);
+                lowered.push(Parameter {
+                    ty: self.ty(at, parameter.ty, diagnostics)?,
+                    nonnull: parameter.nonnull,
+                });
             }
         }
 
@@ -592,7 +676,7 @@ impl Lowering<'_> {
         };
         let (returns, parameters) = (*returns, parameters.clone());
         let (returns, lowered) = self.signature(name, returns, &parameters, diagnostics)?;
-        let function = Function::new(name, returns, lowered);
+        let function = Function::with_parameters(name, returns, lowered);
 
         // A parameter is a local before the body's first statement, and its
         // name is how the body reaches it.

@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:5:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:6:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:6:5 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:6:5 generated
+    Return
+Function a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:2:6 "h"
+  Local "_0" "void" return
+  Local "_1" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:3:5 generated
+    Call a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:3:5 "g" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Sequenced a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:3:5 generated
+    Return

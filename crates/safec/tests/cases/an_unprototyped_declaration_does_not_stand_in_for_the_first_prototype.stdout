@@ -1,0 +1,18 @@
+Target "x86_64-pc-windows-msvc"
+Function an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype.c:3:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype.c:4:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype.c:4:5 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype.c:4:5 generated
+    Return

@@ -1,0 +1,5 @@
+void g();
+void g(int *p);
+void g(int * _Nonnull p) {
+    *p = 1;
+}

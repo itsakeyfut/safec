@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_on_a_parameter_of_a_function_pointer_is_refused.c:1:31 ]
+   │
+ 1 │ void g(void (*callback)(int * _Nonnull p));
+   │                               ────┬───  
+   │                                   ╰───── this is a parameter of a function type, not of a declared function
+───╯

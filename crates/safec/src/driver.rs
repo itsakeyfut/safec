@@ -46,7 +46,7 @@ use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::TranslationUnit;
 use safec_ir::memory::{self, Kind, Unproven};
-use safec_ir::nullability;
+use safec_ir::nullability::{self, Asked};
 use safec_ir::print::{dump_ir, dump_node, quoted, shown};
 use safec_ir::source::{FileId, FileName, SourceFile, SourceMap, Span};
 use safec_ir::target::{Integer, Target};
@@ -101,6 +101,14 @@ const NULL_DEREFERENCE: Code = Code::new("SC0403");
 /// nowhere, where this one points somewhere real that `free` does not take.
 /// See ADR-0036.
 const INTERIOR_FREE: Code = Code::new("SC0404");
+
+/// A pointer that may be null passed to a parameter declared `_Nonnull`.
+///
+/// Not `NULL_DEREFERENCE`'s, though the question is the same one, because the
+/// fix is at a different place: that one is fixed where the pointer is read,
+/// and this one where it is handed over, or at the promise the parameter made.
+/// See ADR-0037.
+const NULL_ARGUMENT: Code = Code::new("SC0405");
 
 /// What to change where this check stopped following a pointer.
 ///
@@ -1013,10 +1021,11 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
 /// The check names a conclusion and never reads the policy, so this does not
 /// either, for `memory_finding`'s reason and ADR-0001's.
 ///
-/// **Two rows rather than four.** The memory check's words differ by which of
-/// its two questions was asked and by why an answer was unproven; there is one
-/// question here and one reason, which is that nothing established what the
-/// pointer holds. A reason enum with one variant is a field nobody reads.
+/// **Two rows per question.** The memory check's words differ by which of its
+/// two questions was asked and by why an answer was unproven; there are two
+/// questions here, a dereference and an argument to a `_Nonnull` parameter, and
+/// one reason, which is that nothing established what the pointer holds. A
+/// reason enum with one variant is a field nobody reads.
 ///
 /// The value is not named, for `memory_finding`'s reason: the IR holds no `p`,
 /// which is #136, and the caret's quoted line shows the reader their own text.
@@ -1034,26 +1043,53 @@ fn nullability_finding(finding: &nullability::Finding) -> Option<Diagnostic> {
     // is what would establish it. Telling a reader to give it a value there
     // would assert that it has none, which is the row above's sentence and not
     // this one's. RK-036.
-    let (message, label, remedy) = match finding.conclusion {
-        Conclusion::Unsafe => (
+    //
+    // The argument rows follow the same rule, and their unsafe remedy offers
+    // the promise as the other way out, because a parameter declared
+    // `_Nonnull` that a caller has a reason to pass null to is a promise that
+    // was wrong rather than a call that was.
+    let (code, message, label, remedy) = match (finding.asked, finding.conclusion) {
+        (Asked::Dereference, Conclusion::Unsafe) => (
+            NULL_DEREFERENCE,
             "this dereferences a null pointer",
             "this is null when it is read through",
             "give this pointer a value before reading through it, or do not read through it here",
         ),
-        Conclusion::Unknown => (
+        (Asked::Dereference, Conclusion::Unknown) => (
+            NULL_DEREFERENCE,
             "this may dereference a null pointer",
             "this check cannot say this is not null",
             "test this pointer against null before reading through it",
         ),
-        Conclusion::Safe => ("nothing", "nothing", "nothing"),
+        (Asked::Argument { promise: _ }, Conclusion::Unsafe) => (
+            NULL_ARGUMENT,
+            "this passes a null pointer to a parameter declared `_Nonnull`",
+            "this is null when it is passed",
+            "pass a pointer to an object here, or remove `_Nonnull` from the parameter",
+        ),
+        (Asked::Argument { promise: _ }, Conclusion::Unknown) => (
+            NULL_ARGUMENT,
+            "this may pass a null pointer to a parameter declared `_Nonnull`",
+            "this check cannot say this is not null",
+            "test this pointer against null before passing it",
+        ),
+        (Asked::Dereference | Asked::Argument { promise: _ }, Conclusion::Safe) => {
+            (NULL_DEREFERENCE, "nothing", "nothing", "nothing")
+        }
     };
 
-    Some(
-        Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
-            .with_code(NULL_DEREFERENCE)
-            .with_safety_level(SafetyLevel::Memory)
-            .with_label(Label::primary(finding.at, label)),
-    )
+    let mut diagnostic = Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
+        .with_code(code)
+        .with_safety_level(SafetyLevel::Memory)
+        .with_label(Label::primary(finding.at, label));
+    if let Asked::Argument { promise } = finding.asked {
+        diagnostic = diagnostic.with_label(Label::secondary(
+            promise,
+            "the parameter is declared `_Nonnull` here",
+        ));
+    }
+
+    Some(diagnostic)
 }
 
 /// Where an artifact is written, which is not always what `-o` said.
@@ -1618,18 +1654,25 @@ fn dump_declarators(
     }
 }
 
-/// The tail of a line that declares something: the name, then the type.
+/// The tail of a line that declares something: the name, the type, and
+/// `_Nonnull` where it was written.
 ///
 /// A name is the file's own bytes and is quoted for the reason RK-002 gives. A
 /// type is this compiler's spelling of what the declarator derived, quoted
 /// beside it so that the two read alike; the only file text inside one is the
 /// length of an array, which [`spell_type`] answers for.
+///
+/// `_Nonnull` is a word on the line rather than part of the type string,
+/// because it is not part of the type: [`Declaration::nonnull`] says why.
 fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, out: &mut String) {
     if let Some(name) = declaration.name {
         write!(out, " {:?}", quoted(sources, name)).expect("writing to a string cannot fail");
     }
     write!(out, " {:?}", spell_type(sources, ast, declaration.ty))
         .expect("writing to a string cannot fail");
+    if declaration.nonnull.is_some() {
+        out.push_str(" _Nonnull");
+    }
     out.push('\n');
 }
 

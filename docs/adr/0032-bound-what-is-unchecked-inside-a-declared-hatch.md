@@ -96,10 +96,12 @@ before Phase 5 has written one annotation would be deciding it with no evidence.
 ### Confirmation
 
 **Nothing guards this today, and that is the honest answer.** There is no hatch
-in the tree, there is no annotation, and no check consults one. `Certainty` and
-`Conclusion` in `crates/safec-ir` are the only things that currently carry what
-a check could not establish, and neither has a notion of a promise standing in
-for a proof.
+in the tree. There is one annotation, `_Nonnull`, and it is this record's
+boundary promise at the scale of one declaration:
+[ADR-0037](./0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
+is that decision and its Confirmation is what guards it. It guards the promise
+and not a region, which is what this record decides, so it is not this
+record's guard.
 
 What would guard it is the first check that reads a hatch. The guard to build
 with it is a test that a hatch does **not** change what a check concluded, only

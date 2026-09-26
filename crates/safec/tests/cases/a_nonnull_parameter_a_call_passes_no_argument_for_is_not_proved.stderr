@@ -1,0 +1,14 @@
+error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+   ╭─[ a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved.c:3:5 ]
+   │
+ 3 │     g();
+   │     ─┬─  
+   │      ╰─── this check cannot say this is not null
+   │ 
+ 5 │ void g(int * _Nonnull p) {
+   │              ────┬───  
+   │                  ╰───── the parameter is declared `_Nonnull` here
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before passing it

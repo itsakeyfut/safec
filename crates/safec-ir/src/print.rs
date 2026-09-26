@@ -216,6 +216,9 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                 out.push_str(" return");
             } else if function.parameters().any(|parameter| parameter == local) {
                 out.push_str(" parameter");
+                if function.nonnull(local).is_some() {
+                    out.push_str(" _Nonnull");
+                }
             }
             out.push('\n');
         }

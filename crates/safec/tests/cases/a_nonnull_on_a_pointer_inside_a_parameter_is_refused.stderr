@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_on_a_pointer_inside_a_parameter_is_refused.c:1:14 ]
+   │
+ 1 │ void g(int * _Nonnull * p);
+   │              ────┬───  
+   │                  ╰───── this qualifies a pointer inside the parameter's type
+───╯

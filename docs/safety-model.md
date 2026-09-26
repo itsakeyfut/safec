@@ -112,8 +112,8 @@ project asks instead that a program be rewritten until it can be proved, and
 which also records what that costs: the false positive rate becomes something a
 user feels rather than something they can ignore, and the answer to it is the
 hatch in
-[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) and the
-annotations below, neither of which exists yet.
+[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md), which
+does not exist yet, and the annotations below, of which one does.
 
 `Unsafe` says that **some** execution of the function is undefined, not that
 every one is. A check here reads one function at a time, so a parameter ranges
@@ -243,6 +243,30 @@ void consume(owner int *p);
 ```
 
 The exact syntax is not fixed.
+
+**One annotation exists, and it answers the third question.** `_Nonnull`,
+written after the `*` of a pointer parameter, says the parameter is not null:
+
+```c
+void process(int * _Nonnull p) { *p = 1; }
+```
+
+The body believes it, so the read above is not reported, and every call in the
+same translation unit is checked against it, so `process(0)` is an error and so
+is passing a pointer that nothing established is not null. What is believed
+without a check is only what no such call reaches: a caller in another
+translation unit, another file of the same `safec` run among them, or one
+compiled by something else. That is the boundary promise
+[ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) asks
+of a hatch, at the scale of one declaration.
+
+It is `clang`'s spelling rather than one in the style sketched above, because it
+is reserved to the implementation, `clang` compiles it unchanged, and it changes
+no code. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
+has the reasoning and the options it rejected, and
+[`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read) says where it is read and
+where it is refused. It says nothing about the other four questions, which wait
+for the phases that ask them.
 
 The desired migration model is:
 

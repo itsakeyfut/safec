@@ -708,6 +708,71 @@ cases! {
     a_null_dereference_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     an_unproven_dereference_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
 
+    // `_Nonnull`, the first annotation: believed by the body, checked at every
+    // call, refused everywhere else. See ADR-0037, whose Confirmation names
+    // the mutation each of these fails under.
+    //
+    // One case per stage the annotation passes through, for RK-033's reason:
+    // the tree, a declaration's IR, and a definition read by the analysis.
+    a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
+    // The parameter's own pointer is the last one written, not the first.
+    // Mutation: have `parameter_list` read `derivations.first()`, which drops
+    // this annotation in silence; only this case fails.
+    a_nonnull_after_the_last_star_of_a_parameter_is_read: ["--emit", "ast"],
+    a_nonnull_parameter_of_a_declaration_reaches_the_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_declared_nonnull_is_dereferenced_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What the body stopped carrying, the caller carries.
+    a_null_constant_passed_to_a_nonnull_parameter_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_local_proved_null_passed_to_a_nonnull_parameter_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+    each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A call through `void g();` passes nothing for a parameter the body
+    // believes. Mutation: zip the arguments with the parameters in
+    // `report_arguments`; only this case fails, and it goes silent.
+    a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `g(*pp)` asks two questions at one caret: whether `pp` is null, and
+    // whether what it holds is. Mutation: skip an argument with a projection
+    // in `report_arguments`; only this case fails, losing the `SC0405`.
+    an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The two ways a caller discharges it, which are what keep the check from
+    // reporting every call.
+    a_tested_pointer_passed_to_a_nonnull_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_nonnull_parameter_passed_on_to_another_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What the body believes is a fact at its entry, and no more than that.
+    a_nonnull_parameter_whose_address_escaped_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_nonnull_parameter_given_a_null_in_the_body_is_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_null_passed_to_a_nonnull_parameter_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
+    // Everywhere it cannot apply, one case per reason `parser.rs::placed`
+    // gives.
+    a_nonnull_not_after_a_star_is_refused: ["--emit", "ast"],
+    // The second of two after one `*`. Mutation: give it the label above;
+    // only this case fails.
+    a_second_nonnull_on_one_pointer_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_pointer_inside_a_parameter_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_file_scope_object_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_local_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_return_type_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_parameter_of_a_function_pointer_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_parameter_of_a_block_scope_function_is_refused: ["--emit", "ast"],
+    // C17 6.7.6.3 p8 adjusts a parameter of function type to a pointer, so it
+    // declares no function, and the label must not say it does. Mutation:
+    // choose the block-scope label on `own` alone; only this case fails.
+    a_nonnull_on_a_parameter_of_a_parameter_that_is_a_function_is_refused: ["--emit", "ast"],
+    // The disagreement `lowering.rs::agree` refuses, both ways round.
+    declarations_that_disagree_about_nonnull_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: compare only the first parameter in `agree`; only this fails.
+    declarations_that_disagree_about_a_later_parameter_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `void g();` declares no parameters, so it cannot be what the rest agree
+    // with. Mutation: have `declare_one` call `agree` for `()` as well; only
+    // this case fails, and it goes silent.
+    an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The promise on a declaration and not on the definition. The body is
+    // built from the definition, so it believes nothing and its dereference
+    // is reported beside the refusal.
+    a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

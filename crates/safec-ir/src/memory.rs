@@ -47,9 +47,10 @@ use crate::source::{SourceMap, Span};
 
 /// What this check can read in a callee's name.
 ///
-/// By name because nothing else is available: an annotation saying what a
-/// function does to what it is passed is the phase's last issue and does not
-/// exist. C17 7.1.3 reserves the identifiers the library declares, so a program
+/// By name because nothing else is available: no annotation says what a
+/// function does to what it is passed. The one annotation there is,
+/// `_Nonnull`, says only that a parameter is not null, which is ADR-0037.
+/// C17 7.1.3 reserves the identifiers the library declares, so a program
 /// that defines its own `free` has no behaviour C defines. `clang -std=c17
 /// -pedantic-errors` does not diagnose one, measured, so a program that does it
 /// anyway is read wrongly here and there is no way to tell from inside.
@@ -1958,7 +1959,8 @@ impl Analysis for Allocations<'_> {
                 // function knows.** The other producer of this fact narrows by
                 // the type it writes, which is ADR-0031; a callee's body is not
                 // read, so there is nothing here to narrow by. Narrowing this
-                // one would need what #134's annotation says.
+                // one would need an annotation saying what a callee writes,
+                // and `_Nonnull` is not one.
                 value.replaced(|_| true);
             }
         }

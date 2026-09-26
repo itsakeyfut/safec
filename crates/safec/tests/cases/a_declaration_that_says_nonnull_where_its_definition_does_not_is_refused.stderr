@@ -1,0 +1,21 @@
+error[SC0307]: the declarations of `g` disagree about `_Nonnull`
+   ╭─[ a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused.c:1:14 ]
+   │
+ 1 │ void g(int * _Nonnull p);
+   │              ────┬───  
+   │                  ╰───── one declaration says `_Nonnull` here
+ 2 │ void g(int *p) {
+   │      ┬  
+   │      ╰── this declaration does not
+───╯
+  = note: every declaration of a function has to agree about `_Nonnull`, because a caller is checked against the declaration it sees
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused.c:3:5 ]
+   │
+ 3 │     *p = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_on_a_local_is_refused.c:2:11 ]
+   │
+ 2 │     int * _Nonnull q = 0;
+   │           ────┬───  
+   │               ╰───── this is not the pointer a parameter holds
+───╯

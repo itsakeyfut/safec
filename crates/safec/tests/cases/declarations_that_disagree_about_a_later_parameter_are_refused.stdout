@@ -1,0 +1,20 @@
+Target "x86_64-pc-windows-msvc"
+Function declarations_that_disagree_about_a_later_parameter_are_refused.c:2:6 "g"
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+  Local "_2" "int *" parameter _Nonnull
+  Local "_3" "int"
+  Block "bb0" entry
+    Operation declarations_that_disagree_about_a_later_parameter_are_refused.c:3:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+          Deref
+    Operation declarations_that_disagree_about_a_later_parameter_are_refused.c:3:5 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced declarations_that_disagree_about_a_later_parameter_are_refused.c:3:5 generated
+    Return

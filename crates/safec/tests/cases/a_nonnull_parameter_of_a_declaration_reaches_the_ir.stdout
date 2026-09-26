@@ -1,0 +1,31 @@
+Target "x86_64-pc-windows-msvc"
+Function a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:1:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter _Nonnull
+Function a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int *"
+  Local "_3" "void"
+  Block "bb0" entry
+    Operation a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:3:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:3:13 generated
+    Operation a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:7 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 generated
+    Call a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 "g" "bb1"
+      Destination "_3"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 generated
+    Operation a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:5:12 generated
+    Return

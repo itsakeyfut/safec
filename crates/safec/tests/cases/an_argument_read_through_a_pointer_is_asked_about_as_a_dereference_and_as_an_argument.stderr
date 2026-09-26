@@ -1,0 +1,24 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument.c:3:5 ]
+   │
+ 3 │     g(*pp);
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+   ╭─[ an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument.c:3:5 ]
+   │
+ 1 │ void g(int * _Nonnull p);
+   │              ────┬───  
+   │                  ╰───── the parameter is declared `_Nonnull` here
+   │ 
+ 3 │     g(*pp);
+   │     ───┬──  
+   │        ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before passing it

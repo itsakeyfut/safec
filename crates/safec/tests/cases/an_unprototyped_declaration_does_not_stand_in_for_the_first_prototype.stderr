@@ -1,0 +1,11 @@
+error[SC0307]: the declarations of `g` disagree about `_Nonnull`
+   ╭─[ an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype.c:3:14 ]
+   │
+ 2 │ void g(int *p);
+   │      ┬  
+   │      ╰── the first prototype does not
+ 3 │ void g(int * _Nonnull p) {
+   │              ────┬───  
+   │                  ╰───── one declaration says `_Nonnull` here
+───╯
+  = note: every declaration of a function has to agree about `_Nonnull`, because a caller is checked against the declaration it sees

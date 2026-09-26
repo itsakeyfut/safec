@@ -1,0 +1,2 @@
+Declaration a_nonnull_after_the_last_star_of_a_parameter_is_read.c:1:1 "g" "void (int **)"
+  Parameter a_nonnull_after_the_last_star_of_a_parameter_is_read.c:1:8 "pp" "int **" _Nonnull

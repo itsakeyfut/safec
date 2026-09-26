@@ -26,7 +26,7 @@ use crate::ast::{
     StmtId, Type, TypeId, UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::token::{Keyword, Punct, Token, TokenKind};
+use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
 use safec_ir::source::{FileId, Span};
 
 /// Something was expected and something else was there.
@@ -60,6 +60,20 @@ const TOO_DEEP: Code = Code::new("SC0202");
 /// `docs/frontend.md` carries the row, which is where a reader looks to tell a
 /// gap from a decision.
 const BRACED_INITIALIZER: Code = Code::new("SC0203");
+
+/// `_Nonnull` written where it cannot apply.
+///
+/// It applies to one thing, the pointer a parameter of a declared function
+/// holds, because that is the one place ADR-0037 gives it a meaning: the body
+/// believes it and every call is checked against it. Anywhere else it would be
+/// read and mean nothing, which is a promise written down and silently dropped,
+/// so it is refused instead. `clang` accepts it on a local and on a return
+/// type; `docs/frontend.md` carries those rows.
+///
+/// The parser's rather than a later stage's, because it is the stage that
+/// knows what a declarator declares: whether it is a parameter, and whether the
+/// function type a parameter list belongs to is the declared function's own.
+const MISPLACED_ANNOTATION: Code = Code::new("SC0204");
 
 /// How deep this parser will go before it declines.
 ///
@@ -147,6 +161,26 @@ struct Declared {
     name: Span,
     /// The type this declarator derived from `base`.
     ty: TypeId,
+    /// What the declaration declares, which every later declarator in it
+    /// shares.
+    declares: Declares,
+}
+
+/// What a declarator declares, which is what decides whether `_Nonnull` may be
+/// written in it.
+///
+/// See [`MISPLACED_ANNOTATION`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Declares {
+    /// A parameter, whose own pointer is what `_Nonnull` qualifies.
+    Parameter,
+    /// A declaration or definition at file scope, whose function type's
+    /// parameters are the declared function's own.
+    FileScope,
+    /// A declaration inside a block. `lowering.rs::declare` reads only
+    /// file-scope items, so a function declared here is not one a call is
+    /// checked against, and nothing in it may carry `_Nonnull`.
+    BlockScope,
 }
 
 /// One step a declarator derives, in the order it wraps the base type.
@@ -157,8 +191,11 @@ struct Declared {
 /// fold happen once, at the end, in the order C17 6.7.6 p4 to p6 derive.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Derivation {
-    /// C17 6.7.6.1.
-    Pointer,
+    /// C17 6.7.6.1, and the `_Nonnull` written after its `*`, if one was.
+    Pointer {
+        /// Where the `_Nonnull` was written.
+        nonnull: Option<Span>,
+    },
     /// C17 6.7.6.2.
     Array(Option<ExprId>),
     /// C17 6.7.6.3.
@@ -418,7 +455,7 @@ impl Parser<'_> {
     fn item(&mut self, diagnostics: &mut DiagnosticSink) -> Item {
         let start = self.peek().span;
 
-        let Some(declared) = self.declared(diagnostics) else {
+        let Some(declared) = self.declared(Declares::FileScope, diagnostics) else {
             return Item::Error { span: start };
         };
 
@@ -453,16 +490,21 @@ impl Parser<'_> {
 
     /// The specifiers and one declarator, which is how a declaration and a
     /// definition both begin.
-    fn declared(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Declared> {
+    fn declared(
+        &mut self,
+        declares: Declares,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Declared> {
         let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
-        let (name, ty) = self.named_declarator(start, base, diagnostics)?;
+        let (name, ty) = self.named_declarator(start, base, declares, diagnostics)?;
 
         Some(Declared {
             start,
             base,
             name,
             ty,
+            declares,
         })
     }
 
@@ -477,10 +519,11 @@ impl Parser<'_> {
         &mut self,
         start: Span,
         base: TypeId,
+        declares: Declares,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<(Span, TypeId)> {
         let (name, derivations) = self.declarator(true, diagnostics)?;
-        let ty = self.apply(start, base, derivations, diagnostics)?;
+        let ty = self.apply(start, base, derivations, declares, diagnostics)?;
 
         let Some(name) = name else {
             // `declarator` was asked for a name and reports before it returns
@@ -515,6 +558,7 @@ impl Parser<'_> {
             base,
             mut name,
             mut ty,
+            declares,
         } = declared;
         let mut declarators = Vec::new();
 
@@ -528,6 +572,9 @@ impl Parser<'_> {
                     // this one's initializer. `Declaration::span` says why they
                     // all begin at the same byte and what tells them apart.
                     span: Span::new(self.file, start.start(), self.previous().span.end()),
+                    // Only a parameter carries one, and `apply` has refused it
+                    // everywhere else before this is reached.
+                    nonnull: None,
                 },
                 init,
             });
@@ -540,7 +587,7 @@ impl Parser<'_> {
             // loop always consumes a token and `spend`'s budget is not what
             // stops it going round forever.
             let at = self.peek().span;
-            (name, ty) = self.named_declarator(at, base, diagnostics)?;
+            (name, ty) = self.named_declarator(at, base, declares, diagnostics)?;
         }
     }
 
@@ -615,7 +662,12 @@ impl Parser<'_> {
         while self.check(TokenKind::Punct(Punct::Star)) {
             self.spend();
             self.advance();
-            derivations.push(Derivation::Pointer);
+            // One, and only directly after the `*`, which is where `clang`
+            // reads it. A second is left for `core`, which refuses it.
+            let nonnull = self
+                .check(TokenKind::Annotation(Annotation::Nonnull))
+                .then(|| self.advance().span);
+            derivations.push(Derivation::Pointer { nonnull });
         }
 
         let (name, inner) = self.core(named, diagnostics)?;
@@ -653,6 +705,28 @@ impl Parser<'_> {
 
             self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
             return Some(inner);
+        }
+
+        // `int _Nonnull x;` is the one place a reader who knows the word but
+        // not its position will write it, and "expected a name" would say
+        // nothing about why. The other way to arrive here is a second one
+        // after the first, which is after a `*` and needs its own words:
+        // telling that reader to write it after the `*` is telling them what
+        // they did. `clang` warns about the duplicate and reads one.
+        if self.check(TokenKind::Annotation(Annotation::Nonnull)) {
+            let label = if self.previous().kind == TokenKind::Annotation(Annotation::Nonnull) {
+                "a pointer takes one `_Nonnull`, and this is the second"
+            } else {
+                "`_Nonnull` is written after the `*` of the pointer it qualifies"
+            };
+            self.report_at(
+                self.peek().span,
+                MISPLACED_ANNOTATION,
+                "`_Nonnull` cannot apply here",
+                label,
+                diagnostics,
+            );
+            return None;
         }
 
         if named {
@@ -736,10 +810,22 @@ impl Parser<'_> {
             let start = self.peek().span;
             let base = self.specifiers(diagnostics)?;
             let (name, derivations) = self.declarator(false, diagnostics)?;
-            let ty = self.apply(start, base, derivations, diagnostics)?;
+            // The parameter's own pointer is the last derivation, the one that
+            // makes the parameter's type. `apply` refuses one written anywhere
+            // else, so this is the only one there is to keep.
+            let nonnull = match derivations.last() {
+                Some(Derivation::Pointer { nonnull }) => *nonnull,
+                _ => None,
+            };
+            let ty = self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
-            parameters.push(Declaration { name, ty, span });
+            parameters.push(Declaration {
+                name,
+                ty,
+                span,
+                nonnull,
+            });
 
             if !self.eat(TokenKind::Punct(Punct::Comma)) {
                 break;
@@ -780,11 +866,17 @@ impl Parser<'_> {
     /// 5.2.4.1's own limits sit far below [`MAX_NESTING`]: it asks an
     /// implementation to manage "63 nesting levels of parenthesized declarators
     /// within a full declarator".
+    ///
+    /// It is also where `_Nonnull` is placed or refused, because this is the
+    /// first point at which the whole declarator is known: which derivation is
+    /// the declared entity's own type is only settled once the last one is
+    /// read. See [`MISPLACED_ANNOTATION`].
     fn apply(
         &mut self,
         start: Span,
         base: TypeId,
         derivations: Vec<Derivation>,
+        declares: Declares,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<TypeId> {
         if derivations.len() > MAX_NESTING {
@@ -802,10 +894,12 @@ impl Parser<'_> {
             return None;
         }
 
+        self.placed(&derivations, declares, diagnostics)?;
+
         let mut ty = base;
         for derivation in derivations {
             ty = self.ast.push_type(match derivation {
-                Derivation::Pointer => Type::Pointer(ty),
+                Derivation::Pointer { nonnull: _ } => Type::Pointer(ty),
                 Derivation::Array(length) => Type::Array {
                     element: ty,
                     length,
@@ -818,6 +912,75 @@ impl Parser<'_> {
         }
 
         Some(ty)
+    }
+
+    /// Refuse every `_Nonnull` in one declarator that is not on a parameter's
+    /// own pointer.
+    ///
+    /// Two places can hold one. A pointer derivation holds the one written
+    /// after its `*`, which is allowed only where it is the last derivation of
+    /// a parameter. A function derivation holds its parameters, whose own
+    /// `_Nonnull` was allowed when each was read, and is kept only where the
+    /// function is the declared one: the last derivation of a file-scope
+    /// declarator. Everywhere else, `void (*fp)(int * _Nonnull)` among them,
+    /// there is no declared function whose calls could be checked against it.
+    ///
+    /// `Some(())` is placed and `None` has been reported.
+    fn placed(
+        &mut self,
+        derivations: &[Derivation],
+        declares: Declares,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let last = derivations.len().saturating_sub(1);
+
+        for (index, derivation) in derivations.iter().enumerate() {
+            let own = index == last;
+            let refused = match derivation {
+                Derivation::Pointer { nonnull: Some(at) } => match declares {
+                    Declares::Parameter if own => None,
+                    Declares::Parameter => {
+                        Some((*at, "this qualifies a pointer inside the parameter's type"))
+                    }
+                    Declares::FileScope | Declares::BlockScope => {
+                        Some((*at, "this is not the pointer a parameter holds"))
+                    }
+                },
+                Derivation::Function(Parameters::Prototype(parameters))
+                    if !(own && declares == Declares::FileScope) =>
+                {
+                    // A parameter whose own type is a function, `int g(int *
+                    // _Nonnull p)` in a parameter list, is the second line's:
+                    // C17 6.7.6.3 p8 adjusts it to a pointer, so no function is
+                    // declared by it.
+                    let label = if own && declares == Declares::BlockScope {
+                        "this is a parameter of a function declared inside a block"
+                    } else {
+                        "this is a parameter of a function type, not of a declared function"
+                    };
+                    parameters
+                        .iter()
+                        .find_map(|parameter| parameter.nonnull)
+                        .map(|at| (at, label))
+                }
+                Derivation::Pointer { nonnull: None }
+                | Derivation::Array(_)
+                | Derivation::Function(_) => None,
+            };
+
+            if let Some((at, label)) = refused {
+                self.report_at(
+                    at,
+                    MISPLACED_ANNOTATION,
+                    "`_Nonnull` cannot apply here",
+                    label,
+                    diagnostics,
+                );
+                return None;
+            }
+        }
+
+        Some(())
     }
 
     /// A braced sequence of statements.
@@ -863,7 +1026,7 @@ impl Parser<'_> {
     fn declaration_statement(&mut self, diagnostics: &mut DiagnosticSink) -> StmtId {
         let start = self.peek().span;
 
-        let Some(declared) = self.declared(diagnostics) else {
+        let Some(declared) = self.declared(Declares::BlockScope, diagnostics) else {
             return self.ast.push_stmt(Stmt::Error { span: start });
         };
 
