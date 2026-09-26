@@ -869,6 +869,12 @@ impl Known {
         // A new allocation has not been handed to anybody and holds nothing
         // yet. What an opaque call's destination may still be is the call
         // transfer's to say, after this. See ADR-0039.
+        //
+        // **Clearing `contents` is held by nothing**, measured: a site is
+        // reborn only by a loop through the same call, and the body that
+        // stored into the old allocation stores into the new one on the same
+        // turn, so a stale row never adds a site the closure would not add
+        // anyway. It is kept because it is what the value means.
         exposed[site] = false;
         contents[site].fill(false);
 
@@ -919,18 +925,27 @@ impl Known {
     }
 
     /// Code this check cannot read may reach `sites`, and so everything a
-    /// pointer stored in them may hold, and so on.
+    /// pointer stored in any exposed allocation may hold, and so on.
     ///
-    /// The closure runs here rather than where the mark is read, so that
-    /// [`Self::exposed`] alone answers the question everywhere. See ADR-0039.
+    /// **The closure is taken over every exposed site, not only the ones this
+    /// call marks.** A join can leave an allocation exposed on one arm and
+    /// holding a pointer on the other, and after it the pair is exposed and
+    /// holds the pointer while the pointer is not exposed; a closure that
+    /// started from the new marks alone left that pointer proved after the
+    /// next call. Every reader of [`Self::exposed`] runs after this, so this
+    /// is the one place the invariant has to hold. RK-044 in the review
+    /// knowledge bank is the shape. See ADR-0039.
     fn expose(&mut self, sites: impl IntoIterator<Item = usize>) {
-        let mut pending: Vec<usize> = sites.into_iter().collect();
+        for site in sites {
+            self.exposed[site] = true;
+        }
+        let mut pending: Vec<usize> = (0..self.exposed.len())
+            .filter(|&site| self.exposed[site])
+            .collect();
         while let Some(site) = pending.pop() {
-            if std::mem::replace(&mut self.exposed[site], true) {
-                continue;
-            }
             for (held, &in_it) in self.contents[site].iter().enumerate() {
                 if in_it && !self.exposed[held] {
+                    self.exposed[held] = true;
                     pending.push(held);
                 }
             }
@@ -948,21 +963,13 @@ impl Known {
         }
     }
 
-    /// Every site a call could reach through what it was handed: what the
-    /// arguments name, what the locals an argument points at hold, and what
-    /// every local whose address escaped holds, since the call may have been
-    /// handed that address earlier or by another route. See ADR-0039.
-    fn reach_of(&self, named: impl Iterator<Item = usize>, arguments: &[Operand]) -> Vec<usize> {
+    /// Every site a call could reach: what its arguments name, and what every
+    /// local whose address escaped holds, since the call may have been handed
+    /// that address now, earlier, or by another route. A local an argument
+    /// points at is one of those: its address was taken to point at it. See
+    /// ADR-0039.
+    fn reach_of(&self, named: impl Iterator<Item = usize>) -> Vec<usize> {
         let mut reach: Vec<usize> = named.collect();
-        for argument in arguments {
-            if let Operand::Copy(source) = argument {
-                if source.projection.is_empty() {
-                    for target in self.written_through(source.local) {
-                        reach.extend(self.points_to[target].sites());
-                    }
-                }
-            }
-        }
         for (local, &escaped) in self.escaped.iter().enumerate() {
             if escaped {
                 reach.extend(self.points_to[local].sites());
@@ -1679,14 +1686,14 @@ impl Analysis for Allocations<'_> {
                 }
 
                 // **Into the allocations the pointer holds, what the write
-                // carries is their contents**, and exposed with them if they
-                // are. A write this check cannot place exposes what it carries
-                // at once: one deeper than one `Deref`, which has no targets,
-                // or one through a pointer holding no allocation that may land
-                // somewhere other than the locals it was seen pointing at. A
-                // write that lands in followed locals records nothing here:
-                // their addresses escaped, and what they hold is in every
-                // call's reach. See ADR-0039.
+                // carries is their contents**, exposed whenever they are, by
+                // [`Known::expose`]'s closure. A write this check cannot place
+                // exposes what it carries at once: one deeper than one `Deref`,
+                // which has no targets, or one through a pointer that holds
+                // neither an allocation nor a local's address. A write that
+                // may land in followed locals records nothing here: their
+                // addresses escaped, and what they hold is in every call's
+                // reach. See ADR-0039.
                 if !operation.place.projection.is_empty() {
                     let carried: Vec<usize> = self
                         .carried(function, &operation.value, value)
@@ -1697,10 +1704,9 @@ impl Analysis for Allocations<'_> {
                     } else {
                         Vec::new()
                     };
-                    let unplaced = containers.is_empty()
-                        && (targets.is_empty()
-                            || value.points_to[pointer].writes_elsewhere
-                            || value.escaped[pointer]);
+                    // With a target, what it carries is in that local now, and
+                    // the local's address escaped: every call reaches it.
+                    let unplaced = containers.is_empty() && targets.is_empty();
                     if unplaced {
                         value.expose(carried);
                     } else {
@@ -1708,9 +1714,6 @@ impl Analysis for Allocations<'_> {
                             for &site in &carried {
                                 value.contents[*container][site] = true;
                             }
-                        }
-                        if containers.iter().any(|&container| value.exposed[container]) {
-                            value.expose(carried);
                         }
                     }
                 }
@@ -1975,14 +1978,7 @@ impl Analysis for Allocations<'_> {
         // following, which is a fact about the report rather than about the
         // lattice.
         let kind = self.callee(*callee);
-        // `realloc`'s size is not a pointer anything is freed through.
-        let handed = match kind {
-            Callee::Reallocates => &arguments[..arguments.len().min(1)],
-            Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {
-                &arguments[..]
-            }
-        };
-        let touched = Self::touching(handed.iter(), value);
+        let touched = Self::touching(arguments.iter(), value);
         let sites = || named(&touched);
 
         match kind {
@@ -2119,7 +2115,7 @@ impl Analysis for Allocations<'_> {
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
             Callee::ReturnsFirst => {
-                let reach = value.reach_of(sites(), arguments);
+                let reach = value.reach_of(sites());
                 value.expose(reach);
                 value.replaced(|_| true);
             }
@@ -2132,7 +2128,7 @@ impl Analysis for Allocations<'_> {
                 // before it by code this check cannot read**, is unproven
                 // after it, because any of it may be what this call frees.
                 // See ADR-0039.
-                let reach = value.reach_of(sites(), arguments);
+                let reach = value.reach_of(sites());
                 value.expose(reach);
                 value.unprove_exposed();
 
@@ -2260,8 +2256,10 @@ impl Analysis for Allocations<'_> {
             }
             if was_exposed {
                 value.state[site] = SiteState::Unknown;
-                value.exposed[site] = true;
             }
+            // **And what it returns is exposed**: the callee had the pointer,
+            // and may have kept it where the next call can reach it.
+            value.expose([site]);
         }
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every

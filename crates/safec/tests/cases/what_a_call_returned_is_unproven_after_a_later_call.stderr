@@ -1,0 +1,10 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ what_a_call_returned_is_unproven_after_a_later_call.c:12:5 ]
+    │
+ 12 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

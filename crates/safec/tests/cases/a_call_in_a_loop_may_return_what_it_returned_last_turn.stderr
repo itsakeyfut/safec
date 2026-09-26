@@ -18,3 +18,13 @@ error[SC0401]: this may free a value that was freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0404]: this may free a pointer that is not the start of an allocation
+    ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 ]
+    │
+ 20 │         free(t);
+    │         ───┬───  
+    │            ╰───── this offset may not be zero
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free the pointer the allocation was made with if this offset can be non-zero
