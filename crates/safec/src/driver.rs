@@ -1618,18 +1618,25 @@ fn dump_declarators(
     }
 }
 
-/// The tail of a line that declares something: the name, then the type.
+/// The tail of a line that declares something: the name, the type, and
+/// `_Nonnull` where it was written.
 ///
 /// A name is the file's own bytes and is quoted for the reason RK-002 gives. A
 /// type is this compiler's spelling of what the declarator derived, quoted
 /// beside it so that the two read alike; the only file text inside one is the
 /// length of an array, which [`spell_type`] answers for.
+///
+/// `_Nonnull` is a word on the line rather than part of the type string,
+/// because it is not part of the type: [`Declaration::nonnull`] says why.
 fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, out: &mut String) {
     if let Some(name) = declaration.name {
         write!(out, " {:?}", quoted(sources, name)).expect("writing to a string cannot fail");
     }
     write!(out, " {:?}", spell_type(sources, ast, declaration.ty))
         .expect("writing to a string cannot fail");
+    if declaration.nonnull.is_some() {
+        out.push_str(" _Nonnull");
+    }
     out.push('\n');
 }
 

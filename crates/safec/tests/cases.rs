@@ -708,6 +708,23 @@ cases! {
     a_null_dereference_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
     an_unproven_dereference_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
 
+    // `_Nonnull`, the first annotation: believed by the body, checked at every
+    // call, refused everywhere else. See ADR-0037, whose Confirmation names
+    // the mutation each of these fails under.
+    //
+    // One case per stage the annotation passes through, for RK-033's reason:
+    // the tree, a declaration's IR, and a definition read by the analysis.
+    a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
+    // Everywhere it cannot apply, one case per reason `parser.rs::placed`
+    // gives.
+    a_nonnull_not_after_a_star_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_pointer_inside_a_parameter_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_file_scope_object_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_local_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_return_type_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_parameter_of_a_function_pointer_is_refused: ["--emit", "ast"],
+    a_nonnull_on_a_parameter_of_a_block_scope_function_is_refused: ["--emit", "ast"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

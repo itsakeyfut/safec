@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_on_a_return_type_is_refused.c:1:7 ]
+   │
+ 1 │ int * _Nonnull f(void);
+   │       ────┬───  
+   │           ╰───── this is not the pointer a parameter holds
+───╯

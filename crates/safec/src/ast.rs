@@ -171,6 +171,13 @@ pub struct Declaration {
     /// because C17 6.7 gives them one set of specifiers between them. What
     /// tells two of them apart is [`Declaration::name`].
     pub span: Span,
+    /// Where `_Nonnull` was written on this declaration's own pointer.
+    ///
+    /// Only a parameter carries one. The parser refuses it everywhere else,
+    /// with `SC0204`, before a declaration is built. It is not part of
+    /// [`Declaration::ty`]: it selects no type and changes no code, and what it
+    /// does mean is ADR-0037.
+    pub nonnull: Option<Span>,
 }
 
 /// One declarator of a declaration, with the initializer that followed it.
@@ -1103,6 +1110,7 @@ mod tests {
             name: None,
             ty,
             span: Span::new(file, 0, 1),
+            nonnull: None,
         };
         let of = |ast: &mut Ast, returns, parameters| {
             ast.push_type(Type::Function {
@@ -1262,6 +1270,7 @@ mod tests {
             name: None,
             ty,
             span: Span::new(file, 0, 2),
+            nonnull: None,
         };
         let takes_int = |returns| Type::Function {
             returns,

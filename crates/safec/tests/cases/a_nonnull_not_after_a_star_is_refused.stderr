@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_not_after_a_star_is_refused.c:1:12 ]
+   │
+ 1 │ void g(int _Nonnull p);
+   │            ────┬───  
+   │                ╰───── `_Nonnull` is written after the `*` of the pointer it qualifies
+───╯

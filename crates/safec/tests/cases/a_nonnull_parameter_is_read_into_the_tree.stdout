@@ -1,0 +1,3 @@
+Declaration a_nonnull_parameter_is_read_into_the_tree.c:1:1 "g" "void (int *, int *)"
+  Parameter a_nonnull_parameter_is_read_into_the_tree.c:1:8 "p" "int *" _Nonnull
+  Parameter a_nonnull_parameter_is_read_into_the_tree.c:1:26 "q" "int *"
