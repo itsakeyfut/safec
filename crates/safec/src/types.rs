@@ -2821,9 +2821,10 @@ int main(void) {{
     /// rows fail. Mutation: have `subscript` stop asking it. The `[]` rows
     /// fail. Mutation: have `subscript` ask only when the base is the pointer.
     /// `1[v]` fails. Mutation: put the primary label on the base always.
-    /// `1[v]`'s label fails. Mutation: drop `decayed` from `subscript`. `g[1]`
-    /// fails. Mutation: swap the two increments' clauses. `v++` and `--v`
-    /// fail. Mutation: have `unsteppable` refuse `int`. The silent rows fail.
+    /// `1[v]`'s label fails. Mutation: drop `decayed` from the base in
+    /// `subscript`. `g[1]` fails, and from the index, `1[g]`. Mutation: swap
+    /// the two increments' clauses. `v++` and `--v` fail. Mutation: have
+    /// `unsteppable` refuse `int`. The silent rows fail.
     #[test]
     fn an_increment_and_a_subscript_take_the_step_the_additive_operators_do() {
         for (code, message, primary, note) in [
@@ -2872,6 +2873,12 @@ int main(void) {{
             (
                 "g[1];",
                 "`[]` cannot take `void (*)(void)` and `int`",
+                "this is `void (*)(void)`",
+                "a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)",
+            ),
+            (
+                "1[g];",
+                "`[]` cannot take `int` and `void (*)(void)`",
                 "this is `void (*)(void)`",
                 "a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)",
             ),

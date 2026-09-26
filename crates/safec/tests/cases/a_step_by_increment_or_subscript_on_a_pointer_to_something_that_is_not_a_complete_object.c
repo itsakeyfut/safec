@@ -9,6 +9,7 @@ int f(void *v, int (*q)[], void (*h)(void), int *p) {
     q[0];
     1[v];
     g[1];
+    1[g];
     p++;
     --p;
     p[1];

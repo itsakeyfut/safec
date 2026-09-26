@@ -70,3 +70,13 @@ error[SC0306]: `[]` cannot take `void (*)(void)` and `int`
     │       ╰── this is `int`
 ────╯
   = note: a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `int` and `void (*)(void)`
+    ╭─[ a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object.c:12:7 ]
+    │
+ 12 │     1[g];
+    │     ┬ ┬  
+    │     ╰──── this is `int`
+    │       │  
+    │       ╰── this is `void (*)(void)`
+────╯
+  = note: a pointer steps by the size of what it points to, and a function is not an object (C17 6.5.2.1 p1)
