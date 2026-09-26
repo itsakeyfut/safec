@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-26
 decision-makers: itsakeyfut
 ---
@@ -131,22 +131,63 @@ they cannot read. #134's answer and this one are the same answer.
 
 ### Confirmation
 
-**Nothing guards this yet; the record is `proposed`.** #210 lands it and
-rewrites this section with what it measured. The guards it is due to build:
+Every mutation below was applied on its own to the tree as committed, the
+whole workspace was run with `--no-fail-fast`, and the file was restored from
+git. The tests named are the ones that failed; how many there were is not
+written down, for RK-028's reason. The cases are in `crates/safec/tests/cases`.
 
-* The suppression mutation. Dropping the listing of a hatch's unproven
-  conclusion, so that the driver only filters it, has to fail the case that
-  pins `--emit hatches` for a hatch whose body is `Unknown`.
-* The hatch ignored. Reading the attribute and not carrying it to the IR has to
-  fail the case where the same body builds with the hatch and is refused
-  without it.
-* A proved defect inside a hatch. Routing `Unsafe` to the listing as well has
-  to fail a case whose hatch frees one pointer twice.
-* The boundary. A call that passes a null to a hatch's `_Nonnull` parameter is
-  `SC0405`, and a hatch handed an allocation leaves it unproven for the caller:
-  treating a call to a hatch as one that touches nothing has to fail a case that
-  frees what it passed to the hatch.
-* The placement. Deleting the refusal fails a case per reason it gives.
+**Where a conclusion goes.** This is the one the record is about. Having
+`driver.rs::route` keep nothing in `hatched`, which is the hatch as a
+suppression, fails `an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported`
+and `a_proved_double_free_inside_a_hatch_is_still_reported`. Reporting an
+`Unknown` inside a hatch as well fails the first of those and
+`an_unproven_dereference_inside_a_hatch_is_not_reported`. Answering `Unsafe` the
+way `Unknown` is answered, so that a proved defect inside a hatch builds, fails
+`a_proved_double_free_inside_a_hatch_is_still_reported` alone. `route` matches
+every conclusion, so a fourth is `error[E0004]` there.
+
+**Which function a conclusion is about.** Having either check's
+`Finding::function` name the unit's first function, for the memory check's
+findings, the nullability check's dereferences, or its arguments, fails
+`a_function_after_a_hatch_is_still_answered_for`, whose hatch is that first
+function: it is the silent direction, a conclusion about an ordinary function
+credited to a hatch and not reported. Before that case was written, the
+nullability half of this passed the whole suite.
+
+**Carried to the IR.** `Lowering::body` never calling `Function::unchecked`
+fails every case above that has a hatch in it and
+`driver::tests::every_emit_kind_makes_something_of_a_program`. Not printing
+`unchecked` fails the cases that emit the IR of a hatch, and not printing the
+attribute in the tree fails `a_hatch_is_read_into_the_tree`.
+
+**The listing.** Listing every function rather than every hatch fails
+`a_program_with_no_hatch_lists_none` and
+`every_hatch_is_listed_at_safety_off_with_nothing_under_it`. Dropping the sort
+fails `what_a_hatch_concluded_is_listed_in_the_order_it_was_written` alone, and
+calling a proof unproven fails the double-free case alone. File names in it are
+written by `print.rs::dump_node`, whose escaping is held by that file's own test.
+
+**The boundary.** Deleting the `report_arguments` call fails
+`a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved` beside ADR-0037's
+own cases, so a hatch's prototype is held to the same rule as any other.
+Having `Allocations::callee` answer that a call to a hatch touches nothing fails
+`freeing_what_was_handed_to_a_hatch_is_not_proved`, which is ADR-0032's
+conservative default at a hatch's boundary.
+
+**The spelling and where it is read.** Each refusal fails the case named for
+it and nothing else: on a declaration, a list of two, an argument that is not
+a string, before a specifier (a second attribute, a parameter, a block), after
+a specifier, and a block sending it to the expressions. `sema::resolve` never
+comparing fails `an_attribute_other_than_annotate_is_refused` and
+`an_annotation_other_than_the_hatch_is_refused`, and comparing the name alone
+fails the second. Misspelling `__attribute__` in the annotation table fails
+the table test, the lexer's neighbour test, and every case above.
+
+**What nothing holds.** That `--emit hatches` is written on a run that failed
+is held by nothing, as for `--emit ast`, and
+`options.rs::EmitKind::survives_an_error` says so. A test that the name is an
+identifier was measured to be one no mutation could break and was removed; the
+parser says where such a name is refused instead.
 
 ### Consequences
 
