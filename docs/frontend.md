@@ -236,18 +236,19 @@ a constant expression can be evaluated.
 
 ### Where the nonnull annotation is read
 
-`_Nonnull` is `clang`'s nullability qualifier, and the one annotation this
-compiler reads. It is not C: C17 7.1.3 p1 reserves every identifier that begins
-with an underscore and an uppercase letter to the implementation, which is what
-lets a compiler read one without taking a name from a conforming program, and
-is also why `-pedantic-errors` refuses it as an extension. What it means here is
-[ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-this-compiler-sees.md):
-the body of a function believes it of a parameter, and every call is checked
-against it.
+`_Nonnull` is what `clang` calls a type nullability specifier, and the one
+annotation this compiler reads. It is not C, and `-pedantic-errors` refuses it
+for that reason, as an extension. C17 7.1.3 p1 reserves every identifier that
+begins with an underscore and an uppercase letter to the implementation, which
+is what lets a compiler read one without taking a name from a conforming
+program. What it means here is
+[ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md):
+the body of a function believes it of a parameter, and every call in the
+translation unit is checked against it.
 
 So it is read in one place, after the `*` of a parameter's own pointer in a
 function declared at file scope, and refused everywhere else. `clang` reads it
-in more places than that, because there it is a qualifier on any pointer type
+in more places than that, because there it is a specifier on any pointer type
 and means nothing it has to check.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
@@ -268,7 +269,11 @@ the tables above are. **Every refusal here is a decision rather than a gap**, an
 each is the same one: an annotation read where it means nothing is a promise
 written down and dropped, and a reader who wrote it would believe it held. The
 two declarations disagreeing is refused rather than inherited, which is what
-`clang` does, because a caller is checked against the declaration it sees. The
+`clang` does, because a caller is checked against the declaration it sees; what
+is compared is the first prototype, so a `void g();` above them changes
+nothing. **The refusals hold at every safety level, `--safety off` included**,
+because a level decides which checks run and these are the frontend reading
+the language. The
 last two rows are the check rather than the frontend, and `clang`'s answer to
 them is the reason the check exists: it warns about a literal null and says
 nothing about a local that holds one.

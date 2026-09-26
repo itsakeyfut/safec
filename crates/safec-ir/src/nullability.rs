@@ -24,8 +24,8 @@
 //!
 //! **A `_Nonnull` parameter is believed by its body and checked at every
 //! call.** It enters the lattice not null, and every argument passed to one is
-//! asked what a dereference is asked. What is believed is only what no call this
-//! crate can see reaches, which is ADR-0037.
+//! asked what a dereference is asked. What is believed is only what no call in
+//! the translation unit reaches, which is ADR-0037.
 //!
 //! **Nothing here reports.** This builds a [`Conclusion`] and a span; `safec`
 //! turns one into a diagnostic, because this crate cannot see one, which is
@@ -510,7 +510,7 @@ impl Analysis for Nullability<'_> {
     ///
     /// A parameter's nullness is a caller's fact, so `void f(int *p) { *p =
     /// 1; }` is not established here. `_Nonnull` is how a caller's fact is
-    /// carried: the body believes it, and every call this check can see is
+    /// carried: the body believes it, and every call in the translation unit is
     /// asked whether it keeps it, which is ADR-0037.
     ///
     /// It is a fact at the entry and nowhere else. The body can replace it like
@@ -709,12 +709,17 @@ fn report(
 /// written after, and `q = g(q)` asks about the `q` that was passed.
 ///
 /// **This is the second reader of `Nullness::NonNull`, and for it being wrong
-/// is a silence.** A dereference reads it too, and every place that mints it
+/// is a silence.** A dereference reads it too, and each place that mints it
 /// was made sound for that reader: an address, a dereference that did not trap
 /// (ADR-0025), a branch that tested the pointer, and a `_Nonnull` parameter.
-/// The argument is read where the dereference is, so each stays sound here for
-/// the same reason. RK-071 is what happens when a second reader assumes that
-/// rather than checks it.
+/// The argument is read where the dereference is, so it inherits that reader's
+/// answers **and its gaps**, and this sentence used to claim only the first.
+/// The one review found: every argument is lowered before the call, so
+/// `g(q, q = &x)` asks about `q` after the second argument wrote it, and a null
+/// `q` is silent. C17 6.5 p2 makes that call undefined, and `h(*q, q = &x)` is
+/// silent on the dereference side for the same reason. ADR-0037 records it as
+/// a consequence. RK-071 is what happens when a second reader assumes the first
+/// one's soundness rather than checks it.
 ///
 /// One per argument rather than the worst per call, because each argument has
 /// its own promise to point at.

@@ -49,7 +49,8 @@ use crate::source::{SourceMap, Span};
 ///
 /// By name because nothing else is available: no annotation says what a
 /// function does to what it is passed. The one annotation there is,
-/// `_Nonnull`, says only that a parameter is not null, which is ADR-0037. C17 7.1.3 reserves the identifiers the library declares, so a program
+/// `_Nonnull`, says only that a parameter is not null, which is ADR-0037.
+/// C17 7.1.3 reserves the identifiers the library declares, so a program
 /// that defines its own `free` has no behaviour C defines. `clang -std=c17
 /// -pedantic-errors` does not diagnose one, measured, so a program that does it
 /// anyway is read wrongly here and there is no way to tell from inside.

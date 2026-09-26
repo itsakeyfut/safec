@@ -251,17 +251,18 @@ written after the `*` of a pointer parameter, says the parameter is not null:
 void process(int * _Nonnull p) { *p = 1; }
 ```
 
-The body believes it, so the read above is not reported, and every call this
-compiler sees is checked against it, so `process(0)` is an error and so is
-passing a pointer nothing established is not null. What is believed without a
-check is only what no such call reaches: a caller in another translation unit,
-or one compiled by something else. That is the boundary promise
+The body believes it, so the read above is not reported, and every call in the
+same translation unit is checked against it, so `process(0)` is an error and so
+is passing a pointer that nothing established is not null. What is believed
+without a check is only what no such call reaches: a caller in another
+translation unit, another file of the same `safec` run among them, or one
+compiled by something else. That is the boundary promise
 [ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) asks
 of a hatch, at the scale of one declaration.
 
 It is `clang`'s spelling rather than one in the style sketched above, because it
 is reserved to the implementation, `clang` compiles it unchanged, and it changes
-no code. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-this-compiler-sees.md)
+no code. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
 has the reasoning and the options it rejected, and
 [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read) says where it is read and
 where it is refused. It says nothing about the other four questions, which wait

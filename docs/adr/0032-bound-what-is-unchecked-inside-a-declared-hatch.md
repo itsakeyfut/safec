@@ -98,7 +98,7 @@ before Phase 5 has written one annotation would be deciding it with no evidence.
 **Nothing guards this today, and that is the honest answer.** There is no hatch
 in the tree. There is one annotation, `_Nonnull`, and it is this record's
 boundary promise at the scale of one declaration:
-[ADR-0037](./0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-this-compiler-sees.md)
+[ADR-0037](./0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
 is that decision and its Confirmation is what guards it. It guards the promise
 and not a region, which is what this record decides, so it is not this
 record's guard.

@@ -4,7 +4,7 @@ date: 2026-09-26
 decision-makers: itsakeyfut
 ---
 
-# A `_Nonnull` parameter is believed by its body and checked at every call this compiler sees
+# A `_Nonnull` parameter is believed by its body and checked at every call in its translation unit
 
 ## Context and Problem Statement
 
@@ -28,6 +28,11 @@ This record is that sentence made concrete.
 [#134](https://github.com/itsakeyfut/safec/issues/134) landed it, and the status
 moved with it.
 
+**The title was narrowed by review.** It said "every call this compiler sees",
+and a run handed two files sees a call in one to a function defined in the
+other without checking it. The boundary is the translation unit, and the record
+now says so wherever it used to say the wider thing.
+
 ## Decision Drivers
 
 * `CLAUDE.md`'s ranking. Whatever is believed has to be believed where a person
@@ -48,8 +53,8 @@ moved with it.
 
 The spelling:
 
-* `_Nonnull`, `clang`'s nullability qualifier, written after the `*` it
-  qualifies
+* `_Nonnull`, what `clang` calls a type nullability specifier, written after the
+  `*` it applies to
 * `__attribute__((nonnull))`, which GCC and `clang` both read
 * a keyword of this compiler's own, `nonnull`, in the style
   [`safety-model.md`](../safety-model.md#annotations) sketches for `owner` and
@@ -57,14 +62,14 @@ The spelling:
 
 What it means:
 
-* believed by the body and checked at every call this compiler sees
+* believed by the body and checked at every call in its translation unit
 * believed by the body only
 * checked at the calls only, and believed nowhere
 
 ## Decision Outcome
 
 Chosen: **`_Nonnull`, believed by the function's body at its entry and checked
-at every call this compiler lowers.**
+at every call in the translation unit that declares it.**
 
 **The body believes it.** A parameter declared `_Nonnull` enters the nullability
 lattice as not null. Nothing else changes: it is read through
@@ -75,18 +80,29 @@ only, so `p = 0; *p = 1;` in the body is a proved null dereference.
 
 **Every call is checked.** An argument passed to a `_Nonnull` parameter is asked
 the same question a dereference is. Proved null is `Unsafe`, not established is
-`Unknown`, and not null is nothing. So the obligation the body stopped carrying
-moves to the caller, where it can be discharged by a test, by an address, or by
-passing on a parameter that was itself declared `_Nonnull`.
+`Unknown`, and not null is nothing. A `_Nonnull` parameter a call passes no
+argument for, which a call through `void g();` can do, is not established. So
+the obligation the body stopped carrying moves to the caller, where it can be
+discharged by a test, by an address, or by passing on a parameter that was
+itself declared `_Nonnull`.
 
-**What is believed is what no call this compiler saw can reach**: a caller in
-another translation unit, or one compiled by something else. That is the whole
-of what the promise rests on, it is written at a named place in the source, and
-it is the property ADR-0032 asks of a hatch. It is also the reason every
-declaration of one function has to agree about it: a header that omits the
-annotation is how a caller in another translation unit goes unchecked, so a
-disagreement between two declarations in one unit is refused rather than
-resolved.
+**What is believed is what no call in the translation unit can reach**: a caller
+in another translation unit, including another file of the same `safec` run, or
+one compiled by something else. That is the whole of what the promise rests on,
+it is written at a named place in the source, and it is the property ADR-0032
+asks of a hatch. It is also the reason every prototype of one function has to
+agree about it: a header that omits the annotation is how a caller in another
+translation unit goes unchecked, so a disagreement between two prototypes in one
+unit is refused rather than resolved. `void g();` is not a prototype and says
+nothing to agree with.
+
+**The refusals hold at every safety level, `--safety off` included.** Where
+`_Nonnull` may be written, and whether two prototypes agree, is the frontend
+reading the language, and [`safety-model.md`](../safety-model.md) makes a level
+decide which checks run and nothing else. So `--safety off` ignores what the
+annotation means, since no check runs to believe or ask about it, and still
+refuses it where it cannot apply. What that costs is that a file `clang` builds
+with `_Nonnull` on a local is refused at every level, which is row 4.
 
 `__attribute__((nonnull))` is rejected on the measurement above. A program that
 violates it means one thing under `clang` and another under `safec`, and the
@@ -129,6 +145,17 @@ only a proved null there, and dropping the unproven one, fails the last three of
 those. Keying `findings`' `dedup_by` on the caret alone fails the last one
 alone, which is two promises at one call collapsing into one report.
 
+Three more rows of the same rule were found by review, each a way a call went
+unasked with the whole suite green. Walking the arguments rather than the
+parameters, so that one with no argument is skipped, fails
+`a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved` alone.
+Skipping an argument read through a pointer fails
+`an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument`
+alone. And `report_arguments` names every terminator, so adding a second kind of
+call to `Terminator` is `error[E0004]` there as well as at the eight places it
+already was, measured by adding one; that is the guard on *What would reverse
+this* below.
+
 **Believed at the entry and nowhere else.** Having `Nullability::known` answer
 `NonNull` for any parameter declared `_Nonnull`, ahead of the escape mask, is
 the edit that believes the annotation over what the body did, and it fails
@@ -143,24 +170,37 @@ than `Function::with_parameters` fails the definition's cases, and
 `_Nonnull` token and dropping its span fails every case above and
 `a_nonnull_parameter_is_read_into_the_tree`. Not printing it in the tree fails
 that case alone; not printing it in the IR fails every case that emits the IR.
-`the_annotation_table_is_the_spellings_this_compiler_reads` in
+Reading a parameter's annotation from the first derivation of its declarator
+rather than the last fails `a_nonnull_after_the_last_star_of_a_parameter_is_read`
+alone. `the_annotation_table_is_the_spellings_this_compiler_reads` in
 `crates/safec/src/token.rs` holds the spelling, and
 `a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not` in
 `crates/safec/src/lexer.rs` fails when `scan_word` never asks for one.
 
 **Refused where it cannot apply.** Deleting the call to `Parser::placed` fails
 the six `a_nonnull_on_..._is_refused` cases, one per reason that function gives.
-`a_nonnull_not_after_a_star_is_refused` is held by `Parser::core` instead, which
-is the other place `SC0204` is reported.
+Choosing the label for a block-scope function on whether the function type is
+the declarator's own alone fails
+`a_nonnull_on_a_parameter_of_a_parameter_that_is_a_function_is_refused` alone.
+`a_nonnull_not_after_a_star_is_refused` and
+`a_second_nonnull_on_one_pointer_is_refused` are held by `Parser::core`
+instead, which is the other place `SC0204` is reported, and giving the second
+the first one's label fails it alone.
 
-**Every declaration agrees.** Replacing the call to `Lowering::agree` with
-nothing fails `declarations_that_disagree_about_nonnull_are_refused` and
+**Every prototype agrees.** Replacing the call to `Lowering::agree` with nothing
+fails `declarations_that_disagree_about_nonnull_are_refused` and
 `a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused`,
-which are the two orders.
+which put the promise on the definition in each order, and
+`a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused`,
+which puts it on the declaration. Comparing only the first parameter fails
+`declarations_that_disagree_about_a_later_parameter_are_refused` alone, and
+asking `agree` about `void g();` as well, which is how this shipped to review,
+fails `an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype`
+alone.
 
-**What nothing holds.** That `--safety off` ignores the annotation is held by the
-level gate every check already sits behind rather than by anything of this
-record's: `a_null_passed_to_a_nonnull_parameter_is_silent_at_safety_off`
+**What nothing holds.** That `--safety off` ignores what the annotation means is
+held by the level gate every check already sits behind rather than by anything
+of this record's: `a_null_passed_to_a_nonnull_parameter_is_silent_at_safety_off`
 documents the row and there is no mutation of this change that it alone fails.
 A call through a function pointer is not checked, and cannot be reached, because
 the lowering refuses it with `SC0304`; *What would reverse this* below is the day
@@ -176,11 +216,26 @@ it can.
   means the same thing.
 * Bad, because a caller in another translation unit is believed. That is row 6
   arrived at deliberately, and what bounds it is that a person wrote the
-  promise at a place with a name.
+  promise at a place with a name. It holds for two files handed to one `safec`
+  run as well: each is lowered and checked on its own, and a call in one to a
+  function defined in the other is not asked about. Measured, `a.c` calling
+  `g(0)` through a prototype without the annotation and `b.c` defining `g` with
+  it builds, and the program faults. Checking across the files of one run would
+  need each unit's external signatures kept until the run ends; nothing decided
+  that here.
+* Bad, because a promise on a declaration and not on its definition is refused
+  and also reported inside the body, which is built from the definition and so
+  believes nothing: one mistake, two diagnostics. The refusal comes first.
+* Bad, because the argument check inherits the dereference check's reading of
+  a call: an argument is asked about as it stands once every other argument has
+  been evaluated, so `g(q, q = &x)` with `q` null is silent. C17 6.5 p2 makes
+  that call undefined, since one argument writes what another reads with nothing
+  ordering them, and `h(*q, q = &x)` is silent on the dereference side in the
+  same way. Found by review and not answered here.
 * Bad, because it is stricter than `clang` in two places a user will meet:
   `clang` inherits `_Nonnull` from one declaration to another in silence, and
-  accepts it on a local or a return type. Both are refused here. Both are row
-  4.
+  accepts it on a local or a return type. Both are refused here, at every level.
+  Both are row 4.
 * Bad, because `_Nonnull` is a `clang` extension and GCC does not read it.
   Mitigated by nothing yet; a macro is the usual answer and there is no
   preprocessor to define one.

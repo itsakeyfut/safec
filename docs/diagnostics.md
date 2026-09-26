@@ -76,11 +76,11 @@ looking for programs to fix, and the fix for a use after free is about where the
 **`SC0405` asks `SC0403`'s question somewhere else, and is a class of its own
 for the reason the two above are.** A parameter declared `_Nonnull` is believed
 by the function's body, so the read that would have been `SC0403` inside it is
-not reported there; what it rests on is that every call this compiler sees
-passes a pointer it established is not null, and `SC0405` is that call when it
-does not. The fix is at the call, or at the promise if the promise was wrong,
+not reported there; what it rests on is that every call in the translation
+unit passes a pointer it established is not null, and `SC0405` is that call
+when it does not. The fix is at the call, or at the promise if the promise was wrong,
 and never inside the body. It carries a second label at the `_Nonnull` it
-broke. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-this-compiler-sees.md)
+broke. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
 is the decision. The two frontend refusals that come with it, `SC0204` for a
 `_Nonnull` where it cannot apply and `SC0307` for two declarations that
 disagree about one, are in [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read).
