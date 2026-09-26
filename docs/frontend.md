@@ -129,10 +129,9 @@ and a function is not an object. `clang` gives each a size of one unless asked
 to be pedantic. `-=` and `v - v` answer the same, because
 `types.rs::unsteppable` is the one place the additive operators and their
 compound assignments ask. `++`, `--` and a subscript are the same rule by C17
-6.5.2.4 p2, 6.5.3.1 p2 and 6.5.2.1 p1, and do not ask yet: `v++` and `v[1]`
-pass the type checker, and what refuses them later is about something else,
-`SC0801` about the backend and, for `v[1]`, `SC0403` about a null pointer
-([#242](https://github.com/itsakeyfut/safec/issues/242)). A pointer to an array
+6.5.2.4 p2, 6.5.3.1 p2 and 6.5.2.1 p1, and ask the same function: `v++` is
+refused citing 6.5.2.4 p2, `--v` citing 6.5.3.1 p2, and `v[1]` and `1[v]`
+citing 6.5.2.1 p1, whichever operand of `[]` the pointer is. A pointer to an array
 of unknown length is refused by the same rule and is not a row, because `clang`
 refuses it too, with or without `-pedantic-errors`.
 

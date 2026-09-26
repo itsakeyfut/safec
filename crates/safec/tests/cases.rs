@@ -828,6 +828,21 @@ cases! {
     // lines lose it. Mutation: have `unsteppable` refuse `int`. The control
     // reports.
     arithmetic_on_a_pointer_to_something_that_is_not_a_complete_object: ["--emit", "ast"],
+    // The same rule in its other two spellings: C17 6.5.2.4 p2 and 6.5.3.1
+    // p2 define an increment as `+= 1`, and 6.5.2.1 p1 gives a subscript the
+    // same constraint. Lines 4 to 11 are refused, and `clang -pedantic-errors`
+    // refuses the same eight. `1[v]` is there because the pointer can be
+    // either operand of `[]`, and `g[1]` because a function is refused only
+    // as the pointer 6.3.2.1 p4 makes of it. Lines 12 to 16 are the control,
+    // in the same run so that their silence is asserted beside reports.
+    //
+    // Mutation: have `increment` stop asking `unsteppable`. Lines 4 to 7 go
+    // silent. Mutation: have `subscript` stop asking it. Lines 8 to 11 do.
+    // Mutation: have `subscript` ask only when the base is the pointer. Line
+    // 10 goes silent. Mutation: drop `decayed` from `subscript`. Line 11 goes silent.
+    // Mutation: swap the two increments' clauses. Lines 4 to 7 change note.
+    // Mutation: have `unsteppable` refuse `int`. The control reports.
+    a_step_by_increment_or_subscript_on_a_pointer_to_something_that_is_not_a_complete_object: ["--emit", "ast"],
     // Why the rule matters past the message, as for the initializer below:
     // `i = p * 1` writes a multiplication over an `int *` into a local
     // declared `int`, which is the shape `docs/c-family.md`'s fourth
