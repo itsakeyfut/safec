@@ -895,6 +895,17 @@ cases! {
     an_allocation_made_again_at_a_site_is_not_the_one_exposed_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `realloc`'s size is not asked whether it was freed.
     the_size_realloc_is_handed_is_not_asked_whether_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `realloc` read by name: the new object holds what the old one held,
+    // what it returns is named where it was allocated, a proved free before
+    // it stays proved, and a pointer into an allocation is asked about as
+    // `free` asks about one.
+    a_table_realloc_grew_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_realloc_returns_is_named_where_it_was_allocated: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_freed_before_realloc_stays_freed_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_into_an_allocation_handed_to_realloc_is_not_its_start: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // C17 7.22.3 p1 holds `calloc` and `aligned_alloc` to what `malloc` is.
+    what_calloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_aligned_alloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

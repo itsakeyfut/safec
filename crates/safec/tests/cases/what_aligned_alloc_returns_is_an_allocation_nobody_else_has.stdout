@@ -1,0 +1,93 @@
+Target "x86_64-pc-windows-msvc"
+Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:1:7 "aligned_alloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+  Local "_2" "int" parameter
+Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:3:5 "abs" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "void"
+  Block "bb0" entry
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:6:14 generated
+    Call what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:6:14 "aligned_alloc" "bb1"
+      Destination "_2"
+      Constant 4
+      Constant 4
+  Block "bb1"
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:6:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:6:14 generated
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:7:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:7:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:7:9 generated
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:17 written
+      Destination "_5"
+      Unary "Neg"
+        Constant 1
+    ArgumentsEvaluated what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:13 generated
+    Call what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:13 "abs" "bb5"
+      Destination "_6"
+      Copy "_5"
+  Block "bb5"
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:9 written
+      Destination "_4"
+      Use
+        Copy "_6"
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:13 generated
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:11:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:11:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:11:5 generated
+    ArgumentsEvaluated what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated
+    Call what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:12:5 "free" "bb6"
+      Destination "_8"
+      Copy "_1"
+  Block "bb6"
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated
+    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:13:12 generated
+    Return

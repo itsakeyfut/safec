@@ -60,15 +60,20 @@ use crate::source::{SourceMap, Span};
 enum Callee {
     /// C17 7.22.3.3's `free`.
     Frees,
-    /// C17 7.22.3.4's `malloc`. Read only so that its arguments are left
-    /// alone: it is otherwise an ordinary call, and an allocation is named by
-    /// where it landed rather than by which function made it.
+    /// C17 7.22.3.4's `malloc`, and 7.22.3.1's `aligned_alloc` and 7.22.3.2's
+    /// `calloc`, which 7.22.3 p1 holds to the same thing: a pointer to the
+    /// start of an object disjoint from any other. Read so that its arguments
+    /// are left alone, and so that what it returns is a fresh allocation nobody
+    /// else has, rather than one an opaque call may hand back. An allocation
+    /// is otherwise named by where it landed rather than by which function made
+    /// it. See ADR-0039.
     Allocates,
     /// C17 7.22.3.5's `realloc`.
     ///
-    /// Its first argument may be freed, and is not when the call fails (p4), so
-    /// what it names becomes unproven rather than freed. What it returns is a
-    /// fresh allocation, as `malloc`'s is. See ADR-0039.
+    /// Its first argument may be freed, and is not when the call fails with a
+    /// nonzero size (p3), so what it names becomes unproven rather than freed.
+    /// What it returns is a fresh allocation, as `malloc`'s is, holding what
+    /// the old one held (p2). See ADR-0039.
     Reallocates,
     /// A C library function that frees nothing and returns its first argument:
     /// `memset`, `memcpy`, `memmove`, `strcpy`, `strncpy`, `strcat` and
@@ -1242,7 +1247,7 @@ impl Allocations<'_> {
     fn callee(&self, id: FuncId) -> Callee {
         match self.sources.snippet(self.unit.function(id).name) {
             "free" => Callee::Frees,
-            "malloc" => Callee::Allocates,
+            "malloc" | "calloc" | "aligned_alloc" => Callee::Allocates,
             "realloc" => Callee::Reallocates,
             "memset" | "memcpy" | "memmove" | "strcpy" | "strncpy" | "strcat" | "strncat" => {
                 Callee::ReturnsFirst
@@ -1978,7 +1983,17 @@ impl Analysis for Allocations<'_> {
         // following, which is a fact about the report rather than about the
         // lattice.
         let kind = self.callee(*callee);
-        let touched = Self::touching(arguments.iter(), value);
+        // `realloc` is asked about its first argument only, as `reported` asks
+        // it. No C program shows the difference, since its size holds no
+        // allocation; it is written the same way in both places so that the
+        // two readings of one rule cannot drift, which is RK-052.
+        let handed = match kind {
+            Callee::Reallocates => &arguments[..arguments.len().min(1)],
+            Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {
+                &arguments[..]
+            }
+        };
+        let touched = Self::touching(handed.iter(), value);
         let sites = || named(&touched);
 
         match kind {
@@ -2233,13 +2248,36 @@ impl Analysis for Allocations<'_> {
         // anything and a site is how that is tracked. But `allocated here` is a
         // claim, and `void *p = bar();` gives no evidence that `bar` allocated
         // anything. Naming that line was a caret asserting something nothing
-        // had established, so a site whose call is not `malloc` is `Live(None)`
-        // and the diagnostic leaves the label off.
+        // had established, so a site whose call is not an allocation function
+        // this check reads by name, `malloc`, `calloc`, `aligned_alloc` or
+        // `realloc`, is `Live(None)` and the diagnostic leaves the label off.
         let made = match kind {
             Callee::Allocates | Callee::Reallocates => Some(origin.span()),
             Callee::Opaque | Callee::Frees | Callee::ReturnsFirst => None,
         };
         value.reborn(site, made);
+        // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
+        // p2, so what a pointer stored in the old one may hold, the new one
+        // may. Reborn with nothing in it, a table grown by `realloc` and then
+        // handed to a call exposed nothing it held. See ADR-0039.
+        if kind == Callee::Reallocates {
+            let old: Vec<usize> = handed
+                .iter()
+                .filter_map(|argument| match argument {
+                    Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
+                    Operand::Copy(_) | Operand::Constant(_) => None,
+                })
+                .flat_map(|local| value.sites_of(local).collect::<Vec<_>>())
+                .filter(|&old| old != site)
+                .collect();
+            for old in old {
+                for held in 0..value.contents.len() {
+                    if value.contents[old][held] {
+                        value.contents[site][held] = true;
+                    }
+                }
+            }
+        }
         // **Or any allocation code this check cannot read may reach**, which a
         // call it cannot read may hand back: `stash(p); q = fetch();` may make
         // `q` be `p`. At an offset nobody said, since what comes back may point
