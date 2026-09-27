@@ -1,0 +1,16 @@
+error[SC0407]: this passes a pointer to an allocation that was freed
+    ╭─[ a_freed_pointer_handed_after_other_arguments_is_asked.c:15:12 ]
+    │
+  7 │     int *b = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 14 │     free(b);
+    │     ───┬───  
+    │        ╰───── freed here
+ 15 │     return mix(1, a, b);
+    │            ──────┬─────  
+    │                  ╰─────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it

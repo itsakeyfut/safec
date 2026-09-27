@@ -1,0 +1,16 @@
+error[SC0407]: this passes a pointer to an allocation that was freed
+    ╭─[ a_freed_pointer_handed_to_memcpy.c:15:5 ]
+    │
+  6 │     int *d = malloc(8);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 14 │     free(d);
+    │     ───┬───  
+    │        ╰───── freed here
+ 15 │     memcpy(d, s, 8);
+    │     ───────┬───────  
+    │            ╰───────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it

@@ -5,13 +5,14 @@
 //! this compiler says about what a C program *does* rather than about how it is
 //! written.
 //!
-//! **Four answers out of one walk.** They read one lattice: what a free does to
+//! **Five answers out of one walk.** They read one lattice: what a free does to
 //! a site is what makes a later use of it a defect, so computing the states
 //! twice would be the same computation twice and a second chance for the two
 //! copies to disagree. The third asks a free where in its allocation the
-//! pointer is, which is ADR-0036, and the fourth asks a `return` whether what
-//! it hands back was freed, which is ADR-0041. [`Kind`] is how the caller
-//! tells them apart.
+//! pointer is, which is ADR-0036, the fourth asks a `return` whether what it
+//! hands back was freed, which is ADR-0041, and the fifth asks the same of what
+//! a call is handed, which is ADR-0042. [`Kind`] is how the caller tells them
+//! apart.
 //!
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
@@ -2530,13 +2531,14 @@ impl Analysis for Allocations<'_> {
     }
 }
 
-/// Which of the four things this check answers about a finding is.
+/// Which of the five things this check answers about a finding is.
 ///
-/// One walk over one lattice, so this is not four checks and
+/// One walk over one lattice, so this is not five checks and
 /// `docs/diagnostics.md` says so where it hands them their codes. What differs
 /// is the question: the codes and the words are different, and the thing a
-/// caret lands on is a call for a double free and an interior free, a
-/// dereference for a use after free, and a `return` for a return after free.
+/// caret lands on is a call for a double free, an interior free and an
+/// argument after free, a dereference for a use after free, and a `return` for
+/// a return after free.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -2552,10 +2554,16 @@ pub enum Kind {
     InteriorFree,
     /// `free(p); return p;`
     ///
-    /// The one read of a pointer without a dereference this check asks about,
-    /// because a caller believes what it is handed is live and nothing reads
-    /// this function's body from there. See ADR-0041.
+    /// One of the two reads of a pointer without a dereference this check asks
+    /// about, because a caller believes what it is handed is live and nothing
+    /// reads this function's body from there. See ADR-0041.
     ReturnAfterFree,
+    /// `free(p); g(p);`
+    ///
+    /// The other, the same belief arriving by the other door: a function's body
+    /// believes its pointer parameters live where it starts, and nothing reads
+    /// its callers from there. See ADR-0042.
+    ArgumentAfterFree,
 }
 
 /// One thing this check concluded, and where.
@@ -2575,8 +2583,8 @@ pub struct Finding {
     pub kind: Kind,
     /// What that check concluded.
     pub conclusion: Conclusion,
-    /// Where a caret goes: the call that frees, or the element that reads or
-    /// writes through a freed pointer.
+    /// Where a caret goes: the call that frees or is handed a freed pointer, or
+    /// the element that reads or writes through one, or returns one.
     ///
     /// Not the place's own span, which a [`Place`] does not have: the element's
     /// or the terminator's.
@@ -2738,6 +2746,16 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 dereferenced_in_terminator(&block.terminator),
                 &known,
                 func,
+            );
+            // After the dereferences at this call, so a caret carrying both
+            // reads `SC0402` above `SC0407`, and before the transfer, for the
+            // reason above.
+            handed(
+                &mut findings,
+                &analysis,
+                function,
+                &block.terminator,
+                &known,
             );
             findings.extend(reported(&analysis, &block.terminator, &known, &null, id));
             // After the free's own finding, which is the one whose caret is
@@ -2907,6 +2925,11 @@ fn verdict(
         // anywhere in it has run by then, and what leaves is freed in every
         // order C allows. See ADR-0041.
         Kind::ReturnAfterFree => true,
+        // **Not a `return`'s answer.** A call is not the end of its full
+        // expression, so `(free(a), 0) + use(a)` may call `use` before the
+        // free, and answering `true` proved a program C defines on that order.
+        // See ADR-0042.
+        Kind::ArgumentAfterFree => earliest.is_some_and(|freed| freed.sequenced),
     };
 
     match earliest {
@@ -3215,7 +3238,8 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
 /// never had a site. And a bare name is never given an element at all, so
 /// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
 /// p2 makes undefined and which belongs to an axis with no check. A `return`
-/// of one is the exception, and [`returned`] asks it rather than this.
+/// of one and an argument of a call are the exceptions, and [`returned`] and
+/// [`handed`] ask them rather than this.
 /// `docs/diagnostics.md` says what exit 0 does not mean here, because a
 /// boundary that lives only in a comment is one no user can find.
 ///
@@ -3332,6 +3356,86 @@ fn returned(
         made: verdict.made,
         unproven: verdict.unproven,
     });
+}
+
+/// Report a pointer handed to a call where the allocation it points at may
+/// have been freed.
+///
+/// **Asked as [`used`] asks a dereference**, of the local an argument reads, so
+/// an escaped local is distrusted here as it is there, and a local that
+/// reaches no site says nothing: that is the dereference's answer to an empty
+/// may-set and not a free's, because the callee reads what it is handed rather
+/// than freeing a pointer this check lost. See ADR-0042.
+///
+/// **Which arguments turn on the callee**, and the `match` is written out so
+/// that a new kind of callee answers here. What `free` and `realloc`'s first
+/// argument are handed is asked already, as a double free, by [`reported`];
+/// an allocator and `realloc`'s size are handed integers.
+///
+/// **Only a local of pointer type, read with no projection.** A pointer read
+/// out of memory holds no site, and this check says nothing about a
+/// dereference of one either (ADR-0017, #256). An integer can hold sites, since
+/// an addition keeps its operands' (ADR-0030), and asking one refused
+/// `h(f() + g())`, a program with no pointer in it.
+///
+/// **One finding per local per call**, so `g(p, p)` is one report. Pushed
+/// rather than [`say`], as [`returned`] is: the key `say` keeps is the
+/// dereference reports', and a dereference and an argument at one caret are two
+/// questions, as a double free and an interior free are.
+fn handed(
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    terminator: &Terminator,
+    known: &Known,
+) {
+    let Terminator::Call {
+        callee,
+        arguments,
+        destination: _,
+        then: _,
+        origin,
+    } = terminator
+    else {
+        return;
+    };
+
+    let arguments = match analysis.callee(*callee) {
+        Callee::Opaque | Callee::ReturnsFirst => &arguments[..],
+        Callee::Reallocates => &arguments[arguments.len().min(1)..],
+        Callee::Frees | Callee::Allocates => return,
+    };
+
+    let mut asked: Vec<LocalId> = Vec::new();
+    for argument in arguments {
+        let Operand::Copy(place) = argument else {
+            continue;
+        };
+        if !place.projection.is_empty()
+            || !analysis.is_pointer(function, place.local)
+            || asked.contains(&place.local)
+        {
+            continue;
+        }
+        asked.push(place.local);
+
+        let Some(verdict) = verdict(
+            Kind::ArgumentAfterFree,
+            known.reached_by(place.local),
+            known,
+        ) else {
+            continue;
+        };
+        findings.push(Finding {
+            function: analysis.function,
+            kind: Kind::ArgumentAfterFree,
+            conclusion: verdict.conclusion,
+            at: origin.span(),
+            freed: verdict.freed,
+            made: verdict.made,
+            unproven: verdict.unproven,
+        });
+    }
 }
 
 /// Put this finding at its caret, or leave the one already standing there.
