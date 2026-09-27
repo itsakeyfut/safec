@@ -79,6 +79,12 @@ recorded as the contents of an allocation a write stores such a pointer into,
 and is exposed at once by a write this check cannot place. The report is not
 told: `q = *tab; *q` is read exactly as before, and so is `free(q)`.
 
+**What was stored stays stored.** `Known::reborn` used to clear what an
+allocation held when a loop made a new one at the same site, which nothing
+read for a pointer the check had lost. This record reads it for exactly that
+pointer, so the row now keeps what the old allocation held; it is a may-set,
+and a stale entry costs a report rather than a proof.
+
 **The bit.** `Held` gains a bit saying the local may hold a pointer read out of
 memory. A direct assignment from a place with a projection sets it on a
 pointer-typed destination, a write that carries such a value carries the bit,
@@ -90,9 +96,15 @@ A local that merely holds no site does not: `int *z = 0; log_ptr(z);` exposed
 every stored pointer when emptiness was the test, measured.
 
 **A pointer parameter.** Its site is exposed where the function starts. Only a
-pointer: an integer parameter holds no allocation C lets it hold without a
-conversion #154 is about, and exposing one moved
-`a_write_through_a_pointer_with_one_target_on_one_arm_only`, measured.
+pointer: an integer parameter can hold an allocation only through a conversion
+this frontend does not accept yet, a cast, which does not parse, or an implicit
+one, which C17 6.5.16.1 p1 forbids and #154 is about; exposing one moved
+`a_write_through_a_pointer_with_one_target_on_one_arm_only`, measured. The day
+casts parse, the type is no longer enough. And not `main`'s: its caller is the
+host, and C17 5.1.2.2.1 p2 has `argv` and its strings keep their values until
+the program ends, so no call frees them without undefined behaviour. A program
+that calls `main` itself hands it arguments that are not the host's, which this
+does not see.
 
 ### Confirmation
 
@@ -121,8 +133,13 @@ fails `a_pointer_copied_from_one_table_to_another_is_inside_both` alone.
 never setting it in `Allocations::carried` fails
 `a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it` alone;
 `Known::reach_of` ignoring it for an escaped local fails that case and
-`a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it`. Testing for emptiness instead fails
-`a_null_pointer_handed_to_a_call_exposes_nothing_stored` alone. Dropping it at
+`a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it`.
+Testing in `read_out` for a local holding no site, in place of the bit or
+beside it, fails `a_null_pointer_handed_to_a_call_exposes_nothing_stored`,
+`a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored` and
+`a_local_given_something_else_after_a_load_is_no_longer_one`; testing so in
+`reach_of` fails `a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored`
+alone. Dropping it at
 a join fails the one-arm case; keeping it through `Held::clear` fails
 `a_local_given_something_else_after_a_load_is_no_longer_one`; dropping it in
 `Held::accumulated`, and not setting it in `built_from` for an operand read
@@ -132,24 +149,33 @@ itself, found by mutating the first. Setting it whatever the type, in
 `Allocations::may_be_pointer` or in `built_from`, fails
 `an_integer_read_out_of_memory_is_not_a_load`.
 
+**What was stored.** Clearing the row in `Known::reborn` again fails
+`a_table_allocated_again_by_a_loop_still_holds_what_it_held` and
+`a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held`; the
+first is also the case that `read_out` not reading `Held::lost` fails alone,
+since the table it releases is last turn's. Two review lenses found the
+clearing independently, each with a program that built.
+
 **A pointer parameter.** Exposing nothing in `on_entry` fails
 `an_allocation_a_parameter_holds_is_unproven_after_any_call`,
 `a_call_may_return_what_a_parameter_holds` and
 `a_call_whose_destination_it_dereferences`. Exposing every parameter whatever
-its type fails `a_write_through_a_pointer_with_one_target_on_one_arm_only`.
+its type fails `a_write_through_a_pointer_with_one_target_on_one_arm_only`, and
+exposing `main`'s fails `the_arguments_the_host_hands_main_are_not_exposed`
+alone.
 
-**What nothing holds.** `Held::lost` read by `read_out` and by `reach_of`, for
-the pointer a loop's rebirth took the site from, which #254 listed. No program
-isolates it: a loop that loses a container's site also reaches the call on the
-path where it still holds it, and the join reports it without this rule. A lost
-bit from ADR-0029 does reach it, and there it is wider than it needs to be,
-since what an unread callee wrote into a local is exposed already. Either
-removal leaves the workspace green. `Analysis::height`, as for every other term
-in it.
+**What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
+local: every call that gives an escaped local the bit also reaches it, and a
+lost bit from ADR-0029 is on a local whose new contents an unread callee
+wrote, which are exposed already, so there it is wider than it needs to be.
+What a library copy returns carrying the bit, since the same call has just
+exposed what its argument reaches (`Allocations::read_through` says so where
+it is used). `Analysis::height`, as for every other term in it.
 
 ### Consequences
 
-* Good, because every route #254 and ADR-0039's review measured is reported.
+* Good, because every route #254 and ADR-0039's review measured, by which an
+  unread call reaches an allocation, is reported.
 * Good, because no report about a dereference or a free changes, so the RK-045
   direction is closed by construction rather than by a test.
 * Bad, because a pointer parameter read after **any** call this check cannot
@@ -157,14 +183,24 @@ in it.
   takes a pointer, since it may be the parameter's allocation. Under ADR-0033
   those do not build: `fill(int *out) { log_line(); *out = n; }`, and `q =
   make(); return *q;` or `lookup(); free(p);` in a function taking a pointer,
-  were each measured to be refused. Row 4, and the one a user meets first; the answer ADR-0033 names
-  for it is the hatch and an annotation.
+  were each measured to be refused. Row 4, and the one a user meets first; the
+  answer ADR-0033 names for it is the hatch and an annotation.
 * Bad, because a loaded pointer held in a local exposes every stored pointer
   when it reaches a call, not only those in the allocation it came from, and so
   does a local an unread callee may have written into.
-* Bad, because `free(p); q = *tab; return *q;`, which calls nothing, still
-  builds: the report reads a load as ADR-0017 does. That is
-  [#256](https://github.com/itsakeyfut/safec/issues/256).
+* Bad, because a use through the loaded pointer itself still builds, with a
+  call between or without one: `free(p); q = *tab; return *q;`, and `q = *tab;
+  release(tab); return *q;`, and `int f(int **pp) { q = *pp; release_all();
+  return *q; }`. The call reaches the allocation and makes it unproven; the
+  report reads `q` as holding no site, as ADR-0017 does, so nothing asks. That
+  is [#256](https://github.com/itsakeyfut/safec/issues/256).
+* Bad, because what `memset` is handed out of a table is unproven after a
+  later call, although C17 7.24.6.1 has it copy no pointer. That is ADR-0039's
+  rule for the family, that what it is handed is exposed, applied to a load;
+  narrowing it for `memset` is a question about that rule.
+* Bad, because a pointer copied a byte at a time through `char` is not a load,
+  and a use after free through the copy builds, as it did before this record.
+  That is [#257](https://github.com/itsakeyfut/safec/issues/257).
 * What would reverse this: summaries of the functions this translation unit
   defines, or an annotation saying what a callee may free, either of which
   would let a parameter's allocation stay proved across a call that provably

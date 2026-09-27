@@ -1420,6 +1420,13 @@ impl Allocations<'_> {
     /// `Deref` of something that is not a pointer, which the lowering does not
     /// build and a hand-built unit can, and a place whose type this cannot
     /// name is one it cannot narrow: [`replaced_by`] reads it the same way.
+    ///
+    /// **A `char` answers no**, though C17 6.5 p7 lets one copy a pointer a
+    /// byte at a time and [`replaced_by`] reads it as reaching everything for
+    /// that reason. Reading every character as a load would expose every
+    /// stored pointer at any call a character reaches, and what that costs is
+    /// unmeasured; a use after free through such a copy builds, which is
+    /// #257.
     fn may_be_pointer(&self, function: &Function, place: &Place) -> bool {
         match self
             .unit

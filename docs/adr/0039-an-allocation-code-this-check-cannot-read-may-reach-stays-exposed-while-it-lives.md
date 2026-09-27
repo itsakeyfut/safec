@@ -201,8 +201,9 @@ by name fails the case named for each.
 fails the four cases its Confirmation names, measured after this change, so the
 exposed mark did not make them vacuous (RK-048).
 
-**What nothing holds.** Clearing what a reborn site holds, for the reason its
-comment gives; `realloc` being asked about its first argument only in its
+**What nothing holds.** Clearing what a reborn site holds was listed here;
+ADR-0040 stopped clearing it, and its Confirmation names what holds that now.
+`realloc` being asked about its first argument only in its
 transfer, which no C program can show since its size holds no allocation; and `Analysis::height`, as for every other term in it.
 
 ### Consequences
