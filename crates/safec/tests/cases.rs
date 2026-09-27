@@ -1040,6 +1040,10 @@ cases! {
     a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Mutation: drop the repeated-local test in `handed`; two reports.
     a_freed_pointer_handed_twice_to_one_call_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A dereference and an argument at one caret are two reports, the
+    // dereference first. Mutation: call `handed` before the terminator's
+    // `used` in `memory::findings`; the two change places.
+    a_freed_pointer_handed_and_read_through_at_one_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What is handed is `*tab`, a pointer read out of memory, and the read of
     // freed `tab` is `SC0402`'s. Mutation: ask a projected argument in
     // `handed`; this gains an `SC0407` about `tab`.
