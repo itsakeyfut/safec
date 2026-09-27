@@ -5,11 +5,13 @@
 //! this compiler says about what a C program *does* rather than about how it is
 //! written.
 //!
-//! **Three answers out of one walk.** They read one lattice: what a free does to
+//! **Four answers out of one walk.** They read one lattice: what a free does to
 //! a site is what makes a later use of it a defect, so computing the states
 //! twice would be the same computation twice and a second chance for the two
 //! copies to disagree. The third asks a free where in its allocation the
-//! pointer is, which is ADR-0036. [`Kind`] is how the caller tells them apart.
+//! pointer is, which is ADR-0036, and the fourth asks a `return` whether what
+//! it hands back was freed, which is ADR-0041. [`Kind`] is how the caller
+//! tells them apart.
 //!
 //! **This answers a [`Finding`] rather than a diagnostic.** ADR-0011 keeps this
 //! crate from seeing one, and what that buys is a check testable against IR
@@ -2529,12 +2531,13 @@ impl Analysis for Allocations<'_> {
     }
 }
 
-/// Which of the three things this check answers about a finding is.
+/// Which of the four things this check answers about a finding is.
 ///
-/// One walk over one lattice, so this is not three checks and
+/// One walk over one lattice, so this is not four checks and
 /// `docs/diagnostics.md` says so where it hands them their codes. What differs
 /// is the question: the codes and the words are different, and the thing a
-/// caret lands on is a call in two of them and a dereference in the other.
+/// caret lands on is a call in two of them, a dereference in the third and a
+/// `return` in the fourth.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -2548,6 +2551,12 @@ pub enum Kind {
     /// pointer into an allocation this check followed, and `free(17)` or a
     /// free of a local's address is not reported under it. See ADR-0036.
     InteriorFree,
+    /// `free(p); return p;`
+    ///
+    /// The one read of a pointer without a dereference this check asks about,
+    /// because a caller believes what it is handed is live and nothing reads
+    /// this function's body from there. See ADR-0041.
+    ReturnAfterFree,
 }
 
 /// One thing this check concluded, and where.
@@ -2706,6 +2715,9 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
             let block = function.block(id);
             for element in &block.elements {
+                // Before the transfer, for the reason below: what the local
+                // being returned holds is what it held as the write ran.
+                returned(&mut findings, &analysis, function, element, &known);
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 used(
@@ -2892,6 +2904,10 @@ fn verdict(
         // all. `true` because a pointer that is not the start of an
         // allocation is the wrong thing to hand `free` whatever ran first.
         Kind::InteriorFree => true,
+        // A `return` leaves the function after its whole expression, so a free
+        // anywhere in it has run by then, and what leaves is freed in every
+        // order C allows. See ADR-0041.
+        Kind::ReturnAfterFree => true,
     };
 
     match earliest {
@@ -3196,7 +3212,8 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
 /// of what it reaches. A pointer read out of another pointer, `int *p = *pp;`,
 /// never had a site. And a bare name is never given an element at all, so
 /// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
-/// p2 makes undefined and which belongs to an axis with no check.
+/// p2 makes undefined and which belongs to an axis with no check. A `return`
+/// of one is the exception, and [`returned`] asks it rather than this.
 /// `docs/diagnostics.md` says what exit 0 does not mean here, because a
 /// boundary that lives only in a comment is one no user can find.
 ///
@@ -3247,6 +3264,85 @@ fn used(
             },
         );
     }
+}
+
+/// Report a `return` of a pointer to an allocation that may have been freed.
+///
+/// **Asked at the write into the return place, of the local being written**,
+/// as [`used`] asks a dereference, so that an escaped local is distrusted here
+/// as it is there: asking the return place at [`Terminator::Return`] instead
+/// proved a return that a dereference of the same local only doubts, because
+/// the return place never escapes. For C the two points are one, since the
+/// lowering writes the value and ends the block with nothing between;
+/// `docs/c-family.md` says what that asks of another frontend.
+///
+/// **Only where the function returns a pointer.** Every call's result is a
+/// site and exposed, a later call this check cannot read unproves it, and an
+/// addition of two integers keeps its operands' sites (ADR-0030), so
+/// `return f() + g();` reached `f`'s result after `g` ran and was refused, in
+/// six corpus cases.
+///
+/// **A parameter's allocation counts only where it was proved freed.** A
+/// caller reads this function as a call it cannot read, so every allocation it
+/// handed over is already unproven there, and a doubt about one here says
+/// nothing the caller does not say at its own next use. See ADR-0041.
+///
+/// Pushed rather than [`say`]: no other report is made about a place with no
+/// projection, so nothing else can stand at this key.
+fn returned(
+    findings: &mut Vec<Finding>,
+    analysis: &Allocations<'_>,
+    function: &Function,
+    element: &Element,
+    known: &Known,
+) {
+    let Element::Assign(operation) = element else {
+        return;
+    };
+    if operation.place != Place::local(function.return_place()) {
+        return;
+    }
+    // A `match` for `Allocations::is_pointer`'s reason: a kind of type added
+    // later has to say whether what it returns is asked about.
+    match analysis.unit.ty(function.local(function.return_place())) {
+        Ty::Pointer(_) => {}
+        Ty::Int | Ty::Char | Ty::Void => return,
+    }
+    // A constant holds no allocation, and a place read through a projection is
+    // a pointer read out of memory, which holds no site: ADR-0017, and #256.
+    let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
+        return;
+    };
+    if !source.projection.is_empty() {
+        return;
+    }
+
+    let reached = known
+        .reached_by(source.local)
+        .into_iter()
+        .filter(|reached| match reached {
+            Reached::Site(site) => {
+                !analysis
+                    .parameters
+                    .iter()
+                    .any(|parameter| parameter.index() == *site)
+                    || matches!(known.state[*site], SiteState::Freed { .. })
+            }
+            Reached::SetFreed(_) | Reached::Lost => true,
+        });
+
+    let Some(verdict) = verdict(Kind::ReturnAfterFree, reached, known) else {
+        return;
+    };
+    findings.push(Finding {
+        function: analysis.function,
+        kind: Kind::ReturnAfterFree,
+        conclusion: verdict.conclusion,
+        at: operation.origin.span(),
+        freed: verdict.freed,
+        made: verdict.made,
+        unproven: verdict.unproven,
+    });
 }
 
 /// Put this finding at its caret, or leave the one already standing there.

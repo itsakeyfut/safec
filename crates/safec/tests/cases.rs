@@ -958,6 +958,26 @@ cases! {
     // through what holds it. Mutation: clear the row in `Known::reborn`;
     // both fail.
     a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
+    // A pointer a function returns, asked at its `return` about what its
+    // caller cannot already doubt. See ADR-0041, whose Confirmation names the
+    // mutation each of these fails under.
+    //
+    // Reported at the return, proved or not, and nothing at the caller's read,
+    // which believes a call's result is live.
+    a_function_that_returns_what_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_return_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_escaped_local_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Reported, and what ADR-0041 accepts as its cost: an allocation the
+    // function made and handed to a call it cannot read.
+    an_allocation_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Not reported at the return: a doubt about a parameter's allocation is
+    // the caller's, which reports it at its own read, and an integer is not
+    // asked about at all.
+    a_parameter_returned_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_on_one_arm_is_doubted_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_integer_built_from_two_calls_is_not_asked_about_at_its_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],

@@ -110,6 +110,14 @@ const INTERIOR_FREE: Code = Code::new("SC0404");
 /// See ADR-0037.
 const NULL_ARGUMENT: Code = Code::new("SC0405");
 
+/// A pointer to an allocation that was freed, handed back by a `return`.
+///
+/// Not `USE_AFTER_FREE`'s, because that code is a dereference and this is a
+/// read with none, and because the fix is at the return or at the free rather
+/// than at a read. The caller that would have dereferenced it believes it is
+/// live and cannot see why it is not. See ADR-0041.
+const RETURN_AFTER_FREE: Code = Code::new("SC0406");
+
 /// What to change where this check stopped following a pointer.
 ///
 /// **It names no cause, and that is the whole of its design.**
@@ -120,8 +128,9 @@ const NULL_ARGUMENT: Code = Code::new("SC0405");
 /// word. So this says only what is true of all five, and tells the reader the
 /// one thing that matters here, which is not to go hunting for a defect.
 ///
-/// Shared by both codes because the fact is the same fact. #213 carries the
-/// reason into the `Finding` and replaces this with five.
+/// Shared by the three codes that can lose a pointer, because the fact is the
+/// same fact. #213 carries the reason into the `Finding` and replaces this
+/// with five.
 const LOST_REMEDY: &str = "nothing here says the program is wrong: this check could no longer \
                            say which allocation this pointer holds";
 
@@ -1087,6 +1096,32 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             USE_AFTER_FREE,
             "this may use a value after it was freed",
             "used here, perhaps after the free",
+            DISAGREEMENT_REMEDY,
+        ),
+        (Kind::ReturnAfterFree, Conclusion::Unsafe, _) => (
+            RETURN_AFTER_FREE,
+            "this returns a pointer to an allocation that was freed",
+            "returned here",
+            "return a pointer that is still allocated, or do not free this one before returning it",
+        ),
+        (Kind::ReturnAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
+            RETURN_AFTER_FREE,
+            "this returns a pointer this check stopped following",
+            "this check cannot say what this points at",
+            LOST_REMEDY,
+        ),
+        // `Unsequenced` cannot arrive, because `memory::verdict` answers that a
+        // `return` is ordered after every free in its expression, and `Offset`
+        // cannot because only `memory::interior` builds it. Named rather than
+        // taken by `_`, for the reason the double-free rows give.
+        (
+            Kind::ReturnAfterFree,
+            Conclusion::Unknown,
+            Some(Unproven::Disagreement | Unproven::Unsequenced | Unproven::Offset) | None,
+        ) => (
+            RETURN_AFTER_FREE,
+            "this may return a pointer to an allocation that was freed",
+            "returned here, perhaps after the free",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::InteriorFree, Conclusion::Unsafe, _) => (
