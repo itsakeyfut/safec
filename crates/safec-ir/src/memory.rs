@@ -1381,13 +1381,9 @@ impl Allocations<'_> {
             }
             // A read through a projection is not a pointer this check follows
             // to an allocation, and the target is given no site for it; but
-            // it may be a pointer read out of memory, and says so, which the
-            // direct assignment's twin of this arm says too. See ADR-0040.
-            Rvalue::Use(Operand::Copy(source)) => {
-                let mut loaded = Held::none(value.points_to.len());
-                loaded.loaded = self.may_be_pointer(function, source);
-                loaded
-            }
+            // it may be a pointer read out of memory, and says so. See
+            // `Allocations::read_through`.
+            Rvalue::Use(Operand::Copy(source)) => self.read_through(function, source, value),
             // A constant, a unary operator, an address. None is a pointer
             // this check follows to an allocation, so the target is given
             // nothing: a write this check cannot follow is not evidence that
@@ -1433,6 +1429,19 @@ impl Allocations<'_> {
             Some(Ty::Pointer(_)) | None => true,
             Some(Ty::Int | Ty::Char | Ty::Void) => false,
         }
+    }
+
+    /// What a value read through a projection holds: no site, and whether it
+    /// may be a pointer read out of memory.
+    ///
+    /// One answer for the three places a load is given to something: an
+    /// assignment, a write through a pointer, and what a library copy returns
+    /// when handed one. RK-052 is one rule in several places drifting apart.
+    /// See ADR-0040.
+    fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
+        let mut held = Held::none(value.points_to.len());
+        held.loaded = self.may_be_pointer(function, source);
+        held
     }
 
     /// What an operand may reach beyond the sites it holds, because it may be
@@ -2054,13 +2063,11 @@ impl Analysis for Allocations<'_> {
                     // follows, and the report reads it as holding nothing,
                     // which is ADR-0017. It may be a pointer read out of
                     // memory all the same, and what a call reaches and what a
-                    // write stores have to know it. The twin of this is in
-                    // `Allocations::carried`, for RK-052's reason. See
-                    // ADR-0040.
+                    // write stores have to know it. See
+                    // `Allocations::read_through`.
                     Rvalue::Use(Operand::Copy(source)) => {
-                        value.clear(destination);
-                        value.points_to[destination.index()].loaded =
-                            self.may_be_pointer(function, source);
+                        value.points_to[destination.index()] =
+                            self.read_through(function, source, value);
                     }
                     // A constant or a unary operator. Neither is a pointer this
                     // check can follow: C17 6.5.3.3 gives unary `+`, `-` and
@@ -2414,7 +2421,15 @@ impl Analysis for Allocations<'_> {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
                         value.points_to[source.local.index()].clone()
                     }
-                    Some(_) | None => Held::none(value.points_to.len()),
+                    // `memset(*tab, 0, 4)` returns a pointer read out of
+                    // memory, and says so, as an assignment of `*tab` would.
+                    // **Nothing holds this**: the call has just exposed what
+                    // `*tab` reaches, so a later call handed the result finds
+                    // it exposed already. It is here so that the day this
+                    // family stops exposing what it is handed, its result is
+                    // not a silence. See ADR-0040.
+                    Some(Operand::Copy(source)) => self.read_through(function, source, value),
+                    Some(Operand::Constant(_)) | None => Held::none(value.points_to.len()),
                 };
                 value.points_to[place.local.index()] = first;
                 return;
