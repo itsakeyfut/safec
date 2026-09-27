@@ -55,10 +55,10 @@ impl Cfg {
     /// **Iteratively, and that is not a preference.** The obvious depth-first
     /// search is recursive and is bounded by how deep the graph is, which is
     /// bounded by nothing: `MAX_NESTING` bounds what the parser accepts and says
-    /// in its own doc comment that this is not the same as bounding the tree,
-    /// which is RK-019's neighbour RK-008 in the review knowledge bank. A chain
-    /// of blocks long enough to overflow a stack is a chain of statements, and
-    /// the answer to that must not be a process that dies without a diagnostic.
+    /// in its own doc comment that this is not the same as bounding the tree.
+    /// A chain of blocks long enough to overflow a stack is a chain of
+    /// statements, and the answer to that must not be a process that dies
+    /// without a diagnostic.
     ///
     /// A block already walked is not walked again, which is what makes this
     /// end at all: a loop's back edge would otherwise be followed forever.
@@ -288,7 +288,8 @@ mod tests {
     /// One of each kind of edge there is, because the walk reads them through
     /// `Terminator::successors` and what that answers for is the thing being
     /// relied on: a terminator kind added later is `error[E0004]` there, and a
-    /// field added to one is `error[E0027]`, which is RK-018.
+    /// field added to one is `error[E0027]`, because that match names every
+    /// field rather than letting `..` walk past a new one.
     ///
     /// Both arms of a branch to one block are two edges and two entries. The
     /// graph says two, a join is idempotent, and a `Cfg` that deduplicated
@@ -420,8 +421,7 @@ mod tests {
     /// A chain of blocks is a chain of statements, and nothing bounds how many
     /// of those a C file holds: `MAX_NESTING` bounds what the parser accepts
     /// and says in its own doc comment that this is not the same as bounding
-    /// the tree, which is RK-008. So the walk is iterative, and this is what
-    /// says so.
+    /// the tree. So the walk is iterative, and this is what says so.
     ///
     /// Ten thousand, which overflows a recursive walk on every platform this
     /// runs on and takes milliseconds here.

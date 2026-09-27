@@ -159,7 +159,7 @@ impl Target {
     /// `__SIZEOF_INT__`, `__CHAR_BIT__` and `__CHAR_UNSIGNED__`. A row nobody
     /// measured is a machine this compiler would be inventing, so the test
     /// beside this writes the same numbers out again rather than walking this
-    /// table against itself. RK-001 is why.
+    /// table against itself, which would hold for any numbers at all.
     ///
     /// The eight are what is needed rather than what exists: five so that each
     /// of the three CI runners and this project's own machines can host
@@ -266,7 +266,8 @@ impl Target {
     /// Read off the triple rather than given a column of its own, because seven
     /// of the eight rows answer the same thing and a column would be seven
     /// copies of it. What holds the answer is a test that writes all eight out,
-    /// so the table is not asked what it says. See RK-001.
+    /// so the table is not asked what it says, which would hold for any
+    /// answer at all.
     pub fn program_name(self) -> &'static str {
         if self.triple.contains("-windows-") {
             "a.exe"
@@ -316,8 +317,8 @@ mod tests {
     /// The table says what `clang` says, written out rather than walked.
     ///
     /// A test that asked `Target::ALL` about itself would hold for any numbers
-    /// at all, which is RK-001 in the review knowledge bank and the reason the
-    /// keyword table is written out too. These numbers came from
+    /// at all, which is the reason the keyword table is written out too. These
+    /// numbers came from
     /// `clang 20.1.6 --target=<triple> -dM -E -x c /dev/null`, reading
     /// `__SIZEOF_INT__`, `__CHAR_BIT__` and `__CHAR_UNSIGNED__`. The extension
     /// column came from `clang 20.1.6 --target=<triple> -S -emit-llvm -O0` on
@@ -530,8 +531,8 @@ mod tests {
     /// Eight rows, because a rule read off a triple is a rule that can be read
     /// off the wrong part of one: `x86_64-pc-windows-msvc` is the only row with
     /// `windows` in it today and `aarch64-pc-windows-msvc` is the obvious
-    /// ninth. Asking `Target::ALL` what it says would hold for any rule at all,
-    /// which is RK-001.
+    /// ninth. Asking `Target::ALL` what it says would hold for any rule at
+    /// all.
     ///
     /// Mutation: match on `windows` rather than `-windows-`, which is the same
     /// answer today. Nothing here fails, and that is the point of the comment

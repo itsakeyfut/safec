@@ -24,7 +24,8 @@
 //! `ir.rs`, `cfg.rs` and `interp.rs` all keep their tests beside the code, and
 //! this cannot: `Written` is the only analysis there is, a `#[cfg(test)]` item
 //! is invisible from an integration test, and publishing an analysis with no
-//! caller is the shape `CLAUDE.md` rejects. So either the fixture exists twice
+//! caller is an interface invented rather than designed. So either the
+//! fixture exists twice
 //! and one copy is fixed without the other, or every test moves. They moved.
 
 use safec_ir::cfg::Cfg;
@@ -69,10 +70,9 @@ impl Analysis for Written {
     }
 
     fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
-        // Every field written out, never `..`: RK-018 in the review
-        // knowledge bank is a field added to a variant that already exists
-        // walking past an exhaustive match. This is the file Phase 5 will
-        // copy from.
+        // Every field written out, never `..`, which would let a field
+        // added to a variant that already exists walk past an exhaustive
+        // match. This is the file Phase 5 will copy from.
         match element {
             Element::Assign(operation) => value[operation.place.local.index()] = true,
             // Evaluating a place writes nothing, so nothing has been written.
@@ -128,8 +128,9 @@ impl Analysis for Written {
 /// **It has no top, and that is why it is only asked about the acyclic graphs
 /// below.** A trace grows with the length of a path, so a back edge would make
 /// it climb forever and the solver's budget would stop it. Nothing here is a
-/// claim about a fixpoint: `Written` holds all of those, and RK-027 is the
-/// reason that division matters.
+/// claim about a fixpoint: `Written` holds all of those, and the division
+/// matters because a must-analysis's back edge can only take facts away, so a
+/// loop that only adds them guards no fixpoint.
 struct Arrived;
 
 impl Analysis for Arrived {

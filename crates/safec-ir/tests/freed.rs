@@ -8,8 +8,8 @@
 //! where the diff lands.
 //!
 //! The corpus under `crates/safec/tests/cases/` holds the same shapes written
-//! as C, which is the other half. RK-033 in the review knowledge bank is why
-//! both exist: a feature guarded at one stage is unguarded at every stage that
+//! as C, which is the other half. Both exist because a feature guarded at
+//! one stage is unguarded at every stage that
 //! reads it.
 
 use safec_ir::analysis::Conclusion;
@@ -357,8 +357,9 @@ fn a_value_freed_through_a_copy_is_unsafe() {
 ///
 /// Nothing in the function allocates, so without this there is no site to mark
 /// and `void f(int *p) { free(p); free(p); }` is a double free reported by
-/// nobody. That is the bottom row of the failure list in `CLAUDE.md`, which is
-/// why the site list is calls **and** parameters rather than calls alone.
+/// nobody. That is saying safe wrongly, which `docs/safety-model.md` calls
+/// the worst answer this compiler can give, and it is why the site list is
+/// calls **and** parameters rather than calls alone.
 ///
 /// Mutation: leave the parameters out of `on_entry`. Nothing is reported and
 /// this fails.
@@ -465,8 +466,8 @@ fn a_join_names_the_earlier_free() {
 /// The same join, asked which half of the order it reads first.
 ///
 /// The test above holds that two spans are ordered at all; this holds *by
-/// what*. `earlier` compares the file before the offset, and RK-007 in the
-/// review knowledge bank is why: a span names its own file and two of them
+/// what*. `earlier` compares the file before the offset, because a span
+/// names its own file and two of them
 /// need not share one. Nothing held that half, because every span in `t.c`
 /// shares a file and a comparison of offsets alone answers those identically.
 ///
@@ -482,8 +483,8 @@ fn a_join_names_the_earlier_free() {
 ///
 /// **The line has a second wrong version and this is not the test for it.**
 /// Comparing the file alone leaves the two arms of a join inside one file
-/// ordered by which one arrived, which is what RK-038 asks to be measured in
-/// both directions: `a_use_after_two_allocations_names_no_allocation` and
+/// ordered by which one arrived. A line with two wrong versions is measured
+/// against both: `a_use_after_two_allocations_names_no_allocation` and
 /// `a_free_sequenced_on_one_arm_only_is_not_a_proof` are the two that fail
 /// under it, and this one passes.
 #[test]
@@ -1117,8 +1118,9 @@ fn a_second_free_keeps_where_the_allocation_was() {
 /// The corpus holds this shape written as C, four times over, because four
 /// lowering paths reach it. This holds the half that belongs to this crate: a
 /// condition that is a place with a projection is read from the branch's own
-/// `Origin`, with no frontend between. RK-033 in the review knowledge bank is
-/// why both exist, and a review found this one missing: every other condition
+/// `Origin`, with no frontend between. Both exist because a feature guarded
+/// at one stage is unguarded at every stage that reads it, and a review found
+/// this one missing: every other condition
 /// in this file is a constant, so the arm was exercised only through the
 /// corpus, which proves the lowering and the check at once and says which of
 /// them broke only by where the diff lands.
@@ -1176,8 +1178,9 @@ fn evaluate(local: LocalId, at: Span, then: BlockId) -> Block {
 /// reach it. This holds the half that belongs to this crate: an element saying
 /// a place was evaluated is read by the check with no frontend between, and a
 /// corpus case proves the lowering and the check at once and says which of them
-/// broke only by where the diff lands. RK-033 in the review knowledge bank is
-/// why both exist, and a review of the sibling found this half missing.
+/// broke only by where the diff lands. Both exist because a feature guarded
+/// at one stage is unguarded at every stage that reads it, and a review of the
+/// sibling found this half missing.
 ///
 /// Mutation: answer `None` for an `Element::Evaluate` in
 /// `dereferenced_in_element`. This fails, and so does every corpus case that
@@ -1380,8 +1383,8 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
 ///
 /// The other direction of the same rule, and the one a collapse gets wrong by
 /// replacing whenever the pair disagrees rather than only when the new report
-/// proves what the standing one could not. RK-038 in the review knowledge bank
-/// is why both are written: a rule that collapses two disagreeing values has
+/// proves what the standing one could not. Both are written because a rule
+/// that collapses two disagreeing values has
 /// two mutations, and a case that reaches one of them says nothing about the
 /// other.
 ///
@@ -1769,7 +1772,8 @@ fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
 /// the fold. An IR from a frontend that skipped it hands the check this shape,
 /// and reading the constant is what keeps a zero from being taken for a move.
 /// It answers `Unknown`, as every offset `offset_of` cannot call non-zero does:
-/// a suspicion about a free of the start, which is row 4, where assuming the
+/// a suspicion about a free of the start, which is a false report the reader
+/// can see, where assuming the
 /// constant moved the pointer would be a false proof. See ADR-0036.
 ///
 /// Mutation: in `memory.rs::offset_of`, answer `true` for every constant rather
@@ -1943,8 +1947,9 @@ fn an_index_written_on_the_left_still_carries_the_pointer() {
 ///
 /// This is what breaking it costs: **nothing is reported at all**, under every
 /// flag, about a use after free. Not a suspicion, which is what an IR missing
-/// a sequence point gets; the whole finding. That is the bottom row of
-/// `CLAUDE.md`'s list, and it is here so that the day the requirement is
+/// a sequence point gets; the whole finding. That is saying safe wrongly,
+/// which `docs/safety-model.md` calls the worst answer this compiler can give,
+/// and it is here so that the day the requirement is
 /// enforced, or the day the rule stops needing it, a named test says so rather
 /// than passing quietly.
 ///
@@ -2004,9 +2009,8 @@ fn an_allocation_in_a_local_declared_int_is_dropped_beside_a_pointer() {
 /// a local that is not a pointer. The C frontend writes that only for a program
 /// C forbids, `int i = p;` being a constraint violation under C17 6.5.16.1 p1
 /// that #154 is the missing check for, and a hand-built unit writes it freely.
-/// Narrowing here instead would empty the set, and RK-045 in the review
-/// knowledge bank is what an empty set costs at a dereference, which is
-/// silence.
+/// Narrowing here instead would empty the set, and what an empty set costs
+/// at a dereference is silence.
 ///
 /// `m` holds nothing, so what the fallback keeps is the site in `n`. Freeing
 /// `n` and then the sum is a double free of the one allocation there is.
@@ -2145,8 +2149,8 @@ fn nothing(then: BlockId) -> Block {
 ///
 /// A path that reached here with the order still open is a path on which this
 /// is not a proof, so the conjunction is the only answer that keeps the
-/// weaker path's doubt. RK-044 is the entry: an invariant on a lattice value
-/// has to hold after the join, and a flag that grew on one side would be a
+/// weaker path's doubt. An invariant on a lattice value has to hold after
+/// the join, and a flag that grew on one side would be a
 /// proof assembled out of two halves neither of which had one.
 ///
 /// Mutation: make `Freeing::joined` answer `self.sequenced || other.sequenced`.
@@ -2507,13 +2511,14 @@ fn a_read_carried_to_an_allocating_call_is_not_reported() {
 /// Narrowing to nothing is the wrong answer: a write this check cannot even
 /// name the type of is a write it cannot narrow, and `held` would keep a proof
 /// that write may have destroyed. The cost is a report about a program that is
-/// defined, which is row 4 of `CLAUDE.md`'s list, so this is a false positive
+/// defined, which the reader can see, so this is a false positive
 /// rather than a silence; it is guarded here because nothing else can reach
 /// the arm and an unreached arm is one a later reader deletes.
 ///
 /// The report is observed through `sharer` rather than through `held`, because
-/// ADR-0017 has already taken away the report about an escaped local itself.
-/// RK-048 is that hole.
+/// ADR-0017 has already taken away the report about an escaped local itself,
+/// and a guard whose only observer is a report nobody gives passes whatever
+/// the fallback answers.
 ///
 /// Mutation: spell the fallback `written_ty.is_some_and(...)` rather than
 /// `written_ty.is_none_or(...)` in the `Projection::Deref` arm of

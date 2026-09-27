@@ -82,8 +82,8 @@ impl Nullness {
 
     /// What a dereference of a place whose local holds this is worth.
     ///
-    /// **`None` means proved and nothing else.** RK-034 in the review knowledge
-    /// bank is an arm that meant "proved safe" and "gave up" at once, and
+    /// **`None` means proved and nothing else.** The first safety check had an
+    /// arm that meant "proved safe" and "gave up" at once, and
     /// reported the second as the first; here the giving up has a variant of
     /// its own that is reported, so the only thing that reaches `None` is a
     /// pointer this analysis established is not null.
@@ -147,7 +147,8 @@ pub enum Asked {
 /// pointer value a local holds, so the local is the key, and what it costs is
 /// that `int **pp; *pp` answers [`Nullness::Unknown`]: a warning on correct C
 /// rather than silence about it. It also makes [`Analysis::height`] the local
-/// count, read straight off the function, which RK-030 is about.
+/// count, read straight off the function, which is an answer the trait asks
+/// each analysis for rather than guessing one on its behalf.
 struct Nullability<'a> {
     /// What a local's type is, so that a branch on an `int` is not read as a
     /// branch on a pointer.
@@ -308,9 +309,9 @@ impl Nullability<'_> {
 
         for element in function.block(block).elements.iter().rev() {
             // Every variant written out, and every field with it, for the
-            // reason `Analysis::element` gives: RK-018 in the review knowledge
-            // bank is a field added to a variant that already exists walking
-            // past an exhaustive match. The question here is whether anything
+            // reason `Analysis::element` gives: an exhaustive match that
+            // writes `..` lets a field added to a variant that already exists
+            // walk past it. The question here is whether anything
             // below the comparison replaced what it read, so an element kind
             // added later is exactly the thing that would have to answer.
             let operation = match element {
@@ -424,8 +425,8 @@ impl Nullability<'_> {
         }
 
         // Every operator written out rather than `_`, so that one added later
-        // has to answer here: RK-018 in the review knowledge bank is a match
-        // that walked past a case nobody had thought about.
+        // has to answer here rather than pass as a case nobody had thought
+        // about.
         match op {
             BinOp::Ne => Some((local, Nullness::NonNull)),
             BinOp::Eq => Some((local, Nullness::Null)),
@@ -546,9 +547,8 @@ impl Analysis for Nullability<'_> {
         // nothing at all was known about what it now holds.
         met(dereferenced_in_element(element), value);
 
-        // Every field written out, never `..`: RK-018 in the review knowledge
-        // bank is a field added to a variant that already exists walking past
-        // an exhaustive match.
+        // Every field written out, never `..`, which would let a field added
+        // to a variant that already exists walk past an exhaustive match.
         match element {
             Element::Assign(operation) => {
                 if operation.place.projection.is_empty() {
@@ -641,8 +641,9 @@ impl Analysis for Nullability<'_> {
         // 0; if (p) { *p = 1; }` reaches the taken arm with `p` known null, and
         // that arm never runs; `Analysis::edge` cannot say so, and refining to
         // non-null there would make this check quiet about a dereference it had
-        // proved. What it does instead is report code no execution reaches,
-        // which `CLAUDE.md` ranks above going quiet.
+        // proved. What it does instead is report code no execution reaches:
+        // a false report the reader can see, where going quiet would be saying
+        // safe wrongly.
         if value[local.index()] != Nullness::Unknown {
             return;
         }
@@ -723,8 +724,9 @@ fn report(
 /// `g(q, q = &x)` asks about `q` after the second argument wrote it, and a null
 /// `q` is silent. C17 6.5 p2 makes that call undefined, and `h(*q, q = &x)` is
 /// silent on the dereference side for the same reason. ADR-0037 records it as
-/// a consequence, and #247 is the fix. RK-071 is what happens when a second reader assumes the first
-/// one's soundness rather than checks it.
+/// a consequence, and #247 is the fix. An approximation is safe in one
+/// direction only, and its reader decides which, so a second reader has to
+/// check the first one's soundness rather than assume it.
 ///
 /// One per argument rather than the worst per call, because each argument has
 /// its own promise to point at.
@@ -748,7 +750,8 @@ fn report_arguments(
     // second way to call a function has to be answered for here. A call
     // through a pointer is the one the roadmap brings, and passed by in
     // silence it would be every argument to a `_Nonnull` parameter unasked.
-    // RK-018 is the same shape one level down.
+    // A field walking past the `..` of an exhaustive match is the same shape
+    // one level down.
     let (callee, arguments, origin) = match terminator {
         Terminator::Call {
             callee,
@@ -981,7 +984,8 @@ pub(crate) fn null_at_terminators(
         // every occurrence is immediately followed by its `Call`. Searching the
         // whole block would answer the same on every program this compiler can
         // build, so nothing holds the difference and nothing can. How many
-        // occurrences there are is not written here, for RK-028's reason.
+        // occurrences there are is not written here, because a count is a
+        // fact about a corpus that grows.
         //
         // **A block with no elements is not ordered either**, which is the
         // `None` this answers `false` for and is reached by a program rather
@@ -1041,8 +1045,9 @@ pub(crate) fn null_at_terminators(
 /// a sibling the same way, so a reader of `memory::reported` would soon be
 /// given several `&[bool]` that no type tells apart: measured, adding a second
 /// one and passing the two in the wrong order builds with no warning at all,
-/// and what fails is a named test rather than the compiler. `CLAUDE.md` ranks
-/// those the other way round, and this is the row the exemption belongs on.
+/// and what fails is a named test rather than the compiler. A mistake the
+/// compiler refuses is better than one a test has to catch, and a named type
+/// is what moves this one there.
 ///
 /// Both axes are named for the same reason. A bare row is indexed by a local,
 /// a bare table by a block, and `null[block.index()]` and `null[local.index()]`

@@ -227,8 +227,9 @@ impl Offset {
     /// no site answers. `int *q = 0; if (c) q = p + 1; free(q);` joins a path
     /// holding nothing with one off the start and answers `Unknown`, which is a
     /// warning on a program that frees null on one path and an interior
-    /// pointer on the other. That is row 4 rather than row 6, and ADR-0036
-    /// records it as what three values cost.
+    /// pointer on the other. That is a false report the reader can see rather
+    /// than saying safe wrongly, and ADR-0036 records it as what three values
+    /// cost.
     fn joined(self, other: Self) -> Self {
         if self == other { self } else { Self::Unknown }
     }
@@ -251,9 +252,8 @@ fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
 /// The earlier of two spans, by where they are rather than by which arrived.
 ///
 /// A total order over the pair, so a value carrying one can only move one way
-/// and the walk ends. RK-007 in the review knowledge bank is why the file is
-/// the first half: a span names its own file and two of them need not share
-/// one.
+/// and the walk ends. The file is the first half because a span names its
+/// own file and two of them need not share one.
 fn earlier(here: Span, there: Span) -> Span {
     if (here.file().index(), here.start()) <= (there.file().index(), there.start()) {
         here
@@ -469,8 +469,8 @@ impl Held {
     /// axis this check has none for.
     fn clear(&mut self) {
         // Every field named, never `..`: a field added here and missed is a
-        // fact that survives an assignment, which is RK-018's shape one type
-        // over.
+        // fact that survives an assignment, which is `..` letting a field walk
+        // past an exhaustive match, one type over.
         let Held {
             sites,
             lost,
@@ -503,8 +503,8 @@ impl Held {
     fn joined(&mut self, other: &Held) {
         // Every field named, never `..`, in this method and in its neighbour
         // alike: a field added to this struct is `error[E0027]` in both and has
-        // to say what it means in each. RK-018 is the spelling and ADR-0024 is
-        // why there are two places to answer.
+        // to say what it means in each. ADR-0024 is why there are two places
+        // to answer.
         let Held {
             sites,
             lost,
@@ -804,7 +804,8 @@ impl Known {
     /// than a rule.** Measured: recording one anyway changes no answer, because
     /// what [`used_before`] compares is sites and an entry with none can never
     /// meet a free's. So this is skipped to keep the value small, and the
-    /// asymmetry RK-049 is about is held by the comparison rather than by this
+    /// asymmetry between an empty set's two readers, for whom it means
+    /// opposite things, is held by the comparison rather than by this
     /// line: a dereference of a pointer this check never followed says nothing
     /// here for the same reason it says nothing in [`used`], which is that
     /// there is no allocation to say it about.
@@ -814,9 +815,8 @@ impl Known {
     ///
     /// It takes what [`dereferenced_in_element`] answers rather than one place,
     /// so that what the walk carries forwards and what [`used`] reports on are
-    /// decided by one function with two callers. RK-052 in the review knowledge
-    /// bank is one rule written in two places drifting apart inside the change
-    /// that touches one of them.
+    /// decided by one function with two callers. One rule written in two places
+    /// drifts apart inside the change that touches one of them.
     fn met(&mut self, read: Option<(Span, Vec<&Place>)>) {
         let Some((at, dereferenced)) = read else {
             return;
@@ -875,8 +875,8 @@ impl Known {
     /// **Every field named, never `..`.** A fact filed against a site is a
     /// fact about whatever the site named when it was written, so a field
     /// added to [`Known`] has to answer here for what happens when the site
-    /// starts naming something else. `error[E0027]` is what asks, and RK-018
-    /// is the same spelling one type over.
+    /// starts naming something else. `error[E0027]` is what asks, as it does
+    /// for a variant's fields wherever a match does not write `..`.
     fn reborn(&mut self, site: usize, made: Option<Span>) {
         let Known {
             points_to,
@@ -963,8 +963,8 @@ impl Known {
     /// holds the pointer while the pointer is not exposed; a closure that
     /// started from the new marks alone left that pointer proved after the
     /// next call. Every reader of [`Self::exposed`] runs after this, so this
-    /// is the one place the invariant has to hold. RK-044 in the review
-    /// knowledge bank is the shape. See ADR-0039.
+    /// is the one place the invariant has to hold: an invariant on a lattice
+    /// value has to hold after the join. See ADR-0039.
     fn expose(&mut self, sites: impl IntoIterator<Item = usize>) {
         for site in sites {
             self.exposed[site] = true;
@@ -1069,7 +1069,8 @@ impl Known {
     /// ADR-0031 is why that narrowing is the difference between a rule that
     /// costs what it should and one that costs everything. Deciding it here
     /// instead would make one of the two answer a question written for the
-    /// other, which is RK-055 in the review knowledge bank.
+    /// other, and one judgement point reached by two checks inherits a rule
+    /// written for one of them.
     ///
     /// **The bit alone is not the point.** [`Self::reached_by`] already
     /// answers [`Reached::Lost`] for an escaped local that holds a site, so no
@@ -1117,9 +1118,8 @@ impl Known {
 /// [`offset_of`], and it is the one thing here that turns on the operator.
 ///
 /// One function with two callers, because the same question is asked where a
-/// value is assigned and where one is written through a pointer, and RK-052 in
-/// the review knowledge bank is one rule in two places drifting apart inside
-/// the change that touches one of them.
+/// value is assigned and where one is written through a pointer, and one rule
+/// in two places drifts apart inside the change that touches one of them.
 fn built_from(
     op: BinOp,
     operands: [&Operand; 2],
@@ -1142,7 +1142,7 @@ fn built_from(
     // this is the half C says nothing about: two integers added together are
     // not pointer arithmetic, so no clause says the result cannot reach what
     // its operands reach. Narrowing there would be narrowing on nobody's
-    // authority, and RK-045 is what an emptied set costs: a dereference of a
+    // authority, and what an emptied set costs is silence: a dereference of a
     // local that reaches no site is reported by nothing at all.
     //
     // **`i + j` reaches this constantly**, and what is rare is one of those
@@ -1198,8 +1198,9 @@ fn built_from(
 ///   assumed non-zero**. ADR-0021 folds `p + 0` away where the IR is built, and
 ///   `docs/c-family.md` records that nothing enforces it, so an IR from a
 ///   frontend that skipped the fold would hand this a literal zero. Answering
-///   `Unknown` there is row 4, where assuming would be row 6. RK-067 is leaning
-///   on an invariant nobody enforces.
+///   `Unknown` there is a false report the reader can see, where assuming
+///   would be saying safe wrongly, on the strength of an invariant nobody
+///   enforces.
 /// * the followed operand is itself at the start. `q = p + 1; r = q - 1;` has
 ///   `r` back at the start, and nothing here carries a distance to know it.
 ///
@@ -1276,8 +1277,7 @@ fn replaced_by(unit: &TranslationUnit, function: &Function, place: &Place, value
 /// may have touched, and what the two are compared against when the order
 /// between them is open. A free that wrote on a set this did not answer, or a
 /// read that carried one, would be a report about an allocation the other half
-/// never considered. RK-052 in the review knowledge bank is one rule written in
-/// two places drifting apart.
+/// never considered. One rule written in two places drifts apart.
 ///
 /// Neither of the other two variants names a site: one is a fact about a set,
 /// which ADR-0020 records on the local rather than on its members, and the
@@ -1339,14 +1339,14 @@ impl Allocations<'_> {
     ///
     /// One answer for every reader of it: the write that lands in a followed
     /// local, and what a write into memory records as inside an allocation or exposes.
-    /// RK-052 in the review knowledge bank is one rule in two places drifting.
+    /// One rule in two places drifts.
     ///
     /// **A `match` rather than an `if let`, so a fifth kind of rvalue has to
     /// answer here too.** Every other reader of `Rvalue` in this crate is
     /// exhaustive and `error[E0004]` is what asks them; this one was the
     /// exception, and what a missed arm would mean is that a write through a
     /// pointer silently carries nothing, which is a silence rather than a build
-    /// error. RK-018 is the same spelling one type over.
+    /// error.
     fn carried(&self, function: &Function, written_value: &Rvalue, value: &Known) -> Held {
         match written_value {
             // `*pp = q + 1;` arrives here as a copy, not as the arithmetic:
@@ -1374,10 +1374,10 @@ impl Allocations<'_> {
                 reached.writes_to.fill(false);
                 // Emptying the set says nothing on its own: an empty set is
                 // what a pointer this check never followed an address into
-                // has. Giving up on the set is saying so. See ADR-0028, and
-                // RK-052 for why this line is written beside its twin in the
-                // direct assignment's `Rvalue::Binary` arm rather than
-                // anywhere else.
+                // has. Giving up on the set is saying so. See ADR-0028. This
+                // line is written beside its twin in the direct assignment's
+                // `Rvalue::Binary` arm rather than anywhere else, because one
+                // rule written in two places drifts apart.
                 reached.writes_elsewhere = true;
                 reached
             }
@@ -1406,9 +1406,9 @@ impl Allocations<'_> {
     /// nobody has added yet is not `false`.** A type this does not recognise is
     /// dropped from an addition that has a pointer beside it, and a dropped
     /// operand is a site nothing reports: `error[E0004]` here is what asks a
-    /// fourth kind of type whether it is one. RK-015 is the limit of that, and
-    /// this is the case where a reader has something to decide rather than a
-    /// line to fill in.
+    /// fourth kind of type whether it is one. `E0004` makes somebody look and
+    /// that is all it makes them do, and this is the case where a reader has
+    /// something to decide rather than a line to fill in.
     fn is_pointer(&self, function: &Function, local: LocalId) -> bool {
         match self.unit.ty(function.local(local)) {
             Ty::Pointer(_) => true,
@@ -1445,7 +1445,7 @@ impl Allocations<'_> {
     ///
     /// One answer for the three places a load is given to something: an
     /// assignment, a write through a pointer, and what a library copy returns
-    /// when handed one. RK-052 is one rule in several places drifting apart.
+    /// when handed one. One rule in several places drifts apart.
     /// See ADR-0040.
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
         let mut held = Held::none(value.points_to.len());
@@ -1563,8 +1563,8 @@ impl Allocations<'_> {
     /// interchangeable here. Freeing an escaped local that no call has run past
     /// still frees what this check thinks it holds, and reading the folded
     /// answer instead would give up the proof
-    /// `a_free_through_an_escaped_local_is_seen_by_a_sharer` holds. RK-052 is
-    /// one rule written in two places drifting apart, so the argument walk is
+    /// `a_free_through_an_escaped_local_is_seen_by_a_sharer` holds. One rule
+    /// written in two places drifts apart, so the argument walk is
     /// spelled the way its twin above spells it and the reason there are two is
     /// written here. See ADR-0029.
     ///
@@ -1696,8 +1696,8 @@ impl Analysis for Allocations<'_> {
         // forgets a field reaches a fixpoint over a value nobody is joining,
         // and nothing else in the build says so: the field is read, the walk
         // ends, and the answer is wrong on exactly the programs a join is for.
-        // This is RK-018 in the review knowledge bank one type over, where
-        // `..` let a field walk past a match that was otherwise exhaustive.
+        // This is the same as `..` letting a field walk past a match that was
+        // otherwise exhaustive, one type over.
         let Known {
             points_to,
             state,
@@ -1735,8 +1735,8 @@ impl Analysis for Allocations<'_> {
 
         // **A union, because a read on either arm is a read some execution
         // performed.** What this costs when it is wrong is a report about a
-        // read that did not happen, which is row 4; the other direction loses
-        // the read that did. The arms themselves do not meet before their
+        // read that did not happen, which the reader sees; the other direction
+        // loses the read that did. The arms themselves do not meet before their
         // join, which is what keeps a read on one arm from being reported
         // against a free on the other: each arm is walked from the value that
         // reached it and not from this one.
@@ -1767,14 +1767,13 @@ impl Analysis for Allocations<'_> {
         // write through a pointer, and this frontend reads an assignment's
         // value back into a temporary, so the read is recorded by that element
         // instead. That is a property of one lowering rather than of the IR,
-        // and RK-051 in the review knowledge bank is a rule skipped by exactly
-        // such a return. Written first because the order is free and the
-        // alternative is guarded by nothing.
+        // and a rule written after such a return is skipped by exactly the
+        // cases it cannot handle. Written first because the order is free and
+        // the alternative is guarded by nothing.
         value.met(dereferenced_in_element(element));
 
-        // Every field written out, never `..`: RK-018 in the review knowledge
-        // bank is a field added to a variant that already exists walking past
-        // an exhaustive match.
+        // Every field written out, never `..`, which would let a field added
+        // to a variant that already exists walk past an exhaustive match.
         match element {
             // Evaluating a place writes nowhere, so no local changes what it
             // holds and no site changes what is known about it. What it reads
@@ -1840,8 +1839,8 @@ impl Analysis for Allocations<'_> {
                 // further down: one is about what the write may have reached
                 // *besides* its target and the other about what it does to
                 // that target, and the two have to be the same question.
-                // Spelled twice they are one rule in two places, which is
-                // RK-052 in the review knowledge bank.
+                // Spelled twice they are one rule in two places, and those
+                // drift apart.
                 //
                 // A deeper projection is never certain, and that is the
                 // condition above rather than an extra clause: `written_through`
@@ -1874,8 +1873,8 @@ impl Analysis for Allocations<'_> {
                 // addresses escaped, and what they hold is in every call's
                 // reach. A store into a local aggregate, once fields and
                 // indices are lowered, has no targets and lands in the
-                // exposing branch, which is row 4 until it is recorded inside
-                // the local instead. See ADR-0039.
+                // exposing branch, which is a false report the reader can see
+                // until it is recorded inside the local instead. See ADR-0039.
                 if !operation.place.projection.is_empty() {
                     let mut carried: Vec<usize> = self
                         .carried(function, &operation.value, value)
@@ -1950,7 +1949,8 @@ impl Analysis for Allocations<'_> {
                     // outlives an assignment, which is ADR-0018's rule for
                     // which struct a fact belongs in, and it is why the answer
                     // cannot be recorded on the local whose address is taken.
-                    // See ADR-0028 and RK-061.
+                    // See ADR-0028. An analysis that proves anything positive
+                    // about a local has to answer for its address escaping.
                     if certain {
                         value.points_to[targets[0]] = written;
                         return;
@@ -2160,9 +2160,8 @@ impl Analysis for Allocations<'_> {
             origin,
         } = terminator
         else {
-            // Nothing else moves an allocation. Written out rather than `_`
-            // for RK-018's reason: a terminator added later has to be answered
-            // for here.
+            // Nothing else moves an allocation. Written out rather than `_`,
+            // so that a terminator added later has to be answered for here.
             match terminator {
                 Terminator::Goto(_)
                 | Terminator::Branch { .. }
@@ -2182,7 +2181,7 @@ impl Analysis for Allocations<'_> {
         // `realloc` is asked about its first argument only, as `reported` asks
         // it. No C program shows the difference, since its size holds no
         // allocation; it is written the same way in both places so that the
-        // two readings of one rule cannot drift, which is RK-052.
+        // two readings of one rule cannot drift.
         let handed = match kind {
             Callee::Reallocates => &arguments[..arguments.len().min(1)],
             Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {
@@ -2209,9 +2208,9 @@ impl Analysis for Allocations<'_> {
                 // **It supersedes both rules below and skips nothing else.**
                 // Neither of them applies once the set is not known to be what
                 // was freed: the one is about which member of a set went, and
-                // the other about a single member going. RK-051 is an early
-                // return that left the conservative rules behind it unrun, and
-                // the rule here is the conservative one.
+                // the other about a single member going. An early return can
+                // leave the conservative rules behind it unrun, and the rule
+                // here is the conservative one.
                 //
                 // **What it does skip is the destination.** The fall-through
                 // path clears the local `free` is written into and this does
@@ -2503,8 +2502,8 @@ impl Analysis for Allocations<'_> {
         // `q` be `p`. At an offset nobody said, since what comes back may point
         // into one. These are the allocations the call has just unproven, so
         // the result is as doubtful as what it may be and never less, which is
-        // what RK-045 in the review knowledge bank asks of a widened set. See
-        // ADR-0039.
+        // what a widened set has to be, since widening one can make this check
+        // say less. See ADR-0039.
         match kind {
             Callee::Opaque => {
                 let exposed: Vec<usize> = (0..value.exposed.len())
@@ -2776,9 +2775,9 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 /// What a set of sites says about whatever touched them.
 ///
 /// The fold from many sites to one conclusion, and the one place either kind
-/// of finding makes it. RK-035 in the review knowledge bank is why there is
-/// one: a
-/// may-analysis's join is forced to be right by the lattice, and the code that
+/// of finding makes it. There is one because a may-analysis proves nothing
+/// from one member of its set: its join is forced to be right by the lattice,
+/// and the code that
 /// reads the answer is where the same rule gets lost.
 struct Verdict {
     conclusion: Conclusion,
@@ -2808,8 +2807,8 @@ fn verdict(
     // over two paths wants: the earlier span, and the conjunction.
     let mut earliest: Option<Freeing> = None;
     // Where the allocation came from, kept only while every freed site agrees.
-    // **RK-035 one level down**: proving a double free from one of several
-    // sites is the may-set mistake the fold below is written to avoid, and
+    // **One level down**: proving a double free from one of several sites
+    // is the may-set mistake the fold below is written to avoid, and
     // naming one of several allocations as *the* one is the same mistake about
     // a label. `if (c) p = malloc(); else p = malloc();` reaches both, and
     // pointing at either would be a caret on an allocation the value may not
@@ -2886,7 +2885,7 @@ fn verdict(
     // Every site reached was freed and nothing about them was lost. That is
     // the whole of what this check can work out from the states; whether C has
     // put the free first is a separate question with a separate answer, and
-    // running them together is RK-034's shape: one test meaning "proved" and
+    // running them together is a known mistake: one test meaning "proved" and
     // "gave up" at once reports the second as the first.
     let settled = !live && !unknown && !lost;
 
@@ -3002,8 +3001,8 @@ fn reported(
     };
 
     // **One answer to what the arguments reached feeds both questions**,
-    // because the two have to agree about it, and two walks deciding it is
-    // RK-052's shape. The offset is read beside it from the same `asked`, so an
+    // because the two have to agree about it, and two walks deciding it would
+    // drift apart. The offset is read beside it from the same `asked`, so an
     // argument established null is left out of both or of neither.
     let reached = Allocations::touching(asked(arguments, null, block), known);
     let offset = asked(arguments, null, block)
@@ -3057,9 +3056,11 @@ fn reported(
 ///   p + 1; free(p);` never reaches the offset at all, and neither does
 ///   anything a call this check cannot read may have written. The offset is a
 ///   positive claim about a local and the address-taken set is what stops it
-///   being believed, which is RK-061. **That rule is what covers this line**,
-///   and the day something narrows what an escaped local is reported as, this
-///   line stops being covered: RK-064.
+///   being believed, which any analysis proving something positive about a
+///   local owes. **That rule is what covers this line**, and the day something
+///   narrows what an escaped local is reported as, this line stops being
+///   covered: a field a stronger rule upstream answers for has no guard of
+///   its own.
 /// * a [`Reached::SetFreed`] is. The sites are gone from `reached` by then, so
 ///   there is nothing left to be an offset into.
 /// * no site at all. A local that reaches nothing is one this check never
@@ -3097,7 +3098,7 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
 
     let (&first, rest) = sites.split_first()?;
 
-    // The allocation, where every site agrees about it, which is RK-035: naming
+    // The allocation, where every site agrees about it, because naming
     // one of several as the one freed is a caret on an allocation the value
     // may not hold.
     let made_of = |site: usize| match known.state[site] {
@@ -3142,8 +3143,9 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
 /// conditions and it is held by where this function is called from.
 ///
 /// **The result being empty is not [`Reached::Lost`]**, and the two are worth
-/// keeping apart here because RK-045 and RK-049 are both about this check
-/// having two emptinesses. `verdict` answers `None` for no sites and nothing
+/// keeping apart here because this check has two emptinesses, and an empty
+/// may-set means opposite things to its two readers. `verdict` answers `None`
+/// for no sites and nothing
 /// lost, which is silence, and that is the right answer to a call C says does
 /// nothing. What is lost still arrives as a `Reached::Lost` from the arguments
 /// that were asked about.
@@ -3420,9 +3422,9 @@ fn say(
 ///
 /// **It does not go through [`verdict`].** That answers what a set of sites is
 /// worth *now*, and now is before the free, where every one of them is still
-/// live: it answers `None` here, correctly, to a different question. RK-055 in
-/// the review knowledge bank is one judgement point inheriting a rule written
-/// for the other question, which is the mistake in the other direction.
+/// live: it answers `None` here, correctly, to a different question. One
+/// judgement point inheriting a rule written for the other question is the
+/// mistake in the other direction.
 ///
 /// **It asks [`Allocations::touching`] over the arguments themselves, where
 /// [`reported`] asks it over [`asked`], and the two cannot be made to agree
@@ -3445,8 +3447,10 @@ fn say(
 /// `false` for every local. The `Callee::Opaque` half is the same `pending`
 /// reached through the same elements.
 ///
-/// **Written because it was measured and not because it follows**, which is
-/// RK-050: the filter was added here, and the reproducer on #219 and the whole
+/// **Written because it was measured and not because it follows**, since a
+/// claim that the code cannot be written another way is checked only by
+/// writing it that way: the filter was added here, and the reproducer on #219
+/// and the whole
 /// workspace suite came back byte for byte the same. The `debug_assert!` below
 /// is what keeps that true, because a paragraph does not.
 ///
@@ -3493,7 +3497,7 @@ fn used_before(
     // about to be asked over arguments no exemption has been applied to.
     //
     // An assertion rather than the filter, because the filter is a line no
-    // mutation can break, which `CLAUDE.md` calls decoration, and because it
+    // mutation can break, and such a line guards nothing, and because it
     // would go quiet on its own the day the ordering term widens: it would
     // exempt a read without anybody asking whether ADR-0027's four conditions
     // still hold where the exemption had newly arrived.
@@ -3548,7 +3552,7 @@ fn used_before(
         // **Only while every allocation they have in common agrees**, which is
         // `verdict`'s rule about `made` and is here for its reason: naming one
         // of several allocations as *the* one is the may-set mistake about a
-        // label. RK-035 is the entry and `allocated here` is the claim.
+        // label, and `allocated here` is the claim.
         let mut made = None;
         for (index, site) in both.iter().enumerate() {
             let from = match known.state[*site] {
@@ -3573,8 +3577,8 @@ fn used_before(
                 // freed nothing this check established, so there is no span to
                 // put `freed here` on and no order to explain, which is what
                 // keeps C17 6.5.2.2 p10's note off a program with no free in
-                // it. RK-036 is a label claiming more than the analysis
-                // established.
+                // it. A label is a claim, and must not say more than the
+                // analysis established.
                 freed: frees.then(|| origin.span()),
                 made,
                 unproven: Some(if frees {
@@ -3600,9 +3604,9 @@ fn used_before(
 /// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
 /// derive `Ord` and should not: its three variants are three answers rather
 /// than three degrees, and `Safe` is not a weaker `Unsafe`. The pairs that
-/// cannot arise say so rather than falling through, because RK-034 in the
-/// review knowledge bank is a fallthrough in this file that was reached by
-/// "proved" and by "gave up" at once and reported the second as the first.
+/// cannot arise say so rather than falling through, because a fallthrough in
+/// this file was once reached by "proved" and by "gave up" at once and
+/// reported the second as the first.
 fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
     match (standing, new) {
         // First, because a wildcard below would absorb them. [`verdict`]
@@ -3624,9 +3628,8 @@ fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
 /// and holding a freed pointer is not using it. The span is the element's,
 /// because a [`Place`] has none of its own.
 pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&Place>)> {
-    // Every field written out, never `..`: RK-018 in the review knowledge bank
-    // is a field added to a variant that already exists walking past an
-    // exhaustive match.
+    // Every field written out, never `..`, which would let a field added to a
+    // variant that already exists walk past an exhaustive match.
     match element {
         Element::Assign(operation) => {
             let mut places = projected(&operation.place);
