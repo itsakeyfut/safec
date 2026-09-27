@@ -156,7 +156,7 @@ fn targetable(triple: &str) -> bool {
 /// An object is for the machine the run named, and not for the host.
 ///
 /// Written out rather than walked, the way `Target::ALL`'s own test is and for
-/// RK-001's reason: asking the table what it says would hold for any table.
+/// its reason: asking the table what it says would hold for any table.
 /// These came from `clang 20.1.6 --target=<triple>` on the MVP, read out of the
 /// bytes with the helper above.
 ///
@@ -770,7 +770,7 @@ fn the_mvp_program_runs_and_answers_three() {
 /// which is the function under test: a test that computes what it expects from
 /// the code it is checking agrees with that code however wrong both are, and
 /// this one said in its own note that it caught a mutation it cannot see. That
-/// is RK-001's shape and it was found in review.
+/// was found in review.
 ///
 /// Mutation: answer the input's stem from `destination` rather than the
 /// machine's name for a program. Nothing is at `a.out` and this fails.
@@ -1191,7 +1191,7 @@ fn a_failed_link_says_more_than_an_exit_code() {
 /// A program is linked in a directory of its own, so a temporary directory that
 /// cannot be made is a failure with nothing to do with the tool. Reporting it in
 /// the tool's words sends a user to inspect an installation that is fine, which
-/// is the mistake RK-024 records one level over.
+/// is blaming whoever is nearest, the mistake `Unmade` answers one level over.
 ///
 /// Mutation: answer `Unlinked::Tool(Unmade::Unrunnable(..))` when the directory
 /// cannot be made. The message names `clang` and this fails.

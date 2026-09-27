@@ -226,8 +226,9 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
 
         // A loop over a stack of frames rather than a recursive call per C
         // call: a recursion here dies of a stack overflow that nothing can
-        // catch, on a program whose depth the program itself chooses. RK-008 in
-        // the review knowledge bank is the entry, one layer down.
+        // catch, on a program whose depth the program itself chooses. The
+        // parser's bound on nesting bounds what it accepts, not how deep a
+        // chain of calls runs.
         let current = frames.len() - 1;
         let function = unit.function(frames[current].function);
         let block = function.block(frames[current].block);
@@ -237,7 +238,7 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
         for element in &elements {
             // Written out rather than `..`, so that a field added to a storage
             // marker is `error[E0027]` here rather than something the run
-            // quietly ignores. RK-018 is the entry.
+            // quietly ignores.
             match element {
                 Element::Assign(operation) => {
                     // What the destination is worth on this unit's target,

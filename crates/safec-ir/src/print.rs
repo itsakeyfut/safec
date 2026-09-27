@@ -86,8 +86,8 @@ pub fn is_obeyed(ch: char) -> bool {
 /// **Quoted as in quoted from, not as in quote marks: this hands back the
 /// file's own bytes and escapes nothing.** Write it with `{:?}` and never with
 /// `{}`. The text is content, and a `.c` file whose identifier held an escape
-/// sequence would otherwise clear the terminal of whoever compiled it, which is
-/// RK-002 in the review knowledge bank and has happened here once. Every caller
+/// sequence would otherwise clear the terminal of whoever compiled it, which
+/// has happened here once. Every caller
 /// writes `{:?}` today; this says so where a new one is looking, rather than in
 /// [`dump_node`], where the same rule was written when there was one file of
 /// callers to keep to it.
@@ -113,9 +113,9 @@ pub const DEEPEST_INDENT: usize = 32;
 
 /// The part every line shares: indent, kind, and where it is.
 ///
-/// Source text is written with `{:?}` by the callers that write any, for the
-/// reason RK-002 records: a `.c` file's own bytes reaching a stream are
-/// content, and one holding an escape sequence must not be able to clear the
+/// Source text is written with `{:?}` by the callers that write any, because
+/// a `.c` file's own bytes reaching a stream are content, and one holding an
+/// escape sequence must not be able to clear the
 /// terminal of whoever compiled it.
 ///
 /// **The indent is written rather than passed to `write!` as a width.** Rust's
@@ -133,8 +133,7 @@ pub fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out:
     dump_line(kind, depth, out);
     // A name is content: it comes from a command line today and from a file
     // once `#include` lands, and every line of every artifact begins with one.
-    // RK-002 in the review knowledge bank is the entry, and `shown` is the
-    // answer the renderer already gives to the same question.
+    // `shown` is the answer the renderer already gives to the same question.
     write!(
         out,
         " {}:{}:{}",
@@ -251,8 +250,8 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
             for element in &block.elements {
                 // Written out rather than `..`, so that a field added to a
                 // storage marker is `error[E0027]` here and not something the
-                // artifact silently stops showing. RK-018 is the entry, and
-                // `Terminator::successors` is where the rule was written.
+                // artifact silently stops showing. `Terminator::successors` is
+                // where the rule was written.
                 match element {
                     Element::Assign(operation) => {
                         dump_node(sources, element.name(), operation.origin.span(), 2, out);
@@ -536,9 +535,9 @@ mod tests {
     /// A file's name is content, and every artifact line begins with one.
     ///
     /// A name is not something this compiler wrote: it comes from a command
-    /// line or, once `#include` lands, from a file. RK-002 in the review
-    /// knowledge bank is the entry, and the case it records is a `.c` file that
-    /// cleared the terminal of whoever compiled it. A name can do the same, and
+    /// line or, once `#include` lands, from a file. A `.c` file here has
+    /// already cleared the terminal of whoever compiled it. A name can do the
+    /// same, and
     /// a name that reorders the line it is on is the shape somebody would use
     /// to make an artifact say something it does not.
     ///

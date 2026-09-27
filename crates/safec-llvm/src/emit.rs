@@ -56,7 +56,8 @@ pub struct Refusal {
 ///
 /// The triple is written with `{:?}`, the way `print::dump_ir` writes the same
 /// string. It is one of a fixed table of measured ASCII triples rather than
-/// anything a file said, so nothing here is content in RK-002's sense.
+/// anything a file said, so nothing here is source text that could carry an
+/// escape sequence.
 pub fn header(target: Target) -> String {
     format!("target triple = {:?}\n", target.triple())
 }
@@ -198,7 +199,7 @@ impl Emitter<'_> {
     /// and a C++ name carries `$`, `.` and `::`.
     ///
     /// So this is the fifth place a name out of a source file reaches a
-    /// stream, and RK-002 in the review knowledge bank is the entry.
+    /// stream, and every such place has to answer for what the name holds.
     /// `print::shown` is the wrong escape here: LLVM reads `\xx` and nothing
     /// else, so a `\u{1b}` would arrive as six characters of name.
     fn name(&self, function: &Function) -> String {
@@ -514,7 +515,7 @@ impl Emitter<'_> {
     fn element(&mut self, function: &Function, element: &Element, out: &mut String) -> Option<()> {
         // Written out rather than `..`, so that a field added to a storage
         // marker is `error[E0027]` here rather than something this silently
-        // stops answering for. RK-018 is the entry.
+        // stops answering for.
         match element {
             Element::Assign(operation) => {
                 self.at = Some(operation.origin.span());

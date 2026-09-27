@@ -93,8 +93,9 @@ cases! {
     a_read_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And what the report is allowed to *name*. The read may have gone through
     // either allocation, so `allocated here` would be a caret on one of two
-    // lines with nothing to choose between them, which is RK-035's may-set
-    // mistake made about a label rather than about a proof. Its `.stderr` has
+    // lines with nothing to choose between them, which is the may-set mistake
+    // of concluding from one member, made about a label rather than about a
+    // proof. Its `.stderr` has
     // no such caret, and folding the two with anything but `same` puts one
     // back.
     a_read_of_either_of_two_allocations_before_a_free_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -122,7 +123,8 @@ cases! {
     // These two fail on their `.stderr` with the `SC0402` back, and nothing
     // else fails. The rule's other half is the lowering that emits it, and
     // mutating that fails these two on their `.stdout` along with every other
-    // artifact holding a call, so the halves are mutated apart. RK-039.
+    // artifact holding a call, so the halves are mutated apart: a mutation
+    // is measured by which assertion it broke, not only by whether one did.
     a_read_in_a_frees_own_argument_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_read_in_a_frees_argument_through_a_call_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The same question asked of a call this check cannot read, which may have
@@ -148,8 +150,8 @@ cases! {
     // why it guards anything.** Spelled `h(p)`, the call is enclosed by nothing
     // C leaves unsequenced, so ADR-0026's marker is emitted at its own
     // arguments and empties the carried reads a second time; measured, the case
-    // then survived the removal of *either* clearing and named neither. RK-039
-    // is a mutation that nothing fails because two rules hold it. Under the
+    // then survived the removal of *either* clearing and named neither, a
+    // mutation nothing fails because two rules hold it. Under the
     // `+`, the marker is suppressed and the sequence point at the end of the
     // statement before is the only thing left holding the silence.
     //
@@ -398,8 +400,9 @@ cases! {
     // does is `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no
     // unsequenced operator encloses the call, and its absence here is what
     // refuses the exemption. Dropping that term reports nothing at all about a
-    // double free this check watched, which is the bottom row of `CLAUDE.md`'s
-    // list, and fails this case.
+    // double free this check watched, which is saying safe wrongly, the worst
+    // answer `docs/safety-model.md` says this compiler can give, and fails
+    // this case.
     a_free_in_an_unsequenced_operand_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The same defect where the block holding the free has no elements at all.
     // A call ends a block, so the `g(0)` between the two operands puts the
@@ -437,12 +440,13 @@ cases! {
     // `SC0404` about a free C defines.
     a_free_of_a_pointer_moved_back_to_the_start_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Two allocations, one offset, and no `allocated here`: naming either line
-    // would be a caret on an allocation the value may not hold, RK-035. Both
+    // would be a caret on an allocation the value may not hold. Both
     // are made before the branch rather than on its arms: allocated on an arm,
     // each site meets the other arm's `Live(None)` at the join and arrives with
     // no line to name, so the fold has nothing to get wrong. Mutation: in `memory.rs::interior`, fold `made` by keeping the first
     // site's, or by keeping the last site's. Each fails on the label, and both
-    // directions are measured because RK-038 is a fold guarded on one side.
+    // directions are measured because a fold has a wrong version on each side
+    // and a case can hold only some of them.
     a_free_past_the_start_of_either_of_two_allocations_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_offset_on_both_arms_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_free_offset_on_one_arm_only_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -485,7 +489,8 @@ cases! {
     // an `error` at exit 1, reported against a **sharer**: what the escape
     // already took away is the report about the escaped local itself, so a
     // case that frees or reads through that local alone observes nothing.
-    // RK-048 is that hole and ADR-0029 is the rule.
+    // A guard whose only observer is that report is vacuous, and ADR-0029 is
+    // the rule.
     a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_certain_write_does_not_survive_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What that rule costs, kept where it can be seen: a double free through a
@@ -504,18 +509,19 @@ cases! {
     a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the direction the cheap versions of that rule fail in. Clearing the
     // escaped local's row at the call instead leaves this program with nothing
-    // to say about the read, which is the bottom of `CLAUDE.md`'s list while a
-    // false positive is row 4. See ADR-0029.
+    // to say about the read, which is saying safe wrongly, while a false
+    // positive is only a false report the reader can see. See ADR-0029.
     a_use_after_free_through_an_escaped_local_is_still_reported_after_an_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And the other order, which keeps the rule from being the whole of what
     // an escape means: a call that ran **before** the address escaped cannot
-    // have written through it, so the proof survives. RK-065 is a guard that
-    // held only the order it was written in.
+    // have written through it, so the proof survives. A guard for a rule
+    // about two events holds only the order it was written in.
     an_opaque_call_before_the_escape_leaves_the_proof_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The same rule through the door ADR-0029 named and declined: the writer
     // is a write in this function rather than a callee. Both of these were an
     // `error` at exit 1 about a program C defines, and both report through a
-    // sharer for RK-048's reason. The second is here although one mutation
+    // sharer, because a case observing only the escaped local would observe
+    // nothing. The second is here although one mutation
     // fails both, because the two are the ways a pointer gets out of this
     // check's sight: through a parameter, and through a chain of locals with
     // no call and no parameter in it. A fix keyed on either shape alone passes
@@ -583,7 +589,8 @@ cases! {
     // pointer is a defect with a check of its own that does not exist yet, and
     // when that check lands this case will have something to say about it: the
     // program is chosen for a read this compiler currently answers nothing
-    // about, which is RK-010's shape.
+    // about, and it stops testing this the day that check has something to
+    // say.
     //
     // Mutation: both the `StorageLive` and the `StorageDead` arm of
     // `Allocations::element` to no-ops. The free from the previous iteration
@@ -607,7 +614,7 @@ cases! {
     // Mutation: in `driver.rs::undelivered`, compare `options.safety` against
     // `SafetyLevel::IMPLEMENTED` rather than against `Options::delivered`, which
     // drops the artifact half. The second fails and the first stays green, which
-    // is the shape `CLAUDE.md` calls the worst defect this project has had: two
+    // is the shape of the worst defect this project has had: two
     // axes, and a gate that answers one of them.
     //
     // Mutation: answer the conclusion `Unsafe` rather than `Unknown`, which is
@@ -717,8 +724,9 @@ cases! {
     // call, refused everywhere else. See ADR-0037, whose Confirmation names
     // the mutation each of these fails under.
     //
-    // One case per stage the annotation passes through, for RK-033's reason:
-    // the tree, a declaration's IR, and a definition read by the analysis.
+    // One case per stage the annotation passes through, because a feature
+    // guarded at one stage is unguarded at every stage that reads it: the
+    // tree, a declaration's IR, and a definition read by the analysis.
     a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
     // The parameter's own pointer is the last one written, not the first.
     // Mutation: have `parameter_list` read `derivations.first()`, which drops
@@ -782,8 +790,9 @@ cases! {
     // rather than reported. See ADR-0038, whose Confirmation names the
     // mutation each of these fails under.
     //
-    // One case per stage it passes through, for RK-033's reason: the tree, the
-    // IR, and the listing.
+    // One case per stage it passes through, because a feature guarded at one
+    // stage is unguarded at every stage that reads it: the tree, the IR, and
+    // the listing.
     a_hatch_is_read_into_the_tree: ["--emit", "ast"],
     // The pair the record is about: one body, reported outside a hatch and
     // not inside one. Mutation: have `Lowering::body` never call
@@ -1037,7 +1046,8 @@ cases! {
     // only visible beside the others. `every_operator` is the one that stops
     // the operator table being a table nothing checks: without it, spelling
     // `BitAnd` as `or`, `Mul` as `add`, `Le` as `lt`, `Neg` as `add` and
-    // `BitNot` as `xor 0` all passed the whole suite, which is RK-001's shape.
+    // `BitNot` as `xor 0` all passed the whole suite, because nothing checked
+    // the table against anything but itself.
     // `conversions_and_a_constant_condition` is the same for C17 6.3.1.3 and
     // 6.5.2.2 p7: `c = 300` and `narrow(300)` both answer 44, and a constant
     // that ignored its destination's type passed everything before it. `mix`
@@ -1357,7 +1367,7 @@ fn run_case(name: &str, args: &[&str]) {
 /// which is the one that says what the rule is, and so does every case that
 /// exits non-zero. **How many that is is not written here**, because it counts
 /// the cases that happen to exist and a case is added most weeks; it was nine
-/// when this was written and is many times that now. See RK-028.
+/// when this was written and is many times that now.
 fn expected_exit(code: i32) -> Vec<u8> {
     if code == 0 {
         Vec::new()

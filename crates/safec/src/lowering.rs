@@ -332,9 +332,8 @@ impl Builder {
 ///
 /// The walk is a stack rather than a recursion because the tree is not bounded
 /// by the parser's own nesting limit: a chain folded by a loop, which is how
-/// every left-associative operator is read, adds a level per operator. RK-008
-/// in the review knowledge bank is the entry, and `driver.rs`'s `dump_expr` is
-/// the walker that paid for it first.
+/// every left-associative operator is read, adds a level per operator.
+/// `driver.rs`'s `dump_expr` is the walker that paid for it first.
 enum Task {
     /// Push the value of this expression.
     Value(ExprId),
@@ -362,7 +361,7 @@ enum Task {
     /// Every argument of this call has been evaluated; say so before it runs.
     ///
     /// Between the operands and the node, the way [`Self::Discard`] is for a
-    /// comma, and for RK-040's reason: an element built where a node finishes
+    /// comma, and for the same reason: an element built where a node finishes
     /// lands after everything the node contains, and what this one says is
     /// about what came before it. The span is the call's, because that is what
     /// the point falls before.
@@ -847,8 +846,8 @@ impl Lowering<'_> {
     /// p3 allows the pointer only on the left of a `-`, which is why `0 - E`
     /// is not here, and `types.rs` cites the same paragraph where it declines
     /// to give `1 - p` a type. Reading one of those for the other is a habit
-    /// rather than an accident: RK-042 in the review knowledge bank is the
-    /// same mistake caught in 6.5.3.2.
+    /// rather than an accident: the same mistake was caught in 6.5.3.2, where
+    /// a Semantics paragraph was read as a Constraint.
     fn unmoved(ty: Ty, op: BinOp, lhs: &Operand, rhs: &Operand) -> Option<Operand> {
         if !matches!(ty, Ty::Pointer(_)) {
             return None;
@@ -1235,8 +1234,8 @@ impl Lowering<'_> {
     /// from there breaks no named test.
     ///
     /// It is called anyway, because one rule asked in two places is one
-    /// function rather than two copies, and RK-052 in the review knowledge bank
-    /// is what the two copies cost last time. A C++ adapter with a sequencing
+    /// function rather than two copies, and two copies of one rule have drifted
+    /// apart here before. A C++ adapter with a sequencing
     /// operator that yields an lvalue makes the call live without anybody
     /// having to notice.
     fn descend(&mut self, id: ExprId, tasks: &mut Vec<Task>) {
@@ -1274,7 +1273,7 @@ impl Lowering<'_> {
                 // constant has no value exactly when it has no type, and
                 // `typed` above has already returned `None` for that, so
                 // replacing this with `unwrap_or(0)` breaks no test: measured.
-                // That is RK-064's shape, a line a stronger rule upstream
+                // That is a line a stronger rule upstream
                 // answers for, and what it guards against is the day `typed`
                 // narrows. Writing the fallback instead would put a number
                 // nobody wrote into the IR, which is how `010` used to lower
@@ -1994,8 +1993,8 @@ impl Lowering<'_> {
         let lhs = self.ast.expr(lhs).span();
         builder.discarded(value, lhs);
 
-        // C17 6.5.17 p2. RK-040 is why this is a task between the operands
-        // rather than something the comma builds when it finishes: an element
+        // C17 6.5.17 p2. This is a task between the operands rather than
+        // something the comma builds when it finishes, because an element
         // built where a node finishes lands after everything the node
         // contains, and what this one says is about what came before it.
         if self.top_level {
@@ -3117,9 +3116,9 @@ mod tests {
 
     /// Every binary operator becomes the one it means.
     ///
-    /// The expected side is written out rather than taken from `binary`, for
-    /// the reason RK-001 gives: a table built the way the code builds one
-    /// compares the code with itself. `&&` and `||` are absent because they are
+    /// The expected side is written out rather than taken from `binary`,
+    /// because a table built the way the code builds one compares the code
+    /// with itself. `&&` and `||` are absent because they are
     /// branches, which the test above holds.
     ///
     /// Mutation: map any one of these to another variant, `Mul` to `Div` say.
@@ -3687,9 +3686,9 @@ mod tests {
     /// An expression deeper than the parser's own nesting limit still lowers.
     ///
     /// A chain folded by a loop adds a level to the tree per operator and none
-    /// to the parser's count, which is RK-008 in the review knowledge bank and
-    /// what killed the tree printer once. Ten thousand terms is far past
-    /// `parser::MAX_NESTING` and nowhere near the native stack.
+    /// to the parser's count, which is what killed the tree printer once. Ten
+    /// thousand terms is far past `parser::MAX_NESTING` and nowhere near the
+    /// native stack.
     ///
     /// Mutation: walk an expression by recursion. The process dies rather than
     /// failing, which is why this test exists at all: a stack overflow is not a

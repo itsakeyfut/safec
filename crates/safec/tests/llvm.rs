@@ -73,8 +73,8 @@ fn case(name: &str) -> PathBuf {
 ///
 /// `--target` is passed because an artifact is for a machine and this one is
 /// not always the host: `llvm_ir_follows_the_target` is for a machine nothing
-/// here runs. RK-011 in the review knowledge bank is the entry, and it is the
-/// same rule from the other side.
+/// here runs. A result against `clang` means nothing until the target is
+/// named, and this is the same rule from the other side.
 ///
 /// `-Wno-override-module` because `clang`'s own default triple is more
 /// specific than any of the measured ones (`x86_64-pc-windows-msvc19.51.36256`
@@ -126,8 +126,8 @@ fn llvm_says(module: &[u8], triple: &str) -> String {
 /// Where there is no `clang`, this says what it did not check and passes,
 /// unless `SAFEC_REQUIRE_LLVM` is set. CI sets it, so "nobody has `clang` any
 /// more" is a red build rather than a quiet one: a check whose command cannot
-/// fail loudly reports the state it was asked to prove, which is RK-012 and
-/// has already produced a false result here twice.
+/// fail loudly reports the state it was asked to prove, which has already
+/// produced a false result here twice.
 #[test]
 fn the_emitted_ir_is_what_llvm_accepts() {
     if !clang_is_here() {
@@ -225,7 +225,8 @@ fn extensions(module: &str, marker: &str, name: &str) -> Vec<&'static str> {
 /// host is `x86_64-pc-windows-msvc`, one of the two that ask for nothing, so
 /// such a program answers the same with the attribute and without it, and so
 /// does `windows-latest`. A test that cannot fail where its author runs it is
-/// RK-012's shape, and it would cover one target where this covers eight from
+/// a check that reports the state it was asked to prove, and it would cover
+/// one target where this covers eight from
 /// any host, because `-S -emit-llvm` cross-compiles with no sysroot.
 ///
 /// Mutation: answer `None` from `Emitter::extension` whatever the target. The

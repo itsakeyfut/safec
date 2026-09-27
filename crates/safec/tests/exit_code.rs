@@ -445,7 +445,8 @@ fn the_deepest_nest_of_statements_does_not_end_the_process() {
 /// exit 101 with nothing on either stream and not one byte of the artifact that
 /// was asked for. `clang 20.1.6` parses the same file and reports an ordinary
 /// error, measured with `--target=x86_64-unknown-linux-gnu`, because its default
-/// target here is MSVC and RK-011 records why that matters.
+/// target here is MSVC, and a result against `clang` means nothing until the
+/// target is named.
 ///
 /// Mutation: pass `depth * 2` as the format width again. The run exits 101 and
 /// this fails by name. `a_long_flat_expression_does_not_end_the_process` below

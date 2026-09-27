@@ -123,10 +123,10 @@ const RETURN_AFTER_FREE: Code = Code::new("SC0406");
 /// **It names no cause, and that is the whole of its design.**
 /// `Unproven::Lost` has five producers, which its own doc comment lists, and a
 /// `memory::Finding` does not say which of them answered. A remedy naming one
-/// would be right for some and false for the others, which is RK-036 in the
-/// review knowledge bank: a conservative over-approximation given a confident
-/// word. So this says only what is true of all five, and tells the reader the
-/// one thing that matters here, which is not to go hunting for a defect.
+/// would be right for some and false for the others: a conservative
+/// over-approximation given a confident word. So this says only what is true
+/// of all five, and tells the reader the one thing that matters here, which is
+/// not to go hunting for a defect.
 ///
 /// Shared by the three codes that can lose a pointer, because the fact is the
 /// same fact. #213 carries the reason into the `Finding` and replaces this
@@ -158,7 +158,7 @@ const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, 
 /// it turns the warning into a proved use after free: the corpus case
 /// `an_unsequenced_use_before_an_opaque_call_is_reported` allocates, calls two
 /// functions, frees nothing, and carried exactly that advice at exit 0. A
-/// remedy is a claim in the way a label is, RK-036, and that one claimed a free
+/// remedy is a claim in the way a label is, and that one claimed a free
 /// this check never found.
 ///
 /// `if it is freed` is what makes one sentence true of both causes while
@@ -554,8 +554,8 @@ pub fn compile(options: &Options) -> Compiled {
 /// The gate that decides whether to build anything runs once, before the
 /// inputs, and the dump runs once per input, so the two are in different
 /// places. Naming the artifact keeps them one decision rather than two matches
-/// on `EmitKind` that have to agree. RK-003 in the review knowledge bank
-/// records what the two-copy version of this cost: a gate written as two
+/// on `EmitKind` that have to agree. The two-copy version of this has already
+/// cost something here: a gate written as two
 /// comparisons left `--emit preprocessed` answered by neither, and the compiler
 /// exited zero having written nothing to either stream.
 enum Emitted {
@@ -662,8 +662,8 @@ fn analysed(
 ///
 /// Shared by the two `--emit` kinds that read the IR rather than duplicated in
 /// each, for the reason [`Emitted`] gives for existing at all: two copies of a
-/// gate are two things that have to agree, and RK-003 is what that costs when
-/// they stop.
+/// gate are two things that have to agree, and when they stop, a case is
+/// answered by neither.
 fn lowered(
     sources: &SourceMap,
     file: FileId,
@@ -698,8 +698,9 @@ fn lowered(
     // is built: every artifact that has one reaches it through here, so there
     // is no arm for a check to be left out of.
     //
-    // A comparison rather than a match, which is the shape RK-003 in the review
-    // knowledge bank warns about and is right here for the reason `SafetyLevel`
+    // A comparison rather than a match, which on an ordered enum usually
+    // answers one side of the question, and is right here for the reason
+    // `SafetyLevel`
     // gives in its own doc comment: the levels are cumulative and ordered on
     // purpose, so a level above this one runs this check too, and there is
     // nothing below `Off`. `EmitKind` is the other case and deliberately has no
@@ -739,7 +740,7 @@ fn lowered(
 /// in.
 ///
 /// One type for both checks, so that [`route`] is one rule rather than a copy
-/// in each loop. RK-052 in the review knowledge bank is what two copies cost.
+/// in each loop, since two copies of one rule drift apart.
 #[derive(Clone)]
 struct Concluded {
     function: FuncId,
@@ -794,7 +795,7 @@ fn route(
 ///
 /// Every line begins with [`dump_node`], so a file's name is escaped the way it
 /// is in every other artifact, and the function's name is the file's text and
-/// is written with `{:?}` for the reason RK-002 gives.
+/// is written with `{:?}`, because source text is content.
 fn dump_hatches(
     sources: &SourceMap,
     unit: &TranslationUnit,
@@ -900,7 +901,7 @@ fn caret(diagnostic: &Diagnostic) -> Span {
 /// other reason. `both_reasons_a_level_can_go_undelivered_are_said_at_once`
 /// fails and the two single-cause cases stay green.
 ///
-/// Both are the shape `CLAUDE.md` calls the worst defect this project has had,
+/// Both are the shape of the worst defect this project has had,
 /// and the second is what guarding against it in one place and not the next
 /// costs: ADR-0034 makes a remedy the change that would make the program
 /// compile, so a remedy answering one of two causes is a promise the run breaks.
@@ -1009,10 +1010,10 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
     // The reason is not read beside `Unsafe`, where there is nothing
     // unproven, and each `Unknown` row names every reason rather than taking
     // `_`, so that a fourth cannot fall into a row written before it existed.
-    // That is RK-034 in the review knowledge bank read forwards, and RK-015 is
-    // its limit: `E0004` makes somebody write an arm and does not make the arm
-    // right.
-    // **A remedy is a claim like a label is**, which is RK-036, so each of
+    // An arm that means two things at once reports the second as the first,
+    // and this is that read forwards. Its limit is that `E0004` makes somebody
+    // write an arm and does not make the arm right.
+    // **A remedy is a claim like a label is**, so each of
     // these is written against what its row established and not against what
     // its words suggest. Two rows are worth saying out loud. `Lost` names no
     // cause because `Unproven::Lost` has five producers and a `Finding` does
@@ -1134,8 +1135,8 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
         // **The remedy is conditional because the offset may really be
         // zero.** What this check could not evaluate is the offset, not the
         // program, and an instruction that holds only where the offset is not
-        // zero has to say so, which is RK-036 and `DISAGREEMENT_REMEDY`'s own
-        // reason.
+        // zero has to say so: a remedy is a claim like a label is, which is
+        // `DISAGREEMENT_REMEDY`'s own reason.
         //
         // Every reason named, although only `Offset` arrives: the other three
         // come out of `verdict`, which `memory::interior` does not call.
@@ -1227,7 +1228,7 @@ fn nullability_finding(finding: &nullability::Finding) -> Option<Diagnostic> {
     // this check failed to establish is that the pointer is not null and a test
     // is what would establish it. Telling a reader to give it a value there
     // would assert that it has none, which is the row above's sentence and not
-    // this one's. RK-036.
+    // this one's, and a remedy is a claim like a label is.
     //
     // The argument rows follow the same rule, and their unsafe remedy offers
     // the promise as the other way out, because a parameter declared
@@ -1304,7 +1305,8 @@ fn destination(options: &Options) -> Option<PathBuf> {
     if let Some(path) = &options.output {
         return Some(path.clone());
     }
-    // Exhaustive, and not two `matches!`, for the reason RK-003 records: a
+    // Exhaustive, and not two `matches!`, because a gate spelled as two
+    // conditions can leave a case answered by neither: a
     // kind added and forgotten in a list is answered by no arm and goes to the
     // stream, which for a kind with a default name is silent and wrong.
     match options.emit {
@@ -1436,7 +1438,7 @@ fn said_something(diagnostics: &DiagnosticSink, before: usize) -> bool {
 /// the program its name says. Only [`Self::Refused`] is `clang` speaking about
 /// a module; the other three are the machine speaking about `clang`, and
 /// wording them as a refusal blames a user's program for their installation.
-/// RK-024 in the review knowledge bank is what that cost.
+/// That has been done here once, to a `clang` that never ran.
 #[derive(Debug)]
 enum Unmade {
     /// There is no `clang` to run.
@@ -1665,7 +1667,7 @@ fn linked(modules: &[Module], target: Target) -> Result<Vec<u8>, Unlinked> {
 /// Two parties, and telling them apart is the whole reason this is not
 /// [`Unmade`]. `clang` answers for the first; the second is this compiler
 /// failing to find anywhere to work, which is nothing to do with the tool and
-/// must not be reported as though the tool were broken. That is RK-024's
+/// must not be reported as though the tool were broken. That is [`Unmade`]'s
 /// mistake one level over: blaming whoever is nearest.
 #[derive(Debug)]
 enum Unlinked {
@@ -1748,8 +1750,9 @@ impl Drop for Scratch {
 /// the same shape for the same reason.
 ///
 /// A [`Refusal`] never carries text out of a source file, only type spellings
-/// this compiler wrote and numbers, so nothing here needs `shown`. RK-002 in
-/// the review knowledge bank is why that is worth stating rather than assuming.
+/// this compiler wrote and numbers, so nothing here needs `shown`. That is
+/// worth stating rather than assuming, because every new place that echoes
+/// text has to answer for whether it is a source file's.
 fn backend_failure(refusal: &Refusal) -> Diagnostic {
     let reported =
         Diagnostic::error(format!("the backend cannot write {}", refusal.why)).with_code(BACKEND);
@@ -1793,8 +1796,8 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
             .expect("writing to a string cannot fail");
             // The name and the string as written, because the tree records what
             // was read and `sema::resolve` is what says whether it is a hatch.
-            // Both are the file's text, written with `{:?}` for the reason
-            // RK-002 gives.
+            // Both are the file's text, written with `{:?}` because source
+            // text is content.
             if let Some(attribute) = function.attribute {
                 write!(
                     out,
@@ -1859,7 +1862,8 @@ fn dump_declarators(
 /// The tail of a line that declares something: the name, the type, and
 /// `_Nonnull` where it was written.
 ///
-/// A name is the file's own bytes and is quoted for the reason RK-002 gives. A
+/// A name is the file's own bytes and is quoted because source text is
+/// content. A
 /// type is this compiler's spelling of what the declarator derived, quoted
 /// beside it so that the two read alike; the only file text inside one is the
 /// length of an array, which [`spell_type`] answers for.
@@ -2007,8 +2011,8 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
 ///
 /// A node writes at most one quoted thing after its position: either the file's
 /// own text, or the operator this compiler spells. The two are not the same
-/// kind of thing. `Number` and `Identifier` echo the source, which is why
-/// RK-002 asks for the quoting; an operator comes from `BinOp::as_str` and is
+/// kind of thing. `Number` and `Identifier` echo the source, which is content
+/// and why they are quoted; an operator comes from `BinOp::as_str` and is
 /// this compiler's own word, so `a  +  b` still prints `"+"`.
 fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &mut String) {
     // Children are pushed in reverse, so that they come back off in the order
@@ -2045,7 +2049,8 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
             Expr::Assign { op, .. } => {
                 // `+=` is `+` and `=`, built rather than tabulated: eleven more
                 // spellings in a second table is a second table to disagree
-                // with the first, which is what RK-003 records the cost of.
+                // with the first, and two spellings of one decision have
+                // already left a case here answered by neither.
                 let spelling = match op {
                     Some(op) => format!("{}=", op.as_str()),
                     None => "=".to_owned(),
@@ -2161,7 +2166,7 @@ pub fn run_compiler(
 
     // One `match` rather than two `if`s, so that the four combinations are
     // answered here and not by whichever condition happened to be written
-    // first. RK-003 in the review knowledge bank is what that costs: a gate
+    // first. That has cost something here: a gate
     // spelled as two comparisons left a case answered by neither, and the
     // compiler exited zero having produced nothing.
     //
@@ -2414,7 +2419,7 @@ mod tests {
     ///
     /// The same gate `tests/object.rs` has, for the same reason and not shared
     /// with it: an integration test is its own crate. A check that cannot fail
-    /// loudly reports the state it was asked to prove, which is RK-012, so
+    /// loudly reports the state it was asked to prove, so
     /// `SAFEC_REQUIRE_LLVM` makes the skip a failure and CI sets it.
     fn clang_or_skip(what: &str) -> bool {
         let here = Command::new("clang")
@@ -2541,8 +2546,7 @@ mod tests {
     ///
     /// Its own gate, for the same reason the tests over there have one. A
     /// feature that needs a tool cannot be tested without it, and a check that
-    /// cannot fail loudly reports the state it was asked to prove, which is
-    /// RK-012.
+    /// cannot fail loudly reports the state it was asked to prove.
     ///
     /// Mutation: answer `Ok` whatever the exit status. The artifact becomes
     /// whatever `clang` wrote before giving up, the run exits successfully, and
@@ -2966,7 +2970,7 @@ mod tests {
     /// `print.rs`'s `a_file_name_is_escaped_wherever_an_artifact_prints_one`
     /// answers for `--emit ast` and `--emit safety-ir` and not for this one.
     /// A name is content: it comes from a command line today and from a
-    /// `#include` later, and RK-002 records what a `.c` file did to somebody's
+    /// `#include` later, and a `.c` file here has already cleared somebody's
     /// terminal when its bytes were echoed verbatim.
     ///
     /// Written against `dump_tokens` rather than through `run`, because a file
@@ -3554,8 +3558,7 @@ int main(void) {
     /// anywhere in the pipeline is covered without anyone remembering this test
     /// exists, which is the only guard of that shape here: `E0004` makes
     /// somebody write an arm and nothing makes the arm they write right, and a
-    /// total roster is what answers for a variant nobody has written yet. See
-    /// RK-015.
+    /// total roster is what answers for a variant nobody has written yet.
     ///
     /// It held that a kind either produced what was asked for **or said it
     /// could not**, which was the weaker half and is gone with the kind that

@@ -61,7 +61,8 @@ impl SafetyLevel {
     /// `options.rs`'s table has to answer for the new row, and three corpus
     /// expectations have to be re-blessed. Moving it alone leaves the compiler
     /// silent about a level nothing checks, and here silence *means* the level
-    /// was delivered, which is the bottom row of `CLAUDE.md`'s list.
+    /// was delivered, which is saying safe wrongly, the worst answer
+    /// `docs/safety-model.md` says this compiler can give.
     /// `driver.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not`
     /// is what refuses that: the four expectations that also change read as
     /// housekeeping, and that one reads as the check that is missing.
@@ -147,7 +148,7 @@ mod tests {
     ///
     /// Written out rather than compared against `to_possible_value`, which is
     /// what `spelling` is implemented in terms of. That comparison holds for
-    /// whatever the derive happens to say and is RK-001's shape; this table is a
+    /// whatever the derive happens to say; this table is a
     /// definition of what a user may type.
     ///
     /// Mutation: answer any other string for any one variant. This fails, naming

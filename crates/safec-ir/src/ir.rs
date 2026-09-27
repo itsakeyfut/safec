@@ -1476,9 +1476,8 @@ mod tests {
 
     /// Where control can go from each way a block can end.
     ///
-    /// The expected lists are written out rather than derived, for the reason
-    /// RK-001 gives: a table built the way the code builds one compares the
-    /// code with itself.
+    /// The expected lists are written out rather than derived, because a table
+    /// built the way the code builds one compares the code with itself.
     ///
     /// **The order is asserted, not only the set**, because
     /// `dataflow::Analysis::edge` names an edge by its index into this list.
