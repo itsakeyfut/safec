@@ -271,3 +271,6 @@ transfer, which no C program can show since its size holds no allocation; and `A
   whose wider rule for a hatch stays.
 * RK-080 in the review knowledge bank, on why the corpus alone could not cost
   this.
+* [ADR-0040](./0040-a-pointer-read-out-of-memory-reaches-what-was-stored-and-a-parameter-is-exposed-where-the-function-starts.md),
+  which answers what the "What this does not reach" paragraph above left to
+  #254.
