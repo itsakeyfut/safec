@@ -209,7 +209,7 @@ fn a_warning_still_writes_its_llvm_ir() {
     let path = artifact_path("warned.ll");
     let output = llvm_ir_to_with(
         &path,
-        "a_call_this_check_cannot_read_between_two_frees",
+        "a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved",
         &["--allow-unknown"],
     );
 
