@@ -128,9 +128,10 @@ parameters live where it starts, wherever it is compiled, so the call that
 hands one over is the last place anything can be said about it. It is asked
 at every call, of every pointer-typed local handed over, as a dereference of
 it would be, except what `free` and `realloc`'s first argument are handed,
-which is `SC0401`'s, and what an allocator is handed, which is a size. So a pointer handed to a call after another call this check cannot
-read was handed it, `init(p); run(p);`, is refused as unproven with no free
-in the function at all. The fix is at the call or at the free, which is why it
+which is `SC0401`'s, and what an allocator is handed, which is a size. So a
+pointer handed to a call after another call this check cannot read was handed
+it, `init(p); run(p);`, is refused as unproven with no free in the function at
+all. The fix is at the call or at the free, which is why it
 is not `SC0402`.
 [ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.

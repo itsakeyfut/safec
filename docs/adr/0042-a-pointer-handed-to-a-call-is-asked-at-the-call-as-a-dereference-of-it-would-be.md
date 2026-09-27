@@ -21,9 +21,10 @@ It is wider than the file. Measured on `main` at `381262f`, every one of these
 exits 0: the callee only declared (`free(a); return use(a);`), a library
 function this check reads by name (`free(d); memcpy(d, s, 8);`), a callee that
 frees what it is handed (`free(a); drop(a);`), a parameter freed and handed on
-(`void f(int *p) { free(p); run(p); }`), a free on one arm only (`if (c) {
-free(a); } return use(a);`), and an allocation an opaque call was handed before
-(`init(a); return use(a);`). The cause is one: nothing asks what a call's
+(`void f(int *p) { free(p); run(p); }`), and a free on one arm only (`if (c) {
+free(a); } return use(a);`). So does `init(a); return use(a);`, which is a
+defect only if `init` freed what it was handed, and which a dereference of `a`
+in its place already doubts. The cause is one: nothing asks what a call's
 arguments hold.
 
 This is the belief
@@ -41,9 +42,11 @@ for null.
 * A program with a use after free that builds is the worst answer this compiler
   gives, and every shape above is silent in both functions.
 * C17 6.2.4 p2 makes a pointer's value indeterminate when what it points at
-  reaches the end of its lifetime, and 7.22.3.3 p2 ends it at a `free`, so
-  handing such a value to a function is already undefined whether or not the
-  callee reads through it.
+  reaches the end of its lifetime, and 7.22.3 p1 ends an allocated object's
+  lifetime at its deallocation, which is what `free` does (7.22.3.3 p2).
+  Annex J.2, which is informative, lists using such a value as undefined, so on
+  that reading handing it to a function is undefined whether or not the callee
+  reads through it.
 * `docs/diagnostics.md` says a bare read, `free(p); p;`, is not something this
   check reads. An argument is that shape, so reporting it needs a reason the
   other bare reads do not have, as a `return` did.
@@ -106,13 +109,23 @@ operands' sites (ADR-0030), so `h(f() + g())` was refused on a program with no
 pointer in it, measured, which is the reason ADR-0041 gives for its own
 condition. One finding per local per call, so `g(p, p)` is one report.
 
-**The order is asked as a dereference asks it.** `Kind::ArgumentAfterFree`
+**The order at the call is asked as a dereference asks it.** `Kind::ArgumentAfterFree`
 answers `earliest.is_some_and(|freed| freed.sequenced)` in `verdict`'s
 `ordered`. Answering `true`, as a `return` does, proved `(free(a), 0) +
 use(a)`, where C17 6.5.2.2 p10 lets `use` run before `free` and the program is
 defined on that order, measured. What the rule costs is `two(a, (free(a), 0))`,
 where every order hands `two` a freed pointer and this check says only that it
-may: a proof reported as a doubt, which fails the build all the same.
+may: a proof reported as a doubt, which fails the build unless
+`--allow-unknown` is given, and under it is a warning on a run that exits 0.
+
+**Asked at the call and nowhere after it.** A dereference is also recorded as a
+pending read and asked again at a free the same full expression leaves
+unsequenced with it (ADR-0023). What a call is handed is not, so
+`(memset(a, 0, 4) != 0) + (free(a), 0)` builds: C lets the free run first. A
+callee this check cannot read hides the gap, because the later free becomes a
+doubted `SC0401`; `memset`, `memcpy` and the rest read by name do not. Carrying
+it forward changes what a pending read records, and is
+[#270](https://github.com/itsakeyfut/safec/issues/270).
 
 **No null exemption.** `memory::asked` exempts a pointer established null from
 a free, and nothing here does. An exemption is the half of a rule that can go
@@ -155,6 +168,10 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   becomes a proof.
 * Dropping the repeated-local test fails
   `a_freed_pointer_handed_twice_to_one_call_is_one_report` alone.
+* Asking only the first argument, `arguments.iter().take(1)`, or turning the
+  loop's `continue`s into `break`s, each fails
+  `a_freed_pointer_handed_after_other_arguments_is_asked` alone, which goes
+  silent. Found by review: every other case hands the freed pointer first.
 * Asking an argument read through a projection fails
   `a_pointer_read_out_of_a_freed_table_and_handed_to_a_call`,
   `a_freed_pointer_read_in_an_argument` and
@@ -190,7 +207,24 @@ the `match`, and nothing tells the two apart.
 * Bad, because the free-and-null idiom `if (c) { free(p); p = 0; } run(p);` is
   refused through the join that does not tell paths apart, which is #264.
 * Bad, because `two(a, (free(a), 0))` is reported as a doubt where it is a
-  proof.
+  proof, so `--allow-unknown` builds it with a warning.
+* Bad, because two more shapes C defines are refused, found by review rather
+  than by the prototype: an allocation handed to one call this check cannot
+  read and then to another, `fill(p); return use(p);`, with no free anywhere;
+  and `realloc`'s failure branch handing the old pointer to a function,
+  `if (b == 0) { release(a); }`, which C17 7.22.3.5 p3 leaves allocated. Both
+  are the doubt the first bullet describes, and a free in place of `release`
+  was already refused as `SC0401`.
+* Bad, because the join is not path-sensitive, so a free followed by a call in
+  an arm no execution reaches, `free(a); if (0) { use(a); }`, is reported as a
+  proof. `SC0402` already did the same with `*a` in that arm; a call there is
+  the commoner shape.
+* Bad, because a pointer handed to a call and freed later in the same full
+  expression, which C may run first, is silent. That is #270, above.
+* Bad, because the address of a freed pointer handed to a call, `use2(&a)`
+  where the callee reads `*pp` and dereferences it, is silent in both
+  functions, as it was before this record. That is
+  [#271](https://github.com/itsakeyfut/safec/issues/271).
 * Bad, because a pointer read out of memory and handed on, `use(*tab)`, is
   silent, as its dereference is. That is #256.
 * What would reverse this: summaries of the functions this translation unit
@@ -200,8 +234,9 @@ the `match`, and nothing tells the two apart.
 
 ## Pros and Cons of the Options
 
-Measured on a throwaway prototype against seven probes with a defect and eleven
-without, and against the corpus.
+Measured on a throwaway prototype against seven probes, six with a defect and
+one, `init(a); return use(a);`, that is a defect only if `init` freed, and
+eleven without a defect, and against the corpus.
 
 ### Every call
 
@@ -217,7 +252,7 @@ without, and against the corpus.
 
 ### Every allocation, as a dereference
 
-* Good, because all seven defect probes are reported.
+* Good, because all seven probes are reported.
 * Bad, because four of the eleven others are refused, listed above.
 
 ### Proofs only
