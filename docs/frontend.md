@@ -190,8 +190,9 @@ measured rather than reasoned about. `1e` has an exponent with no digits and
 which 6.4.4.2 p1 declines to spell, so they are the program's mistake and not a
 type this compiler is short of. `0b101` shows why the fourth column is there: a
 binary constant is C23, `clang` takes it as an extension, and only
-`-pedantic-errors` answers for C17. RK-032 in the review knowledge bank is what
-that column exists for.
+`-pedantic-errors` answers for C17. That column exists because `-std=c17` alone
+leaves every extension on, and what `clang` tolerates has been written up here
+as valid C before.
 
 A value beyond `INT_MAX` is reported as this compiler's gap rather than as a
 violation of 6.4.4 p2, although the two are the same sentence read against this
