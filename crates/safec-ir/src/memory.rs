@@ -1121,6 +1121,7 @@ fn built_from(
     operands: [&Operand; 2],
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
+    may_be_pointer: impl Fn(&Place) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -1165,6 +1166,16 @@ fn built_from(
     }
 
     reached.offset = offset_of(op, operands, &followed, value);
+
+    // **A read through a projection is not followed, and is still a load.**
+    // `*tab + 1` is the pointer `*tab` moved, and the lowering hands it here
+    // as one operand rather than through a temporary, so the bit an operand
+    // carries in [`Held`] never arrives for it: `q = *tab + 1; show(q);`
+    // exposed nothing, found by mutating [`Held::accumulated`]. See ADR-0040.
+    reached.loaded |= operands.iter().any(|operand| match operand {
+        Operand::Copy(source) => !source.projection.is_empty() && may_be_pointer(source),
+        Operand::Constant(_) => false,
+    });
 
     reached
 }
@@ -1340,9 +1351,13 @@ impl Allocations<'_> {
             // shape by hand, and carried an edge through `qq + 7` that the
             // direct assignment had just been taught to drop.
             Rvalue::Binary { op, lhs, rhs } => {
-                let mut reached = built_from(*op, [lhs, rhs], value, |local| {
-                    self.is_pointer(function, local)
-                });
+                let mut reached = built_from(
+                    *op,
+                    [lhs, rhs],
+                    value,
+                    |local| self.is_pointer(function, local),
+                    |place| self.may_be_pointer(function, place),
+                );
                 reached.writes_to.fill(false);
                 // Emptying the set says nothing on its own: an empty set is
                 // what a pointer this check never followed an address into
@@ -1998,9 +2013,13 @@ impl Analysis for Allocations<'_> {
                     // Read before the write, so `p = p + 1` keeps what `p`
                     // held rather than clearing it and unioning the result.
                     Rvalue::Binary { op, lhs, rhs } => {
-                        let mut reached = built_from(*op, [lhs, rhs], value, |local| {
-                            self.is_pointer(function, local)
-                        });
+                        let mut reached = built_from(
+                            *op,
+                            [lhs, rhs],
+                            value,
+                            |local| self.is_pointer(function, local),
+                            |place| self.may_be_pointer(function, place),
+                        );
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
                         // points into, which is why the allocation comes along.
