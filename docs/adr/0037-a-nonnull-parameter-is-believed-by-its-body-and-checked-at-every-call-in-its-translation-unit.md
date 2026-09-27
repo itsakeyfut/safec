@@ -12,7 +12,8 @@ decision-makers: itsakeyfut
 for as much machinery as nullability needs, and names the sharpest question in
 the phase beside it: whether an annotation is trusted or checked. A trusted
 annotation that is wrong turns `Unknown` into `Safe` with nothing said, which is
-the bottom row of `CLAUDE.md`'s failure list.
+saying safe wrongly, the answer [`docs/safety-model.md`](../safety-model.md)
+calls the worst this compiler can give.
 
 Before this record, the nullability check answered `Unknown` for every
 parameter, because a parameter's nullness is a caller's fact and nothing carried
@@ -35,12 +36,13 @@ now says so wherever it used to say the wider thing.
 
 ## Decision Drivers
 
-* `CLAUDE.md`'s ranking. Whatever is believed has to be believed where a person
-  wrote it, and nowhere else.
+* The ranking of failures: saying safe wrongly is worst, and a false report the
+  reader can see is far better. Whatever is believed has to be believed where a
+  person wrote it, and nowhere else.
 * [`concept.md`](../concept.md)'s incremental migration. An annotation that
   removes nothing is one nobody writes.
-* Replacing `clang` with `safec` must not change what a program does, which the
-  `review-c-conformance` lens holds this project to. Measured with
+* Replacing `clang` with `safec` must not change what a program does, which
+  this project holds itself to. Measured with
   `clang 20.1.6 --target=x86_64-unknown-linux-gnu -O2`:
   `__attribute__((nonnull))` puts `nonnull` on the parameter and deletes the
   body's own `p ? *p : 7` test, and `_Nonnull` leaves the IR exactly as it is
@@ -74,9 +76,10 @@ at every call in the translation unit that declares it.**
 **The body believes it.** A parameter declared `_Nonnull` enters the nullability
 lattice as not null. Nothing else changes: it is read through
 `Nullability::known` like every other local, so a parameter whose address is
-taken answers `Unknown` whatever it was declared, which is RK-061 and is the
-same mask that keeps the rest of the lattice honest; and it is a fact at entry
-only, so `p = 0; *p = 1;` in the body is a proved null dereference.
+taken answers `Unknown` whatever it was declared, because a store through a
+pointer can take the fact away unseen, and that is the same mask that keeps the
+rest of the lattice honest; and it is a fact at entry only, so `p = 0; *p = 1;`
+in the body is a proved null dereference.
 
 **Every call is checked.** An argument passed to a `_Nonnull` parameter is asked
 the same question a dereference is. Proved null is `Unsafe`, not established is
@@ -102,30 +105,33 @@ reading the language, and [`safety-model.md`](../safety-model.md) makes a level
 decide which checks run and nothing else. So `--safety off` ignores what the
 annotation means, since no check runs to believe or ask about it, and still
 refuses it where it cannot apply. What that costs is that a file `clang` builds
-with `_Nonnull` on a local is refused at every level, which is row 4.
+with `_Nonnull` on a local is refused at every level, which is a false report
+the reader can see.
 
 `__attribute__((nonnull))` is rejected on the measurement above. A program that
 violates it means one thing under `clang` and another under `safec`, and the
 difference is `clang` deleting a test the author wrote.
 
 A keyword of this compiler's own is rejected because it takes an identifier C
-gives to the program, so it refuses valid C (row 4), and because no other
-compiler reads the file afterwards.
+gives to the program, so it refuses valid C (a false report the reader can
+see), and because no other compiler reads the file afterwards.
 
 Believed by the body only is rejected because `g(0)` in the same file as `g`
-would be silent, which is row 6 about a program this compiler can see all of.
-`clang` is that option and warns only on a literal null; `int *q = 0; g(q);` is
-silent there, measured.
+would be silent, which is saying safe wrongly about a program this compiler can
+see all of. `clang` is that option and warns only on a literal null;
+`int *q = 0; g(q);` is silent there, measured.
 
 Checked at the calls only is rejected because it removes nothing. It is the
-option with no row 6 in it, and the one nobody would write an annotation for.
+option that never says safe wrongly, and the one nobody would write an
+annotation for.
 
 ### Confirmation
 
 Every mutation below was applied on its own, the whole workspace was run with
 `--no-fail-fast`, and the file was restored from a copy rather than from git.
 The tests named are the ones that failed; how many there were is not written
-down, for RK-028's reason. The cases are in `crates/safec/tests/cases`.
+down, because a count is a fact about the suite of the day rather than about
+the rule. The cases are in `crates/safec/tests/cases`.
 
 **Believed by the body.** `Nullability::on_entry` in
 `crates/safec-ir/src/nullability.rs` never reading `Function::nonnull` fails
@@ -214,15 +220,15 @@ it can.
   count them with a search.
 * Good, because a program `clang` compiles keeps compiling under `clang`, and
   means the same thing.
-* Bad, because a caller in another translation unit is believed. That is row 6
-  arrived at deliberately, and what bounds it is that a person wrote the
-  promise at a place with a name. It holds for two files handed to one `safec`
-  run as well: each is lowered and checked on its own, and a call in one to a
-  function defined in the other is not asked about. Measured, `a.c` calling
-  `g(0)` through a prototype without the annotation and `b.c` defining `g` with
-  it builds, and the program faults. Checking across the files of one run would
-  need each unit's external signatures kept until the run ends; nothing decided
-  that here.
+* Bad, because a caller in another translation unit is believed. That is saying
+  safe wrongly, arrived at deliberately, and what bounds it is that a person
+  wrote the promise at a place with a name. It holds for two files handed to
+  one `safec` run as well: each is lowered and checked on its own, and a call
+  in one to a function defined in the other is not asked about. Measured,
+  `a.c` calling `g(0)` through a prototype without the annotation and `b.c`
+  defining `g` with it builds, and the program faults. Checking across the
+  files of one run would need each unit's external signatures kept until the
+  run ends; nothing decided that here.
 * Bad, because a promise on a declaration and not on its definition is refused
   and also reported inside the body, which is built from the definition and so
   believes nothing: one mistake, two diagnostics. The refusal comes first.
@@ -236,7 +242,7 @@ it can.
 * Bad, because it is stricter than `clang` in two places a user will meet:
   `clang` inherits `_Nonnull` from one declaration to another in silence, and
   accepts it on a local or a return type. Both are refused here, at every level.
-  Both are row 4.
+  Both are false reports the reader can see.
 * Bad, because `_Nonnull` is a `clang` extension and GCC does not read it.
   Mitigated by nothing yet; a macro is the usual answer and there is no
   preprocessor to define one.

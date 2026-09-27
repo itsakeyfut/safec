@@ -12,8 +12,9 @@ decision-makers: itsakeyfut
 line. The write through `pp` is what made `p` hold `q`'s allocation, and it was
 invisible, so the `free` was read against whatever `p` held before it and `q`'s
 allocation stayed proved live. A use after free, at `--safety strict
---deny-unknown`, exit 0. That is the bottom row of `CLAUDE.md`'s list and it is
-issue #162.
+--deny-unknown`, exit 0. That is saying safe wrongly, which
+[`docs/safety-model.md`](../safety-model.md#safe-unsafe-unknown) calls the worst
+answer this compiler can give, and it is issue #162.
 
 An attempt to close it went the other way and was withdrawn. Its rule was that a
 `free` this check cannot follow could have freed anything an escaped local

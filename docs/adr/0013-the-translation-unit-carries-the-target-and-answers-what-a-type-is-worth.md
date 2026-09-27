@@ -36,8 +36,8 @@ analysis from Phase 4 onwards reads, because they are written against
   target, once type widths reach them" is a claim about the IR, so an answer
   that lives only in the backend cannot make it true.
 * **The interpreter is a consumer today.** An answer nothing reads until the
-  LLVM backend exists is an interface with no caller, which `CLAUDE.md` calls
-  invented rather than designed.
+  LLVM backend exists is an interface with no caller, and an interface with no
+  caller is invented rather than designed.
 * **`--emit safety-ir` is an interface** that corpus cases pin byte for byte,
   and `docs/architecture.md` asks that output depend on the target and never on
   the host. Two artifacts that differ in meaning must not be identical in text.
@@ -112,8 +112,8 @@ oversight. Nothing can observe one: the artifact prints `int *` rather than a
 size, there is no `sizeof`, and the interpreter refuses pointer arithmetic.
 `i686-unknown-linux-gnu` and `wasm32-unknown-unknown` have 4-byte pointers where
 the rest have 8, so the fact is real and the reader is not. It arrives with the
-backend, where a datalayout line needs it, and `CLAUDE.md` is why it does not
-arrive before: an interface with no caller is invented rather than designed.
+backend, where a datalayout line needs it, and it does not arrive before
+because an interface with no caller is invented rather than designed.
 
 ### Confirmation
 
@@ -125,8 +125,9 @@ way.
 
 `every_target_is_what_clang_says_it_is` in `crates/safec-ir/src/target.rs`
 writes the measurements out again rather than asking the table about itself,
-which is RK-001, and its count fails if a row is added without one. Changing any
-width or the signedness of `char` on `aarch64-unknown-linux-gnu` fails it.
+because a test that asks the table can only compare it with itself, and its
+count fails if a row is added without one. Changing any width or the
+signedness of `char` on `aarch64-unknown-linux-gnu` fails it.
 
 The three rows `docs/frontend.md` recorded have stopped being divergences, and
 each is held: `an_arithmetic_result_the_target_cannot_hold_stops_the_run` and
@@ -194,8 +195,8 @@ that cannot parse.
 * Good, because the IR carries the least it can.
 * Bad, because there would be two answers to what a pointer is worth and
   nothing to keep them equal. This is the shape `shown` and `echoed` were
-  deliberately not given, and RK-020 is what it costs when two paired answers
-  drift.
+  deliberately not given, because when one of two paired paths gains a check,
+  the comment saying the other does not need it is the thing nothing tests.
 
 ## More Information
 

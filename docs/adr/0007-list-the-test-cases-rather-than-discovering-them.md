@@ -18,8 +18,8 @@ adds cases to it and changing the format afterwards means touching every case.
 
 ## Decision Drivers
 
-* `CLAUDE.md` defines a guard as a change to the code that makes a **named**
-  test fail. A harness that loops inside one test function gives every case one
+* A test guards nothing until a change to the code makes a **named** test
+  fail. A harness that loops inside one test function gives every case one
   name.
 * This repository has already shipped a test that compared a table with itself
   and proved nothing: `Keyword::from_spelling(kw.as_str()) == kw` held for any
@@ -114,5 +114,7 @@ only true while the macro generates one function per entry.
 * [`crates/safec/tests/cases.rs`](../../crates/safec/tests/cases.rs), where the
   table and both guards live.
 * [`docs/repository.md`](../repository.md) for the dependency principle.
-* The keyword-table test that motivated the drivers is recorded in the review
-  knowledge bank as RK-001.
+* The keyword-table test that motivated the drivers is the lesson that a test
+  which walks a table can be comparing the table with itself: write the table
+  out in the test as a literal list, so the test is a definition rather than a
+  restatement.

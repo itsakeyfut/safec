@@ -32,9 +32,9 @@ wearing another name.
 
 * The guarantee has to be statable. A guarantee conditional on something nobody
   can enumerate is not a guarantee, it is a hope with a flag on it.
-* `CLAUDE.md`'s ranking. A hatch that suppresses a report without recording a
-  promise turns row 4, a false positive the reader can see, into row 6, `safec`
-  saying safe and being believed.
+* The ranking of failures. A hatch that suppresses a report without recording
+  a promise turns a false report the reader can see into saying safe wrongly,
+  which `docs/safety-model.md` calls the worst answer this compiler can give.
 * [`concept.md`](../concept.md)'s incremental migration. A hatch is what lets a
   half-converted file compile at all.
 * The analysis will never have all the code. Separate translation units, the C
@@ -57,9 +57,9 @@ no phase on the roadmap changes that. Choosing it means Level 5 is unreachable
 on any program that calls `malloc`, which makes the top of
 [the level ladder](../safety-model.md#incremental-safety-levels) decorative.
 
-A suppression is row 6 by construction. It turns an unproven result into
-silence with nothing written down, so afterwards there is no way to say what the
-guarantee rests on, and no finite thing for an audit to look at.
+A suppression is saying safe wrongly by construction. It turns an unproven
+result into silence with nothing written down, so afterwards there is no way to
+say what the guarantee rests on, and no finite thing for an audit to look at.
 
 The third keeps the conclusion honest in both directions. Inside the region
 nothing is claimed, so nothing is silently believed. At the boundary something
@@ -76,9 +76,9 @@ Narrowing that, by having the region declare what it writes and what it frees,
 is explicit and opt in.
 
 The direction is ranked rather than preferred. Under the conservative default a
-region whose effects were never declared produces false positives, which is row
-4 on `CLAUDE.md`'s list and something the reader can see. Under the permissive
-one the same omission produces silence, which is row 6. The two are not
+region whose effects were never declared produces false positives, which are
+false reports the reader can see. Under the permissive one the same omission
+produces silence, which is saying safe wrongly. The two are not
 comparable, and the more convenient default is the one that fails the wrong way.
 
 **The conservative half is already built.** `crates/safec-ir/src/memory.rs` has
@@ -127,9 +127,9 @@ and the change that lands it owes this section a row.
 * Good, because it answers Phase 5's trusted-or-checked question once. A trusted
   annotation is a boundary promise, and it gets whatever treatment this record's
   boundary gets.
-* Bad, because a wrong promise is believed, which is row 6 arrived at
-  deliberately. What limits it is that a person wrote it at a place with a name,
-  rather than a check concluding it out of nothing.
+* Bad, because a wrong promise is believed, which is saying safe wrongly
+  arrived at deliberately. What limits it is that a person wrote it at a place
+  with a name, rather than a check concluding it out of nothing.
 * Bad, because it is a language extension, and [`concept.md`](../concept.md)
   asks for those to be explored rather than fixed early. Mitigated by deciding
   the stance here and leaving the spelling to the phase that has evidence.

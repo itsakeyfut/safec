@@ -28,9 +28,10 @@ write through `pp` may well have replaced the pointer before the read.
 
 ## Decision Drivers
 
-* [`docs/safety-model.md`](../safety-model.md#safe-unsafe-unknown) puts silence
-  at the bottom of the list, so a change that trades a false positive for a
-  silence is a bad trade however much more precise it looks.
+* [`docs/safety-model.md`](../safety-model.md#safe-unsafe-unknown) calls
+  saying safe wrongly the worst answer this compiler can give, so a change that
+  trades a false positive for a silence is a bad trade however much more
+  precise it looks.
 * Reporting asymmetry: a local reaching no site is reported as
   `Reached::Lost`, while a local reaching one live site is not, so widening a
   may-set can make this check say *less*. Where a fact is kept therefore
@@ -151,8 +152,7 @@ in `crates/safec/tests/cases.rs`, per
   this compiler reports go silent, each measured against `main`: a copied
   `points_to` row carries none of the distrust, an escaped local handed to an
   opaque call stops tainting the allocation, and a free through the alias stops
-  reaching a local sharing it. All three are the worst row of `CLAUDE.md`'s
-  list.
+  reaching a local sharing it. All three are saying safe wrongly.
 
 ### One fact, on the site
 

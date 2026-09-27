@@ -13,8 +13,9 @@ cannot read does to what it knows. [ADR-0029](./0029-a-call-this-check-cannot-re
 made it assume the worst of the allocations its arguments name and of the
 locals whose address escaped, and took the call's result as a fresh
 allocation. [#250](https://github.com/itsakeyfut/safec/issues/250) measured two
-programs where that lets a use after free build, which is the bottom row of
-`CLAUDE.md`'s list.
+programs where that lets a use after free build, which is saying safe wrongly,
+the answer [`docs/safety-model.md`](../safety-model.md) calls the worst this
+compiler can give.
 
 A first design closed those two by marking the routes one at a time. Review
 found four more routes it left open, each measured to exit 0 and two run to a
@@ -26,13 +27,14 @@ design was withdrawn before merging; #250's comments carry what it found.
 
 ## Decision Drivers
 
-* `CLAUDE.md`'s ranking. Every option leaves something at row 4; the ones that
-  leave something at row 6 say so here.
+* The ranking of failures: saying safe wrongly is worst, and a false report the
+  reader can see is far better. Every option leaves some false report the
+  reader can see; the ones that leave a silence about a defect say so here.
 * Measured against two sets rather than the corpus alone, because the corpus
-  holds no library call that returns a pointer (RK-080 in the review knowledge
-  bank): seven programs with a defect for some definition of the callees C
-  permits, and eight well-defined ones using the C library the way real code
-  does. The prototype and the tables are on #250's `/spec` comment.
+  holds no library call that returns a pointer: seven programs with a defect
+  for some definition of the callees C permits, and eight well-defined ones
+  using the C library the way real code does. The prototype and the tables are
+  on the design comment on #250.
 * C17 7.1.3 reserves the library's names, which is why `malloc` and `free` are
   read by name at all.
 
@@ -79,8 +81,8 @@ code. It costs `show(p); q = make(); *q`: `q` may be `p`, and is unproven; and
 `q = make(); log_line(); *q`, since `log_line` may free what `make` kept; and a
 loop that frees what a call returns each turn, since the next turn's call may
 return it again. Returning only what the call's own arguments
-reach keeps that program and leaves the registry silent; asked, and the row-6
-direction was ranked below.
+reach keeps that program and leaves the registry silent; asked, and the
+direction that says safe wrongly was ranked below.
 
 **A site reborn from an opaque call that was exposed stays unproven.** In a loop
 the call writes the same site every turn, and what it returns may be last
@@ -132,8 +134,9 @@ instead is the fix, and its shape waits for how fields are lowered.
 Every mutation below was applied on its own to the tree as committed, the whole
 workspace was run with `--no-fail-fast`, and the file was restored from git. The
 tests named are the ones that failed; how many there were is not written down,
-for RK-028's reason. The cases are in `crates/safec/tests/cases` and every
-mutation is in `crates/safec-ir/src/memory.rs`.
+because a count is a fact about the suite of the day rather than about the rule.
+The cases are in `crates/safec/tests/cases` and every mutation is in
+`crates/safec-ir/src/memory.rs`.
 
 **What a call reaches.** Leaving the arguments out of `Known::reach_of` fails
 `what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it`
@@ -151,8 +154,9 @@ case. A closure that stops after one step fails
 only the first allocation a pointer may hold fails
 `a_pointer_stored_through_either_of_two_tables_is_inside_both` alone. Closing only from the sites a call has just marked fails
 `a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call` alone,
-which is the join RK-044 describes, and which mutating the first version of
-this change found as a silence. An unplaced write exposing nothing fails
+which is the join, where an invariant applied only at the writes is missed, and
+which mutating the first version of this change found as a silence. An
+unplaced write exposing nothing fails
 `a_pointer_stored_two_levels_down_is_reached_through_what_holds_it` alone.
 Dropping either half of the join fails a one-arm case alone. Keeping the mark
 through a rebirth fails
@@ -201,7 +205,8 @@ by name fails the case named for each.
 
 **ADR-0029 still holds.** Dropping its `Known::replaced` from the opaque arm
 fails the four cases its Confirmation names, measured after this change, so the
-exposed mark did not make them vacuous (RK-048).
+exposed mark did not make them vacuous, which a new fact read at the point of
+report can do to the guards of the rules beneath it.
 
 **What nothing holds.** Clearing what a reborn site holds was listed here;
 ADR-0040 stopped clearing it, and its Confirmation names what holds that now.
@@ -214,7 +219,8 @@ transfer, which no C program can show since its size holds no allocation; and `A
   and the library idioms `main` refused build.
 * Bad, because an allocation handed to any call this check cannot read makes
   every later call's result doubtful, and a call's result is doubtful after the
-  next call: row 4, and the one a user will meet most.
+  next call: a false report the reader can see, and the one a user will meet
+  most.
 * Bad, because the memory check costs about half again in memory and time,
   until #173.
 * Bad, because a callee returning what it freed itself is believed (#252,
@@ -273,8 +279,8 @@ transfer, which no C program can show since its size holds no allocation; and `A
   which this extends from the locals an opaque call reaches to the allocations.
 * [ADR-0038](./0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md),
   whose wider rule for a hatch stays.
-* RK-080 in the review knowledge bank, on why the corpus alone could not cost
-  this.
+* Why the corpus alone could not cost this: it holds no library call that
+  returns a pointer.
 * [ADR-0040](./0040-a-pointer-read-out-of-memory-reaches-what-was-stored-and-a-parameter-is-exposed-where-the-function-starts.md),
   which answers what the "What this does not reach" paragraph above left to
   #254.

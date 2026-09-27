@@ -68,21 +68,22 @@ which is a distinction the clause does not make.
 
 What this costs is a false positive on a program `clang` accepts, measured with
 `clang -target x86_64-pc-windows-msvc -std=c17 -pedantic-errors -Wall
--fsyntax-only`, which exits 0 on the corpus case named below. That is row 4 of
-`CLAUDE.md`'s failure list: this compiler reports something wrong and the reader
-can see it. The options above move nothing off row 6 in exchange, because neither
-of them makes this check quiet about anything: what they turn a proof into is a
-warning that `--deny-unknown` turns back into an error.
+-fsyntax-only`, which exits 0 on the corpus case named below. That is a false
+report the reader can see: this compiler reports something wrong and the reader
+can see it. In exchange, the options above rescue nothing from saying safe
+wrongly, which `docs/safety-model.md` calls the worst answer this compiler can
+give, because neither of them makes this check quiet about anything: what they
+turn a proof into is a warning that `--deny-unknown` turns back into an error.
 
 **The exemption is the half of this rule that can go quiet, and that is where
-it lands on `CLAUDE.md`'s list.** Everything else here only refuses to weaken a
-proof, which leaves a false positive on row 4. A free that is exempted is
-reported by nobody, so a `Nullness::Null` this compiler is wrong about is a
-real double free nothing says anything about, which is row 6. Three things
-keep it off that row and an implementation of the seam has to hold all four,
-which is why they are written here rather than left to be rediscovered. The
-fourth was not here when the seam was first built, and an implementation
-holding the other three is what found it:
+it lands in the ranking of failures.** Everything else here only refuses to
+weaken a proof, which leaves a false positive the reader can see. A free that is
+exempted is reported by nobody, so a `Nullness::Null` this compiler is wrong
+about is a real double free nothing says anything about, which is saying safe
+wrongly. Three things keep it from being that and an implementation of the
+seam has to hold all four, which is why they are written here rather than left
+to be rediscovered. The fourth was not here when the seam was first built, and
+an implementation holding the other three is what found it:
 
 * the nullness is read through the mask that answers `Unknown` for a local
   whose address escaped, which is `Nullability::known` and ADR-0017's shape on
@@ -168,10 +169,10 @@ narrowing a rule makes a table that was true before it false in silence. All of
 them still fail what they name, and no row was found to have stopped reaching
 what it is about.
 
-**No row here says how many tests it breaks, and that is deliberate.** RK-028
-in the review knowledge bank is a count of exactly this kind: it is a fact about
-a suite that grows every week, and this record carried one for a fortnight
-before three separate measurements of the same mutation answered 22, 23 and 24.
+**No row here says how many tests it breaks, and that is deliberate.** A count
+of exactly this kind is a fact about a suite that grows every week, not about
+the rule, and this record carried one for a fortnight before three separate
+measurements of the same mutation answered 22, 23 and 24.
 A row names the case it is about, and where a mutation takes neighbours down
 with it the row says which neighbours and why, which is the part a later reader
 can check.
@@ -195,9 +196,10 @@ them. What that costs is in the Consequences below.
   so a free of a pointer established null still marks the sites it reaches
   freed. On the arm of `if (p == 0)` that freed nothing, the sites are freed
   all the same, and a later use of one of them is reported. That is a false
-  positive on row 4, taken deliberately: the alternative is a transfer that
-  believes a nullness, and a nullness this compiler is wrong about would then
-  be a real free nobody recorded, which is the bottom row.
+  positive the reader can see, taken deliberately: the alternative is a
+  transfer that believes a nullness, and a nullness this compiler is wrong
+  about would then be a real free nobody recorded, which is saying safe
+  wrongly.
 * Not bad in the other reader of what a call frees, although it reads as
   though it should be. `memory.rs::used_before` carries a read forwards to a
   `free` it is unordered against and asks `Allocations::touching` without the
@@ -222,21 +224,21 @@ them. What that costs is in the Consequences below.
   -pedantic-errors -Wall -fsyntax-only`, and are `error[SC0401]` here. So is
   `int x = (p = 0, free(p), 1) + 2;`, where a comma has ordered the assignment
   before the free inside the operand and the enclosing `+` is what removes the
-  marker. All three are row 4. Asking the question per local, rather than
-  zeroing the row for the block, would close the class and needs the ordering to
-  cross a block edge, which is a lattice dimension; no program in the corpus
-  asks for it.
+  marker. All three are false reports the reader can see. Asking the question
+  per local, rather than zeroing the row for the block, would close the class
+  and needs the ordering to cross a block edge, which is a lattice dimension; no
+  program in the corpus asks for it.
 * Bad, and separately from the marker, because [ADR-0025] refines a pointer to
   non-null at a dereference. `if (p == 0) { return g(*p) + (free(p), 0); }` is
   the program on #219, and it is *not* an instance of the bullet above:
   measured, forcing the marker condition true leaves it unexempted all the
   same, because reading `*p` has already made `p` non-null for the rest of the
-  path. The read it then reports as racing the free is row 4 and survives both
-  of the fixes above. What it takes to be the class this record's exemption is
-  about is a read through an alias, so that the refinement lands on the alias
-  and not on the pointer being freed: `int *r = p; if (p == 0) { return g(*r) +
-  (free(p), 0); }` is that program, and it is reported here and compiled by
-  `clang`.
+  path. The read it then reports as racing the free is a false report the
+  reader can see and survives both of the fixes above. What it takes to be the
+  class this record's exemption is about is a read through an alias, so that
+  the refinement lands on the alias and not on the pointer being freed:
+  `int *r = p; if (p == 0) { return g(*r) + (free(p), 0); }` is that program,
+  and it is reported here and compiled by `clang`.
 
   [ADR-0025]: 0025-a-dereference-that-was-reported-refines-the-pointer.md
 * What would reverse this: an interprocedural phase that can say what a function

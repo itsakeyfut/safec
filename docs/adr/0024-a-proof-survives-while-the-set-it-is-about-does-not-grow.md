@@ -126,10 +126,11 @@ to binary expression ('int *' and 'int *')`, measured. The one conforming
 spelling with two pointer operands is `q - r`, whose result is a `ptrdiff_t` and
 which this frontend refuses for want of that type. So `p` may hold the one
 nothing freed, and no C program reaches it. That report is a proof this check
-cannot make. `CLAUDE.md` puts a false positive on row 4, not on row 6: the
-reader can see it and `docs/safety-model.md` reserves row 6 for a silence. What
-makes it worth a decision anyway is that `Unsafe` is what that document reserves
-for something established, so a wrong one spends the word.
+cannot make. A false positive is a false report the reader can see, not saying
+safe wrongly: `docs/safety-model.md` calls the worst answer this compiler can
+give a silence. What makes it worth a decision anyway is that `Unsafe` is what
+that document reserves for something established, so a wrong one spends the
+word.
 
 **There is no console transcript here and there used to be.** It was measured on
 `int *p = q + i;` with `i` a parameter, which ADR-0030 has since made a program
@@ -150,8 +151,7 @@ The proof's rule is not about the two values being combined at all; it is about
 how many operands the expression had, which only the fold knows. A type per
 field, each carrying its own `join` and `accumulate`, cannot see that. What the compiler holds instead is that both methods
 destructure every field with no `..`, so a fact added to `Held` is
-`error[E0027]` in each and has to say what it means in both. RK-018 in the
-review knowledge bank is that spelling.
+`error[E0027]` in each and has to say what it means in both.
 
 **The write through a pointer is neither, and drops the proof on its own line.**
 `Allocations::element`'s `Deref` arm accumulates a written value into every
@@ -179,10 +179,11 @@ none. Measured both ways.
 
 Each mutation below applied on its own, the whole workspace suite run with
 `--no-fail-fast`, the tree restored, and the failure read rather than predicted.
-**Re-measured after ADR-0030 narrowed what counts as an operand here**, which is
-what RK-066 in the review knowledge bank asks for: the second row used to be
-held by two corpus cases and is held by a hand-built one now, because the
-programs those cases were written from no longer reach the rule.
+**Re-measured after ADR-0030 narrowed what counts as an operand here**, because
+narrowing a rule makes a mutation table measured against the old one false in
+silence: the second row used to be held by two corpus cases and is held by a
+hand-built one now, because the programs those cases were written from no longer
+reach the rule.
 
 | Mutation | Named test that fails |
 |---|---|
@@ -237,7 +238,8 @@ it is a proof about a pointer the write may have replaced.
 ### Two methods, and the proof survives while the set does not grow
 
 * Good, because the failure when the condition is got wrong is losing a proof,
-  which is row 4, while the alternative's failure is inventing one.
+  which is a false report the reader can see, while the alternative's failure is
+  inventing one.
 * Bad, because the condition is not a property of the field it governs.
 
 ### Two methods, and the proof accumulates as a union of the present ones
@@ -246,8 +248,8 @@ it is a proof about a pointer the write may have replaced.
   condition.
 * Bad, because it is measured to fabricate a proof: `free(q); p = q + i; free(p);`
   becomes a proved double free about a set that has grown by a site nothing
-  freed. Row 4 rather than row 6, and still the word `Unsafe` spent on something
-  nothing established.
+  freed. A false report the reader can see rather than saying safe wrongly, and
+  still the word `Unsafe` spent on something nothing established.
 
 ### Two methods, and the accumulator keeps clearing the proof
 

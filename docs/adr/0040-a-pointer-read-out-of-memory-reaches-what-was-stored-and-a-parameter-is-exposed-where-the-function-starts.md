@@ -21,28 +21,31 @@ that ask what a call reaches and what a write carries into an allocation, and
 each read the same answer as "reaches nothing". So `*tab = p; release(*tab);
 return *p;` builds, and so do `*b = *a; drop_inner(b);`, a table read back out
 of a holder and handed to a call, and a pointer whose site a loop's rebirth
-took away handed to a call. RK-071 in the review knowledge bank is this shape.
+took away handed to a call. An answer that was safe to be wrong about for the
+reader it was written for is a silence for the new ones.
 
 An allocation a pointer parameter holds is not exposed at entry, though the
 caller, which this check cannot read, had the pointer. So `int f(int *p) {
 release_all(); return *p; }` builds, and so does `q = lookup(); free(p); return
 *q;`.
 
-Every one of these is the bottom row of `CLAUDE.md`'s list, measured to exit 0
-on `main` at `642261c`.
+Every one of these is saying safe wrongly, the answer
+[`docs/safety-model.md`](../safety-model.md) calls the worst this compiler can
+give, measured to exit 0 on `main` at `642261c`.
 
 ## Decision Drivers
 
-* `CLAUDE.md`'s ranking: every option below is row 4 or row 6, and the chosen
-  ones are row 4 throughout.
-* RK-045 and RK-049: giving a local a site it did not have can make the
-  reporting path quieter, because an empty set is the loud one for a `free`.
-  A rule that widens what a call reaches must not widen what a report reads.
+* The ranking of failures, saying safe wrongly worst and a false report the
+  reader can see far better: every option below fails one of those two ways,
+  and the chosen ones fail only as false reports the reader can see.
+* Giving a local a site it did not have can make the reporting path quieter,
+  because an empty set is the loud one for a `free`. A rule that widens what a
+  call reaches must not widen what a report reads.
 * [`docs/safety-model.md`](../safety-model.md): a parameter ranges over every
   value a caller may pass, so the caller having stashed it where an unread
   callee can free it is one of those values.
-* RK-080: the corpus holds few programs a call's transfer can be costed on, so
-  the costs below were measured on probes written for this record.
+* The corpus holds few programs a call's transfer can be costed on, so the
+  costs below were measured on probes written for this record.
 
 ## Considered Options
 
@@ -176,15 +179,17 @@ it is used). `Analysis::height`, as for every other term in it.
 
 * Good, because every route #254 and ADR-0039's review measured, by which an
   unread call reaches an allocation, is reported.
-* Good, because no report about a dereference or a free changes, so the RK-045
-  direction is closed by construction rather than by a test.
+* Good, because no report about a dereference or a free changes, so a wider
+  may-set making a report quieter is closed by construction rather than by a
+  test.
 * Bad, because a pointer parameter read after **any** call this check cannot
   read is unproven, and so is the result of any such call in a function that
   takes a pointer, since it may be the parameter's allocation. Under ADR-0033
   those do not build: `fill(int *out) { log_line(); *out = n; }`, and `q =
   make(); return *q;` or `lookup(); free(p);` in a function taking a pointer,
-  were each measured to be refused. Row 4, and the one a user meets first; the
-  answer ADR-0033 names for it is the hatch and an annotation.
+  were each measured to be refused. A false report the reader can see, and the
+  one a user meets first; the answer ADR-0033 names for it is the hatch and an
+  annotation.
 * Bad, because a loaded pointer held in a local exposes every stored pointer
   when it reaches a call, not only those in the allocation it came from, and so
   does a local an unread callee may have written into.
@@ -220,7 +225,7 @@ it is used). `Analysis::height`, as for every other term in it.
 * Bad, because `inside` is per allocation and only ever grows, so a table with
   one freed slot warns on every read of the others, and `free(q)` of a loaded
   pointer, now `SC0401` for losing it, becomes a proof over a may-set nobody
-  said was complete: the RK-045 direction.
+  said was complete: a wider may-set making a report quieter.
 
 ### One bit per local
 
@@ -238,21 +243,26 @@ it is used). `Analysis::height`, as for every other term in it.
 
 * Good, because a caller that stashed the pointer is one of the callers C
   permits, and the safety model already reads a parameter that way.
-* Bad, because it is the row-4 cost above.
+* Bad, because it is the cost above, a false report the reader can see.
 
 ### A parameter as the boundary
 
 * Good, because nothing an ordinary function does changes.
-* Bad, because `release_all(); return *p;` builds, which is row 6 written down
-  rather than moved.
+* Bad, because `release_all(); return *p;` builds, which is saying safe wrongly
+  written down rather than moved.
 
 ## More Information
 
-* [#254](https://github.com/itsakeyfut/safec/issues/254), whose `/spec` comment
+* [#254](https://github.com/itsakeyfut/safec/issues/254), whose design comment
   carries the probes and the prototype measurements.
 * [ADR-0039](./0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md),
   which this extends and whose "What this does not reach" paragraph it answers.
 * [ADR-0017](./0017-record-each-half-of-an-escape-where-its-subject-lives.md),
   whose belief about a pointer this check never had a site for stands for the
   report.
-* RK-045, RK-049, RK-071 and RK-080 in the review knowledge bank.
+* What earlier reviews of this check learned: adding a site to a may-set can
+  turn a report into silence, because a local reaching no site is reported and
+  one reaching a single live site is not; a `free` and a dereference need
+  opposite answers for a local reaching no site; an answer that was safe to be
+  wrong about for one reader can be a silence for the next; and the corpus has
+  no program to cost a rule about what a library call returns.

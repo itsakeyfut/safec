@@ -29,9 +29,10 @@ document now says what this decided rather than pointing at a proposal.
 * A checked program is accepted or rejected. An analysis that answers "possibly"
   and exits 0 has moved the decision to whoever reads the output, which is the
   one party with no way to check it.
-* `CLAUDE.md` puts `safec` saying safe and being believed alone at the bottom of
-  its list. A warning in a build that succeeded is the slow road to it: nothing
-  distinguishes the warning nobody read from the proof nobody needed.
+* `safec` saying safe wrongly, and being believed, is what
+  [`docs/safety-model.md`](../safety-model.md) calls the worst answer this
+  compiler can give. A warning in a build that succeeded is the slow road to it:
+  nothing distinguishes the warning nobody read from the proof nobody needed.
 * [ADR-0001](./0001-promote-unproven-results-in-the-sink.md)'s mechanism is not
   in question. A check still names a conclusion and never reads the policy.
   What changes is one value: which policy the sink is built with by default.
@@ -76,10 +77,10 @@ rejected above are the same thing for it. That was checked in the code while
 assumed, and the default was left where it is. Moving it to `off` would make a
 successful bare run mean either "checked and proved" or "nothing ran", with one
 exit code for both, which is
-[#62](https://github.com/itsakeyfut/safec/issues/62) and the bottom row of
-`CLAUDE.md`'s list; rejecting more programs is row 4, where the reader can see
-it. So the way in is `--safety off`, typed out, or `--allow-unknown` while a
-program is being migrated.
+[#62](https://github.com/itsakeyfut/safec/issues/62) and saying safe wrongly;
+rejecting more programs is a false report the reader can see. So the way in is
+`--safety off`, typed out, or `--allow-unknown` while a program is being
+migrated.
 
 **What this costs is paid for by
 [ADR-0032](./0032-bound-what-is-unchecked-inside-a-declared-hatch.md).** Without
@@ -103,7 +104,7 @@ expected exit code. If only one does, the default is being decided in two
 places, which is what ADR-0001 and ADR-0004 exist to prevent. Applied, and both
 were observed to fail. No count is given: a count of the cases that happen to
 exist is a fact about the suite, which grows every week, rather than about the
-rule. See RK-028.
+rule.
 
 The other side is held too, which is what keeps the promotion from being correct
 for the wrong reason:
@@ -124,8 +125,8 @@ says the command line does not decide it early;
 * Good, because the level a user asked for and the strictness they get stop
   being two settings that can disagree.
 * Bad, because the false positive rate becomes something users feel rather than
-  something they can ignore. That is row 4 on `CLAUDE.md`'s list and it is the
-  whole cost of this decision.
+  something they can ignore. That is a false report the reader can see, and it
+  is the whole cost of this decision.
 * Bad, because the flag inverts. Denying became the default above level 0 and
   `--deny-unknown` was removed rather than left as a flag whose name describes
   the default; `--allow-unknown` is what remains.

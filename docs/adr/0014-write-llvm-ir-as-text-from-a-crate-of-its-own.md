@@ -70,8 +70,8 @@ builds on the floor. `clang` is still wanted, to answer whether what was written
 is IR at all, and `tests/llvm.rs` is explicit about being unable to ask.
 
 **There is nothing to abstract over yet.** A trait with one implementation is
-invented rather than designed, and `CLAUDE.md` says so. The shape a second
-backend needs is a question a second backend gets to answer.
+invented rather than designed. The shape a second backend needs is a question
+a second backend gets to answer.
 
 The cost is real and is named rather than argued away: everything LLVM's
 builders check, this has to check itself or leave to `clang`'s parser. A

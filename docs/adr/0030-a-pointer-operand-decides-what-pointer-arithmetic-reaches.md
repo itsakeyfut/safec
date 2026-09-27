@@ -33,14 +33,16 @@ giving it back without giving back more than that.
 ## Decision Drivers
 
 * **This narrows a may-set**, which is the first rule here that does. Widening
-  one is the move everybody reaches for; RK-045 in the review knowledge bank is
-  what an emptied set does on the reporting path, and the three remaining safety
-  axes will each meet this question on their first expression.
+  one is the move everybody reaches for; an emptied set announces itself
+  nowhere on the reporting path, and the three remaining safety axes will each
+  meet this question on their first expression.
 * **The authority has to be C rather than a belief about a type.** A type says
   what a local was declared as; what a check may drop needs a clause saying the
   value cannot be there.
 * **The cost has to be nothing where C says nothing.** An analysis that trades a
-  silence for a proof is on the wrong side of `CLAUDE.md`'s list.
+  silence for a proof has the ranking of failures the wrong way round: a
+  silence is saying safe wrongly, which `docs/safety-model.md` calls the worst
+  answer this compiler can give.
 
 ## Considered Options
 
@@ -65,14 +67,14 @@ operand of an addition whose other operand is a pointer being an integer, which
 **Where neither operand is a pointer, no clause says anything**, and this
 follows both as it always did. Two integers added together are not pointer
 arithmetic, and narrowing there would be narrowing on nobody's authority.
-Ranked on `CLAUDE.md`'s list, which is why this half exists at all:
+Ranked by which failure is worse, which is why this half exists at all:
 
 | Option, for an operation with no pointer operand | Its failure |
 |---|---|
-| follow both, as today | row 4: a suspicion about a value C does not define this way |
-| follow neither | row 6: a hand-built IR whose integer holds an allocation is dereferenced and nothing is reported |
+| follow both, as today | a false report the reader can see: a suspicion about a value C does not define this way |
+| follow neither | saying safe wrongly: a hand-built IR whose integer holds an allocation is dereferenced and nothing is reported |
 
-RK-045 is the mechanism of the second row: a local reaching **no** site is
+The mechanism of the second row is that a local reaching **no** site is
 silence at a dereference, while a local reaching one live site is silence too,
 so emptying a set does not announce itself anywhere.
 
@@ -107,8 +109,8 @@ the first draft of this record named as the thing that would reverse it.
   `warning[SC0401]` before this record and answers nothing at all after it, on a
   program `clang -std=c17 -pedantic-errors` rejects outright. #205.
 
-`CLAUDE.md` puts a silence on row 6, which is the row this project exists to
-keep empty, so the cost of the second one is stated rather than filed under
+A silence is saying safe wrongly, which is the answer this project exists never
+to give, so the cost of the second one is stated rather than filed under
 precision.
 
 **The obvious repair costs the whole decision, and that is measured rather than
@@ -161,7 +163,8 @@ frontend refuses each of their shapes, which is the same reason ADR-0028 keeps
 
 **One of the two call sites is held by nothing, and this says which rule is
 answering instead.** The rule is one function and the predicate is passed at two
-call sites, so RK-052's shape applies; measured, the `Deref` arm can stop
+call sites, so it is one rule written in two places, which drifts in the
+change that touches one of them; measured, the `Deref` arm can stop
 filtering altogether and the whole workspace stays green, while the same
 mutation at the assignment arm fails the three cases above. What covers it is
 [ADR-0017](./0017-record-each-half-of-an-escape-where-its-subject-lives.md):
@@ -169,8 +172,9 @@ mutation at the assignment arm fails the three cases above. What covers it is
 target of a write through a pointer has always escaped, and an escaped local
 answers `Reached::Lost` wherever a report is made. `*pp = q + i;` was built by
 hand with the site carried on into a copy of the target, and the answer is
-`Unknown` with or without the filter. RK-064 is the entry that asks for this
-paragraph rather than for the words "held by nothing": the day something
+`Unknown` with or without the filter. A field a stronger rule upstream answers
+for looks like dead code until that rule narrows, which is why this is a
+paragraph rather than the words "held by nothing": the day something
 narrows what an escaped local is reported as, this line stops being covered,
 and what it would cost then is a proof about a set the index widened. #188 has
 landed and did not narrow it, because the nullness its exemption reads is
@@ -214,7 +218,7 @@ masked by the same escape; #196 is what still describes that work.
 
 * Good, because it is one line and reads as one rule.
 * Bad, because it narrows where C has said nothing, and the failure is a
-  dereference nobody reports: row 6, the one failure
+  dereference nobody reports: saying safe wrongly, the one failure
   `docs/safety-model.md` reserves for the worst thing this compiler can do.
 
 ### Follow the left operand

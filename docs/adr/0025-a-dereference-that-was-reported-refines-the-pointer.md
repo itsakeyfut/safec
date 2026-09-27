@@ -87,7 +87,7 @@ nothing there and fails it, and nothing else.
 **Neither mutation's wider set is written down here.** Dropping `met` fails
 every case whose expected output depends on a pointer having been dereferenced
 before, which is most of the corpus's memory cases and stays true as cases are
-added; a count would not. See RK-028.
+added; a count would not.
 
 `error[E0004]` at `Nullness::inverted` and `Nullness::concluded` if a fourth
 state is added, which is what makes a state that is neither of these three
@@ -135,7 +135,8 @@ answer for what a dereference does to it.
   code.
 * Bad, because it is a rule about reporting rather than a fact about the
   program, so it suppresses a finding on an arm where nothing was established.
-  That is `docs/safety-model.md`'s worst row reached by a presentation choice.
+  That is saying safe wrongly, which `docs/safety-model.md` calls the worst
+  answer this compiler can give, reached by a presentation choice.
 
 ## More Information
 

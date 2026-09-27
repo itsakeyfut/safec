@@ -357,8 +357,9 @@ twelve. **And a fourth time**, found by two review lenses independently on the
 change that added `undelivered`: the second command below answered three while
 this document said two and called them what a check answers.
 
-A number in prose about code in another file is exactly RK-017's shape, and two
-commands settle this one, which is one more than it used to take:
+A number in prose about code in another file goes false in a change that never
+touches the prose, and two commands settle this one, which is one more than it
+used to take:
 
 ```sh
 grep -c "Diagnostic::error("     crates/safec/src/driver.rs   # the twelve

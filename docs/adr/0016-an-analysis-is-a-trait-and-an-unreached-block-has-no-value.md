@@ -140,8 +140,8 @@ because the index already names the arriving one.
 `solve` passes `&function.block(block).terminator`, so the second argument is a
 function of the first, and the two are now a pair a future caller can hand over
 disagreeing. Passing the block alone would make that unspellable, which is a
-compile error where this is a test, and `CLAUDE.md` ranks the first above the
-second. What was bought instead is that
+compile error where this is a test, and a failure to compile ranks above a
+named test failing. What was bought instead is that
 `the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` keeps guarding
 what it was written to guard, and that no existing implementation of the method
 moved. Those are real and they are smaller. Revisit this the first time a second

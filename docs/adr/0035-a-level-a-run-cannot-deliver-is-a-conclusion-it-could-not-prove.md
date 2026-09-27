@@ -16,8 +16,9 @@ empty stderr, so a run that asked for the level defined as leaving nothing
 `Unknown` and got nothing at all reports success.
 [ADR-0033](./0033-a-conclusion-this-analysis-could-not-prove-does-not-build.md)
 already named this as
-[#62](https://github.com/itsakeyfut/safec/issues/62) and as the bottom row of
-`CLAUDE.md`'s failure list while deciding something else.
+[#62](https://github.com/itsakeyfut/safec/issues/62) and as saying safe
+wrongly, which [`docs/safety-model.md`](../safety-model.md) calls the worst
+answer this compiler can give, while deciding something else.
 
 It has to be decided before the answer is built on. Every level above 1 lands on
 top of it, and the shape chosen here decides whether `--safety lifetime` can be
@@ -118,8 +119,7 @@ and both reporting corpus cases.
 the artifact corpus case. Answering `false` for `Executable` fails
 `options.rs::a_kind_that_is_a_program_reaches_the_ir`, the roster invariant that
 covers the kind nobody has written yet: `E0004` makes somebody write an arm and
-nothing whatsoever makes the arm they write correct, which is RK-015 in the
-review knowledge bank.
+nothing whatsoever makes the arm they write correct.
 
 **The constructor, which is the decision this record took.** Answering the
 conclusion `Unsafe` rather than `Unknown` is how `Diagnostic::concluded` builds
@@ -152,9 +152,9 @@ something is absent. The other four are three `.stderr` files and a table row,
 every one of which reads as an expectation to re-bless, and re-blessing them ships
 a run that exits 0 with an empty stderr on `int *foo(void) { int x = 42; return
 &x; }` at `--safety lifetime`, where the silence now means the level was
-delivered. That is the bottom row of `CLAUDE.md`'s list reached through
-housekeeping, and it is what this record claimed the expiring corpus case
-prevented. It did not; it only asked for an edit.
+delivered. That is saying safe wrongly, reached through housekeeping, and it is
+what this record claimed the expiring corpus case prevented. It did not; it
+only asked for an edit.
 
 **The level a user reads.** Special-casing one variant inside
 `SafetyLevel::spelling` fails
@@ -250,7 +250,7 @@ defect, and its table entry says so.
 
 ### A conflict raised by the argument parser
 
-* Good, because the run never starts, which is higher on `CLAUDE.md`'s list than
+* Good, because the run never starts, which is a better way to fail than
   anything reported.
 * Good, because it needs no diagnostic and no change to the count.
 * Bad, because `--safety` defaults to `memory`, so every `--emit ast` run is

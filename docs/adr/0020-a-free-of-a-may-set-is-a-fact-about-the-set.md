@@ -100,7 +100,7 @@ workspace suite run with `--no-fail-fast`, the file restored.
 | `Known::reached_by` returns as soon as it has answered the set fact | `a_may_set_freed_then_written_through_an_alias`, which becomes a proved double free although something holding the local's address may have put a fresh pointer there between the two frees |
 | `Held::union` joins the proof by union rather than intersection | `a_free_of_a_may_set_on_one_arm_only`, which becomes a proved error on a path that never freed |
 | `Held::clear` keeps the fact | `a_local_given_nothing_forgets_the_set_it_freed`. It has to be a local given a *constant*: `p = malloc(8);` is a copy out of a temporary, and the copy replaces the whole row rather than clearing it, so it hides this |
-| the rule fires on a single site as well | every proved double free and use after free this check makes, in the corpus and in `crates/safec-ir/tests/freed.rs` alike. The count is not the claim and is not written here: RK-028 in the review knowledge bank is the entry about why |
+| the rule fires on a single site as well | every proved double free and use after free this check makes, in the corpus and in `crates/safec-ir/tests/freed.rs` alike. The count is not the claim and is not written here, because a count of how many tests a mutation breaks is a fact about the suite, which grows, and not about the rule |
 | a variant added to `Reached`, or a field to `Held` | does not compile: `error[E0004]` at `verdict`, `error[E0063]` and `error[E0027]` at `Held` |
 
 `Analysis::height` is held by nothing here either, as ADR-0016 says of the method
@@ -157,7 +157,8 @@ and ADR-0018 and ADR-0019 say of the last two fields.
   a lattice that does not converge is not a build that does not stop but the
   panic naming `Analysis::height` that
   [ADR-0016](./0016-an-analysis-is-a-trait-and-an-unreached-block-has-no-value.md)
-  put there for exactly this, which is row 3 rather than row 5.
+  put there for exactly this, which is a panic whose message names what is
+  wrong rather than a hang with nothing to read.
 * Good, and measured after this record was written rather than before: a working
   prototype is about forty-five lines, leaves the whole suite green, costs
   nothing per local so the peak stays where it was, and recovers both of the
@@ -179,5 +180,5 @@ and ADR-0018 and ADR-0019 say of the last two fields.
   [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
 * [`docs/diagnostics.md`](../diagnostics.md) carries what it means for a reader
   of `SC0401`.
-* RK-035 in the review knowledge bank is the entry that recorded the report side
-  of this rule, one level down.
+* The report side of this rule, one level down: a may-analysis proves nothing
+  from one member of its set.

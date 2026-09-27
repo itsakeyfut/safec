@@ -30,8 +30,8 @@ on one of its two paths. Reading the code while designing #208 found both to be
 false: the two tests above construct one, and the comment in `write_one` says
 that `ariadne` collapses them *left to itself*, which is why `ReportKind`
 `::Custom` is used, so that both paths agree and a help stays distinguishable
-from a note. `CLAUDE.md` calls false prose worse than none because it is
-believed, and a record cannot be accepted on a premise its author has since
+from a note. False prose is worse than none because it is believed, and a
+record cannot be accepted on a premise its author has since
 disproved. What the correction costs the decision is in *Decision Outcome*.
 
 What is undecided is therefore not whether a remedy can be printed. It is
@@ -49,8 +49,8 @@ safety diagnostic at once.
 * A remedy is about the same program point as the rejection. Any consumer
   grouping by code or by span would have to put the two back together, by a
   convention rather than by a type.
-* `CLAUDE.md` prefers a guard the compiler holds over one somebody has to
-  remember. A rejection shipped with no remedy should be a build failure in this
+* A guard the compiler holds is better than one somebody has to remember. A
+  rejection shipped with no remedy should be a build failure in this
   repository, not a review comment.
 * [`diagnostics.md`](../diagnostics.md) already treats a code as an interface a
   user greps and suppresses on. Whatever carries the remedy is the same kind of
@@ -88,7 +88,7 @@ the constructor: a safety diagnostic built where
 [ADR-0001](./0001-promote-unproven-results-in-the-sink.md) turns a conclusion
 into a severity cannot be built without a remedy, so one omitted is
 `error[E0061]` at the call site rather than an empty line in the output. That is
-row 1 on `CLAUDE.md`'s list, which is where a decision like this should fail.
+a failure to compile, the best way a decision like this can fail.
 
 The field is a list, because one rejection can have two ways out of it and
 choosing between them for the reader is not this layer's job.
@@ -121,7 +121,7 @@ The test modules fail the same way under `cargo test`; how many of them there
 are is a fact about the suite rather than about this decision, and the suite
 grows, so it is not written down here.
 
-That is the guard this record is about, and it is row 1 on `CLAUDE.md`'s list.
+That is the guard this record is about, and it is a failure to compile.
 A guard spelled as a test instead, asserting that some particular diagnostic
 carries a remedy, would hold for the diagnostics somebody wrote it for and say
 nothing about the next one, which is the whole population here.
@@ -143,8 +143,8 @@ build a diagnostic at a severity that means nothing. Mutation: make it `pub`
 again and call it from `crates/safec/src/driver.rs` with `Severity::Help`.
 That compiles, which is the state [#214](https://github.com/itsakeyfut/safec/issues/214)
 closed. With it private the same call is `error[E0624]`, an associated function
-that is private, and there is nothing to run. Row 1 on `CLAUDE.md`'s list, like
-the constructor above it.
+that is private, and there is nothing to run. A failure to compile, like the
+constructor above it.
 
 What that guard does not hold, because it is an absence rather than a check: a
 constructor added beside the three public ones. Adding `pub fn note` to
