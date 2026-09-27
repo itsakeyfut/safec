@@ -340,6 +340,22 @@ That is the same discipline the accepted records already use:
 `E0502` and [ADR-0004](adr/0004-resolve-the-strictest-level-where-the-policy-is-built.md)
 by `E0451`. A guard the compiler holds does not have to be remembered.
 
+**A sixth arrived with**
+[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-about-what-its-caller-cannot-doubt.md).
+The memory check asks a `return` about what it hands back where the value is
+written into the return place, of the local being written, so **nothing that
+frees may run between the write into the return place and the
+`Terminator::Return` that leaves with it**. The C frontend writes the value and
+ends the block with nothing between, so the two are one point for every
+program it builds.
+
+**What an omission costs here is a silence.** A frontend that frees after the
+write hands back a freed pointer, and the caller believes a call's result is
+live. `a_free_after_the_write_into_the_return_place_is_not_asked_about` in
+`crates/safec-ir/tests/freed.rs` builds that shape by hand beside the order C
+writes, so that closing the boundary later fails a named test rather than
+passing quietly.
+
 The testable half is smaller and just as useful: **an analysis should be
 runnable over IR built by hand in a test, with no frontend present.** If that
 test can be written, the IR is frontend-independent by construction, and the

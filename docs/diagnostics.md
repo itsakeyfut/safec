@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -58,12 +58,14 @@ records why the prefix is this one and what was rejected.
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
 the question about, in the order it names them, so they were reserved before
-anything could emit from them. The first of the four now does, five times:
+anything could emit from them. The first of the four now does, six times:
 `SC0401` is a value freed where it may already have been freed, `SC0402` is
 a value used where it may already have been freed, `SC0403` is a value read
 or written through a pointer that may be null, `SC0404` is a value freed
-through a pointer that may not be the start of its allocation, and `SC0405` is
-a pointer that may be null passed to a parameter declared `_Nonnull`. They are
+through a pointer that may not be the start of its allocation, `SC0405` is
+a pointer that may be null passed to a parameter declared `_Nonnull`, and
+`SC0406` is a pointer to an allocation that may have been freed, handed back by
+a `return`. They are
 the first codes in this compiler that say something about what a program does
 rather than about how it is written.
 
@@ -106,6 +108,18 @@ both it and `SC0401` at one caret, the second in `free(p); free(p + 1);`,
 because the two are different questions about the same call.
 [ADR-0036](adr/0036-a-pointer-carries-where-in-its-allocation-it-points.md)
 records what is proved and what is left unproven.
+
+**`SC0406` is a class of its own too, and it is the one read without a
+dereference this check asks about.** A value copied into another local stays in this
+check's sight, and a later dereference of the copy is `SC0402`; a value
+returned leaves it for a caller that believes a call's result is live, so the
+`return` is the last place anything can be said about it. It is asked of the
+function's own allocations whether proved or not, and of an allocation a
+parameter holds only where it was proved freed: the caller already treats
+everything it handed over as unproven, and reports that at its own read. The
+fix is at the return or at the free, which is why it is not `SC0402`.
+[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-about-what-its-caller-cannot-doubt.md)
+is the decision and records what it costs.
 
 **Either can be a proof or a suspicion, and freeing more than one allocation
 at once is where the difference is easiest to misread.** A local that may hold
@@ -189,7 +203,8 @@ that is the rule rather than a list. Two ways to reach one are known: a
 pointer read out of another pointer, `int *p = *pp;`, which never had a site;
 and a name with nothing dereferenced, so `free(p); p;` is quiet about reading
 an indeterminate pointer, which is undefined by 6.2.4 p2 and belongs to an axis
-this compiler has no check for yet. `int *r = &*p;` used to be a third and is
+this compiler has no check for yet. A `return` is the one exception, and it is
+`SC0406` rather than this code. `int *r = &*p;` used to be a third and is
 not: the lowering applies C17 6.5.3.2 p3, which makes that pointer the same
 pointer, so `r` carries what `p` carried.
 
@@ -308,7 +323,7 @@ The refusal is made in `crates/safec-llvm`, which cannot see a `Diagnostic` at
 all, so the code is attached where the diagnostic is built.
 
 **The safety checks' codes are a third kind and are why the count needs a
-second command.** `SC0401`, `SC0402` and `SC0404` are built by `memory_finding` and
+second command.** `SC0401`, `SC0402`, `SC0404` and `SC0406` are built by `memory_finding` and
 `SC0403` and `SC0405` by `nullability_finding`, each with
 `Diagnostic::concluded` rather than `Diagnostic::error`, because what
 a safety check answers is a [conclusion](safety-model.md#safe-unsafe-unknown)
