@@ -936,6 +936,10 @@ cases! {
     // Built: a pointer holding no site is not a load, and a load through one
     // table reaches only what that table holds.
     a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same distinction for a local whose address escaped, which
+    // `Known::reach_of` answers. Mutation: test there for no site instead of
+    // the bit; this fails.
+    a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `argv` is the host's, and no call can free it. Mutation: drop the
     // `main` filter on `exposed_parameters`; this fails.
