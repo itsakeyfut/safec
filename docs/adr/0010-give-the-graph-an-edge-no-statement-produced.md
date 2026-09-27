@@ -86,10 +86,9 @@ reserved here will first be used.
 
 That is the guard this record wants and it is exactly as strong as the ones
 ADR-0003 and ADR-0004 rely on. What it does not hold is the *quality* of the
-answers: an analysis is free to write `Abnormal => {}` and say nothing, and
-RK-015 in the review knowledge bank is the entry recording that `E0004` makes
-somebody look and nothing more. The review of the first analysis that walks
-these edges is where that is caught.
+answers: an analysis is free to write `Abnormal => {}` and say nothing, because
+`E0004` makes somebody look and nothing more. The review of the first analysis
+that walks these edges is where that is caught.
 
 ### Consequences
 

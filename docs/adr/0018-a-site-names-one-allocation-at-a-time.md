@@ -36,8 +36,9 @@ while (c) {
 Before this record, the only diagnostic on that function was a
 `warning[SC0401]` on the `free(p)` that is correct, and the `free(keep)` that is
 a genuine double free produced nothing at all. The same shape with a *read*
-through `keep` is silent even at `--safety strict --deny-unknown`, which is the
-bottom row of `CLAUDE.md`'s list.
+through `keep` is silent even at `--safety strict --deny-unknown`, which is
+saying safe wrongly, the answer `docs/safety-model.md` calls the worst this
+compiler can give.
 
 ## Decision Drivers
 
@@ -183,7 +184,7 @@ naming it.
   call apart, which is what the second Bad above gives up.
 * Bad, because a loop makes allocations without bound while the lattice value
   has to stay finite. The failure is a build that does not terminate, which is
-  row 5 of `CLAUDE.md`'s list and the one row above the worst.
+  a hang with nothing to read, ranked only just above saying safe wrongly.
 
 ## More Information
 

@@ -41,8 +41,8 @@ that cost.)
 * **The answer cannot be a proof.** The read and the free are in one full
   expression with nothing sequencing them, so one allowed order reads freed
   storage and another does not. Whatever shape this takes, `Unsafe` is never
-  right, which puts a ceiling on what the change can cost: row 4 of
-  `CLAUDE.md`'s list, never row 6.
+  right, which puts a ceiling on what the change can cost: a false report the
+  reader can see, never a wrong verdict stated with certainty.
 * **The framework answers forwards.** `Analysis::element` is handed no block and
   no position, so a backward transfer cannot ask the forward solution what a
   free's argument reaches. ADR-0016 lists a backward direction as one of the
@@ -108,10 +108,10 @@ property of the shape rather than of the code.
 
 **It does not go through `verdict`.** That answers what a set of sites is worth
 *now*, and now is before the free, where every one of them is still live: it
-answers `None` here, correctly, to a different question. RK-046 in the review
-knowledge bank is a slot asked what it does not hold, and RK-055 is one
-judgement point inheriting a rule written for the other question; this is the
-second, avoided by not asking.
+answers `None` here, correctly, to a different question. Asking a slot what it
+does not hold is one way to get this wrong, and one judgement point inheriting a
+rule written for the other question is another; this is the second, avoided by
+not asking.
 
 **The words are the mirror's words.** Two spellings of one program answer the
 same thing, including the note citing 6.5.2.2 p10, which is as true of a free
@@ -145,10 +145,10 @@ and no marker, which is `enter`'s `None`.
 
 `error[E0027]` at `Allocations::join` and `Known::reborn`, which destructure
 every field of `Known` rather than writing `..`: a field added to that value has
-to say what a merge and a rebirth do to it. RK-018 in the review knowledge bank
-is that spelling and why. `error[E0004]` at `Allocations::element` and
-`dereferenced_in_element` if a kind is added to `Element`, which is ADR-0022's
-guard and is unchanged.
+to say what a merge and a rebirth do to it, because an exhaustive match answers
+for a variant and nothing below it, and `..` is how a field walks past.
+`error[E0004]` at `Allocations::element` and `dereferenced_in_element` if a kind
+is added to `Element`, which is ADR-0022's guard and is unchanged.
 
 Each mutation below applied on its own, the whole workspace suite run with
 `--no-fail-fast`, the tree restored, and the failures read rather than predicted.
@@ -168,13 +168,14 @@ Each mutation below applied on its own, the whole workspace suite run with
 Deleting both recordings at once fails two cases, so the pair looked guarded;
 deleting only the element half left the whole suite green, because every read the
 corpus reported on until then was carried by a call's argument or a branch's
-condition. RK-039 in the review knowledge bank is a mutation that measures at
-both ends, and this is the shape it warns about: a mutation of the pair says
-nothing about either half.
+condition. A mutation is a measurement at both ends, of whether it changed
+anything and of which assertion it broke, and this is the shape that forgets
+it: a mutation of the pair says nothing about either half.
 
 The rows above are this record's own. The two below are the marker's, and each
 makes the compiler report a use after free in a program C defines, which is a
-false positive rather than a false proof and is row 4.
+false positive rather than a false proof and is a false report the reader can
+see.
 
 | Mutation | Named test that fails |
 |---|---|
@@ -246,12 +247,12 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   case moved, and a corpus that does not move is not evidence about ordinary C.
   What newly reports is an unsequenced read beside a call in a program with no
   free in it at all: `int f(int *p) { int x = g(*p) + h(p); return x; }` is an
-  `SC0402` where it was silent. It stays `Unknown`, so it is row 4 and
-  `--deny-unknown` is what turns it into a refusal, and that is the ground on
-  which it was accepted rather than a claim that nothing was paid. What bounds
-  it is that a read waits in `Known::pending` only where an earlier element or
-  terminator registered it, and ADR-0026's `Element::ArgumentsEvaluated`
-  empties it at every call's own arguments.
+  `SC0402` where it was silent. It stays `Unknown`, so it is a false report the
+  reader can see and `--deny-unknown` is what turns it into a refusal, and that
+  is the ground on which it was accepted rather than a claim that nothing was
+  paid. What bounds it is that a read waits in `Known::pending` only where an
+  earlier element or terminator registered it, and ADR-0026's
+  `Element::ArgumentsEvaluated` empties it at every call's own arguments.
 * **Bad, because #178 got wider and this is where that is written down.**
   ADR-0022's enclosure rule suppresses the marker for a `,`, `&&`, `||` or `?:`
   below anything C leaves unsequenced, and `=` is such a parent under C17
@@ -259,9 +260,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   suspicion in the other as well: measured, `int x = (*p, free(p), 0);` is
   silent and `x = (*p, free(p), 0);` is `error[SC0402]` under `--deny-unknown`,
   which is one expression written two ways and answered two ways, and C17
-  6.5.17 p2 settles the order in both. Every one of these is row 4. The record
-  that owns the rule is ADR-0022 and the issue is #178; what is new is the
-  surface, not the rule.
+  6.5.17 p2 settles the order in both. Every one of these is a false report the
+  reader can see. The record that owns the rule is ADR-0022 and the issue is
+  #178; what is new is the surface, not the rule.
 * **Bad, because the sequence point between a call's arguments and the call is
   not expressed to this direction at all.** C17 6.5.2.2 p10's first sentence
   orders a call's own argument evaluation before the call, and ADR-0022 says
@@ -269,8 +270,8 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   backwards. A read carried forwards is not stopped by a position, so
   `void f(int *p) { free(p + *p); }` is reported although C defines it, and the
   note the report prints cites the very clause that refutes it. Measured, and
-  `clang -std=c17 -pedantic-errors` accepts the program. It is row 4 and it is
-  issue #185.
+  `clang -std=c17 -pedantic-errors` accepts the program. It is a false report
+  the reader can see and it is issue #185.
 * What would reverse this: a value per program point and a backward direction in
   `dataflow.rs`, which ADR-0016 lists as unasked-for and which would let the
   question be answered where it is asked rather than carried to where it can be.
@@ -303,9 +304,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
 
 * Good, because the lattice does not grow and `Analysis::height` is untouched.
 * Bad, because what a region is would be written twice, once in the transfer
-  that clears the marker and once in the walk that stops at it. RK-052 in the
-  review knowledge bank is one rule in two places drifting apart inside the
-  change that touches one of them, and it is an entry about this file.
+  that clears the marker and once in the walk that stops at it. One rule in two
+  places drifts apart inside the change that touches one of them, and this file
+  has had it happen.
 
 ### Leave it
 

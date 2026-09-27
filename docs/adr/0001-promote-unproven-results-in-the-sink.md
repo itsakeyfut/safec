@@ -129,7 +129,7 @@ mutation that makes it fail:
   `the_error_count_agrees_with_the_diagnostics_under_either_policy`, the two
   `the_strictest_safety_level_denies_unknown` tests, and two in `render.rs`.
   Measured before #209 inverted the default, so the count is a fact about the
-  suite of the day rather than about the rule: see RK-028.
+  suite of the day rather than about the rule.
 
 Each of those mutations was applied and the named test observed to fail.
 

@@ -62,8 +62,9 @@ The Constraints beside it answer who may write what, and are cited where that
 question is asked: p3 allows the pointer only on the left of a `-`, which is why
 `0 - E` is not folded and why `types.rs` declines to give `1 - p` a type.
 Reading one of those for the other is a habit rather than an accident, and it
-happened twice while this change was being made: RK-042 in the review knowledge
-bank is the same mistake caught in 6.5.3.2, about a different program.
+happened twice while this change was being made: the same mistake was caught
+in 6.5.3.2, about a different program, where `&*p` on a `void *` is valid C
+because p3 leaves only the constraints of `*` in force.
 
 **Only where the result is a pointer, and not because the value would break.**
 The obvious reason is the wrong one and it was measured rather than assumed:

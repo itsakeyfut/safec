@@ -50,8 +50,9 @@ refused to prove over it.
   has since closed the other door, with the same fact and the same method,
   narrowed by the type the write writes.
 * The sites are shared and the local's own answer is not. A fact recorded
-  against the local is invisible to the sharer that gets reported, which is
-  what RK-048 is about from the other side.
+  against the local is invisible to the sharer that gets reported, which is,
+  from the other side, why a guard observing only the escaped local holds
+  nothing.
 * A free of a local this check has stopped following cannot say which
   allocation went. What it writes on a site is a claim about every holder of
   that site.
@@ -99,7 +100,7 @@ write `Freed` although the argument's local is `lost`, takes both back to
 Every case that observes the rule does so through a **second local sharing the
 allocation**, because the escape has already taken away the report about the
 escaped local itself: a case that frees or reads through that local alone
-observes nothing whatever this decision says. RK-048 is that hole, found after
+observes nothing whatever this decision says. That hole was found after
 ADR-0017 made four guards vacuous at once.
 
 `a_free_through_an_escaped_local_is_seen_by_a_sharer` is what holds the rule to
@@ -107,8 +108,8 @@ calls: a free refusing to prove whenever anything was lost, rather than when the
 argument's own row says so, drops that proved double free to a warning.
 `an_opaque_call_before_the_escape_leaves_the_proof_alone` is the same rule from
 the other end, a call that ran before the address escaped, and it fails for any
-implementation that reads the escape without reading where it happened. RK-065
-is a guard that held only the order it was written in.
+implementation that reads the escape without reading where it happened. A
+guard for a rule about two events holds only the order it was written in.
 
 That `free` and `malloc` do not produce it is **held by nothing**, and the
 argument above is the whole of it: marking at either arm leaves all sixteen
@@ -129,7 +130,8 @@ without a case moving.
 `a_use_after_free_through_an_escaped_local_is_still_reported_after_an_opaque_call`
 holds the direction that is worse than the cost: clearing the local's row at the
 call instead leaves that program saying nothing about the read at all, measured,
-and a silence is the bottom of `CLAUDE.md`'s list.
+and a silence is saying safe wrongly, which `docs/safety-model.md` calls the
+worst answer this compiler can give.
 
 ### What the rule does not take
 
@@ -188,10 +190,10 @@ case alone.
 ### Clear the escaped local's row at the call
 
 * Good, because it is the strongest statement of what the callee may have done.
-* Bad, because a local reaching no site says nothing at all, which is RK-049.
+* Bad, because a local reaching no site says nothing at all.
   Measured on `stash(&p); other(); free(p); *p = 1;`: the `SC0402` goes, and
-  what is left is a warning about the free. A silence is the bottom row of
-  `CLAUDE.md`'s list while a false positive is row 4.
+  what is left is a warning about the free. A silence is saying safe wrongly
+  while a false positive is a false report the reader can see.
 
 ### Take back what ADR-0028 recovered
 

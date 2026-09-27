@@ -49,8 +49,9 @@ this compiler can do.
   copies of it.
 * The failure to avoid is a **proof**, so the bias has to be towards saying
   less. A missing sequence point is a report that is a warning where it could
-  have been an error, which is row 4. A sequence point claimed where C gives
-  none is row 6.
+  have been an error, which is a false report the reader can see. A sequence
+  point claimed where C gives none is a wrong proof, the worst thing this
+  compiler can do.
 
 ## Considered Options
 
@@ -99,14 +100,14 @@ tasks, so it is popped after all of them.
 **A node with one operand is on the false side of that list**, even though a
 sequence point inside `-(free(p), *p)` really does order those two: there is
 nothing else in the expression for them to be unordered against. Answering false
-there costs a proof, which is row 4. What it buys is that `sequences` is C17
-Annex C's list and nothing beside it, so a reader checks it against the standard
-rather than against an argument, and every addition to it is a chance to say
-`true` once too often.
+there costs a proof, which is a false report the reader can see. What it buys is
+that `sequences` is C17 Annex C's list and nothing beside it, so a reader checks
+it against the standard rather than against an argument, and every addition to
+it is a chance to say `true` once too often.
 
-**A new `Element` kind rather than a field.** RK-018 in the review knowledge
-bank is the reason: `error[E0004]` makes every reader of `Element` answer for a
-kind, and a field is what `..` walks past without a word. `print.rs`,
+**A new `Element` kind rather than a field.** `error[E0004]` makes every reader
+of `Element` answer for a kind, and a field is what `..` walks past without a
+word. `print.rs`,
 `interp.rs`, `emit.rs`, `memory.rs`, the hand-built analysis in
 `crates/safec-ir/tests/written.rs` and two helpers in `lowering.rs`'s own tests
 each stopped compiling until they said what this means to them, which is the
@@ -134,17 +135,17 @@ open is a path on which this is not a proof.
 One type rather than a flag beside each span, because a free is recorded in two
 places: on the site, and on the local that named a may-set, which ADR-0020 put
 there. Two carriers of one fact is how the second gets the span and not the half
-that says what the span is worth, and RK-046 is the entry about a marking that
-turns out to carry two things.
+that says what the span is worth: a marking that looks like one fact may be
+carrying two.
 
 **An unproven report that still names its free.** The existing `Unknown` drops
 both spans because what makes it unknown is that the paths or the sites
 disagree, so there is no one free to point at. Here there is exactly one, and
 the reason is different in kind: nothing this check can see orders the free
-first. RK-034 is the entry about a match arm that means "proved" and "gave up"
-at once, and collapsing these two kinds of doubt into one is that mistake at the
-report. So the finding keeps its `freed here` caret and carries a note saying
-what leaves it open.
+first. A match arm that means "proved" and "gave up" at once reports the second
+as the first, and collapsing these two kinds of doubt into one is that mistake
+at the report. So the finding keeps its `freed here` caret and carries a note
+saying what leaves it open.
 
 **Exactly one**, and the fold counts. Several frees meeting at one report give
 the earliest span and the conjunction of their orders, which can come from two
@@ -229,7 +230,8 @@ before changed its answer: every one of them frees in a statement of its own.
   `docs/c-family.md` asks a frontend to normalise one section above where this
   is written down. `a_logical_and_inside_an_unsequenced_operand_orders_nothing`
   and the two cases beside it hold the current answer, and #178 is the issue.
-  Every one of these is row 4 and `--deny-unknown` reports all of them.
+  Every one of these is a false report the reader can see, and `--deny-unknown`
+  reports all of them.
 * This answers the forward half of the question and the record should not be
   read as answering the whole of it. A marker says that what came before it is
   sequenced before what comes after; it cannot say that two things are
@@ -271,8 +273,8 @@ before changed its answer: every one of them frees in a statement of its own.
 ### A region id on every element
 
 * Good, because it needs no new kind and the test is an equality.
-* Bad, because a field is what `..` walks past, which is RK-018 exactly, and
-  every element grows it including the storage markers, which have no
+* Bad, because a field is what `..` walks past, so no match has to answer for
+  it, and every element grows it including the storage markers, which have no
   expression to belong to.
 
 ### The unsequenced region's span on `Terminator::Call`
@@ -288,9 +290,10 @@ before changed its answer: every one of them frees in a statement of its own.
 
 * Good, because it costs nothing.
 * Bad, because the compiler says **proved** about a program C defines under one
-  of its allowed orders, and no flag makes that quieter. It is row 6 of
-  `CLAUDE.md`'s list read from the other side: not a missed defect, but a
-  fabricated one stated with certainty.
+  of its allowed orders, and no flag makes that quieter. It is saying safe
+  wrongly, which `docs/safety-model.md` calls the worst answer this compiler can
+  give, read from the other side: not a missed defect, but a fabricated one
+  stated with certainty.
 
 ## More Information
 

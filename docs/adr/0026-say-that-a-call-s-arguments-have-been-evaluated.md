@@ -20,7 +20,7 @@ the last marker forwards to meet whatever frees ahead of it, and a position does
 not stop a walk that travels that way. So `void f(int *p) { free(p + *p); }` is
 reported, although C orders that read before the call unconditionally, and the
 note the report prints cites the very clause that refutes it. That is issue
-#185, and it is row 4 of `CLAUDE.md`'s list: a report about an ordering C
+#185, and it is a false report the reader can see: a report about an ordering C
 settled, at a caret a reader can see.
 
 What the report is wrong about is the ordering and nothing else. Whether such a
@@ -90,7 +90,7 @@ answers it by doing nothing is this compiler before the element existed: a
 suspicion where C licensed silence. A `covers` field on `Element::Sequenced`
 fails the other way, because a reader that ignores it treats the weaker marker
 as a full barrier, which is the false proof above. A field on `Terminator::Call`
-is RK-018 in the review knowledge bank: `Terminator::Call { .. }` is how several
+is passed over without a word: `Terminator::Call { .. }` is how several
 consumers already spell it, and a field walks past an exhaustive match.
 
 **What this does not close, and it is this record's own class rather than
@@ -107,7 +107,8 @@ an unsequenced parent that set holds the other operand's reads as well: the
 enclosure rule is what keeps those, and ADR-0026's own measurement is that
 dropping it deletes four reports. Clearing only the reads this call's arguments
 produced needs an IR whose call carries its argument evaluations, which is the
-reversal named below. The residue is row 4 either way.
+reversal named below. The residue is a false report the reader can see either
+way.
 
 The same holds for `k(p, *p)`, whose read never waits at all, and for the
 stronger half of the marker, which is left unconcluded for the reason above.
@@ -150,8 +151,8 @@ whoever writes the second frontend.
 
 The two halves are mutated apart on purpose. Mutating the lowering alone fails
 the two new cases on their `.stdout`, along with every other artifact that holds
-a call, which says nothing about whether any consumer reads the element: RK-039
-in the review knowledge bank is that hazard.
+a call, which says nothing about whether any consumer reads the element: a
+failure has to be read for which assertion broke, not only counted.
 
 Held by nothing: that the element is emitted for a call and not for something
 else. Every call is one, so no case distinguishes a rule keyed on the node from
@@ -205,14 +206,16 @@ a rule keyed on anything a call happens to be.
 ### A field on `Terminator::Call`
 
 * Good, because it is where C puts the point, on the call itself.
-* Bad, because RK-018: `Terminator::Call { .. }` is how several walks spell it
+* Bad, because `Terminator::Call { .. }` is how several walks spell it
   today and a field added to a variant walks past an exhaustive match. ADR-0022
   turned this position down for a different proposal and the reason survives the
   change of proposal.
 
 ### Leave it
 
-* Good, because it costs nothing and the failure is row 4 rather than row 6.
+* Good, because it costs nothing and the failure is a false report the reader
+  can see rather than saying safe wrongly, which `docs/safety-model.md` calls
+  the worst answer this compiler can give.
 * Bad, because the report is about a program C defines, the note under it cites
   the clause that says so, and `--deny-unknown` makes it an error. A diagnostic
   that is wrong in a way the reader can check is how a check stops being read.

@@ -20,18 +20,19 @@ $ echo $?
 0
 ```
 
-No diagnostic, which is a `Safe` about something nothing proved: the bottom row
-of `CLAUDE.md`'s list. It was masked for the program, not for the report: at
-the default `--emit executable` the backend refuses pointer arithmetic with
-`SC0801`, while the memory check's diagnostics are emitted beside that refusal
-rather than behind it, so whatever this check says a reader sees today. Issue
-#227 carries the rest of the evidence.
+No diagnostic, which is a `Safe` about something nothing proved: saying safe
+wrongly, which [`docs/safety-model.md`](../safety-model.md) calls the worst
+answer this compiler can give. It was masked for the program, not for the
+report: at the default `--emit executable` the backend refuses pointer
+arithmetic with `SC0801`, while the memory check's diagnostics are emitted
+beside that refusal rather than behind it, so whatever this check says a reader
+sees today. Issue #227 carries the rest of the evidence.
 
 ## Decision Drivers
 
-* **Row 6 has to be emptied, and nothing may be traded into it.** An offset the
-  check cannot evaluate is the common case, `free(p + i)`, and it must not be
-  silence.
+* **Every silence about a defect has to go, and nothing may be traded into
+  one.** An offset the check cannot evaluate is the common case, `free(p + i)`,
+  and it must not be silence.
 * **A proof where C gives one.** `free(p + 1)` is the spelling the defect is
   written in, and `docs/concept.md` asks this compiler for proofs.
 * **The shape three more lattices will copy.** Whatever this adds to `Held` is a
@@ -60,7 +61,8 @@ constant that is **read** and is not zero, and the followed operand was itself
 at the start; `Unknown` otherwise. A call's destination and a parameter are
 the start of what they stand for, a copy carries what it copied, and every other
 rvalue clears the local. That list is closed by `E0004` on `Rvalue` rather than
-by a comment, which is RK-061's question answered at the IR's shape.
+by a comment, which is the question of what makes an analysis stop believing
+a fact, answered at the IR's shape.
 
 A `free` is then asked a second question beside the double free, in
 `memory.rs::interior`, out of the same `Allocations::touching` answer. A
@@ -87,7 +89,7 @@ start both arrive off the start whatever the distances were, so
 the IR is built, and `docs/c-family.md` records that nothing enforces it. A
 frontend that skipped the fold would hand `offset_of` a literal zero, and
 reading it answers `Unknown` where assuming would answer a false `NonZero`.
-RK-067 is leaning on an invariant nobody enforces.
+Assuming would be leaning on an invariant nobody enforces.
 
 **The transfer is not touched.** An interior free still marks the site freed,
 so `int *q = p + 1; free(q); free(p);` keeps its `error[SC0401]` and gains an
@@ -105,8 +107,10 @@ conclusion is about an execution this function has.
 
 Each mutation applied on its own to the tree this record landed with, the whole
 workspace run with `--no-fail-fast`, and the file restored and touched before
-the next, RK-013. No counts are given where a mutation takes neighbours with it,
-for RK-028's reason.
+the next, because `cargo` rebuilds by timestamp and a restore alone can leave
+the mutated binary in place. No counts are given where a mutation takes
+neighbours with it, because a count is a fact about the suite of the day rather
+than about the rule.
 
 * `offset_of` always answering `Zero`: every reporting case goes silent, among
   them `a_free_of_a_pointer_past_the_start_of_an_allocation`,
@@ -137,7 +141,8 @@ for RK-028's reason.
   time, on the `allocated here` it gains. Its two allocations are made before
   the branch, because made on its arms each site meets the other arm's
   `Live(None)` at the join and neither mutation has anything to act on, which
-  is RK-038.
+  is one line with more than one wrong version and a case that can hold only
+  some of them.
 * `Held::joined` leaving the field alone:
   `a_free_offset_on_one_arm_only_is_not_proved`, alone.
 * `Offset::joined` answering `Unknown` for two `NonZero`s:
@@ -168,8 +173,9 @@ and `Allocations::touching` pushes a `Reached::Lost` for an argument reaching
 no site. Removing either alone leaves the workspace green; removing both fails
 `a_free_after_an_offset_that_kept_the_set_is_proved`,
 `an_offset_by_an_integer_local_keeps_the_proof` and
-`an_offset_by_an_integer_parameter_keeps_the_proof`, which RK-039 says to name
-as a pair rather than read as unguarded.
+`an_offset_by_an_integer_parameter_keeps_the_proof`, which is named as a pair
+rather than read as unguarded, because nothing failing can mean two rules hold
+it rather than none.
 
 **Held by nothing, and each says which rule is answering instead.**
 
@@ -178,8 +184,8 @@ as a pair rather than read as unguarded.
   joined with `Zero` is `Zero`.
 * `Held::accumulated` answering `Unknown`. `built_from` assigns over it, and
   the other caller is a write through a pointer, whose target has always
-  escaped, so `interior` never reads it: the escape is answering, which is
-  RK-064's shape.
+  escaped, so `interior` never reads it: the escape is answering, as it does for
+  every field written only where a local has escaped.
 
 ### Consequences
 
@@ -194,7 +200,7 @@ as a pair rather than read as unguarded.
   path and an interior pointer on the other, so the warning is not false, but a
   fourth value below the other three would say the null path contributes
   nothing and prove it. Three values is what the design asked for and this is
-  what they cost; the failure is row 4.
+  what they cost; the failure is a false report the reader can see.
 * Bad, because no magnitude is carried. `free(p + 1 - 1)` is `Unknown`, because
   the second operation works from a base this check only knows to be off the
   start.
@@ -203,7 +209,8 @@ as a pair rather than read as unguarded.
   `a_read_in_a_frees_argument_through_a_call_is_ordered_before_it` free
   `p + *p` and `p + g(*p)`, whose offsets this check cannot evaluate. The first
   program writes zero through `p` first, so its offset really is zero and the
-  report is a suspicion about a defined program, which is row 4.
+  report is a suspicion about a defined program, which is a false report the
+  reader can see.
 * What would reverse this: a lattice that carries a distance, which would make
   `Offset` a special case of it, or a lifetime phase that knows what storage a
   value names and can say the same thing about a free of a local's address.
@@ -222,12 +229,13 @@ as a pair rather than read as unguarded.
 
 * Good, because it has one rule fewer.
 * Bad, because it gives up the proof on `free(p + 1)`, which is the spelling
-  the defect is written in. Row 4, and a worse row 4 than the chosen option's.
+  the defect is written in. A false report the reader can see, and a worse one
+  than the chosen option's.
 
 ### Only a constant offset, silent on the rest
 
-* Bad, because `free(p + i)` stays exit 0 with nothing said, which is row 6 and
-  is the row this record exists to empty. Rejected outright.
+* Bad, because `free(p + i)` stays exit 0 with nothing said, which is saying
+  safe wrongly and is the silence this record exists to end. Rejected outright.
 
 ### An offset per site
 

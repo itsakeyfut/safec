@@ -19,7 +19,7 @@ has since made `_Nonnull` that annotation.
 makes every unproven conclusion an error wherever a check runs, so a program
 whose unprovable part is confined to one function has nowhere to put it today.
 [#210](https://github.com/itsakeyfut/safec/issues/210) is the work, and its
-`/spec` narrowed it to the form decided here.
+design comment narrowed it to the form decided here.
 
 Three things are decided together because each constrains the others: what a
 hatch is (a region or a declaration), how it is spelled, and where a conclusion
@@ -31,8 +31,11 @@ drawn inside one goes.
   it concluded, and a mutation that turns the hatch into a suppression has to
   fail a named test. An implementation that *is* a filter leaves that mutation
   identical to the code.
-* `CLAUDE.md`'s ranking. A proved defect that builds because it sits inside a
-  hatch is the shape of row 6 even though somebody wrote the hatch.
+* The ranking of failures: saying safe wrongly is worst, and a false report the
+  reader can see is far better. A proved defect that builds because it sits
+  inside a hatch has the shape of saying safe wrongly, which
+  [`docs/safety-model.md`](../safety-model.md) calls the worst answer this
+  compiler can give, even though somebody wrote the hatch.
 * Replacing `clang` with `safec` must not change what a program does, which is
   the driver ADR-0037 already applied to a spelling.
 * What the analysis already does at a boundary. Every callee other than `free`
@@ -144,9 +147,9 @@ caller built in silence. So a call to a hatch marks every allocation the
 caller still holds live as unproven, which is ADR-0032's default read with
 nothing declared: what the hatch could reach is not known, so it is all of it.
 An allocation already proved freed stays proved, since no callee un-frees one.
-What this costs is row 4: an allocation the hatch never saw is unproven after
-the call. The same gap for a callee that is not a hatch, and the pointer a call
-returns being taken as fresh, are
+What this costs is a false report the reader can see: an allocation the hatch
+never saw is unproven after the call. The same gap for a callee that is not a
+hatch, and the pointer a call returns being taken as fresh, are
 [#250](https://github.com/itsakeyfut/safec/issues/250).
 
 **Only an attribute `sema::resolve` accepted makes a hatch.** It records the
@@ -163,7 +166,8 @@ accepted.
 Every mutation below was applied on its own to the tree as committed, the
 whole workspace was run with `--no-fail-fast`, and the file was restored from
 git. The tests named are the ones that failed; how many there were is not
-written down, for RK-028's reason. The cases are in `crates/safec/tests/cases`.
+written down, because a count is a fact about the suite of the day rather than
+about the rule. The cases are in `crates/safec/tests/cases`.
 
 **Where a conclusion goes.** This is the one the record is about. Having
 `driver.rs::route` keep nothing in `hatched`, which is the hatch as a
@@ -249,9 +253,10 @@ parser says where such a name is refused instead.
 * Good, because a program `clang` compiles keeps compiling under `clang`,
   `-pedantic-errors` included, and means the same thing.
 * Bad, because every allocation the caller holds live is unproven after a
-  call to a hatch, including those the hatch was never handed. That is row 4,
-  and it is what makes the hatch's boundary as conservative as ADR-0032 asks
-  until #249 lets a hatch say what it does not touch.
+  call to a hatch, including those the hatch was never handed. That is a false
+  report the reader can see, and it is what makes the hatch's boundary as
+  conservative as ADR-0032 asks until #249 lets a hatch say what it does not
+  touch.
 * Bad, because a hatch that must write a caller's local costs that local its
   escape for the rest of the function, measured above.
 * Bad, because a hatch cannot yet say what it does not do, so anything handed to

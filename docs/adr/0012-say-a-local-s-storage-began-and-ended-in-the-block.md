@@ -41,8 +41,8 @@ whatever shape that takes.
 * **A loop reuses the local.** `while (n < 3) { int x; ... }` lowers today, and
   `x` is one `LocalId` across every iteration.
 * **A reversal has to fail to build.** ADR-0010 is confirmed by `E0004` on
-  `Terminator::successors`, and RK-018 records why the arms there name every
-  field: `E0004` answers for a variant and `..` lets a field walk past it.
+  `Terminator::successors`, and the arms there name every field because
+  `E0004` answers for a variant and `..` lets a field walk past it.
 
 ## Considered Options
 
@@ -127,14 +127,15 @@ three places stopped, and `Element::Evaluate` arriving as that fourth kind
 measured nine arms across seven files, `crates/safec-ir/src/memory.rs` twice and
 `crates/safec-llvm/src/emit.rs` among them. The claim is that no walk is missed,
 which is a property of there being no `_` arm over `Element` anywhere; a count
-is what it happened to be on the day somebody ran it, and `records.sh` cannot
-check one.
+is what it happened to be on the day somebody ran it, and no check of the
+records can verify one.
 
-`E0027` for a field, which is the narrower and worse failure RK-018 records.
-Adding a field to `Element::StorageDead` and fixing nothing is `error[E0027]:
-pattern does not mention field` in both of those walks, and once they are fixed
-it is `error[E0063]` where the lowering builds the element and `E0027` again in
-the test helper that reads one. Every arm names its fields; none writes `..`,
+`E0027` for a field, which is the narrower and worse failure: `E0004` answers
+for a variant, and `..` lets a field walk past it. Adding a field to
+`Element::StorageDead` and fixing nothing is `error[E0027]: pattern does not
+mention field` in both of those walks, and once they are fixed it is
+`error[E0063]` where the lowering builds the element and `E0027` again in the
+test helper that reads one. Every arm names its fields; none writes `..`,
 except `Element::name`, where the name does not depend on what the kind carries.
 
 The two programs are `the_same_program_in_a_nested_scope_is_not_the_same_ir` in

@@ -39,10 +39,11 @@ reason is no longer about this rule.
 * `Held::writes_to` is a may-set, and one member in it means "at most one target
   this check has seen an address for". An empty set is what a pointer this check
   never followed has, so a union of an empty set with one member is one member,
-  and the two readings were the same value. That is the third-emptiness shape
-  RK-045 is about, one field over.
-* Erasing a value nothing wrote over is a silence, which is the bottom row of
-  `CLAUDE.md`'s list. Any rule here has to be checked in that direction first.
+  and the two readings were the same value. That is the third-emptiness shape,
+  where a fold's seed and a real empty set read as one thing, one field over.
+* Erasing a value nothing wrote over is a silence, which is saying safe
+  wrongly, the answer `docs/safety-model.md` calls the worst this compiler can
+  give. Any rule here has to be checked in that direction first.
 * Three more axes will each meet this. A move through a pointer and a borrow
   through a pointer ask the same question about the same edge.
 
@@ -84,7 +85,7 @@ the constant, unary, address and projected-read arms was written and measured:
 it recovers the headline proof just as well and costs two things. `p` keeps an
 allocation the program demonstrably overwrote, so a later read of it is a
 suspicion about a defect that is not there. And "a certain write" would then
-mean two things depending on the rvalue, inside the one arm RK-052 already
+mean two things depending on the rvalue, inside the one arm a review already
 caught answering two ways.
 
 **It does not call `Known::unproved` on the target**, which is the one thing
@@ -103,9 +104,9 @@ opaque(ppp); *pp = q; free(p); *q = 1;` was then a proved use after free about a
 program with no defect. `Known::escaped` is the half that outlives an
 assignment, which is ADR-0018's rule for which struct a fact belongs in, so the
 condition reads it beside the flag rather than the escape writing on the
-pointer's own row. It is RK-061's rule arriving for this lattice: a new answer
-that proves something positive about a local has to answer for that local's
-address escaping.
+pointer's own row. It is ADR-0017's rule arriving for this lattice: a new
+answer that proves something positive about a local has to answer for that
+local's address escaping.
 
 **The edge has to name the local itself.** C17 6.5.3.2 p3 makes `&*pp` the value
 of `pp`, so the place it names is what `pp` points at, while the edge can only
@@ -153,8 +154,8 @@ target that is already a pointer-to-pointer before it is written into, which
 takes three levels of indirection and no test here has them. They are written anyway because the alternative is a value that
 says something false about itself, and because the next reader of this struct
 will copy whichever shape is there. The two `Rvalue::Binary` lines are also
-RK-052's rule: one question asked in two places is answered in both or it drifts
-inside the change that touches one of them.
+the rule that one question asked in two places is answered in both or it
+drifts inside the change that touches one of them.
 
 **Everything the replacement does beyond the sites is held by nothing either.**
 Measured, each on its own: replacing only `Held::sites` and leaving the rest of

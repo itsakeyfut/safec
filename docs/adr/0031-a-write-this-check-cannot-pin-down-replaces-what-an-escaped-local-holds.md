@@ -46,10 +46,12 @@ included.
 * The sites are shared. A `free` of a local whose contents this check has not
   kept up with writes `SiteState::Freed` on sites that every other local
   holding them reads, which is what turns one stale row into a proof about a
-  sharer. RK-048 is that asymmetry from the other side.
+  sharer. A guard observing only the escaped local holds nothing, which is
+  that asymmetry from the other side.
 * A rule whose cost is unmeasured is not a rule anybody can rank.
-  `CLAUDE.md` puts a false positive on row 4 and this decision has to say which
-  row *its own* failure lands on, in both directions.
+  A false positive is a false report the reader can see, and this decision has
+  to say where *its own* failure lands in the ranking of failures, in both
+  directions.
 * `docs/safety-model.md` ranks a silence below a false positive. Whatever this
   does, a use after free of the same shape has to stay reported.
 * **Two spellings of one program have to answer the same way.** The door this
@@ -114,15 +116,18 @@ it under AddressSanitizer to show it has no use after free in it, and this
 compiler answered `error[SC0402]` at exit 1. So a write whose type is
 `Ty::Char` reaches every escaped local and the narrowing applies to the rest.
 
-**Which row each direction lands on, because this decision both distrusts and
-exempts.** RK-063 is the entry that says the exempting half is the one to rank.
+**Where each direction lands in the ranking of failures, because this decision
+both distrusts and exempts.** A decision that both refuses and exempts is
+ranked on the exempting half, because that is the half that can go quiet.
 Distrusting too much costs a proof: a report drops from `error` to `warning` and
 is still made, and `--deny-unknown` still fails the build on it. Exempting too
 much *keeps* a marking off a local, a local that is not marked keeps whatever
 proof it had, and a proof is a report. So the exemption's failure is the false
-positive this record removes, which is row 4, and neither direction can reach
-row 6. That is what makes reading a declared type affordable here where RK-067
-warns against it: `docs/c-family.md`'s fourth requirement costs a silence when a
+positive this record removes, which is a false report the reader can see, and
+neither direction can reach saying safe wrongly, which `docs/safety-model.md`
+calls the worst answer this compiler can give. That is what makes reading a
+declared type affordable here, where elsewhere it is trusting an invariant
+nobody enforces: `docs/c-family.md`'s fourth requirement costs a silence when a
 frontend breaks it and this fifth one costs a suspicion.
 
 ### Confirmation
@@ -152,7 +157,7 @@ and
 whose proved double frees drop to warnings and whose exit 1 drops to exit 0.
 Comparing the types with `!=` rather than `==` fails those two and two more; it
 is written down because a narrowing has more than one wrong version and a table
-that measures one of them holds one of them, which is RK-038.
+that measures one of them holds one of them.
 
 Four mutations fail one case each, which is why the condition is what it is
 rather than any of the things next to it. Keying the door on the shape this
@@ -181,7 +186,7 @@ callee may reach.
 Every case reports through a **second local sharing the allocation**, because
 ADR-0017 already takes away the report about the escaped local itself and a case
 that frees or reads through that local alone observes nothing whatever this
-record says. RK-048 is that hole.
+record says.
 
 **No mutation fails
 `a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds`
@@ -198,12 +203,12 @@ annotation is what would change that.
 **Held by ADR-0029's cases rather than by new ones**: that a write *before* the
 escape marks nothing. `Known::replaced` reads `Known::escaped` for both
 producers, and `an_opaque_call_before_the_escape_leaves_the_proof_alone` is the
-case that fails if it stops. RK-065 is a guard that held only the order it was
-written in, and the order is covered here because the two doors share the
-method, not because a second case was written. That giving the method a second
-caller has made no earlier record's mutation vacuous was measured: the
-mutations ADR-0017, ADR-0028 and ADR-0029 name still fail the tests those
-records name.
+case that fails if it stops. A guard for a rule about two events holds only
+the order it was written in, and the order is covered here because the two
+doors share the method, not because a second case was written. That giving the
+method a second caller has made no earlier record's mutation vacuous was
+measured: the mutations ADR-0017, ADR-0028 and ADR-0029 name still fail the
+tests those records name.
 
 ### What the rule does not take
 
@@ -242,8 +247,9 @@ whole reason it does not block the decision.
 * Good, because it keeps the proofs a write of an `int` cannot have touched,
   which is every `*p = 1` in an ordinary function.
 * Good, because the narrowing can only keep a proof, so getting it wrong is the
-  row-4 direction rather than the row-6 one.
-* Bad, because it reads a declared type, which RK-067 says is an invariant
+  direction of a false report the reader can see rather than of saying safe
+  wrongly.
+* Bad, because it reads a declared type, which is trusting an invariant
   nobody enforces. The requirement is written into `docs/c-family.md` for that
   reason.
 
@@ -285,9 +291,10 @@ whole reason it does not block the decision.
 ### Clear the escaped local's row
 
 * Good, because it is the strongest statement of what the write may have done.
-* Bad, because a local reaching no site says nothing at all, which is RK-049.
+* Bad, because a local reaching no site says nothing at all.
   ADR-0029 measured it at the other door: the `SC0402` goes and a silence is
-  the bottom row of `CLAUDE.md`'s list while a false positive is row 4.
+  saying safe wrongly while a false positive is a false report the reader can
+  see.
 
 ## More Information
 
