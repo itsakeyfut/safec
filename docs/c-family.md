@@ -341,13 +341,14 @@ That is the same discipline the accepted records already use:
 by `E0451`. A guard the compiler holds does not have to be remembered.
 
 **A sixth arrived with**
-[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-about-what-its-caller-cannot-doubt.md).
+[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md).
 The memory check asks a `return` about what it hands back where the value is
 written into the return place, of the local being written, so **nothing that
 frees may run between the write into the return place and the
-`Terminator::Return` that leaves with it**. The C frontend writes the value and
-ends the block with nothing between, so the two are one point for every
-program it builds.
+`Terminator::Return` that leaves with it**. The C frontend writes the value,
+marks the end of the `return`'s full expression with an `Element::Sequenced`,
+and ends the block, so nothing frees between the two for any program it
+builds.
 
 **What an omission costs here is a silence.** A frontend that frees after the
 write hands back a freed pointer, and the caller believes a call's result is

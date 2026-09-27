@@ -110,15 +110,16 @@ because the two are different questions about the same call.
 records what is proved and what is left unproven.
 
 **`SC0406` is a class of its own too, and it is the one read without a
-dereference this check asks about.** A value copied into another local stays in this
-check's sight, and a later dereference of the copy is `SC0402`; a value
+dereference this check asks about.** A value copied into another local stays in
+this check's sight, and a later dereference of the copy is `SC0402`; a value
 returned leaves it for a caller that believes a call's result is live, so the
-`return` is the last place anything can be said about it. It is asked of the
-function's own allocations whether proved or not, and of an allocation a
-parameter holds only where it was proved freed: the caller already treats
-everything it handed over as unproven, and reports that at its own read. The
-fix is at the return or at the free, which is why it is not `SC0402`.
-[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-about-what-its-caller-cannot-doubt.md)
+`return` is the last place anything can be said about it. It is asked of every
+allocation the returned pointer may hold, a parameter's included, as a
+dereference of it would be, so a pointer returned after a call this check
+cannot read, or after its address was taken, is refused as unproven with no
+free in the function at all. The fix is at the return or at the free, which is
+why it is not `SC0402`.
+[ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
 
 **Either can be a proof or a suspicion, and freeing more than one allocation

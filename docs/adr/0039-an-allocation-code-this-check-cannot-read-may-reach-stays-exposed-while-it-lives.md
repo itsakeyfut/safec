@@ -110,7 +110,7 @@ they copy bytes and a pointer is bytes. Measured, this is what builds
 
 **What is believed, and written down.** A callee that returns an allocation it
 made and freed itself is a fresh allocation to this rule, and silent: #252.
-[ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-about-what-its-caller-cannot-doubt.md)
+[ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 now reports it at the callee's `return`, and the caller still believes it.
 `realloc`'s failure branch, `if (q == 0) free(p);`, is unproven because nothing
 ties the result's nullness to the argument: [#253](https://github.com/itsakeyfut/safec/issues/253).

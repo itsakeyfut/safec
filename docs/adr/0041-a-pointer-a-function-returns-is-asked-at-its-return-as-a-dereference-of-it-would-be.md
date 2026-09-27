@@ -4,7 +4,7 @@ date: 2026-09-27
 decision-makers: itsakeyfut
 ---
 
-# A pointer a function returns is asked at its return, about what its caller cannot already doubt
+# A pointer a function returns is asked at its return, as a dereference of it would be
 
 ## Context and Problem Statement
 
@@ -53,10 +53,21 @@ every caller believes and the body is checked.
 
 ## Decision Outcome
 
-Chosen option: "the same, except that an allocation a parameter holds is
-reported only where it was proved freed", asked at the write into the return
-place, because it is the narrowest rule that leaves no program silent in both
-the callee and its caller.
+Chosen option: "every allocation the returned value may hold, as a dereference
+is asked", at the write into the return place, because it is the only option
+measured that leaves no function silent about a free that reaches its return.
+
+The second option was chosen first, implemented, and withdrawn after review.
+Its reason was that a caller already treats as unproven everything it handed a
+call it cannot read, so a doubt about a parameter's allocation at the return
+would add nothing the caller does not say at its own next use. That holds only
+where the caller's next use is a dereference or a free. A caller that hands the
+result on as an argument asks nothing, because a bare read is not asked, and
+the function it hands it to believes its parameter live: a parameter freed on
+one arm and returned was silent in every function, and so was
+`free(p); log_ptr(p); return p;`, where the call turns the proved free into a
+doubt. Review demonstrated both, and restoring the narrowing silences them
+again.
 
 **Why a return is read when other bare reads are not.** A value copied into
 another local stays in this check's sight, and a later dereference of the copy
@@ -64,29 +75,19 @@ is asked. A value returned leaves it for a caller that believes it live, so the
 return is the last point anything can be said about it, and the check is of
 what the caller was promised rather than of the read itself.
 
-**Why a parameter's doubt is left to the caller.** A caller reads this
-function as a call it cannot read, so by ADR-0039 every allocation it handed
-over is exposed and unproven after the call, and so is anything the result may
-be. A doubt about a parameter's allocation at the return therefore adds nothing
-the caller does not already say at its own next use, measured: freeing a
-parameter on one arm and returning it is reported at the caller's dereference.
-A proof adds something, and is kept: `free(p); return p;` is reported in the
-function that did it. An allocation the function made itself, or was handed
-back by a call it made, is the one the caller believes fresh, and every doubt
-about that one is reported.
-
 **What the return asks, exactly.** Where the lowering writes a `return`'s value
 into the return place, the local being written is asked what
 `Known::reached_by` answers for it, as a dereference asks, so an escaped local
-is distrusted as ADR-0017 distrusts it, with a parameter's site dropped unless
-it is `SiteState::Freed`. Only in a function whose return type is a pointer,
-because every call's result is a site and exposed, a later call this check
-cannot read unproves it, and an addition of integers keeps its operands'
-sites (ADR-0030), so `return f() + g();` reached `f`'s result after `g` ran
-and was refused, in six corpus cases. The order is not asked: a `return` leaves the
-function after its whole expression, so any free in it has run, and
-`memory::verdict` answers `true` for this question as it does for a double
-free.
+is distrusted as ADR-0017 distrusts it. Only in a function whose return type is
+a pointer, because every call's result is a site and exposed, a later call this
+check cannot read unproves it, and an addition of integers keeps its operands'
+sites (ADR-0030), so `return f() + g();` reached `f`'s result after `g` ran and
+was refused, in six corpus cases. A value read through a projection is not
+asked, because a pointer read out of memory holds no site and this check says
+nothing about a dereference of one either (ADR-0017, #256). The order is not
+asked: a `return` leaves the function after its whole expression, so any free
+in it has run, and `memory::verdict` answers `true` for this question as it
+does for a double free.
 
 **A code of its own, `SC0406`.** `SC0402` is a dereference by
 `docs/diagnostics.md`'s own definition, and the fix here is at the return or
@@ -103,11 +104,11 @@ measured, and a named case in `crates/safec/tests/cases` that it fails:
   `an_allocation_handed_to_a_call_and_returned`, and the reported half of
   `a_free_after_the_write_into_the_return_place_is_not_asked_about` in
   `crates/safec-ir/tests/freed.rs`.
-* Keeping every parameter's site fails
-  `a_parameter_returned_after_a_call_this_check_cannot_read` and
-  `a_parameter_freed_on_one_arm_is_doubted_by_its_caller`.
-* Dropping every parameter's site, freed or not, fails
-  `a_parameter_freed_and_returned`.
+* Dropping a parameter's site from what is asked unless it is
+  `SiteState::Freed`, which is the withdrawn option, fails
+  `a_parameter_freed_on_one_arm_and_handed_on_by_its_caller` and
+  `a_parameter_freed_then_handed_to_a_call_and_returned`, which go silent, and
+  three more cases about a parameter.
 * Dropping the pointer-type condition fails
   `an_integer_built_from_two_calls_is_not_asked_about_at_its_return` and six
   older cases that return an `int` built from calls.
@@ -116,7 +117,6 @@ measured, and a named case in `crates/safec/tests/cases` that it fails:
 * Reporting only proofs fails `a_return_after_a_free_on_one_arm_only`,
   `an_allocation_handed_to_a_call_and_returned` and
   `an_escaped_local_freed_and_returned`.
-
 * Dropping `Reached::SetFreed` from what is asked fails
   `a_free_of_either_of_two_allocations_then_returned`, which goes silent.
 * Asking any copy rather than the write into the return place fails
@@ -135,9 +135,10 @@ A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in `driver.rs`'s
 `false` fails `a_function_that_returns_what_it_freed` and
 `a_parameter_freed_and_returned`; answering as a dereference does,
 `earliest.is_some_and(|freed| freed.sequenced)`, changes nothing, measured,
-because every free the C frontend emits is followed by a sequence point before
-the write into the return place. The arm is right for the reason given above
-and no C program shows it.
+because a `free` returns `void` and so is always followed by a sequence point
+before the write into the return place. `realloc` can sit in the returned
+expression unsequenced, but it only ever makes a site unproven, never freed.
+The arm is right for the reason given above and no C program shows it.
 
 **The boundary is held too.** A free placed between the write and the return,
 which no C program builds, is silent, and
@@ -147,17 +148,23 @@ that closing it fails a named test. `docs/c-family.md` carries the requirement.
 ### Consequences
 
 * Good, because a function that frees what it returns is reported, proved
-  where it is proved, in the function that did it.
-* Bad, because a function that hands its own allocation to a call this check
-  cannot read and then returns it is refused, and so is one that returns a
-  pointer whose address it handed out, `grow(&b); return b;`: a false refusal, measured.
-* Bad, because the rule leans on ADR-0039's treatment of a call's arguments in
-  the caller. A caller that stopped doubting what it handed a call, which
-  summaries of defined functions would do, would leave a parameter freed on one
-  arm silent in both functions, so that change has to widen this one.
-* Bad, because a returned value nobody dereferences is only reported where the
-  callee's own allocation is involved, which is the bare-read boundary
-  `docs/diagnostics.md` already states.
+  where it is proved, in the function that did it, whatever its caller does
+  with the result.
+* Bad, because a pointer returned after anything this check reads as a doubt
+  is refused, with no free in the function required: after a call this check
+  cannot read was handed it or its address (`enroll(p); return p;`,
+  `grow(&b); return b;`), after any such call where the pointer is a parameter
+  (`log_line(); return p;`, `return dup(p);`), after its address was taken
+  (`int **pp = &p; return p;`), and on `realloc`'s failure branch. Each was
+  already refused as a dereference; a return is far more common. A false
+  refusal, measured.
+* Bad, because the join does not tell paths apart, so the free-and-null idiom
+  `if (c) { free(p); p = 0; } return p;` is refused: the site is freed on one
+  arm and held on the other, and the two meet as unproven. The dereference of
+  the same pointer was already refused.
+* Bad, because a pointer read out of memory and returned, `return *box;` or
+  `return *&p;`, is silent in the callee and believed by the caller. That is
+  the boundary ADR-0017 draws for a dereference, now drawn for a return too.
 * What would reverse this: summaries of functions this translation unit
   defines, which would let a caller read what a callee returns instead of
   believing it.
@@ -165,15 +172,25 @@ that closing it fails a named test. `docs/c-family.md` carries the requirement.
 ## Pros and Cons of the Options
 
 Measured on a throwaway prototype against seven programs with a defect and ten
-without, all returning a pointer, and against the corpus.
+without, all returning a pointer, and against the corpus; the review of the
+first implementation added the programs named in the Decision Outcome and in
+Consequences.
 
 ### Every allocation, as a dereference
 
-* Good, because nothing is left silent in either function.
+* Good, because nothing reaching the return is left silent in either
+  function.
 * Bad, because it also refuses returning a parameter after any call this check
   cannot read, returning `p` on `realloc`'s failure branch, and a wrapper
   returning another call's result while a pointer parameter exists: five of the
-  ten, where the chosen rule refuses two.
+  ten, where the narrowed option refused two.
+
+### A parameter's allocation only where proved freed
+
+* Good, because it builds the three parameter idioms above.
+* Bad, because a caller that hands the result on as an argument asks nothing,
+  so a parameter freed on one arm and returned is silent in every function.
+  Chosen first, and withdrawn for this.
 
 ### Proofs only
 
@@ -195,6 +212,8 @@ without, all returning a pointer, and against the corpus.
 
 * #252, and #250 where it was split off.
 * `crates/safec/src/lowering.rs`, whose `Stmt::Return` arm writes the return
-  place and ends the block with `Terminator::Return` and nothing between, which
-  is what makes asking at the write the same as asking at the return for C.
-  `docs/c-family.md` is where that becomes a requirement on another frontend.
+  place, marks the end of the `return`'s full expression with an
+  `Element::Sequenced`, and ends the block with `Terminator::Return`. Nothing
+  that frees runs between the write and the return, which is what makes asking
+  at the write the same as asking at the return for C. `docs/c-family.md` is
+  where that becomes a requirement on another frontend.

@@ -3283,10 +3283,11 @@ fn used(
 /// `return f() + g();` reached `f`'s result after `g` ran and was refused, in
 /// six corpus cases.
 ///
-/// **A parameter's allocation counts only where it was proved freed.** A
-/// caller reads this function as a call it cannot read, so every allocation it
-/// handed over is already unproven there, and a doubt about one here says
-/// nothing the caller does not say at its own next use. See ADR-0041.
+/// **Every site the local may hold, a parameter's included.** Leaving a doubt
+/// about a parameter's allocation to the caller was tried and withdrawn: a
+/// caller that hands the result on as an argument asks nothing, so a
+/// parameter freed on one arm and returned was silent in every function. See
+/// ADR-0041.
 ///
 /// Pushed rather than [`say`]: no other report is made about a place with no
 /// projection, so nothing else can stand at this key.
@@ -3306,7 +3307,9 @@ fn returned(
         return;
     }
     // A constant holds no allocation, and a place read through a projection is
-    // a pointer read out of memory, which holds no site: ADR-0017, and #256.
+    // a pointer read out of memory, which holds no site and about which this
+    // check says nothing here, as it says nothing about a dereference of one:
+    // ADR-0017, and #256.
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
@@ -3314,21 +3317,8 @@ fn returned(
         return;
     }
 
-    let reached = known
-        .reached_by(source.local)
-        .into_iter()
-        .filter(|reached| match reached {
-            Reached::Site(site) => {
-                !analysis
-                    .parameters
-                    .iter()
-                    .any(|parameter| parameter.index() == *site)
-                    || matches!(known.state[*site], SiteState::Freed { .. })
-            }
-            Reached::SetFreed(_) | Reached::Lost => true,
-        });
-
-    let Some(verdict) = verdict(Kind::ReturnAfterFree, reached, known) else {
+    let Some(verdict) = verdict(Kind::ReturnAfterFree, known.reached_by(source.local), known)
+    else {
         return;
     };
     findings.push(Finding {
