@@ -1,0 +1,117 @@
+Target "x86_64-pc-windows-msvc"
+Function what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:2:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int" parameter
+Function what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:3:6 "log_line" declared
+  Local "_0" "void" return
+Function what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "void"
+  Block "bb0" entry
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:6:17 generated
+    Call what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:6:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:6:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:6:17 generated
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:7:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:7:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:7:9 generated
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:10:14 generated
+    Call what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:10:14 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:10:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:10:14 generated
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:11:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:11:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:11:9 generated
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:12:16 generated
+    Return
+  Block "bb7"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:14:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:14:5 written
+      Destination "_7"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:14:5 generated
+    ArgumentsEvaluated what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:15:5 generated
+    Call what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:15:5 "memset" "bb9"
+      Destination "_8"
+      Copy "_1"
+        Deref
+      Constant 0
+      Constant 4
+  Block "bb9"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:15:5 generated
+    ArgumentsEvaluated what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:16:5 generated
+    Call what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:16:5 "log_line" "bb10"
+      Destination "_9"
+  Block "bb10"
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:16:5 generated
+    Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:17:12 generated
+    Return

@@ -917,6 +917,49 @@ cases! {
     what_calloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     what_aligned_alloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // What a pointer read out of memory reaches, for a call and for a store,
+    // and a pointer parameter exposed where its function starts. See
+    // ADR-0040, whose Confirmation names the mutation each of these fails
+    // under.
+    //
+    // Reported.
+    what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_copied_from_one_table_to_another_is_inside_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_table_read_out_of_a_holder_into_a_local_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Reported, and what ADR-0040 accepts as its cost: every pointer
+    // parameter read after any call this check cannot read, and freed after
+    // one, is unproven.
+    an_allocation_a_parameter_holds_is_unproven_after_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_may_return_what_a_parameter_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Built: a pointer holding no site is not a load, and a load through one
+    // table reaches only what that table holds.
+    a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same distinction for a local whose address escaped, which
+    // `Known::reach_of` answers. Mutation: test there for no site instead of
+    // the bit; this fails.
+    a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `argv` is the host's, and no call can free it. Mutation: drop the
+    // `main` filter on `exposed_parameters`; this fails.
+    the_arguments_the_host_hands_main_are_not_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The bit a load leaves on a local: set by a load on either arm of a
+    // join, carried through arithmetic, cleared by what the local is given
+    // next, and never set by an integer. A load handed to `memset` is read as
+    // one too.
+    a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_moved_off_a_load_is_still_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_local_given_something_else_after_a_load_is_no_longer_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_integer_read_out_of_memory_is_not_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A loop that allocates a table again leaves last turn's table holding
+    // what it held, reached through a local that lost its name for it and
+    // through what holds it. Mutation: clear the row in `Known::reborn`;
+    // both fail.
+    a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],

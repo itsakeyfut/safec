@@ -401,6 +401,15 @@ struct Held {
     /// cannot be written without answering where in it the value points. See
     /// ADR-0036.
     offset: Offset,
+    /// Whether this local may hold a pointer read out of memory.
+    ///
+    /// Such a pointer holds no site, which is ADR-0017's belief and what the
+    /// report still reads. **This bit is for the other readers**: what a call
+    /// reaches and what a write stores, for which "no site" had come to mean
+    /// "reaches nothing". It is not the emptiness of [`Held::sites`], because
+    /// `int *z = 0;` is empty too, and reading it as a load exposed every
+    /// stored pointer at `log_ptr(z)`, measured. See ADR-0040.
+    loaded: bool,
 }
 
 impl Held {
@@ -417,6 +426,7 @@ impl Held {
             // that holds nothing and, through `Held::hold`'s join, on every
             // parameter. See ADR-0036.
             offset: Offset::Zero,
+            loaded: false,
         }
     }
 
@@ -466,9 +476,11 @@ impl Held {
             writes_to,
             writes_elsewhere,
             offset,
+            loaded,
         } = self;
         sites.fill(false);
         *lost = false;
+        *loaded = false;
         *freed = None;
         writes_to.fill(false);
         // What a local is given ends the claim that this check knew where a
@@ -498,8 +510,10 @@ impl Held {
             writes_to,
             writes_elsewhere,
             offset,
+            loaded,
         } = self;
         *offset = offset.joined(other.offset);
+        *loaded = *loaded || other.loaded;
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -546,7 +560,11 @@ impl Held {
             writes_to,
             writes_elsewhere,
             offset,
+            loaded,
         } = self;
+
+        // `*tab + 1` is built from a pointer read out of memory, and is one.
+        *loaded = *loaded || other.loaded;
 
         // **Where the result points is the fold's to say, and not this
         // method's**, for the reason the line below gives about the proof:
@@ -863,7 +881,8 @@ impl Known {
             state,
             escaped: _,
             exposed,
-            inside,
+            // Kept, for the reason given below.
+            inside: _,
             pending,
         } = self;
 
@@ -874,17 +893,18 @@ impl Known {
         }
 
         state[site] = SiteState::Live(made);
-        // A new allocation has not been handed to anybody and holds nothing
-        // yet. What an opaque call's destination may still be is the call
-        // transfer's to say, after this. See ADR-0039.
+        // A new allocation has not been handed to anybody. What an opaque
+        // call's destination may still be is the call transfer's to say,
+        // after this. See ADR-0039.
         //
-        // **Clearing `inside` is held by nothing**, measured: a site is
-        // reborn only by a loop through the same call, and the body that
-        // stored into the old allocation stores into the new one on the same
-        // turn, so a stale row never adds a site the closure would not add
-        // anyway. It is kept because it is what the value means.
+        // **What the old allocation held stays in the row**, though the new
+        // one holds nothing yet. The old one is still out there, held by a
+        // local that has just lost its name for it or by another allocation,
+        // and a pointer read out of it reaches what it held: `release(old);
+        // return *p;` with `*old = p` stored last turn built in silence while
+        // this row was cleared. The row is a may-set, so a stale entry costs
+        // a report and never a proof. See ADR-0040.
         exposed[site] = false;
-        inside[site].fill(false);
 
         // **A read of the allocation this site used to name is not a read of
         // the one it names now.** Left standing, a free of the new allocation
@@ -976,14 +996,38 @@ impl Known {
     /// that address now, earlier, or by another route. A local an argument
     /// points at is one of those: its address was taken to point at it. See
     /// ADR-0039.
+    ///
+    /// **An escaped local that may hold a pointer read out of memory, or one
+    /// it lost, reaches what is stored**, since a callee handed its address can
+    /// read that pointer out of it and nothing here names what it is. See
+    /// ADR-0040.
     fn reach_of(&self, named: impl Iterator<Item = usize>) -> Vec<usize> {
         let mut reach: Vec<usize> = named.collect();
+        let mut unnamed = false;
         for (local, &escaped) in self.escaped.iter().enumerate() {
             if escaped {
                 reach.extend(self.points_to[local].sites());
+                unnamed |= self.points_to[local].loaded || self.points_to[local].lost;
             }
         }
+        if unnamed {
+            reach.extend(self.stored());
+        }
         reach
+    }
+
+    /// Every site a pointer stored in some allocation may hold.
+    ///
+    /// What a pointer read out of memory this check cannot say which may be:
+    /// wherever it was read from, it was stored there, and a store into an
+    /// allocation is recorded in [`Self::inside`] or exposed at once. One read
+    /// out of a local through its address is not here and need not be: that
+    /// local escaped, so what it holds is in every call's reach already. See
+    /// ADR-0040.
+    fn stored(&self) -> Vec<usize> {
+        (0..self.inside.len())
+            .filter(|&held| self.inside.iter().any(|row| row[held]))
+            .collect()
     }
 
     /// [`Self::unproved`] for every local at once.
@@ -1079,6 +1123,7 @@ fn built_from(
     operands: [&Operand; 2],
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
+    may_be_pointer: impl Fn(&Place) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -1123,6 +1168,16 @@ fn built_from(
     }
 
     reached.offset = offset_of(op, operands, &followed, value);
+
+    // **A read through a projection is not followed, and is still a load.**
+    // `*tab + 1` is the pointer `*tab` moved, and the lowering hands it here
+    // as one operand rather than through a temporary, so the bit an operand
+    // carries in [`Held`] never arrives for it: `q = *tab + 1; show(q);`
+    // exposed nothing, found by mutating [`Held::accumulated`]. See ADR-0040.
+    reached.loaded |= operands.iter().any(|operand| match operand {
+        Operand::Copy(source) => !source.projection.is_empty() && may_be_pointer(source),
+        Operand::Constant(_) => false,
+    });
 
     reached
 }
@@ -1243,6 +1298,24 @@ struct Allocations<'a> {
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     parameters: Vec<LocalId>,
+    /// The parameters that hold a pointer, whose allocations are exposed
+    /// where the function starts: the caller, which this check cannot read,
+    /// had the pointer, and may have left it where a call can free it.
+    ///
+    /// **Not every parameter.** Every one is a site, for the reason the module
+    /// comment gives, and an integer parameter can hold an allocation only
+    /// through a conversion this frontend does not accept yet: a cast, which
+    /// does not parse, or an implicit one, which C17 6.5.16.1 p1 forbids and
+    /// #154 is about. Exposing one made every opaque call's result reach it.
+    /// The day casts parse, the type below stops being enough.
+    ///
+    /// **Not `main`'s either.** Its caller is the host, and C17 5.1.2.2.1 p2
+    /// has `argv` and its strings keep their values until the program ends:
+    /// no allocation function returned them, so no call can free them
+    /// without the behaviour 7.22.3.3 p2 leaves undefined. Exposing them
+    /// refused `log_line(); char *name = argv[0];`. A program that calls
+    /// `main` itself hands it arguments this does not see. See ADR-0040.
+    exposed_parameters: Vec<LocalId>,
 }
 
 impl Allocations<'_> {
@@ -1289,9 +1362,13 @@ impl Allocations<'_> {
             // shape by hand, and carried an edge through `qq + 7` that the
             // direct assignment had just been taught to drop.
             Rvalue::Binary { op, lhs, rhs } => {
-                let mut reached = built_from(*op, [lhs, rhs], value, |local| {
-                    self.is_pointer(function, local)
-                });
+                let mut reached = built_from(
+                    *op,
+                    [lhs, rhs],
+                    value,
+                    |local| self.is_pointer(function, local),
+                    |place| self.may_be_pointer(function, place),
+                );
                 reached.writes_to.fill(false);
                 // Emptying the set says nothing on its own: an empty set is
                 // what a pointer this check never followed an address into
@@ -1302,11 +1379,16 @@ impl Allocations<'_> {
                 reached.writes_elsewhere = true;
                 reached
             }
-            // A constant, a read through a projection, a unary operator, an
-            // address. None is a pointer this check follows to an
-            // allocation, so the target is given nothing: a write this check
-            // cannot follow is not evidence that the old contents are gone.
-            Rvalue::Use(_) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
+            // A read through a projection is not a pointer this check follows
+            // to an allocation, and the target is given no site for it; but
+            // it may be a pointer read out of memory, and says so. See
+            // `Allocations::read_through`.
+            Rvalue::Use(Operand::Copy(source)) => self.read_through(function, source, value),
+            // A constant, a unary operator, an address. None is a pointer
+            // this check follows to an allocation, so the target is given
+            // nothing: a write this check cannot follow is not evidence that
+            // the old contents are gone.
+            Rvalue::Use(Operand::Constant(_)) | Rvalue::Unary { .. } | Rvalue::Address(_) => {
                 Held::none(value.points_to.len())
             }
         }
@@ -1330,6 +1412,85 @@ impl Allocations<'_> {
             Ty::Pointer(_) => true,
             Ty::Int | Ty::Char | Ty::Void => false,
         }
+    }
+
+    /// Whether a place may hold a pointer, by its type.
+    ///
+    /// **`None` answers yes.** [`TranslationUnit::place_ty`] has no type for a
+    /// `Deref` of something that is not a pointer, which the lowering does not
+    /// build and a hand-built unit can, and a place whose type this cannot
+    /// name is one it cannot narrow: [`replaced_by`] reads it the same way.
+    ///
+    /// **A `char` answers no**, though C17 6.5 p7 lets one copy a pointer a
+    /// byte at a time and [`replaced_by`] reads it as reaching everything for
+    /// that reason. Reading every character as a load would expose every
+    /// stored pointer at any call a character reaches, and what that costs is
+    /// unmeasured; a use after free through such a copy builds, which is
+    /// #257.
+    fn may_be_pointer(&self, function: &Function, place: &Place) -> bool {
+        match self
+            .unit
+            .place_ty(function, place)
+            .map(|ty| self.unit.ty(ty))
+        {
+            Some(Ty::Pointer(_)) | None => true,
+            Some(Ty::Int | Ty::Char | Ty::Void) => false,
+        }
+    }
+
+    /// What a value read through a projection holds: no site, and whether it
+    /// may be a pointer read out of memory.
+    ///
+    /// One answer for the three places a load is given to something: an
+    /// assignment, a write through a pointer, and what a library copy returns
+    /// when handed one. RK-052 is one rule in several places drifting apart.
+    /// See ADR-0040.
+    fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
+        let mut held = Held::none(value.points_to.len());
+        held.loaded = self.may_be_pointer(function, source);
+        held
+    }
+
+    /// What an operand may reach beyond the sites it holds, because it may be
+    /// a pointer read out of memory.
+    ///
+    /// Read through one `Deref` of a local holding sites, and neither a load
+    /// nor a pointer it lost besides, what those allocations may contain. Read
+    /// any other way, or held by a local that may hold a load or a pointer it
+    /// lost, what is stored anywhere, [`Known::stored`]. **A local merely holding no site answers
+    /// nothing**: `int *z = 0;` is one, and is not a load. What the report
+    /// reads is not this, and is ADR-0017's. See ADR-0040.
+    fn read_out(&self, function: &Function, operand: &Operand, known: &Known) -> Vec<usize> {
+        let Operand::Copy(place) = operand else {
+            return Vec::new();
+        };
+        if !self.may_be_pointer(function, place) {
+            return Vec::new();
+        }
+        let held = &known.points_to[place.local.index()];
+        if place.projection.is_empty() {
+            return if held.loaded || held.lost {
+                known.stored()
+            } else {
+                Vec::new()
+            };
+        }
+        if place.projection.as_slice() == [Projection::Deref]
+            && !held.lost
+            && !held.loaded
+            && held.sites().next().is_some()
+        {
+            return held
+                .sites()
+                .flat_map(|container| {
+                    known.inside[container]
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(site, &in_it)| in_it.then_some(site))
+                })
+                .collect();
+        }
+        known.stored()
     }
 
     /// What the arguments of a call reach, in the order they were written.
@@ -1456,7 +1617,9 @@ impl Analysis for Allocations<'_> {
         // Whether a site is exposed is one more bit per site that a join only
         // sets, so one more step each; what each site may contain is a third
         // square table that only grows at a join, one step per pair, and the
-        // first term gains a third square for it. See ADR-0039.
+        // first term gains a third square for it. See ADR-0039. Whether a
+        // local may hold a pointer read out of memory is one more bit per
+        // local that a join only sets, one more step each. See ADR-0040.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -1486,7 +1649,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 9) + positions * (locals + 1)
+        locals * locals * 3 + locals * (locals + 10) + positions * (locals + 1)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1516,6 +1679,12 @@ impl Analysis for Allocations<'_> {
         for &parameter in &self.parameters {
             known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
         }
+
+        // **And exposed**, so that `release_all(); return *p;` is unproven:
+        // the caller may have stashed `p` where `release_all` frees it. What
+        // this costs is that a pointer parameter read after any call this
+        // check cannot read is unproven too. See ADR-0040.
+        known.expose(self.exposed_parameters.iter().map(|local| local.index()));
 
         known
     }
@@ -1706,10 +1875,16 @@ impl Analysis for Allocations<'_> {
                 // exposing branch, which is row 4 until it is recorded inside
                 // the local instead. See ADR-0039.
                 if !operation.place.projection.is_empty() {
-                    let carried: Vec<usize> = self
+                    let mut carried: Vec<usize> = self
                         .carried(function, &operation.value, value)
                         .sites()
                         .collect();
+                    // And what a pointer read out of memory may be, which the
+                    // sites above do not name: `*b = *a;` stores in `b` what
+                    // `a` held. See ADR-0040.
+                    if let Rvalue::Use(written) = &operation.value {
+                        carried.extend(self.read_out(function, written, value));
+                    }
                     let containers: Vec<usize> = if one_step {
                         value.sites_of(operation.place.local).collect()
                     } else {
@@ -1865,9 +2040,13 @@ impl Analysis for Allocations<'_> {
                     // Read before the write, so `p = p + 1` keeps what `p`
                     // held rather than clearing it and unioning the result.
                     Rvalue::Binary { op, lhs, rhs } => {
-                        let mut reached = built_from(*op, [lhs, rhs], value, |local| {
-                            self.is_pointer(function, local)
-                        });
+                        let mut reached = built_from(
+                            *op,
+                            [lhs, rhs],
+                            value,
+                            |local| self.is_pointer(function, local),
+                            |place| self.may_be_pointer(function, place),
+                        );
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
                         // points into, which is why the allocation comes along.
@@ -1887,11 +2066,20 @@ impl Analysis for Allocations<'_> {
                         reached.writes_elsewhere = true;
                         value.points_to[destination.index()] = reached;
                     }
-                    // A constant, a read through a projection, or a unary
-                    // operator. None of the three is a pointer this check can
-                    // follow: C17 6.5.3.3 gives unary `+`, `-` and `~`
-                    // arithmetic operands only, and `!` yields an `int`.
-                    Rvalue::Use(_) | Rvalue::Unary { .. } => {
+                    // A read through a projection is not a pointer this check
+                    // follows, and the report reads it as holding nothing,
+                    // which is ADR-0017. It may be a pointer read out of
+                    // memory all the same, and what a call reaches and what a
+                    // write stores have to know it. See
+                    // `Allocations::read_through`.
+                    Rvalue::Use(Operand::Copy(source)) => {
+                        value.points_to[destination.index()] =
+                            self.read_through(function, source, value);
+                    }
+                    // A constant or a unary operator. Neither is a pointer this
+                    // check can follow: C17 6.5.3.3 gives unary `+`, `-` and
+                    // `~` arithmetic operands only, and `!` yields an `int`.
+                    Rvalue::Use(Operand::Constant(_)) | Rvalue::Unary { .. } => {
                         value.clear(destination);
                     }
                     // The address of a place is not an allocation this check
@@ -1954,7 +2142,7 @@ impl Analysis for Allocations<'_> {
         }
     }
 
-    fn terminator(&self, _function: &Function, terminator: &Terminator, value: &mut Self::Value) {
+    fn terminator(&self, function: &Function, terminator: &Terminator, value: &mut Self::Value) {
         // Before the `let ... else` below, which returns for every terminator
         // that is not a call. A `Terminator::Branch` reads its condition and a
         // condition that is exactly a place never becomes an element, so
@@ -2136,7 +2324,12 @@ impl Analysis for Allocations<'_> {
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
             Callee::ReturnsFirst => {
-                let reach = value.reach_of(sites());
+                let mut reach = value.reach_of(sites());
+                // What a pointer it was handed may be, read out of memory, as
+                // the opaque arm below says. See ADR-0040.
+                for argument in handed {
+                    reach.extend(self.read_out(function, argument, value));
+                }
                 value.expose(reach);
                 value.replaced(|_| true);
             }
@@ -2149,7 +2342,15 @@ impl Analysis for Allocations<'_> {
                 // before it by code this check cannot read**, is unproven
                 // after it, because any of it may be what this call frees.
                 // See ADR-0039.
-                let reach = value.reach_of(sites());
+                let mut reach = value.reach_of(sites());
+                // **And what an argument read out of memory may be.** It names
+                // no site, and "no site" is what the report is told; what the
+                // callee can reach through it is whatever was stored where it
+                // was read from. `release(*tab);` frees what `tab` held. See
+                // ADR-0040.
+                for argument in handed {
+                    reach.extend(self.read_out(function, argument, value));
+                }
                 value.expose(reach);
                 value.unproved_exposed();
 
@@ -2227,7 +2428,15 @@ impl Analysis for Allocations<'_> {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
                         value.points_to[source.local.index()].clone()
                     }
-                    Some(_) | None => Held::none(value.points_to.len()),
+                    // `memset(*tab, 0, 4)` returns a pointer read out of
+                    // memory, and says so, as an assignment of `*tab` would.
+                    // **Nothing holds this**: the call has just exposed what
+                    // `*tab` reaches, so a later call handed the result finds
+                    // it exposed already. It is here so that the day this
+                    // family stops exposing what it is handed, its result is
+                    // not a silence. See ADR-0040.
+                    Some(Operand::Copy(source)) => self.read_through(function, source, value),
+                    Some(Operand::Constant(_)) | None => Held::none(value.points_to.len()),
                 };
                 value.points_to[place.local.index()] = first;
                 return;
@@ -2459,6 +2668,16 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             function: func,
             locals: function.locals().len(),
             parameters: function.parameters().collect(),
+            exposed_parameters: function
+                .parameters()
+                .filter(|_| sources.snippet(function.name) != "main")
+                // A `match` for `Allocations::is_pointer`'s reason: a kind of
+                // type added later is asked whether it is exposed.
+                .filter(|&local| match unit.ty(function.local(local)) {
+                    Ty::Pointer(_) => true,
+                    Ty::Int | Ty::Char | Ty::Void => false,
+                })
+                .collect(),
         };
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
