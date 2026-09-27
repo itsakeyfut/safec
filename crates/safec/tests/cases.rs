@@ -1040,6 +1040,11 @@ cases! {
     a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Mutation: drop the repeated-local test in `handed`; two reports.
     a_freed_pointer_handed_twice_to_one_call_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Every argument is asked, not only the first: the freed pointer comes
+    // after a constant and a live pointer. Mutation: walk
+    // `arguments.iter().take(1)` in `handed`, or turn its `continue`s into
+    // `break`s; this goes silent.
+    a_freed_pointer_handed_after_other_arguments_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A dereference and an argument at one caret are two reports, the
     // dereference first. Mutation: call `handed` before the terminator's
     // `used` in `memory::findings`; the two change places.
