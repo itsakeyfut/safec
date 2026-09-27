@@ -1402,8 +1402,8 @@ impl Lowering<'_> {
                 // **`*&E` is `E`.** C17 6.5.3.2 p3 makes `&E` the address of
                 // what `E` designates and p4 makes `*` of that address the
                 // object itself, and the footnote to p4 says it outright: where
-                // `E` is a valid operand of `&`, `*&E` is an lvalue equal to
-                // `E`. It is the other half of the rule the `AddrOf` arm of
+                // `E` is an lvalue that is a valid operand of `&`, `*&E` is an
+                // lvalue equal to `E`. It is the other half of the rule the `AddrOf` arm of
                 // `finish_value` applies to `&*E`.
                 //
                 // Without this, the value went through a temporary holding an
