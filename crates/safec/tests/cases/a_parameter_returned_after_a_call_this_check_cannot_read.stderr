@@ -1,0 +1,10 @@
+error[SC0406]: this may return a pointer to an allocation that was freed
+   ╭─[ a_parameter_returned_after_a_call_this_check_cannot_read.c:5:5 ]
+   │
+ 5 │     return p;
+   │     ────┬────  
+   │         ╰────── returned here, perhaps after the free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

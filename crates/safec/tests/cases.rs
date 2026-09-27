@@ -958,6 +958,48 @@ cases! {
     // through what holds it. Mutation: clear the row in `Known::reborn`;
     // both fail.
     a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
+    // A pointer a function returns, asked at its `return` about every
+    // allocation it may hold. See ADR-0041, whose Confirmation names the
+    // mutation each of these fails under.
+    //
+    // Reported at the return, proved or not, and nothing at the caller's read,
+    // which believes a call's result is live.
+    a_function_that_returns_what_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_return_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_escaped_local_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free of a two-member set, returned. Mutation: drop
+    // `Reached::SetFreed` from what `returned` asks; this goes silent.
+    a_free_of_either_of_two_allocations_then_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer kept from last turn of a loop names no allocation, which is
+    // ADR-0018's `Lost`. Mutation: change the `Lost` row's words in
+    // `memory_finding`; this fails, and nothing else reaches that row.
+    a_pointer_kept_from_the_last_turn_of_a_loop_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A parameter's allocation is asked about like any other. A caller that
+    // dereferences the result doubts it too; one that hands it on as an
+    // argument asks nothing, and the return is the only report. Mutation:
+    // drop a parameter's site from what `returned` asks unless it is
+    // `SiteState::Freed`; the second and third go silent.
+    a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_on_one_arm_and_handed_on_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_then_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Reported, and what ADR-0041 accepts as its cost: an allocation handed
+    // to a call this check cannot read, a parameter returned after one, and
+    // a parameter whose address was taken, each returned with no free in the
+    // function at all.
+    an_allocation_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_returned_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_whose_address_escaped_returned_without_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Not asked about: an integer.
+    an_integer_built_from_two_calls_is_not_asked_about_at_its_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Only the write into the return place is a return. Mutation: drop the
+    // return-place test in `returned`; the copy into `q` is reported.
+    a_freed_pointer_copied_but_not_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What leaves is `*tab`, a pointer read out of memory, and the read of
+    // freed `tab` is `SC0402`'s. Mutation: ask a projected source in
+    // `returned`; this gains an `SC0406` about `tab`.
+    a_pointer_read_out_of_a_freed_table_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],

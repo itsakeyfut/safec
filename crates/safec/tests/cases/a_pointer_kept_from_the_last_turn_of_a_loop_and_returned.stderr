@@ -1,0 +1,10 @@
+error[SC0406]: this returns a pointer this check stopped following
+    ╭─[ a_pointer_kept_from_the_last_turn_of_a_loop_and_returned.c:12:5 ]
+    │
+ 12 │     return prev;
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

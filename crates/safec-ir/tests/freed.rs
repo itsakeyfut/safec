@@ -2683,3 +2683,61 @@ fn a_local_given_a_constant_forgets_the_set_it_freed() {
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
     assert_eq!(found[0].unproven, Some(Unproven::Lost));
 }
+
+/// A free between the write into the return place and the return is not asked
+/// about.
+///
+/// **A boundary, not a goal.** ADR-0041 asks a `return` at the write into the
+/// return place, about the local being written, so that an escaped local is
+/// distrusted there as a dereference distrusts it. For C that write and the
+/// return are one point, because the lowering puts only a sequence point
+/// between them and nothing that frees; another frontend that frees between the two hands back a freed pointer and
+/// this says nothing. `docs/c-family.md` is where that obligation is written
+/// down for whoever writes the second frontend.
+///
+/// The same blocks in the order C writes them are reported, which is what
+/// keeps the silence from being a unit this check never read: a function that
+/// does not return a pointer, or a write it does not recognise, would be quiet
+/// in both.
+///
+/// Mutation: none from inside this file for the silent half, which holds the
+/// absence of a rule. Deleting the call to `returned` in `memory::findings`
+/// fails the reported half.
+#[test]
+fn a_free_after_the_write_into_the_return_place_is_not_asked_about() {
+    let run = |free_first: bool| {
+        let (sources, names) = sources();
+        let (unit, _, types, callees) = a_unit(&names, 0);
+        let mut function = Function::new(names.function, types.ptr, []);
+        let p = function.push_local(types.ptr);
+        let returned = function.return_place();
+
+        let allocate = function.reserve_block();
+        let first = function.reserve_block();
+        let second = function.reserve_block();
+        let exit = function.reserve_block();
+
+        function.fill_block(allocate, malloc(&callees, p, names.at[0], first));
+        if free_first {
+            function.fill_block(first, free(&callees, p, names.at[1], second));
+            function.fill_block(
+                second,
+                after_the_statement(names.at[1], copy(returned, p, names.at[2], exit)),
+            );
+        } else {
+            function.fill_block(first, copy(returned, p, names.at[2], second));
+            function.fill_block(second, free(&callees, p, names.at[1], exit));
+        }
+        function.fill_block(exit, returns());
+
+        concluded(unit, &sources, function)
+    };
+
+    let reported = run(true);
+    assert_eq!(reported.len(), 1, "{reported:?}");
+    assert_eq!(reported[0].kind, Kind::ReturnAfterFree);
+    assert_eq!(reported[0].conclusion, Conclusion::Unsafe);
+
+    let found = run(false);
+    assert!(found.is_empty(), "{found:?}");
+}

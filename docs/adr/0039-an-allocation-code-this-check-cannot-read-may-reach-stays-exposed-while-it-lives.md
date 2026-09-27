@@ -110,6 +110,8 @@ they copy bytes and a pointer is bytes. Measured, this is what builds
 
 **What is believed, and written down.** A callee that returns an allocation it
 made and freed itself is a fresh allocation to this rule, and silent: #252.
+[ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
+now reports it at the callee's `return`, and the caller still believes it.
 `realloc`'s failure branch, `if (q == 0) free(p);`, is unproven because nothing
 ties the result's nullness to the argument: [#253](https://github.com/itsakeyfut/safec/issues/253).
 
@@ -215,7 +217,8 @@ transfer, which no C program can show since its size holds no allocation; and `A
   next call: row 4, and the one a user will meet most.
 * Bad, because the memory check costs about half again in memory and time,
   until #173.
-* Bad, because a callee returning what it freed itself is believed (#252), and
+* Bad, because a callee returning what it freed itself is believed (#252,
+  reported at the callee's `return` since ADR-0041), and
   `realloc`'s failure branch is refused (#253).
 * Bad, because a pointer read out of memory, and a parameter's allocation, are
   not exposed, so a use after free through either still builds (#254).

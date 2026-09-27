@@ -1,0 +1,19 @@
+Target "x86_64-pc-windows-msvc"
+Function a_parameter_returned_after_a_call_this_check_cannot_read.c:1:6 "log_line" declared
+  Local "_0" "void" return
+Function a_parameter_returned_after_a_call_this_check_cannot_read.c:3:6 "pass"
+  Local "_0" "int *" return
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_parameter_returned_after_a_call_this_check_cannot_read.c:4:5 generated
+    Call a_parameter_returned_after_a_call_this_check_cannot_read.c:4:5 "log_line" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Sequenced a_parameter_returned_after_a_call_this_check_cannot_read.c:4:5 generated
+    Operation a_parameter_returned_after_a_call_this_check_cannot_read.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_parameter_returned_after_a_call_this_check_cannot_read.c:5:12 generated
+    Return

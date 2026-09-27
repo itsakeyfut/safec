@@ -1,0 +1,20 @@
+error[SC0406]: this may return a pointer to an allocation that was freed
+   ╭─[ a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:8:5 ]
+   │
+ 8 │     return p;
+   │     ────┬────  
+   │         ╰────── returned here, perhaps after the free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:20:5 ]
+    │
+ 20 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
