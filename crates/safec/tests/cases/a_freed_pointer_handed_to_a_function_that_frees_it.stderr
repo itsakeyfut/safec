@@ -1,0 +1,16 @@
+error[SC0407]: this passes a pointer to an allocation that was freed
+    ╭─[ a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 ]
+    │
+  9 │     int *a = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 13 │     free(a);
+    │     ───┬───  
+    │        ╰───── freed here
+ 14 │     drop(a);
+    │     ───┬───  
+    │        ╰───── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it

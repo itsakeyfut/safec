@@ -1,0 +1,12 @@
+error[SC0407]: this passes a pointer to an allocation that was freed
+   ╭─[ a_parameter_freed_and_handed_on.c:6:5 ]
+   │
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 6 │     run(p);
+   │     ───┬──  
+   │        ╰──── passed here
+───╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it

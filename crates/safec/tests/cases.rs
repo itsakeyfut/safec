@@ -991,10 +991,10 @@ cases! {
     // `memory_finding`; this fails, and nothing else reaches that row.
     a_pointer_kept_from_the_last_turn_of_a_loop_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A parameter's allocation is asked about like any other. A caller that
-    // dereferences the result doubts it too; one that hands it on as an
-    // argument asks nothing, and the return is the only report. Mutation:
-    // drop a parameter's site from what `returned` asks unless it is
-    // `SiteState::Freed`; the second and third go silent.
+    // dereferences the result doubts it too, and one that hands it on as an
+    // argument doubts it at the call (ADR-0042). Mutation: drop a parameter's
+    // site from what `returned` asks unless it is `SiteState::Freed`; all
+    // three lose the report at the return.
     a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_parameter_freed_on_one_arm_and_handed_on_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_parameter_freed_then_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1015,6 +1015,35 @@ cases! {
     // `returned`; this gains an `SC0406` about `tab`.
     a_pointer_read_out_of_a_freed_table_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
+    // A pointer handed to a call is asked as a dereference of it would be,
+    // whatever the callee is and wherever it is defined. See ADR-0042.
+    // Mutation: drop the call to `handed` in `memory::findings`; the first
+    // five go silent.
+    a_freed_pointer_handed_to_a_function_defined_in_the_file: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_freed_pointer_handed_to_a_function_only_declared: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_freed_pointer_handed_to_a_function_that_frees_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_parameter_freed_and_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: drop `Callee::ReturnsFirst` from the callees `handed` asks.
+    a_freed_pointer_handed_to_memcpy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Doubts, which fail the build. Mutation: report only proofs in
+    // `handed`; both go silent, and the callee believes what it was handed.
+    a_pointer_freed_on_one_arm_and_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_allocation_a_call_was_handed_is_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What ADR-0042 accepts as its cost: a parameter handed to a second call
+    // this check cannot read, with no free in the function at all.
+    a_parameter_handed_to_a_second_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: drop the pointer-type condition in `handed`; this is refused.
+    an_integer_built_from_two_calls_is_not_asked_about_as_an_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // C may call `use` before the free. Mutation: answer `true` for
+    // `Kind::ArgumentAfterFree` in `verdict`'s `ordered`; this becomes a proof.
+    a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Mutation: drop the repeated-local test in `handed`; two reports.
+    a_freed_pointer_handed_twice_to_one_call_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What is handed is `*tab`, a pointer read out of memory, and the read of
+    // freed `tab` is `SC0402`'s. Mutation: ask a projected argument in
+    // `handed`; this gains an `SC0407` about `tab`.
+    a_pointer_read_out_of_a_freed_table_and_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

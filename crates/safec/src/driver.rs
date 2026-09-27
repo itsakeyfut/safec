@@ -118,6 +118,13 @@ const NULL_ARGUMENT: Code = Code::new("SC0405");
 /// live and cannot see why it is not. See ADR-0041.
 const RETURN_AFTER_FREE: Code = Code::new("SC0406");
 
+/// A pointer to an allocation that was freed, handed to a call.
+///
+/// Not `USE_AFTER_FREE`'s, for `RETURN_AFTER_FREE`'s reasons: this is a read
+/// with no dereference, and the fix is at the call or at the free. The callee
+/// believes its parameter is live and cannot see why it is not. See ADR-0042.
+const ARGUMENT_AFTER_FREE: Code = Code::new("SC0407");
+
 /// What to change where this check stopped following a pointer.
 ///
 /// **It names no cause, and that is the whole of its design.**
@@ -1123,6 +1130,37 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             RETURN_AFTER_FREE,
             "this may return a pointer to an allocation that was freed",
             "returned here, perhaps after the free",
+            DISAGREEMENT_REMEDY,
+        ),
+        (Kind::ArgumentAfterFree, Conclusion::Unsafe, _) => (
+            ARGUMENT_AFTER_FREE,
+            "this passes a pointer to an allocation that was freed",
+            "passed here",
+            "pass a pointer that is still allocated, or do not free this one before passing it",
+        ),
+        (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
+            ARGUMENT_AFTER_FREE,
+            "this passes a pointer this check stopped following",
+            "this check cannot say what this points at",
+            LOST_REMEDY,
+        ),
+        (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
+            ARGUMENT_AFTER_FREE,
+            "this may pass a pointer to an allocation that was freed",
+            "passed here, perhaps after the free",
+            UNSEQUENCED_REMEDY,
+        ),
+        // `Offset` cannot arrive, because only `memory::interior` builds it.
+        // Named rather than taken by `_`, for the reason the double-free rows
+        // give.
+        (
+            Kind::ArgumentAfterFree,
+            Conclusion::Unknown,
+            Some(Unproven::Disagreement | Unproven::Offset) | None,
+        ) => (
+            ARGUMENT_AFTER_FREE,
+            "this may pass a pointer to an allocation that was freed",
+            "passed here, perhaps after the free",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::InteriorFree, Conclusion::Unsafe, _) => (
