@@ -1339,7 +1339,13 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
         after_the_statement(names.at[2], malloc(&callees, held, names.at[3], handed)),
     );
     function.fill_block(handed, helper(&callees, held, names.at[4], suspect));
-    function.fill_block(suspect, read(value, held, names.at[5], release));
+    // A statement of its own, so that what `helper` was handed is not carried
+    // to the free below as well: without the marker the two calls are one full
+    // expression, which is a fourth finding about a different question.
+    function.fill_block(
+        suspect,
+        after_the_statement(names.at[4], read(value, held, names.at[5], release)),
+    );
     function.fill_block(release, free(&callees, held, names.at[6], proof));
     // The same span as the unproven read, which is what makes the two one
     // report and is the whole of what this test is about.

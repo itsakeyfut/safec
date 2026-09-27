@@ -619,7 +619,8 @@ impl Held {
     }
 }
 
-/// A dereference this walk has met since the last sequence point.
+/// A dereference this walk has met since the last sequence point, or a pointer
+/// a call was handed.
 ///
 /// **The other half of ADR-0022, which this one is ADR-0023 for.** An
 /// [`Element::Sequenced`] says what is ordered and a forward walk only ever
@@ -635,15 +636,42 @@ impl Held {
 /// asking at the free would answer about the wrong one. That is a silence
 /// rather than a false positive, which is the direction this check cannot
 /// afford.
+///
+/// **A pointer handed to a call is carried the same way**, because what C
+/// leaves unordered against a later free is the callee's body, and that body
+/// reads what it was handed. `(memset(a, 0, 4) != 0) + (free(a), 0)` built
+/// while its dereference spelling reported. See ADR-0042.
 #[derive(Clone, PartialEq, Eq)]
 struct PendingRead {
-    /// The element's span, which is where `used here` goes.
+    /// The element's span, which is where `used here` goes, or the call's,
+    /// which is where `passed here` goes.
     ///
     /// Kept beside the key rather than in it, because a [`Span`] cannot be
     /// rebuilt from the position the key holds.
     at: Span,
     /// Which allocations it may have read.
     sites: BTreeSet<usize>,
+    /// Which of the two reads it is, which decides the code it is reported
+    /// under.
+    ///
+    /// **In the value and not in [`ReadKey`]**, because the key's place already
+    /// keeps the two apart: a dereference is read through a projection and an
+    /// argument is a local read with none. A kind in the key would be a part no
+    /// mutation can break, and here it is a field the join has to carry.
+    read: Read,
+}
+
+/// What a [`PendingRead`] is a read of.
+///
+/// Two reads of one pointer that a reader is told about in two different
+/// codes: `SC0402` is a dereference and `SC0407` a pointer handed on, because
+/// the fix for the second is at the call or at the free rather than at a read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Read {
+    /// `*p`, met by [`Known::met`].
+    Dereference,
+    /// `g(p)`, met where the call's terminator is.
+    Argument,
 }
 
 /// What one of them is filed under: where the read is, and what it read
@@ -824,12 +852,13 @@ impl Known {
         };
 
         for place in dereferenced {
-            self.meeting(at, place);
+            self.meeting(at, place, Read::Dereference);
         }
     }
 
-    /// One place of one element, for [`Self::met`].
-    fn meeting(&mut self, at: Span, place: &Place) {
+    /// One place of one element, for [`Self::met`], or one argument of one
+    /// call, for [`Allocations::terminator`].
+    fn meeting(&mut self, at: Span, place: &Place, read: Read) {
         let sites: BTreeSet<usize> = named(&self.reached_by(place.local)).collect();
 
         if sites.is_empty() {
@@ -843,6 +872,7 @@ impl Known {
             .or_insert(PendingRead {
                 at,
                 sites: BTreeSet::new(),
+                read,
             })
             .sites
             .extend(sites);
@@ -1747,6 +1777,11 @@ impl Analysis for Allocations<'_> {
                 .or_insert(PendingRead {
                     at: entry.at,
                     sites: BTreeSet::new(),
+                    // Whichever arm got here first, since the key's place
+                    // decides the kind and two arms cannot disagree about it.
+                    // Answering `Read::Dereference` here fails
+                    // `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`.
+                    read: entry.read,
                 })
                 .sites
                 .extend(&entry.sites);
@@ -2171,6 +2206,19 @@ impl Analysis for Allocations<'_> {
                 Terminator::Call { .. } => unreachable!("the let above took it"),
             }
         };
+
+        // **What the call is handed is carried forwards, as a dereference is
+        // by the line above.** The callee's body reads it, and C17 6.5.2.2
+        // p10 leaves that body unordered against a free later in the same full
+        // expression. Before the transfer below, for `PendingRead`'s reason:
+        // the sites are the ones held where the call is reached. The
+        // arguments are exactly the ones `handed` asks, from one function, so
+        // the two readers cannot disagree about which. Dropping this loop
+        // silences `a_pointer_handed_to_a_call_the_check_meets_first_is_reported`.
+        // See ADR-0042.
+        for place in handed_places(self, function, *callee, arguments) {
+            value.meeting(origin.span(), place, Read::Argument);
+        }
 
         // What the call does to what it was handed, before what it leaves
         // behind, which is the order the two happen in.
@@ -2752,6 +2800,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             // reason above.
             handed(
                 &mut findings,
+                &mut said,
                 &analysis,
                 function,
                 &block.terminator,
@@ -3367,23 +3416,24 @@ fn returned(
 /// may-set and not a free's, because the callee reads what it is handed rather
 /// than freeing a pointer this check lost. See ADR-0042.
 ///
-/// **Which arguments turn on the callee**, and the `match` is written out so
-/// that a new kind of callee answers here. What `free` and `realloc`'s first
-/// argument are handed is asked already, as a double free, by [`reported`];
-/// an allocator and `realloc`'s size are handed integers.
+/// **And carried to a later call, as a dereference is.** This asks what was
+/// true where the call is reached; `Allocations::terminator` records the same
+/// arguments as a [`PendingRead`], and [`used_before`] asks them again at a
+/// free the same full expression leaves unordered against this call.
 ///
-/// **Only a local of pointer type, read with no projection.** A pointer read
-/// out of memory holds no site, and this check says nothing about a
-/// dereference of one either (ADR-0017, #256). An integer can hold sites, since
-/// an addition keeps its operands' (ADR-0030), and asking one refused
-/// `h(f() + g())`, a program with no pointer in it.
+/// **One finding per local per call**, so `g(p, p)` is one report, and
+/// [`handed_places`] is what says which.
 ///
-/// **One finding per local per call**, so `g(p, p)` is one report. Pushed
-/// rather than [`say`], as [`returned`] is: the key `say` keeps is the
-/// dereference reports', and a dereference and an argument at one caret are two
-/// questions, as a double free and an interior free are.
+/// **Through [`say`], because [`used_before`] reaches the same caret about the
+/// same local.** `int **q = &a; (memset(a, 0, 4) != 0) + (free(a), 0)` is
+/// doubted here, since `a` escaped, and doubted again from the free: pushed,
+/// that was two `SC0407` about `a` at one caret. The key cannot meet a
+/// dereference's, whose place always carries a projection where an
+/// argument's never does. Pushing fails
+/// `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`.
 fn handed(
     findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     terminator: &Terminator,
@@ -3400,25 +3450,7 @@ fn handed(
         return;
     };
 
-    let arguments = match analysis.callee(*callee) {
-        Callee::Opaque | Callee::ReturnsFirst => &arguments[..],
-        Callee::Reallocates => &arguments[arguments.len().min(1)..],
-        Callee::Frees | Callee::Allocates => return,
-    };
-
-    let mut asked: Vec<LocalId> = Vec::new();
-    for argument in arguments {
-        let Operand::Copy(place) = argument else {
-            continue;
-        };
-        if !place.projection.is_empty()
-            || !analysis.is_pointer(function, place.local)
-            || asked.contains(&place.local)
-        {
-            continue;
-        }
-        asked.push(place.local);
-
+    for place in handed_places(analysis, function, *callee, arguments) {
         let Some(verdict) = verdict(
             Kind::ArgumentAfterFree,
             known.reached_by(place.local),
@@ -3426,16 +3458,77 @@ fn handed(
         ) else {
             continue;
         };
-        findings.push(Finding {
-            function: analysis.function,
-            kind: Kind::ArgumentAfterFree,
-            conclusion: verdict.conclusion,
-            at: origin.span(),
-            freed: verdict.freed,
-            made: verdict.made,
-            unproven: verdict.unproven,
-        });
+        say(
+            findings,
+            said,
+            place,
+            Finding {
+                function: analysis.function,
+                kind: Kind::ArgumentAfterFree,
+                conclusion: verdict.conclusion,
+                at: origin.span(),
+                freed: verdict.freed,
+                made: verdict.made,
+                unproven: verdict.unproven,
+            },
+        );
     }
+}
+
+/// The arguments a call is asked about as a pointer it was handed, one place
+/// per local.
+///
+/// **One function for its two readers**, [`handed`] at the call and
+/// `Allocations::terminator` carrying them forwards, because one rule written
+/// in two places drifts apart inside the change that touches one of them.
+///
+/// **Which arguments turn on the callee**, and the `match` is written out so
+/// that a new kind of callee answers here. What `free` and `realloc`'s first
+/// argument are handed is asked already, as a double free, by [`reported`];
+/// an allocator and `realloc`'s size are handed integers.
+///
+/// **Only a local of pointer type, read with no projection.** A pointer read
+/// out of memory holds no site, and this check says nothing about a
+/// dereference of one either (ADR-0017, #256). An integer can hold sites, since
+/// an addition keeps its operands' (ADR-0030), and asking one refused
+/// `h(f() + g())`, a program with no pointer in it.
+///
+/// **Two of these conditions are answered twice, and a mutation sees only
+/// the other answer.** Since [`handed`] reports through [`say`], a local
+/// handed twice lands on one key, and a projected argument lands on the key a
+/// dereference of the same place at the same call already holds, which
+/// [`used`] fills first. So dropping the repeated-local test, or asking a
+/// projected argument, leaves the whole suite green. Both are kept, because
+/// they say what is asked rather than what happens to collapse afterwards,
+/// and measured without `say` they fail
+/// `a_freed_pointer_handed_twice_to_one_call_is_one_report` and
+/// `a_pointer_read_out_of_a_freed_table_and_handed_to_a_call` again.
+fn handed_places<'a>(
+    analysis: &Allocations<'_>,
+    function: &Function,
+    callee: FuncId,
+    arguments: &'a [Operand],
+) -> Vec<&'a Place> {
+    let arguments = match analysis.callee(callee) {
+        Callee::Opaque | Callee::ReturnsFirst => arguments,
+        Callee::Reallocates => &arguments[arguments.len().min(1)..],
+        Callee::Frees | Callee::Allocates => return Vec::new(),
+    };
+
+    let mut asked: Vec<&Place> = Vec::new();
+    for argument in arguments {
+        let Operand::Copy(place) = argument else {
+            continue;
+        };
+        if !place.projection.is_empty()
+            || !analysis.is_pointer(function, place.local)
+            || asked.iter().any(|seen| seen.local == place.local)
+        {
+            continue;
+        }
+        asked.push(place);
+    }
+    asked
 }
 
 /// Put this finding at its caret, or leave the one already standing there.
@@ -3505,6 +3598,9 @@ fn say(
 /// question at the only point where both are in hand. `Element::Sequenced` is
 /// what says a read is behind rather than beside, and clearing
 /// [`Known::pending`] is where that happens. See ADR-0023.
+///
+/// A read is a dereference or a pointer an earlier call was handed, and each
+/// is reported under the code it would have had where it ran. See ADR-0042.
 ///
 /// **Two callees ask it, and they are asking about different things.** A
 /// `free` took the site away, so the read may have run after the free. A call
@@ -3672,7 +3768,13 @@ fn used_before(
             place,
             Finding {
                 function: analysis.function,
-                kind: Kind::UseAfterFree,
+                // The code the read would have had where it ran, so that
+                // `(a[0] = 0) + (free(a), 0)` stays `SC0402` and its memset
+                // spelling is `SC0407`, as each is in the other order.
+                kind: match read.read {
+                    Read::Dereference => Kind::UseAfterFree,
+                    Read::Argument => Kind::ArgumentAfterFree,
+                },
                 conclusion: Conclusion::Unknown,
                 at: read.at,
                 // Exactly one free, which is this one: the reads are carried

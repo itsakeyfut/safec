@@ -1,0 +1,14 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_pointer_handed_to_a_call_before_realloc_is_reported.c:10:13 ]
+    │
+  6 │     int *a = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 10 │     return (memset(a, 0, 4) != 0) + (realloc(a, 8) != 0);
+    │             ───────┬───────  
+    │                    ╰───────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
