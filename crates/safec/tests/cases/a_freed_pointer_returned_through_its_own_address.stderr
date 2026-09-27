@@ -1,0 +1,15 @@
+error[SC0406]: this returns a pointer to an allocation that was freed
+   ╭─[ a_freed_pointer_returned_through_its_own_address.c:7:5 ]
+   │
+ 5 │     int *p = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+ 6 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 7 │     return *&p;
+   │     ─────┬─────  
+   │          ╰─────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer that is still allocated, or do not free this one before returning it

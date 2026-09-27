@@ -308,6 +308,10 @@ cases! {
     an_address_of_a_dereference_aliases_what_it_came_from: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_address_of_a_subscript_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_address_of_a_double_dereference: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `*&p` is `p`, the other half of the same clause. Mutation: in
+    // `begin_place`, drop the fold and always build the `&`; both go silent.
+    a_freed_pointer_returned_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_freed_pointer_read_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_after_a_comma_in_a_condition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_subscript_in_a_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_conditional_expression_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

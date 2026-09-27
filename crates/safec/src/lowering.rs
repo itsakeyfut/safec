@@ -1399,8 +1399,39 @@ impl Lowering<'_> {
                 operand,
                 ..
             } => {
-                tasks.push(Task::FinishPlace(id));
-                tasks.push(Task::Value(*operand));
+                // **`*&E` is `E`.** C17 6.5.3.2 p3 makes `&E` the address of
+                // what `E` designates and p4 makes `*` of that address the
+                // object itself, and the footnote to p4 says it outright: where
+                // `E` is a valid operand of `&`, `*&E` is an lvalue equal to
+                // `E`. It is the other half of the rule the `AddrOf` arm of
+                // `finish_value` applies to `&*E`.
+                //
+                // Without this, the value went through a temporary holding an
+                // address, and what a read of that is to the memory check is a
+                // pointer read out of memory, which holds no site: a freed
+                // pointer returned or dereferenced as `*&p` was answered in
+                // silence where `p` is refused.
+                //
+                // **On the tree rather than on the IR**, unlike `&*E`. That one
+                // is a place whose last step is a `Deref`, which the IR still
+                // shows when the `&` arrives. This one would be an `Address`
+                // written into a temporary, found and taken back out after it
+                // was pushed. Asking for the place of `&`'s own operand builds
+                // nothing to take back, and it is exactly what `&` would have
+                // asked for, so `*&3` is refused as `&3` is. The `&` node is
+                // not passed to `descend`, which costs nothing: `&` sequences
+                // nothing, and the `*` above it has already been passed.
+                if let Expr::Unary {
+                    op: AstUnOp::AddrOf,
+                    operand: addressed,
+                    ..
+                } = self.ast.expr(*operand)
+                {
+                    tasks.push(Task::Place(*addressed));
+                } else {
+                    tasks.push(Task::FinishPlace(id));
+                    tasks.push(Task::Value(*operand));
+                }
             }
             Expr::Subscript { base, index, .. } => {
                 tasks.push(Task::FinishPlace(id));
