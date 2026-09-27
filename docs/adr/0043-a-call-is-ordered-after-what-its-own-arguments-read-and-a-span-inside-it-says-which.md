@@ -97,6 +97,11 @@ The cases are in `crates/safec/tests/cases` unless named otherwise.
   `a_read_with_the_span_of_a_later_free_is_still_carried_to_it` in
   `crates/safec-ir/tests/freed.rs` alone, which goes silent. No C program
   reaches an equal span, and that test is IR a frontend can build.
+* Dropping `inner.end() <= outer.end()` from `inside` fails
+  `a_read_reaching_past_a_later_free_is_still_carried_to_it` in
+  `crates/safec-ir/tests/freed.rs` alone, which goes silent. No C program
+  reaches a read starting inside a call and ending past it; a lowering that
+  gives an operand the enclosing expression's span can build one.
 * Dropping the reads inside a call's span from `pending` at that call's
   transfer, rather than skipping them where `used_before` asks, fails
   `a_nested_call_is_still_carried_to_a_free_beside_it` alone, which loses its

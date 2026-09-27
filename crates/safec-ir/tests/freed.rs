@@ -2426,6 +2426,54 @@ fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
     );
 }
 
+/// A read whose span starts inside a call's and ends past it is not one of the
+/// call's arguments.
+///
+/// **No C program reaches this and a frontend can build it.** An argument ends
+/// where its call's parentheses do, so a read reaching past the call is not
+/// written inside it; a lowering that gives an operand the whole enclosing
+/// expression's span, as this one does for both operands of a `||`, is the
+/// kind of producer that makes one. Nothing orders the read before the free, so
+/// it is carried to it and reported.
+///
+/// Mutation: drop `inner.end() <= outer.end()` from `memory.rs::inside`. The
+/// read counts as inside the free, is skipped, nothing is reported, and this
+/// fails. Nothing else in the workspace fails, which is why this exists.
+#[test]
+fn a_read_reaching_past_a_later_free_is_still_carried_to_it() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let live = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // From where the free starts to two bytes past where it ends.
+    let at = names.at[1];
+    let reaching = Span::new(at.file(), at.start(), at.end() + 2);
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
+    function.fill_block(
+        live,
+        after_the_statement(names.at[0], read(value, held, reaching, release)),
+    );
+    function.fill_block(release, free(&callees, held, at, exit));
+    function.fill_block(exit, after_the_statement(at, returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        found
+            .iter()
+            .any(|finding| finding.kind == Kind::UseAfterFree
+                && finding.unproven == Some(Unproven::Unsequenced)),
+        "{found:?}"
+    );
+}
+
 /// What a call is handed is carried as the sites it held where the call was
 /// reached, not the ones the call leaves behind.
 ///
