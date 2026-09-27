@@ -881,7 +881,8 @@ impl Known {
             state,
             escaped: _,
             exposed,
-            inside,
+            // Kept, for the reason given below.
+            inside: _,
             pending,
         } = self;
 
@@ -892,17 +893,18 @@ impl Known {
         }
 
         state[site] = SiteState::Live(made);
-        // A new allocation has not been handed to anybody and holds nothing
-        // yet. What an opaque call's destination may still be is the call
-        // transfer's to say, after this. See ADR-0039.
+        // A new allocation has not been handed to anybody. What an opaque
+        // call's destination may still be is the call transfer's to say,
+        // after this. See ADR-0039.
         //
-        // **Clearing `inside` is held by nothing**, measured: a site is
-        // reborn only by a loop through the same call, and the body that
-        // stored into the old allocation stores into the new one on the same
-        // turn, so a stale row never adds a site the closure would not add
-        // anyway. It is kept because it is what the value means.
+        // **What the old allocation held stays in the row**, though the new
+        // one holds nothing yet. The old one is still out there, held by a
+        // local that has just lost its name for it or by another allocation,
+        // and a pointer read out of it reaches what it held: `release(old);
+        // return *p;` with `*old = p` stored last turn built in silence while
+        // this row was cleared. The row is a may-set, so a stale entry costs
+        // a report and never a proof. See ADR-0040.
         exposed[site] = false;
-        inside[site].fill(false);
 
         // **A read of the allocation this site used to name is not a read of
         // the one it names now.** Left standing, a free of the new allocation

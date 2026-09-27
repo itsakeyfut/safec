@@ -946,6 +946,12 @@ cases! {
     what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_local_given_something_else_after_a_load_is_no_longer_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_integer_read_out_of_memory_is_not_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A loop that allocates a table again leaves last turn's table holding
+    // what it held, reached through a local that lost its name for it and
+    // through what holds it. Mutation: clear the row in `Known::reborn`;
+    // both fail.
+    a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
