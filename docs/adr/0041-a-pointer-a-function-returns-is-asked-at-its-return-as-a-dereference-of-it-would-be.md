@@ -162,9 +162,11 @@ that closing it fails a named test. `docs/c-family.md` carries the requirement.
   `if (c) { free(p); p = 0; } return p;` is refused: the site is freed on one
   arm and held on the other, and the two meet as unproven. The dereference of
   the same pointer was already refused.
-* Bad, because a pointer read out of memory and returned, `return *box;` or
-  `return *&p;`, is silent in the callee and believed by the caller. That is
-  the boundary ADR-0017 draws for a dereference, now drawn for a return too.
+* Bad, because a pointer read out of memory and returned, `return *box;`, is
+  silent in the callee and believed by the caller. That is the boundary
+  ADR-0017 draws for a dereference, now drawn for a return too. `return *&p;`
+  was the same until the lowering folded `*&p` to `p`, which C17 6.5.3.2
+  defines it as.
 * What would reverse this: summaries of functions this translation unit
   defines, which would let a caller read what a callee returns instead of
   believing it.
