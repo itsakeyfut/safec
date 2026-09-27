@@ -1076,9 +1076,9 @@ impl Checker<'_> {
             return Some(returns);
         };
 
-        // A `match` on the ordering rather than two comparisons: the shape
-        // `CLAUDE.md` records as the worst defect this project has had is a
-        // gate written as two of those with a case answered by neither.
+        // A `match` on the ordering rather than two comparisons: the worst
+        // defect this project has had is a gate written as two of those with a
+        // case answered by neither.
         let (what, expected, found) = match arguments.len().cmp(&parameters.len()) {
             Ordering::Less => ("too few", parameters.len(), arguments.len()),
             Ordering::Greater => ("too many", parameters.len(), arguments.len()),
@@ -1189,7 +1189,7 @@ impl Checker<'_> {
     /// unsigned division. `docs/frontend.md` records the divergence.
     ///
     /// Nothing that reaches a diagnostic below is the file's own text, which
-    /// is what RK-002 in the review knowledge bank asks of a new message: the
+    /// is what every new message owes, since source text is content: the
     /// span is what points at the spelling, and the words are this
     /// compiler's.
     fn constant(
@@ -1271,7 +1271,8 @@ impl OperandClass {
 /// and 6.5.3.1 p2 define an increment as `+= 1`, and 6.5.2.1 p1 gives a
 /// subscript the same constraint. The reason is written here rather
 /// than spelled from `pointee`, because a spelled type can carry the file's
-/// own bytes (RK-002) and none of the three needs the type to be read.
+/// own bytes, which are content, and none of the three needs the type to be
+/// read.
 fn unsteppable(ast: &Ast, pointee: TypeId) -> Option<&'static str> {
     match ast.ty(pointee) {
         Type::Void => Some("`void` has no size"),
@@ -1438,8 +1439,8 @@ const NOT_A_DIGIT: &str = "this is not a digit of the constant's base, and not a
 ///
 /// Every digit test is `char::is_digit`, which is ASCII whatever the radix:
 /// `to_digit` beneath it reads `0`-`9`, `a`-`z` and `A`-`Z` and nothing else.
-/// RK-004 in the review knowledge bank is what asks for that to be said out
-/// loud rather than assumed, because the `char::is_*` family next to it
+/// That is said out loud rather than assumed, because the `char::is_*`
+/// family next to it
 /// answers for Unicode where C means ASCII.
 fn read_number(text: &str) -> Reading {
     // 6.4.4.2 p1 gives a floating constant a `.`, or an exponent: `e`/`E` for
@@ -1644,8 +1645,8 @@ mod tests {
         let resolution = resolve(&sources, &ast, &mut diagnostics);
         // Named rather than taken from the host: what a constant's type is
         // turns on the range of `int`, so a test that did not name a target
-        // would be asserting about whichever machine ran it. RK-011 is the
-        // entry. `int` is 32 bits on every row of `Target::ALL`, which is
+        // would be asserting about whichever machine ran it. `int` is 32 bits
+        // on every row of `Target::ALL`, which is
         // what makes one triple enough here.
         let target = Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple");
         let types = check(
@@ -1756,7 +1757,7 @@ mod tests {
     /// An integer constant is worth what its base says, C17 6.4.4.1 p1.
     ///
     /// The values are written out rather than computed from the spellings,
-    /// which is what RK-001 asks: a table that works the expectation out the
+    /// because a table that works the expectation out the
     /// way the code does agrees with the code however wrong both are.
     ///
     /// Every row is unsuffixed, because a suffix is refused rather than read:
@@ -1981,7 +1982,7 @@ mod tests {
     /// Each row was measured against `clang 20.1.6 -std=c17
     /// -pedantic-errors --target=x86_64-pc-windows-msvc`, which reports every
     /// one of them as an error; `-pedantic-errors` is the flag that makes the
-    /// answer C's rather than clang's, which is RK-032.
+    /// answer C's rather than clang's.
     ///
     /// Mutation: accept any suffix. `1lL`, `1uu`, `123abc` and `0b101` stop
     /// being reported and this fails. Mutation: answer `NOT_A_CONSTANT` for
@@ -2028,8 +2029,9 @@ mod tests {
 
     /// What each shape of expression is worth, spelled the way C declares it.
     ///
-    /// The spellings are written out rather than derived from the types, for
-    /// the reason RK-001 gives.
+    /// The spellings are written out rather than derived from the types,
+    /// because a table built the way the code builds one compares the code
+    /// with itself.
     ///
     /// Mutation: give `UnOp::AddrOf` the operand's type rather than a pointer
     /// to it, or `UnOp::Deref` the operand's. Either fails. Mutation: type
@@ -2329,7 +2331,8 @@ error[SC0302]: no problems found
 
     /// Every operator and every pair of operand types 6.5.16.2 answers for,
     /// each in a program of its own, with the message and the primary label
-    /// written out rather than worked out (RK-001).
+    /// written out rather than worked out, so as not to compare the code with
+    /// itself.
     ///
     /// A row is `(statement, message, primary label)`, and an empty message is
     /// a statement that must stay silent. The primary label is the first one,
@@ -2447,7 +2450,8 @@ int main(void) {{
 
     /// Every binary operator against the constraint of its own clause, C17
     /// 6.5.5 p2 to 6.5.14 p2, each in a program of its own, with the message
-    /// and the primary label written out rather than worked out (RK-001).
+    /// and the primary label written out rather than worked out, so as not to
+    /// compare the code with itself.
     ///
     /// A row is `(expression, message, primary label)`, and an empty message
     /// is an expression that must stay silent. The silences are every pairing
@@ -2952,7 +2956,8 @@ int main(void) {{
     /// One program with the silences and the reports together, so that the
     /// silences are asserted against a run that does report and cannot pass by
     /// checking nothing. The silences are a null pointer constant, and a
-    /// `void *` both ways, which is the implicit conversion RK-068 is about.
+    /// `void *` both ways, which is an implicit conversion with no cast in the
+    /// grammar.
     ///
     /// Mutation: have `collect_receivers` skip an `Item::Declaration`. The
     /// file-scope report goes and this fails; nothing else in the suite
@@ -2999,7 +3004,8 @@ int main(void) {
     /// one with no initializer does not end the search.
     ///
     /// `m` is written first on purpose: it is the trivial value a list of one
-    /// would pass every other test with, which is RK-076's shape.
+    /// would pass every other test with, and a widened input that every other
+    /// test passes the trivial value is held by nothing.
     ///
     /// Mutation: have `initializers` read `declarators.iter().take(1)`.
     /// Mutation: have it `break` rather than `continue` at a declarator with

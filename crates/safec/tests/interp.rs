@@ -357,7 +357,8 @@ fn a_main_that_falls_off_the_end_answers_zero() {
 /// The lowering has its own table saying which `BinOp` a spelling becomes,
 /// and that says nothing about what the operator then does: a `Mul` that
 /// added would pass it. The expected side here is written out rather than
-/// derived, for the reason RK-001 gives.
+/// derived, because a table built the way the code builds one compares the
+/// code with itself.
 ///
 /// Mutation: change any one arm of `binary` or of the unary match. The
 /// spelling that moved fails, and the message names it.
@@ -896,7 +897,7 @@ fn a_discarded_dereference_is_not_a_read() {
 ///
 /// `resolve` answers neither. It checks each frame it loads *through* and hands
 /// back the last location unchecked, which is what `store`'s doc comment says
-/// and what RK-020 in the review knowledge bank is about. An arm that stopped
+/// rather than claiming a check already happened. An arm that stopped
 /// at `resolve` would be the careless half of the pair a second time.
 ///
 /// Mutation: delete the `Slot::Dead` check after `resolve` in the

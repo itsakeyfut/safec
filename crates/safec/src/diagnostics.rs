@@ -84,8 +84,8 @@ impl Severity {
     /// it, or whether the artifact should still be written. The `match` has no
     /// wildcard, so adding a variant is `error[E0004]` here until somebody
     /// looks. `EmitKind` in `driver.rs` is bounded the same way and for the
-    /// same reason; RK-003 in the review knowledge bank records what the
-    /// version spelled as a comparison alone cost.
+    /// same reason: the version spelled as a comparison alone answered one
+    /// side of the question and left the other to nobody.
     ///
     /// The obvious way to silence `E0004` is a wildcard, and that one is shut
     /// too: with the arms replaced by `_` this is a match over a single
@@ -377,8 +377,8 @@ impl Diagnostic {
     /// checks can remember the mapping differently: the arms are here, and a
     /// fourth conclusion is `error[E0004]` until somebody says what it reports.
     ///
-    /// What `E0004` cannot do is make these three right, which is RK-015 in the
-    /// review knowledge bank: it makes somebody look and nothing more. Three
+    /// What `E0004` cannot do is make these three right: it makes somebody
+    /// look and nothing more. Three
     /// arms a reader can hold against the table in the document are what is
     /// left, and `every_conclusion_is_reported_the_way_the_model_says` writes
     /// them out again rather than asking this what it says.
@@ -697,15 +697,14 @@ mod tests {
 
     /// Each conclusion is reported the way `docs/safety-model.md` says.
     ///
-    /// The three written out rather than walked, for RK-001's reason: a test
+    /// The three written out rather than walked, because a test
     /// that asks `concluded` what it answers agrees with it whatever it
     /// answers. These rows are the document's table copied by a reader, which
     /// is the only thing that can disagree with the code.
     ///
     /// What holds the *fourth* conclusion is `error[E0004]` in `concluded`
     /// rather than anything here. Nothing makes somebody add a row to this
-    /// table, which is RK-015's limit: a compiler that makes you look does not
-    /// make you right.
+    /// table: a compiler that makes you look does not make you right.
     ///
     /// Mutation: answer `Some` for `Safe`. The first row fails, and only it.
     /// Mutation: give `Unsafe` a warning's severity. The second row fails, and
@@ -803,8 +802,9 @@ mod tests {
     /// would stop being true the day the enum gains the more serious variant
     /// its own doc comment invites, which is the day this has to keep holding.
     ///
-    /// The expected column is written out rather than computed, which is
-    /// RK-001's rule and matters more here than usual: `is_error` answers by
+    /// The expected column is written out rather than computed, because a
+    /// table built the way the code builds one compares the code with itself,
+    /// and that matters more here than usual: `is_error` answers by
     /// comparing against `Self::Error`, so a column that did the same would be
     /// the function checked against itself and would hold whatever the function
     /// said. These four answers are what the compiler is supposed to do, stated
@@ -1107,9 +1107,9 @@ mod tests {
     ///
     /// The rows are written out rather than computed from the levels. A test
     /// that restates the implementation's comparison holds for whatever that
-    /// comparison happens to say, which is RK-001 in the review knowledge bank,
-    /// and this table is a definition instead. The length check is what covers
-    /// a level nobody has written yet: adding one without answering for it here
+    /// comparison happens to say, and this table is a definition instead. The
+    /// length check is what covers a level nobody has written yet: adding one
+    /// without answering for it here
     /// fails this test by name rather than passing quietly, which is as far as
     /// `value_variants` can be taken, since it is not a `const fn` and the
     /// count cannot be a compile error.

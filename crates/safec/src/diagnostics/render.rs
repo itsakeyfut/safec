@@ -399,8 +399,9 @@ fn write_notes(notes: &[String], out: &mut impl io::Write) -> io::Result<()> {
 /// After the notes, because a note says what happened and a remedy says what to
 /// do about it, and the second reads as the conclusion of the first.
 ///
-/// `shown` rather than the text of a source file, for RK-002's reason: these
-/// are strings this compiler wrote.
+/// Written through `shown`, though these are strings this compiler wrote
+/// rather than the text of a source file, because every place that echoes
+/// text has to answer for what it may one day hold.
 fn write_remedies(remedies: &[Remedy], out: &mut impl io::Write) -> io::Result<()> {
     for remedy in remedies {
         writeln!(out, "  = help: {}", shown(remedy.message()))?;
@@ -866,8 +867,8 @@ mod tests {
     /// **A remedy is the fourth place that echoes, and it is here for the same
     /// reason the note is.** Every remedy in the tree today is a static string
     /// this compiler wrote, so nothing a user controls reaches one yet; the day
-    /// a remedy names an identifier it will, and RK-002 in the review knowledge
-    /// bank is the record of that shape costing this repository a terminal.
+    /// a remedy names an identifier it will, and that shape has already cost
+    /// this repository a terminal.
     ///
     /// Mutation: drop `shown` from `write_remedies`. This fails and nothing
     /// else does, because every other remedy is plain ASCII.
@@ -918,7 +919,7 @@ mod tests {
     /// every anchored report.
     ///
     /// A name is not this compiler's text. It comes from a command line today
-    /// and from a `#include` later, and RK-002 records what a `.c` file did to
+    /// and from a `#include` later, and a `.c` file here has already cleared
     /// somebody's terminal when its bytes were echoed verbatim.
     ///
     /// Mutation: drop the `shown` from `SourceMapCache::display`. The escape

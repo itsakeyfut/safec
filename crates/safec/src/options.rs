@@ -56,7 +56,7 @@ impl Options {
     /// whatever the level was. Both are the same sentence to whoever reads the
     /// report, which is why this is one function rather than two conditions at
     /// the site that reports. Answering two axes with two conditions is the
-    /// shape `CLAUDE.md` calls the worst defect this project has had, and
+    /// shape of the worst defect this project has had, and
     /// `driver.rs::undelivered` shipped to review with exactly that in its note
     /// and its remedy while this function was avoiding it in the gate. See
     /// ADR-0035.
@@ -267,8 +267,8 @@ impl EmitKind {
     /// a listing of what could be read is still true of what could be read.
     /// One case holds the rule and a second differing in one word would be a
     /// test of the corpus rather than of this. What is left for those arms is
-    /// `error[E0004]`, which makes somebody answer for a kind and, as RK-015 in
-    /// the review knowledge bank puts it, nothing more than that.
+    /// `error[E0004]`, which makes somebody answer for a kind and nothing more
+    /// than that.
     ///
     /// **Asked of the file and not of the stream.** `--emit llvm-ir` with no
     /// `-o` still writes its module to the artifact stream on a run that
@@ -368,8 +368,8 @@ mod tests {
     /// Which artifacts are made by building the Safety IR.
     ///
     /// Written out rather than asked of the `match`, because a test that asks
-    /// the implementation what it says holds for whatever it says, which is
-    /// RK-001 in the review knowledge bank. This table is the definition.
+    /// the implementation what it says holds for whatever it says. This table
+    /// is the definition.
     ///
     /// The length check covers the kind nobody has written yet: adding one
     /// without answering for it here fails by name rather than passing quietly.
@@ -410,7 +410,7 @@ mod tests {
     ///
     /// Driven by the roster rather than by a list, which is what covers the kind
     /// nobody has written: `error[E0004]` makes somebody add an arm and nothing
-    /// whatsoever makes the arm they add correct, which is RK-015.
+    /// whatsoever makes the arm they add correct.
     ///
     /// Mutation: answer `false` from `reaches_the_ir` for `Executable`. This
     /// fails, naming the kind.

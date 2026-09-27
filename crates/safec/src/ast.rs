@@ -692,7 +692,7 @@ impl Expr {
     ///
     /// Forgetting one is not a compile error, and `error[E0004]` here says only
     /// that a new variant has to be looked at rather than that it was answered
-    /// correctly, which is what RK-015 in the review knowledge bank records. The
+    /// correctly. The
     /// answer is held by the corpus instead: `--emit ast` prints what this
     /// returns, so a child dropped from an arm is lines missing from expected
     /// files that are compared byte for byte.
@@ -1088,10 +1088,10 @@ mod tests {
 
     /// What C17 calls compatible types, and what it does not.
     ///
-    /// The pairs are written out rather than derived, for the reason RK-001
-    /// gives: a table built the way the code builds one compares the code with
-    /// itself. Each row is a declaration a reader can write down, and the two
-    /// sides are separate nodes in the arena, which is the whole point: a
+    /// The pairs are written out rather than derived, because a table built
+    /// the way the code builds one compares the code with itself. Each row is
+    /// a declaration a reader can write down, and the two sides are separate
+    /// nodes in the arena, which is the whole point: a
     /// derived `PartialEq` would call the two halves of every `true` row
     /// different.
     ///
@@ -1256,7 +1256,7 @@ mod tests {
     /// Every shape of type, and how C declares one of it.
     ///
     /// The expected strings are written out rather than derived from the types,
-    /// for the reason RK-001 gives: a test that builds its expectation the way
+    /// because a test that builds its expectation the way
     /// the code does is comparing the code with itself. These were taken from
     /// `clang -Xclang -ast-dump` on the same declarations, so they are what
     /// another compiler prints and not what this one happens to.
@@ -1397,10 +1397,10 @@ mod tests {
     /// Every node kind, and what it is called in the artifact.
     ///
     /// Written out here rather than derived from the enums, because a test that
-    /// walks a table and checks it against itself proves nothing. RK-001 in the
-    /// review knowledge bank is that lesson, learned on this crate's keyword
-    /// table, where `return` spelled `retrun` passed the whole suite. Its own
-    /// note says the next table is the AST node kinds, and this is it.
+    /// walks a table and checks it against itself proves nothing. That lesson
+    /// was learned on this crate's keyword table, where `return` spelled
+    /// `retrun` passed the whole suite, and the AST node kinds were the next
+    /// table in line.
     ///
     /// Mutation: rename any arm in a `name` method. This fails.
     #[test]

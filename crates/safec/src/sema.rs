@@ -195,7 +195,7 @@ impl Resolver<'_> {
     /// Here rather than in the parser, which reads the shape and not the text:
     /// [`Attribute`] says why. The string is compared as written, quotes
     /// included, so an escape that spells the same bytes is refused, which is
-    /// row 4 and not a spelling anybody writes.
+    /// a refusal the reader can see and not a spelling anybody writes.
     ///
     /// What it accepts is recorded, and [`Resolution::is_hatch`] is the only
     /// thing that makes a function a hatch.

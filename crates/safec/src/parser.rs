@@ -233,7 +233,8 @@ enum Derivation {
 /// declarator from a parameter list; `compound` asks without consuming, to tell
 /// C17 6.8.2's two kinds of block-item apart. All three have to agree about
 /// what begins a declaration, and a second copy of the answer is what would let
-/// them stop agreeing, which is the shape RK-003 records the cost of.
+/// them stop agreeing, and two spellings of one decision have already left a
+/// case here answered by neither.
 ///
 /// `docs/frontend.md` gives Stage 1 `int`, `char` and `void`. C's other
 /// specifiers, its qualifiers and its storage classes are later stages, and
@@ -284,8 +285,8 @@ struct Infix {
 ///
 /// One table and not two. A binding power in one place and a node kind in
 /// another have to agree, and nothing would notice `a - b` arriving at
-/// `BinOp::Add` with the right precedence. RK-003 in the review knowledge bank
-/// is what a second copy of one decision has already cost here.
+/// `BinOp::Add` with the right precedence. A second copy of one decision has
+/// already left a case here answered by neither.
 ///
 /// `?` is in it, because the conditional binds like an infix operator even
 /// though it reads a whole expression before its `:`. `:` is not, and neither
@@ -1794,8 +1795,8 @@ impl Parser<'_> {
     /// Mutation: report whether or not `failed` is set.
     /// `only_the_first_syntax_error_is_reported` fails.
     ///
-    /// The token's text is never spelled into the message. RK-002 in the review
-    /// knowledge bank records why: text out of a source file is content, and a
+    /// The token's text is never spelled into the message, because text out of
+    /// a source file is content, and a
     /// `.c` holding an escape sequence must not be able to write it to a
     /// terminal through a diagnostic. The quoted source line above the caret is
     /// where a reader sees what was actually written, and the renderer escapes
@@ -2631,8 +2632,8 @@ int main(void) { return 0; }
 
     /// The table C17 6.5 gives, written out rather than walked.
     ///
-    /// RK-001 in the review knowledge bank is why it is written out: a test
-    /// that walks a table is comparing the table with itself, and this
+    /// It is written out because a test that walks a table is comparing the
+    /// table with itself, and this
     /// repository has already shipped one, on the C keyword list, where
     /// `return` spelled `retrun` passed the entire suite.
     ///
