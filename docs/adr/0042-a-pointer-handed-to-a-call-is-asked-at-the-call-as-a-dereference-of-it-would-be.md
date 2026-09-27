@@ -118,14 +118,26 @@ where every order hands `two` a freed pointer and this check says only that it
 may: a proof reported as a doubt, which fails the build unless
 `--allow-unknown` is given, and under it is a warning on a run that exits 0.
 
-**Asked at the call and nowhere after it.** A dereference is also recorded as a
-pending read and asked again at a free the same full expression leaves
-unsequenced with it (ADR-0023). What a call is handed is not, so
-`(memset(a, 0, 4) != 0) + (free(a), 0)` builds: C lets the free run first. A
-callee this check cannot read hides the gap, because the later free becomes a
-doubted `SC0401`; `memset`, `memcpy` and the rest read by name do not. Carrying
-it forward changes what a pending read records, and is
-[#270](https://github.com/itsakeyfut/safec/issues/270).
+**Asked at the call, and carried from it as a dereference is.** A
+dereference is also recorded as a pending read and asked again at a free the
+same full expression leaves unsequenced with it (ADR-0023). What a call is
+handed is recorded the same way, where the call's terminator is and before its
+transfer, and asked again by `used_before` at a later free, opaque call or
+`realloc`: `(memset(a, 0, 4) != 0) + (free(a), 0)` is `SC0407` at `memset`,
+because C lets the free run first. Asked only at the call, as this record first
+had it, that program built, and so did the same program with an opaque call or
+`realloc` in place of the free, while each one's dereference spelling was
+`SC0402` ([#270](https://github.com/itsakeyfut/safec/issues/270)).
+
+A pending read carries which of the two it is, `Read::Dereference` or
+`Read::Argument`, and is reported under the code it would have had where it
+ran. The kind is a field of the value and not a part of the key, because the
+key's place already keeps the two apart: a dereference is read through a
+projection and an argument is a local read with none, so a kind in the key
+would be a part no mutation can break. `handed_places` is the one function
+that says which arguments are asked, for `handed` at the call and for the
+transfer that carries them, and `handed` reports through `say`, because
+`used_before` can reach the same caret about the same local.
 
 **No null exemption.** `memory::asked` exempts a pointer established null from
 a free, and nothing here does. An exemption is the half of a rule that can go
@@ -155,28 +167,56 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   `a_pointer_freed_on_one_arm_and_handed_to_a_call` and
   `an_allocation_a_call_was_handed_is_doubted_when_handed_on`, which go
   silent, and the cases whose report here is a doubt.
-* Answering `Callee::ReturnsFirst` with no arguments fails
-  `a_freed_pointer_handed_to_memcpy` alone.
-* Asking every argument of `realloc` rather than those after the first fails
+* Answering `Callee::ReturnsFirst` with no arguments in `handed_places` fails
+  `a_freed_pointer_handed_to_memcpy` and the five cases below that carry a
+  pointer handed to `memset`.
+* Asking every argument of `realloc` in `handed_places`, rather than those
+  after the first, fails
   `a_freed_pointer_handed_to_realloc_is_freed_twice` and
   `a_pointer_freed_before_realloc_stays_freed_after_it`, which gain a second
   report at the call their `SC0401` stands at.
-* Dropping the pointer-type condition fails
+* Dropping the pointer-type condition in `handed_places` fails
   `an_integer_built_from_two_calls_is_not_asked_about_as_an_argument` alone.
 * Answering `true` for `Kind::ArgumentAfterFree` in `verdict`'s `ordered` fails
   `a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it` alone, which
   becomes a proof.
-* Dropping the repeated-local test fails
-  `a_freed_pointer_handed_twice_to_one_call_is_one_report` alone.
-* Asking only the first argument, `arguments.iter().take(1)`, or turning the
-  loop's `continue`s into `break`s, each fails
+* Dropping the repeated-local test in `handed_places` fails nothing on its
+  own, because `handed` reports through `say` and the second report lands on
+  the first one's key. Dropping it and pushing in `handed` fails
+  `a_freed_pointer_handed_twice_to_one_call_is_one_report` and
+  `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`.
+* Asking only the first argument in `handed_places`,
+  `arguments.iter().take(1)`, or turning the loop's `continue`s into `break`s,
+  each fails
   `a_freed_pointer_handed_after_other_arguments_is_asked` alone, which goes
   silent. Found by review: every other case hands the freed pointer first.
-* Asking an argument read through a projection fails
+* Asking an argument read through a projection in `handed_places` fails
+  nothing on its own: the dereference of the same place at the same call
+  already holds `say`'s key, because `used` runs before `handed`. Asking it and
+  pushing in `handed` fails
   `a_pointer_read_out_of_a_freed_table_and_handed_to_a_call`,
   `a_freed_pointer_read_in_an_argument` and
   `a_comma_inside_a_call_argument_orders_nothing_outside_it`, each gaining an
-  `SC0407` about the pointer the argument was read through.
+  `SC0407` about the pointer the argument was read through, and
+  `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`.
+* Dropping the loop in `Allocations::terminator` that records `Read::Argument`
+  fails `a_pointer_handed_to_a_call_the_check_meets_first_is_reported`,
+  `a_pointer_handed_to_a_call_before_an_opaque_call_is_reported`,
+  `a_pointer_handed_to_a_call_before_realloc_is_reported` and
+  `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`,
+  which go silent. Answering `Kind::UseAfterFree` for `Read::Argument` in
+  `used_before` fails the same four, which become `SC0402`.
+* Answering `Kind::ArgumentAfterFree` for `Read::Dereference` in `used_before`
+  fails eight cases whose dereference is carried to a later call, among them
+  `a_write_through_a_pointer_the_check_meets_first_is_reported` and
+  `an_unsequenced_use_the_check_meets_first_is_reported`, which become
+  `SC0407`.
+* Answering `Read::Dereference` in the `or_insert` of `Allocations`'s `join`
+  fails `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`
+  alone, which becomes `SC0402`.
+* Pushing in `handed` rather than going through `say` fails
+  `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report` alone,
+  which gains a second `SC0407` about `a` at the `memset` caret.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
   `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
   the `Unsequenced` row the disagreement remedy fails
@@ -219,8 +259,13 @@ the `match`, and nothing tells the two apart.
   an arm no execution reaches, `free(a); if (0) { use(a); }`, is reported as a
   proof. `SC0402` already did the same with `*a` in that arm; a call there is
   the commoner shape.
-* Bad, because a pointer handed to a call and freed later in the same full
-  expression, which C may run first, is silent. That is #270, above.
+* Bad, because a program this check already refuses can gain a second report
+  about one full expression, at a different caret: `g(a) + (free(a), 0)` is
+  `SC0401` at the free, since `g` may free `a`, and now `SC0407` at `g` as
+  well, since the free may run first. Both orders are undefined, so neither
+  report is wrong; it is one more line for the reader. Measured on the
+  programs of #270's design comment, no exit code moved except on the three
+  programs that were silent.
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`
   where the callee reads `*pp` and dereferences it, is silent in both
   functions, as it was before this record. That is

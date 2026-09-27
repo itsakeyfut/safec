@@ -131,8 +131,10 @@ it would be, except what `free` and `realloc`'s first argument are handed,
 which is `SC0401`'s, and what an allocator is handed, which is a size. So a
 pointer handed to a call after another call this check cannot read was handed
 it, `init(p); run(p);`, is refused as unproven with no free in the function at
-all. The fix is at the call or at the free, which is why it
-is not `SC0402`.
+all. It is asked again, as a dereference is, at a later call the same full
+expression leaves unordered against it, since C may run that call first:
+`(memset(a, 0, 4) != 0) + (free(a), 0)` is `SC0407` at `memset`. The fix is at
+the call or at the free, which is why it is not `SC0402`.
 [ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
 
