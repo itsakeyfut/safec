@@ -2536,8 +2536,8 @@ impl Analysis for Allocations<'_> {
 /// One walk over one lattice, so this is not four checks and
 /// `docs/diagnostics.md` says so where it hands them their codes. What differs
 /// is the question: the codes and the words are different, and the thing a
-/// caret lands on is a call in two of them, a dereference in the third and a
-/// `return` in the fourth.
+/// caret lands on is a call for a double free and an interior free, a
+/// dereference for a use after free, and a `return` for a return after free.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -3273,7 +3273,8 @@ fn used(
 /// as it is there: asking the return place at [`Terminator::Return`] instead
 /// proved a return that a dereference of the same local only doubts, because
 /// the return place never escapes. For C the two points are one, since the
-/// lowering writes the value and ends the block with nothing between;
+/// lowering puts nothing that frees between the write and the return, only the
+/// sequence point that ends the `return`'s full expression;
 /// `docs/c-family.md` says what that asks of another frontend.
 ///
 /// **Only where the function returns a pointer.** Every call's result is a
@@ -3299,14 +3300,10 @@ fn returned(
     let Element::Assign(operation) = element else {
         return;
     };
-    if operation.place != Place::local(function.return_place()) {
+    if operation.place != Place::local(function.return_place())
+        || !analysis.is_pointer(function, function.return_place())
+    {
         return;
-    }
-    // A `match` for `Allocations::is_pointer`'s reason: a kind of type added
-    // later has to say whether what it returns is asked about.
-    match analysis.unit.ty(function.local(function.return_place())) {
-        Ty::Pointer(_) => {}
-        Ty::Int | Ty::Char | Ty::Void => return,
     }
     // A constant holds no allocation, and a place read through a projection is
     // a pointer read out of memory, which holds no site: ADR-0017, and #256.

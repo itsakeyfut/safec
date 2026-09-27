@@ -2690,8 +2690,8 @@ fn a_local_given_a_constant_forgets_the_set_it_freed() {
 /// **A boundary, not a goal.** ADR-0041 asks a `return` at the write into the
 /// return place, about the local being written, so that an escaped local is
 /// distrusted there as a dereference distrusts it. For C that write and the
-/// return are one point, because the lowering ends the block right after it;
-/// another frontend that frees between the two hands back a freed pointer and
+/// return are one point, because the lowering puts only a sequence point
+/// between them and nothing that frees; another frontend that frees between the two hands back a freed pointer and
 /// this says nothing. `docs/c-family.md` is where that obligation is written
 /// down for whoever writes the second frontend.
 ///
