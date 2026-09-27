@@ -297,10 +297,11 @@ the `match`, and nothing tells the two apart.
   design comment, no exit code moved except on the three programs that were
   silent.
 * Bad, because a pointer handed to a call is refused where a `,`, `&&`, `||`
-  or `?:` below an assignment orders it before a later free or opaque call,
-  `x = (memset(a, 0, 4) != 0) && h(a);`, as its dereference spelling is on
-  `main`. That assignment gets no `Element::Sequenced`, which is #178's, and
-  ADR-0043 records it as what it leaves.
+  or `?:` below any node other than one of those four orders it before a later
+  free or opaque call: `x = (memset(a, 0, 4) != 0) && h(a);` and
+  `if (!((memset(a, 0, 4) != 0) && h(a)))` both are, as their dereference
+  spellings are on `main`. The operator gets no `Element::Sequenced` there,
+  which is #178's, and ADR-0043 records it as what it leaves.
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`
   where the callee reads `*pp` and dereferences it, is silent in both
   functions, as it was before this record. That is

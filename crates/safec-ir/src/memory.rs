@@ -3813,11 +3813,11 @@ fn used_before(
 
 /// Whether a read at `inner` is part of the arguments of the call at `outer`.
 ///
-/// **Strictly inside**, because in C an argument is written between its call's
-/// parentheses and nothing else is, so every read an argument makes, a call
-/// nested there included, has a span inside the call's and no read in another
-/// operand does. C17 6.5.2.2 p10's first sentence orders the first kind before
-/// the call.
+/// **Strictly inside**, because in C a call's designator and arguments are
+/// written within the call and nothing else is, so every read an argument
+/// makes, a call nested there included, has a span inside the call's and no
+/// read in another operand does. C17 6.5.2.2 p10's first sentence orders the
+/// first kind before the call.
 ///
 /// **An equal span is not inside.** The reads that carry exactly a call's span
 /// are its own operand reads and what it is handed, which are recorded after

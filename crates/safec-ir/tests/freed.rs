@@ -2429,12 +2429,13 @@ fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
 /// A read whose span starts inside a call's and ends past it is not one of the
 /// call's arguments.
 ///
-/// **No C program reaches this and a frontend can build it.** An argument ends
-/// where its call's parentheses do, so a read reaching past the call is not
-/// written inside it; a lowering that gives an operand the whole enclosing
-/// expression's span, as this one does for both operands of a `||`, is the
-/// kind of producer that makes one. Nothing orders the read before the free, so
-/// it is carried to it and reported.
+/// **No C program reaches this pending at the call, and a frontend can build
+/// it.** An argument ends where its call's parentheses do, so a read reaching
+/// past the call is not written inside it. The C lowering does make such spans,
+/// since it gives both operands of a `||` the whole expression's span, so the
+/// right operand of `h(x) || *a` starts where `h(x)` does; but that read runs
+/// after the call and is never pending when it is asked. Nothing orders the
+/// read below before the free, so it is carried to it and reported.
 ///
 /// Mutation: drop `inner.end() <= outer.end()` from `memory.rs::inside`. The
 /// read counts as inside the free, is skipped, nothing is reported, and this

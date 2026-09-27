@@ -232,7 +232,8 @@ rather than quieter.
 **Where the element is not emitted, a span says the same thing, and that half is
 not loud.** [ADR-0043](adr/0043-a-call-is-ordered-after-what-its-own-arguments-read-and-a-span-inside-it-says-which.md)
 lets a call skip a carried read whose span lies strictly inside the call's,
-because that is how C source says a read is one of the call's arguments. So a
+because that is how C source says a read is part of the call's designator or
+arguments, both of which C17 6.5.2.2 p10 orders before it. So a
 producer owes two things of its spans. A read an argument makes, in a call
 nested there included, has a span strictly inside the call's; breaking that
 costs a suspicion. A read in another operand has no span inside the call's;

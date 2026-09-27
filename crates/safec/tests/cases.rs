@@ -1098,7 +1098,7 @@ cases! {
     // The read is skipped at the call around it and not dropped: `strcpy`'s
     // argument still reaches the free beside `strlen`. Mutation: drop the
     // reads inside a call's span from `pending` at that call's transfer, in
-    // `Allocations::terminator`, rather than skipping them in `used_before`;
+    // `Allocations::terminator`, as well as skipping them in `used_before`;
     // the `SC0407` at `strcpy` goes, and nothing else fails.
     a_nested_call_is_still_carried_to_a_free_beside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 

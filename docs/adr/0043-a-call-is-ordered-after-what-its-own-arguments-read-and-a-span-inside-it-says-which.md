@@ -56,12 +56,16 @@ nowhere else. The read is not removed from the set, because C orders it before
 this call and before nothing else: `strlen(strcpy(s, t)) + (free(s), 0)` still
 carries `strcpy`'s argument to the free.
 
-**Why a span can say this.** In C source, an argument is written between the
-parentheses of the call it is an argument of, and nothing else is. The lowering
-gives each read the span of the element that performs it, and a call's span
-covers its name and its parentheses. So a read inside the call's arguments,
-including one inside a call nested there, has a span inside the call's, and a
-read in another operand has a span outside it.
+**Why a span can say this.** In C source, a call's function designator and its
+arguments are written within the call, and nothing else is, and 6.5.2.2 p10
+orders both before the call; the designator is a name today and reads nothing.
+The lowering gives each read the span of the element that performs it, and a
+call's span covers its name and its parentheses. So a read inside the call's
+arguments, including one inside a call nested there, has a span strictly inside
+the call's, and a read in another operand has a span that is not: it lies
+outside the call, or encloses it, or starts where the call does and reaches past
+it, as the right operand of `h(x) || *a` does, whose read the lowering places at
+the whole expression.
 
 **Why strictly.** A span equal to the call's is not taken for an argument. The
 only reads that carry exactly the call's span are the call's own operand reads
@@ -72,10 +76,13 @@ a sibling operand to one span, which `Span`'s third coordinate has yet to
 decide, the sibling is still asked and reported, rather than excluded and
 silent.
 
-**What it does not close.** A `,`, `&&`, `||` or `?:` below an operator C leaves
-unsequenced still gets no `Element::Sequenced`, so
-`x = (memset(a, 0, 4) != 0) && h(a);` is refused, as `x = (a[0] != 0) && h(a);`
-is on `main`. The missing marker is the one #178 is about. #178 records the
+**What it does not close.** A `,`, `&&`, `||` or `?:` below any node other
+than one of those four gets no `Element::Sequenced`, which includes an
+assignment, a `!`, an arithmetic operator and a call's argument list. So
+`x = (memset(a, 0, 4) != 0) && h(a);`, `if (!((memset(a, 0, 4) != 0) && h(a)))`,
+`h2(0, (memset(a, 0, 4) != 0) && h(a));` and `x = (memset(a, 0, 4), free(a), 0);`
+are refused, as each one's dereference spelling is on `main`, while the same
+operators at the root of a full expression build. The missing marker is the one #178 is about. #178 records the
 proof its absence costs, and this is the report it costs; this record does not
 reach either.
 
@@ -99,13 +106,16 @@ The cases are in `crates/safec/tests/cases` unless named otherwise.
   reaches an equal span, and that test is IR a frontend can build.
 * Dropping `inner.end() <= outer.end()` from `inside` fails
   `a_read_reaching_past_a_later_free_is_still_carried_to_it` in
-  `crates/safec-ir/tests/freed.rs` alone, which goes silent. No C program
-  reaches a read starting inside a call and ending past it; a lowering that
-  gives an operand the enclosing expression's span can build one.
+  `crates/safec-ir/tests/freed.rs` alone, which goes silent. The C lowering
+  does make such spans, the right operand of `h(x) || *a` among them, but never
+  has one pending at the call it starts inside, because that read runs after
+  the call; IR can.
 * Dropping the reads inside a call's span from `pending` at that call's
-  transfer, rather than skipping them where `used_before` asks, fails
+  transfer, as well as skipping them where `used_before` asks, fails
   `a_nested_call_is_still_carried_to_a_free_beside_it` alone, which loses its
-  `SC0407` at `strcpy`.
+  `SC0407` at `strcpy`. Dropping them there *instead of* skipping them fails
+  the four nested-call cases as well, because `used_before` asks a call before
+  its transfer runs.
 
 Held by nothing: that `inside` compares the file. Every case is one file, and
 two spans in two files cannot be nested by offsets that happen to agree unless a
@@ -128,7 +138,8 @@ case is written across two files.
   covers the one way that is foreseeable, an equal span. It does not cover a
   frontend that hands out spans nested wrongly.
 * Bad, because what #178's missing marker costs stays: a read and a call
-  ordered by a `,`, `&&`, `||` or `?:` below an assignment are still reported.
+  ordered by a `,`, `&&`, `||` or `?:` below any other node are still
+  reported, and `if (!(p && q))` is an ordinary shape of that.
   With #270's carry that holds in the argument spelling as well as the
   dereference one.
 * What would reverse this: an IR whose call carries its argument evaluations,
