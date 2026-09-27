@@ -1076,6 +1076,14 @@ cases! {
     // it again from the free, at the same caret. Mutation: push in `handed`
     // rather than going through `say`; two `SC0407` about `a` at one caret.
     an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Two reports about one full expression, and each is its own order: `g`
+    // may free `a` before the free, which is the forward `SC0401`, and the free
+    // may run before `g` reads `a`, which is the carried `SC0407`. The second
+    // is the only thing the carry adds after a call this check cannot read,
+    // because the first already fails the build. Mutation: record
+    // `Read::Argument` only for `Callee::ReturnsFirst` in
+    // `Allocations::terminator`; the `SC0407` goes and the exit code stays.
+    an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

@@ -2381,6 +2381,64 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
     assert!(found.is_empty(), "{found:?}");
 }
 
+/// What a call is handed is carried as the sites it held where the call was
+/// reached, not the ones the call leaves behind.
+///
+/// **No C program reaches this and a frontend can build it**, for the reason
+/// the test above gives: here the call writes its result into the local it was
+/// handed, so the site that local names becomes the call's own allocation and
+/// the one `helper` read is gone. Nothing separates the call from the free, so
+/// what the call was handed is carried to it. Recorded before the transfer, it
+/// names the old allocation and `Known::reborn` drops it with the site; nothing
+/// is said about `helper` being handed anything freed, because the free is of
+/// what `helper` returned.
+///
+/// Mutation: record `Read::Argument` after the call's transfer rather than
+/// before it in `Allocations::terminator`. The entry names the new allocation,
+/// the free meets it, and an `SC0407` is reported at `helper` about a pointer
+/// it was never handed, so this fails.
+#[test]
+fn what_a_call_was_handed_is_carried_as_it_was_before_the_call() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let handed = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], handed));
+    // `held = helper(held)`, into the local itself, so into the same site.
+    function.fill_block(
+        handed,
+        after_the_statement(
+            names.at[0],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Call {
+                    callee: callees.helper,
+                    arguments: vec![Operand::Copy(Place::local(held))],
+                    destination: Some(Place::local(held)),
+                    then: release,
+                    origin: Origin::Written(names.at[1]),
+                },
+            },
+        ),
+    );
+    function.fill_block(release, free(&callees, held, names.at[2], exit));
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        !found
+            .iter()
+            .any(|finding| finding.kind == Kind::ArgumentAfterFree),
+        "{found:?}"
+    );
+}
+
 /// A read in a call's own argument, with no marker, is a suspicion this check
 /// keeps.
 ///

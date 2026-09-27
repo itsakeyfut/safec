@@ -2211,7 +2211,9 @@ impl Analysis for Allocations<'_> {
         // by the line above.** The callee's body reads it, and C17 6.5.2.2
         // p10 leaves that body unordered against a free later in the same full
         // expression. Before the transfer below, for `PendingRead`'s reason:
-        // the sites are the ones held where the call is reached. The
+        // the sites are the ones held where the call is reached, which
+        // `what_a_call_was_handed_is_carried_as_it_was_before_the_call` holds
+        // where the call writes into the local it was handed. The
         // arguments are exactly the ones `handed` asks, from one function, so
         // the two readers cannot disagree about which. Dropping this loop
         // silences `a_pointer_handed_to_a_call_the_check_meets_first_is_reported`.

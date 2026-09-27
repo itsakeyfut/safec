@@ -217,6 +217,16 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
 * Pushing in `handed` rather than going through `say` fails
   `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report` alone,
   which gains a second `SC0407` about `a` at the `memset` caret.
+* Recording `Read::Argument` only for `Callee::ReturnsFirst` fails
+  `an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free`
+  alone, which loses its `SC0407` and keeps its exit code: after a call this
+  check cannot read, the later free is already a doubted `SC0401`, so the
+  carry adds the report about the other order and nothing that fails a build.
+* Recording `Read::Argument` after the call's whole transfer rather than
+  before it fails `what_a_call_was_handed_is_carried_as_it_was_before_the_call`
+  in `crates/safec-ir/tests/freed.rs` alone, where the call writes into the
+  local it was handed and the entry would name the call's own allocation. No
+  C program reaches that shape.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
   `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
   the `Unsequenced` row the disagreement remedy fails
