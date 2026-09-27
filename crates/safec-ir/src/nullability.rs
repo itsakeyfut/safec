@@ -82,7 +82,7 @@ impl Nullness {
 
     /// What a dereference of a place whose local holds this is worth.
     ///
-    /// **`None` means proved and nothing else.** The first safety check had an
+    /// **`None` means proved and nothing else.** The memory check once had an
     /// arm that meant "proved safe" and "gave up" at once, and
     /// reported the second as the first; here the giving up has a variant of
     /// its own that is reported, so the only thing that reaches `None` is a

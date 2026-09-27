@@ -847,7 +847,7 @@ impl Lowering<'_> {
     /// is not here, and `types.rs` cites the same paragraph where it declines
     /// to give `1 - p` a type. Reading one of those for the other is a habit
     /// rather than an accident: the same mistake was caught in 6.5.3.2, where
-    /// a Constraint was read as a Semantics paragraph.
+    /// a Semantics paragraph was read as a Constraint.
     fn unmoved(ty: Ty, op: BinOp, lhs: &Operand, rhs: &Operand) -> Option<Operand> {
         if !matches!(ty, Ty::Pointer(_)) {
             return None;

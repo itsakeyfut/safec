@@ -93,9 +93,9 @@ cases! {
     a_read_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // And what the report is allowed to *name*. The read may have gone through
     // either allocation, so `allocated here` would be a caret on one of two
-    // lines with nothing to choose between them, which is proving from one
-    // member of a may-set, made about a label rather than about a proof. Its
-    // `.stderr` has
+    // lines with nothing to choose between them, which is the may-set mistake
+    // of concluding from one member, made about a label rather than about a
+    // proof. Its `.stderr` has
     // no such caret, and folding the two with anything but `same` puts one
     // back.
     a_read_of_either_of_two_allocations_before_a_free_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

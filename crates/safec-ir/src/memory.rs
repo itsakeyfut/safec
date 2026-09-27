@@ -1767,9 +1767,9 @@ impl Analysis for Allocations<'_> {
         // write through a pointer, and this frontend reads an assignment's
         // value back into a temporary, so the read is recorded by that element
         // instead. That is a property of one lowering rather than of the IR,
-        // and a rule written after such a return is skipped by exactly the
-        // cases it cannot handle. Written first because the order is free and
-        // the alternative is guarded by nothing.
+        // and such a return has already skipped the rules below it here once,
+        // turning a suspicion into a proof. Written first because the order is
+        // free and the alternative is guarded by nothing.
         value.met(dereferenced_in_element(element));
 
         // Every field written out, never `..`, which would let a field added
