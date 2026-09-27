@@ -917,6 +917,22 @@ cases! {
     what_calloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     what_aligned_alloc_returns_is_an_allocation_nobody_else_has: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // What a pointer read out of memory reaches, for a call and for a store,
+    // and a pointer parameter exposed where its function starts. See
+    // ADR-0040, whose Confirmation names the mutation each of these fails
+    // under.
+    //
+    // Reported.
+    what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_copied_from_one_table_to_another_is_inside_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_table_read_out_of_a_holder_into_a_local_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Built: a pointer holding no site is not a load, and a load through one
+    // table reaches only what that table holds.
+    a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
     a_braced_initializer_is_refused: ["--emit", "ast"],
