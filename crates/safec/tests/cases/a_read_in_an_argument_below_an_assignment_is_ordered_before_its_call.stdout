@@ -1,0 +1,87 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:2:5 "h" declared
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+Function a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:14 generated
+    Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:5:14 generated
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 generated
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:10:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:10:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:10:5 generated
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:11 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_1"
+        Copy "_1"
+          Deref
+    Call a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:9 "h" "bb5"
+      Destination "_7"
+      Copy "_6"
+  Block "bb5"
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:5 written
+      Destination "_3"
+      Use
+        Copy "_7"
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:5 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:11:5 generated
+    Operation a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call.c:12:12 generated
+    Return

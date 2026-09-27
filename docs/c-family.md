@@ -229,6 +229,18 @@ that emits none gets `free(p + *p)` reported, which is a suspicion about a
 program C defines, so the bias is the same as above: too few markers is louder
 rather than quieter.
 
+**Where the element is not emitted, a span says the same thing, and that half is
+not loud.** [ADR-0043](adr/0043-a-call-is-ordered-after-what-its-own-arguments-read-and-a-span-inside-it-says-which.md)
+lets a call skip a carried read whose span lies strictly inside the call's,
+because that is how C source says a read is one of the call's arguments. So a
+producer owes two things of its spans. A read an argument makes, in a call
+nested there included, has a span strictly inside the call's; breaking that
+costs a suspicion. A read in another operand has no span inside the call's;
+breaking that costs silence, since the read is skipped at a call that may free
+what it read. A span equal to the call's is not taken for inside, so giving a
+call and its sibling operands one span, as an expansion attributed to its
+invocation would, is the safe way to be wrong.
+
 There is one more such requirement today.
 [ADR-0021](adr/0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds a
 zero pointer offset away, so **no `Rvalue::Binary` in a well-formed safety IR
@@ -386,7 +398,7 @@ there is adapter output.
 |---|---|---|
 | Phase 2 builds the CFG | Whether an edge can exist that no statement produced | [ADR-0010](adr/0010-give-the-graph-an-edge-no-statement-produced.md), written when the trigger fired |
 | The Safety IR gains a function table | Whether identity is an opaque id or a name | `FuncId`'s doc comment in the IR, where it was recorded when the table landed |
-| `Span` grows its third coordinate | What it has to serve: macros, instantiations, and generated operations | An ADR; `Span`'s doc already says the shape is pinned by more than privacy |
+| `Span` grows its third coordinate | What it has to serve: macros, instantiations, and generated operations, without a read in one operand landing strictly inside a call in another (ADR-0043) | An ADR; `Span`'s doc already says the shape is pinned by more than privacy |
 | The safety IR is extracted from the `safec` crate | Which crates may depend on which | [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md), written when the trigger fired |
 | The first safety check is written | Where `Diagnostic` lives, and therefore which crate an analysis can be written in | An ADR. [ADR-0011](adr/0011-the-ir-crate-depends-on-nothing-in-the-workspace.md) says why this is the trigger and why waiting costs nothing |
 | The first C++ lifetime bug is analyzed | Whether the C annotation and the C++ type reached the same IR concept | Wherever it shows that one of them was wrong |

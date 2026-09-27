@@ -2209,8 +2209,10 @@ impl Analysis for Allocations<'_> {
 
         // **What the call is handed is carried forwards, as a dereference is
         // by the line above.** The callee's body reads it, and C17 6.5.2.2
-        // p10 leaves that body unordered against a free later in the same full
-        // expression. Before the transfer below, for `PendingRead`'s reason:
+        // p10 leaves that body indeterminately sequenced with a later call in
+        // the same full expression, unless that call encloses this one, whose
+        // arguments it orders before itself (ADR-0043, in `used_before`).
+        // Before the transfer below, for `PendingRead`'s reason:
         // the sites are the ones held where the call is reached, which
         // `what_a_call_was_handed_is_carried_as_it_was_before_the_call` holds
         // where the call writes into the local it was handed. The
@@ -3740,6 +3742,13 @@ fn used_before(
     let taken: Vec<usize> = named(&touched).collect();
 
     for ((.., place), read) in &known.pending {
+        // **A read this call's own arguments made is behind it**, so it is
+        // skipped here and kept for whatever else in the expression may free:
+        // `strlen(strcpy(s, t)) + (free(s), 0)` still carries `strcpy`'s
+        // argument to the free. See ADR-0043.
+        if inside(read.at, origin.span()) {
+            continue;
+        }
         let both: Vec<usize> = read
             .sites
             .iter()
@@ -3800,6 +3809,27 @@ fn used_before(
             },
         );
     }
+}
+
+/// Whether a read at `inner` is part of the arguments of the call at `outer`.
+///
+/// **Strictly inside**, because in C an argument is written between its call's
+/// parentheses and nothing else is, so every read an argument makes, a call
+/// nested there included, has a span inside the call's and no read in another
+/// operand does. C17 6.5.2.2 p10's first sentence orders the first kind before
+/// the call.
+///
+/// **An equal span is not inside.** The reads that carry exactly a call's span
+/// are its own operand reads and what it is handed, which are recorded after
+/// the call has been asked, so nothing is lost here by refusing them. What it
+/// buys is the direction of a mistake: were a call and a sibling operand ever
+/// given one span, the sibling is reported rather than skipped. See ADR-0043,
+/// and `docs/c-family.md` for what this asks of another frontend.
+fn inside(inner: Span, outer: Span) -> bool {
+    inner != outer
+        && inner.file() == outer.file()
+        && inner.start() >= outer.start()
+        && inner.end() <= outer.end()
 }
 
 /// Whether a report at a caret replaces the one already standing there.

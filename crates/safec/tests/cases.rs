@@ -1084,6 +1084,23 @@ cases! {
     // `Read::Argument` only for `Callee::ReturnsFirst` in
     // `Allocations::terminator`; the `SC0407` goes and the exit code stays.
     an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a call's own arguments read is behind it, C17 6.5.2.2 p10's first
+    // sentence, wherever the call sits; ADR-0026's element says so only for a
+    // call no unsequenced operator encloses, and these are the calls below one.
+    // The first has no free in it at all. Mutation: drop the `inside` test in
+    // `used_before`; all four are refused again, the last with the `SC0402` its
+    // own note used to contradict, and the case after them gains reports. See
+    // ADR-0043.
+    a_call_nested_in_an_argument_is_ordered_before_the_call_around_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_of_what_a_nested_call_returns_is_ordered_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The read is skipped at the call around it and not dropped: `strcpy`'s
+    // argument still reaches the free beside `strlen`. Mutation: drop the
+    // reads inside a call's span from `pending` at that call's transfer, in
+    // `Allocations::terminator`, rather than skipping them in `used_before`;
+    // the `SC0407` at `strcpy` goes, and nothing else fails.
+    a_nested_call_is_still_carried_to_a_free_beside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

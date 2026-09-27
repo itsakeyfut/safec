@@ -2381,6 +2381,51 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
     assert!(found.is_empty(), "{found:?}");
 }
 
+/// A read carrying exactly a call's span is not taken for one of its arguments.
+///
+/// **No C program reaches this and a frontend can build it.** The C lowering
+/// gives a call's argument reads spans strictly inside the call's, and a read
+/// in another operand a span outside it, so an equal span never arrives from C.
+/// Here the read and the free share one, with no marker between them, which is
+/// what a frontend that attributed a whole expansion to one span would build.
+/// Nothing says the read is behind the free, so it is carried to it and
+/// reported, which is the direction ADR-0043 chose for this mistake.
+///
+/// Mutation: let `memory.rs::inside` answer `true` for an equal span, by
+/// dropping its `inner != outer`. The read is skipped as if it were an
+/// argument, nothing is reported, and this fails.
+#[test]
+fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let live = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
+    function.fill_block(
+        live,
+        after_the_statement(names.at[0], read(value, held, names.at[1], release)),
+    );
+    // The same span as the read above, and nothing between them.
+    function.fill_block(release, free(&callees, held, names.at[1], exit));
+    function.fill_block(exit, after_the_statement(names.at[1], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        found
+            .iter()
+            .any(|finding| finding.kind == Kind::UseAfterFree
+                && finding.unproven == Some(Unproven::Unsequenced)),
+        "{found:?}"
+    );
+}
+
 /// What a call is handed is carried as the sites it held where the call was
 /// reached, not the ones the call leaves behind.
 ///

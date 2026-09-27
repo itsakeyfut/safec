@@ -110,6 +110,10 @@ produced needs an IR whose call carries its argument evaluations, which is the
 reversal named below. The residue is a false report the reader can see either
 way.
 
+ADR-0043 later closed this residue without that IR. A carried read whose span
+lies strictly inside the call's is one of its arguments, and the call does not
+ask it, so `x = (free(p + *p), 0);` keeps only its interior-free `SC0404`.
+
 The same holds for `k(p, *p)`, whose read never waits at all, and for the
 stronger half of the marker, which is left unconcluded for the reason above.
 
