@@ -129,6 +129,15 @@ had it, that program built, and so did the same program with an opaque call or
 `realloc` in place of the free, while each one's dereference spelling was
 `SC0402` ([#270](https://github.com/itsakeyfut/safec/issues/270)).
 
+A later call that encloses the one it was handed to is not asked, because C
+orders a call's arguments before it: `free(memset(a, 0, 4))` and
+`strlen(strcpy(s, t))` build. That is ADR-0043's, which the carry made
+necessary, since it refused both on a first implementation. And an opaque call
+is asked about what it is handed, not about what it can reach because it was
+exposed, so `(memset(p, 0, 4) != 0) + (release_all(), 0)` over a parameter
+builds; the dereference spelling does the same on `main`, and it is
+[#273](https://github.com/itsakeyfut/safec/issues/273).
+
 A pending read carries which of the two it is, `Read::Dereference` or
 `Read::Argument`, and is reported under the code it would have had where it
 ran. The kind is a field of the value and not a part of the key, because the
@@ -204,8 +213,12 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   `a_pointer_handed_to_a_call_before_an_opaque_call_is_reported`,
   `a_pointer_handed_to_a_call_before_realloc_is_reported` and
   `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`,
-  which go silent. Answering `Kind::UseAfterFree` for `Read::Argument` in
-  `used_before` fails the same four, which become `SC0402`.
+  which go silent, and
+  `an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free`
+  and `a_nested_call_is_still_carried_to_a_free_beside_it`, which lose their
+  `SC0407` at the call that was handed the pointer. Answering
+  `Kind::UseAfterFree` for `Read::Argument` in `used_before` fails the first
+  four, which become `SC0402`, and the other two.
 * Answering `Kind::ArgumentAfterFree` for `Read::Dereference` in `used_before`
   fails eight cases whose dereference is carried to a later call, among them
   `a_write_through_a_pointer_the_check_meets_first_is_reported` and
@@ -226,7 +239,12 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   before it fails `what_a_call_was_handed_is_carried_as_it_was_before_the_call`
   in `crates/safec-ir/tests/freed.rs` alone, where the call writes into the
   local it was handed and the entry would name the call's own allocation. No
-  C program reaches that shape.
+  C program reaches that shape. The mutation has to run after every exit of
+  the transfer, which is a wrapper around `Allocations::terminator` rather
+  than the loop moved within it: the transfer returns early for `free` and
+  for the callees that return their first argument, so a loop moved to its
+  end also stops recording for `memset` and `strcpy` and fails the corpus
+  cases that hand a pointer to either.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
   `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
   the `Unsequenced` row the disagreement remedy fails
@@ -272,10 +290,17 @@ the `match`, and nothing tells the two apart.
 * Bad, because a program this check already refuses can gain a second report
   about one full expression, at a different caret: `g(a) + (free(a), 0)` is
   `SC0401` at the free, since `g` may free `a`, and now `SC0407` at `g` as
-  well, since the free may run first. Both orders are undefined, so neither
-  report is wrong; it is one more line for the reader. Measured on the
-  programs of #270's design comment, no exit code moved except on the three
-  programs that were silent.
+  well, since the free may run first. The free-first order is undefined
+  whatever `g` does, and the other order is undefined when `g` frees `a`,
+  which is what the first report already doubts, so neither report is wrong;
+  it is one more line for the reader. Measured on the programs of #270's
+  design comment, no exit code moved except on the three programs that were
+  silent.
+* Bad, because a pointer handed to a call is refused where a `,`, `&&`, `||`
+  or `?:` below an assignment orders it before a later free or opaque call,
+  `x = (memset(a, 0, 4) != 0) && h(a);`, as its dereference spelling is on
+  `main`. That assignment gets no `Element::Sequenced`, which is #178's, and
+  ADR-0043 records it as what it leaves.
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`
   where the callee reads `*pp` and dereferences it, is silent in both
   functions, as it was before this record. That is
