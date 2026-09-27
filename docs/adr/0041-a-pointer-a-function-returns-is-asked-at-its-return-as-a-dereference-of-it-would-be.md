@@ -66,8 +66,10 @@ result on as an argument asks nothing, because a bare read is not asked, and
 the function it hands it to believes its parameter live: a parameter freed on
 one arm and returned was silent in every function, and so was
 `free(p); log_ptr(p); return p;`, where the call turns the proved free into a
-doubt. Review demonstrated both, and restoring the narrowing silences them
-again.
+doubt. Review demonstrated both, and restoring the narrowing silenced them
+again until
+[ADR-0042](./0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
+asked what a call is handed, which reports each at the caller's call.
 
 **Why a return is read when other bare reads are not.** A value copied into
 another local stays in this check's sight, and a later dereference of the copy
@@ -107,8 +109,9 @@ measured, and a named case in `crates/safec/tests/cases` that it fails:
 * Dropping a parameter's site from what is asked unless it is
   `SiteState::Freed`, which is the withdrawn option, fails
   `a_parameter_freed_on_one_arm_and_handed_on_by_its_caller` and
-  `a_parameter_freed_then_handed_to_a_call_and_returned`, which go silent, and
-  three more cases about a parameter.
+  `a_parameter_freed_then_handed_to_a_call_and_returned`, which lose the
+  report at the return, and three more cases about a parameter. Neither goes
+  silent since ADR-0042: each keeps an `SC0407` at a call.
 * Dropping the pointer-type condition fails
   `an_integer_built_from_two_calls_is_not_asked_about_at_its_return` and six
   older cases that return an `int` built from calls.
