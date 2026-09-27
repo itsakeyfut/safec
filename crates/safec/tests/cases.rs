@@ -969,6 +969,13 @@ cases! {
     a_return_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_parameter_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_escaped_local_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free of a two-member set, returned. Mutation: drop
+    // `Reached::SetFreed` from what `returned` asks; this goes silent.
+    a_free_of_either_of_two_allocations_then_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer kept from last turn of a loop names no allocation, which is
+    // ADR-0018's `Lost`. Mutation: change the `Lost` row's words in
+    // `memory_finding`; this fails, and nothing else reaches that row.
+    a_pointer_kept_from_the_last_turn_of_a_loop_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Reported, and what ADR-0041 accepts as its cost: an allocation the
     // function made and handed to a call it cannot read.
     an_allocation_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -978,6 +985,13 @@ cases! {
     a_parameter_returned_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_parameter_freed_on_one_arm_is_doubted_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_integer_built_from_two_calls_is_not_asked_about_at_its_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Only the write into the return place is a return. Mutation: drop the
+    // return-place test in `returned`; the copy into `q` is reported.
+    a_freed_pointer_copied_but_not_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What leaves is `*tab`, a pointer read out of memory, and the read of
+    // freed `tab` is `SC0402`'s. Mutation: ask a projected source in
+    // `returned`; this gains an `SC0406` about `tab`.
+    a_pointer_read_out_of_a_freed_table_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],

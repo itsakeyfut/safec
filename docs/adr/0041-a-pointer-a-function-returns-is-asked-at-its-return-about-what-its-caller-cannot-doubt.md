@@ -117,6 +117,17 @@ measured, and a named case in `crates/safec/tests/cases` that it fails:
   `an_allocation_handed_to_a_call_and_returned` and
   `an_escaped_local_freed_and_returned`.
 
+* Dropping `Reached::SetFreed` from what is asked fails
+  `a_free_of_either_of_two_allocations_then_returned`, which goes silent.
+* Asking any copy rather than the write into the return place fails
+  `a_freed_pointer_copied_but_not_returned`.
+* Asking a source read through a projection fails
+  `a_pointer_read_out_of_a_freed_table_and_returned`, which gains a report
+  about the table where what leaves is a pointer read out of it.
+* Changing the words of the `Lost` row in `memory_finding` fails
+  `a_pointer_kept_from_the_last_turn_of_a_loop_and_returned`, the one case
+  that reaches it.
+
 A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in `driver.rs`'s
 `memory_finding`, which is the guard the compiler holds.
 

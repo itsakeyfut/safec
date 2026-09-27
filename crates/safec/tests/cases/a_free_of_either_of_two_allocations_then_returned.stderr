@@ -1,0 +1,12 @@
+error[SC0406]: this returns a pointer to an allocation that was freed
+    ╭─[ a_free_of_either_of_two_allocations_then_returned.c:12:5 ]
+    │
+ 11 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 12 │     return p;
+    │     ────┬────  
+    │         ╰────── returned here
+────╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer that is still allocated, or do not free this one before returning it
