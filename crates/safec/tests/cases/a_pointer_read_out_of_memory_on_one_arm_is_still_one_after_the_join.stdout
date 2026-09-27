@@ -1,0 +1,224 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:2:6 "show" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter
+Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int ***"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int **"
+  Local "_15" "int *"
+  Local "_16" "int **"
+  Local "_17" "int **"
+  Local "_18" "int"
+  Local "_19" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 generated
+    Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:12 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:6:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:6:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:6:9 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:9:17 generated
+    Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:9:17 "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb5"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:9:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:9:17 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:10:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:10:9 "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:10:9 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:11:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:13:19 generated
+    Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:13:19 "malloc" "bb9"
+      Destination "_9"
+      Constant 8
+  Block "bb9"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:13:11 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:13:19 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:14:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:14:9 "bb10" "bb11"
+      Copy "_10"
+  Block "bb10"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:14:9 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:15:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:14:9 generated
+    Goto "bb12"
+  Block "bb12"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:17:14 generated
+    Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:17:14 "malloc" "bb13"
+      Destination "_12"
+      Constant 4
+  Block "bb13"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:17:10 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:17:14 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:18:9 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_11"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:18:9 "bb14" "bb15"
+      Copy "_13"
+  Block "bb14"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:18:9 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:19:16 generated
+    Return
+  Block "bb15"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:18:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:21:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:21:5 written
+      Destination "_14"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:21:5 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:22:5 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_11"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:22:5 written
+      Destination "_15"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:22:5 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:23:11 written
+      Destination "_16"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:23:15 generated
+    Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:24:9 "bb17" "bb18"
+      Copy "_1"
+  Block "bb17"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:24:9 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:25:9 written
+      Destination "_16"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:25:9 written
+      Destination "_17"
+      Use
+        Copy "_16"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:25:9 generated
+    Goto "bb19"
+  Block "bb18"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:24:9 generated
+    Goto "bb19"
+  Block "bb19"
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 written
+      Destination "_18"
+      Binary "Eq"
+        Copy "_16"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 "bb20" "bb21"
+      Copy "_18"
+  Block "bb20"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:28:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:28:16 generated
+    Return
+  Block "bb21"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:27:9 generated
+    Goto "bb22"
+  Block "bb22"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 generated
+    Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 "show" "bb23"
+      Destination "_19"
+      Copy "_16"
+        Deref
+  Block "bb23"
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 generated
+    Operation a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:31:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:31:12 generated
+    Return

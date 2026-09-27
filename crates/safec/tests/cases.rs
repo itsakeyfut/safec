@@ -937,9 +937,15 @@ cases! {
     // table reaches only what that table holds.
     a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // A load moved by arithmetic is still one, including when the lowering
-    // hands the load to the operator as an operand.
+    // The bit a load leaves on a local: set by a load on either arm of a
+    // join, carried through arithmetic, cleared by what the local is given
+    // next, and never set by an integer. A load handed to `memset` is read as
+    // one too.
+    a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_moved_off_a_load_is_still_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_local_given_something_else_after_a_load_is_no_longer_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    an_integer_read_out_of_memory_is_not_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],
