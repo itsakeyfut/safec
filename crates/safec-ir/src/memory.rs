@@ -1285,6 +1285,15 @@ struct Allocations<'a> {
     /// The locals a caller filled, which are sites because an allocation can
     /// arrive through one.
     parameters: Vec<LocalId>,
+    /// The parameters that hold a pointer, whose allocations are exposed
+    /// where the function starts: the caller, which this check cannot read,
+    /// had the pointer, and may have left it where a call can free it.
+    ///
+    /// **Not every parameter.** Every one is a site, for the reason the module
+    /// comment gives, and an integer parameter holds no allocation C lets it
+    /// hold without a conversion #154 is about; exposing one made every opaque
+    /// call's result reach it. See ADR-0040.
+    exposed_parameters: Vec<LocalId>,
 }
 
 impl Allocations<'_> {
@@ -1628,6 +1637,12 @@ impl Analysis for Allocations<'_> {
         for &parameter in &self.parameters {
             known.points_to[parameter.index()].hold(parameter.index(), Offset::Zero);
         }
+
+        // **And exposed**, so that `release_all(); return *p;` is unproven:
+        // the caller may have stashed `p` where `release_all` frees it. What
+        // this costs is that a pointer parameter read after any call this
+        // check cannot read is unproven too. See ADR-0040.
+        known.expose(self.exposed_parameters.iter().map(|local| local.index()));
 
         known
     }
@@ -2601,6 +2616,15 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             function: func,
             locals: function.locals().len(),
             parameters: function.parameters().collect(),
+            exposed_parameters: function
+                .parameters()
+                // A `match` for `Allocations::is_pointer`'s reason: a kind of
+                // type added later is asked whether it is exposed.
+                .filter(|&local| match unit.ty(function.local(local)) {
+                    Ty::Pointer(_) => true,
+                    Ty::Int | Ty::Char | Ty::Void => false,
+                })
+                .collect(),
         };
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);

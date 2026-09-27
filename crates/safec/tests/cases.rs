@@ -928,6 +928,11 @@ cases! {
     a_table_read_out_of_a_holder_into_a_local_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Reported, and what ADR-0040 accepts as its cost: every pointer
+    // parameter read after any call this check cannot read, and freed after
+    // one, is unproven.
+    an_allocation_a_parameter_holds_is_unproven_after_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_may_return_what_a_parameter_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Built: a pointer holding no site is not a load, and a load through one
     // table reaches only what that table holds.
     a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
