@@ -937,6 +937,9 @@ cases! {
     // table reaches only what that table holds.
     a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `argv` is the host's, and no call can free it. Mutation: drop the
+    // `main` filter on `exposed_parameters`; this fails.
+    the_arguments_the_host_hands_main_are_not_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The bit a load leaves on a local: set by a load on either arm of a
     // join, carried through arithmetic, cleared by what the local is given
     // next, and never set by an integer. A load handed to `memset` is read as

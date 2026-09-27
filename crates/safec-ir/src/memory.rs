@@ -1303,9 +1303,18 @@ struct Allocations<'a> {
     /// had the pointer, and may have left it where a call can free it.
     ///
     /// **Not every parameter.** Every one is a site, for the reason the module
-    /// comment gives, and an integer parameter holds no allocation C lets it
-    /// hold without a conversion #154 is about; exposing one made every opaque
-    /// call's result reach it. See ADR-0040.
+    /// comment gives, and an integer parameter can hold an allocation only
+    /// through a conversion this frontend does not accept yet: a cast, which
+    /// does not parse, or an implicit one, which C17 6.5.16.1 p1 forbids and
+    /// #154 is about. Exposing one made every opaque call's result reach it.
+    /// The day casts parse, the type below stops being enough.
+    ///
+    /// **Not `main`'s either.** Its caller is the host, and C17 5.1.2.2.1 p2
+    /// has `argv` and its strings keep their values until the program ends:
+    /// no allocation function returned them, so no call can free them
+    /// without the behaviour 7.22.3.3 p2 leaves undefined. Exposing them
+    /// refused `log_line(); char *name = argv[0];`. A program that calls
+    /// `main` itself hands it arguments this does not see. See ADR-0040.
     exposed_parameters: Vec<LocalId>,
 }
 
@@ -2639,6 +2648,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             parameters: function.parameters().collect(),
             exposed_parameters: function
                 .parameters()
+                .filter(|_| sources.snippet(function.name) != "main")
                 // A `match` for `Allocations::is_pointer`'s reason: a kind of
                 // type added later is asked whether it is exposed.
                 .filter(|&local| match unit.ty(function.local(local)) {
