@@ -1127,6 +1127,19 @@ cases! {
     // goes silent.
     a_read_is_asked_about_what_another_call_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_read_is_asked_about_what_a_store_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What an event makes reachable is closed over what it holds: `memset`
+    // exposes `tab`, and so `a` stored in it; storing `tab` into `box`, which
+    // an earlier call exposed, does the same. The first is not asked by
+    // `memset` itself, which frees nothing. Mutation: tell a read `sites`
+    // rather than their closure in `Known::expose`; the first goes silent.
+    // Mutation: the same for the store in `Allocations::element`; the second
+    // loses its report at `a[0]`.
+    a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A store into an allocation nothing reaches makes nothing reachable.
+    // Mutation: notice after every placed store in `Allocations::element`,
+    // whatever its container; this reports.
+    a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The exposure is on one arm. Mutation: keep one arm's `reachable` in
     // `Allocations`'s `join`; this goes silent.
     an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

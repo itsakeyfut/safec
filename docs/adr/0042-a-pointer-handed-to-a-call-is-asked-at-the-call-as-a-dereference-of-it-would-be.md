@@ -318,6 +318,15 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   one arm's `reachable` at the join fails
   `an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join`
   alone.
+* Telling a read the sites an event exposes rather than their closure fails
+  `a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed` alone
+  for a call, and
+  `a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries`
+  alone for a store. Telling it after every store, whether or not what it
+  stored into is reachable, fails
+  `a_store_into_an_allocation_nothing_reaches_makes_nothing_reachable` alone.
+  Keeping a reborn site in `reachable` fails nothing: no C program reuses a
+  site inside one expression, as `Known::reborn` says.
 * Counting every site as taken fails eleven, among them
   `a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call`.
 * Answering `true` for `beyond_its_arguments` for `realloc` fails

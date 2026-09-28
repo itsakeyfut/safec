@@ -1036,7 +1036,9 @@ impl Known {
         // No C program reaches this, because two calls in one full expression
         // are two call sites and a site is the local a call writes into; a
         // frontend whose calls share one can, and this is the answer
-        // `error[E0027]` asked for when the field was added.
+        // `error[E0027]` asked for when the field was added. `reachable`
+        // goes with `sites`, and for the same reason no case holds it:
+        // dropping its line leaves the whole workspace green.
         for entry in pending.values_mut() {
             entry.sites.remove(&site);
             entry.reachable.remove(&site);
