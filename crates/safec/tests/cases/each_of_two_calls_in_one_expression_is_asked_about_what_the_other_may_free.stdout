@@ -1,0 +1,71 @@
+Target "x86_64-pc-windows-msvc"
+Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:1:5 "strlen" declared
+  Local "_0" "int" return
+  Local "_1" "char *" parameter
+Function each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "char *" parameter
+  Local "_2" "char *" parameter
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    Operation each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 generated
+    Operation each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:5:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:5:16 generated
+    Return
+  Block "bb2"
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 generated
+    Operation each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:8:16 generated
+    Return
+  Block "bb5"
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:7:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 "strlen" "bb7"
+      Destination "_5"
+      Copy "_1"
+  Block "bb7"
+    Call each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 "strlen" "bb8"
+      Destination "_6"
+      Copy "_2"
+  Block "bb8"
+    Operation each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 written
+      Destination "_7"
+      Binary "Add"
+        Copy "_5"
+        Copy "_6"
+    Operation each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 generated
+    Return

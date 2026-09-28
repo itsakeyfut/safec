@@ -1,0 +1,20 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:12 ]
+    │
+ 10 │     return strlen(s) + strlen(t);
+    │            ────┬────  
+    │                ╰────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free.c:10:24 ]
+    │
+ 10 │     return strlen(s) + strlen(t);
+    │                        ────┬────  
+    │                            ╰────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

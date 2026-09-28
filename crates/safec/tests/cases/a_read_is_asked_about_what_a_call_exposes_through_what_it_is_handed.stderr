@@ -1,0 +1,14 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:10 ]
+    │
+  9 │     int *a = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 18 │     r = (x = a[0]) + (memset(tab, 0, 8) != 0) + release_all();
+    │          ────┬───  
+    │              ╰───── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

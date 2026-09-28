@@ -1,0 +1,136 @@
+Target "x86_64-pc-windows-msvc"
+Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:2:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int" parameter
+Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:3:5 "keep" declared
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:4:5 "release_all" declared
+  Local "_0" "int" return
+Function a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:6:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int"
+  Block "bb0" entry
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:6:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:8:14 generated
+    Call a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:8:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:8:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:8:14 generated
+    ArgumentsEvaluated a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:9:14 generated
+    Call a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:9:14 "malloc" "bb2"
+      Destination "_5"
+      Constant 4
+  Block "bb2"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:9:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:9:14 generated
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:10:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:10:9 "bb3" "bb4"
+      Copy "_6"
+  Block "bb3"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:10:9 generated
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:11:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:10:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:13:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:13:9 "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:13:9 generated
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:14:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:14:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:13:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Call a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:9 "keep" "bb9"
+      Destination "_8"
+      Copy "_2"
+  Block "bb9"
+    Call a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:20 "memset" "bb10"
+      Destination "_9"
+      Copy "_4"
+      Constant 0
+      Constant 4
+  Block "bb10"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:20 written
+      Destination "_10"
+      Binary "Ne"
+        Copy "_9"
+        Constant 0
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:9 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_8"
+        Copy "_10"
+    Call a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:44 "release_all" "bb11"
+      Destination "_12"
+  Block "bb11"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:9 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_11"
+        Copy "_12"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:5 written
+      Destination "_1"
+      Use
+        Copy "_13"
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:5 written
+      Destination "_14"
+      Use
+        Copy "_1"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:16:5 generated
+    Operation a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_call_exposing_another_allocation_does_not_make_the_read_s_reachable.c:17:12 generated
+    Return
