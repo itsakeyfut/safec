@@ -1099,32 +1099,41 @@ cases! {
     // What the read's own call exposes is not reachable to a sibling call
     // before the read, since C orders a call's arguments before its body, and
     // nor is what a call enclosing that one exposes, which runs later still.
-    // Mutation: tell every pending read in `Known::noticed`, owned or not;
-    // all three report. Mutation: own a read only by `inside`; the first two
-    // report, through the pointer each call was handed. Mutation: own it only
-    // by `entry.at == by`; the third reports. The dereference in the second
-    // is ordered before `keep2` by `Element::ArgumentsEvaluated`, so it is
-    // not pending there at all.
+    // The third does report, about `keep`'s own argument, which `memset` made
+    // reachable before `keep` ran; what it holds is that `memset`'s argument
+    // is not told what `keep` exposes. Mutation: tell every pending read in
+    // `Known::noticed`, owned or not; each of the three gains a report.
+    // Mutation: own a read only by `inside`; the same, through the pointer
+    // each call was handed. Mutation: own it only by `entry.at == by`; the
+    // third alone gains one. The dereference in the second is ordered before
+    // `keep2` by `Element::ArgumentsEvaluated`, so it is not pending there.
     a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A read is told what an event makes reachable, not everything exposed
-    // by then, which after `keep(a)` includes `a`. Mutation: tell it
-    // `reachable_now` in `Known::expose` rather than the closure of what is
-    // exposed there; `memset(b, ..)` tells `keep`'s read about `a`, and this
-    // reports.
+    // by then, which after `keep(a)` includes `a`. Mutation: in
+    // `Known::expose`, tell it `reachable_now` once the new sites are marked
+    // rather than the closure of those sites; `memset(b, ..)` tells `keep`'s
+    // read about `a`, and this reports.
     a_call_exposing_another_allocation_does_not_make_the_read_s_reachable: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `release(tab)` reaches `a` through what `tab` holds, whatever exposed
     // it. Mutation: drop `own_reach` from the filter in `used_before`; this
     // goes silent.
     a_later_call_is_asked_about_what_it_reaches_through_what_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a later call reaches by itself includes what a pointer it reads
+    // out of memory may be, and what every local whose address escaped
+    // holds. Mutation: build `used_before`'s `own_reach` from `reach_of`
+    // alone; the first goes silent. Mutation: from the arguments' sites and
+    // `read_out` alone; the second goes silent.
+    a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_later_call_is_asked_about_what_a_local_whose_address_escaped_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Something other than the read exposes `a` between it and the later
     // call, and C may run that and the later call first. `memset`'s own
     // argument is not reported, because only `memset` itself makes `a`
     // reachable to `release_all`. Mutation: drop the `noticed` in
     // `Known::expose`; the first goes silent. Mutation: drop the one after a
     // store into a reachable allocation in `Allocations::element`; the second
-    // goes silent.
+    // loses its report at `a[0]`, keeping the one at the write through `t`.
     a_read_is_asked_about_what_another_call_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_read_is_asked_about_what_a_store_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What an event makes reachable is closed over what it holds: `memset`
