@@ -1,0 +1,17 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:18 ]
+    │
+  6 │     int *a = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 11 │     return (w ? (memset(a, 0, 4) != 0) : 0) + (free(a), 0);
+    │                  ───────┬───────               ───┬───  
+    │                         ╰─────────────────────────────── passed here, perhaps after the free
+    │                                                   │     
+    │                                                   ╰───── freed here
+────╯
+  = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: put the free and this in separate statements, so that C orders one before the other

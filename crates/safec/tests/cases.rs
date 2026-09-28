@@ -1024,7 +1024,8 @@ cases! {
     a_freed_pointer_handed_to_a_function_only_declared: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_freed_pointer_handed_to_a_function_that_frees_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_parameter_freed_and_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // Mutation: drop `Callee::ReturnsFirst` from the callees `handed` asks.
+    // Mutation: drop `Callee::ReturnsFirst` from the callees `handed_places`
+    // answers.
     a_freed_pointer_handed_to_memcpy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Doubts, which fail the build. Mutation: report only proofs in
     // `handed`; both go silent, and the callee believes what it was handed.
@@ -1033,16 +1034,19 @@ cases! {
     // What ADR-0042 accepts as its cost: a parameter handed to a second call
     // this check cannot read, with no free in the function at all.
     a_parameter_handed_to_a_second_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // Mutation: drop the pointer-type condition in `handed`; this is refused.
+    // Mutation: drop the pointer-type condition in `handed_places`; this is
+    // refused.
     an_integer_built_from_two_calls_is_not_asked_about_as_an_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // C may call `use` before the free. Mutation: answer `true` for
     // `Kind::ArgumentAfterFree` in `verdict`'s `ordered`; this becomes a proof.
     a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // Mutation: drop the repeated-local test in `handed`; two reports.
+    // `say` collapses the second report as well, so the mutation is to drop
+    // the repeated-local test in `handed_places` *and* push in `handed`; two
+    // reports. Either alone leaves this green.
     a_freed_pointer_handed_twice_to_one_call_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Every argument is asked, not only the first: the freed pointer comes
     // after a constant and a live pointer. Mutation: walk
-    // `arguments.iter().take(1)` in `handed`, or turn its `continue`s into
+    // `arguments.iter().take(1)` in `handed_places`, or turn its `continue`s into
     // `break`s; this goes silent.
     a_freed_pointer_handed_after_other_arguments_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A dereference and an argument at one caret are two reports, the
@@ -1051,8 +1055,52 @@ cases! {
     a_freed_pointer_handed_and_read_through_at_one_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // What is handed is `*tab`, a pointer read out of memory, and the read of
     // freed `tab` is `SC0402`'s. Mutation: ask a projected argument in
-    // `handed`; this gains an `SC0407` about `tab`.
+    // `handed_places` and push in `handed`; this gains an `SC0407` about
+    // `tab`. With `say`, the dereference's report at the call already holds
+    // the key, so asking it alone leaves this green.
     a_pointer_read_out_of_a_freed_table_and_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a call is handed is carried to a later call the same full
+    // expression leaves unordered against it, as a dereference is: C may run
+    // the free, the opaque call or `realloc` before `memset`. Mutation: drop
+    // the loop that records `Read::Argument` in `Allocations::terminator`; all
+    // three go silent. Mutation: answer `Kind::UseAfterFree` for
+    // `Read::Argument` in `used_before`; all three become `SC0402`.
+    a_pointer_handed_to_a_call_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_handed_to_a_call_before_an_opaque_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_handed_to_a_call_before_realloc_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The argument crosses a join before the free. Mutation: answer
+    // `Read::Dereference` in the `or_insert` of `Allocations`'s `join`; this
+    // becomes `SC0402`.
+    a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `a` escaped, so `handed` doubts it at the call and `used_before` doubts
+    // it again from the free, at the same caret. Mutation: push in `handed`
+    // rather than going through `say`; two `SC0407` about `a` at one caret.
+    an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Two reports about one full expression, and each is its own order: `g`
+    // may free `a` before the free, which is the forward `SC0401`, and the free
+    // may run before `g` reads `a`, which is the carried `SC0407`. The second
+    // is the only thing the carry adds after a call this check cannot read,
+    // because the first already fails the build. Mutation: record
+    // `Read::Argument` only for `Callee::ReturnsFirst` in
+    // `Allocations::terminator`; the `SC0407` goes and the exit code stays.
+    an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What a call's own arguments read is behind it, C17 6.5.2.2 p10's first
+    // sentence, wherever the call sits; ADR-0026's element says so only for a
+    // call no unsequenced operator encloses, and these are the calls below one.
+    // The first has no free in it at all. Mutation: drop the `inside` test in
+    // `used_before`; all four are refused again, the last with the `SC0402` its
+    // own note used to contradict, and the case after them gains reports. See
+    // ADR-0043.
+    a_call_nested_in_an_argument_is_ordered_before_the_call_around_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_free_of_what_a_nested_call_returns_is_ordered_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The read is skipped at the call around it and not dropped: `strcpy`'s
+    // argument still reaches the free beside `strlen`. Mutation: drop the
+    // reads inside a call's span from `pending` at that call's transfer, in
+    // `Allocations::terminator`, as well as skipping them in `used_before`;
+    // the `SC0407` at `strcpy` goes, and nothing else fails.
+    a_nested_call_is_still_carried_to_a_free_beside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     a_block_declaration_carries_its_initializer: ["--emit", "ast"],
     a_block_declaration_does_not_leave_its_block: ["--emit", "ast"],

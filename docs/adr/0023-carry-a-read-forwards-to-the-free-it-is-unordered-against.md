@@ -95,6 +95,10 @@ the ones a free is about to take the sites of. **One marker, one meaning, read
 from each side**: the element that says a free behind it is ordered is the
 element that says a read behind it is ordered, and the same arm does both.
 
+ADR-0042 later carried a pointer handed to a call the same way, recorded at the
+call's terminator, and gave `PendingRead` a third field saying which of the two
+reads it is.
+
 **The sites are resolved where the read is and not where the free is.**
 `x = *p + (p = q, free(p), 0)` reads one allocation and frees another, and asking
 at the free would answer about the wrong one. That is a silence rather than a

@@ -1,0 +1,36 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:12 ]
+    │
+ 16 │     return strlen(strcpy(s, t)) + (free(s), 0);
+    │            ──────────┬─────────    ───┬───  
+    │                      ╰────────────────────── passed here, perhaps after the free
+    │                                       │     
+    │                                       ╰───── freed here
+────╯
+  = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: put the free and this in separate statements, so that C orders one before the other
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:19 ]
+    │
+ 16 │     return strlen(strcpy(s, t)) + (free(s), 0);
+    │                   ──────┬─────     ───┬───  
+    │                         ╰─────────────────── passed here, perhaps after the free
+    │                                       │     
+    │                                       ╰───── freed here
+────╯
+  = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: put the free and this in separate statements, so that C orders one before the other
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:36 ]
+    │
+ 16 │     return strlen(strcpy(s, t)) + (free(s), 0);
+    │                                    ───┬───  
+    │                                       ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

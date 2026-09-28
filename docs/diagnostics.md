@@ -124,15 +124,21 @@ is the decision and records what it costs.
 
 **`SC0407` is the other read without a dereference, and the same belief
 arriving by the other door.** A function's body believes its pointer
-parameters live where it starts, wherever it is compiled, so the call that
-hands one over is the last place anything can be said about it. It is asked
+parameters live where it starts, wherever it is compiled, so it is the caller
+that has to ask whether what it hands over is. It is asked
 at every call, of every pointer-typed local handed over, as a dereference of
 it would be, except what `free` and `realloc`'s first argument are handed,
 which is `SC0401`'s, and what an allocator is handed, which is a size. So a
 pointer handed to a call after another call this check cannot read was handed
 it, `init(p); run(p);`, is refused as unproven with no free in the function at
-all. The fix is at the call or at the free, which is why it
-is not `SC0402`.
+all. It is asked again, as a dereference is, at a later call the same full
+expression leaves unordered against it, since C may run that call first:
+`(memset(a, 0, 4) != 0) + (free(a), 0)` is `SC0407` at `memset`. A call that
+encloses it is not such a call, because C orders a call's arguments before it,
+so `free(memset(a, 0, 4))` is not reported
+([ADR-0043](adr/0043-a-call-is-ordered-after-what-its-own-arguments-read-and-a-span-inside-it-says-which.md)).
+The fix is at
+the call or at the free, which is why it is not `SC0402`.
 [ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
 is the decision and records what it costs.
 

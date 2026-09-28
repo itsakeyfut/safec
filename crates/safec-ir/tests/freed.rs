@@ -1339,7 +1339,13 @@ fn a_proof_replaces_the_suspicion_at_one_caret() {
         after_the_statement(names.at[2], malloc(&callees, held, names.at[3], handed)),
     );
     function.fill_block(handed, helper(&callees, held, names.at[4], suspect));
-    function.fill_block(suspect, read(value, held, names.at[5], release));
+    // A statement of its own, so that what `helper` was handed is not carried
+    // to the free below as well: without the marker the two calls are one full
+    // expression, which is a fourth finding about a different question.
+    function.fill_block(
+        suspect,
+        after_the_statement(names.at[4], read(value, held, names.at[5], release)),
+    );
     function.fill_block(release, free(&callees, held, names.at[6], proof));
     // The same span as the unproven read, which is what makes the two one
     // report and is the whole of what this test is about.
@@ -2373,6 +2379,158 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
     let found = concluded(unit, &sources, function);
 
     assert!(found.is_empty(), "{found:?}");
+}
+
+/// A read carrying exactly a call's span is not taken for one of its arguments.
+///
+/// **No C program reaches this and a frontend can build it.** The C lowering
+/// gives a call's argument reads spans strictly inside the call's, and a read
+/// in another operand a span outside it, so an equal span never arrives from C.
+/// Here the read and the free share one, with no marker between them, which is
+/// what a frontend that attributed a whole expansion to one span would build.
+/// Nothing says the read is behind the free, so it is carried to it and
+/// reported, which is the direction ADR-0043 chose for this mistake.
+///
+/// Mutation: let `memory.rs::inside` answer `true` for an equal span, by
+/// dropping its `inner != outer`. The read is skipped as if it were an
+/// argument, nothing is reported, and this fails.
+#[test]
+fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let live = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
+    function.fill_block(
+        live,
+        after_the_statement(names.at[0], read(value, held, names.at[1], release)),
+    );
+    // The same span as the read above, and nothing between them.
+    function.fill_block(release, free(&callees, held, names.at[1], exit));
+    function.fill_block(exit, after_the_statement(names.at[1], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        found
+            .iter()
+            .any(|finding| finding.kind == Kind::UseAfterFree
+                && finding.unproven == Some(Unproven::Unsequenced)),
+        "{found:?}"
+    );
+}
+
+/// A read whose span starts inside a call's and ends past it is not one of the
+/// call's arguments.
+///
+/// **No C program reaches this pending at the call, and a frontend can build
+/// it.** An argument ends where its call's parentheses do, so a read reaching
+/// past the call is not written inside it. The C lowering does make such spans,
+/// since it gives both operands of a `||` the whole expression's span, so the
+/// right operand of `h(x) || *a` starts where `h(x)` does; but that read runs
+/// after the call and is never pending when it is asked. Nothing orders the
+/// read below before the free, so it is carried to it and reported.
+///
+/// Mutation: drop `inner.end() <= outer.end()` from `memory.rs::inside`. The
+/// read counts as inside the free, is skipped, nothing is reported, and this
+/// fails. Nothing else in the workspace fails, which is why this exists.
+#[test]
+fn a_read_reaching_past_a_later_free_is_still_carried_to_it() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let live = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    // From where the free starts to two bytes past where it ends.
+    let at = names.at[1];
+    let reaching = Span::new(at.file(), at.start(), at.end() + 2);
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], live));
+    function.fill_block(
+        live,
+        after_the_statement(names.at[0], read(value, held, reaching, release)),
+    );
+    function.fill_block(release, free(&callees, held, at, exit));
+    function.fill_block(exit, after_the_statement(at, returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        found
+            .iter()
+            .any(|finding| finding.kind == Kind::UseAfterFree
+                && finding.unproven == Some(Unproven::Unsequenced)),
+        "{found:?}"
+    );
+}
+
+/// What a call is handed is carried as the sites it held where the call was
+/// reached, not the ones the call leaves behind.
+///
+/// **No C program reaches this and a frontend can build it**, for the reason
+/// the test above gives: here the call writes its result into the local it was
+/// handed, so the site that local names becomes the call's own allocation and
+/// the one `helper` read is gone. Nothing separates the call from the free, so
+/// what the call was handed is carried to it. Recorded before the transfer, it
+/// names the old allocation and `Known::reborn` drops it with the site; nothing
+/// is said about `helper` being handed anything freed, because the free is of
+/// what `helper` returned.
+///
+/// Mutation: record `Read::Argument` after the call's transfer rather than
+/// before it in `Allocations::terminator`. The entry names the new allocation,
+/// the free meets it, and an `SC0407` is reported at `helper` about a pointer
+/// it was never handed, so this fails.
+#[test]
+fn what_a_call_was_handed_is_carried_as_it_was_before_the_call() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+
+    let allocate = function.reserve_block();
+    let handed = function.reserve_block();
+    let release = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], handed));
+    // `held = helper(held)`, into the local itself, so into the same site.
+    function.fill_block(
+        handed,
+        after_the_statement(
+            names.at[0],
+            Block {
+                elements: vec![],
+                terminator: Terminator::Call {
+                    callee: callees.helper,
+                    arguments: vec![Operand::Copy(Place::local(held))],
+                    destination: Some(Place::local(held)),
+                    then: release,
+                    origin: Origin::Written(names.at[1]),
+                },
+            },
+        ),
+    );
+    function.fill_block(release, free(&callees, held, names.at[2], exit));
+    function.fill_block(exit, after_the_statement(names.at[2], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        !found
+            .iter()
+            .any(|finding| finding.kind == Kind::ArgumentAfterFree),
+        "{found:?}"
+    );
 }
 
 /// A read in a call's own argument, with no marker, is a suspicion this check
