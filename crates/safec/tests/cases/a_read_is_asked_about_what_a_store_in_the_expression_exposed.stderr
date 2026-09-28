@@ -1,0 +1,24 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:10 ]
+    │
+ 11 │     a = malloc(4);
+    │         ────┬────  
+    │             ╰────── allocated here
+    │ 
+ 16 │     r = (x = a[0]) + (*t = a, 0) + release_all();
+    │          ────┬───  
+    │              ╰───── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_read_is_asked_about_what_a_store_in_the_expression_exposed.c:16:23 ]
+    │
+ 16 │     r = (x = a[0]) + (*t = a, 0) + release_all();
+    │                       ───┬──  
+    │                          ╰──── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

@@ -1,0 +1,95 @@
+Target "x86_64-pc-windows-msvc"
+Function a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:2:5 "keep2" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *" parameter
+Function a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:3:5 "release_all" declared
+  Local "_0" "int" return
+Function a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:7:14 generated
+    Call a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:7:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:7:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:7:14 generated
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:8:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:8:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:8:9 generated
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:9:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:11:5 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 1
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:11:5 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:11:5 generated
+    Call a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:12:9 "keep2" "bb5"
+      Destination "_6"
+      Copy "_2"
+        Deref
+      Copy "_2"
+  Block "bb5"
+    Call a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:12:26 "release_all" "bb6"
+      Destination "_7"
+  Block "bb6"
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:12:9 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_6"
+        Copy "_7"
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:12:5 written
+      Destination "_1"
+      Use
+        Copy "_8"
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:12:5 written
+      Destination "_9"
+      Use
+        Copy "_1"
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:12:5 generated
+    Operation a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:13:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed.c:13:12 generated
+    Return

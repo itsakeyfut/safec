@@ -1,0 +1,10 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+   ╭─[ a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 ]
+   │
+ 8 │     return (memset(p, 0, 4) != 0) + (release_all(), 0);
+   │             ───────┬───────  
+   │                    ╰───────── passed here, perhaps after the free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

@@ -1068,6 +1068,77 @@ cases! {
     a_pointer_handed_to_a_call_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_handed_to_a_call_before_an_opaque_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_handed_to_a_call_before_realloc_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A read carried to a later call this check cannot read is asked about
+    // what that call may free beyond what it was handed: a parameter, and a
+    // local stored where one points, were reachable to it before the read.
+    // Each swapped spelling reported already. Mutation: answer `false` for
+    // `beyond_its_arguments` in `used_before`'s filter, so only the
+    // arguments are asked; all three go silent. Mutation: start
+    // `PendingRead::reachable` empty in `Known::meeting`; all three go
+    // silent. Mutation: read `exposed` as it stands rather than
+    // `reachable_now` in `Known::meeting`; the second goes silent, because
+    // `*t = a` marks nothing exposed until the next call.
+    a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `strlen(s)` has made `s` unknown by the time `strlen(t)` is asked, and
+    // C may run `strlen(t)` first. Mutation: drop `read.reachable` from the
+    // filter in `used_before`; the report at `strlen(s)` goes.
+    each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other side: an allocation no call was handed and nothing stored is
+    // not one a call this check cannot read may free. Mutation: count every
+    // site as taken in `used_before`; this reports.
+    a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free and `realloc` free only what they are handed, so `a`, which the
+    // store made reachable, is not asked at a free of `b`. Mutation: answer
+    // `true` for `Callee::Frees` in `used_before`'s `beyond_its_arguments`;
+    // the first reports `a` with `freed here` on `free(b)`. Mutation: the
+    // same for `Callee::Reallocates`; the second reports.
+    a_read_is_not_asked_at_a_free_of_another_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_is_not_asked_at_realloc_of_another_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // What the read's own call exposes is not reachable to a sibling call
+    // before the read, since C orders a call's arguments before its body, and
+    // nor is what a call enclosing that one exposes, which runs later still.
+    // Mutation: tell every pending read in `Known::noticed`, owned or not;
+    // all three report. Mutation: own a read only by `inside`; the first two
+    // report, through the pointer each call was handed. Mutation: own it only
+    // by `entry.at == by`; the third reports. The dereference in the second
+    // is ordered before `keep2` by `Element::ArgumentsEvaluated`, so it is
+    // not pending there at all.
+    a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A read is told what an event makes reachable, not everything exposed
+    // by then, which after `keep(a)` includes `a`. Mutation: tell it
+    // `reachable_now` in `Known::expose` rather than the closure of what is
+    // exposed there; `memset(b, ..)` tells `keep`'s read about `a`, and this
+    // reports.
+    a_call_exposing_another_allocation_does_not_make_the_read_s_reachable: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // `release(tab)` reaches `a` through what `tab` holds, whatever exposed
+    // it. Mutation: drop `own_reach` from the filter in `used_before`; this
+    // goes silent.
+    a_later_call_is_asked_about_what_it_reaches_through_what_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Something other than the read exposes `a` between it and the later
+    // call, and C may run that and the later call first. `memset`'s own
+    // argument is not reported, because only `memset` itself makes `a`
+    // reachable to `release_all`. Mutation: drop the `noticed` in
+    // `Known::expose`; the first goes silent. Mutation: drop the one after a
+    // store into a reachable allocation in `Allocations::element`; the second
+    // goes silent.
+    a_read_is_asked_about_what_another_call_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_is_asked_about_what_a_store_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The exposure is on one arm. Mutation: keep one arm's `reachable` in
+    // `Allocations`'s `join`; this goes silent.
+    an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A hatch may free anything, as the forward walk already says after one.
+    // Mutation: drop `anything` from the filter in `used_before`; this goes
+    // silent.
+    a_read_carried_to_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // C sequences `p[0]` before `g`, and this is still refused: under `=`
+    // the `?:` gets no sequence point, which is #178, so the read is pending
+    // at `g`. This holds today's answer so that closing #178 moves a named
+    // case. See ADR-0042.
+    a_read_sequenced_before_an_opaque_call_under_an_assignment_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // The argument crosses a join before the free. Mutation: answer
     // `Read::Dereference` in the `or_insert` of `Allocations`'s `join`; this
     // becomes `SC0402`.

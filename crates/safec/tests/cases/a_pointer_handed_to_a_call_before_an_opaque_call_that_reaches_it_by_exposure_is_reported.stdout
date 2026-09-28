@@ -1,0 +1,61 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:1:7 "memset" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int" parameter
+Function a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:2:6 "release_all" declared
+  Local "_0" "void" return
+Function a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "void"
+  Local "_6" "int"
+  Block "bb0" entry
+    Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:5:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:5:9 "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:5:9 generated
+    Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:6:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:6:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Call a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 "memset" "bb4"
+      Destination "_3"
+      Copy "_1"
+      Constant 0
+      Constant 4
+  Block "bb4"
+    Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 written
+      Destination "_4"
+      Binary "Ne"
+        Copy "_3"
+        Constant 0
+    Call a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:38 "release_all" "bb5"
+      Destination "_5"
+  Block "bb5"
+    Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 written
+      Destination "_6"
+      Binary "Add"
+        Copy "_4"
+        Constant 0
+    Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 generated
+    Return

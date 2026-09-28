@@ -1,0 +1,10 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling.c:12:9 ]
+    │
+ 12 │     r = keep(memset(a, 0, 4)) + release_all();
+    │         ──────────┬──────────  
+    │                   ╰──────────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
