@@ -245,7 +245,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   **No longer true.** #184 took the decision and it was to widen this mechanism
   rather than to build a second one: `used_before` asks the same question of an
   opaque callee, and answers it without a `freed here` caret because nothing
-  established a free.
+  established a free. Since #273 the callee is also asked about what it may
+  free beyond what it was handed, which is what it reaches itself and what
+  something other than the read's own call made reachable; see ADR-0042.
 
   **What that costs, measured rather than inferred from the corpus.** No corpus
   case moved, and a corpus that does not move is not evidence about ordinary C.

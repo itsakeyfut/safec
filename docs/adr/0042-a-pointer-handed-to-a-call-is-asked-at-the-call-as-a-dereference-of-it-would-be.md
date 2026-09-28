@@ -132,11 +132,47 @@ had it, that program built, and so did the same program with an opaque call or
 A later call that encloses the one it was handed to is not asked, because C
 orders a call's arguments before it: `free(memset(a, 0, 4))` and
 `strlen(strcpy(s, t))` build. That is ADR-0043's, which the carry made
-necessary, since it refused both on a first implementation. And an opaque call
-is asked about what it is handed, not about what it can reach because it was
-exposed, so `(memset(p, 0, 4) != 0) + (release_all(), 0)` over a parameter
-builds; the dereference spelling does the same on `main`, and it is
-[#273](https://github.com/itsakeyfut/safec/issues/273).
+necessary, since it refused both on a first implementation.
+
+**A later opaque call is asked about what it may free beyond what it is
+handed.** This record first asked the arguments alone, and `(memset(p, 0, 4)
+!= 0) + (release_all(), 0)` over a parameter built while its swapped spelling
+was `SC0407`, as did the dereference spelling
+([#273](https://github.com/itsakeyfut/safec/issues/273)). A call this check
+cannot read may free any allocation it can reach (ADR-0039), so a read carried
+to one is asked about three things:
+
+* what the call reaches itself through what it is handed, closed over what
+  those allocations hold, which `Allocations::reach` answers for the transfer
+  as well;
+* what something other than the read's own call had made reachable to code
+  this check cannot read, which the read remembers in `PendingRead::reachable`:
+  a parameter from entry (ADR-0040), a store into a reachable allocation, or
+  another call in the expression;
+* after a hatch, anything (ADR-0038).
+
+**The read's own call is left out**, and so is a call enclosing it, because C17
+6.5.2.2 p10 orders a call's arguments before its body: `keep(a) +
+release_all()` over a local builds, since `release_all` cannot reach `a` before
+`keep` has run. Two rules were implemented first and rejected on that ground.
+Counting every site unknown after the call refused `keep(a) + release_all()`,
+whose swapped spelling builds. Telling each read everything exposed by the time
+of each later event refused `(keep(a) != 0) + release_all()` the same way. A
+read is therefore told what each event makes reachable, when it happens,
+whether or not the site was reachable already, so that a second route to what
+the own call exposed is still told: `keep(a) + (*t = a, 0) + release_all()` is
+reported.
+
+What it newly refuses, measured on the library idioms and on the shapes review
+found (`strlen`, `memcpy`, `memset`, `realloc`, `strdup`, the free-and-null
+idiom, a pointer whose address was taken, a read whose own call exposes it, a
+sequencing operator under one that does not sequence): `(x = p[0]) +
+strlen(s)` and `(memcpy(d, s, 4) != 0) + g()` over parameters, a read beside a
+call that reaches it through what it is handed or after another call or a store
+exposed it, and a read beside a hatch. The swapped spelling of each was refused
+already. The one that is not a mirror is below, in Consequences. A free and
+`realloc` are still asked about their arguments only, because each frees only
+what it is handed, and a free's report would also name it as the free.
 
 A pending read carries which of the two it is, `Read::Dereference` or
 `Read::Argument`, and is reported under the code it would have had where it
@@ -245,6 +281,49 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   for the callees that return their first argument, so a loop moved to its
   end also stops recording for `memset` and `strcpy` and fails the corpus
   cases that hand a pointer to either.
+* Answering `false` for `beyond_its_arguments` in `used_before`'s filter, so
+  that a later opaque call is asked about its arguments only, fails eleven
+  cases, among them
+  `a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported`,
+  `a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call`,
+  `a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported`
+  and `a_read_carried_to_a_hatch_is_reported`, which go silent.
+* Dropping `read.reachable` from that filter fails nine, among them the first
+  three above and
+  `each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free`,
+  which loses its report at `strlen(s)`. Dropping `own_reach` fails
+  `a_later_call_is_asked_about_what_it_reaches_through_what_it_is_handed`
+  alone, and dropping `anything` fails `a_read_carried_to_a_hatch_is_reported`
+  alone.
+* Starting `PendingRead::reachable` empty in `Known::meeting` fails seven, the
+  parameter and stored-local cases among them. Reading `exposed` there as it
+  stands rather than through `Known::reachable_now` fails
+  `a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call`
+  alone, because `*t = a` marks nothing exposed until the next call.
+* Telling a read its own call's routes in `Known::noticed` fails six, among
+  them `a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed`
+  and `a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed`.
+  Owning a read only by equal spans fails
+  `a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling`
+  alone; owning it only by `inside` fails six, the pointer each call was handed
+  no longer being its own.
+* Telling a read everything reachable at an event, rather than what the event
+  exposes, fails
+  `a_call_exposing_another_allocation_does_not_make_the_read_s_reachable`,
+  `a_read_is_asked_about_what_another_call_in_the_expression_exposed` and
+  `an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join`.
+  Dropping the notice in `Known::expose` fails the last two; dropping the one
+  after a store into a reachable allocation fails
+  `a_read_is_asked_about_what_a_store_in_the_expression_exposed` alone; keeping
+  one arm's `reachable` at the join fails
+  `an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join`
+  alone.
+* Counting every site as taken fails eleven, among them
+  `a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call`.
+* Answering `true` for `beyond_its_arguments` for `realloc` fails
+  `a_read_is_not_asked_at_realloc_of_another_allocation` alone, and for a free
+  fails `a_read_is_not_asked_at_a_free_of_another_allocation` alone, which
+  gains an `SC0402` about `a` with `freed here` on `free(b)`.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
   `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
   the `Unsequenced` row the disagreement remedy fails
@@ -302,6 +381,19 @@ the `match`, and nothing tells the two apart.
   `if (!((memset(a, 0, 4) != 0) && h(a)))` both are, as their dereference
   spellings are on `main`. The operator gets no `Element::Sequenced` there,
   which is #178's, and ADR-0043 records it as what it leaves.
+* Bad, because since #273 that surface reaches every opaque call, not only
+  one handed the same pointer: `x = p[0] ? g() : 0;`, `x = (p[0] != 0) && g();`
+  and `x = (p[0], g());` over a parameter are refused where they built, though
+  C17 6.5.15 p4, 6.5.13 p4 and 6.5.17 p2 order the read before `g`. A parameter
+  is reachable from entry, so the read, still pending at `g`, is asked there.
+  It was taken as a cost rather than left silent because it is bounded: any
+  read of a pointer parameter after any opaque call in the function was
+  refused already (`h(); x = p[0];`), so what is new is only a read before the
+  function's first opaque call, in one expression, on the left of one of those
+  operators under one that does not sequence. The declaration spelling, `int
+  y = (p[0] != 0) && g();`, puts the operator at the root and builds.
+  `a_read_sequenced_before_an_opaque_call_under_an_assignment_is_still_asked`
+  holds today's answer, so closing #178 moves a named case.
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`
   where the callee reads `*pp` and dereferences it, is silent in both
   functions, as it was before this record. That is
