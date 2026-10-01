@@ -690,6 +690,15 @@ struct PendingRead {
     /// call in the expression does, since any of them may run first. Filled
     /// by [`Known::meeting`] and [`Known::noticed`]. See ADR-0042.
     reachable: BTreeSet<usize>,
+    /// Whether something made what this read read reachable to code this
+    /// check cannot read while a call that code may be in was pending.
+    ///
+    /// **The order a forward walk cannot see from either end.** C may run the
+    /// exposing event, then the call, then the read, so the call may free what
+    /// was read; but the call was walked before the event and the read before
+    /// both. [`Known::noticed`] sets this at the event, and [`after_a_call`]
+    /// reports it. See ADR-0042.
+    after_call: bool,
 }
 
 /// What a [`PendingRead`] is a read of.
@@ -770,6 +779,15 @@ struct Known {
     /// have no arrangement to get wrong. [`Place`] carries the `Ord` the map
     /// orders by for no other reason. See ADR-0023.
     pending: BTreeMap<ReadKey, PendingRead>,
+    /// The calls this check cannot read met since the last sequence point,
+    /// keyed as [`ReadKey`] is without the place.
+    ///
+    /// Carried forwards as [`Self::pending`] is, so that something exposed
+    /// later in the same expression can ask whether one of them may run
+    /// between it and a read. Cleared by [`Element::Sequenced`] alone: a call
+    /// inside another call's arguments is ordered before that call, and not
+    /// before its siblings. See ADR-0042.
+    calls: BTreeMap<(usize, u32, u32), Span>,
 }
 
 impl Known {
@@ -917,6 +935,7 @@ impl Known {
                 sites: BTreeSet::new(),
                 read,
                 reachable: BTreeSet::new(),
+                after_call: false,
             });
         entry.sites.extend(sites);
         entry.reachable.extend(reachable);
@@ -970,6 +989,25 @@ impl Known {
     /// its own whether or not the site was exposed already, so a second route
     /// to a site the own call exposed is still told.
     fn noticed(&mut self, by: Option<Span>, routes: &BTreeSet<usize>) {
+        // **And whether a call already pending may run between this and the
+        // read.** It may unless the read belongs to it or to `by`, or it is
+        // in `by`'s arguments: C17 6.5.2.2 p10 orders a call's arguments
+        // before its body, so none of those can come after `by` and before
+        // the read. See [`PendingRead::after_call`].
+        let calls: Vec<Span> = self.calls.values().copied().collect();
+        for entry in self.pending.values_mut() {
+            let own_by = by.is_some_and(|by| entry.at == by || inside(entry.at, by));
+            if !own_by && entry.sites.iter().any(|site| routes.contains(site)) {
+                let freer = calls.iter().any(|&call| {
+                    by != Some(call)
+                        && !(entry.at == call || inside(entry.at, call))
+                        && !by.is_some_and(|by| inside(call, by))
+                });
+                if freer {
+                    entry.after_call = true;
+                }
+            }
+        }
         for entry in self.pending.values_mut() {
             // Its own if it is the pointer the call was handed, whose span is
             // the call's, or a dereference written in its arguments, whose
@@ -1027,6 +1065,7 @@ impl Known {
             // Kept, for the reason given below.
             inside: _,
             pending,
+            calls: _,
         } = self;
 
         for (other, held) in points_to.iter_mut().enumerate() {
@@ -1092,6 +1131,11 @@ impl Known {
         if !self.escaped[local] {
             return;
         }
+        // What an escaped local is given, every call reaches through
+        // [`Self::reach_of`]: a pending read is told so, as at an exposure.
+        // See ADR-0042.
+        let routes = self.closure(self.points_to[local].sites().collect());
+        self.noticed(None, &routes);
 
         for site in self.points_to[local].sites() {
             self.state[site] = SiteState::Unknown;
@@ -1825,7 +1869,8 @@ impl Analysis for Allocations<'_> {
         // or terminator of the function, and each entry's set of sites can gain
         // one site per local, and its set of sites reachable to code this check
         // cannot read one more, which is ADR-0042's and was left uncounted
-        // until ADR-0044 recounted this. The same paragraph above applies to
+        // until ADR-0044 recounted this, and the calls pending with them one
+        // step per position more. The same paragraph above applies to
         // it: the transfer empties it at every marker and only a join makes an
         // entry value grow.
         let positions: usize = function
@@ -1840,7 +1885,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 11) + positions * (2 * locals + 1)
+        locals * locals * 3 + locals * (locals + 11) + positions * (2 * locals + 2)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1858,6 +1903,7 @@ impl Analysis for Allocations<'_> {
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
+            calls: BTreeMap::new(),
         };
 
         // A parameter holds whatever the caller passed, which is a thing this
@@ -1897,6 +1943,7 @@ impl Analysis for Allocations<'_> {
             exposed,
             inside,
             pending,
+            calls,
         } = into;
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
@@ -1942,11 +1989,16 @@ impl Analysis for Allocations<'_> {
                 // `a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join`.
                 read: entry.read,
                 reachable: BTreeSet::new(),
+                after_call: false,
             });
             here.sites.extend(&entry.sites);
+            here.after_call |= entry.after_call;
             // Reachable on one arm is reachable where they meet, for the
             // reason `exposed` is a union.
             here.reachable.extend(&entry.reachable);
+        }
+        for (key, span) in &from.calls {
+            calls.entry(*key).or_insert(*span);
         }
 
         // And applying it, which the union alone does not do. [`Known::settle`]
@@ -2005,6 +2057,12 @@ impl Analysis for Allocations<'_> {
                 // directions is the point: one marker, one meaning, read from
                 // each side. See ADR-0023.
                 value.pending.clear();
+                // And every call, for the same reason. Not at
+                // `ArgumentsEvaluated`, which orders reads before one call and
+                // a call in its arguments before nothing else. No program
+                // measured tells the two apart, because that marker is not
+                // emitted under an operator that does not sequence.
+                value.calls.clear();
             }
             // **Every read behind this is ordered before the call that
             // follows**, which is the half of the marker above that this one
@@ -2094,6 +2152,13 @@ impl Analysis for Allocations<'_> {
                     // With a target, what it carries is in that local now, and
                     // the local's address escaped: every call reaches it.
                     let unplaced = containers.is_empty() && targets.is_empty();
+                    // Written into locals whose addresses escaped, which every
+                    // call reaches, so a pending read is told, as at an
+                    // exposure. See ADR-0042.
+                    if !targets.is_empty() {
+                        let routes = value.closure(carried.clone());
+                        value.noticed(None, &routes);
+                    }
                     // **A pointer that holds a site may also hold what this
                     // check cannot name**: a pointer read out of memory, which
                     // may be memory the caller owns; a site it lost the name
@@ -2586,6 +2651,12 @@ impl Analysis for Allocations<'_> {
                 let reach = self.reach(function, handed, sites(), value);
                 value.expose(reach, Some(origin.span()));
                 value.unproved_exposed();
+                // Pending from here, and not at its own exposure above, which
+                // `Known::noticed` leaves out by `by` anyway. See ADR-0042.
+                let span = origin.span();
+                value
+                    .calls
+                    .insert((span.file().index(), span.start(), span.end()), span);
 
                 // **A hatch may have reached anything, so every allocation
                 // still live is unproven after it.** The loop above is about
@@ -2967,6 +3038,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     func,
                 );
                 analysis.element(function, element, &mut known);
+                after_a_call(&mut findings, &mut said, &known, func);
             }
 
             // Before the terminator's own transfer, which is what turns a live
@@ -3006,6 +3078,11 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 &null,
                 id,
             );
+            {
+                let mut after = known.clone();
+                analysis.terminator(function, &block.terminator, &mut after);
+                after_a_call(&mut findings, &mut said, &after, func);
+            }
         }
     }
 
@@ -4013,6 +4090,53 @@ fn used_before(
                     // exposed, and may have freed it.
                     Unproven::Disagreement
                 }),
+            },
+        );
+    }
+}
+
+/// Report every pending read that something exposed while a call this check
+/// cannot read was pending.
+///
+/// **The finding `used_before` makes for a read carried to an opaque call**,
+/// for the same reason: the call may free what the read read, and which order
+/// runs is C's to leave open. It is asked after every transfer, since an
+/// exposure is an element or a terminator, and [`say`] keeps one report per
+/// caret and place. See ADR-0042.
+fn after_a_call(
+    findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
+    known: &Known,
+    function: FuncId,
+) {
+    for ((.., place), read) in &known.pending {
+        if !read.after_call {
+            continue;
+        }
+        // Only while every allocation read agrees, for `used_before`'s reason.
+        let mut made = None;
+        for (index, site) in read.sites.iter().enumerate() {
+            let from = match known.state[*site] {
+                SiteState::Live(made) | SiteState::Freed { made, .. } => made,
+                SiteState::Unknown => None,
+            };
+            made = if index == 0 { from } else { same(made, from) };
+        }
+        say(
+            findings,
+            said,
+            place,
+            Finding {
+                function,
+                kind: match read.read {
+                    Read::Dereference => Kind::UseAfterFree,
+                    Read::Argument => Kind::ArgumentAfterFree,
+                },
+                conclusion: Conclusion::Unknown,
+                at: read.at,
+                freed: None,
+                made,
+                unproven: Some(Unproven::Disagreement),
             },
         );
     }

@@ -1190,6 +1190,38 @@ cases! {
     // Mutation: drop `anything` from the filter in `used_before`; this goes
     // silent.
     a_read_carried_to_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A call this check cannot read is carried forwards as a read is, so an
+    // exposure walked after it asks a read walked before it: C may run the
+    // exposure, then the call, then the read. A store into an escaped local,
+    // a library call that exposes what it is handed, a write into an escaped
+    // target, and a read walked first. Mutation: record no call in
+    // `Allocations::terminator`; all four go silent. Mutation: no notice in
+    // `Known::unproved`; the first and fourth go silent. Mutation: no notice
+    // for `targets` in `Allocations::element`; the third goes silent.
+    a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_before_a_call_and_an_exposure_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other side. An exposure of another allocation asks nothing; a read
+    // the exposing call owns, or the pending call owns, is ordered before it.
+    // Mutation: do not leave `by`'s own read out in `Known::noticed`; the
+    // first two report. Mutation: do not leave the pending call's own read
+    // out; the third reports.
+    an_exposure_of_another_allocation_after_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_an_exposing_call_owns_is_not_asked_about_a_call_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_a_pending_call_owns_is_not_asked_about_an_exposure_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // An exposure under `?:`, and a call pending on either arm. The read is
+    // reported inside the arm that exposed it, so the flag's union at the
+    // join is held by nothing. Mutation: keep one arm's calls at the join;
+    // the second goes silent, its call being on the arm the join does not
+    // keep, and the third is the other order.
+    an_exposure_on_one_arm_after_a_call_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_on_the_first_arm_is_pending_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_call_on_the_second_arm_is_pending_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A call in the exposing call's arguments runs before it, so it cannot
+    // free what that call exposes. Mutation: do not leave a call inside
+    // `by`'s span out in `Known::noticed`; this reports.
+    a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // C sequences `p[0]` before `g`, and this is still refused: under `=`
     // the `?:` gets no sequence point, which is #178, so the read is pending
     // at `g`. This holds today's answer so that closing #178 moves a named
