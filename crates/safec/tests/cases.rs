@@ -916,6 +916,16 @@ cases! {
     what_the_other_library_copies_return_is_what_they_were_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_no_call_can_reach_stays_proved_across_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A store through a pointer that may be a load is unplaced for that part,
+    // since the load may be the caller's memory: `release_all` may reach `a`
+    // there on one arm. The second is the same store unsequenced with a read
+    // before it and a call after it. Mutation: answer `false` for `unnamed`
+    // in `Allocations::element`'s store arm; both go silent. The third is a
+    // pointer that may be either of two allocations this check follows, and
+    // stays placed. Mutation: answer `true` for `unnamed`; it reports.
+    a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_made_again_at_a_site_is_not_the_one_exposed_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `realloc`'s size is not asked whether it was freed.
     the_size_realloc_is_handed_is_not_asked_whether_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

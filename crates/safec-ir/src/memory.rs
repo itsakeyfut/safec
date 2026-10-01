@@ -2034,7 +2034,9 @@ impl Analysis for Allocations<'_> {
                 // [`Known::expose`]'s closure. A write this check cannot place
                 // exposes what it carries at once: one deeper than one `Deref`,
                 // which has no targets, or one through a pointer that holds
-                // neither an allocation nor a local's address. A write that
+                // neither an allocation nor a local's address, or, for that
+                // part, one through a pointer that may also be a load or hold
+                // something it lost. A write that
                 // may land in followed locals records nothing here: their
                 // addresses escaped, and what they hold is in every call's
                 // reach. A store into a local aggregate, once fields and
@@ -2060,9 +2062,25 @@ impl Analysis for Allocations<'_> {
                     // With a target, what it carries is in that local now, and
                     // the local's address escaped: every call reaches it.
                     let unplaced = containers.is_empty() && targets.is_empty();
+                    // **A pointer that holds a site may also hold what this
+                    // check cannot name**: a load, which may be memory the
+                    // caller owns, or a site it lost the name for. For that
+                    // part the write is unplaced, so what it carries is
+                    // exposed as well as recorded in the sites: `t = c ? s :
+                    // *tab; *t = a;` stored `a` only in `s` and was silent
+                    // after a later call. See ADR-0039 and ADR-0040.
+                    //
+                    // `lost` is here for the same reason and no case holds it:
+                    // every C program measured that joins a site with `lost`
+                    // is already reported, by the escape rule or by the site
+                    // being unknown. Leaving it out could only be a silence.
+                    let unnamed = value.points_to[pointer].loaded || value.points_to[pointer].lost;
                     if unplaced {
                         value.expose(carried, None);
                     } else {
+                        if unnamed {
+                            value.expose(carried.clone(), None);
+                        }
                         for container in &containers {
                             for &site in &carried {
                                 value.inside[*container][site] = true;
