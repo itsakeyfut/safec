@@ -29,7 +29,7 @@ A write through a pointer records what it stores inside the allocations the poin
 
 Chosen option: **expose for the part a pointer cannot name**, with one new bit for the third door.
 
-**`Held::foreign`**, set by `Known::replaced` on every local a call this check cannot read may write whose address escaped, whatever it holds. It is unioned at a join and through arithmetic, and cleared by an assignment, as `Held::loaded` is. The report never reads it, so an output parameter is still not reported.
+**`Held::foreign`**, set by `Known::replaced` on every local a call this check cannot read may write whose address escaped, whatever it holds. It is unioned at a join and through arithmetic, and `Held::clear` resets it, as `Held::loaded` is. The report never reads it, so an output parameter is still not reported.
 
 **A store through a pointer** that holds sites and is `loaded`, `lost` or `foreign` records what it carries in the sites, as before, and exposes it as well. That is ADR-0039's unplaced write, for that part.
 
@@ -55,7 +55,10 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 - **Not carrying it in `Held::accumulated`** fails `a_pointer_moved_off_one_a_call_filled_in_is_still_one` alone.
 - **Dropping `lost` from the condition** fails `a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores` alone, which loses its report at the read.
 - **Exposing every placed write** fails, among others, `a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing` and `a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is`.
-- **Held by nothing.** `Held::clear` resetting the bit fails nothing: a fresh allocation reaches a local as a copy of a whole `Held`, and no assignment measured goes through `clear` with the bit set.
+- **Setting it on every local a call may write, escaped or not,** fails `a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in` alone, which reports.
+- **Held by nothing.**
+  - `Held::clear` resetting the bit fails nothing: a fresh allocation reaches a local as a copy of a whole `Held`, and no assignment measured goes through `clear` with the bit set.
+  - Dropping the `may_hold` narrowing in `Known::replaced` fails nothing either. It narrows only by the type a write through a pointer writes (ADR-0031), and a local of a type no write could hold a pointer in is never written through.
 
 On the 158 probes kept from #273, #276 and the four reviews of #276, no program that `main` refuses builds. The programs that moved all moved from building to refused.
 
@@ -64,7 +67,7 @@ On the 158 probes kept from #273, #276 and the four reviews of #276, no program 
 * Good, because a store through a pointer that may be the caller's memory, or that a call may have filled in, is no longer silent. Nothing reports less than before.
 * Bad, because a load of the function's own memory is exposed through like any other. `a_list_built_and_appended_to_in_one_function_is_refused` is a list built and appended to in one function, refused with an `SC0402` and an `SC0401` about a double free that cannot happen. `*box = s; t = c ? s2 : *box; *t = a; log_line(); return a[0];` is refused the same way.
 * Bad, because the lattice gains one bit per local, and `Analysis::height` one step per local for it. It now also counts the per-site set ADR-0042's pending reads carry, which it had not.
-* What would reverse the cost: following a load to the allocations it may have been read from, so that a store through one is placed rather than exposed. That is the report's question in #256 asked of a store as well, and it has to answer the routes the second option missed.
+* What would reverse the cost: following a load to the allocations it may have been read from, so that a store through one is placed rather than exposed. That is [#278](https://github.com/itsakeyfut/safec/issues/278), the report's question in #256 asked of a store as well, and it has to answer the routes the second option missed.
 
 ## More Information
 

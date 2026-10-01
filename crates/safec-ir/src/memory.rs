@@ -420,11 +420,11 @@ struct Held {
     /// Whether a call this check cannot read may have written into this
     /// local, through its address, something no site names.
     ///
-    /// What [`Known::replaced`] cannot say with [`Held::lost`] for a local
+    /// [`Known::replaced`] cannot say this with [`Held::lost`] for a local
     /// holding no site, because the report reads that bit and ADR-0017 does
-    /// not report an output parameter: `get(&u)` sets this instead, and the
-    /// report never reads it. A write through such a local exposes what it
-    /// carries, as one through a load does. See ADR-0044.
+    /// not report an output parameter. So `get(&u)` sets this instead, and
+    /// the report never reads it. A write through such a local exposes what
+    /// it carries, as one through a load does. See ADR-0044.
     foreign: bool,
 }
 
