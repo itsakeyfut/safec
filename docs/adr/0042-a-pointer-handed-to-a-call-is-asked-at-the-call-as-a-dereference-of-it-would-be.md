@@ -431,9 +431,10 @@ the `match`, and nothing tells the two apart.
   `memset` the second order is a silence `main` has too. Carrying the call
   forwards as well as the read would answer every order, and is
   [#275](https://github.com/itsakeyfut/safec/issues/275). A store through a
-  pointer that may be a site or a load exposes nothing through the load, on
-  `main` as here, and the notice this record adds at a store inherits that; it
-  is [#276](https://github.com/itsakeyfut/safec/issues/276).
+  pointer that may be a site or a load exposed nothing through the load, and
+  the notice this record adds at a store inherited that until
+  [#276](https://github.com/itsakeyfut/safec/issues/276) made such a store
+  expose what it carries (ADR-0039).
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`
   where the callee reads `*pp` and dereferences it, is silent in both
   functions, as it was before this record. That is

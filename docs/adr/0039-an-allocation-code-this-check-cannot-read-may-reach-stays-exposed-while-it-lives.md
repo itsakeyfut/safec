@@ -92,7 +92,11 @@ turn's allocation, which the site number cannot tell from the new one.
 carries as the contents of those allocations; one this check cannot place
 exposes what it carries at once. So `*tab = p; log_line(); *p` builds: `tab` was
 never reachable by `log_line`, so neither is `p`. Exposing at the store instead
-refused that program. The record is a square table beside the two `Held`
+refused that program. A write through a pointer that holds sites and may also
+be a load (ADR-0040) or hold a site it lost is both, recorded in the sites and
+exposed for the rest, since the load may be memory the caller owns: `t = c ? s
+: *tab; *t = a;` stored `a` only in `s` and was silent after a later call
+([#276](https://github.com/itsakeyfut/safec/issues/276)). The record is a square table beside the two `Held`
 already has, which is the condition `Held::sites` names for a packed bitset:
 measured on a 456-line function, peak memory went from 485 MB to 711 MB and time
 from 0.49 s to 0.71 s. The bitset is left to
@@ -158,6 +162,15 @@ which is the join, where an invariant applied only at the writes is missed, and
 which mutating the first version of this change found as a silence. An
 unplaced write exposing nothing fails
 `a_pointer_stored_two_levels_down_is_reached_through_what_holds_it` alone.
+Ignoring that a pointer holding sites may also be a load fails
+`a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores` and
+`a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call`,
+which go silent; exposing every placed write fails, among others,
+`a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing`
+and `a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is`.
+Ignoring only `lost` there fails nothing: every C program measured that joins
+a site with a lost one is reported already, by the escape rule or by the site
+being unknown.
 Dropping either half of the join fails a one-arm case alone. Keeping the mark
 through a rebirth fails
 `an_allocation_made_again_at_a_site_is_not_the_one_exposed_before` alone, by a
