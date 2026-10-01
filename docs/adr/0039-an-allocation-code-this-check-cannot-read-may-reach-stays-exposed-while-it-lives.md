@@ -92,7 +92,11 @@ turn's allocation, which the site number cannot tell from the new one.
 carries as the contents of those allocations; one this check cannot place
 exposes what it carries at once. So `*tab = p; log_line(); *p` builds: `tab` was
 never reachable by `log_line`, so neither is `p`. Exposing at the store instead
-refused that program. The record is a square table beside the two `Held`
+refused that program. A write through a pointer that holds sites and may also
+hold something this check cannot name, a load, a site it lost, or what a call
+may have written, is both, recorded in the sites and exposed for the rest:
+`t = c ? s : *tab; *t = a;` stored `a` only in `s` and was silent after a later
+call ([#276](https://github.com/itsakeyfut/safec/issues/276), ADR-0044). The record is a square table beside the two `Held`
 already has, which is the condition `Held::sites` names for a packed bitset:
 measured on a 456-line function, peak memory went from 485 MB to 711 MB and time
 from 0.49 s to 0.71 s. The bitset is left to
@@ -158,6 +162,12 @@ which is the join, where an invariant applied only at the writes is missed, and
 which mutating the first version of this change found as a silence. An
 unplaced write exposing nothing fails
 `a_pointer_stored_two_levels_down_is_reached_through_what_holds_it` alone.
+Exposing every placed write fails, among others,
+`a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing`
+and `a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is`.
+Ignoring `lost` in that condition fails
+`a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores` alone,
+which loses its report at the read; the rest of the condition is ADR-0044's.
 Dropping either half of the join fails a one-arm case alone. Keeping the mark
 through a rebirth fails
 `an_allocation_made_again_at_a_site_is_not_the_one_exposed_before` alone, by a

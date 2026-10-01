@@ -1,0 +1,221 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:2:5 "release_all" declared
+  Local "_0" "int" return
+Function a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int ***" parameter
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "int **"
+  Local "_11" "int"
+  Local "_12" "void *"
+  Local "_13" "int *"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "int **"
+  Local "_17" "int **"
+  Local "_18" "int"
+  Local "_19" "int"
+  Local "_20" "int *"
+  Local "_21" "int"
+  Local "_22" "int"
+  Local "_23" "int"
+  Local "_24" "int"
+  Block "bb0" entry
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:10:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:10:9 "bb1" "bb2"
+      Copy "_8"
+  Block "bb1"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:10:9 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:11:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:10:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Call a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:13:9 "malloc" "bb4"
+      Destination "_9"
+      Constant 8
+  Block "bb4"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:13:5 written
+      Destination "_3"
+      Use
+        Copy "_9"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:13:5 written
+      Destination "_10"
+      Use
+        Copy "_3"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:13:5 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:14:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:14:9 "bb5" "bb6"
+      Copy "_11"
+  Block "bb5"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:14:9 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:15:16 generated
+    Return
+  Block "bb6"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:14:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Call a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:17:9 "malloc" "bb8"
+      Destination "_12"
+      Constant 4
+  Block "bb8"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:17:5 written
+      Destination "_5"
+      Use
+        Copy "_12"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:17:5 written
+      Destination "_13"
+      Use
+        Copy "_5"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:17:5 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:18:9 written
+      Destination "_14"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:18:9 "bb9" "bb10"
+      Copy "_14"
+  Block "bb9"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:18:9 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:19:16 generated
+    Return
+  Block "bb10"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:18:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:21:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:21:5 written
+      Destination "_15"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:21:5 generated
+    Branch a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:22:9 "bb12" "bb13"
+      Copy "_1"
+  Block "bb12"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:22:9 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:23:9 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:23:9 written
+      Destination "_16"
+      Use
+        Copy "_4"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:23:9 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:22:9 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:25:9 written
+      Destination "_4"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:25:9 written
+      Destination "_17"
+      Use
+        Copy "_4"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:25:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:27:9 written
+      Destination "_18"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:27:9 "bb15" "bb16"
+      Copy "_18"
+  Block "bb15"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:27:9 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:28:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:28:16 generated
+    Return
+  Block "bb16"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:27:9 generated
+    Goto "bb17"
+  Block "bb17"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:10 written
+      Destination "_6"
+      Use
+        Copy "_5"
+          Deref
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:10 written
+      Destination "_19"
+      Use
+        Copy "_6"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:23 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:23 written
+      Destination "_20"
+      Use
+        Copy "_4"
+          Deref
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:10 written
+      Destination "_21"
+      Binary "Add"
+        Copy "_19"
+        Constant 0
+    Call a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:36 "release_all" "bb18"
+      Destination "_22"
+  Block "bb18"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:10 written
+      Destination "_23"
+      Binary "Add"
+        Copy "_21"
+        Copy "_22"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:5 written
+      Destination "_7"
+      Use
+        Copy "_23"
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:5 written
+      Destination "_24"
+      Use
+        Copy "_7"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:30:5 generated
+    Operation a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:31:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+    Sequenced a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call.c:31:12 generated
+    Return

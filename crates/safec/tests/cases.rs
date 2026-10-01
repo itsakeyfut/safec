@@ -916,6 +916,40 @@ cases! {
     what_the_other_library_copies_return_is_what_they_were_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_no_call_can_reach_stays_proved_across_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A store through a pointer that holds a site and may also be a load is
+    // unplaced for that part: `*tab` may be the caller's, and `release_all`
+    // may reach `a` there on one arm. The second is the same store
+    // unsequenced with a read before it and a call after it. Mutation: drop
+    // `loaded` from `unnamed` in `Allocations::element`'s store arm; both go
+    // silent, and the list case below builds. The third is a pointer that may
+    // be either of two allocations this check follows, and stays placed.
+    // Mutation: answer `true` for `unnamed`; the third reports. See ADR-0044.
+    a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A local a call this check cannot read may have written into is the
+    // same, though it holds no site, on either arm and moved by arithmetic.
+    // Mutation: set no `foreign` in `Known::replaced`; all three go silent.
+    // Mutation: drop `foreign` from `unnamed`; all three go silent.
+    // Mutation: keep one arm's `foreign` in `Held::joined`; the second goes
+    // silent, the call being on the arm the join does not keep. Mutation:
+    // carry none in `Held::accumulated`; the third goes silent.
+    a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_moved_off_one_a_call_filled_in_is_still_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The other side: a call this check cannot read writes only through
+    // addresses that escaped. Mutation: set `foreign` in `Known::replaced`
+    // on every local it may write, escaped or not; this reports.
+    a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The cost: a load of the function's own memory is exposed through like
+    // any other, so a list built and appended to in one function is refused,
+    // with a double free that cannot happen. Following a load to where it was
+    // read from would remove it. See ADR-0044.
+    a_list_built_and_appended_to_in_one_function_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer that lost the name for its site is unplaced too. Mutation:
+    // drop `lost` from `unnamed`; the report at `a[0]` goes, and the one at
+    // the store stays.
+    a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_made_again_at_a_site_is_not_the_one_exposed_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `realloc`'s size is not asked whether it was freed.
     the_size_realloc_is_handed_is_not_asked_whether_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
