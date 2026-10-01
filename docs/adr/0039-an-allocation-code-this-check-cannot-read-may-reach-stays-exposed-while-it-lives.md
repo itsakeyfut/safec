@@ -93,12 +93,10 @@ carries as the contents of those allocations; one this check cannot place
 exposes what it carries at once. So `*tab = p; log_line(); *p` builds: `tab` was
 never reachable by `log_line`, so neither is `p`. Exposing at the store instead
 refused that program. A write through a pointer that holds sites and may also
-point into memory this check does not model, or hold a site it lost, is both,
-recorded in the sites and exposed for the rest: `t = c ? s : *tab; *t = a;`
-stored `a` only in `s` and was silent after a later call
-([#276](https://github.com/itsakeyfut/safec/issues/276)). Which loads that is,
-and what a write through one of the function's own memory does instead, is
-ADR-0044's. The record is a square table beside the two `Held`
+hold something this check cannot name, a load, a site it lost, or what a call
+may have written, is both, recorded in the sites and exposed for the rest:
+`t = c ? s : *tab; *t = a;` stored `a` only in `s` and was silent after a later
+call ([#276](https://github.com/itsakeyfut/safec/issues/276), ADR-0044). The record is a square table beside the two `Held`
 already has, which is the condition `Held::sites` names for a packed bitset:
 measured on a 456-line function, peak memory went from 485 MB to 711 MB and time
 from 0.49 s to 0.71 s. The bitset is left to

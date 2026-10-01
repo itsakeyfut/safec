@@ -4,85 +4,68 @@ date: 2026-10-01
 decision-makers: project author
 ---
 
-# A pointer says whether it may point into memory this check does not model, and an allocation says whether it may hold one
+# A store through a pointer that may hold what this check cannot name exposes what it carries, and a local a call may have written says so
 
 ## Context and Problem Statement
 
-A write through a pointer records what it stores inside the allocations the pointer holds, and exposes it at once when it cannot place it (ADR-0039). A pointer read out of memory holds no site (ADR-0017) and carries `Held::loaded` (ADR-0040), which says that it was read out of memory and not from where.
+A write through a pointer records what it stores inside the allocations the pointer holds, and exposes it at once when it cannot place it (ADR-0039). A pointer that held a site was treated as placed even when it might also hold something this check cannot name, so the rest of what it might point at exposed nothing ([#276](https://github.com/itsakeyfut/safec/issues/276)):
 
-That loses the one distinction a store needs. A pointer read out of a parameter's memory may point into memory the caller owns, which code this check cannot read can reach. A pointer read out of an allocation this function made and never exposed points at one of the allocations stored there, every one of which this check names. Treating the two alike was wrong in both directions ([#276](https://github.com/itsakeyfut/safec/issues/276)):
-
-- **A silence.** `t = c ? s : *tab; *t = a; release_all(); return a[0];` built, because the site `s` made the store placed and the load exposed nothing. So did the same with `t = c ? s : u` after `get(&u)`, since a pointer a call writes into a local that holds no site sets neither `loaded` nor `lost` (ADR-0017, ADR-0029).
-- **A false refusal.** Exposing what is stored through every possible load refused a function appending to a list it built itself, with a double free that cannot happen.
+- **A pointer read out of memory** (`Held::loaded`, ADR-0040). `t = c ? s : *tab; *t = a; release_all(); return a[0];` built, because the site `s` made the store placed and `*tab` may be the caller's memory.
+- **A site it lost the name for** (`Held::lost`).
+- **What a call this check cannot read may have written into it through its address.** For a local holding no site that set neither bit: `Known::replaced` leaves `lost` off it so that the report says nothing about an output parameter (ADR-0017, ADR-0029). So `get(&u); t = c ? s : u; *t = a;` was silent the same way.
 
 ## Decision Drivers
 
 * A missed route is a silence, row 6 of the ranking; an extra one is a report the reader can see, row 4.
-* ADR-0017's refusal to report an output parameter, `int *p; get(&p); *p = 1;`, has to survive: nothing the report reads may change for it.
-* Lattice size: #173 tracks the cost of square fields, and a third already exists.
+* Nothing may report less than before. A rule that is more precise somewhere is worth nothing if it is silent somewhere `main` was not.
+* ADR-0017's refusal to report an output parameter, `int *p; get(&p); *p = 1;`, has to survive.
 
 ## Considered Options
 
-* **Expose what a store carries through any pointer that may be a load.** This was the first implementation of #276, and was rejected by its review for the list program.
-* **A bit on the value alone.** The bit is set where a load reads memory reachable to code this check cannot read. It is lost when such a pointer is stored into the function's own memory and read back, so that route is a silence.
-* **A bit on the value, and a bit per allocation saying it may hold such a pointer.**
+* **Expose what a store carries for the part of a pointer this check cannot name.** A pointer may be loaded, lost, or written by a call it cannot read.
+* **Also tell a load of the function's own memory from one it cannot model.** A bit would say a value may be memory reachable to code this check cannot read, and a bit per allocation would say it may hold such a value. A store through a load of the function's own memory would then be recorded in the allocations stored there rather than exposed.
 
 ## Decision Outcome
 
-Chosen option: **a bit on the value, and a bit per allocation**.
+Chosen option: **expose for the part a pointer cannot name**, with one new bit for the third door.
 
-**The value's bit is `Held::foreign`**: the local may point into memory reachable to code this check cannot read, which no site names. It is set:
+**`Held::foreign`**, set by `Known::replaced` on every local a call this check cannot read may write whose address escaped, whatever it holds. It is unioned at a join and through arithmetic, and cleared by an assignment, as `Held::loaded` is. The report never reads it, so an output parameter is still not reported.
 
-- by a load through one `Deref` when the pointer read through is itself foreign or lost, or when any allocation it may point at is reachable to such code (`Known::reachable_now`) or may hold such a pointer. A load through a pointer that may itself be a load asks the same of every allocation `Known::stored` names. A load through any deeper projection is foreign.
-- by a call this check cannot read, for every local whose address escaped and whose type it may write, whether or not the local holds a site. This is `Known::replaced`. A local holding no site gets `foreign` and not `lost`, so the report, which reads `lost` and not `foreign`, is unchanged for an output parameter.
-- by arithmetic on such a load, as `loaded` is (ADR-0040).
+**A store through a pointer** that holds sites and is `loaded`, `lost` or `foreign` records what it carries in the sites, as before, and exposes it as well. That is ADR-0039's unplaced write, for that part.
 
-It is cleared by an assignment and unioned at a join, as `loaded` is. The report never reads it.
+The second option was implemented and rejected by its review. It treated a load as one of the function's own memory whenever it could not see otherwise, and that is false by too many routes, each a silence where `main` reported:
 
-**The allocation's bit is `Known::holds_foreign`**, one per site. It is set where a store of a foreign value is recorded into an allocation, unioned at a join, and kept through a rebirth for `inside`'s reason (ADR-0040).
+- a load through a pointer to a local (`pp = &u; t = *pp;`);
+- a table of pointers grown with `realloc`, which carried the contents but not the new bit;
+- a store through `**pp`;
+- a local's address stored in the function's own memory and read back.
 
-**A store through a pointer** then:
-
-- exposes what it carries when the pointer is foreign or lost (ADR-0039's unplaced write, for that part);
-- otherwise, when the pointer may be a load, records what it carries inside every allocation `Known::stored` names, since the load points at one of them, rather than exposing it;
-- records into the sites it holds as before.
+More than ten such programs were found across four review lenses. The closure each load computed also made a large function about seventeen times slower. Every review round found a new route, so the premise was dropped rather than patched.
 
 ### Confirmation
 
 Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. The cases are in `crates/safec/tests/cases`.
 
-- **`Known::foreign_load` answering not foreign** fails, among others:
-  - `a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores`;
-  - `a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call`;
-  - `a_foreign_pointer_stored_in_the_function_s_own_memory_stays_foreign`;
-  - `a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled`.
+- **Dropping `loaded` from the store's condition** fails `a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores` and `a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call`, which go silent. It also fails `a_list_built_and_appended_to_in_one_function_is_refused`, which builds.
+- **The output-parameter cases.** Dropping `foreign` from the store's condition, or not setting it in `Known::replaced`, fails each of these, which go silent:
+  - `a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores`;
+  - `a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores`;
+  - `a_pointer_moved_off_one_a_call_filled_in_is_still_one`.
+- **Keeping one arm's bit in `Held::joined`** fails `a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores` alone.
+- **Not carrying it in `Held::accumulated`** fails `a_pointer_moved_off_one_a_call_filled_in_is_still_one` alone.
+- **Dropping `lost` from the condition** fails `a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores` alone, which loses its report at the read.
+- **Exposing every placed write** fails, among others, `a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing` and `a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is`.
+- **Held by nothing.** `Held::clear` resetting the bit fails nothing: a fresh allocation reaches a local as a copy of a whole `Held`, and no assignment measured goes through `clear` with the bit set.
 
-  All of them go silent.
-- **It answering foreign** fails `a_list_built_and_appended_to_in_one_function_is_not_refused` and `a_pointer_read_out_of_the_function_s_own_memory_is_not_unmodeled`, which report.
-- **One case alone per route.** Each of these fails only the case named, which goes silent unless it says otherwise:
-
-| Mutation | The case that fails |
-|---|---|
-| not setting the bit in `Allocations::read_through` | the first three above, together |
-| not setting `Known::holds_foreign` at a store | `a_foreign_pointer_stored_in_the_function_s_own_memory_stays_foreign` |
-| not carrying the bit in `built_from` | `a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled` |
-| not carrying it in `Held::accumulated` | `a_pointer_moved_off_a_local_holding_an_unmodeled_load_is_still_unmodeled` |
-| not setting it in `Known::replaced` | `a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores` |
-| keeping one arm's bit in `Held::joined` | `a_store_through_a_pointer_that_is_a_load_on_the_first_arm_exposes_what_it_stores` |
-| keeping one arm's `Known::holds_foreign` at the join | `a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join` |
-| adding nothing from `Known::stored` to a store's containers | `a_store_through_a_modeled_load_lands_in_what_it_may_point_at`, which loses its report at the read |
-| exposing a store through a modeled load that has no site of its own | `a_pointer_read_out_of_the_function_s_own_memory_is_not_unmodeled`, which reports |
-| dropping `lost` from the store's condition | `a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores`, which loses its report at the read |
-
-- **Held by nothing.** `Held::clear` resetting the bit fails nothing. A fresh allocation reaches a local as a copy of a whole `Held`, and no assignment measured goes through `clear` with the bit set. `Known::reborn` keeping `Known::holds_foreign` is unguarded for `Known::inside`'s reason.
+On the 158 probes kept from #273, #276 and the four reviews of #276, no program that `main` refuses builds. The programs that moved all moved from building to refused.
 
 ### Consequences
 
-* Good, because the two silences in #276 report, and a store through a pointer read out of the function's own memory no longer exposes anything. On a prototype, `*s2 = s; t = *s2; *t = a; release_all(); return a[0];`, which `main` refused, built.
-* Bad, because a write by this function through a pointer it cannot pin down makes every escaped local foreign, though what it wrote may not have been. That is ADR-0031's writer reusing a rule written for a call, and costs a report rather than a silence.
-* Bad, because the lattice gains one bit per local and one per site, and `Analysis::height` grows by two steps per local for them.
-* What would reverse this: following a load to the allocations it may have been read from, as #256 asks of the report, which would make both bits derivable.
+* Good, because a store through a pointer that may be the caller's memory, or that a call may have filled in, is no longer silent. Nothing reports less than before.
+* Bad, because a load of the function's own memory is exposed through like any other. `a_list_built_and_appended_to_in_one_function_is_refused` is a list built and appended to in one function, refused with an `SC0402` and an `SC0401` about a double free that cannot happen. `*box = s; t = c ? s2 : *box; *t = a; log_line(); return a[0];` is refused the same way.
+* Bad, because the lattice gains one bit per local, and `Analysis::height` one step per local for it. It now also counts the per-site set ADR-0042's pending reads carry, which it had not.
+* What would reverse the cost: following a load to the allocations it may have been read from, so that a store through one is placed rather than exposed. That is the report's question in #256 asked of a store as well, and it has to answer the routes the second option missed.
 
 ## More Information
 
-[#276](https://github.com/itsakeyfut/safec/issues/276) has the programs and the review that found them. ADR-0017, ADR-0029, ADR-0039 and ADR-0040 are what this narrows or extends.
+[#276](https://github.com/itsakeyfut/safec/issues/276) has the programs, the two designs and the reviews. ADR-0017, ADR-0029, ADR-0039 and ADR-0040 are what this extends.
