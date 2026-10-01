@@ -1,0 +1,262 @@
+Target "x86_64-pc-windows-msvc"
+Function a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:2:6 "release_all" declared
+  Local "_0" "void" return
+Function a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int" parameter
+  Local "_3" "int ***" parameter
+  Local "_4" "int ***"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "int ***"
+  Local "_11" "void *"
+  Local "_12" "int **"
+  Local "_13" "void *"
+  Local "_14" "int *"
+  Local "_15" "int"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "int **"
+  Local "_20" "int **"
+  Local "_21" "int **"
+  Local "_22" "int **"
+  Local "_23" "int"
+  Local "_24" "int *"
+  Local "_25" "void"
+  Block "bb0" entry
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:9:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:9:9 "bb1" "bb2"
+      Copy "_8"
+  Block "bb1"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:9:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:10:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:10:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:9:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Call a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:12:11 "malloc" "bb4"
+      Destination "_9"
+      Constant 8
+  Block "bb4"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:12:5 written
+      Destination "_4"
+      Use
+        Copy "_9"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:12:5 written
+      Destination "_10"
+      Use
+        Copy "_4"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:12:5 generated
+    Call a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:13:9 "malloc" "bb5"
+      Destination "_11"
+      Constant 8
+  Block "bb5"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:13:5 written
+      Destination "_5"
+      Use
+        Copy "_11"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:13:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:13:5 generated
+    Call a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:14:9 "malloc" "bb6"
+      Destination "_13"
+      Constant 4
+  Block "bb6"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:14:5 written
+      Destination "_7"
+      Use
+        Copy "_13"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:14:5 written
+      Destination "_14"
+      Use
+        Copy "_7"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:14:5 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:15:9 written
+      Destination "_15"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:15:9 "bb7" "bb8"
+      Copy "_15"
+  Block "bb7"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:15:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:16:16 generated
+    Return
+  Block "bb8"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:15:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:18:9 written
+      Destination "_16"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:18:9 "bb10" "bb11"
+      Copy "_16"
+  Block "bb10"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:18:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:19:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:18:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:21:9 written
+      Destination "_17"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:21:9 "bb13" "bb14"
+      Copy "_17"
+  Block "bb13"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:21:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:22:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:22:16 generated
+    Return
+  Block "bb14"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:21:9 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:24:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:24:5 written
+      Destination "_18"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:24:5 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:25:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:25:5 written
+      Destination "_19"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:25:5 generated
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:26:9 "bb16" "bb17"
+      Copy "_1"
+  Block "bb16"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:26:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:27:9 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_3"
+          Deref
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:27:9 written
+      Destination "_20"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:27:9 generated
+    Goto "bb18"
+  Block "bb17"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:26:9 generated
+    Goto "bb18"
+  Block "bb18"
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:29:9 "bb19" "bb20"
+      Copy "_2"
+  Block "bb19"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:29:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:30:9 written
+      Destination "_6"
+      Use
+        Copy "_5"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:30:9 written
+      Destination "_21"
+      Use
+        Copy "_6"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:30:9 generated
+    Goto "bb21"
+  Block "bb20"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:29:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:32:9 written
+      Destination "_6"
+      Use
+        Copy "_4"
+          Deref
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:32:9 written
+      Destination "_22"
+      Use
+        Copy "_6"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:32:9 generated
+    Goto "bb21"
+  Block "bb21"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:34:9 written
+      Destination "_23"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:34:9 "bb22" "bb23"
+      Copy "_23"
+  Block "bb22"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:34:9 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:35:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:35:16 generated
+    Return
+  Block "bb23"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:34:9 generated
+    Goto "bb24"
+  Block "bb24"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:37:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:37:5 written
+      Destination "_24"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:37:5 generated
+    ArgumentsEvaluated a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:38:5 generated
+    Call a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:38:5 "release_all" "bb25"
+      Destination "_25"
+  Block "bb25"
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:38:5 generated
+    Operation a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:39:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:39:12 generated
+    Return

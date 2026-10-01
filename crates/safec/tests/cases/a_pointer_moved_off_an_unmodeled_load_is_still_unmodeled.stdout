@@ -1,0 +1,197 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:2:6 "release_all" declared
+  Local "_0" "void" return
+Function a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int ***" parameter
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "int **"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int **"
+  Local "_15" "int **"
+  Local "_16" "int **"
+  Local "_17" "int"
+  Local "_18" "int *"
+  Local "_19" "void"
+  Block "bb0" entry
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:8:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:8:9 "bb1" "bb2"
+      Copy "_6"
+  Block "bb1"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:8:9 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:9:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:8:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Call a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:11:9 "malloc" "bb4"
+      Destination "_7"
+      Constant 8
+  Block "bb4"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:11:5 written
+      Destination "_3"
+      Use
+        Copy "_7"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:11:5 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:11:5 generated
+    Call a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:12:9 "malloc" "bb5"
+      Destination "_9"
+      Constant 4
+  Block "bb5"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:12:5 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:12:5 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:12:5 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:13:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:13:9 "bb6" "bb7"
+      Copy "_11"
+  Block "bb6"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:13:9 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:14:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:14:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:13:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:16:9 written
+      Destination "_12"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:16:9 "bb9" "bb10"
+      Copy "_12"
+  Block "bb9"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:16:9 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:17:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:17:16 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:16:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:19:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:19:5 written
+      Destination "_13"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:19:5 generated
+    Branch a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:20:9 "bb12" "bb13"
+      Copy "_1"
+  Block "bb12"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:20:9 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:21:9 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:21:9 written
+      Destination "_14"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:21:9 generated
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:20:9 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:23:13 written
+      Destination "_15"
+      Binary "Add"
+        Copy "_2"
+          Deref
+        Constant 1
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:23:9 written
+      Destination "_4"
+      Use
+        Copy "_15"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:23:9 written
+      Destination "_16"
+      Use
+        Copy "_4"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:23:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:25:9 written
+      Destination "_17"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:25:9 "bb15" "bb16"
+      Copy "_17"
+  Block "bb15"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:25:9 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:26:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:26:16 generated
+    Return
+  Block "bb16"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:25:9 generated
+    Goto "bb17"
+  Block "bb17"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:28:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:28:5 written
+      Destination "_18"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:28:5 generated
+    ArgumentsEvaluated a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:29:5 generated
+    Call a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:29:5 "release_all" "bb18"
+      Destination "_19"
+  Block "bb18"
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:29:5 generated
+    Operation a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:30:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled.c:30:12 generated
+    Return

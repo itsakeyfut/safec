@@ -1,0 +1,185 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:2:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter
+Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:3:6 "release_all" declared
+  Local "_0" "void" return
+Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int **"
+  Local "_3" "int **"
+  Local "_4" "int **"
+  Local "_5" "int *"
+  Local "_6" "void *"
+  Local "_7" "int **"
+  Local "_8" "int"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int ***"
+  Local "_14" "void"
+  Local "_15" "int **"
+  Local "_16" "int **"
+  Local "_17" "int"
+  Local "_18" "int *"
+  Local "_19" "void"
+  Block "bb0" entry
+    Call a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:10:9 "malloc" "bb1"
+      Destination "_6"
+      Constant 8
+  Block "bb1"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:10:5 written
+      Destination "_2"
+      Use
+        Copy "_6"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:10:5 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:10:5 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:11:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_2"
+        Constant 0
+    Branch a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:11:9 "bb2" "bb3"
+      Copy "_8"
+  Block "bb2"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:11:9 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:12:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:11:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Call a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:14:9 "malloc" "bb5"
+      Destination "_9"
+      Constant 4
+  Block "bb5"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:14:5 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:14:5 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:14:5 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:15:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:15:9 "bb6" "bb7"
+      Copy "_11"
+  Block "bb6"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:15:9 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:16:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:15:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:18:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:18:5 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:18:5 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:19:9 written
+      Destination "_13"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:19:5 generated
+    Call a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:19:5 "get" "bb9"
+      Destination "_14"
+      Copy "_13"
+  Block "bb9"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:19:5 generated
+    Branch a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:20:9 "bb10" "bb11"
+      Copy "_1"
+  Block "bb10"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:20:9 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:21:9 written
+      Destination "_4"
+      Use
+        Copy "_2"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:21:9 written
+      Destination "_15"
+      Use
+        Copy "_4"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:21:9 generated
+    Goto "bb12"
+  Block "bb11"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:20:9 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:23:9 written
+      Destination "_4"
+      Use
+        Copy "_3"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:23:9 written
+      Destination "_16"
+      Use
+        Copy "_4"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:23:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:25:9 written
+      Destination "_17"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:25:9 "bb13" "bb14"
+      Copy "_17"
+  Block "bb13"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:25:9 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:26:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:26:16 generated
+    Return
+  Block "bb14"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:25:9 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:28:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:28:5 written
+      Destination "_18"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:28:5 generated
+    ArgumentsEvaluated a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:29:5 generated
+    Call a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:29:5 "release_all" "bb16"
+      Destination "_19"
+  Block "bb16"
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:29:5 generated
+    Operation a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:30:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:30:12 generated
+    Return

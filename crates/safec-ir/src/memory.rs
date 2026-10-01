@@ -412,7 +412,22 @@ struct Held {
     /// "reaches nothing". It is not the emptiness of [`Held::sites`], because
     /// `int *z = 0;` is empty too, and reading it as a load exposed every
     /// stored pointer at `log_ptr(z)`, measured. See ADR-0040.
+    ///
+    /// It says that the value was read out of memory and not from where;
+    /// [`Held::foreign`] is the half a write through it needs.
     loaded: bool,
+    /// Whether this local may point into memory that code this check cannot
+    /// read can reach, and that no site names.
+    ///
+    /// **What [`Held::loaded`] does not say.** A pointer read out of a
+    /// parameter's memory may be the caller's; one read out of an allocation
+    /// this function made and never exposed is one of the sites stored there,
+    /// and a store through it can be recorded rather than exposed. A local a
+    /// call this check cannot read may have written is the other door:
+    /// `get(&u)` sets it here and not [`Held::lost`], so the report, which
+    /// never reads this, says nothing new about an output parameter. See
+    /// ADR-0044.
+    foreign: bool,
 }
 
 impl Held {
@@ -430,6 +445,7 @@ impl Held {
             // parameter. See ADR-0036.
             offset: Offset::Zero,
             loaded: false,
+            foreign: false,
         }
     }
 
@@ -480,10 +496,12 @@ impl Held {
             writes_elsewhere,
             offset,
             loaded,
+            foreign,
         } = self;
         sites.fill(false);
         *lost = false;
         *loaded = false;
+        *foreign = false;
         *freed = None;
         writes_to.fill(false);
         // What a local is given ends the claim that this check knew where a
@@ -514,9 +532,11 @@ impl Held {
             writes_elsewhere,
             offset,
             loaded,
+            foreign,
         } = self;
         *offset = offset.joined(other.offset);
         *loaded = *loaded || other.loaded;
+        *foreign = *foreign || other.foreign;
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -564,10 +584,12 @@ impl Held {
             writes_elsewhere,
             offset,
             loaded,
+            foreign,
         } = self;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
         *loaded = *loaded || other.loaded;
+        *foreign = *foreign || other.foreign;
 
         // **Where the result points is the fold's to say, and not this
         // method's**, for the reason the line below gives about the proof:
@@ -738,6 +760,14 @@ struct Known {
     /// exposed `tab`. Square in the locals, which is [`Held::sites`]' condition
     /// for a packed bitset. See ADR-0039.
     inside: Vec<Vec<bool>>,
+    /// Per site, whether that allocation may hold a pointer that is
+    /// [`Held::foreign`].
+    ///
+    /// So that storing such a pointer into the function's own memory and
+    /// reading it back does not launder it: `*box = u; t = *box;` is as
+    /// foreign as `u`. Kept through a rebirth, for [`Self::inside`]'s reason.
+    /// See ADR-0044.
+    holds_foreign: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -1006,6 +1036,7 @@ impl Known {
             exposed,
             // Kept, for the reason given below.
             inside: _,
+            holds_foreign: _,
             pending,
         } = self;
 
@@ -1142,6 +1173,31 @@ impl Known {
         reach
     }
 
+    /// Whether a value read through `place` may be [`Held::foreign`].
+    ///
+    /// Read through one `Deref` of a local, it is foreign when that local is
+    /// foreign or lost, or when any allocation it may point at, its sites and,
+    /// for a load, every site [`Self::stored`] names, is reachable to code
+    /// this check cannot read or may hold a foreign pointer. Read any other
+    /// way, it is foreign, because this check does not follow it. See
+    /// ADR-0044.
+    fn foreign_load(&self, place: &Place) -> bool {
+        if place.projection.as_slice() != [Projection::Deref] {
+            return true;
+        }
+        let held = &self.points_to[place.local.index()];
+        if held.foreign || held.lost {
+            return true;
+        }
+        let reach = self.reachable_now();
+        let mut from: Vec<usize> = held.sites().collect();
+        if held.loaded {
+            from.extend(self.stored());
+        }
+        from.iter()
+            .any(|&site| reach.contains(&site) || self.holds_foreign[site])
+    }
+
     /// Every site a pointer stored in some allocation may hold.
     ///
     /// What a pointer read out of memory this check cannot say which may be:
@@ -1217,6 +1273,13 @@ impl Known {
                 && self.points_to[local].sites().next().is_some()
             {
                 self.points_to[local].lost = true;
+            }
+            // **Whatever it holds**, since the writer may have put a pointer
+            // into memory this check does not model there. A local holding no
+            // site is given this and not `lost`, which is the output-parameter
+            // idiom above: the report does not read it. See ADR-0044.
+            if may_hold(local) && self.escaped[local] {
+                self.points_to[local].foreign = true;
             }
         }
     }
@@ -1302,6 +1365,14 @@ fn built_from(
     // exposed nothing, found by mutating [`Held::accumulated`]. See ADR-0040.
     reached.loaded |= operands.iter().any(|operand| match operand {
         Operand::Copy(source) => !source.projection.is_empty() && may_be_pointer(source),
+        Operand::Constant(_) => false,
+    });
+    // And whether that load may be memory this check does not model, which
+    // arrives the same way. See ADR-0044.
+    reached.foreign |= operands.iter().any(|operand| match operand {
+        Operand::Copy(source) => {
+            !source.projection.is_empty() && may_be_pointer(source) && value.foreign_load(source)
+        }
         Operand::Constant(_) => false,
     });
 
@@ -1574,6 +1645,9 @@ impl Allocations<'_> {
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
         let mut held = Held::none(value.points_to.len());
         held.loaded = self.may_be_pointer(function, source);
+        // Where it was read from decides whether it may be memory this check
+        // does not model. See ADR-0044.
+        held.foreign = held.loaded && value.foreign_load(source);
         held
     }
 
@@ -1779,6 +1853,10 @@ impl Analysis for Allocations<'_> {
         // first term gains a third square for it. See ADR-0039. Whether a
         // local may hold a pointer read out of memory is one more bit per
         // local that a join only sets, one more step each. See ADR-0040.
+        // Whether a local may point into memory this check does not model, and
+        // whether a site may hold such a pointer, are one more bit per local
+        // each, which a join only sets: two more steps per local. See
+        // ADR-0044.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -1793,9 +1871,11 @@ impl Analysis for Allocations<'_> {
         // positions, so it is counted in positions rather than in locals.** A
         // block's entry value can gain one entry per place read at one element
         // or terminator of the function, and each entry's set of sites can gain
-        // one site per local. The same paragraph above applies to it: the
-        // transfer empties it at every marker and only a join makes an entry
-        // value grow.
+        // one site per local, and its set of sites reachable to code this check
+        // cannot read one more, which is ADR-0042's and was left uncounted
+        // until ADR-0044 recounted this. The same paragraph above applies to
+        // it: the transfer empties it at every marker and only a join makes an
+        // entry value grow.
         let positions: usize = function
             .blocks()
             .map(|block| block.elements.len() + 1)
@@ -1808,7 +1888,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 10) + positions * (locals + 1)
+        locals * locals * 3 + locals * (locals + 12) + positions * (2 * locals + 1)
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -1823,6 +1903,7 @@ impl Analysis for Allocations<'_> {
             escaped: vec![false; self.locals],
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
+            holds_foreign: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -1864,6 +1945,7 @@ impl Analysis for Allocations<'_> {
             escaped,
             exposed,
             inside,
+            holds_foreign,
             pending,
         } = into;
 
@@ -1891,6 +1973,9 @@ impl Analysis for Allocations<'_> {
             for (here, there) in row.iter_mut().zip(other) {
                 *here = *here || *there;
             }
+        }
+        for (here, there) in holds_foreign.iter_mut().zip(&from.holds_foreign) {
+            *here = *here || *there;
         }
 
         // **A union, because a read on either arm is a read some execution
@@ -2035,8 +2120,8 @@ impl Analysis for Allocations<'_> {
                 // exposes what it carries at once: one deeper than one `Deref`,
                 // which has no targets, or one through a pointer that holds
                 // neither an allocation nor a local's address, or, for that
-                // part, one through a pointer that may also be a load or hold
-                // something it lost. A write that
+                // part, one through a pointer that may also point into memory
+                // this check does not model or hold something it lost. A write that
                 // may land in followed locals records nothing here: their
                 // addresses escaped, and what they hold is in every call's
                 // reach. A store into a local aggregate, once fields and
@@ -2044,10 +2129,9 @@ impl Analysis for Allocations<'_> {
                 // exposing branch, which is a false report the reader can see
                 // until it is recorded inside the local instead. See ADR-0039.
                 if !operation.place.projection.is_empty() {
-                    let mut carried: Vec<usize> = self
-                        .carried(function, &operation.value, value)
-                        .sites()
-                        .collect();
+                    let written = self.carried(function, &operation.value, value);
+                    let carried_foreign = written.foreign;
+                    let mut carried: Vec<usize> = written.sites().collect();
                     // And what a pointer read out of memory may be, which the
                     // sites above do not name: `*b = *a;` stores in `b` what
                     // `a` held. See ADR-0040.
@@ -2062,20 +2146,31 @@ impl Analysis for Allocations<'_> {
                     // With a target, what it carries is in that local now, and
                     // the local's address escaped: every call reaches it.
                     let unplaced = containers.is_empty() && targets.is_empty();
-                    // **A pointer that holds a site may also hold what this
-                    // check cannot name**: a load, which may be memory the
-                    // caller owns, or a site it lost the name for. For that
-                    // part the write is unplaced, so what it carries is
-                    // exposed as well as recorded in the sites: `t = c ? s :
-                    // *tab; *t = a;` stored `a` only in `s` and was silent
-                    // after a later call. See ADR-0039 and ADR-0040.
-                    //
-                    // `lost` is here for the same reason and no case holds it:
-                    // every C program measured that joins a site with `lost`
-                    // is already reported, by the escape rule or by the site
-                    // being unknown. Leaving it out could only be a silence.
-                    let unnamed = value.points_to[pointer].loaded || value.points_to[pointer].lost;
-                    if unplaced {
+                    // **What a pointer may hold besides its sites decides the
+                    // rest.** Memory this check does not model, a foreign
+                    // pointer's or a lost one's, is unplaced for that part,
+                    // so what the write carries is exposed as well as
+                    // recorded: `t = c ? s : *tab; *t = a;` stored `a` only in
+                    // `s` and was silent after a later call. A load of the
+                    // function's own memory points at one of the sites stored
+                    // there, so the write is recorded in each of them instead,
+                    // and a list built and appended to in one function is not
+                    // refused. See ADR-0044.
+                    let held = &value.points_to[pointer];
+                    let unnamed = held.foreign || held.lost;
+                    let modeled_load = held.loaded && !unnamed;
+                    let mut containers = containers;
+                    if modeled_load {
+                        containers.extend(value.stored());
+                    }
+                    // A foreign pointer stored here is still foreign when it
+                    // is read back.
+                    if carried_foreign {
+                        for container in &containers {
+                            value.holds_foreign[*container] = true;
+                        }
+                    }
+                    if unplaced && !modeled_load {
                         value.expose(carried, None);
                     } else {
                         if unnamed {

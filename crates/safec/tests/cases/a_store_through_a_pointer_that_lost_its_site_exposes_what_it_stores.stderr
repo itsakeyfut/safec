@@ -1,0 +1,20 @@
+error[SC0402]: this uses a pointer this check stopped following
+    ╭─[ a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:28:5 ]
+    │
+ 28 │     *t = a;
+    │     ───┬──  
+    │        ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:30:5 ]
+    │
+ 30 │     return a[0];
+    │     ──────┬─────  
+    │           ╰─────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
