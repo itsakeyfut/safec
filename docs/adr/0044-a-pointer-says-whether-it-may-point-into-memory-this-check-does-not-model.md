@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-10-01
 decision-makers: project author
 ---
@@ -49,17 +49,32 @@ It is cleared by an assignment and unioned at a join, as `loaded` is. The report
 
 ### Confirmation
 
-No case holds this yet. The implementation of #276 adds one case per route, each guarded by its own mutation:
+Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. The cases are in `crates/safec/tests/cases`.
 
-- the load answering not foreign, and answering foreign;
-- not marking the allocation a foreign pointer is stored into;
-- not carrying the bit through arithmetic;
-- not setting it at a call;
-- not recording into the allocations a load may point at;
-- exposing a store through a load of the function's own memory;
-- dropping `lost` from the store's condition.
+- **`Known::foreign_load` answering not foreign** fails, among others:
+  - `a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores`;
+  - `a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call`;
+  - `a_foreign_pointer_stored_in_the_function_s_own_memory_stays_foreign`;
+  - `a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled`.
 
-On a prototype each of these moved at least one probe. This section names the cases once they exist.
+  All of them go silent.
+- **It answering foreign** fails `a_list_built_and_appended_to_in_one_function_is_not_refused` and `a_pointer_read_out_of_the_function_s_own_memory_is_not_unmodeled`, which report.
+- **One case alone per route.** Each of these fails only the case named, which goes silent unless it says otherwise:
+
+| Mutation | The case that fails |
+|---|---|
+| not setting the bit in `Allocations::read_through` | the first three above, together |
+| not setting `Known::holds_foreign` at a store | `a_foreign_pointer_stored_in_the_function_s_own_memory_stays_foreign` |
+| not carrying the bit in `built_from` | `a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled` |
+| not carrying it in `Held::accumulated` | `a_pointer_moved_off_a_local_holding_an_unmodeled_load_is_still_unmodeled` |
+| not setting it in `Known::replaced` | `a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores` |
+| keeping one arm's bit in `Held::joined` | `a_store_through_a_pointer_that_is_a_load_on_the_first_arm_exposes_what_it_stores` |
+| keeping one arm's `Known::holds_foreign` at the join | `a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join` |
+| adding nothing from `Known::stored` to a store's containers | `a_store_through_a_modeled_load_lands_in_what_it_may_point_at`, which loses its report at the read |
+| exposing a store through a modeled load that has no site of its own | `a_pointer_read_out_of_the_function_s_own_memory_is_not_unmodeled`, which reports |
+| dropping `lost` from the store's condition | `a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores`, which loses its report at the read |
+
+- **Held by nothing.** `Held::clear` resetting the bit fails nothing. A fresh allocation reaches a local as a copy of a whole `Held`, and no assignment measured goes through `clear` with the bit set. `Known::reborn` keeping `Known::holds_foreign` is unguarded for `Known::inside`'s reason.
 
 ### Consequences
 

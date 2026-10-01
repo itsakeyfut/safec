@@ -434,7 +434,8 @@ the `match`, and nothing tells the two apart.
   pointer that may be a site or a load exposed nothing through the load, and
   the notice this record adds at a store inherited that until
   [#276](https://github.com/itsakeyfut/safec/issues/276) made such a store
-  expose what it carries (ADR-0039).
+  expose what it carries where the load may be memory this check does not
+  model (ADR-0044).
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`
   where the callee reads `*pp` and dereferences it, is silent in both
   functions, as it was before this record. That is
