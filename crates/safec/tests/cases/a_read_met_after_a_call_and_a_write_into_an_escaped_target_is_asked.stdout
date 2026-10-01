@@ -1,0 +1,126 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:2:6 "keep" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:3:6 "release_all" declared
+  Local "_0" "void" return
+Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "int **"
+  Local "_7" "int **"
+  Local "_8" "void"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "void"
+  Local "_13" "int *"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:10:5 written
+      Destination "_1"
+      Use
+        Constant 0
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:10:5 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:10:5 generated
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:11:10 written
+      Destination "_6"
+      Address
+        Place "_1"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:11:5 written
+      Destination "_2"
+      Use
+        Copy "_6"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:11:5 written
+      Destination "_7"
+      Use
+        Copy "_2"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:11:5 generated
+    ArgumentsEvaluated a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 generated
+    Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 "keep" "bb1"
+      Destination "_8"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 generated
+    Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:9 "malloc" "bb2"
+      Destination "_9"
+      Constant 4
+  Block "bb2"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:5 written
+      Destination "_3"
+      Use
+        Copy "_9"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:5 written
+      Destination "_10"
+      Use
+        Copy "_3"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:5 generated
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 "bb3" "bb4"
+      Copy "_11"
+  Block "bb3"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 generated
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:15:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 "release_all" "bb6"
+      Destination "_12"
+  Block "bb6"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:34 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_3"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:34 written
+      Destination "_13"
+      Use
+        Copy "_2"
+          Deref
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 written
+      Destination "_14"
+      Binary "Add"
+        Constant 0
+        Constant 0
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:49 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:49 written
+      Destination "_15"
+      Use
+        Copy "_4"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 written
+      Destination "_16"
+      Binary "Add"
+        Copy "_14"
+        Copy "_15"
+    Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+    Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 generated
+    Return

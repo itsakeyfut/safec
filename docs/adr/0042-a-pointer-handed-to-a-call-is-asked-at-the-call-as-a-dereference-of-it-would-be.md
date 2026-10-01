@@ -171,11 +171,40 @@ strlen(s)` and `(memcpy(d, s, 4) != 0) + g()` over parameters, a read beside a
 call that reaches it through what it is handed or after another call or a store
 exposed it, and a read beside a hatch. Each is one order of an expression
 whose operands C leaves unsequenced, and another order of it was refused
-already. Not every order is: an event is related to a later call only when the
-walk meets it first, so a store or `memset` walked after the call is not, and
-Consequences says what that costs. A free and
-`realloc` are still asked about their arguments only, because each frees only
-what it is handed, and a free's report would also name it as the free.
+already.
+
+**A call this check cannot read is carried forwards as well.** An event
+walked after the call, a store or `memset`, would otherwise never be related
+back to it. `release_all() + (x = a[0]) + (holder = a, 0)` with `holder`'s
+address escaped was a silence
+([#275](https://github.com/itsakeyfut/safec/issues/275)).
+
+`Known::calls` holds the calls met since the last `Element::Sequenced`. It is
+not cleared by `Element::ArgumentsEvaluated`, since a call in another's
+arguments is ordered before that call and not before its siblings.
+
+An event is anything that makes something reachable to code this check cannot
+read: `Known::expose`, a store into a reachable allocation, a write into an
+escaped local, an escaped local assigned, and an address taken. When a pending
+call may run after the event, three things answer the three places a read can
+be:
+
+* a read pending already gets `PendingRead::after_call`;
+* the sites go into `Known::exposed_after_call`, which `Known::meeting` asks
+  of a read met later in the same expression;
+* at the `Element::Sequenced` that ends the expression, those sites become
+  unknown, for a read in a later statement.
+
+A call may not run there when it owns the read, when the event does, or when it
+is inside the event's span. C orders all of those first: a call's arguments
+before its body (C17 6.5.2.2 p10), and a store's operands before the store
+(6.5.16 p3).
+
+`after_a_call` reports a marked read as `used_before` would. It does so where a
+marker is about to clear what is pending, and at a return, so that a free in
+the same expression reports first with its label. A free and `realloc` are
+still asked about their arguments only, because each frees only what it is
+handed, and a free's report would also name it as the free.
 
 A pending read carries which of the two it is, `Read::Dereference` or
 `Read::Argument`, and is reported under the code it would have had where it
@@ -344,6 +373,32 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   gains an `SC0402` about `a` with `freed here` on `free(b)`.
 * Keeping a reborn site in `reachable` fails nothing: no C program reuses a
   site inside one expression, as `Known::reborn` says.
+* **What #275 added**, each mutation applied on its own on the final code:
+
+| Mutation | Fails | Effect |
+|---|---|---|
+| recording no pending call in `Allocations::terminator` | every case #275 added that expects a report, among them `a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it` and `a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked` | they go silent |
+| recording nothing in `Known::exposed_after_call` | among others, `a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked` and `a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked` | they go silent |
+| not asking it in `Known::meeting` | the first of those, and not the second | silent |
+| leaving the sites as they were at `Element::Sequenced` | `a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked` alone | silent |
+| no notice where an escaped local is assigned | among others, `a_store_into_an_escaped_local_after_a_call_is_asked_of_a_read_before_it` and `a_read_before_a_call_and_an_exposure_is_asked` | silent |
+| the same in `Known::unproved`, which `settle` runs at a join | `a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join`, which pairs one arm's read with the other's call | reports |
+| no notice for a write's `targets` | `a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it` and the read-met-after case | silent |
+| no notice at an address taken | `an_address_taken_after_a_call_is_asked_of_a_read_before_it` alone | loses its report at the read |
+| an element's notice given no span | `a_call_in_a_store_s_own_operands_is_not_asked_about_the_store` (for an assignment) and `a_call_in_a_write_s_own_operands_is_not_asked_about_the_write` (for a write) | reports |
+| not leaving out `by`'s own read | among others, `an_exposure_of_another_allocation_after_a_call_is_not_asked` and `a_read_an_exposing_call_owns_is_not_asked_about_a_call_before_it` | they report |
+| not leaving out the pending call's own read | `a_read_a_pending_call_owns_is_not_asked_about_an_exposure_after_it` alone | reports |
+| not leaving out a call inside the event's span | that case's two neighbours above and `a_call_in_the_exposing_call_s_arguments_is_not_asked_about_it` | they report |
+| keeping one arm at the join: of `after_call` | `an_exposure_on_one_arm_after_a_call_is_asked` | fails |
+| keeping one arm at the join: of the calls | `a_call_on_the_first_arm_is_pending_after_the_join` | fails |
+| keeping one arm at the join: of `exposed_after_call` | `an_exposure_on_one_arm_after_a_call_is_asked_of_a_read_after_the_join` | fails |
+| reporting after every element | `a_free_in_the_same_expression_keeps_its_label_over_a_pending_call` alone | loses `freed here` |
+| reporting at no `ArgumentsEvaluated` | `an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported` alone | silent |
+
+* **Held by nothing.** Three lines fail nothing when removed:
+  * clearing `Known::exposed_after_call` at `Element::Sequenced`, whose sites were just made unknown;
+  * removing a reborn site from it;
+  * reporting at a `return`, which every expression measured ends with a marker before.
 * Counting every site as taken fails eleven, among them
   `a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call`.
 * Answering `true` for `beyond_its_arguments` for `realloc` fails
@@ -422,17 +477,18 @@ the `match`, and nothing tells the two apart.
   expression, in that shape. `return p[0] && g();` and `int y = (p[0] != 0) &&
   g();` put the operator at the root and build.
   `a_read_sequenced_before_an_opaque_call_under_an_assignment_is_still_asked`
-  holds today's answer, so closing #178 moves a named case.
-* Bad, because the orders of one expression are not all answered alike. An
-  event that makes an allocation reachable is related to a later opaque call
-  only when the walk meets it before the call, so `(x = a[0]) + (memset(a, 0,
-  4) != 0) + release_all()` over a local is refused while `release_all() + (x =
-  a[0]) + (memset(a, 0, 4) != 0)` builds, and with a store in place of
-  `memset` the second order is a silence `main` has too. Carrying the call
-  forwards as well as the read would answer every order, and is
-  [#275](https://github.com/itsakeyfut/safec/issues/275). A store through a
-  pointer that may be a site or a load exposed nothing through the load, and
-  the notice this record adds at a store inherited that until
+  holds today's answer, so closing #178 moves a named case. Since #275 the same
+  surface reaches what a sequenced operand makes reachable after a call:
+  `r = (x = a[0]) + (now(), cursor = a, 0);`, `r = (x = a[0]) && (now() +
+  (cursor = a, 0));` and `r = a[0] != 0 && now() && (cursor = a) != 0;` with
+  `cursor`'s address escaped are refused, though C orders the read, or the
+  call, first. A call is cleared with the reads, at the marker #178 leaves
+  out.
+* Bad, because the lattice value carries the calls pending since the last
+  sequence point, one entry per call, and `Analysis::height` counts one step
+  per position more for them. A store through a pointer that may be a site or
+  a load exposed nothing through the load, and the notice this record adds at
+  a store inherited that until
   [#276](https://github.com/itsakeyfut/safec/issues/276) made such a store
   expose what it carries (ADR-0044).
 * Bad, because the address of a freed pointer handed to a call, `use2(&a)`

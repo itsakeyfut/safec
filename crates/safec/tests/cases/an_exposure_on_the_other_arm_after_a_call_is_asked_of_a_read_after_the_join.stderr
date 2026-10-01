@@ -1,0 +1,14 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ an_exposure_on_the_other_arm_after_a_call_is_asked_of_a_read_after_the_join.c:15:61 ]
+    │
+ 10 │     a = malloc(4);
+    │         ────┬────  
+    │             ╰────── allocated here
+    │ 
+ 15 │     r = release_all() + (c ? 0 : (memset(a, 0, 4) != 0)) + (x = a[0]);
+    │                                                             ────┬───  
+    │                                                                 ╰───── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
