@@ -1,34 +1,26 @@
 void *malloc(int n);
+void get(int ***out);
 void release_all(void);
 
-int f(int c, int ***tab) {
-    int ***box;
+int f(int c) {
     int **s;
     int **u;
     int **t;
     int *a;
-    if (tab == 0) {
-        return 0;
-    }
-    box = malloc(8);
     s = malloc(8);
-    a = malloc(4);
-    if (box == 0) {
-        return 0;
-    }
     if (s == 0) {
         return 0;
     }
+    a = malloc(4);
     if (a == 0) {
         return 0;
     }
     a[0] = 1;
-    u = *tab;
-    *box = u;
+    get(&u);
     if (c) {
         t = s;
     } else {
-        t = *box;
+        t = u + 1;
     }
     if (t == 0) {
         return 0;

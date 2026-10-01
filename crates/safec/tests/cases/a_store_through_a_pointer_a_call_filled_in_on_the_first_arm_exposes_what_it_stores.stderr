@@ -1,7 +1,7 @@
 error[SC0402]: this may use a value after it was freed
-    ╭─[ a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join.c:39:5 ]
+    ╭─[ a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:30:5 ]
     │
- 39 │     return a[0];
+ 30 │     return a[0];
     │     ──────┬─────  
     │           ╰─────── used here, perhaps after the free
 ────╯

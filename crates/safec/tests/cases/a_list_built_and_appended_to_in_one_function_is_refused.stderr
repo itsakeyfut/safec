@@ -1,0 +1,20 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_list_built_and_appended_to_in_one_function_is_refused.c:29:5 ]
+    │
+ 29 │     *node = 0;
+    │     ────┬────  
+    │         ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_list_built_and_appended_to_in_one_function_is_refused.c:30:5 ]
+    │
+ 30 │     free(node);
+    │     ─────┬────  
+    │          ╰────── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

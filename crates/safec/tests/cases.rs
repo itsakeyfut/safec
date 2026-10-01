@@ -916,50 +916,36 @@ cases! {
     what_the_other_library_copies_return_is_what_they_were_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_no_call_can_reach_stays_proved_across_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // A store through a pointer that may point into memory this check does
-    // not model is unplaced for that part: `*tab` may be the caller's, and
-    // `release_all` may reach `a` there on one arm. The second is the same
-    // store unsequenced with a read before it and a call after it. Mutation:
-    // answer `false` for `foreign_load` in `Known`; both go silent. The third
-    // is a pointer that may be either of two allocations this check follows,
-    // and stays placed. Mutation: answer `true` for `unnamed` in
-    // `Allocations::element`'s store arm; it reports. See ADR-0044.
+    // A store through a pointer that holds a site and may also be a load is
+    // unplaced for that part: `*tab` may be the caller's, and `release_all`
+    // may reach `a` there on one arm. The second is the same store
+    // unsequenced with a read before it and a call after it. Mutation: drop
+    // `loaded` from `unnamed` in `Allocations::element`'s store arm; both go
+    // silent, and the list case below builds. The third is a pointer that may be either of two allocations
+    // this check follows, and stays placed. Mutation: answer `true` for
+    // `unnamed`; it reports. See ADR-0044.
     a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // A local a call this check cannot read may have written is foreign
-    // though it holds no site. Mutation: set nothing in `Known::replaced`
-    // for it; this goes silent.
-    a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // A load of the function's own memory points at a site stored there, and
-    // a store through it is recorded, not exposed. Mutation: answer `true`
-    // for `foreign_load`; both report. Mutation: expose a store through such
-    // a load when it has no site of its own; the second reports.
-    a_list_built_and_appended_to_in_one_function_is_not_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    a_pointer_read_out_of_the_function_s_own_memory_is_not_unmodeled: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // Foreign survives being stored in the function's own memory, and being
-    // moved by arithmetic, on a load or on a local holding one. Mutation:
-    // set no `holds_foreign` at a store; the first goes silent. Mutation:
-    // carry no `foreign` in `built_from`; the second goes silent. Mutation:
+    // A local a call this check cannot read may have written into is the
+    // same, though it holds no site, on either arm and moved by arithmetic.
+    // Mutation: set no `foreign` in `Known::replaced`; all three go silent.
+    // Mutation: drop `foreign` from `unnamed`; all three go silent.
+    // Mutation: keep one arm's `foreign` in `Held::joined`; the second goes
+    // silent, the call being on the arm the join does not keep. Mutation:
     // carry none in `Held::accumulated`; the third goes silent.
-    a_foreign_pointer_stored_in_the_function_s_own_memory_stays_foreign: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    a_pointer_moved_off_an_unmodeled_load_is_still_unmodeled: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    a_pointer_moved_off_a_local_holding_an_unmodeled_load_is_still_unmodeled: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // A store through a load of the function's own memory lands in what that
-    // memory holds, so exposing it later exposes what was stored. Mutation:
-    // add nothing from `Known::stored` to the containers; the report at
-    // `a[0]` goes.
-    a_store_through_a_modeled_load_lands_in_what_it_may_point_at: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_moved_off_one_a_call_filled_in_is_still_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The cost: a load of the function's own memory is exposed through like
+    // any other, so a list built and appended to in one function is refused,
+    // with a double free that cannot happen. Following a load to where it was
+    // read from would remove it. See ADR-0044.
+    a_list_built_and_appended_to_in_one_function_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A pointer that lost the name for its site is unplaced too. Mutation:
     // drop `lost` from `unnamed`; the report at `a[0]` goes, and the one at
     // the store stays.
     a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // Each bit survives a join whichever arm set it. Mutation: keep one
-    // arm's `foreign` in `Held::joined`; the first goes silent, the load
-    // being on the arm the join does not keep. Mutation: keep one arm's
-    // `holds_foreign` in `Allocations`'s `join`; the second goes silent.
-    a_store_through_a_pointer_that_is_a_load_on_the_first_arm_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    a_foreign_pointer_stored_on_one_arm_is_foreign_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     an_allocation_made_again_at_a_site_is_not_the_one_exposed_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // `realloc`'s size is not asked whether it was freed.
     the_size_realloc_is_handed_is_not_asked_whether_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
