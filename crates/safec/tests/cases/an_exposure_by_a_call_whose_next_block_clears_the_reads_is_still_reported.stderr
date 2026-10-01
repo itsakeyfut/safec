@@ -1,0 +1,24 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:5 ]
+    │
+ 20 │     g(release_all() + (x = a[0]), memset(a, 0, 4));
+    │     ───────────────────────┬──────────────────────  
+    │                            ╰──────────────────────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this may use a value after it was freed
+    ╭─[ an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:24 ]
+    │
+ 15 │     a = malloc(4);
+    │         ────┬────  
+    │             ╰────── allocated here
+    │ 
+ 20 │     g(release_all() + (x = a[0]), memset(a, 0, 4));
+    │                        ────┬───  
+    │                            ╰───── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

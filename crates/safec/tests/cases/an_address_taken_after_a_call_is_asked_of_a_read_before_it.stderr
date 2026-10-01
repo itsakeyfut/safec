@@ -1,0 +1,30 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:26 ]
+    │
+ 15 │     r = release_all() + (x = a[0]) + (hp = &a, 0);
+    │                          ────┬───  
+    │                              ╰───── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference a null pointer
+    ╭─[ an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:14:5 ]
+    │
+ 14 │     a[0] = 1;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:26 ]
+    │
+ 15 │     r = release_all() + (x = a[0]) + (hp = &a, 0);
+    │                          ────┬───  
+    │                              ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
