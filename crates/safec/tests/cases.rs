@@ -1197,6 +1197,15 @@ cases! {
         // ADR-0045. Mutation: have `returned` return early for a source with
         // a projection again; this goes silent.
         a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same two levels down. Mutation: have `handed_reached` read one
+        // level whatever the depth; this goes silent.
+        a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a doubt about reading `*tab` is kept over one about what it
+        // returns, as at a call, since the read comes first. Mutation: run
+        // `returned` before `used`; this reports `SC0406` instead. Mutation:
+        // have `returned` push rather than go through `say`; this reports
+        // both at one caret.
+        a_doubted_read_of_a_table_is_kept_over_what_it_returns: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "calls" => {
@@ -1469,11 +1478,15 @@ cases! {
         // silent. Mutation: have the terminator carry `reached_by(local)`
         // for an argument; the fourth goes silent. Mutation: drop `Read`
         // from `ReadKey`; the fourth reports `SC0402` instead. Mutation:
-        // count `Reached::Partial` as a doubt; the fifth reports.
+        // count `Reached::Partial` as a doubt; the third reports.
         a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_two_levels_down_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A table and what it holds, handed to one call, are two places and
+        // both are asked. Mutation: have `handed_places` ask one place per
+        // local again; this goes silent, since the table is live.
+        a_table_and_what_it_holds_handed_to_one_call_are_both_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {

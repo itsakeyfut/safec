@@ -274,6 +274,10 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   `a_pointer_read_two_levels_down_and_handed_on_after_a_free_is_unproven` and
   `a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free`,
   which go silent about the argument.
+* Asking one place per local in `handed_places` again, rather than one per
+  place, fails `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`
+  alone, which goes silent: `give(tab, *tab)` asked `tab`, which is live, and
+  never what `*tab` holds.
 * Carrying `reached_by` of the argument's local, rather than what the argument
   holds, fails `a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free`
   alone, and dropping `Read` from the key fails it too, which reports `SC0402`

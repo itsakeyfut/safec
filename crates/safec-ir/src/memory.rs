@@ -3239,16 +3239,6 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
             let block = function.block(id);
             for element in &block.elements {
-                // Before the transfer, for the reason below: what the local
-                // being returned holds is what it held as the write ran.
-                returned(
-                    &mut findings,
-                    &mut said,
-                    &analysis,
-                    function,
-                    element,
-                    &known,
-                );
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 used(
@@ -3257,6 +3247,19 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     dereferenced_in_element(element),
                     &known,
                     func,
+                );
+                // After the dereferences in the element, as `handed` is after
+                // the ones at a call, so that `return *tab;` keeps a doubt
+                // about reading `*tab` over one about what it returns, as
+                // `release(*tab)` does. Before the transfer, for the reason
+                // above: what is returned is what was held as the write ran.
+                returned(
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
                 );
                 // Just before what is pending is cleared, so that a free in
                 // the same expression has reported first, with its label.
@@ -3897,9 +3900,10 @@ fn used(
 ///
 /// **A place of dereferences is asked what it holds**, `return *tab;` as
 /// `int *q = *tab; return q;` is, through [`Known::handed_reached`]. Through
-/// [`say`], because a dereference of the same place at the same span can stand
-/// at that key: `free(tab); return *tab;` is a proved `SC0402` about reading
-/// `*tab`, and that is the report kept. See ADR-0045.
+/// [`say`], and after [`used`], because a dereference of the same place at the
+/// same span can stand at that key, and it is the earlier read: reading
+/// `*tab` comes before returning what it held, so a doubt or a proof about it
+/// is the report kept, as at a call. See ADR-0045.
 fn returned(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
@@ -3958,16 +3962,17 @@ fn returned(
 /// arguments as a [`PendingRead`], and [`used_before`] asks them again at a
 /// free the same full expression leaves unordered against this call.
 ///
-/// **One finding per local per call**, so `g(p, p)` is one report, and
+/// **One finding per place per call**, so `g(p, p)` is one report, and
 /// [`handed_places`] is what says which.
 ///
 /// **Through [`say`], because [`used_before`] reaches the same caret about the
 /// same local.** `int **q = &a; (memset(a, 0, 4) != 0) + (free(a), 0)` is
 /// doubted here, since `a` escaped, and doubted again from the free: pushed,
-/// that was two `SC0407` about `a` at one caret. The key cannot meet a
-/// dereference's, whose place always carries a projection where an
-/// argument's never does. Pushing fails
-/// `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`.
+/// that was two `SC0407` about `a` at one caret. Pushing fails
+/// `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`. **And a
+/// place of dereferences meets the key a dereference of the same place at
+/// the same call holds**, which [`used`] fills first, so the read through
+/// `tab` is the report kept over what `*tab` hands on.
 fn handed(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
