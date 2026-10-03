@@ -1084,11 +1084,18 @@ cases! {
         // read, and not again at `*q`. Mutation: `read_through` giving a load
         // sites whatever its projection; `*q` reports too.
         a_pointer_read_two_levels_down_holds_nothing_from_the_level_above: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Built, and what ADR-0045 leaves out: a pointer read out of a load
-        // holds no site, so a use after free through a chain of two loads is
-        // silent. That is #282, and this moves when it is answered. Mutation:
-        // drop `loaded` from `Known::stored_in`'s condition; this reports.
-        a_pointer_read_out_of_a_load_holds_no_site: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read out of a load holds what was stored where it was
+        // read from, so a chain of two loads is followed: reported, never
+        // proved, and silent when what the chain reaches is live. Mutation:
+        // restore `loaded` to `Known::stored_in`'s condition; the first goes
+        // silent. Mutation: count `Reached::Partial` as a doubt; the second
+        // reports.
+        a_use_after_free_through_a_chain_of_two_loads_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_live_value_read_through_a_chain_of_two_loads_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same chain read by `Known::reached_below` rather than by a load:
+        // `**q2`, where `q2` is a load. Mutation: have `reached_below` answer
+        // nothing for a local that is a load; this goes silent.
+        a_read_two_levels_down_through_a_load_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A free of a load stays the doubt it was rather than a free of what
         // the load holds. Mutation: `touching` not answering `Lost` for a load;
         // this goes silent.
