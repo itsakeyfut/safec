@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-10-03
 decision-makers: itsakeyfut
 ---
@@ -44,12 +44,17 @@ A load out of what a parameter points at is outside this rule. The caller stored
 
 ### Confirmation
 
-Not yet held: #256's implementation adds a case for each part and names it here. Planned:
+Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. The cases are in `crates/safec/tests/cases`.
 
-- the load answering no site again silences the call-free program, the one with `release(tab)`, and the two-level read;
-- the marker dropped makes a dereference of a freed load a proof;
-- the free's doubt dropped turns `free(q)` of a load silent;
-- a two-slot table reading the live slot holds today's answer as the cost.
+- **The load holding no site again**, by dropping what `Allocations::read_through` holds from `Known::stored_in`, fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported`, `a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it` and `a_live_slot_of_a_table_with_a_freed_one_is_doubted`, which go silent.
+- **The marker not pushed for a load** in `Known::reached_by` fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported` alone, which becomes a proof.
+- **The marker not pushed for a read two levels down** in `Known::reached_through` fails `a_read_two_levels_down_after_a_free_is_not_proved` alone, which becomes a proof.
+- **`verdict` settling with the marker present** fails those two, both proofs.
+- **`used` asking `reached_by` instead of `reached_through`** fails `a_read_two_levels_down_after_its_allocation_was_released_is_reported` alone, which goes silent.
+- **`Allocations::touching` not answering `Reached::Lost` for a load** fails `a_free_of_a_pointer_read_out_of_memory_stays_a_doubt` alone, which goes silent.
+- **The marker counted as a doubt**, as `Reached::Lost` is, fails `a_live_pointer_read_out_of_memory_is_read_in_silence` and six earlier cases that build or stay silent today, among them `a_list_built_and_appended_to_in_one_function_is_refused` and `a_table_read_out_of_a_holder_into_a_local_is_reached_through_it`.
+
+`a_live_slot_of_a_table_with_a_freed_one_is_doubted` holds the cost below. It is reported as unproven today and moves when slots are told apart.
 
 ### Consequences
 
