@@ -351,7 +351,7 @@ fn an_output_path_is_where_the_artifact_goes() {
     let path = std::env::temp_dir().join(format!("safec_output_{}.tok", std::process::id()));
     let _ = std::fs::remove_file(&path);
 
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/cases/add.c");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/cases/frontend/add.c");
     let output = safec(&[
         "--color",
         "never",
