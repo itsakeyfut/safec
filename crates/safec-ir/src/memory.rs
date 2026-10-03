@@ -902,29 +902,54 @@ impl Known {
         reached
     }
 
-    /// What the second dereference of `**local` reads: what the allocations
-    /// the local holds may contain, marked as possibly incomplete for the
-    /// reason a load is. Nothing for any other place.
+    /// What a dereference `depth + 1` levels below `local` reads: what
+    /// [`Self::stored_below`] says the level above it may contain, marked as
+    /// possibly incomplete for the reason a load is.
     ///
     /// **`**tab` is one place with two `Deref`s**, and was judged on `tab`'s
     /// own sites alone, so a use after free one level down said nothing:
-    /// `*tab = p; release(*tab); return **tab;`. This is asked **after** those
-    /// sites rather than in place of them, which is what [`used`] does: asked
-    /// instead, `free(tab); return **tab;` went from a proof to silence. See
-    /// ADR-0045.
-    fn reached_below(&self, place: &Place) -> Vec<Reached> {
-        if place.projection.as_slice() == [Projection::Deref, Projection::Deref] {
-            let mut reached: Vec<Reached> = self
-                .stored_in(place.local)
-                .into_iter()
-                .map(Reached::Site)
-                .collect();
-            if !reached.is_empty() {
-                reached.push(Reached::Partial);
-            }
-            return reached;
+    /// `*tab = p; release(*tab); return **tab;`. Each level below the first is
+    /// asked **after** the ones above it rather than in place of them, which
+    /// is what [`used`] does: asked instead, `free(tab); return **tab;` went
+    /// from a proof to silence. See ADR-0045.
+    fn reached_below(&self, local: LocalId, depth: usize) -> Vec<Reached> {
+        let mut reached: Vec<Reached> = self
+            .stored_below(local, depth)
+            .into_iter()
+            .map(Reached::Site)
+            .collect();
+        if !reached.is_empty() {
+            reached.push(Reached::Partial);
         }
-        Vec::new()
+        reached
+    }
+
+    /// What a pointer read `depth` dereferences below `local` may be: one is
+    /// [`Self::stored_in`], and each more is what the allocations of the
+    /// level above may contain.
+    ///
+    /// **A chain written as one place is the chain written through locals**:
+    /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Self::inside`]
+    /// as a load through a load does, so the two spellings of a **read** cannot
+    /// be answered differently. A **store** written as one place, `**t3 = r`,
+    /// is one this check cannot place and is exposed rather than recorded, so
+    /// what it stored is not here to be read (#283). Every level is a lower bound read beside
+    /// [`Reached::Partial`], and since `inside` only grows, each is finite.
+    /// See ADR-0045.
+    fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
+        let mut sites = self.stored_in(local);
+        for _ in 1..depth {
+            let mut next = BTreeSet::new();
+            for container in sites {
+                for (site, &in_it) in self.inside[container].iter().enumerate() {
+                    if in_it {
+                        next.insert(site);
+                    }
+                }
+            }
+            sites = next;
+        }
+        sites
     }
 
     /// What the allocations this local holds may contain, which is what a
@@ -939,9 +964,8 @@ impl Known {
     /// every reader of it is a load read beside [`Reached::Partial`]. So a
     /// chain of loads through locals is followed, however long, and since
     /// `inside` only grows, the chain reads a finite set. A chain written as
-    /// one place, `**t3` read into a local, is not (#288). One function for a load and for a
-    /// read two levels down, so that the two cannot disagree about what was
-    /// stored. See ADR-0045.
+    /// one place, `**t3` read into a local, is followed by
+    /// [`Self::stored_below`], which starts here. See ADR-0045.
     fn stored_in(&self, local: LocalId) -> BTreeSet<usize> {
         let held = &self.points_to[local.index()];
         if held.lost {
@@ -1746,8 +1770,9 @@ impl Allocations<'_> {
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
         // possibly incomplete for every reader. See ADR-0045.
-        if held.loaded && source.projection.as_slice() == [Projection::Deref] {
-            for site in value.stored_in(source.local) {
+        let depth = derefs(source);
+        if held.loaded && depth > 0 {
+            for site in value.stored_below(source.local, depth) {
                 held.hold(site, Offset::Unknown);
             }
         }
@@ -3289,6 +3314,26 @@ struct Verdict {
     unproven: Option<Unproven>,
 }
 
+/// How many dereferences `place` is, when it is nothing but dereferences, and
+/// zero otherwise.
+///
+/// One answer for the load and for the report, so that the two cannot disagree
+/// about which places are followed below their first level. A place with an
+/// `Index` in it is an array's element and is not one of them. No program
+/// this compiler accepts tells that apart from following it too, measured: an
+/// array of pointers is refused as `SC0304`. See ADR-0045.
+fn derefs(place: &Place) -> usize {
+    if place
+        .projection
+        .iter()
+        .all(|step| matches!(step, Projection::Deref))
+    {
+        place.projection.len()
+    } else {
+        0
+    }
+}
+
 /// What these sites amount to, or nothing where they amount to no report.
 ///
 /// The caller decides what reaching nothing means, by what it puts in
@@ -3758,12 +3803,24 @@ fn used(
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
         //
-        // **The first level before the second**, as C reads them: `**tab`
-        // reads `tab`'s own allocation and then what was stored in it, so a
-        // freed table is the earlier defect and the one that is said. Only
-        // when it says nothing is the second level asked. See ADR-0045.
+        // **Each level before the next**, as C reads them: `***t3` reads
+        // `t3`'s own allocation, then what was stored in it, then what was
+        // stored in that, so a freed level nearer the root is the earlier
+        // defect and the one that is said. A deeper level is asked only when
+        // every level above it says nothing. Below the first level the order
+        // is not visible in what is printed, measured: every such level is
+        // unproven and says the same words, so only the first level's place
+        // ahead of them is guarded. See ADR-0045.
         let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
-            .or_else(|| verdict(Kind::UseAfterFree, known.reached_below(place), known))
+            .or_else(|| {
+                (1..derefs(place)).find_map(|depth| {
+                    verdict(
+                        Kind::UseAfterFree,
+                        known.reached_below(place.local, depth),
+                        known,
+                    )
+                })
+            })
         else {
             continue;
         };
