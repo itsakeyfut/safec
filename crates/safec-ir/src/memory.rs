@@ -1490,10 +1490,10 @@ fn built_from(
     // ADR-0030, which measures what this branch is worth on such a program.
     // **A load that may be a pointer is the pointer operand**, so the
     // integers beside it contribute nothing, as below for a local pointer:
-    // `*tab + i` stays inside what `*tab` points into, whatever `i` holds.
-    // No program this compiler accepts tells that apart from keeping `i`'s
-    // sites, measured: an integer holding an allocation takes `int i = p;`,
-    // refused as `SC0302`. See ADR-0030.
+    // `*tab + i` stays inside what `*tab` points into, whatever `i` holds,
+    // and an integer can hold sites: one returned by a call this check cannot
+    // read holds what the call was handed. `n = h(r); free(r); q = *t2 + n;`
+    // doubted `*q` about `r` while it kept them. See ADR-0030.
     let loads: Vec<&Place> = operands
         .iter()
         .filter_map(|operand| match operand {

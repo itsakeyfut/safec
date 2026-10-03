@@ -1,0 +1,208 @@
+Target "x86_64-pc-windows-msvc"
+Function an_integer_beside_a_load_does_not_decide_where_it_points.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_integer_beside_a_load_does_not_decide_where_it_points.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function an_integer_beside_a_load_does_not_decide_where_it_points.c:3:5 "h" declared
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "void"
+  Local "_16" "int *"
+  Local "_17" "int *"
+  Local "_18" "int"
+  Block "bb0" entry
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:6:16 generated
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:6:16 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:6:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:6:16 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:10:14 generated
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:10:14 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:10:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:10:14 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:12:16 generated
+    Return
+  Block "bb7"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:14:14 generated
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:14:14 "malloc" "bb9"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:14:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:14:14 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:16:16 generated
+    Return
+  Block "bb11"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:15:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:18:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:18:5 written
+      Destination "_10"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:18:5 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:19:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 1
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:19:5 written
+      Destination "_11"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:19:5 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:20:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:20:5 written
+      Destination "_12"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:20:5 generated
+    ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 generated
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 "h" "bb13"
+      Destination "_14"
+      Copy "_7"
+  Block "bb13"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:21:9 written
+      Destination "_13"
+      Use
+        Copy "_14"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 generated
+    ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 generated
+    Call an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 "free" "bb14"
+      Destination "_15"
+      Copy "_7"
+  Block "bb14"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:23:14 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_1"
+          Deref
+        Copy "_13"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:23:10 written
+      Destination "_16"
+      Use
+        Copy "_17"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:23:14 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 written
+      Destination "_18"
+      Binary "Eq"
+        Copy "_16"
+        Constant 0
+    Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 "bb15" "bb16"
+      Copy "_18"
+  Block "bb15"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 generated
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:25:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:25:16 generated
+    Return
+  Block "bb16"
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 generated
+    Goto "bb17"
+  Block "bb17"
+    Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:27:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+          Deref
+    Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:27:12 generated
+    Return

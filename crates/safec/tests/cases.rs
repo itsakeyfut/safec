@@ -1127,6 +1127,12 @@ cases! {
         a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_load_moved_by_a_subscript_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the integer beside a load decides nothing about where the sum
+        // points: `n` holds what `h` was handed, which is freed, and `*q` is
+        // inside `p`, which is live. No `SC0402` at `return *q;`; the `SC0401`
+        // is the free of what `h` may have freed. Mutation: let the integers
+        // beside a load contribute again; this reports `SC0402` at `*q`.
+        an_integer_beside_a_load_does_not_decide_where_it_points: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A free of a load stays the doubt it was rather than a free of what
         // the load holds. Mutation: `touching` not answering `Lost` for a load;
         // this goes silent.

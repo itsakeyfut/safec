@@ -69,7 +69,7 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 **The load moved by arithmetic.**
 
 - **`built_from` holding no sites for a load** fails `a_load_moved_by_a_subscript_after_a_free_is_unproven`, `a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven` and `a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven`, which go silent about the free; **reading it one level down whatever its depth** fails the second and third.
-- **The integers beside a load still contributing** changes no case: an integer holding an allocation takes `int i = p;`, refused as `SC0302`, measured.
+- **The integers beside a load still contributing** fails `an_integer_beside_a_load_does_not_decide_where_it_points` alone, which reports `SC0402` about what an opaque call returned as an integer.
 - `a_live_load_moved_by_a_subscript_is_read_in_silence` is among those **the marker counted as a doubt** fails.
 
 **The free and the call.**
@@ -87,6 +87,7 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 * Bad, because a load out of a parameter's memory is still silent after a call, which is #281.
 * Bad, because a load out of an allocation a store this check cannot place has written into holds only what was recorded there, so `memcpy(tab, src, 8); free(r); q = *tab; *q` is silent when what was recorded is live. That is [#283](https://github.com/itsakeyfut/safec/issues/283).
 * Bad, because what a chain reads is what was recorded where each level was stored, and a store written as one place, `**t3 = r`, is exposed rather than recorded. So `**t3 = r; free(r); return ***t3;` is silent where the same store through a local is reported. That is [#283](https://github.com/itsakeyfut/safec/issues/283), the same gap as a store `memcpy` makes.
+* Bad, because every allocation one `malloc` in a loop makes is one site, and what a container holds is recorded per site. A pointer stored and freed on one turn and read back after the loop allocated again is read as the new allocation, which is live, so the use after free is silent. That is [#293](https://github.com/itsakeyfut/safec/issues/293).
 * Bad, because a free of a load written as one place, `free(*t3)`, frees none of what the load holds; it is reported as a free of a pointer this check stopped following, where `m = *t3; free(m);` also reports the read through `t3` after it.
 * What would reverse this: slots told apart, so that a load names exactly what was stored where it read, and a record of every store, so that the set is complete and a proof is earned.
 
