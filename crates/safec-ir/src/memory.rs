@@ -937,8 +937,9 @@ impl Known {
     /// **A local that is itself a load is followed**: what it holds
     /// is a lower bound, so what its allocations contain is one too, and
     /// every reader of it is a load read beside [`Reached::Partial`]. So a
-    /// chain of loads of any length is followed, and since `inside` only
-    /// grows, the chain reads a finite set. One function for a load and for a
+    /// chain of loads through locals is followed, however long, and since
+    /// `inside` only grows, the chain reads a finite set. A chain written as
+    /// one place, `**t3` read into a local, is not (#288). One function for a load and for a
     /// read two levels down, so that the two cannot disagree about what was
     /// stored. See ADR-0045.
     fn stored_in(&self, local: LocalId) -> BTreeSet<usize> {
