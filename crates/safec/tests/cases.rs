@@ -1007,6 +1007,34 @@ cases! {
     // both fail.
     a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // A pointer read out of the function's own memory, dereferenced: it holds
+    // what was stored where it was read from, and proves nothing with it. See
+    // ADR-0045, whose Confirmation names the mutation each of these fails
+    // under.
+    //
+    // Reported, after a free and after a call that reaches the table.
+    // Mutation: a load holds no site again; both fail, and so does the
+    // two-slot case below.
+    a_use_after_free_through_a_pointer_read_out_of_memory_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same two levels down, `**tab`, asked through the table's own sites
+    // rather than through a load. Mutation: `used` asking `reached_by`; the
+    // first fails. Mutation: the second level not marked as possibly
+    // incomplete; the second becomes a proof.
+    a_read_two_levels_down_after_its_allocation_was_released_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_two_levels_down_after_a_free_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free of a load stays the doubt it was rather than a free of what the
+    // load holds. Mutation: `touching` not answering `Lost` for a load; this
+    // goes silent.
+    a_free_of_a_pointer_read_out_of_memory_stays_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A live load is read in silence, since the marker is not a doubt of its
+    // own. Mutation: count it as one; this reports.
+    a_live_pointer_read_out_of_memory_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Reported, and what ADR-0045 accepts as its cost: what a table holds is
+    // not told apart by slot, so the live slot of a table whose other slot
+    // was freed is doubted.
+    a_live_slot_of_a_table_with_a_freed_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
     // A pointer a function returns, asked at its `return` about every
     // allocation it may hold. See ADR-0041, whose Confirmation names the
     // mutation each of these fails under.
