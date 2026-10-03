@@ -1027,6 +1027,16 @@ cases! {
     // it was before the second level was. Mutation: `used` asking only
     // `reached_below`; this goes silent.
     a_read_two_levels_down_through_a_freed_table_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer read two levels down, `q = **t3`, is not given what one level
+    // down holds: the report is at `**t3`, where the freed table is read, and
+    // not again at `*q`. Mutation: `read_through` giving a load sites whatever
+    // its projection; `*q` reports too.
+    a_pointer_read_two_levels_down_holds_nothing_from_the_level_above: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Built, and what ADR-0045 leaves out: a pointer read out of a load holds
+    // no site, so a use after free through a chain of two loads is silent.
+    // That is #282, and this moves when it is answered. Mutation: drop
+    // `loaded` from `Known::stored_in`'s condition; this reports.
+    a_pointer_read_out_of_a_load_holds_no_site: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A free of a load stays the doubt it was rather than a free of what the
     // load holds. Mutation: `touching` not answering `Lost` for a load; this
     // goes silent.

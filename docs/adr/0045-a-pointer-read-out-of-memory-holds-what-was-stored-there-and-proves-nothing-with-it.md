@@ -55,6 +55,9 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 - **`Allocations::touching` not answering `Reached::Lost` for a load** fails `a_free_of_a_pointer_read_out_of_memory_stays_a_doubt` alone, which goes silent.
 - **The marker counted as a doubt**, as `Reached::Lost` is, fails `a_live_pointer_read_out_of_memory_is_read_in_silence` and six earlier cases that build or stay silent today, among them `a_list_built_and_appended_to_in_one_function_is_refused` and `a_table_read_out_of_a_holder_into_a_local_is_reached_through_it`.
 
+- **A load given sites whatever its projection** fails `a_pointer_read_two_levels_down_holds_nothing_from_the_level_above`, which reports again at `*q` about the level above.
+- **`Known::stored_in` reading through a load** fails `a_pointer_read_out_of_a_load_holds_no_site`, which reports. That case holds today's silence, below.
+
 `a_live_slot_of_a_table_with_a_freed_one_is_doubted` holds the cost below. It is reported as unproven today and moves when slots are told apart.
 
 ### Consequences
@@ -62,6 +65,7 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 * Good, because a use after free through a pointer stored in the function's own memory is reported, with or without a call between.
 * Bad, because `inside` does not tell slots apart. `tab[0] = p; tab[1] = r; free(p); q = tab[1]; *q` is reported as unproven though `q` is `r`. Telling slots apart is a question for how fields and indices are lowered in Phase 9, and the case that holds this answer moves then.
 * Bad, because a load out of a parameter's memory is still silent after a call, which is #281.
+* Bad, because a pointer read out of a load holds no site, so a use after free through a chain of two loads is silent. That is [#282](https://github.com/itsakeyfut/safec/issues/282).
 * What would reverse this: slots told apart, so that a load names exactly what was stored where it read, and a record of every store, so that the set is complete and a proof is earned.
 
 ## More Information
