@@ -4026,7 +4026,9 @@ fn handed(
 /// [`Known::handed_reached`], so `release(*tab)` is asked what `q = *tab;
 /// release(q);` is (ADR-0045). What the call reaches through it is
 /// `read_out`'s (ADR-0040). One place is asked once, compared as a place, so
-/// `g(p, *p)` asks both. An integer can hold sites, since
+/// `g(p, *p)` asks both. The pointer test on a place of dereferences changes
+/// no case, measured: without a cast, an integer is read out of an allocation
+/// that holds integers, and nothing was stored there for it to hold. An integer can hold sites, since
 /// an addition keeps its operands' (ADR-0030), and asking one refused
 /// `h(f() + g())`, a program with no pointer in it.
 ///
