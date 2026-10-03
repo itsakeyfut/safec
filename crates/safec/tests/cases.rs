@@ -1096,6 +1096,17 @@ cases! {
         // `**q2`, where `q2` is a load. Mutation: have `reached_below` answer
         // nothing for a local that is a load; this goes silent.
         a_read_two_levels_down_through_a_load_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same chain written as one place: `q = **t3` read into a local,
+        // and `***t3` dereferenced, each level asked in the order C reads it.
+        // Mutation: have `read_through` follow only one `Deref` again; the
+        // first goes silent. Mutation: have `used` ask no level past the
+        // second; the second and third go silent. Mutation: have `used` ask
+        // the deepest level only; the third goes silent. Mutation: count
+        // `Reached::Partial` as a doubt; the fourth reports.
+        a_use_after_free_through_a_chain_written_as_one_place_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_three_levels_down_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_three_levels_down_through_a_freed_middle_level_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_live_value_read_three_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A free of a load stays the doubt it was rather than a free of what
         // the load holds. Mutation: `touching` not answering `Lost` for a load;
         // this goes silent.
