@@ -33,7 +33,8 @@ Chosen option: **a load holds what `inside` records, marked as possibly incomple
 
 - **The load.** A pointer read through one dereference of a local that holds sites, and is neither loaded nor lost, holds every site those allocations may contain, at an offset nobody said.
 - **The report.** It reads those sites, with a marker saying the set may be missing members. A dereference of a load whose sites are freed or unknown is reported as unproven, never proved. A dereference through two levels, `**tab`, is asked about the table's own sites first, as C reads them, and only when those say nothing about the sites the table may contain. Asking the second level instead of the first turned a proved `free(tab); return **tab;` into silence.
-- **The free.** A free of a loaded pointer still answers that this check stopped following it, beside the sites. It stays the doubt it was, and the sites become unknown rather than freed.
+- **The free.** A free of a loaded pointer still answers that this check stopped following it, beside the sites. It stays the doubt it was, and the transfer is ADR-0029's for a free of something this check cannot name: the sites become unknown rather than freed, and a site already proved freed stays so. Writing `Freed` there made `free(q); return *p;` a proof where `q` was null.
+- **A call handed a load.** A site a load may hold that is already proved freed is not blanked by an opaque call it is handed, since the call is not known to have been handed that allocation. What an argument names outright is blanked as before. Blanking it turned a proved use after free in a hatch, where a doubt is only listed, into a build.
 
 The two rejected options:
 
@@ -44,30 +45,44 @@ A load out of what a parameter points at is outside this rule. The caller stored
 
 ### Confirmation
 
-Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. The cases are in `crates/safec/tests/cases`.
+Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. Each list is every test that failed. The cases are in `crates/safec/tests/cases`.
 
-- **The load holding no site again**, by dropping what `Allocations::read_through` holds from `Known::stored_in`, fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported`, `a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it` and `a_live_slot_of_a_table_with_a_freed_one_is_doubted`, which go silent.
-- **The marker not pushed for a load** in `Known::reached_by` fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported` alone, which becomes a proof.
-- **The marker not pushed for a read two levels down** in `Known::reached_below` fails `a_read_two_levels_down_after_a_free_is_not_proved` alone, which becomes a proof.
-- **`verdict` settling with the marker present** fails those two, both proofs.
-- **`used` not asking `reached_below`** fails `a_read_two_levels_down_after_its_allocation_was_released_is_reported` and `a_read_two_levels_down_after_a_free_is_not_proved`, which go silent.
-- **`used` asking only `reached_below` for `**tab`**, not the table's own sites, fails `a_read_two_levels_down_through_a_freed_table_is_proved`, which goes silent.
-- **`Allocations::touching` not answering `Reached::Lost` for a load** fails `a_free_of_a_pointer_read_out_of_memory_stays_a_doubt` alone, which goes silent.
-- **The marker counted as a doubt**, as `Reached::Lost` is, fails `a_live_pointer_read_out_of_memory_is_read_in_silence` and six earlier cases that build or stay silent today, among them `a_list_built_and_appended_to_in_one_function_is_refused` and `a_table_read_out_of_a_holder_into_a_local_is_reached_through_it`.
+**The load.**
 
-- **A load given sites whatever its projection** fails `a_pointer_read_two_levels_down_holds_nothing_from_the_level_above`, which reports again at `*q` about the level above.
-- **`Known::stored_in` reading through a load** fails `a_pointer_read_out_of_a_load_holds_no_site`, which reports. That case holds today's silence, below.
+- **Holding no site again**, by dropping what `Allocations::read_through` holds from `Known::stored_in`, fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported`, `a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it`, `a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned`, `a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on`, `a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds`, `a_live_slot_of_a_table_with_a_freed_one_is_doubted` and `a_slot_stored_again_after_what_it_held_was_freed_is_doubted`.
+- **Given sites whatever its projection** fails `a_pointer_read_two_levels_down_holds_nothing_from_the_level_above` alone, which reports again at `*q` about the level above.
+- **`Known::stored_in` reading through a load** fails `a_pointer_read_out_of_a_load_holds_no_site` alone, which reports. That case holds today's silence, below.
 
-`a_live_slot_of_a_table_with_a_freed_one_is_doubted` holds the cost below. It is reported as unproven today and moves when slots are told apart.
+**The marker.**
+
+- **Not pushed for a load** in `Known::reached_by` fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported`, `a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned`, `a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on` and `a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call`.
+- **Not pushed for a read two levels down** in `Known::reached_below` fails `a_read_two_levels_down_after_a_free_is_not_proved` and `a_pointer_read_two_levels_down_holds_nothing_from_the_level_above`.
+- **`verdict` settling with it present** fails the six cases the two rows above name.
+- **Counted as a doubt**, as `Reached::Lost` is, fails `a_live_pointer_read_out_of_memory_is_read_in_silence`, `a_pointer_read_out_of_a_load_holds_no_site` and six earlier cases that build or stay silent today, among them `a_list_built_and_appended_to_in_one_function_is_refused` and `a_table_read_out_of_a_holder_into_a_local_is_reached_through_it`.
+
+**The read two levels down.**
+
+- **`used` not asking `reached_below`** fails `a_read_two_levels_down_after_its_allocation_was_released_is_reported`, `a_read_two_levels_down_after_a_free_is_not_proved` and `a_pointer_read_two_levels_down_holds_nothing_from_the_level_above`.
+- **`used` asking only `reached_below` for `**tab`**, not the table's own sites, fails `a_read_two_levels_down_through_a_freed_table_is_proved` alone, which goes silent.
+
+**The free and the call.**
+
+- **`Allocations::touching` not answering `Reached::Lost` for a load** fails `a_free_of_a_pointer_read_out_of_memory_stays_a_doubt` and `a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds`.
+- **`holds_something_unnameable` not answering for a load** fails `a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds`, which becomes a proof, and `a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load`, which builds.
+- **An opaque call blanking every site it reaches**, or `named_outright` counting a load, fails `a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call` alone, which builds.
+
+`a_live_slot_of_a_table_with_a_freed_one_is_doubted` and `a_slot_stored_again_after_what_it_held_was_freed_is_doubted` hold the cost below. Both are reported as unproven today and move when slots are told apart.
 
 ### Consequences
 
-* Good, because a use after free through a pointer stored in the function's own memory is reported, with or without a call between.
-* Bad, because `inside` does not tell slots apart. `tab[0] = p; tab[1] = r; free(p); q = tab[1]; *q` is reported as unproven though `q` is `r`. Telling slots apart is a question for how fields and indices are lowered in Phase 9, and the case that holds this answer moves then.
+* Good, because a use after free through a pointer this check saw stored in the function's own memory, and read into a local, is reported, with or without a call between.
+* Bad, because `inside` does not tell slots apart and a store adds to it rather than replacing what was there. `tab[0] = p; tab[1] = r; free(p); q = tab[1]; *q` is reported as unproven though `q` is `r`, and so is `*tab = p; free(p); *tab = malloc(4); q = *tab; *q`. Telling slots apart is a question for how fields and indices are lowered in Phase 9, and the case that holds this answer moves then.
 * Bad, because a load out of a parameter's memory is still silent after a call, which is #281.
 * Bad, because a pointer read out of a load holds no site, so a use after free through a chain of two loads is silent. That is [#282](https://github.com/itsakeyfut/safec/issues/282).
+* Bad, because a load out of an allocation a store this check cannot place has written into holds only what was recorded there, so `memcpy(tab, src, 8); free(r); q = *tab; *q` is silent when what was recorded is live. That is [#283](https://github.com/itsakeyfut/safec/issues/283).
+* Bad, because a load handed to a call or returned without passing through a local is not asked about, so `free(p); release(*tab);` is silent where `q = *tab; release(q);` is not. That is [#284](https://github.com/itsakeyfut/safec/issues/284).
 * What would reverse this: slots told apart, so that a load names exactly what was stored where it read, and a record of every store, so that the set is complete and a proof is earned.
 
 ## More Information
 
-[#256](https://github.com/itsakeyfut/safec/issues/256) carries the programs and the design. ADR-0017, ADR-0020, ADR-0024 and ADR-0040 are what this narrows or extends.
+[#256](https://github.com/itsakeyfut/safec/issues/256) carries the programs and the design. ADR-0017, ADR-0020, ADR-0024, ADR-0029 and ADR-0040 are what this narrows or extends.
