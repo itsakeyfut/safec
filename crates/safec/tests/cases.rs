@@ -1675,13 +1675,70 @@ cases! {
 ///
 /// Mutation: put anything in `cases/` that the table does not name: a file at
 /// the top level, a directory no group names, a directory inside a group, or a
-/// case's files in another group. This test fails each time.
+/// case's files in another group. This test fails each time. What `strays`
+/// itself refuses is held by the test after it, since on a corpus with nothing
+/// stray in it a guard that refused nothing would pass here too.
 #[test]
 fn every_file_in_the_corpus_belongs_to_a_case_in_the_table() {
+    let strays = strays(&cases_dir(), CASES);
+
+    assert!(
+        strays.is_empty(),
+        "nothing in the table names these, so nothing runs them and nothing \
+         says so: {strays:?}"
+    );
+}
+
+/// Each way to be stray, built in a directory of its own and named by `strays`,
+/// beside two cases that are where they belong.
+///
+/// Mutations, each of which the guard above survives on a correct corpus and
+/// this does not: compare a file's stem without its group; skip the test that
+/// a group is a directory; report nothing found inside a group.
+#[test]
+fn every_way_to_be_stray_is_reported() {
+    let root = std::env::temp_dir().join(format!("safec_strays_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    for dir in ["g", "h", "g/nested", "unknown"] {
+        std::fs::create_dir_all(root.join(dir)).expect("a temporary directory can be made");
+    }
+    for file in [
+        "g/one.c",
+        "g/one.stdout",
+        "h/two.c",
+        "top.c",
+        "k",
+        "h/one.c",
+        "g/one.txt",
+        "g/three.c",
+    ] {
+        std::fs::write(root.join(file), b"").expect("a temporary file can be written");
+    }
+
+    let found = strays(&root, &[("g", "one"), ("h", "two"), ("k", "four")]);
+    let _ = std::fs::remove_dir_all(&root);
+
+    assert_eq!(
+        found,
+        [
+            "g/nested",  // a directory inside a group
+            "g/one.txt", // an extension no stream has
+            "g/three.c", // a case nobody listed
+            "h/one.c",   // a case's file in another group
+            "k",         // a file, though a group has its name
+            "top.c",     // a file directly in the corpus
+            "unknown",   // a directory no group names
+        ]
+    );
+}
+
+/// What under `root` belongs to no case of `cases` in the group it is in,
+/// sorted.
+fn strays(root: &Path, cases: &[(&str, &str)]) -> Vec<String> {
     const EXPECTED: [&str; 4] = ["c", "stdout", "stderr", "exit"];
 
     let mut strays: Vec<String> = Vec::new();
-    for entry in std::fs::read_dir(cases_dir()).expect("the cases directory is in the repository") {
+    for entry in std::fs::read_dir(root).expect("the cases directory is in the repository") {
         let group_path = entry.expect("a directory entry can be read").path();
         let group = group_path
             .file_name()
@@ -1689,7 +1746,7 @@ fn every_file_in_the_corpus_belongs_to_a_case_in_the_table() {
             .to_string_lossy()
             .into_owned();
 
-        if !group_path.is_dir() || !CASES.iter().any(|(named, _)| *named == group) {
+        if !group_path.is_dir() || !cases.iter().any(|(named, _)| *named == group) {
             strays.push(group);
             continue;
         }
@@ -1705,7 +1762,7 @@ fn every_file_in_the_corpus_belongs_to_a_case_in_the_table() {
                 && path
                     .extension()
                     .is_some_and(|ext| EXPECTED.iter().any(|known| ext == *known))
-                && CASES.contains(&(group.as_str(), stem.as_str()));
+                && cases.contains(&(group.as_str(), stem.as_str()));
 
             if !belongs {
                 let name = path.file_name().unwrap_or_default().to_string_lossy();
@@ -1714,12 +1771,7 @@ fn every_file_in_the_corpus_belongs_to_a_case_in_the_table() {
         }
     }
     strays.sort();
-
-    assert!(
-        strays.is_empty(),
-        "nothing in the table names these, so nothing runs them and nothing \
-         says so: {strays:?}"
-    );
+    strays
 }
 
 /// Where the cases live.
