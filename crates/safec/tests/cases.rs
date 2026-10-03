@@ -1191,6 +1191,12 @@ cases! {
         // `returned`; this gains an `SC0406` about `tab`.
         a_pointer_read_out_of_a_freed_table_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
+        // A pointer read out of memory and returned without passing through a
+        // local is asked what it holds, as the same through a local is. See
+        // ADR-0045. Mutation: have `returned` return early for a source with
+        // a projection again; this goes silent.
+        a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "calls" => {
@@ -1451,6 +1457,23 @@ cases! {
         // `Allocations::terminator`, as well as skipping them in `used_before`;
         // the `SC0407` at `strcpy` goes, and nothing else fails.
         a_nested_call_is_still_carried_to_a_free_beside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
+        // A pointer read out of memory and handed to a call without passing
+        // through a local is asked what it holds, at the call and at a later
+        // free the same full expression leaves unordered against it, as the
+        // same through a local is. See ADR-0042 and ADR-0045.
+        //
+        // Mutation: have `handed_places` admit no projected argument again;
+        // the first, the second and the fourth go silent. Mutation: have
+        // `handed_reached` read one level whatever the depth; the second goes
+        // silent. Mutation: have the terminator carry `reached_by(local)`
+        // for an argument; the fourth goes silent. Mutation: drop `Read`
+        // from `ReadKey`; the fourth reports `SC0402` instead. Mutation:
+        // count `Reached::Partial` as a doubt; the fifth reports.
+        a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_two_levels_down_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {
