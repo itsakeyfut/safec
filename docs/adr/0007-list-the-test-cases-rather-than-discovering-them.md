@@ -73,9 +73,9 @@ The mutation: delete the `add:` line from the `cases!` table while leaving
 `add`, and no other test does. So does each of these, on its own: a file
 directly in `cases/`, a directory no group names, a directory inside a group,
 and one case's files moved to another group, which also fails that case,
-since it runs from its own group's directory. It is the reversal this record exists to make expensive:
-whatever replaces the table has to keep answering the question of which files
-are covered.
+since it runs from its own group's directory. It is the reversal this record
+exists to make expensive: whatever replaces the table has to keep answering the
+question of which files are covered.
 
 The other half is confirmed by the shape of the expansion rather than by an
 assertion. Changing the separator in `driver.rs::dump_tokens` fails a test

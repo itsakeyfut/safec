@@ -1,7 +1,7 @@
 //! C programs, and the output the compiler is expected to produce for them.
 //!
-//! A case is a `.c` file under `cases/` and up to three expected-output files
-//! beside it. Adding one is those files and a line in the table below; no Rust
+//! A case is a `.c` file in a group's directory under `cases/` and up to three
+//! expected-output files beside it. Adding one is those files and a line in the table below; no Rust
 //! is written for it, which is the point. There were two fixtures here for as
 //! long as adding a third meant writing a test.
 //!
@@ -1738,12 +1738,13 @@ fn every_file_in_the_corpus_belongs_to_a_case_in_the_table() {
 ///
 /// Mutations, each of which the guard above survives on a correct corpus and
 /// this does not: compare a file's stem without its group; skip the test that
-/// a group is a directory; report nothing found inside a group.
+/// a group is a directory; skip the test that what is inside one is a file;
+/// report nothing found inside a group.
 #[test]
 fn every_way_to_be_stray_is_reported() {
     let root = std::env::temp_dir().join(format!("safec_strays_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
-    for dir in ["g", "h", "g/nested", "unknown"] {
+    for dir in ["g", "h", "g/nested", "g/one.exit", "unknown"] {
         std::fs::create_dir_all(root.join(dir)).expect("a temporary directory can be made");
     }
     for file in [
@@ -1765,13 +1766,14 @@ fn every_way_to_be_stray_is_reported() {
     assert_eq!(
         found,
         [
-            "g/nested",  // a directory inside a group
-            "g/one.txt", // an extension no stream has
-            "g/three.c", // a case nobody listed
-            "h/one.c",   // a case's file in another group
-            "k",         // a file, though a group has its name
-            "top.c",     // a file directly in the corpus
-            "unknown",   // a directory no group names
+            "g/nested",   // a directory inside a group
+            "g/one.exit", // a directory, though a case's file would have its name
+            "g/one.txt",  // an extension no stream has
+            "g/three.c",  // a case nobody listed
+            "h/one.c",    // a case's file in another group
+            "k",          // a file, though a group has its name
+            "top.c",      // a file directly in the corpus
+            "unknown",    // a directory no group names
         ]
     );
 }
@@ -1829,9 +1831,10 @@ fn cases_dir() -> PathBuf {
 /// file name, because it echoes back the path it was given: `safec --emit
 /// tokens crates/safec/tests/cases/frontend/add.c` prints
 /// `crates/safec/tests/cases/frontend/add.c:3:1 keyword "int"`, while the same
-/// run from inside the directory prints `add.c:3:1 keyword "int"`. That is what makes an
-/// expected file mean the same thing on every machine, and it is why passing a
-/// path here would silently break every case that reports a position.
+/// run from inside the directory prints `add.c:3:1 keyword "int"`. That is
+/// what makes an expected file mean the same thing on every machine, and it is
+/// why passing a path here would silently break every case that reports a
+/// position.
 ///
 /// `--color never` is passed rather than relied on. `ColorMode::Auto` resolves
 /// against whether the stream is a terminal, and a test whose meaning depends
