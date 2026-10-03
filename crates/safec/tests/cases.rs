@@ -1114,6 +1114,19 @@ cases! {
         // no level past the third; the second goes silent.
         a_use_after_free_through_a_chain_of_three_loads_written_as_one_place_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_four_levels_down_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load moved by arithmetic, `t3[i][i]` or `**t3 + i`, holds what it
+        // held at an offset nobody said. `--allow-unknown`, so that the
+        // nullability check's doubt about the subscript is a warning and the
+        // memory check's `SC0402` is visible beside it rather than standing in
+        // for it. Mutation: have `built_from` hold no sites for a load again;
+        // the first three go silent about the free. Mutation: read a load's
+        // sites one level down whatever its depth; the second and the third
+        // go silent.
+        // Mutation: count `Reached::Partial` as a doubt; the fourth reports.
+        a_load_moved_by_a_subscript_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_moved_by_arithmetic_and_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_live_load_moved_by_a_subscript_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A free of a load stays the doubt it was rather than a free of what
         // the load holds. Mutation: `touching` not answering `Lost` for a load;
         // this goes silent.
