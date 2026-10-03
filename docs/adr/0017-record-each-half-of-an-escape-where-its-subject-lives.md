@@ -71,6 +71,11 @@ lattice is most likely to get wrong, because the distrust is real and the thing
 to be distrustful about is missing, so it is stated here rather than left to be
 read off the code.
 
+A pointer read out of memory is no longer such a local where the memory is the
+function's own: it holds what was stored there, marked as possibly incomplete,
+and a dereference of it is asked about those sites without proving from them.
+See [ADR-0045](./0045-a-pointer-read-out-of-memory-holds-what-was-stored-there-and-proves-nothing-with-it.md).
+
 Nothing is added to the lattice value, so `Analysis::height` is unchanged.
 
 ### Confirmation

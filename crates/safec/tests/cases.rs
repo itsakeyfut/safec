@@ -1007,6 +1007,67 @@ cases! {
     // both fail.
     a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
+    // A pointer read out of the function's own memory, dereferenced: it holds
+    // what was stored where it was read from, and proves nothing with it. See
+    // ADR-0045, whose Confirmation names the mutation each of these fails
+    // under.
+    //
+    // Reported, after a free and after a call that reaches the table.
+    // Mutation: a load holds no site again; both fail, and so does the
+    // two-slot case below.
+    a_use_after_free_through_a_pointer_read_out_of_memory_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same two levels down, `**tab`, asked through what the table's own
+    // allocation holds rather than through a load. Mutation: `used` not asking
+    // `reached_below`; the first goes silent. Mutation: the second level not
+    // marked as possibly incomplete; the second becomes a proof.
+    a_read_two_levels_down_after_its_allocation_was_released_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_read_two_levels_down_after_a_free_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the first level is still asked first: a freed table is proved, as
+    // it was before the second level was. Mutation: `used` asking only
+    // `reached_below`; this goes silent.
+    a_read_two_levels_down_through_a_freed_table_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A pointer read two levels down, `q = **t3`, is not given what one level
+    // down holds: the report is at `**t3`, where the freed table is read, and
+    // not again at `*q`. Mutation: `read_through` giving a load sites whatever
+    // its projection; `*q` reports too.
+    a_pointer_read_two_levels_down_holds_nothing_from_the_level_above: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Built, and what ADR-0045 leaves out: a pointer read out of a load holds
+    // no site, so a use after free through a chain of two loads is silent.
+    // That is #282, and this moves when it is answered. Mutation: drop
+    // `loaded` from `Known::stored_in`'s condition; this reports.
+    a_pointer_read_out_of_a_load_holds_no_site: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A free of a load stays the doubt it was rather than a free of what the
+    // load holds. Mutation: `touching` not answering `Lost` for a load; this
+    // goes silent.
+    a_free_of_a_pointer_read_out_of_memory_stays_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And what it writes is a doubt too. `q` is null, so `free(q)` frees
+    // nothing and `*p` reads a live allocation; the read is doubted, never
+    // proved. Mutation: drop `loaded` from `holds_something_unnameable`; the
+    // free writes `Freed` and `*p` becomes a proof.
+    a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A load's sites are a lower bound, and are never what takes a proof
+    // away. Each is a use after free that is proved in a hatch, where a doubt
+    // is only listed, so losing the proof builds. Mutation: drop `loaded` from
+    // `holds_something_unnameable`; the first builds. Mutation: blank every
+    // site an opaque call reaches, as before; the second builds.
+    a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A live load is read in silence, since the marker is not a doubt of its
+    // own. Mutation: count it as one; this reports.
+    a_live_pointer_read_out_of_memory_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same marker read by a return and by an argument, which are asked
+    // apart from a dereference. Mutation: let `verdict` settle with the
+    // marker present; both become proofs.
+    a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // Reported, and what ADR-0045 accepts as its cost: what a table holds is
+    // not told apart by slot and a store adds to it rather than replacing
+    // it, so the live slot of a table whose other slot was freed is doubted,
+    // and so is a slot stored again after what it held was freed.
+    a_live_slot_of_a_table_with_a_freed_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_slot_stored_again_after_what_it_held_was_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+
     // A pointer a function returns, asked at its `return` about every
     // allocation it may hold. See ADR-0041, whose Confirmation names the
     // mutation each of these fails under.

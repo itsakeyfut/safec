@@ -198,7 +198,10 @@ it is used). `Analysis::height`, as for every other term in it.
   release(tab); return *q;`, and `int f(int **pp) { q = *pp; release_all();
   return *q; }`. The call reaches the allocation and makes it unproven; the
   report reads `q` as holding no site, as ADR-0017 does, so nothing asks. That
-  is [#256](https://github.com/itsakeyfut/safec/issues/256).
+  is [#256](https://github.com/itsakeyfut/safec/issues/256), and
+  [ADR-0045](./0045-a-pointer-read-out-of-memory-holds-what-was-stored-there-and-proves-nothing-with-it.md)
+  answers the first two by telling the report too. The third is
+  [#281](https://github.com/itsakeyfut/safec/issues/281).
 * Bad, because what `memset` is handed out of a table is unproven after a
   later call, although C17 7.24.6.1 has it copy no pointer. That is ADR-0039's
   rule for the family, that what it is handed is exposed, applied to a load;

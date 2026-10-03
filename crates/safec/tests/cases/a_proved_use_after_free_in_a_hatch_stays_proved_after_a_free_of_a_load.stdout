@@ -1,0 +1,200 @@
+Target "x86_64-pc-windows-msvc"
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:5:5 "read_after_free" hatch
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int *"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int **"
+  Local "_13" "int *"
+  Local "_14" "void"
+  Local "_15" "int *"
+  Local "_16" "int **"
+  Local "_17" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:6:17 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:6:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 16
+  Block "bb1"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:6:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:6:17 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:7:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:7:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:7:9 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:10:14 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:10:14 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:10:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:10:14 generated
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:11:14 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:11:14 "malloc" "bb6"
+      Destination "_7"
+      Constant 4
+  Block "bb6"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:11:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:11:14 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:12:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:12:9 "bb7" "bb8"
+      Copy "_8"
+  Block "bb7"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:12:9 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:13:16 generated
+    Return
+  Block "bb8"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:12:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:15:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:15:9 "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:15:9 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:16:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:15:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:18:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:18:5 written
+      Destination "_10"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:18:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:19:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:19:5 written
+      Destination "_11"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:19:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:20:5 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:20:5 written
+      Destination "_12"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:20:5 written
+      Destination "_13"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:20:5 generated
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:21:5 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:21:5 "free" "bb13"
+      Destination "_14"
+      Copy "_4"
+  Block "bb13"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:21:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:22:14 written
+      Destination "_16"
+      Binary "Add"
+        Copy "_1"
+        Constant 1
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:22:10 written
+      Destination "_15"
+      Use
+        Copy "_16"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:22:14 generated
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:23:5 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:23:5 "free" "bb14"
+      Destination "_17"
+      Copy "_15"
+  Block "bb14"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:23:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:24:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:24:12 generated
+    Return
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:27:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Block "bb0" entry
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:27:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:27:25 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:27:25 "read_after_free" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:27:18 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load.c:27:25 generated
+    Return

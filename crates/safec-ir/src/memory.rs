@@ -303,6 +303,16 @@ enum Reached {
     /// a third, which is that same write performed here rather than by a
     /// callee.
     Lost,
+    /// The sites beside this may not be all the value can hold.
+    ///
+    /// **Not a doubt on its own, which is what keeps it apart from
+    /// [`Reached::Lost`].** A pointer read out of memory holds what
+    /// [`Known::inside`] records for the allocation it was read from, and
+    /// that is a lower bound: slots are not told apart, and a store this check
+    /// cannot place is exposed rather than recorded. So nothing proves from
+    /// such a set, but a set of live sites says nothing either, and a
+    /// dereference of a live load is not a report. See ADR-0045.
+    Partial,
 }
 
 /// What one local may hold.
@@ -406,10 +416,13 @@ struct Held {
     offset: Offset,
     /// Whether this local may hold a pointer read out of memory.
     ///
-    /// Such a pointer holds no site, which is ADR-0017's belief and what the
-    /// report still reads. **This bit is for the other readers**: what a call
-    /// reaches and what a write stores, for which "no site" had come to mean
-    /// "reaches nothing". It is not the emptiness of [`Held::sites`], because
+    /// Such a pointer holds what [`Known::inside`] records for the allocation
+    /// it was read from, which may be missing members, and this bit is what
+    /// says so: the report reads [`Reached::Partial`] beside those sites, and
+    /// a free of it stays a doubt (ADR-0045). **For the other readers**, what
+    /// a call reaches and what a write stores, it says the value may be
+    /// anything stored, for which "no site" had come to mean "reaches
+    /// nothing". It is not the emptiness of [`Held::sites`], because
     /// `int *z = 0;` is empty too, and reading it as a load exposed every
     /// stored pointer at `log_ptr(z)`, measured. See ADR-0040.
     ///
@@ -879,8 +892,63 @@ impl Known {
         {
             reached.push(Reached::Lost);
         }
+        // **A load's sites are what was stored where it was read from**, which
+        // may not be all it holds: the report may doubt from them and never
+        // prove. See ADR-0045.
+        if self.points_to[local.index()].loaded && !reached.is_empty() {
+            reached.push(Reached::Partial);
+        }
 
         reached
+    }
+
+    /// What the second dereference of `**local` reads: what the allocations
+    /// the local holds may contain, marked as possibly incomplete for the
+    /// reason a load is. Nothing for any other place.
+    ///
+    /// **`**tab` is one place with two `Deref`s**, and was judged on `tab`'s
+    /// own sites alone, so a use after free one level down said nothing:
+    /// `*tab = p; release(*tab); return **tab;`. This is asked **after** those
+    /// sites rather than in place of them, which is what [`used`] does: asked
+    /// instead, `free(tab); return **tab;` went from a proof to silence. See
+    /// ADR-0045.
+    fn reached_below(&self, place: &Place) -> Vec<Reached> {
+        if place.projection.as_slice() == [Projection::Deref, Projection::Deref] {
+            let mut reached: Vec<Reached> = self
+                .stored_in(place.local)
+                .into_iter()
+                .map(Reached::Site)
+                .collect();
+            if !reached.is_empty() {
+                reached.push(Reached::Partial);
+            }
+            return reached;
+        }
+        Vec::new()
+    }
+
+    /// What the allocations this local holds may contain, which is what a
+    /// pointer read through it may be, as far as [`Self::inside`] says.
+    ///
+    /// Nothing for a local that is itself a load or lost, since what it holds
+    /// is not named, and a load through it is answered by [`Self::stored`]
+    /// for what a call reaches. One function for a load and for a read two
+    /// levels down, so that the two cannot disagree about what was stored.
+    /// See ADR-0045.
+    fn stored_in(&self, local: LocalId) -> BTreeSet<usize> {
+        let held = &self.points_to[local.index()];
+        if held.loaded || held.lost {
+            return BTreeSet::new();
+        }
+        let mut sites = BTreeSet::new();
+        for container in held.sites() {
+            for (site, &in_it) in self.inside[container].iter().enumerate() {
+                if in_it {
+                    sites.insert(site);
+                }
+            }
+        }
+        sites
     }
 
     /// Record that this place was read through, where the read reaches an
@@ -1502,7 +1570,7 @@ fn replaced_by(unit: &TranslationUnit, function: &Function, place: &Place, value
 fn named(reached: &[Reached]) -> impl Iterator<Item = usize> + '_ {
     reached.iter().filter_map(|reached| match reached {
         Reached::Site(site) => Some(*site),
-        Reached::SetFreed(_) | Reached::Lost => None,
+        Reached::SetFreed(_) | Reached::Lost | Reached::Partial => None,
     })
 }
 
@@ -1667,6 +1735,15 @@ impl Allocations<'_> {
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
         let mut held = Held::none(value.points_to.len());
         held.loaded = self.may_be_pointer(function, source);
+        // **And what was stored where it was read from**, at an offset nobody
+        // said, so that a dereference of it can be asked about what it may
+        // point at. `loaded` stays set, which is what marks the set as
+        // possibly incomplete for every reader. See ADR-0045.
+        if held.loaded && source.projection.as_slice() == [Projection::Deref] {
+            for site in value.stored_in(source.local) {
+                held.hold(site, Offset::Unknown);
+            }
+        }
         held
     }
 
@@ -1796,7 +1873,11 @@ impl Allocations<'_> {
 
             let before = reached.len();
             reached.extend(known.reached_by(place.local));
-            if reached.len() == before {
+            // **A load is something this check cannot fully name**, whatever
+            // sites it holds, so a free of it stays the doubt it was rather
+            // than a free of those sites alone: answering them without this
+            // made `free(q)` of a load say less. See ADR-0045.
+            if reached.len() == before || known.points_to[place.local.index()].loaded {
                 reached.push(Reached::Lost);
             }
         }
@@ -1834,10 +1915,24 @@ impl Allocations<'_> {
             // A projection names a place rather than a local, and this check
             // follows locals: `free(*pp)` is already a `Reached::Lost` above,
             // and there is no row here to ask.
+            // A load holds what was stored where it was read from, which may
+            // not be all it holds, so a free of it does not say which went
+            // either. See ADR-0045.
             Operand::Copy(place) => {
-                place.projection.is_empty() && known.points_to[place.local.index()].lost
+                let held = &known.points_to[place.local.index()];
+                place.projection.is_empty() && (held.lost || held.loaded)
             }
         })
+    }
+
+    /// The sites `arguments` name through a local that is not a load: what a
+    /// call is certainly handed, rather than what it may be.
+    fn named_outright(arguments: &[Operand], known: &Known) -> Vec<usize> {
+        let outright = arguments.iter().filter(|argument| match argument {
+            Operand::Copy(place) => !known.points_to[place.local.index()].loaded,
+            Operand::Constant(_) => true,
+        });
+        named(&Self::touching(outright, known)).collect()
     }
 }
 
@@ -2690,7 +2785,20 @@ impl Analysis for Allocations<'_> {
                 value.replaced(|_| true);
             }
             Callee::Opaque => {
+                // **A load's sites are a lower bound, and a proof is not taken
+                // away on one.** A freed allocation a load may hold is not one
+                // this call is known to have been handed, so blanking it would
+                // turn a proved use after free into a doubt, which a hatch only
+                // lists: that is how `free(p); q = *tab; g(q); return *p;` in
+                // a hatch built. What an argument names outright is blanked as
+                // before. See ADR-0045.
+                let outright = Self::named_outright(handed, value);
                 for site in sites().collect::<Vec<_>>() {
+                    if matches!(value.state[site], SiteState::Freed { .. })
+                        && !outright.contains(&site)
+                    {
+                        continue;
+                    }
                     value.state[site] = SiteState::Unknown;
                 }
 
@@ -3208,6 +3316,7 @@ fn verdict(
     // about any free anywhere. Counting both as one flag is what put
     // `may free it again here` on a program with one free in it.
     let mut lost = false;
+    let mut partial = false;
     // Whether more than one free was folded in. The span below is the earliest
     // of them and the flag beside it is the conjunction, so where they differ
     // the span can be a free this check *has* seen sequenced while the flag is
@@ -3237,6 +3346,10 @@ fn verdict(
             // it tolerates.
             Reached::Lost => {
                 lost = true;
+                continue;
+            }
+            Reached::Partial => {
+                partial = true;
                 continue;
             }
         };
@@ -3271,7 +3384,8 @@ fn verdict(
     // put the free first is a separate question with a separate answer, and
     // running them together is a known mistake: one test meaning "proved" and
     // "gave up" at once reports the second as the first.
-    let settled = !live && !unknown && !lost;
+    // A set that may be missing members proves nothing. See ADR-0045.
+    let settled = !live && !unknown && !lost && !partial;
 
     // **A double free does not turn on which ran first.** Two frees of one
     // allocation are a double free in either order, so there is nothing for a
@@ -3481,7 +3595,7 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
             // `SetFreed` is answered twice: `Known::reached_by` clears the
             // sites whenever it answers it, so the rule below this loop says
             // the same. The doc comment above says what holds the pair.
-            Reached::SetFreed(_) | Reached::Lost => return None,
+            Reached::SetFreed(_) | Reached::Lost | Reached::Partial => return None,
         }
     }
 
@@ -3600,8 +3714,9 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
 /// reaches no site says nothing, however it came to reach none.** Two ways are
 /// known, and the third was closed by making the lowering apply C17 6.5.3.2
 /// p3, so `int *r = &*p;` now copies the pointer rather than taking an address
-/// of what it reaches. A pointer read out of another pointer, `int *p = *pp;`,
-/// never had a site. And a bare name is never given an element at all, so
+/// of what it reaches. A pointer read out of memory nothing recorded a store
+/// into, `int *p = *pp;` with `pp` a parameter, has no site; one read out of
+/// the function's own memory holds what was stored there (ADR-0045). And a bare name is never given an element at all, so
 /// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
 /// p2 makes undefined and which belongs to an axis with no check. A `return`
 /// of one and an argument of a call are the exceptions, and [`returned`] and
@@ -3636,7 +3751,12 @@ fn used(
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
         //
+        // **The first level before the second**, as C reads them: `**tab`
+        // reads `tab`'s own allocation and then what was stored in it, so a
+        // freed table is the earlier defect and the one that is said. Only
+        // when it says nothing is the second level asked. See ADR-0045.
         let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
+            .or_else(|| verdict(Kind::UseAfterFree, known.reached_below(place), known))
         else {
             continue;
         };
@@ -3699,9 +3819,9 @@ fn returned(
         return;
     }
     // A constant holds no allocation, and a place read through a projection is
-    // a pointer read out of memory, which holds no site and about which this
-    // check says nothing here, as it says nothing about a dereference of one:
-    // ADR-0017, and #256.
+    // a pointer read out of memory, about which this check says nothing here.
+    // A dereference of one reads what was stored where it was read from
+    // (ADR-0045); returning one is not asked (#284).
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
@@ -3804,9 +3924,11 @@ fn handed(
 /// argument are handed is asked already, as a double free, by [`reported`];
 /// an allocator and `realloc`'s size are handed integers.
 ///
-/// **Only a local of pointer type, read with no projection.** A pointer read
-/// out of memory holds no site, and this check says nothing about a
-/// dereference of one either (ADR-0017, #256). An integer can hold sites, since
+/// **Only a local of pointer type, read with no projection.** An argument
+/// read through a projection names no site of its own, and what it may be is
+/// `read_out`'s, for what the call reaches (ADR-0040); a dereference of a
+/// load reads what was stored (ADR-0045), and handing one on is not asked
+/// (#284). An integer can hold sites, since
 /// an addition keeps its operands' (ADR-0030), and asking one refused
 /// `h(f() + g())`, a program with no pointer in it.
 ///
