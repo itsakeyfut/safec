@@ -1041,13 +1041,32 @@ cases! {
     // load holds. Mutation: `touching` not answering `Lost` for a load; this
     // goes silent.
     a_free_of_a_pointer_read_out_of_memory_stays_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And what it writes is a doubt too. `q` is null, so `free(q)` frees
+    // nothing and `*p` reads a live allocation; the read is doubted, never
+    // proved. Mutation: drop `loaded` from `holds_something_unnameable`; the
+    // free writes `Freed` and `*p` becomes a proof.
+    a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // A load's sites are a lower bound, and are never what takes a proof
+    // away. Each is a use after free that is proved in a hatch, where a doubt
+    // is only listed, so losing the proof builds. Mutation: drop `loaded` from
+    // `holds_something_unnameable`; the first builds. Mutation: blank every
+    // site an opaque call reaches, as before; the second builds.
+    a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A live load is read in silence, since the marker is not a doubt of its
     // own. Mutation: count it as one; this reports.
     a_live_pointer_read_out_of_memory_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // The same marker read by a return and by an argument, which are asked
+    // apart from a dereference. Mutation: let `verdict` settle with the
+    // marker present; both become proofs.
+    a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // Reported, and what ADR-0045 accepts as its cost: what a table holds is
-    // not told apart by slot, so the live slot of a table whose other slot
-    // was freed is doubted.
+    // not told apart by slot and a store adds to it rather than replacing
+    // it, so the live slot of a table whose other slot was freed is doubted,
+    // and so is a slot stored again after what it held was freed.
     a_live_slot_of_a_table_with_a_freed_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    a_slot_stored_again_after_what_it_held_was_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
     // A pointer a function returns, asked at its `return` about every
     // allocation it may hold. See ADR-0041, whose Confirmation names the

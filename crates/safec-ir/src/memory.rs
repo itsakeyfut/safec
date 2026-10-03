@@ -1915,10 +1915,24 @@ impl Allocations<'_> {
             // A projection names a place rather than a local, and this check
             // follows locals: `free(*pp)` is already a `Reached::Lost` above,
             // and there is no row here to ask.
+            // A load holds what was stored where it was read from, which may
+            // not be all it holds, so a free of it does not say which went
+            // either. See ADR-0045.
             Operand::Copy(place) => {
-                place.projection.is_empty() && known.points_to[place.local.index()].lost
+                let held = &known.points_to[place.local.index()];
+                place.projection.is_empty() && (held.lost || held.loaded)
             }
         })
+    }
+
+    /// The sites `arguments` name through a local that is not a load: what a
+    /// call is certainly handed, rather than what it may be.
+    fn named_outright(arguments: &[Operand], known: &Known) -> Vec<usize> {
+        let outright = arguments.iter().filter(|argument| match argument {
+            Operand::Copy(place) => !known.points_to[place.local.index()].loaded,
+            Operand::Constant(_) => true,
+        });
+        named(&Self::touching(outright, known)).collect()
     }
 }
 
@@ -2771,7 +2785,20 @@ impl Analysis for Allocations<'_> {
                 value.replaced(|_| true);
             }
             Callee::Opaque => {
+                // **A load's sites are a lower bound, and a proof is not taken
+                // away on one.** A freed allocation a load may hold is not one
+                // this call is known to have been handed, so blanking it would
+                // turn a proved use after free into a doubt, which a hatch only
+                // lists: that is how `free(p); q = *tab; g(q); return *p;` in
+                // a hatch built. What an argument names outright is blanked as
+                // before. See ADR-0045.
+                let outright = Self::named_outright(handed, value);
                 for site in sites().collect::<Vec<_>>() {
+                    if matches!(value.state[site], SiteState::Freed { .. })
+                        && !outright.contains(&site)
+                    {
+                        continue;
+                    }
                     value.state[site] = SiteState::Unknown;
                 }
 
@@ -3794,7 +3821,7 @@ fn returned(
     // A constant holds no allocation, and a place read through a projection is
     // a pointer read out of memory, about which this check says nothing here.
     // A dereference of one reads what was stored where it was read from
-    // (ADR-0045); returning one is not asked.
+    // (ADR-0045); returning one is not asked (#284).
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
@@ -3900,7 +3927,8 @@ fn handed(
 /// **Only a local of pointer type, read with no projection.** An argument
 /// read through a projection names no site of its own, and what it may be is
 /// `read_out`'s, for what the call reaches (ADR-0040); a dereference of a
-/// load reads what was stored (ADR-0045), and handing one on is not asked. An integer can hold sites, since
+/// load reads what was stored (ADR-0045), and handing one on is not asked
+/// (#284). An integer can hold sites, since
 /// an addition keeps its operands' (ADR-0030), and asking one refused
 /// `h(f() + g())`, a program with no pointer in it.
 ///

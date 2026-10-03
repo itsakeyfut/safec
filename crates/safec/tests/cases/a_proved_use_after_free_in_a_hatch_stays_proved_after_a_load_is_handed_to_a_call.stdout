@@ -1,0 +1,147 @@
+Target "x86_64-pc-windows-msvc"
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:3:6 "g" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:6:5 "read_after_free" hatch
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "void"
+  Local "_10" "int *"
+  Local "_11" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:7:17 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:9:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:14 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:14 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:11:14 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:13:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:12:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:15:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:15:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:15:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 written
+      Destination "_8"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:16:5 generated
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 "free" "bb9"
+      Destination "_9"
+      Copy "_4"
+  Block "bb9"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:17:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:18:10 written
+      Destination "_10"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:18:14 generated
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 "g" "bb10"
+      Destination "_11"
+      Copy "_10"
+  Block "bb10"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:19:5 generated
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:20:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:20:12 generated
+    Return
+Function a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Block "bb0" entry
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:25 generated
+    Call a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:25 "read_after_free" "bb1"
+      Destination "_1"
+  Block "bb1"
+    Operation a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:18 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call.c:23:25 generated
+    Return
