@@ -1,0 +1,10 @@
+error[SC0406]: this may return a pointer to an allocation that was freed
+    ╭─[ a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:15:5 ]
+    │
+ 15 │     return *tab;
+    │     ──────┬─────  
+    │           ╰─────── returned here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

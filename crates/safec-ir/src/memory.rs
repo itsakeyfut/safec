@@ -264,8 +264,8 @@ fn earlier(here: Span, there: Span) -> Span {
 }
 
 /// What one read is filed under. See [`ReadKey`].
-fn read_key(at: Span, place: &Place) -> ReadKey {
-    (at.file().index(), at.start(), at.end(), place.clone())
+fn read_key(at: Span, place: &Place, read: Read) -> ReadKey {
+    (at.file().index(), at.start(), at.end(), place.clone(), read)
 }
 
 /// What one argument of a call reaches.
@@ -687,10 +687,10 @@ struct PendingRead {
     /// Which of the two reads it is, which decides the code it is reported
     /// under.
     ///
-    /// **In the value and not in [`ReadKey`]**, because the key's place already
-    /// keeps the two apart: a dereference is read through a projection and an
-    /// argument is a local read with none. A kind in the key would be a part no
-    /// mutation can break, and here it is a field the join has to carry.
+    /// **In [`ReadKey`] as well**, because the place no longer keeps the two
+    /// apart: `release(*tab)` dereferences `tab` and hands on what `*tab`
+    /// holds, one place at one span. With one entry for both, what was handed
+    /// was filed under the dereference and reported as `SC0402`. See ADR-0042.
     read: Read,
     /// Which of `sites` code this check cannot read may reach by a route
     /// other than the call this read belongs to.
@@ -719,7 +719,7 @@ struct PendingRead {
 /// Two reads of one pointer that a reader is told about in two different
 /// codes: `SC0402` is a dereference and `SC0407` a pointer handed on, because
 /// the fix for the second is at the call or at the free rather than at a read.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Read {
     /// `*p`, met by [`Known::met`].
     Dereference,
@@ -737,14 +737,15 @@ enum Read {
 /// **The place is the fourth part because this is the pair a report is
 /// collapsed on**, and [`say`] says what each half of it costs when it goes.
 /// Two reads at one span through one place are one report; two reads at one
-/// span through two places are two.
+/// span through two places are two. **Which read it is, the fifth**, for the
+/// reason [`PendingRead::read`] gives.
 ///
 /// The end as well as the start, so that two elements beginning at one column
 /// and covering different extents are two reads rather than one. Nothing
 /// reaches that today and ADR-0023 says so: dropping the end leaves the whole
 /// suite green, and what it would cost is one of two reports rather than a
 /// wrong one.
-type ReadKey = (usize, u32, u32, Place);
+type ReadKey = (usize, u32, u32, Place, Read);
 
 /// Which allocations each local may hold, and what is known about each.
 #[derive(Clone, PartialEq, Eq)]
@@ -902,6 +903,22 @@ impl Known {
         reached
     }
 
+    /// What the value of `place` may point at, where it is handed to a call or
+    /// returned: a local's own sites, or, for a place of dereferences, what its
+    /// deepest level holds, marked as possibly incomplete.
+    ///
+    /// **One answer for the report and for the read carried forwards**, so that
+    /// `release(*tab)` is asked at the call and at a later free about the same
+    /// thing, and so that it is asked what `q = *tab; release(q);` is asked.
+    /// See ADR-0042 and ADR-0045.
+    fn handed_reached(&self, place: &Place) -> Vec<Reached> {
+        if place.projection.is_empty() {
+            self.reached_by(place.local)
+        } else {
+            self.reached_below(place.local, derefs(place))
+        }
+    }
+
     /// What a dereference `depth + 1` levels below `local` reads: what
     /// [`Self::stored_below`] says the level above it may contain, marked as
     /// possibly incomplete for the reason a load is.
@@ -1008,14 +1025,19 @@ impl Known {
         };
 
         for place in dereferenced {
-            self.meeting(at, place, Read::Dereference);
+            let reached = self.reached_by(place.local);
+            self.meeting(at, place, Read::Dereference, &reached);
         }
     }
 
     /// One place of one element, for [`Self::met`], or one argument of one
     /// call, for [`Allocations::terminator`].
-    fn meeting(&mut self, at: Span, place: &Place, read: Read) {
-        let sites: BTreeSet<usize> = named(&self.reached_by(place.local)).collect();
+    ///
+    /// **`reached` is the caller's**, because the two differ for one place: a
+    /// dereference of `*tab` reads through `tab`'s own sites, and `*tab` handed
+    /// to a call hands on what they contain ([`Self::handed_reached`]).
+    fn meeting(&mut self, at: Span, place: &Place, read: Read, reached: &[Reached]) {
+        let sites: BTreeSet<usize> = named(reached).collect();
 
         if sites.is_empty() {
             return;
@@ -1036,7 +1058,7 @@ impl Known {
         // span, and two entries would be one report said twice.
         let entry = self
             .pending
-            .entry(read_key(at, place))
+            .entry(read_key(at, place, read))
             .or_insert(PendingRead {
                 at,
                 sites: BTreeSet::new(),
@@ -2653,7 +2675,8 @@ impl Analysis for Allocations<'_> {
         // silences `a_pointer_handed_to_a_call_the_check_meets_first_is_reported`.
         // See ADR-0042.
         for place in handed_places(self, function, *callee, arguments) {
-            value.meeting(origin.span(), place, Read::Argument);
+            let reached = value.handed_reached(place);
+            value.meeting(origin.span(), place, Read::Argument, &reached);
         }
 
         // What the call does to what it was handed, before what it leaves
@@ -3216,9 +3239,6 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
 
             let block = function.block(id);
             for element in &block.elements {
-                // Before the transfer, for the reason below: what the local
-                // being returned holds is what it held as the write ran.
-                returned(&mut findings, &analysis, function, element, &known);
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
                 used(
@@ -3227,6 +3247,19 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     dereferenced_in_element(element),
                     &known,
                     func,
+                );
+                // After the dereferences in the element, as `handed` is after
+                // the ones at a call, so that `return *tab;` keeps a doubt
+                // about reading `*tab` over one about what it returns, as
+                // `release(*tab)` does. Before the transfer, for the reason
+                // above: what is returned is what was held as the write ran.
+                returned(
+                    &mut findings,
+                    &mut said,
+                    &analysis,
+                    function,
+                    element,
+                    &known,
                 );
                 // Just before what is pending is cleared, so that a free in
                 // the same expression has reported first, with its label.
@@ -3865,10 +3898,15 @@ fn used(
 /// parameter freed on one arm and returned was silent in every function. See
 /// ADR-0041.
 ///
-/// Pushed rather than [`say`]: no other report is made about a place with no
-/// projection, so nothing else can stand at this key.
+/// **A place of dereferences is asked what it holds**, `return *tab;` as
+/// `int *q = *tab; return q;` is, through [`Known::handed_reached`]. Through
+/// [`say`], and after [`used`], because a dereference of the same place at the
+/// same span can stand at that key, and it is the earlier read: reading
+/// `*tab` comes before returning what it held, so a doubt or a proof about it
+/// is the report kept, as at a call. See ADR-0045.
 fn returned(
     findings: &mut Vec<Finding>,
+    said: &mut Vec<(Span, Place, usize)>,
     analysis: &Allocations<'_>,
     function: &Function,
     element: &Element,
@@ -3882,30 +3920,32 @@ fn returned(
     {
         return;
     }
-    // A constant holds no allocation, and a place read through a projection is
-    // a pointer read out of memory, about which this check says nothing here.
-    // A dereference of one reads what was stored where it was read from
-    // (ADR-0045); returning one is not asked (#284).
+    // A constant holds no allocation, and a place with an `Index` is an
+    // array's element, which this does not follow.
     let Rvalue::Use(Operand::Copy(source)) = &operation.value else {
         return;
     };
-    if !source.projection.is_empty() {
+    if !source.projection.is_empty() && derefs(source) == 0 {
         return;
     }
 
-    let Some(verdict) = verdict(Kind::ReturnAfterFree, known.reached_by(source.local), known)
-    else {
+    let Some(verdict) = verdict(Kind::ReturnAfterFree, known.handed_reached(source), known) else {
         return;
     };
-    findings.push(Finding {
-        function: analysis.function,
-        kind: Kind::ReturnAfterFree,
-        conclusion: verdict.conclusion,
-        at: operation.origin.span(),
-        freed: verdict.freed,
-        made: verdict.made,
-        unproven: verdict.unproven,
-    });
+    say(
+        findings,
+        said,
+        source,
+        Finding {
+            function: analysis.function,
+            kind: Kind::ReturnAfterFree,
+            conclusion: verdict.conclusion,
+            at: operation.origin.span(),
+            freed: verdict.freed,
+            made: verdict.made,
+            unproven: verdict.unproven,
+        },
+    );
 }
 
 /// Report a pointer handed to a call where the allocation it points at may
@@ -3922,16 +3962,17 @@ fn returned(
 /// arguments as a [`PendingRead`], and [`used_before`] asks them again at a
 /// free the same full expression leaves unordered against this call.
 ///
-/// **One finding per local per call**, so `g(p, p)` is one report, and
+/// **One finding per place per call**, so `g(p, p)` is one report, and
 /// [`handed_places`] is what says which.
 ///
 /// **Through [`say`], because [`used_before`] reaches the same caret about the
 /// same local.** `int **q = &a; (memset(a, 0, 4) != 0) + (free(a), 0)` is
 /// doubted here, since `a` escaped, and doubted again from the free: pushed,
-/// that was two `SC0407` about `a` at one caret. The key cannot meet a
-/// dereference's, whose place always carries a projection where an
-/// argument's never does. Pushing fails
-/// `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`.
+/// that was two `SC0407` about `a` at one caret. Pushing fails
+/// `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`. **And a
+/// place of dereferences meets the key a dereference of the same place at
+/// the same call holds**, which [`used`] fills first, so the read through
+/// `tab` is the report kept over what `*tab` hands on.
 fn handed(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
@@ -3952,11 +3993,8 @@ fn handed(
     };
 
     for place in handed_places(analysis, function, *callee, arguments) {
-        let Some(verdict) = verdict(
-            Kind::ArgumentAfterFree,
-            known.reached_by(place.local),
-            known,
-        ) else {
+        let Some(verdict) = verdict(Kind::ArgumentAfterFree, known.handed_reached(place), known)
+        else {
             continue;
         };
         say(
@@ -3988,24 +4026,28 @@ fn handed(
 /// argument are handed is asked already, as a double free, by [`reported`];
 /// an allocator and `realloc`'s size are handed integers.
 ///
-/// **Only a local of pointer type, read with no projection.** An argument
-/// read through a projection names no site of its own, and what it may be is
-/// `read_out`'s, for what the call reaches (ADR-0040); a dereference of a
-/// load reads what was stored (ADR-0045), and handing one on is not asked
-/// (#284). An integer can hold sites, since
+/// **A local of pointer type, or a place of dereferences that may be a
+/// pointer.** The second is asked what its deepest level holds, through
+/// [`Known::handed_reached`], so `release(*tab)` is asked what `q = *tab;
+/// release(q);` is (ADR-0045). What the call reaches through it is
+/// `read_out`'s (ADR-0040). One place is asked once, compared as a place, so
+/// `g(p, *p)` asks both. The pointer test on a place of dereferences changes
+/// no case, measured: without a cast, an integer is read out of an allocation
+/// that holds integers, and nothing was stored there for it to hold. An integer can hold sites, since
 /// an addition keeps its operands' (ADR-0030), and asking one refused
 /// `h(f() + g())`, a program with no pointer in it.
 ///
-/// **Two of these conditions are answered twice, and a mutation sees only
-/// the other answer.** Since [`handed`] reports through [`say`], a local
-/// handed twice lands on one key, and a projected argument lands on the key a
-/// dereference of the same place at the same call already holds, which
-/// [`used`] fills first. So dropping the repeated-local test, or asking a
-/// projected argument, leaves the whole suite green. Both are kept, because
-/// they say what is asked rather than what happens to collapse afterwards,
-/// and measured without `say` they fail
-/// `a_freed_pointer_handed_twice_to_one_call_is_one_report` and
-/// `a_pointer_read_out_of_a_freed_table_and_handed_to_a_call` again.
+/// **The repeat test is answered twice, and a mutation sees only the other
+/// answer.** Since [`handed`] reports through [`say`], a place handed twice
+/// lands on one key, so dropping the test leaves the whole suite green. It is
+/// kept, because it says what is asked rather than what happens to collapse
+/// afterwards, and measured without `say` it fails
+/// `a_freed_pointer_handed_twice_to_one_call_is_one_report`.
+///
+/// **A place of dereferences lands on the key a dereference of the same
+/// place at the same call holds**, which [`used`] fills first. So
+/// `free(tab); release(*tab);` keeps the dereference's proof about reading
+/// `*tab`, and what `*tab` holds is asked only when that says nothing.
 fn handed_places<'a>(
     analysis: &Allocations<'_>,
     function: &Function,
@@ -4023,10 +4065,12 @@ fn handed_places<'a>(
         let Operand::Copy(place) = argument else {
             continue;
         };
-        if !place.projection.is_empty()
-            || !analysis.is_pointer(function, place.local)
-            || asked.iter().any(|seen| seen.local == place.local)
-        {
+        let pointer = if place.projection.is_empty() {
+            analysis.is_pointer(function, place.local)
+        } else {
+            derefs(place) > 0 && analysis.may_be_pointer(function, place)
+        };
+        if !pointer || asked.contains(&place) {
             continue;
         }
         asked.push(place);
@@ -4262,7 +4306,7 @@ fn used_before(
         (BTreeSet::new(), false)
     };
 
-    for ((.., place), read) in &known.pending {
+    for ((.., place, _), read) in &known.pending {
         // **A read this call's own arguments made is behind it**, so it is
         // skipped here and kept for whatever else in the expression may free:
         // `strlen(strcpy(s, t)) + (free(s), 0)` still carries `strcpy`'s
@@ -4352,7 +4396,7 @@ fn after_a_call(
     known: &Known,
     function: FuncId,
 ) {
-    for ((.., place), read) in &known.pending {
+    for ((.., place, _), read) in &known.pending {
         if !read.after_call {
             continue;
         }

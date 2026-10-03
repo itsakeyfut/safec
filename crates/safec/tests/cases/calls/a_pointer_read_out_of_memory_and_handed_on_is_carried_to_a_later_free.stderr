@@ -1,0 +1,23 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:12 ]
+    │
+ 22 │     return keep(*tab) + (free(p), 0);
+    │            ─────┬────    ───┬───  
+    │                 ╰───────────────── passed here, perhaps after the free
+    │                             │     
+    │                             ╰───── freed here
+────╯
+  = note: C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its expression, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: put the free and this in separate statements, so that C orders one before the other
+error[SC0401]: this may free a value that was freed already
+    ╭─[ a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:26 ]
+    │
+ 22 │     return keep(*tab) + (free(p), 0);
+    │                          ───┬───  
+    │                             ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

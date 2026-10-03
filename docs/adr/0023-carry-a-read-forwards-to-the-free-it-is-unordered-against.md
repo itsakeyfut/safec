@@ -67,8 +67,8 @@ that cost.)
 Chosen option: **a field on the memory lattice**.
 
 ```rust
-/// Where the read is, and what it read through.
-type ReadKey = (usize, u32, u32, Place);
+/// Where the read is, what it read through, and which read it is.
+type ReadKey = (usize, u32, u32, Place, Read);
 
 struct PendingRead {
     /// The element's span, which is where `used here` goes.
@@ -77,6 +77,10 @@ struct PendingRead {
     sites: BTreeSet<usize>,
 }
 ```
+
+`Read`, whether the read is a dereference or an argument handed to a call, was
+added to the key by ADR-0042's amendment for #284, when one place at one span
+could be both.
 
 `Known::pending` is a `BTreeMap<ReadKey, PendingRead>`. **Ordered containers because a
 lattice value has to be canonical, and because the type is a better place for

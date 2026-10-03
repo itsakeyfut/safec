@@ -1,0 +1,10 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:17:5 ]
+    │
+ 17 │     give(tab, *tab);
+    │     ───────┬───────  
+    │            ╰───────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

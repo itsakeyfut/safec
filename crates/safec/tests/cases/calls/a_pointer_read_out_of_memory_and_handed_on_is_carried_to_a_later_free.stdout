@@ -1,0 +1,156 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:4:5 "keep"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:5:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:5:9 "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:5:9 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:6:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:6:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:8:12 generated
+    Return
+Function a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:11:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Local "_10" "void"
+  Local "_11" "int"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:11:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:12:17 generated
+    Call a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:12:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:12:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:12:17 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:13:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:13:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:13:9 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:14:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:14:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:13:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:16:14 generated
+    Call a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:16:14 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:16:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:16:14 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:17:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:17:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:17:9 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:18:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:18:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:17:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:20:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:20:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:20:5 generated
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:21:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:21:5 written
+      Destination "_8"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:21:5 generated
+    Call a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:12 "keep" "bb9"
+      Destination "_9"
+      Copy "_1"
+        Deref
+  Block "bb9"
+    Call a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:26 "free" "bb10"
+      Destination "_10"
+      Copy "_4"
+  Block "bb10"
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:12 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_9"
+        Constant 0
+    Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:5 written
+      Destination "_0"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:12 generated
+    Return

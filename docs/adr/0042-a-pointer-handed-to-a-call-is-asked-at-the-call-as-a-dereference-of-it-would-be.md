@@ -101,13 +101,13 @@ silent whenever `use` is in another file.
 **What is asked.** What `Known::reached_by` answers for the argument's local,
 through `verdict`, exactly as `used` asks a dereference, so an escaped local is
 distrusted as ADR-0017 distrusts it and a local that reaches no site says
-nothing (the dereference reader's answer, not the free's). Only an argument
-that is a local read with no projection: a pointer read out of memory holds no
-site, and this check says nothing about a dereference of one either (ADR-0017,
-#256). Only an argument of pointer type: an addition of integers keeps its
+nothing (the dereference reader's answer, not the free's). An argument that
+is a local read with no projection, or a place of dereferences, `*tab` or
+`**t3`, which is asked what its deepest level holds, as a load out of the same
+place would (ADR-0045, #284). Only an argument of pointer type: an addition of integers keeps its
 operands' sites (ADR-0030), so `h(f() + g())` was refused on a program with no
 pointer in it, measured, which is the reason ADR-0041 gives for its own
-condition. One finding per local per call, so `g(p, p)` is one report.
+condition. One finding per place per call, so `g(p, p)` is one report.
 
 **The order at the call is asked as a dereference asks it.** `Kind::ArgumentAfterFree`
 answers `earliest.is_some_and(|freed| freed.sequenced)` in `verdict`'s
@@ -208,10 +208,12 @@ handed, and a free's report would also name it as the free.
 
 A pending read carries which of the two it is, `Read::Dereference` or
 `Read::Argument`, and is reported under the code it would have had where it
-ran. The kind is a field of the value and not a part of the key, because the
-key's place already keeps the two apart: a dereference is read through a
-projection and an argument is a local read with none, so a kind in the key
-would be a part no mutation can break. `handed_places` is the one function
+ran. The kind is a field of the value and a part of the key. It was the value
+alone while an argument was always a local read with no projection, since the
+place then kept the two apart; once `release(*tab)` is asked about what `*tab`
+holds, the dereference of `tab` and the argument are one place at one span,
+and with one entry the argument's sites were reported as a dereference,
+`SC0402` (#284). `handed_places` is the one function
 that says which arguments are asked, for `handed` at the call and for the
 transfer that carries them, and `handed` reports through `say`, because
 `used_before` can reach the same caret about the same local.
@@ -267,15 +269,19 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   each fails
   `a_freed_pointer_handed_after_other_arguments_is_asked` alone, which goes
   silent. Found by review: every other case hands the freed pointer first.
-* Asking an argument read through a projection in `handed_places` fails
-  nothing on its own: the dereference of the same place at the same call
-  already holds `say`'s key, because `used` runs before `handed`. Asking it and
-  pushing in `handed` fails
-  `a_pointer_read_out_of_a_freed_table_and_handed_to_a_call`,
-  `a_freed_pointer_read_in_an_argument` and
-  `a_comma_inside_a_call_argument_orders_nothing_outside_it`, each gaining an
-  `SC0407` about the pointer the argument was read through, and
-  `an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report`.
+* Admitting no projected argument in `handed_places` fails
+  `a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven`,
+  `a_pointer_read_two_levels_down_and_handed_on_after_a_free_is_unproven` and
+  `a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free`,
+  which go silent about the argument.
+* Asking one place per local in `handed_places` again, rather than one per
+  place, fails `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`
+  alone, which goes silent: `give(tab, *tab)` asked `tab`, which is live, and
+  never what `*tab` holds.
+* Carrying `reached_by` of the argument's local, rather than what the argument
+  holds, fails `a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free`
+  alone, and dropping `Read` from the key fails it too, which reports `SC0402`
+  in place of `SC0407`.
 * Dropping the loop in `Allocations::terminator` that records `Read::Argument`
   fails `a_pointer_handed_to_a_call_the_check_meets_first_is_reported`,
   `a_pointer_handed_to_a_call_before_an_opaque_call_is_reported`,
