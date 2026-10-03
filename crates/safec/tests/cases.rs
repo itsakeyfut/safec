@@ -50,10 +50,10 @@ macro_rules! cases {
 // section it belongs to. Its files go in the directory of that name.
 cases! {
     "memory" => {
-        // The memory check's cases, kept together because what each one is for is
-        // a row of one table: `docs/safety-model.md`'s three-valued model met by a
-        // program that proves it, one that leaves it unproven, and one that does
-        // neither.
+        // The memory check's cases, kept together because what each one is for
+        // is a row of one table: `docs/safety-model.md`'s three-valued model
+        // met by a program that proves it, one that leaves it unproven, and one
+        // that does neither.
         a_value_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_freed_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -63,127 +63,130 @@ cases! {
         a_branch_that_allocates_either_way: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_used_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same free and the same use, in one full expression with nothing
-        // ordering them. C17 6.5 p3 leaves the operands of `+` unsequenced, so one
-        // allowed order reads `*p` first and the program is defined; which order an
-        // implementation picks is unspecified and this compiler does not get to
-        // choose. The pair is written both ways round because the answer used to
-        // turn on which side the free was written, and what decided was that
-        // ADR-0010 makes a call end a block. See ADR-0022.
+        // ordering them. C17 6.5 p3 leaves the operands of `+` unsequenced, so
+        // one allowed order reads `*p` first and the program is defined; which
+        // order an implementation picks is unspecified and this compiler does
+        // not get to choose. The pair is written both ways round because the
+        // answer used to turn on which side the free was written, and what
+        // decided was that ADR-0010 makes a call end a block. See ADR-0022.
         //
         // **The third is the same program with the use read first**, which the
-        // walk meets before it meets the free. A forward walk only looks back, so
-        // that half is answered by carrying the read forwards to the free instead:
-        // see ADR-0023. `*p` on its own is not read until the addition is built,
-        // which is after the call, so the pair above are answered by the free
-        // marking what follows it; put the use inside a call and it is read first
-        // and the read is what waits.
+        // walk meets before it meets the free. A forward walk only looks back,
+        // so that half is answered by carrying the read forwards to the free
+        // instead: see ADR-0023. `*p` on its own is not read until the addition
+        // is built, which is after the call, so the pair above are answered by
+        // the free marking what follows it; put the use inside a call and it is
+        // read first and the read is what waits.
         an_unsequenced_free_and_use_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_same_program_with_the_operands_swapped_is_not_proved_either: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_unsequenced_use_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same, for the two reads an *element* carries rather than a call or a
-        // branch: writing through the pointer, and evaluating a place for no reason
-        // but the evaluation. Neither is reached by any case above, whose reads are
-        // all carried by a terminator, so without these the element half of the
-        // recording can be deleted with the suite green. Measured, which is how
-        // they came to be here.
+        // The same, for the two reads an *element* carries rather than a call
+        // or a branch: writing through the pointer, and evaluating a place for
+        // no reason but the evaluation. Neither is reached by any case above,
+        // whose reads are all carried by a terminator, so without these the
+        // element half of the recording can be deleted with the suite green.
+        // Measured, which is how they came to be here.
         a_write_through_a_pointer_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_discarded_read_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the two edges of that: a read of something this free is not about,
-        // and a read that cannot have happened on the path the free is on. The
-        // first says the sites are compared rather than the spans, and the second
-        // says the reads are carried along the graph's edges rather than along the
-        // order the blocks were written in.
+        // And the two edges of that: a read of something this free is not
+        // about, and a read that cannot have happened on the path the free is
+        // on. The first says the sites are compared rather than the spans, and
+        // the second says the reads are carried along the graph's edges rather
+        // than along the order the blocks were written in.
         a_use_of_another_pointer_before_a_free_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the read that has to cross a merge to reach the free at all: it is
-        // inside one arm of a `?:` that the free is outside of, so nothing but the
-        // join carries it. The case above puts the two on opposite arms and asks
-        // for silence; this one puts the read on an arm and the free after the
-        // merge and asks for a report, which is the only shape where losing the
-        // join's union of the carried reads is a silence rather than a noise.
+        // And the read that has to cross a merge to reach the free at all: it
+        // is inside one arm of a `?:` that the free is outside of, so nothing
+        // but the join carries it. The case above puts the two on opposite arms
+        // and asks for silence; this one puts the read on an arm and the free
+        // after the merge and asks for a report, which is the only shape where
+        // losing the join's union of the carried reads is a silence rather than
+        // a noise.
         a_read_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And what the report is allowed to *name*. The read may have gone through
-        // either allocation, so `allocated here` would be a caret on one of two
-        // lines with nothing to choose between them, which is the may-set mistake
-        // of concluding from one member, made about a label rather than about a
-        // proof. Its `.stderr` has
-        // no such caret, and folding the two with anything but `same` puts one
-        // back.
+        // And what the report is allowed to *name*. The read may have gone
+        // through either allocation, so `allocated here` would be a caret on
+        // one of two lines with nothing to choose between them, which is the
+        // may-set mistake of concluding from one member, made about a label
+        // rather than about a proof. Its `.stderr` has no such caret, and
+        // folding the two with anything but `same` puts one back.
         a_read_of_either_of_two_allocations_before_a_free_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the read the free's *own* argument evaluation performed, which C17
-        // 6.5.2.2 p10's first sentence orders before the call unconditionally. The
-        // carried read has to stop at that point like it stops at any other, so
-        // neither of these gets an `SC0402`; the `SC0403` each still carries is the
-        // nullability check answering a different question, and the `SC0404` is
-        // ADR-0036's, because an offset read through a pointer is not one this
-        // check can evaluate. The second reaches the
-        // same place through a nested call, which is the spelling where the read is
-        // further from the free than an operand of it.
+        // And the read the free's *own* argument evaluation performed, which
+        // C17 6.5.2.2 p10's first sentence orders before the call
+        // unconditionally. The carried read has to stop at that point like it
+        // stops at any other, so neither of these gets an `SC0402`; the
+        // `SC0403` each still carries is the nullability check answering a
+        // different question, and the `SC0404` is ADR-0036's, because an offset
+        // read through a pointer is not one this check can evaluate. The second
+        // reaches the same place through a nested call, which is the spelling
+        // where the read is further from the free than an operand of it.
         //
-        // The first writes through `p` before the free so that the program is one
-        // C defines: reading an allocation nobody wrote to is 7.22.3.4 p2's
-        // indeterminate value and the offset would leave the object, and a guard
-        // is worth more when what it guards is defined. The second cannot be
-        // repaired that way, because `g`'s result is not this check's to know, and
-        // it is here for its shape.
+        // The first writes through `p` before the free so that the program is
+        // one C defines: reading an allocation nobody wrote to is 7.22.3.4 p2's
+        // indeterminate value and the offset would leave the object, and a
+        // guard is worth more when what it guards is defined. The second cannot
+        // be repaired that way, because `g`'s result is not this check's to
+        // know, and it is here for its shape.
         //
         // `Element::ArgumentsEvaluated` is what they are about, and ADR-0026 is
         // why it says less than `Element::Sequenced`.
         //
-        // Mutation: the arm in `memory.rs` that reads that element doing nothing.
-        // These two fail on their `.stderr` with the `SC0402` back, and nothing
-        // else fails. The rule's other half is the lowering that emits it, and
-        // mutating that fails these two on their `.stdout` along with every other
-        // artifact holding a call, so the halves are mutated apart: a mutation
-        // is measured by which assertion it broke, not only by whether one did.
+        // Mutation: the arm in `memory.rs` that reads that element doing
+        // nothing. These two fail on their `.stderr` with the `SC0402` back,
+        // and nothing else fails. The rule's other half is the lowering that
+        // emits it, and mutating that fails these two on their `.stdout` along
+        // with every other artifact holding a call, so the halves are mutated
+        // apart: a mutation is measured by which assertion it broke, not only
+        // by whether one did.
         a_read_in_a_frees_own_argument_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_in_a_frees_argument_through_a_call_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same question asked of a call this check cannot read, which may have
-        // freed what it was handed and cannot say. The pair is the asymmetry
-        // itself: the first reads through `p` in the operand beside the call, where
-        // C17 6.5 p3 orders neither against the other, and the second puts a
-        // sequence point between them and has to stay silent. Without the first,
-        // `used_before` can go back to refusing every callee but `free` with the
-        // suite green.
+        // The same question asked of a call this check cannot read, which may
+        // have freed what it was handed and cannot say. The pair is the
+        // asymmetry itself: the first reads through `p` in the operand beside
+        // the call, where C17 6.5 p3 orders neither against the other, and the
+        // second puts a sequence point between them and has to stay silent.
+        // Without the first, `used_before` can go back to refusing every callee
+        // but `free` with the suite green.
         //
-        // Its `.stderr` is where the words are pinned: `allocated here` and `used
-        // here, perhaps after the free`, and **no** `freed here` caret and no
-        // 6.5.2.2 p10 note, because nothing established a free. That is the whole
-        // of what `Unproven::Disagreement` buys over `Unproven::Unsequenced` here.
+        // Its `.stderr` is where the words are pinned: `allocated here` and
+        // `used here, perhaps after the free`, and **no** `freed here` caret
+        // and no 6.5.2.2 p10 note, because nothing established a free. That is
+        // the whole of what `Unproven::Disagreement` buys over
+        // `Unproven::Unsequenced` here.
         //
         // Both test `p` before reading it so that what they pin is this check
         // rather than the nullability one, whose `SC0403` would otherwise be in
         // both files and would make the second case's silence a sentence rather
-        // than an empty file. They write through `p` first for the reason the pair
-        // above give.
+        // than an empty file. They write through `p` first for the reason the
+        // pair above give.
         //
-        // **The second's call is written `h(p) + 1`, and the `+ 1` is the whole of
-        // why it guards anything.** Spelled `h(p)`, the call is enclosed by nothing
-        // C leaves unsequenced, so ADR-0026's marker is emitted at its own
-        // arguments and empties the carried reads a second time; measured, the case
-        // then survived the removal of *either* clearing and named neither, a
-        // mutation nothing fails because two rules hold it. Under the
-        // `+`, the marker is suppressed and the sequence point at the end of the
-        // statement before is the only thing left holding the silence.
+        // **The second's call is written `h(p) + 1`, and the `+ 1` is the whole
+        // of why it guards anything.** Spelled `h(p)`, the call is enclosed by
+        // nothing C leaves unsequenced, so ADR-0026's marker is emitted at its
+        // own arguments and empties the carried reads a second time; measured,
+        // the case then survived the removal of *either* clearing and named
+        // neither, a mutation nothing fails because two rules hold it. Under
+        // the `+`, the marker is suppressed and the sequence point at the end
+        // of the statement before is the only thing left holding the silence.
         //
         // Mutations, each applied alone and the failure read:
         //
-        // * refuse `Callee::Opaque` in `used_before` again. The first fails on its
-        //   `.stderr`, which goes empty.
+        // * refuse `Callee::Opaque` in `used_before` again. The first fails on
+        //   its `.stderr`, which goes empty.
         // * give the opaque case `Unproven::Unsequenced` and the call's span as
-        //   `freed`. The first fails on its `.stderr`, which gains a `freed here`
-        //   caret and the 6.5.2.2 p10 note, about a free no program here performs.
+        //   `freed`. The first fails on its `.stderr`, which gains a `freed
+        //   here` caret and the 6.5.2.2 p10 note, about a free no program here
+        //   performs.
         // * the `Element::Sequenced` arm stops clearing the carried reads. Both
-        //   fail: the second gains an `SC0402` about `g(*p)` a statement earlier,
-        //   and the first gains a second one about `*p = 1`.
+        //   fail: the second gains an `SC0402` about `g(*p)` a statement
+        //   earlier, and the first gains a second one about `*p = 1`.
         an_unsequenced_use_before_an_opaque_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_an_opaque_call_is_sequenced_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A controlling expression that is exactly a dereference is read by the
-        // branch itself, because it needs no temporary, so the sequence point at
-        // the end of it belongs after the branch and not before. C17 6.8 p4, and
-        // both arms: the body and the edge that skips it are each after the
-        // condition. The third has nothing ordering it, because a `?:`
-        // below a `+` is enclosed by something C leaves unsequenced, so that one
+        // branch itself, because it needs no temporary, so the sequence point
+        // at the end of it belongs after the branch and not before. C17 6.8 p4,
+        // and both arms: the body and the edge that skips it are each after the
+        // condition. The third has nothing ordering it, because a `?:` below a
+        // `+` is enclosed by something C leaves unsequenced, so that one
         // reports.
         a_condition_read_through_a_pointer_is_sequenced_before_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_condition_read_through_a_pointer_is_sequenced_before_the_other_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -193,29 +196,30 @@ cases! {
         // wrong question, each of which review found this check getting wrong.
         // A double free runs both frees whichever order C picks, so 6.5 p3
         // settles nothing about it and the proof stands. A free already ordered
-        // before an expression proves a use inside that expression, and stays the
-        // one to name, however the frees inside it are ordered. And where several
-        // frees are folded into one answer, the earliest span and the conjunction
-        // of their orders can come from different frees, so the caret that would
-        // say `freed here` is dropped rather than paired with a note about a free
-        // it is not pointing at.
+        // before an expression proves a use inside that expression, and stays
+        // the one to name, however the frees inside it are ordered. And where
+        // several frees are folded into one answer, the earliest span and the
+        // conjunction of their orders can come from different frees, so the
+        // caret that would say `freed here` is dropped rather than paired with
+        // a note about a free it is not pointing at.
         a_double_free_in_one_expression_does_not_turn_on_the_order: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_already_sequenced_is_the_one_a_later_free_keeps: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_may_set_where_one_free_is_sequenced_and_one_is_not: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A sequencing operator below something C leaves unsequenced orders its
-        // own parts and nothing outside them, so none of these three is a proof.
-        // One case per operator, because the guard is written once per operator
-        // and review measured that removing any one of them leaves the suite
-        // green: the comma's was held, and `&&`, `||`, `?:` and a call's
-        // arguments were not. Each mutation makes the compiler **certain** about
-        // an order C has not chosen, which is the direction that matters.
+        // own parts and nothing outside them, so none of these three is a
+        // proof. One case per operator, because the guard is written once per
+        // operator and review measured that removing any one of them leaves the
+        // suite green: the comma's was held, and `&&`, `||`, `?:` and a call's
+        // arguments were not. Each mutation makes the compiler **certain**
+        // about an order C has not chosen, which is the direction that matters.
         a_comma_inside_a_call_argument_orders_nothing_outside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The four constructs that do order their operands, one case each, because
-        // C17 Annex C names four and a list implemented three-quarters of the way
-        // leaves a reader asking which quarter. 6.5.17 p2, 6.5.13 p4, 6.5.14 p4 and
-        // 6.5.15 p4 in that order, and each is a proof rather than a suspicion.
+        // The four constructs that do order their operands, one case each,
+        // because C17 Annex C names four and a list implemented three-quarters
+        // of the way leaves a reader asking which quarter. 6.5.17 p2, 6.5.13
+        // p4, 6.5.14 p4 and 6.5.15 p4 in that order, and each is a proof rather
+        // than a suspicion.
         a_comma_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_or_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -225,18 +229,18 @@ cases! {
         a_dereference_of_a_pointer_with_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_that_is_not_known_to_allocate: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The other half of reading the callee's name: a call that allocates is
-        // also a call that does not touch what it was handed, and the case above
-        // says nothing about that.
+        // also a call that does not touch what it was handed, and the case
+        // above says nothing about that.
         //
         // **`malloc` is declared taking a pointer, and that is the case rather
         // than an accident of it.** This check recognises an allocation by the
-        // name and never by the type, so the declaration is free to take whatever
-        // reaches a site, and in this subset only a pointer does. Written with
-        // C's own prototype the call does not type-check: `clang -std=c17
-        // -pedantic-errors` reports `incompatible pointer to integer conversion`
-        // for `malloc(q)` against `int`. It accepts this one with
-        // `-Wincompatible-library-redeclaration`, which every case here declaring
-        // `malloc` already draws.
+        // name and never by the type, so the declaration is free to take
+        // whatever reaches a site, and in this subset only a pointer does.
+        // Written with C's own prototype the call does not type-check: `clang
+        // -std=c17 -pedantic-errors` reports `incompatible pointer to integer
+        // conversion` for `malloc(q)` against `int`. It accepts this one with
+        // `-Wincompatible-library-redeclaration`, which every case here
+        // declaring `malloc` already draws.
         //
         // Mutation: have `Callee::Allocates` poison its arguments as
         // `Callee::Opaque` does. The site `q` holds becomes `Unknown` at the
@@ -245,12 +249,13 @@ cases! {
         an_allocating_call_leaves_its_argument_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_constant_subscript_of_a_freed_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same program with `&p` in it, which is the pair that says the fold
-        // aligned the two spellings rather than only changing one. The subscript
-        // used to be proved here and the dereference never was: taking `p`'s
-        // address makes it unprovable under ADR-0017, and the subscript reached a
-        // proof only by arriving as a shape that rule did not see. Aligning them
-        // costs a proof, and ADR-0021 says why that is the right direction.
+        // The same program with `&p` in it, which is the pair that says the
+        // fold aligned the two spellings rather than only changing one. The
+        // subscript used to be proved here and the dereference never was:
+        // taking `p`'s address makes it unprovable under ADR-0017, and the
+        // subscript reached a proof only by arriving as a shape that rule did
+        // not see. Aligning them costs a proof, and ADR-0021 says why that is
+        // the right direction.
         a_subscript_of_an_escaped_pointer_is_suspected_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         two_pointers_used_after_a_free_on_one_line: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         one_pointer_used_after_a_free_on_two_lines: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -258,36 +263,37 @@ cases! {
         a_free_of_either_of_two_locals_names_no_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_one_of_two_allocations_by_name: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_a_may_set_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Silent, and for two reasons since ADR-0027: the local forgot the set it
-        // freed, and `p = 0; free(p);` is a call C defines as doing nothing. Which
-        // of the two is working can no longer be read off this case, so the
-        // forgetting is asked of the lattice directly by
+        // Silent, and for two reasons since ADR-0027: the local forgot the set
+        // it freed, and `p = 0; free(p);` is a call C defines as doing nothing.
+        // Which of the two is working can no longer be read off this case, so
+        // the forgetting is asked of the lattice directly by
         // `a_local_given_a_constant_forgets_the_set_it_freed` in
         // `crates/safec-ir/tests/freed.rs`, where the assignment is a constant
         // this subset cannot write.
         a_local_given_nothing_forgets_the_set_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_may_set_freed_then_written_through_an_alias: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a proof about a may-set survives when a value is built from its
-        // operands, which is the half of `Held` that is not a may-fact. It carries
-        // while the set does not grow, and an offset by an integer does not grow
-        // it: C17 6.5.6 p8 keeps the result inside the object the *pointer* operand
-        // points into, whatever the index happens to be. `i` is a parameter and so
-        // a site, and the result reaches it no longer. See ADR-0024 for the proof's
-        // rule and ADR-0030 for which operands it counts.
+        // operands, which is the half of `Held` that is not a may-fact. It
+        // carries while the set does not grow, and an offset by an integer does
+        // not grow it: C17 6.5.6 p8 keeps the result inside the object the
+        // *pointer* operand points into, whatever the index happens to be. `i`
+        // is a parameter and so a site, and the result reaches it no longer.
+        // See ADR-0024 for the proof's rule and ADR-0030 for which operands it
+        // counts.
         a_free_after_an_offset_that_kept_the_set_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_offset_by_an_integer_parameter_keeps_the_proof: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same offset by an integer that is not a site at all, which is the
-        // other half of that: the two cases differ in whether there was anything to
-        // pick up, and neither picks it up. A set that *has* grown loses the proof
-        // still, and no C this frontend accepts writes one, so
+        // other half of that: the two cases differ in whether there was
+        // anything to pick up, and neither picks it up. A set that *has* grown
+        // loses the proof still, and no C this frontend accepts writes one, so
         // `an_offset_by_a_second_pointer_loses_the_proof` holds that from
         // hand-built IR instead.
         an_offset_by_an_integer_local_keeps_the_proof: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the may-fact beside the proof. A local that lost the name for what it
-        // held says so, and arithmetic on it builds a pointer that has lost it too.
-        // ADR-0018 holds that for a copy and nothing held it for arithmetic, so the
-        // union the accumulator does of that bit could be deleted with the suite
-        // green.
+        // And the may-fact beside the proof. A local that lost the name for
+        // what it held says so, and arithmetic on it builds a pointer that has
+        // lost it too. ADR-0018 holds that for a copy and nothing held it for
+        // arithmetic, so the union the accumulator does of that bit could be
+        // deleted with the suite green.
         a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_after_a_may_set_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_in_a_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -301,9 +307,10 @@ cases! {
         a_double_free_across_a_loop_names_the_free_that_is_wrong: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_the_previous_turns_pointer_leaves_the_new_one_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_given_something_fresh_forgets_what_it_lost: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `free(p); p = 0;`, the commonest hygiene C has, and silent for the two
-        // reasons the case above is. `a_local_given_a_constant_forgets_the_site_it_held`
-        // is where the lattice half is asked on its own.
+        // `free(p); p = 0;`, the commonest hygiene C has, and silent for the
+        // two reasons the case above is.
+        // `a_local_given_a_constant_forgets_the_site_it_held` is where the
+        // lattice half is asked on its own.
         a_pointer_set_to_nothing_after_a_free_holds_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -322,7 +329,8 @@ cases! {
         an_address_of_a_subscript_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_of_a_double_dereference: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*&p` is `p`, the other half of the same clause. Mutation: in
-        // `begin_place`, drop the fold and always build the `&`; both go silent.
+        // `begin_place`, drop the fold and always build the `&`; both go
+        // silent.
         a_freed_pointer_returned_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_read_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_written_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -334,44 +342,44 @@ cases! {
         a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_this_check_cannot_read_between_two_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_through_a_pointer_the_check_does_not_follow: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Two programs with one `free` each, and the boundary between two reasons
-        // a report can be unproven. In the first nothing established a free at
-        // all, so the diagnostic says what this check lost rather than that the
-        // value may have been freed already: `*pp` is a pointer this check follows
-        // locals rather than the targets of. The second reaches the same caret
-        // with a site an opaque call was handed, where `helper` may really have
-        // freed it, and it keeps the older words. It is the only case whose
-        // suspicion rests on nothing but the callee: every other program that
-        // keeps those words has a `free` in it that this check saw. Answering
-        // `Unproven::Lost` where the sites disagree fails it, along with
-        // everything else that keeps them.
+        // Two programs with one `free` each, and the boundary between two
+        // reasons a report can be unproven. In the first nothing established a
+        // free at all, so the diagnostic says what this check lost rather than
+        // that the value may have been freed already: `*pp` is a pointer this
+        // check follows locals rather than the targets of. The second reaches
+        // the same caret with a site an opaque call was handed, where `helper`
+        // may really have freed it, and it keeps the older words. It is the
+        // only case whose suspicion rests on nothing but the callee: every
+        // other program that keeps those words has a `free` in it that this
+        // check saw. Answering `Unproven::Lost` where the sites disagree fails
+        // it, along with everything else that keeps them.
         //
         // **There were three, and the third has moved down beside the null
         // constant.** `int *p = 0; free(p);` was here to hold the words a lost
         // pointer gets, on the grounds that a local given a constant holds no
-        // site. ADR-0027's exemption now answers that program before the words are
-        // reached, so it says nothing at all and belongs with the other spelling
-        // of it.
+        // site. ADR-0027's exemption now answers that program before the words
+        // are reached, so it says nothing at all and belongs with the other
+        // spelling of it.
         a_free_read_out_of_another_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And the one this check is meant to say nothing about at all. C17
-        // 7.22.3.3 p2: "If `ptr` is a null pointer, no action occurs." So a null
-        // constant handed to `free` is written on purpose and is not a pointer
-        // this check lost. Nothing held that until this case: making a constant
-        // argument answer `Reached::Lost` puts a warning on a program C defines,
-        // and fails this case and nothing else in the suite.
+        // 7.22.3.3 p2: "If `ptr` is a null pointer, no action occurs." So a
+        // null constant handed to `free` is written on purpose and is not a
+        // pointer this check lost. Nothing held that until this case: making a
+        // constant argument answer `Reached::Lost` puts a warning on a program
+        // C defines, and fails this case and nothing else in the suite.
         //
         // It pins the null half only. `Allocations::touching` skips every
-        // constant, and the clause above supports it for this one, so `free(17)`
-        // stays silent and this case does not say otherwise. The comment on that
-        // arm says where the other half belongs.
+        // constant, and the clause above supports it for this one, so
+        // `free(17)` stays silent and this case does not say otherwise. The
+        // comment on that arm says where the other half belongs.
         a_free_of_a_null_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same program with the constant given a name first, which the clause
-        // does not distinguish and `clang` accepts identically. It is silent
-        // because the nullability check established the pointer is null and
-        // `asked` leaves such an argument out, which is ADR-0027; dropping that
-        // filter puts `this frees a pointer this check stopped following` back on
-        // a program C defines and fails this case.
+        // The same program with the constant given a name first, which the
+        // clause does not distinguish and `clang` accepts identically. It is
+        // silent because the nullability check established the pointer is null
+        // and `asked` leaves such an argument out, which is ADR-0027; dropping
+        // that filter puts `this frees a pointer this check stopped following`
+        // back on a program C defines and fails this case.
         a_free_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The two halves of what that exemption is allowed to rest on, one case
         // each, because each is a way of getting the nullness right in form and
@@ -383,88 +391,92 @@ cases! {
         // given it an allocation; reading the value rather than
         // `Nullability::known` exempts both frees and this case goes silent.
         //
-        // The second is asked where the free runs. `p` is established null at the
-        // entry of the block that frees it and is not null by the time the free is
-        // reached, so recording the row before the block's elements rather than
-        // after exempts a proved double free of `q`'s site. Measured: each
-        // mutation takes its own case to exit 0 and leaves the other reporting.
-        // And the argument the exemption is not allowed to read at all. `pp` is
-        // established null and `*pp` is a question about what it points at, which
-        // the nullability lattice is keyed by the local and cannot ask; answering
-        // it with `pp`'s own nullness takes the `SC0401` off this case and leaves
-        // the `SC0403` alone. Measured: dropping the `projection.is_empty()` guard
-        // in `established_null` fails this case and nothing else in the suite.
-        // And the local the exemption may not call null at all, because it does
-        // not hold a pointer. `nullness_of` answers `Null` for a constant zero
-        // without asking what it is assigned to, which costs nothing where the
-        // answer is only read about a dereference; read to exempt a free, it took
-        // the `SC0401` off this program and left nothing in its place. C17 6.3.2.3
+        // The second is asked where the free runs. `p` is established null at
+        // the entry of the block that frees it and is not null by the time the
+        // free is reached, so recording the row before the block's elements
+        // rather than after exempts a proved double free of `q`'s site.
+        // Measured: each mutation takes its own case to exit 0 and leaves the
+        // other reporting. And the argument the exemption is not allowed to
+        // read at all. `pp` is established null and `*pp` is a question about
+        // what it points at, which the nullability lattice is keyed by the
+        // local and cannot ask; answering it with `pp`'s own nullness takes the
+        // `SC0401` off this case and leaves the `SC0403` alone. Measured:
+        // dropping the `projection.is_empty()` guard in `established_null`
+        // fails this case and nothing else in the suite. And the local the
+        // exemption may not call null at all, because it does not hold a
+        // pointer. `nullness_of` answers `Null` for a constant zero without
+        // asking what it is assigned to, which costs nothing where the answer
+        // is only read about a dereference; read to exempt a free, it took the
+        // `SC0401` off this program and left nothing in its place. C17 6.3.2.3
         // p3 makes a null pointer constant an integer constant expression
         // converted to a pointer type, and an `int` lvalue holding zero is
         // neither. `clang` refuses this program under 6.5.2.2 p2, which this
         // compiler does not do yet and #154 is about; until it does, what it
-        // should not do is go quiet.
-        // And the free C has not ordered the assignment before. The operands of
-        // `+` are unsequenced, C17 6.5 p3, so on the order that runs the right one
-        // first this frees the pointer the line above already freed. The
-        // nullability lattice has no notion of order and says so; the marker that
-        // does is `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no
+        // should not do is go quiet. And the free C has not ordered the
+        // assignment before. The operands of `+` are unsequenced, C17 6.5 p3,
+        // so on the order that runs the right one first this frees the pointer
+        // the line above already freed. The nullability lattice has no notion
+        // of order and says so; the marker that does is
+        // `Element::ArgumentsEvaluated`, which ADR-0026 emits only where no
         // unsequenced operator encloses the call, and its absence here is what
-        // refuses the exemption. Dropping that term reports nothing at all about a
-        // double free this check watched, which is saying safe wrongly, the worst
-        // answer `docs/safety-model.md` says this compiler can give, and fails
-        // this case.
+        // refuses the exemption. Dropping that term reports nothing at all
+        // about a double free this check watched, which is saying safe wrongly,
+        // the worst answer `docs/safety-model.md` says this compiler can give,
+        // and fails this case.
         a_free_in_an_unsequenced_operand_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same defect where the block holding the free has no elements at all.
-        // A call ends a block, so the `g(0)` between the two operands puts the
-        // write in one block and the free at the terminator of the next, and that
-        // block carries neither a marker nor anything else. The rule reads
-        // `elements.last()`, so this is the `None` arm, and it is the only case
-        // that reaches it: treating `None` as ordered leaves this program silent
-        // about the double free and fails nothing else.
+        // The same defect where the block holding the free has no elements at
+        // all. A call ends a block, so the `g(0)` between the two operands puts
+        // the write in one block and the free at the terminator of the next,
+        // and that block carries neither a marker nor anything else. The rule
+        // reads `elements.last()`, so this is the `None` arm, and it is the
+        // only case that reaches it: treating `None` as ordered leaves this
+        // program silent about the double free and fails nothing else.
         a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_stopped_being_null_before_the_free_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A free of a pointer that is not the start of its allocation, which C17
-        // 7.22.3.3 p2 makes undefined and which this check once followed to the
-        // allocation and said nothing about. See ADR-0036. The first three are the
-        // proof: a constant offset either way, and the increment the issue that
-        // found this was written about. The fourth is the offset this check cannot
-        // evaluate, which is unproven and so an error in this compilation.
+        // A free of a pointer that is not the start of its allocation, which
+        // C17 7.22.3.3 p2 makes undefined and which this check once followed to
+        // the allocation and said nothing about. See ADR-0036. The first three
+        // are the proof: a constant offset either way, and the increment the
+        // issue that found this was written about. The fourth is the offset
+        // this check cannot evaluate, which is unproven and so an error in this
+        // compilation.
         a_free_of_a_pointer_past_the_start_of_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_a_pointer_an_increment_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_a_pointer_before_the_start_of_an_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_a_pointer_offset_by_an_integer_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The join, both ways. Two paths that each moved the pointer off the start
-        // are both off it, whatever the distances; one that did not leaves the
-        // answer open.
-        // `+` with the constant on the left, which C17 6.5.6 p8 makes the same
-        // addition. Mutation: in `memory.rs::offset_of`, drop the arm that reads
-        // the constant on the left. This fails with the proof down to `may`.
+        // The join, both ways. Two paths that each moved the pointer off the
+        // start are both off it, whatever the distances; one that did not
+        // leaves the answer open. `+` with the constant on the left, which C17
+        // 6.5.6 p8 makes the same addition. Mutation: in
+        // `memory.rs::offset_of`, drop the arm that reads the constant on the
+        // left. This fails with the proof down to `may`.
         a_free_of_a_constant_plus_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A pointer moved off the start and back is at the start again, and this
-        // check carries no distance to know it, so the second move proves nothing.
-        // The program is one C defines. Mutation: in `offset_of`, stop requiring
-        // the followed operand to be at the start. This fails with a proved
-        // `SC0404` about a free C defines.
+        // A pointer moved off the start and back is at the start again, and
+        // this check carries no distance to know it, so the second move proves
+        // nothing. The program is one C defines. Mutation: in `offset_of`, stop
+        // requiring the followed operand to be at the start. This fails with a
+        // proved `SC0404` about a free C defines.
         a_free_of_a_pointer_moved_back_to_the_start_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Two allocations, one offset, and no `allocated here`: naming either line
-        // would be a caret on an allocation the value may not hold. Both
-        // are made before the branch rather than on its arms: allocated on an arm,
-        // each site meets the other arm's `Live(None)` at the join and arrives with
-        // no line to name, so the fold has nothing to get wrong. Mutation: in `memory.rs::interior`, fold `made` by keeping the first
-        // site's, or by keeping the last site's. Each fails on the label, and both
-        // directions are measured because a fold has a wrong version on each side
-        // and a case can hold only some of them.
+        // Two allocations, one offset, and no `allocated here`: naming either
+        // line would be a caret on an allocation the value may not hold. Both
+        // are made before the branch rather than on its arms: allocated on an
+        // arm, each site meets the other arm's `Live(None)` at the join and
+        // arrives with no line to name, so the fold has nothing to get wrong.
+        // Mutation: in `memory.rs::interior`, fold `made` by keeping the first
+        // site's, or by keeping the last site's. Each fails on the label, and
+        // both directions are measured because a fold has a wrong version on
+        // each side and a case can hold only some of them.
         a_free_past_the_start_of_either_of_two_allocations_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_offset_on_both_arms_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_offset_on_one_arm_only_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The two that must stay silent. The first is ADR-0021's fold reaching this
-        // check as no arithmetic at all, and guards that record rather than anything
-        // here. The second is what a local holding no site answers, on one of the
-        // commonest shapes in C: a path that holds null meeting one that allocated.
+        // The two that must stay silent. The first is ADR-0021's fold reaching
+        // this check as no arithmetic at all, and guards that record rather
+        // than anything here. The second is what a local holding no site
+        // answers, on one of the commonest shapes in C: a path that holds null
+        // meeting one that allocated.
         a_free_of_a_pointer_plus_zero_is_a_free_of_the_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_an_allocation_made_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_whose_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -482,66 +494,70 @@ cases! {
         a_write_through_a_pointer_plus_zero_on_the_left: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_minus_zero: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_taken_on_one_arm_is_written_through_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same shape as the case above, on a program C defines on both paths:
-        // the other arm gives `pp` a pointer this check cannot follow rather than
-        // a null one it would be undefined to write through. A guard for a
-        // soundness rule should not rest on a program C has already given up on.
+        // The same shape as the case above, on a program C defines on both
+        // paths: the other arm gives `pp` a pointer this check cannot follow
+        // rather than a null one it would be undefined to write through. A
+        // guard for a soundness rule should not rest on a program C has already
+        // given up on.
         a_write_through_a_pointer_with_one_target_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A write through a pointer whose own address escaped may land anywhere,
-        // whichever order the two happen in. The second case is the one that says
-        // the answer cannot be recorded on the pointer's own row: `pp = &p` after
-        // the escape gives `pp` a fresh row, and a fact written there would have
-        // gone with the old one. See ADR-0028.
+        // A write through a pointer whose own address escaped may land
+        // anywhere, whichever order the two happen in. The second case is the
+        // one that says the answer cannot be recorded on the pointer's own row:
+        // `pp = &p` after the escape gives `pp` a fresh row, and a fact written
+        // there would have gone with the old one. See ADR-0028.
         a_write_through_a_pointer_whose_own_address_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call this check cannot read may write a fresh pointer through any
         // address that has escaped, so a `free` afterwards cannot say which
-        // allocation it took. Both of these are programs C defines and both were
-        // an `error` at exit 1, reported against a **sharer**: what the escape
-        // already took away is the report about the escaped local itself, so a
-        // case that frees or reads through that local alone observes nothing.
-        // A guard whose only observer is that report is vacuous, and ADR-0029 is
-        // the rule.
+        // allocation it took. Both of these are programs C defines and both
+        // were an `error` at exit 1, reported against a **sharer**: what the
+        // escape already took away is the report about the escaped local
+        // itself, so a case that frees or reads through that local alone
+        // observes nothing. A guard whose only observer is that report is
+        // vacuous, and ADR-0029 is the rule.
         a_call_this_check_cannot_read_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_certain_write_does_not_survive_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What that rule costs, kept where it can be seen: a double free through a
-        // sharer that `main` proved before the call was allowed to replace what
-        // `p` holds. It is a warning here because the callee may have.
+        // What that rule costs, kept where it can be seen: a double free
+        // through a sharer that `main` proved before the call was allowed to
+        // replace what `p` holds. It is a warning here because the callee may
+        // have.
         a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A free cannot un-free an allocation, so a free this check could not
-        // follow has nothing to say about a site an earlier free it *could* follow
-        // already proved. Writing `Unknown` over that site anyway threw the proof
-        // away, and the site is shared, so what lost it was the sharer's report.
-        // Found by review.
+        // follow has nothing to say about a site an earlier free it *could*
+        // follow already proved. Writing `Unknown` over that site anyway threw
+        // the proof away, and the site is shared, so what lost it was the
+        // sharer's report. Found by review.
         a_free_this_check_could_not_follow_leaves_a_proved_free_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The other half of the trade the rule makes. The downgrade is only
-        // acceptable because the flag still fails the build, and this is the case
-        // that says so: same program as the sharer case above, one flag on.
+        // acceptable because the flag still fails the build, and this is the
+        // case that says so: same program as the sharer case above, one flag
+        // on.
         a_double_free_a_call_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the direction the cheap versions of that rule fail in. Clearing the
-        // escaped local's row at the call instead leaves this program with nothing
-        // to say about the read, which is saying safe wrongly, while a false
-        // positive is only a false report the reader can see. See ADR-0029.
+        // And the direction the cheap versions of that rule fail in. Clearing
+        // the escaped local's row at the call instead leaves this program with
+        // nothing to say about the read, which is saying safe wrongly, while a
+        // false positive is only a false report the reader can see. See
+        // ADR-0029.
         a_use_after_free_through_an_escaped_local_is_still_reported_after_an_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the other order, which keeps the rule from being the whole of what
-        // an escape means: a call that ran **before** the address escaped cannot
-        // have written through it, so the proof survives. A guard for a rule
-        // about two events holds only the order it was written in.
+        // And the other order, which keeps the rule from being the whole of
+        // what an escape means: a call that ran **before** the address escaped
+        // cannot have written through it, so the proof survives. A guard for a
+        // rule about two events holds only the order it was written in.
         an_opaque_call_before_the_escape_leaves_the_proof_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same rule through the door ADR-0029 named and declined: the writer
-        // is a write in this function rather than a callee. Both of these were an
-        // `error` at exit 1 about a program C defines, and both report through a
-        // sharer, because a case observing only the escaped local would observe
-        // nothing. The second is here although one mutation
+        // The same rule through the door ADR-0029 named and declined: the
+        // writer is a write in this function rather than a callee. Both of
+        // these were an `error` at exit 1 about a program C defines, and both
+        // report through a sharer, because a case observing only the escaped
+        // local would observe nothing. The second is here although one mutation
         // fails both, because the two are the ways a pointer gets out of this
-        // check's sight: through a parameter, and through a chain of locals with
-        // no call and no parameter in it. A fix keyed on either shape alone passes
-        // the other. See ADR-0031.
+        // check's sight: through a parameter, and through a chain of locals
+        // with no call and no parameter in it. A fix keyed on either shape
+        // alone passes the other. See ADR-0031.
         a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_that_replaces_what_an_escaped_local_holds_needs_no_call_and_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The other half of the trade, as ADR-0029's own flag case says it for the
-        // call: the downgrade is only acceptable because the flag still fails the
-        // build. Same program as the first case above, one flag on.
+        // The other half of the trade, as ADR-0029's own flag case says it for
+        // the call: the downgrade is only acceptable because the flag still
+        // fails the build. Same program as the first case above, one flag on.
         a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What keeps that rule from costing everything, and the only case that
         // holds it: a write through a pointer to an `int` cannot put a pointer
@@ -549,32 +565,33 @@ cases! {
         // below stays proved. Marking every escaped local instead drops this
         // `error[SC0401]` to a warning and exit 1 to exit 0.
         a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The half of the door that a write with no target at all does not reach:
-        // one named target, and a path on which the pointer was never given one,
-        // so the write may land beside that target in an escaped local the union
-        // says nothing about. Narrowing the rule to an empty target set leaves
-        // this program an `error` at exit 1.
+        // The half of the door that a write with no target at all does not
+        // reach: one named target, and a path on which the pointer was never
+        // given one, so the write may land beside that target in an escaped
+        // local the union says nothing about. Narrowing the rule to an empty
+        // target set leaves this program an `error` at exit 1.
         a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The first case above with the alias written inline instead of read into
-        // a temporary, which is the same program and a place with two `Deref`s.
-        // This check follows a write through exactly one, so the rule has to fire
-        // for every projection it declines rather than for the shape it can
-        // follow: keyed on that shape, the two spellings of one program answered
-        // opposite ways. Two review lenses found it independently.
+        // The first case above with the alias written inline instead of read
+        // into a temporary, which is the same program and a place with two
+        // `Deref`s. This check follows a write through exactly one, so the rule
+        // has to fire for every projection it declines rather than for the
+        // shape it can follow: keyed on that shape, the two spellings of one
+        // program answered opposite ways. Two review lenses found it
+        // independently.
         a_write_through_more_than_one_deref_may_have_replaced_what_an_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The exception C17 6.5 p7 carries, and the one write that reaches an
-        // escaped local of every type: a character lvalue may access an object of
-        // any type, so copying one pointer's object representation over another's
-        // is defined. No cast is needed to get a `char *` that aliases a pointer,
-        // because the `void *` round trip is implicit both ways, and this
-        // frontend accepts it. Found by review, which compiled the program with
-        // `clang -std=c17 -pedantic-errors` and ran it under AddressSanitizer to
-        // show there is no use after free in it.
+        // escaped local of every type: a character lvalue may access an object
+        // of any type, so copying one pointer's object representation over
+        // another's is defined. No cast is needed to get a `char *` that
+        // aliases a pointer, because the `void *` round trip is implicit both
+        // ways, and this frontend accepts it. Found by review, which compiled
+        // the program with `clang -std=c17 -pedantic-errors` and ran it under
+        // AddressSanitizer to show there is no use after free in it.
         a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And the write the rule must not fire on: ADR-0028's certain one, which
-        // lands in its target and nowhere else, beside an escaped local of the
-        // same type that keeps its proof. Firing at every write drops this
-        // `error[SC0401]` to a warning.
+        // And the write the rule must not fire on: ADR-0028's certain one,
+        // which lands in its target and nowhere else, beside an escaped local
+        // of the same type that keeps its proof. Firing at every write drops
+        // this `error[SC0401]` to a warning.
         a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_that_was_never_given_a_pointer_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_an_alias_keeps_what_it_carried_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -587,105 +604,109 @@ cases! {
         an_escape_on_one_arm_and_an_allocation_on_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_escape_on_one_arm_and_a_shared_allocation_on_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_taken_of_a_local_declared_in_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The storage pair ADR-0012 emits, read by the memory check rather than by
-        // the lowering that writes it. A local declared inside a loop is given
-        // fresh storage each time round, and the only path from its `StorageDead`
-        // back to it is the back edge, so this is the one shape where the previous
-        // iteration's facts can still be standing.
+        // The storage pair ADR-0012 emits, read by the memory check rather than
+        // by the lowering that writes it. A local declared inside a loop is
+        // given fresh storage each time round, and the only path from its
+        // `StorageDead` back to it is the back edge, so this is the one shape
+        // where the previous iteration's facts can still be standing.
         //
         // **The write before the assignment is what makes it visible.**
         // `Known::clear` clears the local's edge to its sites and not the sites
         // themselves, so a stale `Freed` can only be observed by a read that
         // happens before the local is given anything. `*p` on an indeterminate
-        // pointer is a defect with a check of its own that does not exist yet, and
-        // when that check lands this case will have something to say about it: the
-        // program is chosen for a read this compiler currently answers nothing
-        // about, and it stops testing this the day that check has something to
-        // say.
+        // pointer is a defect with a check of its own that does not exist yet,
+        // and when that check lands this case will have something to say about
+        // it: the program is chosen for a read this compiler currently answers
+        // nothing about, and it stops testing this the day that check has
+        // something to say.
         //
         // Mutation: both the `StorageLive` and the `StorageDead` arm of
-        // `Allocations::element` to no-ops. The free from the previous iteration
-        // arrives at the write and this fails on its `.stderr`, which gains a
-        // `warning[SC0402]` beside the null one.
+        // `Allocations::element` to no-ops. The free from the previous
+        // iteration arrives at the write and this fails on its `.stderr`, which
+        // gains a `warning[SC0402]` beside the null one.
         a_scope_reentered_forgets_what_its_local_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_where_one_of_two_allocations_is_live: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_double_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
         an_unproven_free_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
-        // The other side of ADR-0033, and the only cases that reach it: an unproven
-        // conclusion is an error wherever a check runs, so a warning needs the run
-        // to have asked for one. Without these three the arm of `certainty_note`
-        // that is not promoted has no observer outside the renderer's own tests.
+        // The other side of ADR-0033, and the only cases that reach it: an
+        // unproven conclusion is an error wherever a check runs, so a warning
+        // needs the run to have asked for one. Without these three the arm of
+        // `certainty_note` that is not promoted has no observer outside the
+        // renderer's own tests.
         an_unproven_free_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         an_unproven_use_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // What a run is told when the level it asked for is not the level it gets,
-        // which is ADR-0035. Two independent things lower it, so two of these are
-        // one cause each and two are the edges that a gate on one cause alone gets
-        // wrong.
+        // What a run is told when the level it asked for is not the level it
+        // gets, which is ADR-0035. Two independent things lower it, so two of
+        // these are one cause each and two are the edges that a gate on one
+        // cause alone gets wrong.
         //
-        // Mutation: in `driver.rs::undelivered`, compare `options.safety` against
-        // `SafetyLevel::IMPLEMENTED` rather than against `Options::delivered`, which
-        // drops the artifact half. The second fails and the first stays green, which
-        // is the shape of the worst defect this project has had: two
-        // axes, and a gate that answers one of them.
+        // Mutation: in `driver.rs::undelivered`, compare `options.safety`
+        // against `SafetyLevel::IMPLEMENTED` rather than against
+        // `Options::delivered`, which drops the artifact half. The second fails
+        // and the first stays green, which is the shape of the worst defect
+        // this project has had: two axes, and a gate that answers one of them.
         //
-        // Mutation: answer the conclusion `Unsafe` rather than `Unknown`, which is
-        // how `Diagnostic::concluded` builds an error instead. All three of the
-        // reporting cases fail and the fourth is the one whose `.exit` goes from 0
-        // to 1: the conclusion is the whole of what lets `--allow-unknown` reach
-        // this report.
+        // Mutation: answer the conclusion `Unsafe` rather than `Unknown`, which
+        // is how `Diagnostic::concluded` builds an error instead. All three of
+        // the reporting cases fail and the fourth is the one whose `.exit` goes
+        // from 0 to 1: the conclusion is the whole of what lets
+        // `--allow-unknown` reach this report.
         //
-        // **The third is documentation rather than a discriminating guard, and that
-        // is measured rather than hoped.** It is the only case anywhere that names a
-        // satisfiable level beside an artifact that carries no check, so nothing
-        // else pins the combination; but every mutation tried on the gate fails it
-        // together with all 76 bare dump cases rather than alone. Reporting on the
-        // artifact without asking the level fails 84 tests, this among them. There
-        // is no mutation that isolates it, because the derived default already makes
-        // a bare dump resolve to `off`, so "report above `off`" and "report when
-        // delivered differs" agree on every input in the corpus.
+        // **The third is documentation rather than a discriminating guard, and
+        // that is measured rather than hoped.** It is the only case anywhere
+        // that names a satisfiable level beside an artifact that carries no
+        // check, so nothing else pins the combination; but every mutation tried
+        // on the gate fails it together with all 76 bare dump cases rather than
+        // alone. Reporting on the artifact without asking the level fails 84
+        // tests, this among them. There is no mutation that isolates it,
+        // because the derived default already makes a bare dump resolve to
+        // `off`, so "report above `off`" and "report when delivered differs"
+        // agree on every input in the corpus.
         a_level_with_no_checks_behind_it_is_not_delivered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         an_artifact_that_stops_before_the_ir_delivers_no_checks: ["--emit", "ast", "--safety", "memory"],
         a_level_that_was_not_asked_for_is_not_reported: ["--emit", "ast", "--safety", "off"],
         a_migrating_run_is_told_what_was_not_established_and_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "lifetime", "--allow-unknown"],
-        // Both causes at once, which the two above have one each of. A review found
-        // the report speaking whichever cause was written first, and its remedy
-        // sending the reader to `--emit safety-ir`, which is refused again for the
-        // other reason: ADR-0034 makes a remedy the change that would make the
-        // program compile, so half of that one was a promise this run breaks.
+        // Both causes at once, which the two above have one each of. A review
+        // found the report speaking whichever cause was written first, and its
+        // remedy sending the reader to `--emit safety-ir`, which is refused
+        // again for the other reason: ADR-0034 makes a remedy the change that
+        // would make the program compile, so half of that one was a promise
+        // this run breaks.
         //
         // Mutation: choose the note and the remedy with one `if` on
-        // `options.emit.reaches_the_ir()`, as it was written. This fails and the two
-        // single-cause cases stay green, which is the shape of the defect rather
-        // than its size.
+        // `options.emit.reaches_the_ir()`, as it was written. This fails and
+        // the two single-cause cases stay green, which is the shape of the
+        // defect rather than its size.
         //
         // Mutation: offer `--allow-unknown` whatever the level. This fails: the
-        // level here is `strict` and `Cli::check` refuses that pair, so following
-        // the remedy is an argument conflict rather than a build.
+        // level here is `strict` and `Cli::check` refuses that pair, so
+        // following the remedy is an argument conflict rather than a build.
         both_reasons_a_level_can_go_undelivered_are_said_at_once: ["--emit", "ast", "--safety", "strict"],
         a_double_free_is_found_on_a_backend_run: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         a_discarded_dereference_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         // `pp[0]` is `*pp`, and the backend can write `*pp`. It used to refuse
         // this with `SC0801`, because the subscript built an addition and the
         // backend cannot write pointer arithmetic; ADR-0021 folded the addition
-        // away and the refusal went with it. `an_ir_shape_the_backend_cannot_write`
-        // is the case that holds the refusal itself, which `pp[1]` still earns.
+        // away and the refusal went with it.
+        // `an_ir_shape_the_backend_cannot_write` is the case that holds the
+        // refusal itself, which `pp[1]` still earns.
         a_zero_subscript_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "nullability" => {
-        // The nullability check's cases, kept together for the reason the memory
-        // check's are: one table, whose rows are the three-valued model met by a
-        // program that proves the answer, one that leaves it unproven, and one
-        // that tests the pointer and so needs neither.
+        // The nullability check's cases, kept together for the reason the
+        // memory check's are: one table, whose rows are the three-valued model
+        // met by a program that proves the answer, one that leaves it unproven,
+        // and one that tests the pointer and so needs neither.
         //
         // The row that proves it.
         a_null_pointer_dereferenced_is_unsafe: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **Three tests of a pointer are three cases and not one**, because the
         // shapes reach the check differently: `if (p)` hands the pointer's own
-        // place to the terminator with no element in the block, and `p != 0` and
-        // `p == 0` put a comparison above it that has to be read back through the
-        // block. A reader of the C cannot tell those apart, which is why each is
-        // held.
+        // place to the terminator with no element in the block, and `p != 0`
+        // and `p == 0` put a comparison above it that has to be read back
+        // through the block. A reader of the C cannot tell those apart, which
+        // is why each is held.
         a_pointer_tested_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_compared_against_zero_before_it_is_dereferenced: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_whose_null_arm_returns_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -700,17 +721,19 @@ cases! {
         a_parameter_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `docs/roadmap.md`'s own headline example. C17 7.22.3.4 p3 makes a
         // `malloc` result either null or the allocation, so this warns, and the
-        // roadmap's example is a program this compiler has something to say about.
+        // roadmap's example is a program this compiler has something to say
+        // about.
         an_allocation_dereferenced_without_a_test_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The address of a local is the only thing this check can prove not null,
-        // and a store through a pointer that may hold that address is what takes
-        // the proof back. Without it this program said nothing at all, while `p`
-        // was provably null at the write: `docs/safety-model.md`'s worst answer,
-        // found by review. One case for one rule: a callee handed `&p` is the same
-        // escape through a different door.
+        // The address of a local is the only thing this check can prove not
+        // null, and a store through a pointer that may hold that address is
+        // what takes the proof back. Without it this program said nothing at
+        // all, while `p` was provably null at the write:
+        // `docs/safety-model.md`'s worst answer, found by review. One case for
+        // one rule: a callee handed `&p` is the same escape through a different
+        // door.
         a_pointer_written_through_its_own_address_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The two that hold ADR-0025, and the second is the one that says the fact
-        // is per path: the arm that skips the dereference joins back in.
+        // The two that hold ADR-0025, and the second is the one that says the
+        // fact is per path: the arm that skips the dereference joins back in.
         a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_dereferenced_on_one_arm_is_not_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One element that dereferences two pointers, one proved null and one
@@ -719,14 +742,14 @@ cases! {
         a_proved_null_dereference_beside_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same pair with the worse one written second, which is what tells
         // "the worst of them" apart from "the first of them": the places an
-        // element dereferences are collected destination first, so the case above
-        // has them agreeing and only this one does not.
+        // element dereferences are collected destination first, so the case
+        // above has them agreeing and only this one does not.
         a_proved_null_dereference_after_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A call reading through a pointer it then assigns to. What this pins is
-        // the answer rather than the rule behind it: a call's result lands in a
-        // fresh temporary here and is copied out in an element of its own, so the
-        // order the arguments and the destination are applied in cannot be seen
-        // from any C this frontend lowers.
+        // A call reading through a pointer it then assigns to. What this pins
+        // is the answer rather than the rule behind it: a call's result lands
+        // in a fresh temporary here and is copied out in an element of its own,
+        // so the order the arguments and the destination are applied in cannot
+        // be seen from any C this frontend lowers.
         // `a_call_that_reads_a_pointer_and_writes_it_keeps_neither` in
         // `crates/safec-ir/tests/nulls.rs` is what holds that.
         a_call_whose_destination_it_dereferences: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -735,17 +758,17 @@ cases! {
     }
 
     "nonnull" => {
-        // `_Nonnull`, the first annotation: believed by the body, checked at every
-        // call, refused everywhere else. See ADR-0037, whose Confirmation names
-        // the mutation each of these fails under.
+        // `_Nonnull`, the first annotation: believed by the body, checked at
+        // every call, refused everywhere else. See ADR-0037, whose Confirmation
+        // names the mutation each of these fails under.
         //
         // One case per stage the annotation passes through, because a feature
         // guarded at one stage is unguarded at every stage that reads it: the
         // tree, a declaration's IR, and a definition read by the analysis.
         a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
         // The parameter's own pointer is the last one written, not the first.
-        // Mutation: have `parameter_list` read `derivations.first()`, which drops
-        // this annotation in silence; only this case fails.
+        // Mutation: have `parameter_list` read `derivations.first()`, which
+        // drops this annotation in silence; only this case fails.
         a_nonnull_after_the_last_star_of_a_parameter_is_read: ["--emit", "ast"],
         a_nonnull_parameter_of_a_declaration_reaches_the_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_declared_nonnull_is_dereferenced_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -760,11 +783,12 @@ cases! {
         // `report_arguments`; only this case fails, and it goes silent.
         a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `g(*pp)` asks two questions at one caret: whether `pp` is null, and
-        // whether what it holds is. Mutation: skip an argument with a projection
-        // in `report_arguments`; only this case fails, losing the `SC0405`.
+        // whether what it holds is. Mutation: skip an argument with a
+        // projection in `report_arguments`; only this case fails, losing the
+        // `SC0405`.
         an_argument_read_through_a_pointer_is_asked_about_as_a_dereference_and_as_an_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The two ways a caller discharges it, which are what keep the check from
-        // reporting every call.
+        // The two ways a caller discharges it, which are what keep the check
+        // from reporting every call.
         a_tested_pointer_passed_to_a_nonnull_parameter_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_nonnull_parameter_passed_on_to_another_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What the body believes is a fact at its entry, and no more than that.
@@ -783,18 +807,20 @@ cases! {
         a_nonnull_on_a_return_type_is_refused: ["--emit", "ast"],
         a_nonnull_on_a_parameter_of_a_function_pointer_is_refused: ["--emit", "ast"],
         a_nonnull_on_a_parameter_of_a_block_scope_function_is_refused: ["--emit", "ast"],
-        // C17 6.7.6.3 p8 adjusts a parameter of function type to a pointer, so it
-        // declares no function, and the label must not say it does. Mutation:
-        // choose the block-scope label on `own` alone; only this case fails.
+        // C17 6.7.6.3 p8 adjusts a parameter of function type to a pointer, so
+        // it declares no function, and the label must not say it does.
+        // Mutation: choose the block-scope label on `own` alone; only this case
+        // fails.
         a_nonnull_on_a_parameter_of_a_parameter_that_is_a_function_is_refused: ["--emit", "ast"],
         // The disagreement `lowering.rs::agree` refuses, both ways round.
         declarations_that_disagree_about_nonnull_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: compare only the first parameter in `agree`; only this fails.
+        // Mutation: compare only the first parameter in `agree`; only this
+        // fails.
         declarations_that_disagree_about_a_later_parameter_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `void g();` declares no parameters, so it cannot be what the rest agree
-        // with. Mutation: have `declare_one` call `agree` for `()` as well; only
-        // this case fails, and it goes silent.
+        // `void g();` declares no parameters, so it cannot be what the rest
+        // agree with. Mutation: have `declare_one` call `agree` for `()` as
+        // well; only this case fails, and it goes silent.
         an_unprototyped_declaration_does_not_stand_in_for_the_first_prototype: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The promise on a declaration and not on the definition. The body is
         // built from the definition, so it believes nothing and its dereference
@@ -807,60 +833,62 @@ cases! {
         // rather than reported. See ADR-0038, whose Confirmation names the
         // mutation each of these fails under.
         //
-        // One case per stage it passes through, because a feature guarded at one
-        // stage is unguarded at every stage that reads it: the tree, the IR, and
-        // the listing.
+        // One case per stage it passes through, because a feature guarded at
+        // one stage is unguarded at every stage that reads it: the tree, the
+        // IR, and the listing.
         a_hatch_is_read_into_the_tree: ["--emit", "ast"],
         // The pair the record is about: one body, reported outside a hatch and
         // not inside one. Mutation: have `Lowering::body` never call
         // `Function::unchecked`; the first of the two fails.
         an_unproven_dereference_inside_a_hatch_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_same_dereference_outside_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: have `route` keep nothing in `hatched`, which is the hatch as
-        // a suppression; this fails.
+        // Mutation: have `route` keep nothing in `hatched`, which is the hatch
+        // as a suppression; this fails.
         an_unproven_dereference_inside_a_hatch_is_listed_and_not_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: answer `!in_a_hatch` for `Unsafe` in `route`; this fails.
         a_proved_double_free_inside_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
-        // The silent direction of getting the function wrong: a conclusion about
-        // a function after a hatch, credited to the hatch, is not reported. The
-        // hatch is the unit's first function so that a finding naming the first
-        // one lands on it. Mutation: have either check's `Finding::function` name
-        // `unit.functions().next()`; this fails.
+        // The silent direction of getting the function wrong: a conclusion
+        // about a function after a hatch, credited to the hatch, is not
+        // reported. The hatch is the unit's first function so that a finding
+        // naming the first one lands on it. Mutation: have either check's
+        // `Finding::function` name `unit.functions().next()`; this fails.
         a_function_after_a_hatch_is_still_answered_for: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
-        // The two checks' conclusions interleaved by caret, where each check's own
-        // come out in a run. Mutation: drop the sort in `dump_hatches`; this fails.
+        // The two checks' conclusions interleaved by caret, where each check's
+        // own come out in a run. Mutation: drop the sort in `dump_hatches`;
+        // this fails.
         what_a_hatch_concluded_is_listed_in_the_order_it_was_written: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // The boundary is the prototype, and the checked side reads it.
         a_null_passed_to_a_nonnull_parameter_of_a_hatch_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a hatch may have done to what it was handed is assumed to be the
         // worst, because it cannot yet say otherwise: ADR-0032's default.
         freeing_what_was_handed_to_a_hatch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A hatch's body is the one whose unproven conclusions are not reported,
-        // so what the caller cannot see it do is assumed to be the worst: every
-        // allocation still live is unproven after a call to one. Mutation: drop
-        // the loop over `value.state` in `memory.rs`'s `Callee::Opaque` arm; the
-        // first two fail, and the first is a use after free going silent.
+        // A hatch's body is the one whose unproven conclusions are not
+        // reported, so what the caller cannot see it do is assumed to be the
+        // worst: every allocation still live is unproven after a call to one.
+        // Mutation: drop the loop over `value.state` in `memory.rs`'s
+        // `Callee::Opaque` arm; the first two fail, and the first is a use
+        // after free going silent.
         what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: make that loop mark every site rather than the live ones; this
-        // fails, a proved double free becoming unproven.
+        // Mutation: make that loop mark every site rather than the live ones;
+        // this fails, a proved double free becoming unproven.
         a_free_proved_before_a_call_to_a_hatch_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `&&` writes both operands at one caret. Mutation: keep the first finding
-        // at a caret in `nullability::findings`' `dedup_by` rather than the worst;
-        // this fails, and the proved dereference builds.
+        // `&&` writes both operands at one caret. Mutation: keep the first
+        // finding at a caret in `nullability::findings`' `dedup_by` rather than
+        // the worst; this fails, and the proved dereference builds.
         a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
-        // An attribute `sema::resolve` refused is not a hatch, even on the run that
-        // is written anyway. Mutation: have the lowering mark a hatch wherever an
-        // attribute is present; this fails.
+        // An attribute `sema::resolve` refused is not a hatch, even on the run
+        // that is written anyway. Mutation: have the lowering mark a hatch
+        // wherever an attribute is present; this fails.
         an_unproven_dereference_behind_a_refused_attribute_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: have `dump_hatches` list every hatch's conclusions under each;
-        // this fails.
+        // Mutation: have `dump_hatches` list every hatch's conclusions under
+        // each; this fails.
         each_hatch_lists_only_what_was_concluded_inside_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // The listing is the count of hatches, whether or not a check ran.
         every_hatch_is_listed_at_safety_off_with_nothing_under_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
         a_program_with_no_hatch_lists_none: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
-        // Everywhere it cannot apply, and every attribute that is not it: one case
-        // per place `parser.rs` and `sema.rs` refuse one.
+        // Everywhere it cannot apply, and every attribute that is not it: one
+        // case per place `parser.rs` and `sema.rs` refuse one.
         a_hatch_on_a_declaration_is_refused: ["--emit", "ast"],
         an_attribute_with_no_argument_is_refused: ["--emit", "ast"],
         an_attribute_with_nothing_in_it_is_refused: ["--emit", "ast"],
@@ -879,8 +907,8 @@ cases! {
     "exposure" => {
         // What code this check cannot read may reach: an allocation is exposed
         // once it may, every opaque call unproves every exposed one, and may
-        // return any of them. See ADR-0039, whose Confirmation names the mutation
-        // each of these fails under.
+        // return any of them. See ADR-0039, whose Confirmation names the
+        // mutation each of these fails under.
         //
         // Reported, each a use after free or a double free for some definition
         // of the callees C permits.
@@ -907,22 +935,24 @@ cases! {
         // `memset` frees nothing and still exposes what it was handed.
         what_memset_was_handed_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `memcpy` can be handed a local's address and write a pointer into it,
-        // so a free through that local proves nothing about what a sharer holds.
+        // so a free through that local proves nothing about what a sharer
+        // holds.
         a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A loop through one call writes one site, and what the call returns may
-        // be what was freed through that site last turn.
+        // A loop through one call writes one site, and what the call returns
+        // may be what was freed through that site last turn.
         a_call_in_a_loop_may_hand_back_what_was_freed_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A write two levels down is not recorded as contents, so it exposes what
-        // it carries at once.
+        // A write two levels down is not recorded as contents, so it exposes
+        // what it carries at once.
         a_pointer_stored_two_levels_down_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The closure over what an allocation holds goes as deep as the tables
-        // do. Mutation: stop pushing what `Known::expose` newly marks; this fails.
+        // do. Mutation: stop pushing what `Known::expose` newly marks; this
+        // fails.
         a_pointer_two_tables_deep_is_reached_through_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A pointer that holds two allocations stores into both. Mutation: record
-        // into the first container only; this fails.
+        // A pointer that holds two allocations stores into both. Mutation:
+        // record into the first container only; this fails.
         a_pointer_stored_through_either_of_two_tables_is_inside_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Refused and well defined: two costs ADR-0039 accepts, pinned so that a
-        // change to either is seen. The first is #253.
+        // Refused and well defined: two costs ADR-0039 accepts, pinned so that
+        // a change to either is seen. The first is #253.
         a_free_on_reallocs_failure_branch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_after_an_allocation_was_exposed_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Built.
@@ -930,8 +960,8 @@ cases! {
         memcpy_frees_neither_of_its_arguments: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         what_strcpy_returns_is_the_allocation_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Every spelling of the family read by name. Mutation: drop any one of
-        // `memmove`, `strncpy`, `strcat` or `strncat` from `Allocations::callee`;
-        // this fails.
+        // `memmove`, `strncpy`, `strcat` or `strncat` from
+        // `Allocations::callee`; this fails.
         what_the_other_library_copies_return_is_what_they_were_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_no_call_can_reach_stays_proved_across_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -939,10 +969,11 @@ cases! {
         // unplaced for that part: `*tab` may be the caller's, and `release_all`
         // may reach `a` there on one arm. The second is the same store
         // unsequenced with a read before it and a call after it. Mutation: drop
-        // `loaded` from `unnamed` in `Allocations::element`'s store arm; both go
-        // silent, and the list case below builds. The third is a pointer that may
-        // be either of two allocations this check follows, and stays placed.
-        // Mutation: answer `true` for `unnamed`; the third reports. See ADR-0044.
+        // `loaded` from `unnamed` in `Allocations::element`'s store arm; both
+        // go silent, and the list case below builds. The third is a pointer
+        // that may be either of two allocations this check follows, and stays
+        // placed. Mutation: answer `true` for `unnamed`; the third reports. See
+        // ADR-0044.
         a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -961,9 +992,9 @@ cases! {
         // on every local it may write, escaped or not; this reports.
         a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost: a load of the function's own memory is exposed through like
-        // any other, so a list built and appended to in one function is refused,
-        // with a double free that cannot happen. Following a load to where it was
-        // read from would remove it. See ADR-0044.
+        // any other, so a list built and appended to in one function is
+        // refused, with a double free that cannot happen. Following a load to
+        // where it was read from would remove it. See ADR-0044.
         a_list_built_and_appended_to_in_one_function_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer that lost the name for its site is unplaced too. Mutation:
         // drop `lost` from `unnamed`; the report at `a[0]` goes, and the one at
@@ -986,8 +1017,8 @@ cases! {
     }
 
     "loads" => {
-        // What a pointer read out of memory reaches, for a call and for a store,
-        // and a pointer parameter exposed where its function starts. See
+        // What a pointer read out of memory reaches, for a call and for a
+        // store, and a pointer parameter exposed where its function starts. See
         // ADR-0040, whose Confirmation names the mutation each of these fails
         // under.
         //
@@ -1002,12 +1033,12 @@ cases! {
         // one, is unproven.
         an_allocation_a_parameter_holds_is_unproven_after_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_may_return_what_a_parameter_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Built: a pointer holding no site is not a load, and a load through one
-        // table reaches only what that table holds.
+        // Built: a pointer holding no site is not a load, and a load through
+        // one table reaches only what that table holds.
         a_null_pointer_handed_to_a_call_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same distinction for a local whose address escaped, which
-        // `Known::reach_of` answers. Mutation: test there for no site instead of
-        // the bit; this fails.
+        // `Known::reach_of` answers. Mutation: test there for no site instead
+        // of the bit; this fails.
         a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `argv` is the host's, and no call can free it. Mutation: drop the
@@ -1015,8 +1046,8 @@ cases! {
         the_arguments_the_host_hands_main_are_not_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The bit a load leaves on a local: set by a load on either arm of a
         // join, carried through arithmetic, cleared by what the local is given
-        // next, and never set by an integer. A load handed to `memset` is read as
-        // one too.
+        // next, and never set by an integer. A load handed to `memset` is read
+        // as one too.
         a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_moved_off_a_load_is_still_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1028,10 +1059,10 @@ cases! {
         // both fail.
         a_table_allocated_again_by_a_loop_still_holds_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
 
-        // A pointer read out of the function's own memory, dereferenced: it holds
-        // what was stored where it was read from, and proves nothing with it. See
-        // ADR-0045, whose Confirmation names the mutation each of these fails
-        // under.
+        // A pointer read out of the function's own memory, dereferenced: it
+        // holds what was stored where it was read from, and proves nothing with
+        // it. See ADR-0045, whose Confirmation names the mutation each of these
+        // fails under.
         //
         // Reported, after a free and after a call that reaches the table.
         // Mutation: a load holds no site again; both fail, and so does the
@@ -1039,53 +1070,55 @@ cases! {
         a_use_after_free_through_a_pointer_read_out_of_memory_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same two levels down, `**tab`, asked through what the table's own
-        // allocation holds rather than through a load. Mutation: `used` not asking
-        // `reached_below`; the first goes silent. Mutation: the second level not
-        // marked as possibly incomplete; the second becomes a proof.
+        // allocation holds rather than through a load. Mutation: `used` not
+        // asking `reached_below`; the first goes silent. Mutation: the second
+        // level not marked as possibly incomplete; the second becomes a proof.
         a_read_two_levels_down_after_its_allocation_was_released_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_two_levels_down_after_a_free_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And the first level is still asked first: a freed table is proved, as
         // it was before the second level was. Mutation: `used` asking only
         // `reached_below`; this goes silent.
         a_read_two_levels_down_through_a_freed_table_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A pointer read two levels down, `q = **t3`, is not given what one level
-        // down holds: the report is at `**t3`, where the freed table is read, and
-        // not again at `*q`. Mutation: `read_through` giving a load sites whatever
-        // its projection; `*q` reports too.
+        // A pointer read two levels down, `q = **t3`, is not given what one
+        // level down holds: the report is at `**t3`, where the freed table is
+        // read, and not again at `*q`. Mutation: `read_through` giving a load
+        // sites whatever its projection; `*q` reports too.
         a_pointer_read_two_levels_down_holds_nothing_from_the_level_above: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Built, and what ADR-0045 leaves out: a pointer read out of a load holds
-        // no site, so a use after free through a chain of two loads is silent.
-        // That is #282, and this moves when it is answered. Mutation: drop
-        // `loaded` from `Known::stored_in`'s condition; this reports.
+        // Built, and what ADR-0045 leaves out: a pointer read out of a load
+        // holds no site, so a use after free through a chain of two loads is
+        // silent. That is #282, and this moves when it is answered. Mutation:
+        // drop `loaded` from `Known::stored_in`'s condition; this reports.
         a_pointer_read_out_of_a_load_holds_no_site: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A free of a load stays the doubt it was rather than a free of what the
-        // load holds. Mutation: `touching` not answering `Lost` for a load; this
-        // goes silent.
+        // A free of a load stays the doubt it was rather than a free of what
+        // the load holds. Mutation: `touching` not answering `Lost` for a load;
+        // this goes silent.
         a_free_of_a_pointer_read_out_of_memory_stays_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what it writes is a doubt too. `q` is null, so `free(q)` frees
         // nothing and `*p` reads a live allocation; the read is doubted, never
-        // proved. Mutation: drop `loaded` from `holds_something_unnameable`; the
-        // free writes `Freed` and `*p` becomes a proof.
+        // proved. Mutation: drop `loaded` from `holds_something_unnameable`;
+        // the free writes `Freed` and `*p` becomes a proof.
         a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A load's sites are a lower bound, and are never what takes a proof
-        // away. Each is a use after free that is proved in a hatch, where a doubt
-        // is only listed, so losing the proof builds. Mutation: drop `loaded` from
-        // `holds_something_unnameable`; the first builds. Mutation: blank every
-        // site an opaque call reaches, as before; the second builds.
+        // away. Each is a use after free that is proved in a hatch, where a
+        // doubt is only listed, so losing the proof builds. Mutation: drop
+        // `loaded` from `holds_something_unnameable`; the first builds.
+        // Mutation: blank every site an opaque call reaches, as before; the
+        // second builds.
         a_proved_use_after_free_in_a_hatch_stays_proved_after_a_free_of_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_proved_use_after_free_in_a_hatch_stays_proved_after_a_load_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A live load is read in silence, since the marker is not a doubt of its
-        // own. Mutation: count it as one; this reports.
+        // A live load is read in silence, since the marker is not a doubt of
+        // its own. Mutation: count it as one; this reports.
         a_live_pointer_read_out_of_memory_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same marker read by a return and by an argument, which are asked
         // apart from a dereference. Mutation: let `verdict` settle with the
         // marker present; both become proofs.
         a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Reported, and what ADR-0045 accepts as its cost: what a table holds is
-        // not told apart by slot and a store adds to it rather than replacing
-        // it, so the live slot of a table whose other slot was freed is doubted,
-        // and so is a slot stored again after what it held was freed.
+        // Reported, and what ADR-0045 accepts as its cost: what a table holds
+        // is not told apart by slot and a store adds to it rather than
+        // replacing it, so the live slot of a table whose other slot was freed
+        // is doubted, and so is a slot stored again after what it held was
+        // freed.
         a_live_slot_of_a_table_with_a_freed_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_stored_again_after_what_it_held_was_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
@@ -1095,8 +1128,8 @@ cases! {
         // allocation it may hold. See ADR-0041, whose Confirmation names the
         // mutation each of these fails under.
         //
-        // Reported at the return, proved or not, and nothing at the caller's read,
-        // which believes a call's result is live.
+        // Reported at the return, proved or not, and nothing at the caller's
+        // read, which believes a call's result is live.
         a_function_that_returns_what_it_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_return_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1110,16 +1143,16 @@ cases! {
         a_pointer_kept_from_the_last_turn_of_a_loop_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A parameter's allocation is asked about like any other. A caller that
         // dereferences the result doubts it too, and one that hands it on as an
-        // argument doubts it at the call (ADR-0042). Mutation: drop a parameter's
-        // site from what `returned` asks unless it is `SiteState::Freed`; all
-        // three lose the report at the return.
+        // argument doubts it at the call (ADR-0042). Mutation: drop a
+        // parameter's site from what `returned` asks unless it is
+        // `SiteState::Freed`; all three lose the report at the return.
         a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_on_one_arm_and_handed_on_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_then_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Reported, and what ADR-0041 accepts as its cost: an allocation handed
         // to a call this check cannot read, a parameter returned after one, and
-        // a parameter whose address was taken, each returned with no free in the
-        // function at all.
+        // a parameter whose address was taken, each returned with no free in
+        // the function at all.
         an_allocation_handed_to_a_call_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_returned_after_a_call_this_check_cannot_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_whose_address_escaped_returned_without_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1144,47 +1177,49 @@ cases! {
         a_freed_pointer_handed_to_a_function_only_declared: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_handed_to_a_function_that_frees_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_and_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Mutation: drop `Callee::ReturnsFirst` from the callees `handed_places`
-        // answers.
+        // Mutation: drop `Callee::ReturnsFirst` from the callees
+        // `handed_places` answers.
         a_freed_pointer_handed_to_memcpy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Doubts, which fail the build. Mutation: report only proofs in
         // `handed`; both go silent, and the callee believes what it was handed.
         a_pointer_freed_on_one_arm_and_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_a_call_was_handed_is_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What ADR-0042 accepts as its cost: a parameter handed to a second call
-        // this check cannot read, with no free in the function at all.
+        // What ADR-0042 accepts as its cost: a parameter handed to a second
+        // call this check cannot read, with no free in the function at all.
         a_parameter_handed_to_a_second_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: drop the pointer-type condition in `handed_places`; this is
         // refused.
         an_integer_built_from_two_calls_is_not_asked_about_as_an_argument: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C may call `use` before the free. Mutation: answer `true` for
-        // `Kind::ArgumentAfterFree` in `verdict`'s `ordered`; this becomes a proof.
+        // `Kind::ArgumentAfterFree` in `verdict`'s `ordered`; this becomes a
+        // proof.
         a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `say` collapses the second report as well, so the mutation is to drop
-        // the repeated-local test in `handed_places` *and* push in `handed`; two
-        // reports. Either alone leaves this green.
+        // the repeated-local test in `handed_places` *and* push in `handed`;
+        // two reports. Either alone leaves this green.
         a_freed_pointer_handed_twice_to_one_call_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Every argument is asked, not only the first: the freed pointer comes
         // after a constant and a live pointer. Mutation: walk
-        // `arguments.iter().take(1)` in `handed_places`, or turn its `continue`s into
-        // `break`s; this goes silent.
+        // `arguments.iter().take(1)` in `handed_places`, or turn its
+        // `continue`s into `break`s; this goes silent.
         a_freed_pointer_handed_after_other_arguments_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A dereference and an argument at one caret are two reports, the
         // dereference first. Mutation: call `handed` before the terminator's
         // `used` in `memory::findings`; the two change places.
         a_freed_pointer_handed_and_read_through_at_one_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What is handed is `*tab`, a pointer read out of memory, and the read of
-        // freed `tab` is `SC0402`'s. Mutation: ask a projected argument in
+        // What is handed is `*tab`, a pointer read out of memory, and the read
+        // of freed `tab` is `SC0402`'s. Mutation: ask a projected argument in
         // `handed_places` and push in `handed`; this gains an `SC0407` about
         // `tab`. With `say`, the dereference's report at the call already holds
         // the key, so asking it alone leaves this green.
         a_pointer_read_out_of_a_freed_table_and_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a call is handed is carried to a later call the same full
-        // expression leaves unordered against it, as a dereference is: C may run
-        // the free, the opaque call or `realloc` before `memset`. Mutation: drop
-        // the loop that records `Read::Argument` in `Allocations::terminator`; all
-        // three go silent. Mutation: answer `Kind::UseAfterFree` for
-        // `Read::Argument` in `used_before`; all three become `SC0402`.
+        // expression leaves unordered against it, as a dereference is: C may
+        // run the free, the opaque call or `realloc` before `memset`. Mutation:
+        // drop the loop that records `Read::Argument` in
+        // `Allocations::terminator`; all three go silent. Mutation: answer
+        // `Kind::UseAfterFree` for `Read::Argument` in `used_before`; all three
+        // become `SC0402`.
         a_pointer_handed_to_a_call_the_check_meets_first_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_to_a_call_before_an_opaque_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_to_a_call_before_realloc_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1201,40 +1236,42 @@ cases! {
         a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `strlen(s)` has made `s` unknown by the time `strlen(t)` is asked, and
-        // C may run `strlen(t)` first. Mutation: drop `read.reachable` from the
-        // filter in `used_before`; the report at `strlen(s)` goes.
+        // `strlen(s)` has made `s` unknown by the time `strlen(t)` is asked,
+        // and C may run `strlen(t)` first. Mutation: drop `read.reachable` from
+        // the filter in `used_before`; the report at `strlen(s)` goes.
         each_of_two_calls_in_one_expression_is_asked_about_what_the_other_may_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The other side: an allocation no call was handed and nothing stored is
-        // not one a call this check cannot read may free. Mutation: count every
-        // site as taken in `used_before`; this reports.
+        // The other side: an allocation no call was handed and nothing stored
+        // is not one a call this check cannot read may free. Mutation: count
+        // every site as taken in `used_before`; this reports.
         a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A free and `realloc` free only what they are handed, so `a`, which the
-        // store made reachable, is not asked at a free of `b`. Mutation: answer
-        // `true` for `Callee::Frees` in `used_before`'s `beyond_its_arguments`;
-        // the first reports `a` with `freed here` on `free(b)`. Mutation: the
-        // same for `Callee::Reallocates`; the second reports.
+        // A free and `realloc` free only what they are handed, so `a`, which
+        // the store made reachable, is not asked at a free of `b`. Mutation:
+        // answer `true` for `Callee::Frees` in `used_before`'s
+        // `beyond_its_arguments`; the first reports `a` with `freed here` on
+        // `free(b)`. Mutation: the same for `Callee::Reallocates`; the second
+        // reports.
         a_read_is_not_asked_at_a_free_of_another_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_is_not_asked_at_realloc_of_another_allocation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What the read's own call exposes is not reachable to a sibling call
-        // before the read, since C orders a call's arguments before its body, and
-        // nor is what a call enclosing that one exposes, which runs later still.
-        // The third does report, about `keep`'s own argument, which `memset` made
-        // reachable before `keep` ran; what it holds is that `memset`'s argument
-        // is not told what `keep` exposes. Mutation: tell every pending read in
-        // `Known::noticed`, owned or not; each of the three gains a report.
-        // Mutation: own a read only by `inside`; the same, through the pointer
-        // each call was handed. Mutation: own it only by `entry.at == by`; the
-        // third alone gains one. The dereference in the second is ordered before
-        // `keep2` by `Element::ArgumentsEvaluated`, so it is not pending there.
+        // before the read, since C orders a call's arguments before its body,
+        // and nor is what a call enclosing that one exposes, which runs later
+        // still. The third does report, about `keep`'s own argument, which
+        // `memset` made reachable before `keep` ran; what it holds is that
+        // `memset`'s argument is not told what `keep` exposes. Mutation: tell
+        // every pending read in `Known::noticed`, owned or not; each of the
+        // three gains a report. Mutation: own a read only by `inside`; the
+        // same, through the pointer each call was handed. Mutation: own it only
+        // by `entry.at == by`; the third alone gains one. The dereference in
+        // the second is ordered before `keep2` by
+        // `Element::ArgumentsEvaluated`, so it is not pending there.
         a_call_is_not_asked_about_an_allocation_only_the_read_s_own_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_in_a_call_s_arguments_is_not_asked_about_what_that_call_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_enclosing_the_read_s_own_call_does_not_make_it_reachable_to_a_sibling: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A read is told what an event makes reachable, not everything exposed
         // by then, which after `keep(a)` includes `a`. Mutation: in
-        // `Known::expose`, tell it `reachable_now` once the new sites are marked
-        // rather than the closure of those sites; `memset(b, ..)` tells `keep`'s
-        // read about `a`, and this reports.
+        // `Known::expose`, tell it `reachable_now` once the new sites are
+        // marked rather than the closure of those sites; `memset(b, ..)` tells
+        // `keep`'s read about `a`, and this reports.
         a_call_exposing_another_allocation_does_not_make_the_read_s_reachable: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `release(tab)` reaches `a` through what `tab` holds, whatever exposed
         // it. Mutation: drop `own_reach` from the filter in `used_before`; this
@@ -1251,18 +1288,19 @@ cases! {
         // call, and C may run that and the later call first. `memset`'s own
         // argument is not reported, because only `memset` itself makes `a`
         // reachable to `release_all`. Mutation: drop the `noticed` in
-        // `Known::expose`; the first goes silent. Mutation: drop the one after a
-        // store into a reachable allocation in `Allocations::element`; the second
-        // loses its report at `a[0]`, keeping the one at the write through `t`.
+        // `Known::expose`; the first goes silent. Mutation: drop the one after
+        // a store into a reachable allocation in `Allocations::element`; the
+        // second loses its report at `a[0]`, keeping the one at the write
+        // through `t`.
         a_read_is_asked_about_what_another_call_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_is_asked_about_what_a_store_in_the_expression_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What an event makes reachable is closed over what it holds: `memset`
-        // exposes `tab`, and so `a` stored in it; storing `tab` into `box`, which
-        // an earlier call exposed, does the same. The first is not asked by
-        // `memset` itself, which frees nothing. Mutation: tell a read `sites`
-        // rather than their closure in `Known::expose`; the first goes silent.
-        // Mutation: the same for the store in `Allocations::element`; the second
-        // loses its report at `a[0]`.
+        // exposes `tab`, and so `a` stored in it; storing `tab` into `box`,
+        // which an earlier call exposed, does the same. The first is not asked
+        // by `memset` itself, which frees nothing. Mutation: tell a read
+        // `sites` rather than their closure in `Known::expose`; the first goes
+        // silent. Mutation: the same for the store in `Allocations::element`;
+        // the second loses its report at `a[0]`.
         a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A store into an allocation nothing reaches makes nothing reachable.
@@ -1272,15 +1310,15 @@ cases! {
         // The exposure is on one arm. Mutation: keep one arm's `reachable` in
         // `Allocations`'s `join`; this goes silent.
         an_allocation_exposed_on_one_arm_is_reachable_to_a_read_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A hatch may free anything, as the forward walk already says after one.
-        // Mutation: drop `anything` from the filter in `used_before`; this goes
-        // silent.
+        // A hatch may free anything, as the forward walk already says after
+        // one. Mutation: drop `anything` from the filter in `used_before`; this
+        // goes silent.
         a_read_carried_to_a_hatch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call this check cannot read is carried forwards as a read is, so an
         // exposure walked after it asks a read walked before it: C may run the
-        // exposure, then the call, then the read. A store into an escaped local,
-        // a library call that exposes what it is handed, a write into an escaped
-        // target, and a read walked first. Mutation: record no call in
+        // exposure, then the call, then the read. A store into an escaped
+        // local, a library call that exposes what it is handed, a write into an
+        // escaped target, and a read walked first. Mutation: record no call in
         // `Allocations::terminator`; all four go silent. Mutation: no notice
         // where an escaped local is assigned in `Allocations::element`; the
         // first and fourth go silent. Mutation: no notice for `targets` there;
@@ -1289,19 +1327,19 @@ cases! {
         a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_into_an_escaped_target_after_a_call_is_asked_of_a_read_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_before_a_call_and_an_exposure_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The other side. An exposure of another allocation asks nothing; a read
-        // the exposing call owns, or the pending call owns, is ordered before it.
-        // Mutation: do not leave `by`'s own read out in `Known::noticed`; the
-        // first two report. Mutation: do not leave the pending call's own read
-        // out; the third reports.
+        // The other side. An exposure of another allocation asks nothing; a
+        // read the exposing call owns, or the pending call owns, is ordered
+        // before it. Mutation: do not leave `by`'s own read out in
+        // `Known::noticed`; the first two report. Mutation: do not leave the
+        // pending call's own read out; the third reports.
         an_exposure_of_another_allocation_after_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_an_exposing_call_owns_is_not_asked_about_a_call_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_a_pending_call_owns_is_not_asked_about_an_exposure_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An exposure under `?:`, and a call pending on either arm. Mutation:
         // keep one arm's `after_call` at the join; the first goes silent, the
         // read being reported only where the marker clears it. Mutation: keep
-        // one arm's calls at the join; the second goes silent, its call being on
-        // the arm the join does not keep, and the third is the other order.
+        // one arm's calls at the join; the second goes silent, its call being
+        // on the arm the join does not keep, and the third is the other order.
         an_exposure_on_one_arm_after_a_call_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_on_the_first_arm_is_pending_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_on_the_second_arm_is_pending_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1325,12 +1363,12 @@ cases! {
         // span; the second reports.
         a_read_and_a_call_on_exclusive_arms_are_not_paired_at_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_in_a_store_s_own_operands_is_not_asked_about_the_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Reported where the marker clears what is pending, so a free in the same
-        // expression reports first, with `freed here`, and an exposure by a call
-        // is reported though the next block starts by clearing the reads.
-        // Mutation: report after every element instead; the first loses its
-        // label. Mutation: report at no `ArgumentsEvaluated`; the second goes
-        // silent.
+        // Reported where the marker clears what is pending, so a free in the
+        // same expression reports first, with `freed here`, and an exposure by
+        // a call is reported though the next block starts by clearing the
+        // reads. Mutation: report after every element instead; the first loses
+        // its label. Mutation: report at no `ArgumentsEvaluated`; the second
+        // goes silent.
         a_free_in_the_same_expression_keeps_its_label_over_a_pending_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What was made reachable while a call was pending may be freed by the
@@ -1350,33 +1388,34 @@ cases! {
         // target no span; this reports.
         a_call_in_a_write_s_own_operands_is_not_asked_about_the_write: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C sequences `p[0]` before `g`, and this is still refused: under `=`
-        // the `?:` gets no sequence point, which is #178, so the read is pending
-        // at `g`. This holds today's answer so that closing #178 moves a named
-        // case. See ADR-0042.
+        // the `?:` gets no sequence point, which is #178, so the read is
+        // pending at `g`. This holds today's answer so that closing #178 moves
+        // a named case. See ADR-0042.
         a_read_sequenced_before_an_opaque_call_under_an_assignment_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The argument crosses a join before the free. Mutation: answer
-        // `Read::Dereference` in the `or_insert` of `Allocations`'s `join`; this
-        // becomes `SC0402`.
+        // `Read::Dereference` in the `or_insert` of `Allocations`'s `join`;
+        // this becomes `SC0402`.
         a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `a` escaped, so `handed` doubts it at the call and `used_before` doubts
-        // it again from the free, at the same caret. Mutation: push in `handed`
-        // rather than going through `say`; two `SC0407` about `a` at one caret.
+        // `a` escaped, so `handed` doubts it at the call and `used_before`
+        // doubts it again from the free, at the same caret. Mutation: push in
+        // `handed` rather than going through `say`; two `SC0407` about `a` at
+        // one caret.
         an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two reports about one full expression, and each is its own order: `g`
-        // may free `a` before the free, which is the forward `SC0401`, and the free
-        // may run before `g` reads `a`, which is the carried `SC0407`. The second
-        // is the only thing the carry adds after a call this check cannot read,
-        // because the first already fails the build. Mutation: record
-        // `Read::Argument` only for `Callee::ReturnsFirst` in
+        // may free `a` before the free, which is the forward `SC0401`, and the
+        // free may run before `g` reads `a`, which is the carried `SC0407`. The
+        // second is the only thing the carry adds after a call this check
+        // cannot read, because the first already fails the build. Mutation:
+        // record `Read::Argument` only for `Callee::ReturnsFirst` in
         // `Allocations::terminator`; the `SC0407` goes and the exit code stays.
         an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What a call's own arguments read is behind it, C17 6.5.2.2 p10's first
-        // sentence, wherever the call sits; ADR-0026's element says so only for a
-        // call no unsequenced operator encloses, and these are the calls below one.
-        // The first has no free in it at all. Mutation: drop the `inside` test in
-        // `used_before`; all four are refused again, the last with the `SC0402` its
-        // own note used to contradict, and the case after them gains reports. See
-        // ADR-0043.
+        // What a call's own arguments read is behind it, C17 6.5.2.2 p10's
+        // first sentence, wherever the call sits; ADR-0026's element says so
+        // only for a call no unsequenced operator encloses, and these are the
+        // calls below one. The first has no free in it at all. Mutation: drop
+        // the `inside` test in `used_before`; all four are refused again, the
+        // last with the `SC0402` its own note used to contradict, and the case
+        // after them gains reports. See ADR-0043.
         a_call_nested_in_an_argument_is_ordered_before_the_call_around_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_what_a_nested_call_returns_is_ordered_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_in_an_argument_below_an_assignment_is_ordered_before_its_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1399,16 +1438,17 @@ cases! {
         // The two codes a constant this compiler cannot read is reported under,
         // and `--emit safety-ir` rather than `--emit ast` because what each one
         // pins is that there is exactly one report. `types.rs` says it and the
-        // lowering says nothing more, which is only visible on a run that lowers.
-        // A value `int` does not hold is this compiler's gap, and `clang 20.1.6
-        // -std=c17 -pedantic-errors` compiles this program; a spelling that is no
-        // constant at all is the program's, and `clang` refuses it too.
+        // lowering says nothing more, which is only visible on a run that
+        // lowers. A value `int` does not hold is this compiler's gap, and
+        // `clang 20.1.6 -std=c17 -pedantic-errors` compiles this program; a
+        // spelling that is no constant at all is the program's, and `clang`
+        // refuses it too.
         a_constant_no_integer_type_here_can_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_spelling_that_is_not_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The suffix is refused rather than read, and the note says why: C
         // computes `-6 / 3u` as an unsigned division. Reading `3u` as an `int`
-        // compiled this program to a signed division and reported nothing, which
-        // is the one shape this stage exists to stop.
+        // compiled this program to a signed division and reported nothing,
+        // which is the one shape this stage exists to stop.
         a_suffixed_constant_has_no_type_here: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_comma_in_a_controlling_expression: ["--emit", "ast"],
         a_dangling_else: ["--emit", "ast"],
@@ -1435,35 +1475,37 @@ cases! {
         // assignment, so the spelling a declaration uses is the same rule.
         //
         // Mutation: have `types.rs::Checker::receivers_in` insert nothing for a
-        // `Stmt::Declaration`. The `SC0302` goes from both of these and both fail.
+        // `Stmt::Declaration`. The `SC0302` goes from both of these and both
+        // fail.
         initializing_with_the_wrong_type: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
-        // `=`: `p += 1` is allowed and holds `a_compound_assignment_on_a_pointer_
-        // computes_into_a_pointer` silent. The first and the last put the primary
-        // caret on the value, the middle two on the place, because that is the
-        // operand the rule refuses.
+        // `=`: `p += 1` is allowed and holds
+        // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.
+        // The first and the last put the primary caret on the value, the middle
+        // two on the place, because that is the operand the rule refuses.
         //
         // Mutation: have `types.rs::Checker::type_of` stop calling
-        // `compound_assignment`. All four go silent and exit 0. Mutation: put the
-        // primary label on the value always. The middle two move their caret.
-        // Mutation: put it on the place always. The outer two move theirs.
+        // `compound_assignment`. All four go silent and exit 0. Mutation: put
+        // the primary label on the value always. The middle two move their
+        // caret. Mutation: put it on the place always. The outer two move
+        // theirs.
         adding_a_pointer_into_an_integer: ["--emit", "ast"],
         multiplying_a_pointer_in_place: ["--emit", "ast"],
         shifting_a_pointer_in_place: ["--emit", "ast"],
         subtracting_a_pointer_from_a_pointer_in_place: ["--emit", "ast"],
-        // C17 6.5.5 to 6.5.14, one clause per operator: the same `SC0306`, for a
-        // binary operator. Every row but `p == 1 - 1` is an error under `clang
-        // --target=x86_64-unknown-linux-gnu -std=c17 -pedantic-errors`, and that
-        // one is `docs/frontend.md`'s null pointer constant table. The control
-        // holds every pairing the clauses allow, so a clause answered too strictly
-        // fails as surely as one answered too loosely; the unit test
-        // `a_binary_operator_answers_for_every_operator_and_operand` holds the
-        // same rows one at a time.
+        // C17 6.5.5 to 6.5.14, one clause per operator: the same `SC0306`, for
+        // a binary operator. Every row but `p == 1 - 1` is an error under
+        // `clang --target=x86_64-unknown-linux-gnu -std=c17 -pedantic-errors`,
+        // and that one is `docs/frontend.md`'s null pointer constant table. The
+        // control holds every pairing the clauses allow, so a clause answered
+        // too strictly fails as surely as one answered too loosely; the unit
+        // test `a_binary_operator_answers_for_every_operator_and_operand` holds
+        // the same rows one at a time.
         //
         // Mutation: have `types.rs::Checker::binary` stop calling
-        // `binary_operable`. The first four go silent and exit 0. Mutation: have
-        // the `==` arm refuse a null pointer constant, or the relational arm two
-        // pointers. The control reports.
+        // `binary_operable`. The first four go silent and exit 0. Mutation:
+        // have the `==` arm refuse a null pointer constant, or the relational
+        // arm two pointers. The control reports.
         a_pointer_is_not_an_arithmetic_operand: ["--emit", "ast"],
         a_comparison_of_a_pointer_with_what_c_does_not_allow: ["--emit", "ast"],
         an_additive_operand_c_does_not_allow: ["--emit", "ast"],
@@ -1477,25 +1519,25 @@ cases! {
         // the control: a pointer to `int` is stepped in both spellings in
         // silence.
         //
-        // Mutation: have `unsteppable` answer `None` for `void`. Lines 3 and 4 go
-        // silent. For a function, line 6 does, and for an array of unknown
-        // length, lines 7 and 8. Mutation: drop the note from either report. Its
-        // lines lose it. Mutation: have `unsteppable` refuse `int`. The control
-        // reports.
+        // Mutation: have `unsteppable` answer `None` for `void`. Lines 3 and 4
+        // go silent. For a function, line 6 does, and for an array of unknown
+        // length, lines 7 and 8. Mutation: drop the note from either report.
+        // Its lines lose it. Mutation: have `unsteppable` refuse `int`. The
+        // control reports.
         arithmetic_on_a_pointer_to_something_that_is_not_a_complete_object: ["--emit", "ast"],
         // The same rule in its other two spellings: C17 6.5.2.4 p2 and 6.5.3.1
-        // p2 define an increment as `+= 1`, and 6.5.2.1 p1 gives a subscript the
-        // same constraint. Lines 4 to 12 are refused, and `clang -pedantic-errors`
-        // refuses the same nine. `1[v]` and `1[g]` are there because the pointer
-        // can be either operand of `[]`, and `g[1]` and `1[g]` because a function
-        // is refused only as the pointer 6.3.2.1 p4 makes of it. Lines 13 to 17
-        // are the control, in the same run so that their silence is asserted
-        // beside reports.
+        // p2 define an increment as `+= 1`, and 6.5.2.1 p1 gives a subscript
+        // the same constraint. Lines 4 to 12 are refused, and `clang
+        // -pedantic-errors` refuses the same nine. `1[v]` and `1[g]` are there
+        // because the pointer can be either operand of `[]`, and `g[1]` and
+        // `1[g]` because a function is refused only as the pointer 6.3.2.1 p4
+        // makes of it. Lines 13 to 17 are the control, in the same run so that
+        // their silence is asserted beside reports.
         //
         // Mutation: have `increment` stop asking `unsteppable`. Lines 4 to 7 go
         // silent. Mutation: have `subscript` stop asking it. Lines 8 to 12 do.
-        // Mutation: have `subscript` ask only when the base is the pointer. Lines
-        // 10 and 12 go silent. Mutation: drop `decayed` from the base in
+        // Mutation: have `subscript` ask only when the base is the pointer.
+        // Lines 10 and 12 go silent. Mutation: drop `decayed` from the base in
         // `subscript`. Line 11 goes silent, and from the index, line 12.
         // Mutation: swap the two increments' clauses. Lines 4 to 7 change note.
         // Mutation: have `unsteppable` refuse `int`. The control reports.
@@ -1580,27 +1622,28 @@ cases! {
 
     "codegen" => {
         // The `--emit llvm-ir` cases, kept together because what each is for is
-        // only visible beside the others. `every_operator` is the one that stops
-        // the operator table being a table nothing checks: without it, spelling
-        // `BitAnd` as `or`, `Mul` as `add`, `Le` as `lt`, `Neg` as `add` and
-        // `BitNot` as `xor 0` all passed the whole suite, because nothing checked
-        // the table against anything but itself.
-        // `conversions_and_a_constant_condition` is the same for C17 6.3.1.3 and
-        // 6.5.2.2 p7: `c = 300` and `narrow(300)` both answer 44, and a constant
-        // that ignored its destination's type passed everything before it. `mix`
-        // is there because every other call in the suite has one parameter or two
-        // of one type, so pairing each argument with the wrong parameter passed
-        // everything too.
+        // only visible beside the others. `every_operator` is the one that
+        // stops the operator table being a table nothing checks: without it,
+        // spelling `BitAnd` as `or`, `Mul` as `add`, `Le` as `lt`, `Neg` as
+        // `add` and `BitNot` as `xor 0` all passed the whole suite, because
+        // nothing checked the table against anything but itself.
+        // `conversions_and_a_constant_condition` is the same for C17 6.3.1.3
+        // and 6.5.2.2 p7: `c = 300` and `narrow(300)` both answer 44, and a
+        // constant that ignored its destination's type passed everything before
+        // it. `mix` is there because every other call in the suite has one
+        // parameter or two of one type, so pairing each argument with the wrong
+        // parameter passed everything too.
         //
-        // The two `extended` cases are one program on two machines, because what
-        // differs is the machine: `x86_64-unknown-linux-gnu` asks for `signext` and
-        // `armv7-unknown-linux-gnueabihf` for `zeroext`, and the `int` beside the
-        // `char` is what says the rule reads a width rather than a type. Every
-        // other `--emit llvm-ir` case is on a target that asks for nothing, so
-        // these two are the only place in the tree an attribute appears at all.
+        // The two `extended` cases are one program on two machines, because
+        // what differs is the machine: `x86_64-unknown-linux-gnu` asks for
+        // `signext` and `armv7-unknown-linux-gnueabihf` for `zeroext`, and the
+        // `int` beside the `char` is what says the rule reads a width rather
+        // than a type. Every other `--emit llvm-ir` case is on a target that
+        // asks for nothing, so these two are the only place in the tree an
+        // attribute appears at all.
         //
-        // Every one of these is also in `llvm.rs`, which hands it to `clang`. The
-        // text and whether the text is LLVM are two claims.
+        // Every one of these is also in `llvm.rs`, which hands it to `clang`.
+        // The text and whether the text is LLVM are two claims.
         a_narrow_unsigned_value_is_extended_without_a_sign: ["--emit", "llvm-ir", "--target", "armv7-unknown-linux-gnueabihf"],
         a_narrow_value_is_extended_where_the_target_asks: ["--emit", "llvm-ir", "--target", "x86_64-unknown-linux-gnu"],
         an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1617,33 +1660,34 @@ cases! {
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same two operators, at the one type whose operation does not happen
-        // at `int`. C17 6.5.6 p8 makes `p + 1` a pointer, and ADR-0030 has the
-        // memory check read a local's declared type to tell the pointer operand of
-        // an addition from the integer beside it and drop the integer, so a
-        // temporary declared `int` holding an allocation is one that check can be
-        // handed and not see. `--emit safety-ir` because the declaration being
-        // pinned is the IR's: `compound_assignment` and `increment` pin the tree
-        // these are read from and stop there, and the tree is where this is right.
+        // The same two operators, at the one type whose operation does not
+        // happen at `int`. C17 6.5.6 p8 makes `p + 1` a pointer, and ADR-0030
+        // has the memory check read a local's declared type to tell the pointer
+        // operand of an addition from the integer beside it and drop the
+        // integer, so a temporary declared `int` holding an allocation is one
+        // that check can be handed and not see. `--emit safety-ir` because the
+        // declaration being pinned is the IR's: `compound_assignment` and
+        // `increment` pin the tree these are read from and stop there, and the
+        // tree is where this is right.
         //
         // Mutation: have `lowering.rs::promoted` answer `Ty::Int` for a pointer
-        // place again. These two fail and nothing else in the suite does, which is
-        // why they are here: the fix is invisible to every other case.
+        // place again. These two fail and nothing else in the suite does, which
+        // is why they are here: the fix is invisible to every other case.
         a_compound_assignment_on_a_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_increment_of_a_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And the same through a projection, because `promoted` is handed the
-        // whole place rather than its base local: `*pp` is an `int *` where `pp`
-        // is an `int **`, and the two cases above cannot tell the difference
-        // because their places have no projection at all.
+        // whole place rather than its base local: `*pp` is an `int *` where
+        // `pp` is an `int **`, and the two cases above cannot tell the
+        // difference because their places have no projection at all.
         //
-        // Mutation: have `promoted` ask about `Place::local(place.local)` instead
-        // of `place`. Only this case fails.
+        // Mutation: have `promoted` ask about `Place::local(place.local)`
+        // instead of `place`. Only this case fails.
         a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_scope_that_opens_and_closes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `wasm32` on purpose, and not the triple every other IR case names: no
         // CI runner and no developer machine hosts it, so this is the case that
-        // fails wherever `--target` stops being honoured. On a machine that hosts
-        // the triple the others name, they cannot tell the two apart.
+        // fails wherever `--target` stops being honoured. On a machine that
+        // hosts the triple the others name, they cannot tell the two apart.
         a_target_the_host_is_not: ["--emit", "safety-ir", "--target", "wasm32-unknown-unknown"],
         places_a_pointer_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_mvp_lowers_to_blocks_and_edges: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
