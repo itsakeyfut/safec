@@ -930,8 +930,10 @@ impl Known {
     ///
     /// **A chain written as one place is the chain written through locals**:
     /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Self::inside`]
-    /// as a load through a load does, so the two spellings cannot be answered
-    /// differently. Every level is a lower bound read beside
+    /// as a load through a load does, so the two spellings of a **read** cannot
+    /// be answered differently. A **store** written as one place, `**t3 = r`,
+    /// is one this check cannot place and is exposed rather than recorded, so
+    /// what it stored is not here to be read (#283). Every level is a lower bound read beside
     /// [`Reached::Partial`], and since `inside` only grows, each is finite.
     /// See ADR-0045.
     fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
