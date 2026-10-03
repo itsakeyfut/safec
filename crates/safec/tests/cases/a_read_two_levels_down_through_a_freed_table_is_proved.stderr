@@ -1,0 +1,16 @@
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_read_two_levels_down_through_a_freed_table_is_proved.c:16:5 ]
+    │
+  5 │     int **tab = malloc(8);
+    │                 ────┬────  
+    │                     ╰────── allocated here
+    │ 
+ 15 │     free(tab);
+    │     ────┬────  
+    │         ╰────── freed here
+ 16 │     return **tab;
+    │     ──────┬──────  
+    │           ╰──────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

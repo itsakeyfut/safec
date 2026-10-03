@@ -902,15 +902,17 @@ impl Known {
         reached
     }
 
-    /// What a dereference of `place` reads: through one `Deref`, what the
-    /// local holds; through two, what the allocations it holds may contain.
+    /// What the second dereference of `**local` reads: what the allocations
+    /// the local holds may contain, marked as possibly incomplete for the
+    /// reason a load is. Nothing for any other place.
     ///
     /// **`**tab` is one place with two `Deref`s**, and was judged on `tab`'s
-    /// own sites, so a use after free one level down said nothing:
-    /// `*tab = p; release(*tab); return **tab;`. The second level reads what
-    /// a load through the first would hold, marked as possibly incomplete for
-    /// the same reason. See ADR-0045.
-    fn reached_through(&self, place: &Place) -> Vec<Reached> {
+    /// own sites alone, so a use after free one level down said nothing:
+    /// `*tab = p; release(*tab); return **tab;`. This is asked **after** those
+    /// sites rather than in place of them, which is what [`used`] does: asked
+    /// instead, `free(tab); return **tab;` went from a proof to silence. See
+    /// ADR-0045.
+    fn reached_below(&self, place: &Place) -> Vec<Reached> {
         if place.projection.as_slice() == [Projection::Deref, Projection::Deref] {
             let mut reached: Vec<Reached> = self
                 .stored_in(place.local)
@@ -922,7 +924,7 @@ impl Known {
             }
             return reached;
         }
-        self.reached_by(place.local)
+        Vec::new()
     }
 
     /// What the allocations this local holds may contain, which is what a
@@ -3685,8 +3687,9 @@ fn established_null(argument: &Operand, null: &NullAtTerminators, block: BlockId
 /// reaches no site says nothing, however it came to reach none.** Two ways are
 /// known, and the third was closed by making the lowering apply C17 6.5.3.2
 /// p3, so `int *r = &*p;` now copies the pointer rather than taking an address
-/// of what it reaches. A pointer read out of another pointer, `int *p = *pp;`,
-/// never had a site. And a bare name is never given an element at all, so
+/// of what it reaches. A pointer read out of memory nothing recorded a store
+/// into, `int *p = *pp;` with `pp` a parameter, has no site; one read out of
+/// the function's own memory holds what was stored there (ADR-0045). And a bare name is never given an element at all, so
 /// `free(p); p;` is quiet about reading an indeterminate pointer, which 6.2.4
 /// p2 makes undefined and which belongs to an axis with no check. A `return`
 /// of one and an argument of a call are the exceptions, and [`returned`] and
@@ -3721,7 +3724,13 @@ fn used(
         // `Vec::dedup` to see. What decides whether two reports are one report
         // is which place was dereferenced, and only this knows it.
         //
-        let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_through(place), known) else {
+        // **The first level before the second**, as C reads them: `**tab`
+        // reads `tab`'s own allocation and then what was stored in it, so a
+        // freed table is the earlier defect and the one that is said. Only
+        // when it says nothing is the second level asked. See ADR-0045.
+        let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
+            .or_else(|| verdict(Kind::UseAfterFree, known.reached_below(place), known))
+        else {
             continue;
         };
 

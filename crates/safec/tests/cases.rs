@@ -1017,12 +1017,16 @@ cases! {
     // two-slot case below.
     a_use_after_free_through_a_pointer_read_out_of_memory_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-    // The same two levels down, `**tab`, asked through the table's own sites
-    // rather than through a load. Mutation: `used` asking `reached_by`; the
-    // first fails. Mutation: the second level not marked as possibly
-    // incomplete; the second becomes a proof.
+    // The same two levels down, `**tab`, asked through what the table's own
+    // allocation holds rather than through a load. Mutation: `used` not asking
+    // `reached_below`; the first goes silent. Mutation: the second level not
+    // marked as possibly incomplete; the second becomes a proof.
     a_read_two_levels_down_after_its_allocation_was_released_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     a_read_two_levels_down_after_a_free_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    // And the first level is still asked first: a freed table is proved, as
+    // it was before the second level was. Mutation: `used` asking only
+    // `reached_below`; this goes silent.
+    a_read_two_levels_down_through_a_freed_table_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     // A free of a load stays the doubt it was rather than a free of what the
     // load holds. Mutation: `touching` not answering `Lost` for a load; this
     // goes silent.

@@ -32,7 +32,7 @@ A pointer read out of memory holds no site. That is ADR-0017's belief about a po
 Chosen option: **a load holds what `inside` records, marked as possibly incomplete**.
 
 - **The load.** A pointer read through one dereference of a local that holds sites, and is neither loaded nor lost, holds every site those allocations may contain, at an offset nobody said.
-- **The report.** It reads those sites, with a marker saying the set may be missing members. A dereference of a load whose sites are freed or unknown is reported as unproven, never proved. A dereference through two levels, `**tab`, reads the same sites through the table's.
+- **The report.** It reads those sites, with a marker saying the set may be missing members. A dereference of a load whose sites are freed or unknown is reported as unproven, never proved. A dereference through two levels, `**tab`, is asked about the table's own sites first, as C reads them, and only when those say nothing about the sites the table may contain. Asking the second level instead of the first turned a proved `free(tab); return **tab;` into silence.
 - **The free.** A free of a loaded pointer still answers that this check stopped following it, beside the sites. It stays the doubt it was, and the sites become unknown rather than freed.
 
 The two rejected options:
@@ -48,9 +48,10 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 
 - **The load holding no site again**, by dropping what `Allocations::read_through` holds from `Known::stored_in`, fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported`, `a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it` and `a_live_slot_of_a_table_with_a_freed_one_is_doubted`, which go silent.
 - **The marker not pushed for a load** in `Known::reached_by` fails `a_use_after_free_through_a_pointer_read_out_of_memory_is_reported` alone, which becomes a proof.
-- **The marker not pushed for a read two levels down** in `Known::reached_through` fails `a_read_two_levels_down_after_a_free_is_not_proved` alone, which becomes a proof.
+- **The marker not pushed for a read two levels down** in `Known::reached_below` fails `a_read_two_levels_down_after_a_free_is_not_proved` alone, which becomes a proof.
 - **`verdict` settling with the marker present** fails those two, both proofs.
-- **`used` asking `reached_by` instead of `reached_through`** fails `a_read_two_levels_down_after_its_allocation_was_released_is_reported` alone, which goes silent.
+- **`used` not asking `reached_below`** fails `a_read_two_levels_down_after_its_allocation_was_released_is_reported` and `a_read_two_levels_down_after_a_free_is_not_proved`, which go silent.
+- **`used` asking only `reached_below` for `**tab`**, not the table's own sites, fails `a_read_two_levels_down_through_a_freed_table_is_proved`, which goes silent.
 - **`Allocations::touching` not answering `Reached::Lost` for a load** fails `a_free_of_a_pointer_read_out_of_memory_stays_a_doubt` alone, which goes silent.
 - **The marker counted as a doubt**, as `Reached::Lost` is, fails `a_live_pointer_read_out_of_memory_is_read_in_silence` and six earlier cases that build or stay silent today, among them `a_list_built_and_appended_to_in_one_function_is_refused` and `a_table_read_out_of_a_holder_into_a_local_is_reached_through_it`.
 
