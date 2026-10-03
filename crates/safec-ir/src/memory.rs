@@ -1468,9 +1468,9 @@ fn built_from(
     let followed: Vec<LocalId> = operands
         .iter()
         .filter_map(|operand| match operand {
-            // A constant is not a value this check follows, and neither is a
-            // read through a projection: `*pp + 1` reaches whatever `pp` points
-            // at, which is a place rather than a local.
+            // A constant is not a value this check follows. A read through a
+            // projection is a place rather than a local, and is followed below
+            // as the load it is.
             Operand::Copy(source) if source.projection.is_empty() => Some(source.local),
             _ => None,
         })
@@ -1488,7 +1488,26 @@ fn built_from(
     // compiler does not yet refuse: `int i = p;` is a constraint violation
     // under C17 6.5.16.1 p1 and #154 is the check that is missing. See
     // ADR-0030, which measures what this branch is worth on such a program.
-    let followed: Vec<usize> = if followed.iter().any(|&local| is_pointer(local)) {
+    // **A load that may be a pointer is the pointer operand**, so the
+    // integers beside it contribute nothing, as below for a local pointer:
+    // `*tab + i` stays inside what `*tab` points into, whatever `i` holds,
+    // and an integer can hold sites: one returned by a call this check cannot
+    // read holds what the call was handed. `n = h(r); free(r); q = *t2 + n;`
+    // doubted `*q` about `r` while it kept them. See ADR-0030.
+    let loads: Vec<&Place> = operands
+        .iter()
+        .filter_map(|operand| match operand {
+            Operand::Copy(source) if derefs(source) > 0 && may_be_pointer(source) => Some(source),
+            _ => None,
+        })
+        .collect();
+    let followed: Vec<usize> = if !loads.is_empty() {
+        followed
+            .iter()
+            .filter(|&&local| is_pointer(local))
+            .map(|local| local.index())
+            .collect()
+    } else if followed.iter().any(|&local| is_pointer(local)) {
         followed
             .iter()
             .filter(|&&local| is_pointer(local))
@@ -1508,6 +1527,16 @@ fn built_from(
     }
 
     reached.offset = offset_of(op, operands, &followed, value);
+    // **And it contributes what it holds**, what a load out of the same place
+    // assigned to a local is given, at an offset nobody said since the
+    // distance is not carried (ADR-0036). `loaded` below keeps every reader
+    // from proving anything with it, so `t3[i][i]` is asked as `t3[0][0]` is.
+    // See ADR-0045.
+    for load in &loads {
+        for site in value.stored_below(load.local, derefs(load)) {
+            reached.hold(site, Offset::Unknown);
+        }
+    }
 
     // **A read through a projection is not followed, and is still a load.**
     // `*tab + 1` is the pointer `*tab` moved, and the lowering hands it here
