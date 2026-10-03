@@ -930,14 +930,20 @@ impl Known {
     /// What the allocations this local holds may contain, which is what a
     /// pointer read through it may be, as far as [`Self::inside`] says.
     ///
-    /// Nothing for a local that is itself a load or lost, since what it holds
-    /// is not named, and a load through it is answered by [`Self::stored`]
-    /// for what a call reaches. One function for a load and for a read two
-    /// levels down, so that the two cannot disagree about what was stored.
-    /// See ADR-0045.
+    /// Nothing for a local this check lost, since what it holds is not named,
+    /// and a load through it is answered by [`Self::stored`] for what a call
+    /// reaches. No case tells that test apart from its absence, measured: a
+    /// lost local's sites, read beside the marker, would only add doubts.
+    /// **A local that is itself a load is followed**: what it holds
+    /// is a lower bound, so what its allocations contain is one too, and
+    /// every reader of it is a load read beside [`Reached::Partial`]. So a
+    /// chain of loads of any length is followed, and since `inside` only
+    /// grows, the chain reads a finite set. One function for a load and for a
+    /// read two levels down, so that the two cannot disagree about what was
+    /// stored. See ADR-0045.
     fn stored_in(&self, local: LocalId) -> BTreeSet<usize> {
         let held = &self.points_to[local.index()];
-        if held.loaded || held.lost {
+        if held.lost {
             return BTreeSet::new();
         }
         let mut sites = BTreeSet::new();
