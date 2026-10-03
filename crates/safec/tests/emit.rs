@@ -17,8 +17,8 @@ use std::process::{Command, Stdio};
 /// the result to a stream.
 ///
 /// The argument is relative to `tests/`. There is one directory of them,
-/// `cases/`, and a program there is a corpus case as well as whatever a test
-/// here wants it for.
+/// `cases/`, grouped one level down, and a program there is a corpus case as
+/// well as whatever a test here wants it for.
 fn test_file(path: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
@@ -43,7 +43,7 @@ fn artifact_path(name: &str) -> PathBuf {
 /// the path a user takes is the path under test. The target is named because
 /// an artifact is for a machine and this one is not always the host; which
 /// machine does not matter here, and naming one keeps the run from depending
-/// on where it is.
+/// on where it is. `case` is the group and the name, `memory/a_value_freed_twice`.
 fn llvm_ir_to(path: &Path, case: &str) -> std::process::Output {
     llvm_ir_to_with(path, case, &[])
 }
@@ -88,8 +88,8 @@ fn a_dump_keeps_what_it_could_read() {
         .args(["--target", "x86_64-pc-windows-msvc"])
         .arg("-o")
         .arg(&path)
-        .arg(test_file("cases/a_value_freed_twice.c"))
-        .arg(test_file("cases/there_is_no_such_program.c"))
+        .arg(test_file("cases/memory/a_value_freed_twice.c"))
+        .arg(test_file("cases/memory/there_is_no_such_program.c"))
         .output()
         .expect("the compiler binary was built for this test");
 
@@ -116,7 +116,7 @@ fn a_dump_keeps_what_it_could_read() {
 #[test]
 fn a_proved_unsafe_run_leaves_no_llvm_ir() {
     let path = artifact_path("proved_unsafe.ll");
-    let output = llvm_ir_to(&path, "a_value_freed_twice");
+    let output = llvm_ir_to(&path, "memory/a_value_freed_twice");
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
@@ -148,7 +148,7 @@ fn a_proved_unsafe_run_leaves_what_was_already_there() {
     )
     .expect("the temporary file can be written");
 
-    let output = llvm_ir_to(&path, "a_value_freed_twice");
+    let output = llvm_ir_to(&path, "memory/a_value_freed_twice");
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
@@ -179,7 +179,7 @@ fn a_proved_unsafe_run_leaves_what_was_already_there() {
 #[test]
 fn a_backend_refusal_leaves_no_llvm_ir() {
     let path = artifact_path("refused.ll");
-    let output = llvm_ir_to(&path, "an_ir_shape_the_backend_cannot_write");
+    let output = llvm_ir_to(&path, "codegen/an_ir_shape_the_backend_cannot_write");
 
     let said = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{said}");
@@ -209,7 +209,7 @@ fn a_warning_still_writes_its_llvm_ir() {
     let path = artifact_path("warned.ll");
     let output = llvm_ir_to_with(
         &path,
-        "a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved",
+        "memory/a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved",
         &["--allow-unknown"],
     );
 
@@ -244,9 +244,9 @@ fn a_warning_still_writes_its_llvm_ir() {
 /// fails, because the file then holds the report.
 #[test]
 fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
-    let expected_artifact = std::fs::read(test_file("cases/unexpected_character.stdout"))
+    let expected_artifact = std::fs::read(test_file("cases/frontend/unexpected_character.stdout"))
         .expect("the corpus pins what this program's artifact is");
-    let expected_report = std::fs::read(test_file("cases/unexpected_character.stderr"))
+    let expected_report = std::fs::read(test_file("cases/frontend/unexpected_character.stderr"))
         .expect("the corpus pins what this program's report is");
 
     let path = std::env::temp_dir().join(format!("safec_emit_{}.tok", std::process::id()));
@@ -255,10 +255,10 @@ fn redirecting_the_artifact_leaves_the_diagnostics_behind() {
 
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
         .args(["--color", "never", "--emit", "tokens"])
-        // Run from `cases/` with a bare name for the same reason the corpus
-        // does: the compiler echoes the path it was given, and the expected
-        // files were written against the bare one.
-        .current_dir(test_file("cases"))
+        // Run from the case's group with a bare name for the same reason the
+        // corpus does: the compiler echoes the path it was given, and the
+        // expected files were written against the bare one.
+        .current_dir(test_file("cases/frontend"))
         .arg("unexpected_character.c")
         .stdout(Stdio::from(file))
         .stderr(Stdio::piped())

@@ -49,16 +49,33 @@ rather than silently unused.
 A case's arguments live on its line in the same table, so that what a case is
 and how it is run are read in one place.
 
+**The corpus is grouped one level deep, and the table says how.** At 527 cases
+and 1807 files one directory could not be read, while the table had long been
+read in sections. Each section is now a block naming a group, and a case's files
+live in the directory of that name, so the table and the directory are grouped
+the same way and neither can be by itself. The tests stay flat: each is still a
+top-level function named after its case, so every citation of one stays true,
+and one name in two groups fails as `E0428` rather than leaving a citation that
+cannot say which it means. Grouping does not reverse anything above. The set of
+cases is still a literal table, and the guard still walks the directory against
+it, now one level down: a file directly in `cases/`, a directory no group
+names, a directory inside a group, and a case's files in another group are each
+reported. [#286](https://github.com/itsakeyfut/safec/issues/286) carries the
+grouping and what was rejected.
+
 ### Confirmation
 
 `every_file_in_the_corpus_belongs_to_a_case_in_the_table` in
 `crates/safec/tests/cases.rs`.
 
 The mutation: delete the `add:` line from the `cases!` table while leaving
-`crates/safec/tests/cases/add.c` in place. That test fails, naming `add`, and no
-other test does. It is the reversal this record exists to make expensive:
-whatever replaces the table has to keep answering the question of which files
-are covered.
+`crates/safec/tests/cases/frontend/add.c` in place. That test fails, naming
+`add`, and no other test does. So does each of these, on its own: a file
+directly in `cases/`, a directory no group names, a directory inside a group,
+and one case's files moved to another group, which also fails that case,
+since it runs from its own group's directory. It is the reversal this record
+exists to make expensive: whatever replaces the table has to keep answering the
+question of which files are covered.
 
 The other half is confirmed by the shape of the expansion rather than by an
 assertion. Changing the separator in `driver.rs::dump_tokens` fails a test
@@ -69,7 +86,8 @@ only true while the macro generates one function per entry.
 
 * Good, because an empty or halved corpus is a failure, and a broken case names
   itself.
-* Good, because adding a case is two files and one line, with no Rust written.
+* Good, because adding a case is two files and one line, with no Rust written,
+  and the block the line is in says which directory the files go in.
 * Bad, because the line is a second thing to remember when adding a case. The
   directory guard is what makes forgetting it loud rather than silent.
 * Bad, because a case's name is also its source file name, so one program

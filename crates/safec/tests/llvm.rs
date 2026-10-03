@@ -61,11 +61,12 @@ fn clang_is_here() -> bool {
         .is_ok()
 }
 
-/// A `.c` file from the corpus, by the name of its case.
+/// A `.c` file from the corpus's `codegen` group, by the name of its case.
 fn case(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("cases")
+        .join("codegen")
         .join(format!("{name}.c"))
 }
 
