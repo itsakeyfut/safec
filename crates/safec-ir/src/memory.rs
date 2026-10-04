@@ -674,11 +674,9 @@ impl Held {
         *freed = None;
 
         // The may-facts, which grow wherever anything meets. The edge and the
-        // flag beside it are the ones nothing observes here: both callers that
-        // build a value out of operands give up on both on the next line,
-        // because C17 6.5.6 p8 keeps a pointer's arithmetic inside the object
-        // and a local's address plus one is not that local. See ADR-0019, and
-        // the two `writes_to.fill(false)` lines in `Allocations::element`.
+        // flag beside it are decided again by both callers that build a value
+        // out of operands, through [`Held::moved_by_arithmetic`]. See
+        // ADR-0019.
         for (here, there) in sites.iter_mut().zip(&other.sites) {
             *here = *here || *there;
         }
@@ -701,6 +699,30 @@ impl Held {
             self.sites[site] = false;
             self.lost = true;
         }
+    }
+
+    /// What pointer arithmetic leaves of the edge to a local.
+    ///
+    /// **Kept where the offset may be zero, and dropped where it is known not
+    /// to be.** C17 6.5.6 p8 treats a local as an array of one, so `&slot +
+    /// n` may be dereferenced only for `n` of zero: a pointer this check moved
+    /// by an offset it cannot read may be `slot`, and dereferenced it is
+    /// `slot` or undefined. `po[k - 1]` read nothing of `slot` while `*po`
+    /// read it. A non-zero constant, `pp[1] = q;`, is not `slot`, and
+    /// following that edge reported a proved use after free about an
+    /// allocation nothing had freed.
+    ///
+    /// **The set is given up on either way**: kept, it is a may-write by
+    /// union, never the replacement a certain write is; emptied, an empty set
+    /// is what a pointer this check never followed an address into has, and
+    /// giving up on it is saying so (ADR-0028). One method for both callers
+    /// that build a value out of operands, because one rule written in two
+    /// places drifts apart. See ADR-0019.
+    fn moved_by_arithmetic(&mut self) {
+        if !matches!(self.offset, Offset::Unknown) {
+            self.writes_to.fill(false);
+        }
+        self.writes_elsewhere = true;
     }
 }
 
@@ -2100,14 +2122,9 @@ impl Allocations<'_> {
                     |place| self.may_be_pointer(function, place),
                     |local, depth| self.reads_caller_memory(local, depth, value),
                 );
-                reached.writes_to.fill(false);
-                // Emptying the set says nothing on its own: an empty set is
-                // what a pointer this check never followed an address into
-                // has. Giving up on the set is saying so. See ADR-0028. This
-                // line is written beside its twin in the direct assignment's
-                // `Rvalue::Binary` arm rather than anywhere else, because one
-                // rule written in two places drifts apart.
-                reached.writes_elsewhere = true;
+                // What the arithmetic leaves of the edge, as the direct
+                // assignment's `Rvalue::Binary` arm asks. See ADR-0019.
+                reached.moved_by_arithmetic();
                 reached
             }
             // A read through a projection is not a pointer this check follows
@@ -3071,23 +3088,14 @@ impl Analysis for Allocations<'_> {
                             |place| self.may_be_pointer(function, place),
                             |local, depth| self.reads_caller_memory(local, depth, value),
                         );
-                        // **The sites travel and the edge does not.** C17 6.5.6
-                        // p8 keeps the result inside the object the operand
-                        // points into, which is why the allocation comes along.
-                        // A local's address plus one is not that local, so
-                        // `*(pp + 1) = q;` must not be read as a write to what
-                        // `pp` points at: it is an out of bounds write, and
-                        // following it here reported a proved use after free
-                        // about an allocation nothing had freed. See ADR-0019.
-                        //
-                        // Plus zero never arrives: the lowering folds it, so the
-                        // two spellings of one C expression are one shape before
-                        // anything reads them. See ADR-0021.
-                        reached.writes_to.fill(false);
-                        // The twin of the line in the `Deref` arm above, and
-                        // for the same reason: an emptied set is a set this
-                        // check knows nothing about. See ADR-0028.
-                        reached.writes_elsewhere = true;
+                        // **The sites travel, and the edge only where the offset
+                        // may be zero.** C17 6.5.6 p8 keeps the result inside
+                        // the object the operand points into, which is why the
+                        // allocation comes along; what the edge does is
+                        // [`Held::moved_by_arithmetic`]'s. A literal zero the
+                        // lowering did not fold is an offset that may be zero,
+                        // and is followed. See ADR-0019 and ADR-0021.
+                        reached.moved_by_arithmetic();
                         value.points_to[destination.index()] = reached;
                     }
                     // A read through a projection is not a pointer this check

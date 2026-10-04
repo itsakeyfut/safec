@@ -1334,6 +1334,15 @@ cases! {
         // Found by review. Mutation: have `lost_through` ask the first level
         // only; this goes silent.
         a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer to a local moved by an offset this check cannot read may
+        // be the local, so the edge survives the arithmetic and a read
+        // through it reads what the local holds: `po[k - 1]` as `*po`. A
+        // write through it with nothing freed says nothing more. See
+        // ADR-0019. Mutation: have `Held::moved_by_arithmetic` empty the
+        // edge whatever the offset; the first two go silent at the read.
+        a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_write_through_a_pointer_to_a_local_moved_by_an_unknown_offset_with_nothing_freed_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a pointer read out of one parameter after another is freed.
         // See ADR-0040. Mutation: have the free not make such a local lost;
         // this goes silent.

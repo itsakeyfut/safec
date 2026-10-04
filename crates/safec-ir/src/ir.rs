@@ -362,9 +362,10 @@ pub enum Rvalue {
     /// that met them as two shapes would answer differently about one program;
     /// the fold belongs to whoever builds the IR, which is ADR-0021. Nothing
     /// checks it at this boundary, so `docs/c-family.md` carries what a
-    /// frontend owes and `an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`
-    /// in `crates/safec-ir/tests/freed.rs` holds what is lost when it is not
-    /// paid.
+    /// frontend owes. The memory check follows an unfolded zero as an offset
+    /// that may be zero, which
+    /// `an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero` in
+    /// `crates/safec-ir/tests/freed.rs` holds.
     Binary {
         /// Which operator.
         op: BinOp,
