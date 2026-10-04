@@ -137,6 +137,8 @@ whole workspace suite run with `--no-fail-fast`, and the file restored.
 | a variant added to `Rvalue` | does not compile: `error[E0004]` here and at four other readers |
 | the edge survives pointer arithmetic whose offset is known not to be zero | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains a proved `error[SC0402]` about an allocation nothing freed |
 | the edge dropped whatever the offset | `a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds` and `an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero` |
+| a kept edge without `writes_elsewhere` | nothing, measured: the local it names escaped, so what it holds is unproven and a read of it is doubted whether the write replaced or unioned |
+| `Allocations::carried`'s arm dropping the edge whatever the offset | nothing, measured: only IR with arithmetic written straight into a place reaches it, and the C frontend puts the sum in a temporary first |
 | `Held::union` does not union the edge | `an_address_taken_on_one_arm_is_written_through_after_the_join` |
 | a field added to `Held` | does not compile: `error[E0063]` in `Held::none` and `error[E0027]` in `Held::clear` and `Held::union` |
 

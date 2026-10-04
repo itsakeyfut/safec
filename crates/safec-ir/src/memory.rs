@@ -718,6 +718,14 @@ impl Held {
     /// giving up on it is saying so (ADR-0028). One method for both callers
     /// that build a value out of operands, because one rule written in two
     /// places drifts apart. See ADR-0019.
+    ///
+    /// **Two parts no program tells apart, measured.** Leaving
+    /// `writes_elsewhere` unset on a kept edge would make a write through it a
+    /// replacement, but the local the edge names had its address taken, so
+    /// ADR-0017 leaves what it holds unproven and the read is doubted either
+    /// way. And the caller in `Allocations::carried` is reached only by an IR
+    /// whose arithmetic is written straight into a place, which the C frontend
+    /// never builds: it puts the sum in a temporary first.
     fn moved_by_arithmetic(&mut self) {
         if !matches!(self.offset, Offset::Unknown) {
             self.writes_to.fill(false);
