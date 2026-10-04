@@ -921,7 +921,11 @@ cases! {
         an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_on_one_arm_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_proved_before_a_call_stays_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        the_old_pointer_realloc_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A use of the old pointer after a `realloc` that succeeded is a
+        // proof: C17 7.22.3.5 p4 deallocates it, and the branch on the result
+        // says the call succeeded. See ADR-0039. Mutation: have the non-null
+        // arm free nothing; this goes back to a doubt.
+        the_old_pointer_used_after_a_successful_realloc_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_handed_to_realloc_is_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local whose address a call kept earlier is reached by every call
         // after it, handed anything or nothing.
@@ -951,9 +955,50 @@ cases! {
         // A pointer that holds two allocations stores into both. Mutation:
         // record into the first container only; this fails.
         a_pointer_stored_through_either_of_two_tables_is_inside_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // Refused and well defined: two costs ADR-0039 accepts, pinned so that
-        // a change to either is seen. The first is #253.
-        a_free_on_reallocs_failure_branch_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A free, or a use, of the old pointer on the branch where `realloc`
+        // failed builds, since C17 7.22.3.5 p3 leaves it allocated, however the
+        // branch tests the result. See ADR-0039. Mutation: have the branch
+        // restore nothing; the first goes back to `SC0401`. Mutation: have it
+        // read `==` and `!=` only; the second does.
+        a_free_on_reallocs_failure_branch_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_on_reallocs_failure_branch_tested_with_not_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_used_on_reallocs_failure_branch_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Refused as before where the size may be zero, which leaves whether a
+        // failed call frees implementation-defined. Mutation: read any size;
+        // both build. Mutation: read any size but a literal zero; the second
+        // builds.
+        a_free_on_reallocs_failure_branch_with_size_zero_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the pointer tested may be something other than what
+        // `realloc` returned: replaced through its address by a call this
+        // check cannot read, or holding another allocation too. Mutation:
+        // have the branch ignore `Held::lost`; the first builds. Mutation:
+        // have it read the first site of several; the second builds.
+        a_free_on_reallocs_failure_branch_after_its_result_was_replaced_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the null tested may not be the call's, or the old
+        // allocation may not be as the call left it, all found by review: a
+        // copy of the result nulled by hand, the result nulled on one arm, and
+        // the old pointer freed on one arm, reallocated again, or handed to a
+        // call between the `realloc` and the branch. Each is a double free on
+        // some execution. Mutation: have the branch ignore
+        // `Held::returned_by`; the first two build. Mutation: have no call
+        // forget a fact naming what it touches; the fourth loses its report at
+        // the free on the null arm. Three guards overlap on the rest: with
+        // touching and a join's disagreement both gone the third loses it,
+        // and with touching and an exposure both gone the fifth does.
+        a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `realloc` of a pointer read out of memory remembers nothing:
+        // what it was handed is not the local the place starts at. Mutation:
+        // let a place with a projection through; three false proofs about
+        // the allocation that held it.
+        a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Refused and well defined: a cost ADR-0039 accepts, pinned so that a
+        // change to it is seen.
         a_call_after_an_allocation_was_exposed_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Built.
         what_memset_returns_is_the_allocation_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

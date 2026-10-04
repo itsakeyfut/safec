@@ -1,0 +1,20 @@
+error[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:16:14 ]
+    │
+ 16 │     int *q = realloc(*pp, 8);
+    │              ───────┬───────  
+    │                     ╰───────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone.c:27:5 ]
+    │
+ 27 │     free(r);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

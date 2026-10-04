@@ -477,6 +477,16 @@ struct Held {
     /// level in; and its cost, a read after any such call doubted, is the same
     /// one level in. See ADR-0040.
     from_caller: bool,
+    /// The site a `realloc` returned, where this local holds exactly that
+    /// value: the call's destination and plain copies of it.
+    ///
+    /// **Points-to cannot say a pointer may be null for another reason**, so
+    /// a branch reading only that `q` holds the returned site read `r = q; if
+    /// (c) r = 0; if (r == 0) free(p);` as a failed call on the arm where `r`
+    /// was nulled by hand, and built a double free. Any other assignment
+    /// clears this, arithmetic included, and a join keeps it only where both
+    /// arms agree. Found by review. See ADR-0039.
+    returned_by: Option<usize>,
 }
 
 impl Held {
@@ -497,6 +507,7 @@ impl Held {
             foreign: false,
             stale_read: false,
             from_caller: false,
+            returned_by: None,
         }
     }
 
@@ -550,9 +561,11 @@ impl Held {
             foreign,
             stale_read,
             from_caller,
+            returned_by,
         } = self;
         sites.fill(false);
         *from_caller = false;
+        *returned_by = None;
         *lost = false;
         *loaded = false;
         *foreign = false;
@@ -590,7 +603,11 @@ impl Held {
             foreign,
             stale_read,
             from_caller,
+            returned_by,
         } = self;
+        if *returned_by != other.returned_by {
+            *returned_by = None;
+        }
         *offset = offset.joined(other.offset);
         *from_caller = *from_caller || other.from_caller;
         *loaded = *loaded || other.loaded;
@@ -646,8 +663,12 @@ impl Held {
             foreign,
             stale_read,
             from_caller,
+            returned_by,
         } = self;
         *from_caller = *from_caller || other.from_caller;
+        // Arithmetic builds a new value, which is no longer exactly what a
+        // `realloc` returned. See ADR-0039.
+        *returned_by = None;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
         *loaded = *loaded || other.loaded;
@@ -836,6 +857,24 @@ enum Read {
 type ReadKey = (usize, u32, u32, Place, Read);
 
 /// Which allocations each local may hold, and what is known about each.
+/// What a `realloc` with a non-zero constant size was handed, remembered on
+/// the allocation it returned: where the call is, and each allocation it was
+/// handed with where that one was made, all live at the call.
+///
+/// C17 7.22.3.5 p3 and p4: a failed `realloc` returns null and deallocates
+/// nothing, a successful one deallocates the old object. Which happened is the
+/// branch on the result, so the fact waits for it. With a size of zero, whether
+/// a failed call deallocates is implementation-defined, so no fact is kept.
+/// See ADR-0039.
+#[derive(Clone, PartialEq, Eq)]
+struct Realloced {
+    /// Where the `realloc` is, which is where the old allocation is freed on
+    /// the arm that learns it succeeded.
+    at: Span,
+    /// Each allocation it was handed, with where it was made.
+    old: Vec<(usize, Option<Span>)>,
+}
+
 #[derive(Clone, PartialEq, Eq)]
 struct Known {
     /// Per local, what it may hold.
@@ -880,6 +919,10 @@ struct Known {
     /// down lands in the local. A table of its own because a site and a local
     /// share an index. See ADR-0045.
     inside_locals: Vec<Vec<bool>>,
+    /// Per site, what a `realloc` that returned it was handed, until a branch
+    /// on a pointer holding it says whether it succeeded. See [`Realloced`]
+    /// and ADR-0039.
+    realloced: Vec<Option<Realloced>>,
     /// Per site, whether what it contains may include an allocation that is
     /// gone and whose site now names a new one.
     ///
@@ -1521,6 +1564,7 @@ impl Known {
             // Kept, as `inside` is: what the old allocation may hold stays
             // in the row. See ADR-0045.
             inside_locals: _,
+            realloced,
             stale,
             // Kept, as the entry and `stale` are: the slots of the new
             // allocation are not told apart from the old one's. No case
@@ -1538,6 +1582,19 @@ impl Known {
         // allocation does. Not one that loses a live allocation: a list built
         // in a loop loses its head every turn to a node nothing freed, and
         // marking that doubted every walk of it. See ADR-0045.
+        // **What a `realloc` remembered about this site goes**, whether the
+        // site is the allocation it returned or one it was handed: the name
+        // now belongs to a new allocation, and the branch that would have
+        // settled the old fact is about another. See ADR-0039.
+        realloced[site] = None;
+        for fact in realloced.iter_mut() {
+            if fact
+                .as_ref()
+                .is_some_and(|fact| fact.old.iter().any(|&(old, _)| old == site))
+            {
+                *fact = None;
+            }
+        }
         let gone = !matches!(state[site], SiteState::Live(_));
         for (other, held) in points_to.iter_mut().enumerate() {
             if other != site {
@@ -1673,9 +1730,27 @@ impl Known {
     /// made may free it. A proved free stays proved: no call un-frees an
     /// allocation. See ADR-0039.
     fn unproved_exposed(&mut self) {
+        // A call that may free what is exposed may free an old allocation a
+        // `realloc` remembered, so the fact goes too. See ADR-0039.
+        let exposed = self.exposed.clone();
+        self.forget_reallocs_touching(|site| exposed[site]);
         for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
             if exposed && matches!(state, SiteState::Live(_)) {
                 *state = SiteState::Unknown;
+            }
+        }
+    }
+
+    /// Forget every `realloc` fact naming an old allocation `touched` says
+    /// something else may have freed since, so a branch on the result can no
+    /// longer give it back as live. See ADR-0039.
+    fn forget_reallocs_touching(&mut self, touched: impl Fn(usize) -> bool) {
+        for fact in self.realloced.iter_mut() {
+            if fact
+                .as_ref()
+                .is_some_and(|fact| fact.old.iter().any(|&(old, _)| touched(old)))
+            {
+                *fact = None;
             }
         }
     }
@@ -2493,6 +2568,64 @@ impl Allocations<'_> {
 }
 
 impl Analysis for Allocations<'_> {
+    /// **A branch on what a `realloc` returned says what became of what it was
+    /// handed.** On the arm where the pointer is null the call failed and the
+    /// old allocations are live again; on the other it succeeded and they were
+    /// freed at the call. Only where the tested pointer holds exactly the one
+    /// allocation the fact is about, and is not one this check stopped
+    /// following. Which local the branch tested is the nullability check's
+    /// answer, shared, so the two checks read one branch alike. See ADR-0039.
+    fn edge(
+        &self,
+        function: &Function,
+        block: BlockId,
+        terminator: &Terminator,
+        index: usize,
+        value: &mut Self::Value,
+    ) {
+        let Terminator::Branch {
+            condition: Operand::Copy(condition),
+            ..
+        } = terminator
+        else {
+            return;
+        };
+        let Some((local, on_then)) =
+            crate::nullability::tested_against_null(self.unit, function, block, condition)
+        else {
+            return;
+        };
+        let held = &value.points_to[local.index()];
+        let mut sites = held.sites();
+        let (Some(returned), None) = (sites.next(), sites.next()) else {
+            return;
+        };
+        if held.lost || held.returned_by != Some(returned) {
+            return;
+        }
+        let Some(fact) = value.realloced[returned].clone() else {
+            return;
+        };
+        // `Terminator::successors` pushes `then` and then `otherwise`, so
+        // index 1 is the other arm, as the nullability check reads it.
+        let null = (index == 0) == (on_then == crate::nullability::Nullness::Null);
+        for (site, made) in fact.old {
+            if null {
+                if matches!(value.state[site], SiteState::Unknown) {
+                    value.state[site] = SiteState::Live(made);
+                }
+            } else {
+                value.state[site] = SiteState::Freed {
+                    made,
+                    freed: Freeing {
+                        at: fact.at,
+                        sequenced: true,
+                    },
+                };
+            }
+        }
+    }
+
     type Value = Known;
 
     fn height(&self, function: &Function) -> usize {
@@ -2531,6 +2664,9 @@ impl Analysis for Allocations<'_> {
         // See ADR-0045. Whether a local was read out of what a parameter
         // points at is one more per local, and whether a site may hold such a
         // pointer one more per site, which a join only sets. See ADR-0040.
+        // What a `realloc` remembered on a site is one more per site: set by
+        // the call, and a join only takes it away; and which site a local is
+        // exactly the result of is one more per local, the same. See ADR-0039.
         // Which locals' addresses each site may hold is a fourth square table
         // that only grows, one step per pair, and the first term gains a
         // fourth square for it. See ADR-0045.
@@ -2566,7 +2702,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 4 + locals * (locals + 15) + positions * (2 * locals + 3) + locals
+        locals * locals * 4 + locals * (locals + 17) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2583,6 +2719,7 @@ impl Analysis for Allocations<'_> {
             inside: vec![vec![false; self.locals]; self.locals],
             stale: vec![false; self.locals],
             inside_locals: vec![vec![false; self.locals]; self.locals],
+            realloced: vec![None; self.locals],
             from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -2630,10 +2767,26 @@ impl Analysis for Allocations<'_> {
             stale,
             from_caller,
             inside_locals,
+            realloced,
             pending,
             calls,
             exposed_after_call,
         } = into;
+        // Kept only where both arms remember the same `realloc`: a fact one
+        // arm lacks is one a branch after the join cannot act on. See ADR-0039.
+        for (here, there) in realloced.iter_mut().zip(&from.realloced) {
+            // And where one arm left an old allocation in another state: a
+            // free on one arm leaves it `Unknown` after the join, which the
+            // null arm would read as the `realloc`'s. Found by review.
+            let disagree = here.as_ref().is_some_and(|fact| {
+                fact.old
+                    .iter()
+                    .any(|&(old, _)| state[old] != from.state[old])
+            });
+            if here != there || disagree {
+                *here = None;
+            }
+        }
         // A local's address stored on one arm may be there where the arms
         // meet, as a site is. See ADR-0045.
         for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
@@ -3276,6 +3429,35 @@ impl Analysis for Allocations<'_> {
         let touched = Self::touching(handed.iter(), value);
         let sites = || named(&touched);
 
+        // **What a later call may have done to an old allocation is not what
+        // the `realloc` did**, so a fact naming one this call touches is
+        // forgotten, before anything this call records: a free of `p`, a
+        // second `realloc` of it, or `g(p)` between the call and the branch
+        // left `p` unproven, and the null arm brought it back live. Found by
+        // review. See ADR-0039.
+        let touched_now: Vec<usize> = sites().collect();
+        value.forget_reallocs_touching(|site| touched_now.contains(&site));
+
+        // **What a `realloc` with a non-zero constant size was handed, while
+        // it is all live**, before the transfer below makes it unproven: the
+        // branch on the result is what says which it became. See ADR-0039.
+        let realloced: Option<Vec<(usize, Option<Span>)>> = match (kind, &arguments[..]) {
+            (Callee::Reallocates, [Operand::Copy(old), Operand::Constant(size), ..])
+                if *size != 0 && old.projection.is_empty() =>
+            {
+                let held = &value.points_to[old.local.index()];
+                let old: Vec<(usize, Option<Span>)> = held
+                    .sites()
+                    .filter_map(|site| match value.state[site] {
+                        SiteState::Live(made) => Some((site, made)),
+                        SiteState::Freed { .. } | SiteState::Unknown => None,
+                    })
+                    .collect();
+                (!held.lost && !old.is_empty() && old.len() == held.sites().count()).then_some(old)
+            }
+            _ => None,
+        };
+
         // **A free of what may be the caller's may free anything the caller
         // can see**, as a call this check cannot read may: `f(p, p)` hands
         // `free(b); return *a;` one allocation twice. **Before the `match`,
@@ -3675,6 +3857,13 @@ impl Analysis for Allocations<'_> {
                     if value.from_caller[old] {
                         value.from_caller[site] = true;
                     }
+                }
+                if let Some(old) = realloced {
+                    value.realloced[site] = Some(Realloced {
+                        at: origin.span(),
+                        old,
+                    });
+                    value.points_to[site].returned_by = Some(site);
                 }
             }
             Callee::Frees
