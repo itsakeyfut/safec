@@ -1322,6 +1322,13 @@ cases! {
         // local's own edges; the first goes silent.
         a_load_through_two_locals_addresses_reads_what_the_last_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_live_value_through_two_locals_addresses_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the table carried as `inside` is: across a join, by `realloc`
+        // and by `memcpy`. Mutation: have the join keep only what both arms
+        // hold, `realloc` copy no row, or `memcpy` copy no locals; the case
+        // named for each goes silent.
+        a_locals_address_stored_on_one_arm_is_followed_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_locals_address_stored_in_an_allocation_is_followed_after_realloc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_locals_address_copied_by_memcpy_is_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

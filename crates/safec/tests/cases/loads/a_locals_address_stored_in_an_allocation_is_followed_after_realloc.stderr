@@ -1,0 +1,10 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:24:5 ]
+    │
+ 24 │     return ***t4;
+    │     ──────┬──────  
+    │           ╰──────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
