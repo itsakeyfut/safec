@@ -218,6 +218,22 @@ that says which arguments are asked, for `handed` at the call and for the
 transfer that carries them, and `handed` reports through `say`, because
 `used_before` can reach the same caret about the same local.
 
+**And one level in, about what is proved freed.** A pointer argument that is
+a local, and says nothing itself, is asked what `Known::stored_below` says it
+points at may hold: through a local's address, `free(a); use2(&a);`, and
+through what the function stored in its own memory, `*t = a; free(a);
+use2(t);`. Both built, and in both the callee may read the freed pointer out
+and use it (#271). Only allocations proved freed are asked, because taking an
+address makes a live one unproven (ADR-0017), and asking about those refused
+`use2(&a)` over every live pointer, measured. It is never a proof, since the
+callee may only write there, and it is reported under the key of `*place`, so
+`give(tab, *tab)` stays one report, with `*tab`'s own words: each argument is
+asked for itself first. It is not carried forwards to a later free as a
+handed pointer is: what is asked is freed already and reported here, so the
+carry would carry nothing, measured. It is `Kind::FreedBehindArgument`, with
+words of its own under `SC0407`, because `a pointer to an allocation that was
+freed` is false about `&a`.
+
 **No null exemption.** `memory::asked` exempts a pointer established null from
 a free, and nothing here does. An exemption is the half of a rule that can go
 quiet, and the one program measured that it would change, `free(a); if (a == 0)
@@ -411,6 +427,15 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   `a_read_is_not_asked_at_realloc_of_another_allocation` alone, and for a free
   fails `a_read_is_not_asked_at_a_free_of_another_allocation` alone, which
   gains an `SC0402` about `a` with `freed here` on `free(b)`.
+* One level in: having `handed` never ask `Known::handed_below` fails
+  `the_address_of_a_freed_pointer_handed_to_a_call_is_reported` and
+  `a_table_holding_a_freed_pointer_handed_to_a_call_is_reported`; having it
+  read edges to locals only fails the second; having it ask every site rather
+  than freed ones fails `the_address_of_a_live_pointer_handed_to_a_call_is_not_asked`;
+  leaving out `Reached::Partial` fails the first, which becomes a proof;
+  keying the finding under the place rather than `*place`, or asking it in
+  the same pass as each argument's own question, fails
+  `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
   `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
   the `Unsequenced` row the disagreement remedy fails
@@ -497,10 +522,20 @@ the `match`, and nothing tells the two apart.
   a store inherited that until
   [#276](https://github.com/itsakeyfut/safec/issues/276) made such a store
   expose what it carries (ADR-0044).
-* Bad, because the address of a freed pointer handed to a call, `use2(&a)`
-  where the callee reads `*pp` and dereferences it, is silent in both
-  functions, as it was before this record. That is
-  [#271](https://github.com/itsakeyfut/safec/issues/271).
+* Good, because the address of a freed pointer handed to a call, `use2(&a)`
+  where the callee reads `*pp` and dereferences it, is reported at the call,
+  and so is a table of this function's own holding one (#271).
+* Bad, because a callee that only writes through what it is handed is not
+  told apart from one that reads: `free(a); reset(&a);` is refused though
+  nothing reads `a` again, which
+  `the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported`
+  holds. Every such program that reads `a` afterwards was refused already.
+  `a = 0;` before the call, which the remedy names, builds.
+* Bad, because a pointer freed on one path only and handed by address, `if
+  (c) free(a); use2(&a);`, is still silent: after the join it is unproven,
+  as a live allocation whose address was taken is, and the two cannot be
+  told apart. That is [#305](https://github.com/itsakeyfut/safec/issues/305).
+  Anything more than one level in is silent too.
 * Bad, because a pointer read out of memory and handed on, `use(*tab)`, is
   silent, as its dereference is. That is #256.
 * What would reverse this: summaries of the functions this translation unit
