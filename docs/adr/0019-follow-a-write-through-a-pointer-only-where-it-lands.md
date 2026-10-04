@@ -137,6 +137,9 @@ this method and what ADR-0018 says about the last field added.
 
 ### Consequences
 
+* Good, because the edge outlives the local that holds it: stored into an
+  allocation it is kept there, read back by a load, and followed by a write
+  two levels down, as ADR-0045 records (#300).
 * Good, because the headline silence is closed: the program in #162 is
   reported on its last line, where it used to say nothing at all. It was
   `error[SC0402]` and exit 1 when this record landed and is `warning[SC0402]`

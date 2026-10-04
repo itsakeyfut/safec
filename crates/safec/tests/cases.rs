@@ -1304,6 +1304,36 @@ cases! {
         // one not first. Found by review. Mutation: have `stale_through` ask
         // the first local it points at only; this goes silent at the read.
         a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A local's address stored in an allocation is remembered, and the
+        // walk of a chain steps through the local as through an allocation:
+        // read through `***t3`, read back as `m` and written through, and
+        // written two levels down into the local. Silent with `r` live. See
+        // ADR-0045. Mutation: have the store never mark
+        // `Known::inside_locals`; the first three go silent. Mutation: have a
+        // load carry no edges; the second goes silent. Mutation: have a store
+        // two levels down land in no local; the third goes silent.
+        a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_locals_address_read_back_out_of_an_allocation_is_written_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a local's own address edge below the first level, `t3 = &t2;
+        // t2 = &slot; u = *t3; *u`. Silent with the value live and written
+        // through the alias. Mutation: have `Known::level_below` ignore a
+        // local's own edges; the first goes silent.
+        a_load_through_two_locals_addresses_reads_what_the_last_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_live_value_through_two_locals_addresses_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the table carried as `inside` is: across a join, by `realloc`
+        // and by `memcpy`. Mutation: have the join keep only what both arms
+        // hold, `realloc` copy no row, or `memcpy` copy no locals; the case
+        // named for each goes silent.
+        a_locals_address_stored_on_one_arm_is_followed_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_locals_address_stored_in_an_allocation_is_followed_after_realloc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_locals_address_copied_by_memcpy_is_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a local this check lost, passed through two levels down in one
+        // place, `**t3` with `*t3 = &t2`, is doubted as `u = *t3; *u` is.
+        // Found by review. Mutation: have `lost_through` ask the first level
+        // only; this goes silent.
+        a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
@@ -1714,6 +1744,11 @@ cases! {
         // And a live pointer stored in a table after its address escaped,
         // whose allocation the escape left unproven.
         a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load out of memory carries a local's address as an edge, which
+        // exempts what the local holds; what the memory itself holds is
+        // still asked. Found by review. Mutation: have `handed_below` exempt
+        // every site the edges reach; this goes silent.
+        a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Silent: the remedy the report gives, and a live pointer handed by
         // address. Mutation: have `handed_below` ask every unproven site,
         // including those through the address; the second reports.

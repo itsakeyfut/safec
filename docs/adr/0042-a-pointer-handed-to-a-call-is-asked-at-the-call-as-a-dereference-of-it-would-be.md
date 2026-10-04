@@ -228,7 +228,10 @@ reached. One unproven is asked through the function's own memory, `*t = a;
 release(a); use2(t);` and a free on one path, as a pointer handed itself
 would be, but not through the address handed: taking an address makes a live
 allocation unproven (ADR-0017), and asking about those refused `use2(&a)`
-over every live pointer, measured. It is never a proof, since the callee may
+over every live pointer, measured. Only what the address alone reaches is
+exempt: a pointer read out of memory carries the locals it may be as edges
+too (ADR-0045), and exempting everything they hold silenced a freed pointer
+the memory held beside them. It is never a proof, since the callee may
 only write there, and it is reported under the key of `*place`, so
 `give(tab, *tab)` stays one report, with `*tab`'s own words: each argument is
 asked for itself first. It is not carried forwards to a later free as a
@@ -444,7 +447,10 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   proof takes the caret from `*tab`'s own doubt; keying the finding under the
   place rather than `*place`, or asking it in the same pass as each
   argument's own question, fails
-  `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`.
+  `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`; and
+  exempting every unproven site an edge reaches, rather than those the
+  address alone reaches, fails
+  `a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on`.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
   `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
   the `Unsequenced` row the disagreement remedy fails
