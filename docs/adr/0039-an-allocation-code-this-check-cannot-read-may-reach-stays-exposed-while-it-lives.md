@@ -124,11 +124,15 @@ made and freed itself is a fresh allocation to this rule, and silent: #252.
 now reports it at the callee's `return`, and the caller still believes it.
 `realloc`'s failure branch, `if (q == 0) free(p);`, builds where the size is a
 non-zero constant: the allocation `realloc` returns remembers the live
-allocations it was handed, and a branch testing a pointer holding exactly it
-against null, read by the nullability check's own reader, gives them back as
-live on the null arm and freed at the call on the other, which C17 7.22.3.5 p3
-and p4 say of a failed and a successful call
-([#253](https://github.com/itsakeyfut/safec/issues/253)). With a size of zero,
+allocations it was handed, and a branch testing against null a local that is
+exactly what the call returned, `Held::returned_by`, read by the nullability
+check's own reader, gives them back as live on the null arm and freed at the
+call on the other, which C17 7.22.3.5 p3 and p4 say of a failed and a successful
+call ([#253](https://github.com/itsakeyfut/safec/issues/253)). Only while
+nothing else may have touched them: the fact goes when a later call is handed
+one of them or may free what is exposed, and where a join's arms disagree about
+it or about their state, since a null that is not the call's, or an `Unknown`
+the call did not leave, would otherwise read as the call failing. With a size of zero,
 whether a failed call frees is implementation-defined, so a variable size, which
 may be zero, is refused as before.
 
@@ -223,11 +227,25 @@ reading any size fails
 branch acting on a pointer this check stopped following fails
 `a_free_on_reallocs_failure_branch_after_its_result_was_replaced_is_not_proved`,
 and on the first of several sites fails
-`a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved`. Three parts
-fail nothing, measured: a join keeping a fact one arm lacks, a rebirth leaving
-it, and a fact kept for old allocations not all live; each is the conservative
-direction, and no program was found where its opposite says anything
-different; not asking its argument whether it was freed
+`a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved`; ignoring
+`Held::returned_by` fails
+`a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved`
+and `a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved`;
+no call forgetting what it touches fails
+`the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported`, and
+with a join's disagreement also gone
+`the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again`, or with an
+exposure also gone
+`the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported`;
+and letting a place with a projection through fails
+`a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone`. Five
+parts fail nothing, measured: a join keeping a fact one arm lacks, a rebirth
+leaving it, a fact kept for old allocations not all live, one kept for an old
+pointer this check stopped following, and the null arm restoring an old
+allocation whatever its state. Each is the conservative direction or answered
+first by another rule: an escape leaves an allocation unproven, so a lost old
+pointer has none all live, and every event that changes an old allocation's
+state also forgets the fact; not asking its argument whether it was freed
 fails `a_freed_pointer_handed_to_realloc_is_freed_twice`; asking its size too
 fails `the_size_realloc_is_handed_is_not_asked_whether_it_was_freed`; not
 carrying what the old object held fails
