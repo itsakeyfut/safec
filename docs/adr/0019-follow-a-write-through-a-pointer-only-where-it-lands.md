@@ -60,6 +60,9 @@ bit outlives everything done to the pointer that took the address, which is why
 it stays on `Known`; the edge dies with an assignment to that pointer, which is
 why ADR-0018's rule puts it in `Held`.
 
+The edge is read by a load as well: a load through the pointer holds what the
+local holds, which is ADR-0045's and #296's.
+
 `Element::Assign` whose place is exactly one `Deref` unions the written value
 into every local the pointer may write to, and does nothing else to them. The
 paragraph below on what it does not do is the one that was measured hardest.
