@@ -1079,6 +1079,12 @@ impl Known {
     /// gone: [`Held::stale_read`] read through the edge, as
     /// [`Self::lost_through`] reads `lost`, so a load through it carries what
     /// a load of the local itself would. See ADR-0045.
+    ///
+    /// **Reading `lost` here instead changes no answer, measured**, though it
+    /// is the wider rule: a local whose address is taken has its allocation
+    /// left unproven by the escape (ADR-0017), so a rebirth of it always
+    /// counts as gone and sets the bit, and one lost to a call writing
+    /// through its address is doubted at the read by that allocation's state.
     fn stale_through(&self, local: LocalId) -> bool {
         self.written_through(local)
             .into_iter()
