@@ -842,6 +842,17 @@ struct Known {
     /// Nothing clears it: slots are not told apart, so a store into one may
     /// leave the old pointer in another. See ADR-0045.
     stale: Vec<bool>,
+    /// Per site, whether what it contains may include a pointer read out of
+    /// memory a pointer parameter points at: one [`Held::from_caller`] marks,
+    /// stored here.
+    ///
+    /// **The mark lived on locals only**, so a store recorded the sites such
+    /// a pointer holds, which are none, and `*box = q; release_all(); r =
+    /// *box; return *r;` built where `return *q;` was reported. A load out of
+    /// a marked allocation reads caller memory, and a call this check cannot
+    /// read makes it [`Self::stale`]. Nothing clears it, for `stale`'s
+    /// reason. See ADR-0040.
+    from_caller: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -1363,6 +1374,9 @@ impl Known {
             exposed,
             inside,
             stale,
+            // Kept, as the entry and `stale` are: the slots of the new
+            // allocation are not told apart from the old one's.
+            from_caller: _,
             pending,
             calls: _,
             exposed_after_call,
@@ -2043,15 +2057,18 @@ impl Allocations<'_> {
 
     /// Whether a load through `local` reads memory a pointer parameter points
     /// at: whether `local` holds the site of one, or was itself read out of
-    /// such memory. The second is the same read one level further in, `q =
-    /// **ppp` spelled `pp = *ppp; q = *pp;`, and without it `q` held nothing
-    /// a call could make lost. Only the parameters `exposed_parameters` names,
+    /// such memory, or holds an allocation one was stored in. The second is
+    /// the same read one level further in, `q = **ppp` spelled `pp = *ppp; q =
+    /// *pp;`, and without it `q` held nothing a call could make lost; the third
+    /// is the same read after a store, `*box = q; r = *box;`, which
+    /// [`Known::from_caller`] marks. Only the parameters `exposed_parameters` names,
     /// so what the host hands `main` is not this, as it is not exposed. One
     /// answer for a load assigned and a load as an operand, so that the two
     /// cannot disagree. See ADR-0040.
     fn reads_caller_memory(&self, local: LocalId, value: &Known) -> bool {
         let held = &value.points_to[local.index()];
         held.from_caller
+            || held.sites().any(|site| value.from_caller[site])
             || self
                 .exposed_parameters
                 .iter()
@@ -2284,7 +2301,8 @@ impl Analysis for Allocations<'_> {
         // is one more bit per site that a join only sets, one more step each,
         // and whether a local was read out of such a site one more per local.
         // See ADR-0045. Whether a local was read out of what a parameter
-        // points at is one more per local. See ADR-0040.
+        // points at is one more per local, and whether a site may hold such a
+        // pointer one more per site, which a join only sets. See ADR-0040.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -2317,7 +2335,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 14) + positions * (2 * locals + 3) + locals
+        locals * locals * 3 + locals * (locals + 15) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2333,6 +2351,7 @@ impl Analysis for Allocations<'_> {
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
             stale: vec![false; self.locals],
+            from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -2377,12 +2396,17 @@ impl Analysis for Allocations<'_> {
             exposed,
             inside,
             stale,
+            from_caller,
             pending,
             calls,
             exposed_after_call,
         } = into;
         // Marked on one arm is marked where the arms meet. See ADR-0045.
         for (here, there) in stale.iter_mut().zip(&from.stale) {
+            *here = *here || *there;
+        }
+        // And so is what may hold the caller's. See ADR-0040.
+        for (here, there) in from_caller.iter_mut().zip(&from.from_caller) {
             *here = *here || *there;
         }
 
@@ -2652,6 +2676,11 @@ impl Analysis for Allocations<'_> {
                             // gives. See ADR-0045.
                             if written.stale_read {
                                 value.stale[*container] = true;
+                            }
+                            // And a pointer read out of caller memory keeps
+                            // that fact where it is stored. See ADR-0040.
+                            if written.from_caller {
+                                value.from_caller[*container] = true;
                             }
                         }
                         // Stored where code this check cannot read already
@@ -3184,6 +3213,16 @@ impl Analysis for Allocations<'_> {
                         held.lost = true;
                     }
                 }
+                // **And so is what this function stored of it**, so a load out
+                // of such an allocation after the call is one too. Whether the
+                // call can reach the allocation does not matter: what it may
+                // free is the caller's, which nothing here names. See
+                // ADR-0040.
+                for (stale, &from_caller) in value.stale.iter_mut().zip(&value.from_caller) {
+                    if from_caller {
+                        *stale = true;
+                    }
+                }
                 // **A load's sites are a lower bound, and a proof is not taken
                 // away on one.** A freed allocation a load may hold is not one
                 // this call is known to have been handed, so blanking it would
@@ -3359,6 +3398,11 @@ impl Analysis for Allocations<'_> {
                     // the copy. See ADR-0045.
                     if value.stale[old] {
                         value.stale[site] = true;
+                    }
+                    // And the caller's mark, for the same reason. See
+                    // ADR-0040.
+                    if value.from_caller[old] {
+                        value.from_caller[site] = true;
                     }
                 }
             }
