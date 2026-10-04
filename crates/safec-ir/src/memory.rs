@@ -726,6 +726,12 @@ impl Held {
     /// way. And the caller in `Allocations::carried` is reached only by an IR
     /// whose arithmetic is written straight into a place, which the C frontend
     /// never builds: it puts the sum in a temporary first.
+    ///
+    /// **What it does not follow**: a pointer moved off its start and back,
+    /// `up = po + 1; back = up - 1;`, since `up` is `Offset::NonZero` and the
+    /// edge is gone before `back` could keep it. And it rests on a local being
+    /// an array of one: once array locals compile, `pp + 1` may name a real
+    /// element, and the `NonZero` drop has to be asked again.
     fn moved_by_arithmetic(&mut self) {
         if !matches!(self.offset, Offset::Unknown) {
             self.writes_to.fill(false);
@@ -1912,8 +1918,16 @@ fn built_from(
     // from proving anything with it, so `t3[i][i]` is asked as `t3[0][0]` is.
     // See ADR-0045.
     for load in &loads {
-        for site in value.stored_below(load.local, derefs(load)) {
+        let (sites, locals) = value.levels_below(load.local, derefs(load));
+        for site in sites {
             reached.hold(site, Offset::Unknown);
+        }
+        // **And the locals whose address it may be**, as `read_through`
+        // carries them, so `(*ppo)[k]` keeps the edge `*ppo` does where the
+        // arithmetic leaves it, [`Held::moved_by_arithmetic`]'s to decide.
+        // Found by review. See ADR-0019 and ADR-0045.
+        for target in locals {
+            reached.writes_to[target] = true;
         }
         // And lost where the load would be. See ADR-0045.
         if value.stale_below(load.local, derefs(load)) {

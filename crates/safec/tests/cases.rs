@@ -1343,6 +1343,13 @@ cases! {
         a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_write_through_a_pointer_to_a_local_moved_by_an_unknown_offset_with_nothing_freed_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the same with the pointer moved being itself a load, through a
+        // local's address or out of a heap box: `built_from` carries the
+        // locals a load may be, as `read_through` does. Found by review.
+        // Mutation: have `built_from` carry no locals for a load; both go
+        // silent at the read.
+        a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a pointer read out of one parameter after another is freed.
         // See ADR-0040. Mutation: have the free not make such a local lost;
         // this goes silent.
