@@ -449,8 +449,14 @@ struct Held {
     /// the report never reads it. A write through such a local exposes what
     /// it carries, as one through a load does. See ADR-0044.
     foreign: bool,
-    /// Whether this was read out of an allocation [`Known::stale`] marks, and
-    /// may be one that is gone.
+    /// Whether this was read out of an allocation [`Known::stale`] marks, or
+    /// otherwise lost an allocation that may be gone, and may be one.
+    ///
+    /// Set too where a local loses a site whose allocation is not live
+    /// ([`Known::reborn`]), by a load through a pointer to such a local, and
+    /// by a call this check cannot read for what it makes lost of the
+    /// caller's. A store of any of them was recorded as nothing and read back
+    /// in silence, where read directly it was doubted. See ADR-0045.
     ///
     /// **Not [`Held::lost`], which says the same to the report and more to a
     /// store.** A local loses a site whenever the site is reborn, whatever
@@ -1069,6 +1075,22 @@ impl Known {
             .any(|&target| self.points_to[target].lost)
     }
 
+    /// Whether a local this one points at lost an allocation that may be
+    /// gone: [`Held::stale_read`] read through the edge, as
+    /// [`Self::lost_through`] reads `lost`, so a load through it carries what
+    /// a load of the local itself would. See ADR-0045.
+    ///
+    /// **Reading `lost` here instead changes no answer, measured**, though it
+    /// is the wider rule: a local whose address is taken has its allocation
+    /// left unproven by the escape (ADR-0017), so a rebirth of it always
+    /// counts as gone and sets the bit, and one lost to a call writing
+    /// through its address is doubted at the read by that allocation's state.
+    fn stale_through(&self, local: LocalId) -> bool {
+        self.written_through(local)
+            .into_iter()
+            .any(|target| self.points_to[target].stale_read)
+    }
+
     /// Whether a pointer read `depth` dereferences below `local` may be one
     /// [`Self::stale`] says this check stopped following: whether any
     /// allocation the chain reads through, at any level, is marked.
@@ -1397,8 +1419,17 @@ impl Known {
             exposed_after_call,
         } = self;
 
+        // **A local that loses an allocation that is gone may hold one**, so
+        // a store of it marks where it lands, as a load out of a marked
+        // allocation does. Not one that loses a live allocation: a list built
+        // in a loop loses its head every turn to a node nothing freed, and
+        // marking that doubted every walk of it. See ADR-0045.
+        let gone = !matches!(state[site], SiteState::Live(_));
         for (other, held) in points_to.iter_mut().enumerate() {
             if other != site {
+                if gone && held.sites[site] {
+                    held.stale_read = true;
+                }
                 held.lose(site);
             }
         }
@@ -1417,7 +1448,6 @@ impl Known {
         // dropping it left a pointer the old allocation held live across a
         // call that may free it, which built where `main` refused it. Found by
         // review; `a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held`.
-        let gone = !matches!(state[site], SiteState::Live(_));
         for container in 0..inside.len() {
             if gone && inside[container][site] {
                 stale[container] = true;
@@ -1756,6 +1786,7 @@ fn built_from(
         }
         if derefs(load) == 1 && value.lost_through(load.local) {
             reached.lost = true;
+            reached.stale_read |= value.stale_through(load.local);
         }
         // And what the caller stored, as `read_through` says. See ADR-0040.
         if reads_caller_memory(load.local, derefs(load)) {
@@ -2057,11 +2088,12 @@ impl Allocations<'_> {
                 held.lost = true;
                 held.stale_read = true;
             }
-            // Read through a pointer to a local this check lost. Not
-            // `stale_read`, which is for a rebirth's mark; a lost local
-            // stored on is #295. See ADR-0045.
+            // Read through a pointer to a local this check lost, carrying
+            // whether what it lost may be gone, as the local does. See
+            // ADR-0045.
             if depth == 1 && value.lost_through(source.local) {
                 held.lost = true;
+                held.stale_read |= value.stale_through(source.local);
             }
             if self.reads_caller_memory(source.local, depth, value) {
                 held.from_caller = true;
@@ -3238,6 +3270,8 @@ impl Analysis for Allocations<'_> {
                 for held in value.points_to.iter_mut() {
                     if held.from_caller {
                         held.lost = true;
+                        // And may be gone, which is the point. See ADR-0045.
+                        held.stale_read = true;
                     }
                 }
                 // **And so is what this function stored of it**, so a load out
