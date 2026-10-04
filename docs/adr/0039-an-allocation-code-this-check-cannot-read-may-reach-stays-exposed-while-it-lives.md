@@ -219,7 +219,15 @@ fails the same case, freeing nothing on the non-null arm fails
 `!=` only fails `a_free_on_reallocs_failure_branch_tested_with_not_builds`, and
 reading any size fails
 `a_free_on_reallocs_failure_branch_with_size_zero_is_not_proved` and
-`a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved`; not asking its argument whether it was freed
+`a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved`; the
+branch acting on a pointer this check stopped following fails
+`a_free_on_reallocs_failure_branch_after_its_result_was_replaced_is_not_proved`,
+and on the first of several sites fails
+`a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved`. Three parts
+fail nothing, measured: a join keeping a fact one arm lacks, a rebirth leaving
+it, and a fact kept for old allocations not all live; each is the conservative
+direction, and no program was found where its opposite says anything
+different; not asking its argument whether it was freed
 fails `a_freed_pointer_handed_to_realloc_is_freed_twice`; asking its size too
 fails `the_size_realloc_is_handed_is_not_asked_whether_it_was_freed`; not
 carrying what the old object held fails

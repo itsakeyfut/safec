@@ -969,6 +969,13 @@ cases! {
         // builds.
         a_free_on_reallocs_failure_branch_with_size_zero_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the pointer tested may be something other than what
+        // `realloc` returned: replaced through its address by a call this
+        // check cannot read, or holding another allocation too. Mutation:
+        // have the branch ignore `Held::lost`; the first builds. Mutation:
+        // have it read the first site of several; the second builds.
+        a_free_on_reallocs_failure_branch_after_its_result_was_replaced_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Refused and well defined: a cost ADR-0039 accepts, pinned so that a
         // change to it is seen.
         a_call_after_an_allocation_was_exposed_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
