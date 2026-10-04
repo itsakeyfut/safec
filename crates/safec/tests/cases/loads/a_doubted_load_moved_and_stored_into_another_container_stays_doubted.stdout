@@ -1,0 +1,324 @@
+Target "x86_64-pc-windows-msvc"
+Function a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "void *"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int *"
+  Local "_16" "void *"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "int"
+  Local "_20" "int *"
+  Local "_21" "int *"
+  Local "_22" "int *"
+  Local "_23" "int *"
+  Local "_24" "int *"
+  Local "_25" "int"
+  Local "_26" "int *"
+  Local "_27" "void"
+  Local "_28" "int"
+  Local "_29" "int"
+  Block "bb0" entry
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:5:16 generated
+    Call a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:5:16 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:5:16 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:6:9 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:9:9 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:9:13 generated
+    ArgumentsEvaluated a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:10:16 generated
+    Call a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:10:16 "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb5"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:10:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:10:16 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:11:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:11:9 "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:11:9 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:12:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:14:14 generated
+    Call a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:14:14 "malloc" "bb9"
+      Destination "_9"
+      Constant 4
+  Block "bb9"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:14:10 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:14:14 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:15:9 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:15:9 "bb10" "bb11"
+      Copy "_10"
+  Block "bb10"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:15:9 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:16:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:16:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:15:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:18:5 written
+      Destination "_8"
+        Deref
+      Use
+        Constant 1
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:18:5 written
+      Destination "_11"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:18:5 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:19:9 written
+      Destination "_12"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:19:13 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:20:9 written
+      Destination "_13"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:20:13 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:21:12 written
+      Destination "_14"
+      Binary "Lt"
+        Copy "_13"
+        Constant 2
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:21:12 "bb14" "bb15"
+      Copy "_14"
+  Block "bb14"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:21:12 generated
+    StorageLive a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:22:9 generated "_15"
+    ArgumentsEvaluated a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:22:18 generated
+    Call a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:22:18 "malloc" "bb16"
+      Destination "_16"
+      Constant 4
+  Block "bb15"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:21:12 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:41:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:41:12 generated
+    Return
+  Block "bb16"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:22:14 written
+      Destination "_15"
+      Use
+        Copy "_16"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:22:18 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:23:13 written
+      Destination "_17"
+      Binary "Eq"
+        Copy "_15"
+        Constant 0
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:23:13 "bb17" "bb18"
+      Copy "_17"
+  Block "bb17"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:23:13 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:24:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:24:20 generated
+    Return
+  Block "bb18"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:23:13 generated
+    Goto "bb19"
+  Block "bb19"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:26:9 written
+      Destination "_15"
+        Deref
+      Use
+        Constant 1
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:26:9 written
+      Destination "_18"
+      Use
+        Copy "_15"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:26:9 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:27:13 written
+      Destination "_19"
+      Binary "Eq"
+        Copy "_13"
+        Constant 1
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:27:13 "bb20" "bb21"
+      Copy "_19"
+  Block "bb20"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:27:13 generated
+    StorageLive a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:28:13 generated "_20"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:28:18 written
+      Destination "_20"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:28:22 generated
+    StorageLive a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:29:13 generated "_21"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:29:22 written
+      Destination "_22"
+      Binary "Add"
+        Copy "_20"
+        Copy "_12"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:29:18 written
+      Destination "_21"
+      Use
+        Copy "_22"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:29:22 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:30:13 written
+      Destination "_5"
+        Deref
+      Use
+        Copy "_21"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:30:13 written
+      Destination "_23"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:30:13 generated
+    StorageLive a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:31:13 generated "_24"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:31:18 written
+      Destination "_24"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:31:22 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:32:17 written
+      Destination "_25"
+      Binary "Eq"
+        Copy "_24"
+        Constant 0
+    Branch a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:32:17 "bb23" "bb24"
+      Copy "_25"
+  Block "bb21"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:27:13 generated
+    Goto "bb22"
+  Block "bb22"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:37:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_15"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:37:9 written
+      Destination "_26"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:37:9 generated
+    ArgumentsEvaluated a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:38:9 generated
+    Call a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:38:9 "free" "bb26"
+      Destination "_27"
+      Copy "_15"
+  Block "bb23"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:32:17 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:33:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:33:24 generated
+    Return
+  Block "bb24"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:32:17 generated
+    Goto "bb25"
+  Block "bb25"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:35:13 written
+      Destination "_0"
+      Use
+        Copy "_24"
+          Deref
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:35:20 generated
+    Return
+  Block "bb26"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:38:9 generated
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:39:13 written
+      Destination "_28"
+      Binary "Add"
+        Copy "_13"
+        Constant 1
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:39:9 written
+      Destination "_13"
+      Use
+        Copy "_28"
+    Operation a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:39:9 written
+      Destination "_29"
+      Use
+        Copy "_13"
+    Sequenced a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:39:9 generated
+    StorageDead a_doubted_load_moved_and_stored_into_another_container_stays_doubted.c:40:5 generated "_15"
+    Goto "bb13"

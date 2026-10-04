@@ -1,0 +1,10 @@
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt.c:20:9 ]
+    │
+ 20 │         n = *n;
+    │         ───┬──  
+    │            ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it

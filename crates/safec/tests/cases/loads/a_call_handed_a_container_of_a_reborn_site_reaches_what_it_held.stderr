@@ -1,0 +1,10 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:24:13 ]
+    │
+ 24 │             return *r;
+    │             ─────┬────  
+    │                  ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

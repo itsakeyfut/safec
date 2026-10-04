@@ -1,0 +1,10 @@
+warning[SC0402]: this uses a pointer this check stopped following
+    ╭─[ a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 ]
+    │
+ 28 │             return *q;
+    │             ─────┬────  
+    │                  ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
