@@ -1133,6 +1133,61 @@ cases! {
         // is the free of what `h` may have freed. Mutation: let the integers
         // beside a load contribute again; this reports `SC0402` at `*q`.
         an_integer_beside_a_load_does_not_decide_where_it_points: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer stored in a loop and freed, read back after the loop
+        // allocates again at its site, is one this check stopped following
+        // rather than the new allocation. See ADR-0045. `--allow-unknown`, so
+        // that the nullability check's doubts are warnings beside it.
+        //
+        // Reported: through a local, through arithmetic, two levels down, and
+        // freed on one arm only. Mutation: have `reborn` mark nothing; the
+        // first four go silent. Mutation: have `read_through` ignore the mark;
+        // the first, third and fourth go silent. Mutation: have `built_from`
+        // ignore it; the second. Mutation: have `stale_below` read one level
+        // only; the third. Mutation: drop `stale` at the join; the fourth.
+        a_pointer_stored_and_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the same read as one place, `**t2`, through `reached_below`.
+        // Mutation: have `reached_below` ignore the mark; this goes silent.
+        a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a marked container grown by `realloc`, whose copy of what it
+        // holds carries the mark. Mutation: copy the row without the mark;
+        // this goes silent.
+        a_container_grown_by_realloc_keeps_its_mark: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the entry a reborn site leaves in a container is kept, for what
+        // a call handed the container reaches: `r`, stored in last turn's
+        // allocation, may be freed by `release(t2)`. Mutation: drop the entry
+        // where the container is marked; this goes silent.
+        a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A load out of a marked allocation is doubted still once stored into
+        // another, directly and through a local. Mutation: have a store not
+        // mark its container for a value read out of a marked one; both go
+        // silent.
+        a_doubted_load_stored_into_another_container_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_doubted_load_stored_through_a_local_into_another_container_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The bit that says so is carried as a load's is: across a join, and
+        // through arithmetic. Mutation: have `Held::joined` drop it; the
+        // first goes silent. Mutation: have `Held::accumulated` drop it; the
+        // second goes silent.
+        a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_doubted_load_moved_and_stored_into_another_container_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And cleared by what a local is given next, and never set by a value
+        // this check merely lost: a list built with nothing freed loses its
+        // `head` every turn, and storing it marks nothing. Mutation: have
+        // `Held::clear` keep the bit; the first reports. Mutation: have a store
+        // mark its container for any lost value; the second reports.
+        a_local_given_something_else_after_a_doubted_load_stores_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Silent: a loop that keeps last turn's allocation alive, and one that
+        // stores and reads within a turn with nothing freed. Mutation: have
+        // `reborn` mark whatever the old allocation's state; both report.
+        a_pointer_kept_alive_last_turn_is_read_in_silence_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_stored_and_read_in_one_turn_with_nothing_freed_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What ADR-0045 accepts as its cost: a loop that stores, reads and
+        // frees within one turn is doubted on the next, since a store does not
+        // clear the mark while slots are not told apart.
+        a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A free of a load stays the doubt it was rather than a free of what
         // the load holds. Mutation: `touching` not answering `Lost` for a load;
         // this goes silent.
