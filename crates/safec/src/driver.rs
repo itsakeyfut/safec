@@ -1163,6 +1163,27 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "passed here, perhaps after the free",
             DISAGREEMENT_REMEDY,
         ),
+        // **Words of its own, under the same code**: what is passed is live,
+        // and `a pointer to an allocation that was freed` would be false about
+        // `use2(&a)`. The fix is the same, at the call or at the free. Only
+        // `Disagreement` arrives, because `memory::handed_below` always answers
+        // `Reached::Partial` beside a freed site; every other reason is named
+        // rather than taken by `_`, for the reason the double-free rows give.
+        // See ADR-0042.
+        (
+            Kind::FreedBehindArgument,
+            Conclusion::Unsafe | Conclusion::Unknown,
+            Some(
+                Unproven::Disagreement | Unproven::Lost | Unproven::Unsequenced | Unproven::Offset,
+            )
+            | None,
+        ) => (
+            ARGUMENT_AFTER_FREE,
+            "this may pass a pointer to where a freed pointer is stored",
+            "passed here, holding a freed pointer behind it",
+            "set the freed pointer to null before passing where it is stored, or do not free it \
+             before this call",
+        ),
         (Kind::InteriorFree, Conclusion::Unsafe, _) => (
             INTERIOR_FREE,
             "this frees a pointer that is not the start of an allocation",
