@@ -1,0 +1,10 @@
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_write_through_a_pointer_to_a_local_moved_by_an_unknown_offset_with_nothing_freed_is_silent.c:10:5 ]
+    │
+ 10 │     po[k] = a;
+    │     ────┬────  
+    │         ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it

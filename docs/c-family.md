@@ -248,15 +248,16 @@ zero pointer offset away, so **no `Rvalue::Binary` in a well-formed safety IR
 adds or subtracts a literal zero from a pointer**. C17 6.5.2.1 p2 makes `E[0]`
 and `*E` one expression and this keeps them one shape.
 
-A frontend that does not fold gets silence rather than a diagnostic, and this is
-measured rather than feared: hand-built IR for
-`t = pp + 0; *t = q; free(q); *p = 1;` produces no finding at all, where the
-folded shape of the same program produces one. Nothing enforces the requirement
-at the boundary, which is why it is written here, in the document a frontend
-author reads, rather than only in the record of the change that introduced it.
-`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` in
-`crates/safec-ir/tests/freed.rs` holds the boundary so that closing it later
-fails a named test rather than passing quietly.
+A frontend that does not fold no longer gets silence from the memory check:
+an edge to a local survives arithmetic whose offset may be zero
+([ADR-0019](adr/0019-follow-a-write-through-a-pointer-only-where-it-lands.md)),
+and a literal zero is such an offset, so hand-built IR for
+`t = pp + 0; *t = q; free(q); *p = 1;` produces the finding the folded shape
+does, which `an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`
+in `crates/safec-ir/tests/freed.rs` holds. The fold is still owed: every other
+reader that meets `E[0]` and `*E` as two shapes may answer them differently, and
+nothing enforces the requirement at the boundary, which is why it is written
+here, in the document a frontend author reads.
 
 **A fourth arrived with**
 [ADR-0030](adr/0030-a-pointer-operand-decides-what-pointer-arithmetic-reaches.md),

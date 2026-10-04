@@ -1435,7 +1435,7 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
 ///
 /// The addition in a local of its own, which is the shape the C frontend
 /// builds for a subscript whose offset is not zero. At zero it builds nothing:
-/// see [`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`].
+/// see [`an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`].
 fn stepped_by(to: LocalId, from: LocalId, by: i128, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![Element::Assign(Operation {
@@ -1474,28 +1474,26 @@ fn summed(to: LocalId, lhs: LocalId, rhs: LocalId, at: Span, then: BlockId) -> B
     }
 }
 
-/// An offset of zero that survived into the IR is a shape this check does not
-/// follow.
+/// An offset of zero that survived into the IR is followed, as an offset that
+/// may be zero.
 ///
-/// **A boundary, not a goal.** The program below is a use after free and this
-/// answers nothing about it, under every flag. What makes that tolerable is
-/// that no IR the C frontend builds has this shape: ADR-0021 folds a zero
-/// pointer offset away where the IR is built, so `pp[0]` and `*pp` arrive as
-/// one shape and this arrives from nowhere. `docs/c-family.md` is where that
-/// obligation is written down, because the reader who needs it is whoever
-/// writes the second frontend.
+/// **A boundary that closed, and which way it closed.** This test held that
+/// the program below, a use after free, answered nothing under every flag,
+/// because every pointer arithmetic dropped the edge to a local and a zero the
+/// frontend did not fold was arithmetic like any other. It said a check taught
+/// to read the zero would fail it, and that whoever did so should say which
+/// of the two ways it went: this is that one. An edge now survives arithmetic
+/// whose offset this check cannot read, since C17 6.5.6 p8 lets such a pointer
+/// be the local itself, and `offset_of` reads a literal zero as such an offset
+/// rather than assuming it moved. See ADR-0019.
 ///
-/// This is here so the boundary has a name. A frontend that stops folding, or
-/// a check taught to read the zero, fails a named test rather than passing
-/// quietly, and whoever deletes it has to say which of those two they did.
-///
-/// Mutation: none from inside this file. What it holds is the absence of a
-/// rule rather than a rule. The fold it rests on is guarded in the corpus, by
-/// `a_subscript_write_is_the_write_it_is_defined_as` for the pointer case and
-/// `a_zero_added_to_an_integer_keeps_its_operation` for the type test, and
-/// this test is what fails if that fold is ever moved back in here.
+/// The fold ADR-0021 asks of a frontend still stands: it is what keeps `pp[0]`
+/// and `*pp` one shape for every other reader; this report is the one the
+/// folded program, `*pp = q;`, gets. Mutation: have
+/// `Held::moved_by_arithmetic` empty the edge whatever the offset; this finds
+/// nothing again.
 #[test]
-fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
+fn an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero() {
     let (sources, names) = sources();
     let (unit, mut function, types, callees) = a_unit(&names, 0);
     let p = function.push_local(types.ptr);
@@ -1526,13 +1524,13 @@ fn an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow() {
 
     let found = concluded(unit, &sources, function);
 
-    // Nothing at all. The write through `stepped` is not followed, so nothing
-    // records that `p` holds what `q` held, and the read after the free asks
-    // about an allocation this check is not carrying. Written `*pp = q;`, the
-    // same program is one `UseAfterFree`, unproven because `p`'s address
-    // escaped and ADR-0017 keeps it out of a proof. Unproven is still an error
-    // wherever a check runs; this is silence under every flag.
-    assert!(found.is_empty(), "{found:?}");
+    // One `UseAfterFree`, unproven: the write through `stepped` lands in `p`
+    // by union, since the edge it kept is a may-write, and `p`'s address
+    // escaped, which ADR-0017 keeps out of a proof. Written `*pp = q;`, the
+    // same program is the same report.
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown, "{found:?}");
 }
 
 /// `*through = from + by;`, ending the block.
@@ -1570,7 +1568,7 @@ fn offset_into(through: LocalId, from: LocalId, by: i128, at: Span, then: BlockI
 /// `Rvalue::Binary` drops the edge, a zero included; this name says what its
 /// own program does, not what the rule distinguishes. Where the distinction
 /// lives is the lowering, and what is lost without it is
-/// [`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow`].
+/// [`an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`].
 ///
 /// **Observed through `q` rather than through `z`.** `z` had its address
 /// taken, so ADR-0017 answers `Reached::Lost` for it wherever a report is
@@ -1969,7 +1967,7 @@ fn an_index_written_on_the_left_still_carries_the_pointer() {
 /// says `is dropped` rather than `cannot happen`.
 ///
 /// Mutation: none from inside this file, for the reason
-/// `an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` gives about
+/// `an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero` gives about
 /// its own boundary. What this holds is the absence of an answer. Making the
 /// filter keep an operand that carries a site, whatever its type, turns this
 /// into a report and fails it.

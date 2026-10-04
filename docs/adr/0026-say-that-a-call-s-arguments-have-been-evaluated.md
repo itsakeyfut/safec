@@ -148,9 +148,10 @@ Three mutations, each measured, each failing named cases and nothing else:
 built by hand with the read and the free in one block and no element between
 them, which is what an adapter that has not read this record produces. It
 answers `Unknown` about a program C defines, and the mutation its doc comment
-names is inserting the element, which silences it. ADR-0021's
-`an_unfolded_zero_offset_is_a_shape_this_check_does_not_follow` is the
-precedent, and `docs/c-family.md` is where the obligation is written for
+names is inserting the element, which silences it. ADR-0021's boundary test
+for an unfolded zero offset was the precedent, until ADR-0019's edge came to
+survive arithmetic that may be zero and it became
+`an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero`; and `docs/c-family.md` is where the obligation is written for
 whoever writes the second frontend.
 
 The two halves are mutated apart on purpose. Mutating the lowering alone fails

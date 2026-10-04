@@ -97,20 +97,33 @@ first answer and not by this one.
 in this crate is, and what a missed arm would mean here is that a write silently
 carries nothing, which is a silence rather than a build error.
 
-**The edge stops at pointer arithmetic.** C17 6.5.6 p8 keeps the result of
-`p + 1` inside the object `p` points into, which is why the *allocation* travels
-through the arithmetic arm. A local's address plus one is not that local, so the
-edge does not: `pp[1] = q;` is an out of bounds write, and following it reported
-a proved use after free about an allocation nothing had freed.
+**The edge stops at pointer arithmetic that moves the pointer.** C17 6.5.6 p8
+keeps the result of `p + 1` inside the object `p` points into, which is why the
+*allocation* travels through the arithmetic arm. A local's address plus one is
+not that local, so the edge does not: `pp[1] = q;` is an out of bounds write,
+and following it reported a proved use after free about an allocation nothing
+had freed.
 
-An offset of zero never reaches this rule.
-[ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) folds it
-away when the IR is built, so `pp[0]` and `*pp` are one shape before anything
-reads them. **The rule in this check is still about arithmetic and not about
-which arithmetic**: every `Rvalue::Binary` drops the edge, a zero offset
-included, because nothing here can tell one offset from another. What #172 found
-is that the *reason* is about arithmetic that moves the pointer, and the layer
-that can act on the difference is the one that builds the IR.
+**Where the offset may be zero, the edge survives.** The same paragraph treats a
+local as an array of one, so `&slot + n` may be dereferenced only for `n` of
+zero, and a pointer moved by an offset this check cannot read may be `slot`
+itself. This record first dropped the edge for every `Rvalue::Binary`, because
+nothing here could tell one offset from another; ADR-0036 since carries
+`Offset::NonZero` for a pointer moved off its start by a non-zero constant, so
+`Held::moved_by_arithmetic` empties the edge for that and keeps it, with
+`writes_elsewhere` set, for `Offset::Unknown`. `po[k - 1]` read nothing of
+`slot` while `*po` read it (#308), and so does a load moved the same way,
+`(*ppo)[k]`, whose edge `built_from` now carries as `read_through` does. A kept
+edge is a may-write by union, so being wrong about it is a doubt and never a
+proof. Two things it does not follow: a pointer moved off its start and back,
+`up = po + 1; back = up - 1;`, which drops the edge at `up` before `back` could
+keep it; and an array local, which does not compile yet, where `pp + 1` may name
+a real element and the `NonZero` drop rests on a premise that no longer holds.
+
+[ADR-0021](./0021-fold-a-zero-pointer-offset-where-the-ir-is-built.md) still
+folds a zero away when the IR is built, so `pp[0]` and `*pp` are one shape before
+anything reads them; a literal zero a frontend did not fold now reaches this
+rule as an offset that may be zero, and is followed.
 
 `Analysis::height` gains `locals * locals` for the second square table.
 
@@ -127,7 +140,11 @@ whole workspace suite run with `--no-fail-fast`, and the file restored.
 | the write unproves the target, as a direct assignment does | `a_write_through_an_alias_leaves_a_sharer_s_proof_alone` and `a_write_through_an_alias_keeps_what_it_carried_proved`, whose proved reports drop to suspicions, and three cases whose diagnostics lose the `allocated here` label |
 | a write this check cannot follow carries every allocation instead of none | `a_write_through_an_alias_that_carries_no_allocation` |
 | a variant added to `Rvalue` | does not compile: `error[E0004]` here and at four other readers |
-| the edge survives pointer arithmetic | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains a proved `error[SC0402]` about an allocation nothing freed |
+| the edge survives pointer arithmetic whose offset is known not to be zero | `a_write_through_an_address_plus_one_is_not_a_write_to_the_local`, which gains `SC0402` about an allocation nothing freed: proved when this record first measured it, unproven now that a kept edge is a union |
+| the edge dropped whatever the offset | `a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds` and `an_unfolded_zero_offset_is_followed_as_an_offset_that_may_be_zero` |
+| `built_from` carrying no locals for a load moved by arithmetic | `a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds` and `a_pointer_to_a_local_read_out_of_memory_and_moved_by_an_unknown_offset_reads_what_the_local_holds` |
+| a kept edge without `writes_elsewhere` | nothing, measured: the local it names escaped, so what it holds is unproven and a read of it is doubted whether the write replaced or unioned |
+| `Allocations::carried`'s arm dropping the edge whatever the offset | nothing, measured: only IR with arithmetic written straight into a place reaches it, and the C frontend puts the sum in a temporary first |
 | `Held::union` does not union the edge | `an_address_taken_on_one_arm_is_written_through_after_the_join` |
 | a field added to `Held` | does not compile: `error[E0063]` in `Held::none` and `error[E0027]` in `Held::clear` and `Held::union` |
 
