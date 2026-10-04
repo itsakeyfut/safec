@@ -8,3 +8,13 @@ error[SC0407]: this may pass a pointer to an allocation that was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ a_later_call_is_asked_about_what_it_reaches_through_what_it_is_handed.c:17:19 ]
+    │
+ 17 │     r = keep(a) + release(tab);
+    │                   ──────┬─────  
+    │                         ╰─────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

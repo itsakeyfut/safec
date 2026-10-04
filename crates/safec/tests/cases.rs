@@ -1638,8 +1638,41 @@ cases! {
         a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A table and what it holds, handed to one call, are two places and
         // both are asked. Mutation: have `handed_places` ask one place per
-        // local again; this goes silent, since the table is live.
+        // local again; this goes silent, since the table is live. And it is
+        // one report, with `*tab`'s own words, though `tab` holds a freed
+        // pointer one level in. Mutation: key that finding under `tab`
+        // rather than `*tab`; two reports. Mutation: ask it in the same pass
+        // as each argument's own question; it takes `*tab`'s words.
         a_table_and_what_it_holds_handed_to_one_call_are_both_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a pointer handed to a call points at, one level in, is asked
+        // about allocations proved freed: through a local's address, and
+        // through this function's own memory. See ADR-0042. Mutation: have
+        // `handed` never ask `handed_below`; the first two go silent.
+        // Mutation: have `Known::unproved` make a freed site `Unknown` again;
+        // the first goes silent. Mutation: have `handed_below` read edges to
+        // locals only; the second goes silent. Mutation: leave out
+        // `Reached::Partial`; both become proofs.
+        the_address_of_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_table_holding_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And about one unproven, through this function's own memory only:
+        // a call this check cannot read may have freed it, or one path did.
+        // Mutation: have `handed_below` ask about freed sites only; both go
+        // silent. Through an address it is not asked, which the live address
+        // below holds. Mutation: have `handed_below` ask about every unproven
+        // site; that one reports.
+        a_table_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What ADR-0042 accepts as its cost: a callee that only writes there
+        // is not told apart from one that reads.
+        the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a live pointer stored in a table after its address escaped,
+        // whose allocation the escape left unproven.
+        a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Silent: the remedy the report gives, and a live pointer handed by
+        // address. Mutation: have `handed_below` ask every unproven site,
+        // including those through the address; the second reports.
+        the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_address_of_a_live_pointer_handed_to_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {

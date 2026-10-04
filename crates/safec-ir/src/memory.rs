@@ -980,6 +980,41 @@ impl Known {
         }
     }
 
+    /// What a pointer handed to a call points at may hold that may have been
+    /// freed: the allocations [`Self::stored_below`] says it may contain one
+    /// level in, through `&a` or through what this function stored in its own
+    /// memory, that are freed or unproven.
+    ///
+    /// **Not one unproven through the address handed**, because taking an
+    /// address makes a live allocation `Unknown` (ADR-0017), so asking about
+    /// those doubted `use2(&a)` over every live pointer. A freed one is asked
+    /// whichever way it is reached, and an unproven one reached through this
+    /// function's own memory is, since nothing about the call made it so:
+    /// `*t = a; release(a); use2(t);` was silent. **Never a proof**:
+    /// [`Reached::Partial`] is always beside them, since the callee may only
+    /// write there. See ADR-0042.
+    fn handed_below(&self, local: LocalId) -> Vec<Reached> {
+        let through_address: BTreeSet<usize> = self
+            .written_through(local)
+            .into_iter()
+            .flat_map(|target| self.points_to[target].sites())
+            .collect();
+        let mut reached: Vec<Reached> = self
+            .stored_below(local, 1)
+            .into_iter()
+            .filter(|&site| match self.state[site] {
+                SiteState::Freed { .. } => true,
+                SiteState::Unknown => !through_address.contains(&site),
+                SiteState::Live(_) => false,
+            })
+            .map(Reached::Site)
+            .collect();
+        if !reached.is_empty() {
+            reached.push(Reached::Partial);
+        }
+        reached
+    }
+
     /// What a dereference `depth + 1` levels below `local` reads: what
     /// [`Self::stored_below`] says the level above it may contain, marked as
     /// possibly incomplete for the reason a load is.
@@ -1420,8 +1455,16 @@ impl Known {
             return;
         }
 
+        // **A live allocation, and not a freed one.** Whoever holds the
+        // address may free what the local holds, which is a doubt about an
+        // allocation still live; one already freed stays freed, as no call
+        // un-frees one. Making it `Unknown` too forgot the free, so `free(a);
+        // use2(&a);` could not be told from a live `a` handed by address. See
+        // ADR-0017.
         for site in self.points_to[local].sites() {
-            self.state[site] = SiteState::Unknown;
+            if matches!(self.state[site], SiteState::Live(_)) {
+                self.state[site] = SiteState::Unknown;
+            }
         }
     }
 
@@ -3395,6 +3438,13 @@ pub enum Kind {
     /// believes its pointer parameters live where it starts, and nothing reads
     /// its callers from there. See ADR-0042.
     ArgumentAfterFree,
+    /// `free(a); g(&a);`
+    ///
+    /// Not [`Kind::ArgumentAfterFree`], because what is handed over is live:
+    /// it is what it points at that holds a freed pointer, which the callee
+    /// may read and use. Never a proof, since it may only write there. See
+    /// ADR-0042.
+    FreedBehindArgument,
 }
 
 /// One thing this check concluded, and where.
@@ -3810,6 +3860,9 @@ fn verdict(
         // free, and answering `true` proved a program C defines on that order.
         // See ADR-0042.
         Kind::ArgumentAfterFree => earliest.is_some_and(|freed| freed.sequenced),
+        // The same question, one level in. No proof reaches it, because
+        // `handed_below` always answers `Reached::Partial` beside its sites.
+        Kind::FreedBehindArgument => earliest.is_some_and(|freed| freed.sequenced),
     };
 
     match earliest {
@@ -4309,9 +4362,16 @@ fn handed(
         return;
     };
 
+    // What each pointer is handed as, first, so that a pointer handed on in
+    // its own right keeps its own words: in `give(tab, *tab)`, `*tab` is a
+    // freed pointer passed, which says more than what `tab` holds behind it.
+    let mut silent: Vec<&Place> = Vec::new();
     for place in handed_places(analysis, function, *callee, arguments) {
         let Some(verdict) = verdict(Kind::ArgumentAfterFree, known.handed_reached(place), known)
         else {
+            if place.projection.is_empty() {
+                silent.push(place);
+            }
             continue;
         };
         say(
@@ -4321,6 +4381,38 @@ fn handed(
             Finding {
                 function: analysis.function,
                 kind: Kind::ArgumentAfterFree,
+                conclusion: verdict.conclusion,
+                at: origin.span(),
+                freed: verdict.freed,
+                made: verdict.made,
+                unproven: verdict.unproven,
+            },
+        );
+    }
+
+    // **And what a pointer that said nothing points at, one level in**, keyed
+    // as `*place`, so that `give(tab, *tab)` is one report rather than two:
+    // what `tab` hands on one level in is what `*tab` hands on. Not carried
+    // forwards as the pointer is, because only allocations already freed are
+    // asked, and those are reported here. See ADR-0042.
+    for place in silent {
+        let Some(verdict) = verdict(
+            Kind::FreedBehindArgument,
+            known.handed_below(place.local),
+            known,
+        ) else {
+            continue;
+        };
+        say(
+            findings,
+            said,
+            &Place {
+                local: place.local,
+                projection: vec![Projection::Deref],
+            },
+            Finding {
+                function: analysis.function,
+                kind: Kind::FreedBehindArgument,
                 conclusion: verdict.conclusion,
                 at: origin.span(),
                 freed: verdict.freed,

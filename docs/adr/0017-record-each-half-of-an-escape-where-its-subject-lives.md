@@ -60,6 +60,12 @@ sites an escaped local reaches, at the four places a local is given something
 and again over the merged value in `join`. That is the fact about the heap,
 answered where the heap is asked about.
 
+**It marks a live allocation, and leaves a freed one alone.** Whoever holds the
+address may free what the local holds, which is a doubt about an allocation
+still live. One already freed stays freed, as no call un-frees one
+(ADR-0039). Marking it too forgot the free, so a call handed `&a` after
+`free(a)` could not tell it from one handed a live `a`'s address (#271).
+
 **A local reaching no site answers nothing, escaped or not.** `used` already
 says nothing about a place it follows no allocation for, however it came to
 follow none, and an address taken is not a reason to break that: a pointer this
@@ -102,6 +108,7 @@ the site marking going.
 | drop `unproved` after the `Element::Assign` match | `an_allocation_given_to_an_escaped_local_after_the_escape` |
 | drop `unproved` at the call's destination in `terminator` | `a_call_into_a_local_whose_address_escaped` in `crates/safec-ir/tests/freed.rs` |
 | drop `settle` from `join` | `an_escape_on_one_arm_and_a_shared_allocation_on_the_other` |
+| `unproved` marks a freed site as well as a live one | `the_address_of_a_freed_pointer_handed_to_a_call_is_reported` |
 
 The corpus cases are in `crates/safec/tests/cases/` and are named in the table
 in `crates/safec/tests/cases.rs`, per
