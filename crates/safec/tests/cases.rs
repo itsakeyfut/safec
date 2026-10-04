@@ -1226,6 +1226,12 @@ cases! {
         // the second goes silent.
         a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a copy whose destination or source is itself read out of memory,
+        // `memcpy(*pp, src, 8)` and `memcpy(tab, *ps, 8)`. Mutation: have
+        // `Callee::Copies` read only plain locals as its arguments; both go
+        // silent.
+        a_copy_into_a_destination_read_out_of_memory_is_recorded_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_copy_from_a_source_read_out_of_memory_is_recorded: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

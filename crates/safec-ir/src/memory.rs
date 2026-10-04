@@ -1042,9 +1042,9 @@ impl Known {
     /// **A chain written as one place is the chain written through locals**:
     /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Self::inside`]
     /// as a load through a load does, so the two spellings of a **read** cannot
-    /// be answered differently. A **store** written as one place, `**t3 = r`,
-    /// is one this check cannot place and is exposed rather than recorded, so
-    /// what it stored is not here to be read (#283). Every level is a lower bound read beside
+    /// be answered differently, and a **store** written as one place, `**t3 =
+    /// r`, is recorded where the level above may be, so it is here to be read.
+    /// Every level is a lower bound read beside
     /// [`Reached::Partial`], and each is a set of sites, so finite.
     /// See ADR-0045.
     fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
@@ -2488,8 +2488,8 @@ impl Analysis for Allocations<'_> {
                 // **Into the allocations the pointer holds, what the write
                 // carries is inside them**, exposed whenever they are, by
                 // [`Known::expose`]'s closure. A write this check cannot place
-                // exposes what it carries at once: one deeper than one `Deref`,
-                // which has no targets, or one through a pointer that holds
+                // exposes what it carries at once: one deeper than one `Deref`
+                // whose level above names nothing, or one through a pointer that holds
                 // neither an allocation nor a local's address, or, for that
                 // part, one through a pointer that may also point into memory
                 // this check does not model or hold something it lost. A write that
@@ -3041,13 +3041,32 @@ impl Analysis for Allocations<'_> {
                 // may hold one this check stopped following, so may the
                 // destination. Before what follows, which is the whole family's.
                 // See ADR-0039 and ADR-0045.
+                //
+                // **Either argument may be a place of dereferences**, `memcpy(*pp,
+                // *ps, 8)`, read as a store and a load through the same place
+                // are: the destination's allocations are what `*pp` may point
+                // at, and what is copied is one level below what `*ps` may
+                // point at. Read only as plain locals, those built in silence.
+                // Found by review.
                 if matches!(kind, Callee::Copies) {
                     if let [Operand::Copy(dest), Operand::Copy(source), ..] = &arguments[..] {
-                        if dest.projection.is_empty() && source.projection.is_empty() {
-                            let copied = value.stored_in(source.local);
-                            let marked = value.stale_below(source.local, 1)
-                                || value.lost_through(source.local);
-                            let into: Vec<usize> = value.sites_of(dest.local).collect();
+                        let (into_depth, from_depth) = (derefs(dest), derefs(source));
+                        let placed = (dest.projection.is_empty() || into_depth > 0)
+                            && (source.projection.is_empty() || from_depth > 0);
+                        if placed {
+                            let copied = value.stored_below(source.local, from_depth + 1);
+                            // The second half has no case: a lost local copied
+                            // is doubted by its own escape first, measured.
+                            let marked = value.stale_below(source.local, from_depth + 1)
+                                || (from_depth == 0 && value.lost_through(source.local));
+                            let into: Vec<usize> = if into_depth == 0 {
+                                value.sites_of(dest.local).collect()
+                            } else {
+                                value
+                                    .stored_below(dest.local, into_depth)
+                                    .into_iter()
+                                    .collect()
+                            };
                             for container in into {
                                 for &site in &copied {
                                     value.inside[container][site] = true;
