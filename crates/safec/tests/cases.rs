@@ -1329,6 +1329,11 @@ cases! {
         a_locals_address_stored_on_one_arm_is_followed_after_the_join: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_locals_address_stored_in_an_allocation_is_followed_after_realloc: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_locals_address_copied_by_memcpy_is_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a local this check lost, passed through two levels down in one
+        // place, `**t3` with `*t3 = &t2`, is doubted as `u = *t3; *u` is.
+        // Found by review. Mutation: have `lost_through` ask the first level
+        // only; this goes silent.
+        a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
@@ -1739,6 +1744,11 @@ cases! {
         // And a live pointer stored in a table after its address escaped,
         // whose allocation the escape left unproven.
         a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load out of memory carries a local's address as an edge, which
+        // exempts what the local holds; what the memory itself holds is
+        // still asked. Found by review. Mutation: have `handed_below` exempt
+        // every site the edges reach; this goes silent.
+        a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Silent: the remedy the report gives, and a live pointer handed by
         // address. Mutation: have `handed_below` ask every unproven site,
         // including those through the address; the second reports.

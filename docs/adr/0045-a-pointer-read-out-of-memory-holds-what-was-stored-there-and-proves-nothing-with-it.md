@@ -90,6 +90,7 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 
 - **The store never marking `Known::inside_locals`**, or **`Known::level_below` ignoring it**, fails `a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it`, `a_locals_address_read_back_out_of_an_allocation_is_written_through` and `a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local`; **a load carrying no edges** fails the second and `a_load_through_two_locals_addresses_reads_what_the_last_holds`; **a store two levels down landing in no local** fails the first and third.
 - **`Known::level_below` ignoring a local's own edges** fails `a_load_through_two_locals_addresses_reads_what_the_last_holds` alone.
+- **`Known::lost_through` asking the first level only**, as it did before the walk stepped through locals at every level, fails `a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted` alone, which goes silent where `u = *t3; *u` was doubted.
 - **The join keeping only what both arms hold**, **`realloc` copying no row** and **`memcpy` copying no locals** fail `a_locals_address_stored_on_one_arm_is_followed_after_the_join`, `a_locals_address_stored_in_an_allocation_is_followed_after_realloc` and `a_locals_address_copied_by_memcpy_is_followed` respectively.
 
 **A copy or a deep store.**

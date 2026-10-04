@@ -1022,10 +1022,28 @@ impl Known {
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     fn handed_below(&self, local: LocalId) -> Vec<Reached> {
+        // **Only what the address alone reaches.** A load out of memory
+        // carries the locals it may be as edges too, so `m = *h;` with `*h`
+        // holding either `&slot` or `x` reaches `x`'s contents through
+        // memory and `slot`'s through an edge, and exempting everything
+        // `slot` holds silenced a freed pointer `x` held as well. Found by
+        // review.
+        let through_memory: BTreeSet<usize> = self.points_to[local.index()]
+            .sites()
+            .flat_map(|container| {
+                self.inside[container]
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &in_it)| in_it)
+                    .map(|(site, _)| site)
+                    .collect::<Vec<_>>()
+            })
+            .collect();
         let through_address: BTreeSet<usize> = self
             .written_through(local)
             .into_iter()
             .flat_map(|target| self.points_to[target].sites())
+            .filter(|site| !through_memory.contains(site))
             .collect();
         let mut reached: Vec<Reached> = self
             .stored_below(local, 1)
@@ -1067,37 +1085,58 @@ impl Known {
         if self.stale_below(local, depth) {
             reached.push(Reached::Lost);
         }
-        // And one level below a pointer to a local this check lost, which is
-        // `**t2` and `*t2` handed on, as a load of `*t2` is. See ADR-0045.
-        if depth == 1 && self.lost_through(local) {
+        // And below a pointer to a local this check lost, at any level, which
+        // is `**t2` and `*t2` handed on, as a load of `*t2` is. See ADR-0045.
+        if self.lost_through(local, depth) {
             reached.push(Reached::Lost);
         }
         reached
     }
 
-    /// Whether a local this one points at is one this check stopped
-    /// following, so that a load through the pointer is lost where a direct
-    /// read of the local is. Its sites alone, which is what
+    /// Whether a local a read `depth` dereferences below `local` passes
+    /// through is one this check stopped following, so that the read is lost
+    /// where a direct read of the local is. Its sites alone, which is what
     /// [`Self::level_below`] carries across, would read as followed.
-    /// See ADR-0045.
-    fn lost_through(&self, local: LocalId) -> bool {
-        self.written_through(local)
-            .iter()
-            .any(|&target| self.points_to[target].lost)
+    ///
+    /// **At every level, not only the first.** The walk steps through a local
+    /// at any level, so `q = **t3` with `*t3 = &t2` reads through `t2` as `u =
+    /// *t3; q = *u;` does, and asking the first level alone left the one-place
+    /// spelling silent where the other was doubted. Found by review. See
+    /// ADR-0045.
+    fn lost_through(&self, local: LocalId, depth: usize) -> bool {
+        self.locals_read_through(local, depth)
+            .into_iter()
+            .any(|target| self.points_to[target].lost)
     }
 
-    /// Whether a local this one points at lost an allocation that may be
-    /// gone: [`Held::stale_read`] read through the edge, as
-    /// [`Self::lost_through`] reads `lost`, so a load through it carries what
-    /// a load of the local itself would. See ADR-0045.
+    /// The locals a read `depth` dereferences below `local` passes through:
+    /// those the local's own edges name, then those each level of
+    /// [`Self::level_below`] reaches, short of the last.
+    fn locals_read_through(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
+        let mut sites: BTreeSet<usize> = self.points_to[local.index()].sites().collect();
+        let mut locals: BTreeSet<usize> = self.written_through(local).into_iter().collect();
+        let mut passed = BTreeSet::new();
+        for level in 0..depth {
+            passed.extend(locals.iter().copied());
+            if level + 1 < depth {
+                (sites, locals) = self.level_below(&sites, &locals);
+            }
+        }
+        passed
+    }
+
+    /// Whether a local a read through `local` passes through lost an
+    /// allocation that may be gone: [`Held::stale_read`] read along the walk,
+    /// as [`Self::lost_through`] reads `lost`, so a load through it carries
+    /// what a load of the local itself would. See ADR-0045.
     ///
     /// **Reading `lost` here instead changes no answer, measured**, though it
     /// is the wider rule: a local whose address is taken has its allocation
     /// left unproven by the escape (ADR-0017), so a rebirth of it always
     /// counts as gone and sets the bit, and one lost to a call writing
     /// through its address is doubted at the read by that allocation's state.
-    fn stale_through(&self, local: LocalId) -> bool {
-        self.written_through(local)
+    fn stale_through(&self, local: LocalId, depth: usize) -> bool {
+        self.locals_read_through(local, depth)
             .into_iter()
             .any(|target| self.points_to[target].stale_read)
     }
@@ -1823,9 +1862,9 @@ fn built_from(
             reached.lost = true;
             reached.stale_read = true;
         }
-        if derefs(load) == 1 && value.lost_through(load.local) {
+        if value.lost_through(load.local, derefs(load)) {
             reached.lost = true;
-            reached.stale_read |= value.stale_through(load.local);
+            reached.stale_read |= value.stale_through(load.local, derefs(load));
         }
         // And what the caller stored, as `read_through` says. See ADR-0040.
         if reads_caller_memory(load.local, derefs(load)) {
@@ -2139,9 +2178,9 @@ impl Allocations<'_> {
             // Read through a pointer to a local this check lost, carrying
             // whether what it lost may be gone, as the local does. See
             // ADR-0045.
-            if depth == 1 && value.lost_through(source.local) {
+            if value.lost_through(source.local, depth) {
                 held.lost = true;
-                held.stale_read |= value.stale_through(source.local);
+                held.stale_read |= value.stale_through(source.local, depth);
             }
             if self.reads_caller_memory(source.local, depth, value) {
                 held.from_caller = true;
@@ -2762,12 +2801,14 @@ impl Analysis for Allocations<'_> {
                     };
                     for &target in &deep_targets {
                         value.points_to[target].accumulated(&written);
+                        // No program observes this, as for the write through
+                        // one dereference below, and it is here for the same
+                        // reason: keeping the proof is the confident direction.
                         value.points_to[target].freed = None;
                     }
                     // With a target, what it carries is in that local now, and
                     // the local's address escaped: every call reaches it.
-                    let unplaced =
-                        containers.is_empty() && targets.is_empty() && deep_targets.is_empty();
+                    let unplaced = containers.is_empty() && targets.is_empty();
                     // Written into locals whose addresses escaped, which every
                     // call reaches, so a pending read is told, as at an
                     // exposure. See ADR-0042.
@@ -3312,7 +3353,7 @@ impl Analysis for Allocations<'_> {
                             // The second half has no case: a lost local copied
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)
-                                || (from_depth == 0 && value.lost_through(source.local));
+                                || value.lost_through(source.local, from_depth + 1);
                             // And what was read out of caller memory, as a
                             // store of a load of the source would carry it:
                             // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
