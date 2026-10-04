@@ -842,6 +842,17 @@ struct Known {
     /// Nothing clears it: slots are not told apart, so a store into one may
     /// leave the old pointer in another. See ADR-0045.
     stale: Vec<bool>,
+    /// Per site, whether what it contains may include a pointer read out of
+    /// memory a pointer parameter points at: one [`Held::from_caller`] marks,
+    /// stored here.
+    ///
+    /// **The mark lived on locals only**, so a store recorded the sites such
+    /// a pointer holds, which are none, and `*box = q; release_all(); r =
+    /// *box; return *r;` built where `return *q;` was reported. A load out of
+    /// a marked allocation reads caller memory, and a call this check cannot
+    /// read makes it [`Self::stale`]. Nothing clears it, for `stale`'s
+    /// reason. See ADR-0040.
+    from_caller: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -1066,13 +1077,25 @@ impl Known {
     /// two answer the same places. Not for a lost local, whose load is
     /// answered by [`Self::stored`]. See ADR-0045.
     fn stale_below(&self, local: LocalId, depth: usize) -> bool {
+        self.marked_below(local, depth, &self.stale)
+    }
+
+    /// Whether any allocation a pointer read `depth` dereferences below
+    /// `local` reads through, at any level, is set in `marks`, a per-site
+    /// column: [`Self::stale`] or [`Self::from_caller`].
+    ///
+    /// **One walk for both**, so that `r = **bb;` and `b = *bb; r = *b;` are
+    /// asked about the same allocations: asked about the local's own sites
+    /// alone, the first read `bb`'s allocation and never the one `*bb` names,
+    /// and built in silence where the second was doubted. Found by review.
+    fn marked_below(&self, local: LocalId, depth: usize, marks: &[bool]) -> bool {
         let held = &self.points_to[local.index()];
         if held.lost {
             return false;
         }
         let mut containers: BTreeSet<usize> = held.sites().collect();
         for _ in 0..depth {
-            if containers.iter().any(|&c| self.stale[c]) {
+            if containers.iter().any(|&c| marks[c]) {
                 return true;
             }
             let mut next = BTreeSet::new();
@@ -1363,6 +1386,12 @@ impl Known {
             exposed,
             inside,
             stale,
+            // Kept, as the entry and `stale` are: the slots of the new
+            // allocation are not told apart from the old one's. No case
+            // tells this from clearing it, measured: every other local
+            // holding the site is lost a few lines below, so a load out of
+            // it is doubted either way.
+            from_caller: _,
             pending,
             calls: _,
             exposed_after_call,
@@ -1647,7 +1676,7 @@ fn built_from(
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
     may_be_pointer: impl Fn(&Place) -> bool,
-    reads_caller_memory: impl Fn(LocalId) -> bool,
+    reads_caller_memory: impl Fn(LocalId, usize) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -1729,7 +1758,7 @@ fn built_from(
             reached.lost = true;
         }
         // And what the caller stored, as `read_through` says. See ADR-0040.
-        if reads_caller_memory(load.local) {
+        if reads_caller_memory(load.local, derefs(load)) {
             reached.from_caller = true;
         }
     }
@@ -1932,7 +1961,7 @@ impl Allocations<'_> {
                     value,
                     |local| self.is_pointer(function, local),
                     |place| self.may_be_pointer(function, place),
-                    |local| self.reads_caller_memory(local, value),
+                    |local, depth| self.reads_caller_memory(local, depth, value),
                 );
                 reached.writes_to.fill(false);
                 // Emptying the set says nothing on its own: an empty set is
@@ -2034,24 +2063,30 @@ impl Allocations<'_> {
             if depth == 1 && value.lost_through(source.local) {
                 held.lost = true;
             }
-            if self.reads_caller_memory(source.local, value) {
+            if self.reads_caller_memory(source.local, depth, value) {
                 held.from_caller = true;
             }
         }
         held
     }
 
-    /// Whether a load through `local` reads memory a pointer parameter points
-    /// at: whether `local` holds the site of one, or was itself read out of
-    /// such memory. The second is the same read one level further in, `q =
-    /// **ppp` spelled `pp = *ppp; q = *pp;`, and without it `q` held nothing
-    /// a call could make lost. Only the parameters `exposed_parameters` names,
+    /// Whether a load `depth` dereferences through `local` reads memory a
+    /// pointer parameter points at: whether `local` holds the site of one, or
+    /// was itself read out of such memory, or the load reads through an
+    /// allocation one was stored in, at any level. The second is the same read
+    /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
+    /// without it `q` held nothing a call could make lost; the third is the
+    /// same read after a store, `*box = q; r = *box;` or `r = **bb;`, which
+    /// [`Known::from_caller`] marks. Only the parameters `exposed_parameters` names,
     /// so what the host hands `main` is not this, as it is not exposed. One
     /// answer for a load assigned and a load as an operand, so that the two
     /// cannot disagree. See ADR-0040.
-    fn reads_caller_memory(&self, local: LocalId, value: &Known) -> bool {
+    fn reads_caller_memory(&self, local: LocalId, depth: usize, value: &Known) -> bool {
         let held = &value.points_to[local.index()];
+        // At least the local's own allocations, which a load with no
+        // dereference in its place, an element, still reads through.
         held.from_caller
+            || value.marked_below(local, depth.max(1), &value.from_caller)
             || self
                 .exposed_parameters
                 .iter()
@@ -2284,7 +2319,8 @@ impl Analysis for Allocations<'_> {
         // is one more bit per site that a join only sets, one more step each,
         // and whether a local was read out of such a site one more per local.
         // See ADR-0045. Whether a local was read out of what a parameter
-        // points at is one more per local. See ADR-0040.
+        // points at is one more per local, and whether a site may hold such a
+        // pointer one more per site, which a join only sets. See ADR-0040.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -2317,7 +2353,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 14) + positions * (2 * locals + 3) + locals
+        locals * locals * 3 + locals * (locals + 15) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2333,6 +2369,7 @@ impl Analysis for Allocations<'_> {
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
             stale: vec![false; self.locals],
+            from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -2377,12 +2414,17 @@ impl Analysis for Allocations<'_> {
             exposed,
             inside,
             stale,
+            from_caller,
             pending,
             calls,
             exposed_after_call,
         } = into;
         // Marked on one arm is marked where the arms meet. See ADR-0045.
         for (here, there) in stale.iter_mut().zip(&from.stale) {
+            *here = *here || *there;
+        }
+        // And so is what may hold the caller's. See ADR-0040.
+        for (here, there) in from_caller.iter_mut().zip(&from.from_caller) {
             *here = *here || *there;
         }
 
@@ -2653,6 +2695,11 @@ impl Analysis for Allocations<'_> {
                             if written.stale_read {
                                 value.stale[*container] = true;
                             }
+                            // And a pointer read out of caller memory keeps
+                            // that fact where it is stored. See ADR-0040.
+                            if written.from_caller {
+                                value.from_caller[*container] = true;
+                            }
                         }
                         // Stored where code this check cannot read already
                         // reaches is reachable to it from now on, which no
@@ -2812,7 +2859,7 @@ impl Analysis for Allocations<'_> {
                             value,
                             |local| self.is_pointer(function, local),
                             |place| self.may_be_pointer(function, place),
-                            |local| self.reads_caller_memory(local, value),
+                            |local, depth| self.reads_caller_memory(local, depth, value),
                         );
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
@@ -3148,6 +3195,12 @@ impl Analysis for Allocations<'_> {
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)
                                 || (from_depth == 0 && value.lost_through(source.local));
+                            // And what was read out of caller memory, as a
+                            // store of a load of the source would carry it:
+                            // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
+                            // review. See ADR-0040.
+                            let caller =
+                                self.reads_caller_memory(source.local, from_depth + 1, value);
                             let into: Vec<usize> = if into_depth == 0 {
                                 value.sites_of(dest.local).collect()
                             } else {
@@ -3162,6 +3215,9 @@ impl Analysis for Allocations<'_> {
                                 }
                                 if marked {
                                     value.stale[container] = true;
+                                }
+                                if caller {
+                                    value.from_caller[container] = true;
                                 }
                             }
                         }
@@ -3182,6 +3238,16 @@ impl Analysis for Allocations<'_> {
                 for held in value.points_to.iter_mut() {
                     if held.from_caller {
                         held.lost = true;
+                    }
+                }
+                // **And so is what this function stored of it**, so a load out
+                // of such an allocation after the call is one too. Whether the
+                // call can reach the allocation does not matter: what it may
+                // free is the caller's, which nothing here names. See
+                // ADR-0040.
+                for (stale, &from_caller) in value.stale.iter_mut().zip(&value.from_caller) {
+                    if from_caller {
+                        *stale = true;
                     }
                 }
                 // **A load's sites are a lower bound, and a proof is not taken
@@ -3359,6 +3425,11 @@ impl Analysis for Allocations<'_> {
                     // the copy. See ADR-0045.
                     if value.stale[old] {
                         value.stale[site] = true;
+                    }
+                    // And the caller's mark, for the same reason. See
+                    // ADR-0040.
+                    if value.from_caller[old] {
+                        value.from_caller[site] = true;
                     }
                 }
             }

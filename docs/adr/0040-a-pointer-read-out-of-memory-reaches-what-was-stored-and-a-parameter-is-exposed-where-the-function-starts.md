@@ -116,10 +116,16 @@ cannot read makes it a pointer this check stopped following, for the same
 reason the parameter's own site is exposed. A load through a local that carries
 it carries it too, so `pp = *ppp; q = *pp;` is `q = **ppp`. The cost is the same
 one level in: such a pointer read after any call this check cannot read is
-doubted (#281). The mark is on locals only, so such a pointer stored into an
-allocation this function made and read back after the call is read in silence
-(#302); and a free this check can read, of another parameter the caller may
-have handed in twice, doubts nothing (#303).
+doubted (#281). Stored into an allocation this function made, it marks the
+allocation, `Known::from_caller`: a load out of it carries the mark, and a call
+this check cannot read makes the allocation `Known::stale`, so a load out of it
+afterwards is one this check stopped following, whether or not the call can
+reach the allocation, since what it may free is the caller's (#302). A load
+is asked about every allocation it reads through, so `r = **bb;` is `b = *bb;
+r = *b;`, and `memcpy` carries the mark as a store does. With no such call it
+is read in silence, as a pointer kept in a local is. A free this
+check can read, of another parameter the caller may have handed in twice,
+doubts nothing (#303).
 
 ### Confirmation
 
@@ -187,6 +193,23 @@ every parameter fails `a_pointer_read_out_of_mains_arguments_is_not_doubted_afte
 fail a case named for them; and `Allocations::reads_caller_memory` reading only
 the parameters' sites fails
 `a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call`.
+Through a store: the store never marking `Known::from_caller` fails
+`a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call`
+and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call`; the call never making a marked
+allocation `Known::stale` fails the first; `reads_caller_memory` ignoring a
+marked site fails the second; the store marking `Known::stale` at once fails
+`a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence`;
+the join dropping the mark fails `a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call`;
+and `realloc` dropping it fails `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call`.
+`reads_caller_memory` asking the local's own allocations only fails
+`a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call`
+and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved`;
+`memcpy` carrying no mark fails
+`a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call`
+and `what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call`.
+Clearing the mark where its site is reborn fails nothing, measured on a loop
+that stores on one turn and reads after it: the rebirth already makes every
+other local holding the site lost, so the read is doubted either way.
 
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a

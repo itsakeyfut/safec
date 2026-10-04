@@ -1,0 +1,10 @@
+warning[SC0402]: this uses a pointer this check stopped following
+    ╭─[ a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved.c:27:5 ]
+    │
+ 27 │     return *r;
+    │     ─────┬────  
+    │          ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
