@@ -460,6 +460,17 @@ struct Held {
     /// that list, measured; a store of this one marks it, so a doubted load
     /// copied into another allocation stays doubted. See ADR-0045.
     stale_read: bool,
+    /// Whether this was read out of memory a pointer parameter points at, so
+    /// may be what the caller stored there.
+    ///
+    /// **Made [`Held::lost`] at a call this check cannot read.** What the
+    /// caller stored behind `pp` is recorded nowhere, so a load of it holds no
+    /// site and nothing a call does could reach it: `q = *pp; release_all();
+    /// return *q;` built. The caller may have stashed it where the call frees
+    /// it, which is ADR-0040's reason for exposing the parameter itself, one
+    /// level in; and its cost, a read after any such call doubted, is the same
+    /// one level in. See ADR-0040.
+    from_caller: bool,
 }
 
 impl Held {
@@ -479,6 +490,7 @@ impl Held {
             loaded: false,
             foreign: false,
             stale_read: false,
+            from_caller: false,
         }
     }
 
@@ -531,8 +543,10 @@ impl Held {
             loaded,
             foreign,
             stale_read,
+            from_caller,
         } = self;
         sites.fill(false);
+        *from_caller = false;
         *lost = false;
         *loaded = false;
         *foreign = false;
@@ -569,8 +583,10 @@ impl Held {
             loaded,
             foreign,
             stale_read,
+            from_caller,
         } = self;
         *offset = offset.joined(other.offset);
+        *from_caller = *from_caller || other.from_caller;
         *loaded = *loaded || other.loaded;
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
@@ -623,7 +639,9 @@ impl Held {
             loaded,
             foreign,
             stale_read,
+            from_caller,
         } = self;
+        *from_caller = *from_caller || other.from_caller;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
         *loaded = *loaded || other.loaded;
@@ -1586,6 +1604,7 @@ fn built_from(
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
     may_be_pointer: impl Fn(&Place) -> bool,
+    reads_caller_memory: impl Fn(LocalId) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -1665,6 +1684,10 @@ fn built_from(
         }
         if derefs(load) == 1 && value.lost_through(load.local) {
             reached.lost = true;
+        }
+        // And what the caller stored, as `read_through` says. See ADR-0040.
+        if reads_caller_memory(load.local) {
+            reached.from_caller = true;
         }
     }
 
@@ -1866,6 +1889,7 @@ impl Allocations<'_> {
                     value,
                     |local| self.is_pointer(function, local),
                     |place| self.may_be_pointer(function, place),
+                    |local| self.reads_caller_memory(local, value),
                 );
                 reached.writes_to.fill(false);
                 // Emptying the set says nothing on its own: an empty set is
@@ -1967,8 +1991,28 @@ impl Allocations<'_> {
             if depth == 1 && value.lost_through(source.local) {
                 held.lost = true;
             }
+            if self.reads_caller_memory(source.local, value) {
+                held.from_caller = true;
+            }
         }
         held
+    }
+
+    /// Whether a load through `local` reads memory a pointer parameter points
+    /// at: whether `local` holds the site of one, or was itself read out of
+    /// such memory. The second is the same read one level further in, `q =
+    /// **ppp` spelled `pp = *ppp; q = *pp;`, and without it `q` held nothing
+    /// a call could make lost. Only the parameters `exposed_parameters` names,
+    /// so what the host hands `main` is not this, as it is not exposed. One
+    /// answer for a load assigned and a load as an operand, so that the two
+    /// cannot disagree. See ADR-0040.
+    fn reads_caller_memory(&self, local: LocalId, value: &Known) -> bool {
+        let held = &value.points_to[local.index()];
+        held.from_caller
+            || self
+                .exposed_parameters
+                .iter()
+                .any(|parameter| held.sites[parameter.index()])
     }
 
     /// What an operand may reach beyond the sites it holds, because it may be
@@ -2196,7 +2240,8 @@ impl Analysis for Allocations<'_> {
         // See ADR-0044. Whether a site may contain an allocation that is gone
         // is one more bit per site that a join only sets, one more step each,
         // and whether a local was read out of such a site one more per local.
-        // See ADR-0045.
+        // See ADR-0045. Whether a local was read out of what a parameter
+        // points at is one more per local. See ADR-0040.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -2229,7 +2274,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 13) + positions * (2 * locals + 3) + locals
+        locals * locals * 3 + locals * (locals + 14) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2724,6 +2769,7 @@ impl Analysis for Allocations<'_> {
                             value,
                             |local| self.is_pointer(function, local),
                             |place| self.may_be_pointer(function, place),
+                            |local| self.reads_caller_memory(local, value),
                         );
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
@@ -3085,6 +3131,16 @@ impl Analysis for Allocations<'_> {
                 value.replaced(|_| true);
             }
             Callee::Opaque => {
+                // **What the caller stored is out of sight from here on.** A
+                // pointer read out of memory a parameter points at may be one
+                // the caller stashed where this call frees it, and no site
+                // names it for the call to reach, so it is one this check
+                // stopped following. See ADR-0040.
+                for held in value.points_to.iter_mut() {
+                    if held.from_caller {
+                        held.lost = true;
+                    }
+                }
                 // **A load's sites are a lower bound, and a proof is not taken
                 // away on one.** A freed allocation a load may hold is not one
                 // this call is known to have been handed, so blanking it would
