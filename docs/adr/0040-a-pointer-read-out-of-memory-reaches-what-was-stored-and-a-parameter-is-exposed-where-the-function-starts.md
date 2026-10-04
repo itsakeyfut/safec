@@ -123,9 +123,19 @@ afterwards is one this check stopped following, whether or not the call can
 reach the allocation, since what it may free is the caller's (#302). A load
 is asked about every allocation it reads through, so `r = **bb;` is `b = *bb;
 r = *b;`, and `memcpy` carries the mark as a store does. With no such call it
-is read in silence, as a pointer kept in a local is. A free this
-check can read, of another parameter the caller may have handed in twice,
-doubts nothing (#303).
+is read in silence, as a pointer kept in a local is.
+
+**A free of what the caller owns, as a call this check cannot read.** A
+caller may hand one allocation twice, so `free(b); return *a;` over two
+parameters is a use after free under `f(p, p)`. A `free` or `realloc` handed
+a pointer that may be the caller's, one holding a parameter's site, one read
+out of what a parameter points at, or `*pp` itself, therefore does to the
+caller's memory what an unread call does: every exposed allocation still live
+becomes unproven, and every pointer read out of caller memory one this check
+stopped following, by the one function both call. Before the free's own
+transfer, which returns early for a pointer read out of memory, the very free
+this is for. A free of an allocation this function made does not, since the
+caller cannot have handed it (#303).
 
 ### Confirmation
 
@@ -211,6 +221,21 @@ Clearing the mark where its site is reborn fails nothing, measured on a loop
 that stores on one turn and reads after it: the rebirth already makes every
 other local holding the site lost, so the read is doubted either way.
 
+**A free of what the caller owns.** The rule never firing fails
+`a_read_through_one_parameter_after_another_is_freed_is_doubted`,
+`a_read_through_one_parameter_after_another_is_reallocated_is_doubted`,
+`a_free_of_what_a_parameter_points_at_doubts_a_read_through_it` and
+`a_pointer_read_out_of_a_parameter_after_another_is_freed_is_doubted`; firing
+for `free` only fails the second alone; asking no place of dereferences fails
+the third alone; and firing for any free fails
+`a_free_of_this_functions_own_allocation_leaves_a_parameter_alone` and twelve
+cases about frees and copies of the function's own allocations. Making no
+pointer read out of caller memory lost, in the function both rules call, fails
+the fourth and every case of the rule one level in. Ignoring `Held::from_caller`
+in `frees_callers`, or running the rule after the free's own arm, fails
+`a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter`
+alone, which goes silent at the read.
+
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a
 lost bit from ADR-0029 is on a local whose new contents an unread callee
@@ -221,6 +246,20 @@ it is used). `Analysis::height`, as for every other term in it.
 
 ### Consequences
 
+* Bad, because a read through one parameter after another is freed is doubted,
+  `free(p); return q[0];`, though nothing says the caller handed the same
+  allocation twice; read before the free it is not. Of every corpus program and
+  probe measured, one that built is refused, `(realloc(t, 8) != 0) +
+  strlen(s)`. The free-and-null idiom, `q = *pp; free(q); *pp = 0;` or `free(*pp);
+  *pp = v;`, and a destructor, `free(*pp); free(pp);`, refused already at the
+  first free, gain a second report at the write or the second free (#303).
+  A free on an arm that established the pointer null, `if (b == 0) {
+  free(b); }`, fires the rule too, since it runs where the free is reached,
+  before the null answer is read.
+* Bad, because a free of a pointer this check stopped following does not fire
+  the rule: `free(*cc)` with `cc = &c` reports the free and nothing after it,
+  where a call this check cannot read handed the same pointer doubts every
+  live allocation. Neither builds, since the free is reported.
 * Good, because every route #254 and ADR-0039's review measured, by which an
   unread call reaches an allocation, is reported.
 * Good, because no report about a dereference or a free changes, so a wider

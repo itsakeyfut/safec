@@ -1,0 +1,43 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_through_one_parameter_after_another_is_freed_is_doubted.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_read_through_one_parameter_after_another_is_freed_is_doubted.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int *" parameter
+  Local "_3" "int"
+  Local "_4" "void"
+  Block "bb0" entry
+    Operation a_read_through_one_parameter_after_another_is_freed_is_doubted.c:4:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_read_through_one_parameter_after_another_is_freed_is_doubted.c:4:9 "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_read_through_one_parameter_after_another_is_freed_is_doubted.c:4:9 generated
+    Operation a_read_through_one_parameter_after_another_is_freed_is_doubted.c:5:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_through_one_parameter_after_another_is_freed_is_doubted.c:5:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_read_through_one_parameter_after_another_is_freed_is_doubted.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_read_through_one_parameter_after_another_is_freed_is_doubted.c:7:5 generated
+    Call a_read_through_one_parameter_after_another_is_freed_is_doubted.c:7:5 "free" "bb4"
+      Destination "_4"
+      Copy "_2"
+  Block "bb4"
+    Sequenced a_read_through_one_parameter_after_another_is_freed_is_doubted.c:7:5 generated
+    Operation a_read_through_one_parameter_after_another_is_freed_is_doubted.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_read_through_one_parameter_after_another_is_freed_is_doubted.c:8:12 generated
+    Return
