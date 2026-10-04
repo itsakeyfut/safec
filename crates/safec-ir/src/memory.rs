@@ -833,6 +833,17 @@ struct Known {
     /// exposed `tab`. Square in the locals, which is [`Held::sites`]' condition
     /// for a packed bitset. See ADR-0039.
     inside: Vec<Vec<bool>>,
+    /// Per site, the locals whose address a pointer stored in that allocation
+    /// may hold: [`Self::inside`] for what is not a site.
+    ///
+    /// **A local's address is an edge, not a site** ([`Held::writes_to`],
+    /// ADR-0019), so a store of one recorded nothing and `*t3 = &slot; **t3
+    /// = r; free(r); return ***t3;` read nothing through `*t3`. Written by a
+    /// store of a value carrying edges, read by [`Known::levels_below`], so
+    /// a load out of the allocation carries the edges and a store two levels
+    /// down lands in the local. A table of its own because a site and a local
+    /// share an index. See ADR-0045.
+    inside_locals: Vec<Vec<bool>>,
     /// Per site, whether what it contains may include an allocation that is
     /// gone and whose site now names a new one.
     ///
@@ -1067,7 +1078,7 @@ impl Known {
     /// Whether a local this one points at is one this check stopped
     /// following, so that a load through the pointer is lost where a direct
     /// read of the local is. Its sites alone, which is what
-    /// [`Self::stored_in`] carries across, would read as followed.
+    /// [`Self::level_below`] carries across, would read as followed.
     /// See ADR-0045.
     fn lost_through(&self, local: LocalId) -> bool {
         self.written_through(local)
@@ -1111,31 +1122,105 @@ impl Known {
     /// alone, the first read `bb`'s allocation and never the one `*bb` names,
     /// and built in silence where the second was doubted. Found by review.
     fn marked_below(&self, local: LocalId, depth: usize, marks: &[bool]) -> bool {
-        let held = &self.points_to[local.index()];
-        if held.lost {
+        let Some((mut sites, mut locals)) = self.level_zero(local) else {
             return false;
-        }
-        let mut containers: BTreeSet<usize> = held.sites().collect();
+        };
         for _ in 0..depth {
-            if containers.iter().any(|&c| marks[c]) {
+            if sites.iter().any(|&site| marks[site]) {
                 return true;
             }
-            let mut next = BTreeSet::new();
-            for container in containers {
-                for (site, &in_it) in self.inside[container].iter().enumerate() {
-                    if in_it {
-                        next.insert(site);
-                    }
-                }
-            }
-            containers = next;
+            (sites, locals) = self.level_below(&sites, &locals);
         }
         false
     }
 
-    /// What a pointer read `depth` dereferences below `local` may be: one is
-    /// [`Self::stored_in`], and each more is what the allocations of the
-    /// level above may contain.
+    /// What a pointer read through `local` reads through first: the
+    /// allocations it holds and the locals whose address it holds.
+    ///
+    /// Nothing for a local this check lost, since what it holds is not named,
+    /// and a load through it is answered by [`Self::stored`] for what a call
+    /// reaches. No case tells that test apart from its absence, measured: a
+    /// lost local's sites, read beside the marker, would only add doubts.
+    /// **A local that is itself a load is followed**: what it holds is a
+    /// lower bound, so what its allocations contain is one too, and every
+    /// reader of it is a load read beside [`Reached::Partial`]. So a chain of
+    /// loads through locals is followed, however long. See ADR-0045.
+    fn level_zero(&self, local: LocalId) -> Option<(BTreeSet<usize>, BTreeSet<usize>)> {
+        let held = &self.points_to[local.index()];
+        if held.lost {
+            return None;
+        }
+        Some((
+            held.sites().collect(),
+            self.written_through(local).into_iter().collect(),
+        ))
+    }
+
+    /// One dereference further: what the allocations may contain
+    /// ([`Self::inside`], [`Self::inside_locals`]) and what the locals hold,
+    /// their sites and the locals their own address edges name.
+    ///
+    /// **A local is stepped through as an allocation is**, the read half of
+    /// what a write through its address does (ADR-0019): `t2 = &slot; *t2 =
+    /// p;` puts `p` in `slot`, and `*t2` reads it. A pointer to `slot`
+    /// leads to what `slot` holds, at any level: `**t3` with `*t3 = &slot`,
+    /// and `**t3` with `t3 = &t2; t2 = &slot`, both of which read nothing
+    /// before. Each level is two finite sets, so the walk ends. The one walk
+    /// for every reader, so the places a load reads and the places a mark is
+    /// found cannot drift. See ADR-0045.
+    fn level_below(
+        &self,
+        sites: &BTreeSet<usize>,
+        locals: &BTreeSet<usize>,
+    ) -> (BTreeSet<usize>, BTreeSet<usize>) {
+        let mut next_sites = BTreeSet::new();
+        let mut next_locals = BTreeSet::new();
+        for &container in sites {
+            next_sites.extend(
+                self.inside[container]
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &in_it)| in_it)
+                    .map(|(site, _)| site),
+            );
+            next_locals.extend(
+                self.inside_locals[container]
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &in_it)| in_it)
+                    .map(|(target, _)| target),
+            );
+        }
+        for &held in locals {
+            next_sites.extend(self.points_to[held].sites());
+            next_locals.extend(
+                self.points_to[held]
+                    .writes_to
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &edge)| edge)
+                    .map(|(target, _)| target),
+            );
+        }
+        (next_sites, next_locals)
+    }
+
+    /// What a pointer read `depth` dereferences below `local` may be, and the
+    /// locals whose address it may be: the walk [`Self::level_below`] takes,
+    /// `depth` times from [`Self::level_zero`]. See ADR-0045.
+    fn levels_below(&self, local: LocalId, depth: usize) -> (BTreeSet<usize>, BTreeSet<usize>) {
+        let Some((mut sites, mut locals)) = self.level_zero(local) else {
+            return (BTreeSet::new(), BTreeSet::new());
+        };
+        for _ in 0..depth {
+            (sites, locals) = self.level_below(&sites, &locals);
+        }
+        (sites, locals)
+    }
+
+    /// What a pointer read `depth` dereferences below `local` may be: each
+    /// level is what the allocations and locals of the level above may
+    /// contain, from [`Self::level_zero`].
     ///
     /// **A chain written as one place is the chain written through locals**:
     /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Self::inside`]
@@ -1143,59 +1228,10 @@ impl Known {
     /// be answered differently, and a **store** written as one place, `**t3 =
     /// r`, is recorded where the level above may be, so it is here to be read.
     /// Every level is a lower bound read beside
-    /// [`Reached::Partial`], and each is a set of sites, so finite.
-    /// See ADR-0045.
+    /// [`Reached::Partial`], and steps through a local whose address is
+    /// stored as through an allocation ([`Self::level_below`]). See ADR-0045.
     fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
-        let mut sites = self.stored_in(local);
-        for _ in 1..depth {
-            let mut next = BTreeSet::new();
-            for container in sites {
-                for (site, &in_it) in self.inside[container].iter().enumerate() {
-                    if in_it {
-                        next.insert(site);
-                    }
-                }
-            }
-            sites = next;
-        }
-        sites
-    }
-
-    /// What the allocations this local holds may contain, which is what a
-    /// pointer read through it may be, as far as [`Self::inside`] says.
-    ///
-    /// Nothing for a local this check lost, since what it holds is not named,
-    /// and a load through it is answered by [`Self::stored`] for what a call
-    /// reaches. No case tells that test apart from its absence, measured: a
-    /// lost local's sites, read beside the marker, would only add doubts.
-    /// **A local that is itself a load is followed**: what it holds
-    /// is a lower bound, so what its allocations contain is one too, and
-    /// every reader of it is a load read beside [`Reached::Partial`]. So a
-    /// chain of loads through locals is followed, however long, and since
-    /// every level is a set of sites, the chain reads a finite set. A chain written as
-    /// one place, `**t3` read into a local, is followed by
-    /// [`Self::stored_below`], which starts here. See ADR-0045.
-    fn stored_in(&self, local: LocalId) -> BTreeSet<usize> {
-        let held = &self.points_to[local.index()];
-        if held.lost {
-            return BTreeSet::new();
-        }
-        let mut sites = BTreeSet::new();
-        for container in held.sites() {
-            for (site, &in_it) in self.inside[container].iter().enumerate() {
-                if in_it {
-                    sites.insert(site);
-                }
-            }
-        }
-        // **And what a local it points at holds**, the read half of what a
-        // write through it does (ADR-0019): `t2 = &slot; *t2 = p;` puts `p` in
-        // `slot`, and `*t2` read it as nothing, so a use after free through
-        // it built where `*slot` was reported. See ADR-0045.
-        for target in self.written_through(local) {
-            sites.extend(self.points_to[target].sites());
-        }
-        sites
+        self.levels_below(local, depth).0
     }
 
     /// Record that this place was read through, where the read reaches an
@@ -1407,6 +1443,9 @@ impl Known {
             escaped: _,
             exposed,
             inside,
+            // Kept, as `inside` is: what the old allocation may hold stays
+            // in the row. See ADR-0045.
+            inside_locals: _,
             stale,
             // Kept, as the entry and `stale` are: the slots of the new
             // allocation are not told apart from the old one's. No case
@@ -2079,8 +2118,17 @@ impl Allocations<'_> {
         // possibly incomplete for every reader. See ADR-0045.
         let depth = derefs(source);
         if held.loaded && depth > 0 {
-            for site in value.stored_below(source.local, depth) {
+            let (sites, locals) = value.levels_below(source.local, depth);
+            for site in sites {
                 held.hold(site, Offset::Unknown);
+            }
+            // **And the locals whose address it may be**, as edges, so a
+            // write through it lands there: `m = *t3; *m = r;` with `*t3 =
+            // &slot`. Not all of them, since the set is a lower bound.
+            // See ADR-0045.
+            for target in locals {
+                held.writes_to[target] = true;
+                held.writes_elsewhere = true;
             }
             // Read out of an allocation that may hold one that is gone.
             // See ADR-0045.
@@ -2353,6 +2401,9 @@ impl Analysis for Allocations<'_> {
         // See ADR-0045. Whether a local was read out of what a parameter
         // points at is one more per local, and whether a site may hold such a
         // pointer one more per site, which a join only sets. See ADR-0040.
+        // Which locals' addresses each site may hold is a fourth square table
+        // that only grows, one step per pair, and the first term gains a
+        // fourth square for it. See ADR-0045.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -2385,7 +2436,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 15) + positions * (2 * locals + 3) + locals
+        locals * locals * 4 + locals * (locals + 15) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2401,6 +2452,7 @@ impl Analysis for Allocations<'_> {
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
             stale: vec![false; self.locals],
+            inside_locals: vec![vec![false; self.locals]; self.locals],
             from_caller: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
@@ -2447,10 +2499,18 @@ impl Analysis for Allocations<'_> {
             inside,
             stale,
             from_caller,
+            inside_locals,
             pending,
             calls,
             exposed_after_call,
         } = into;
+        // A local's address stored on one arm may be there where the arms
+        // meet, as a site is. See ADR-0045.
+        for (here, there) in inside_locals.iter_mut().zip(&from.inside_locals) {
+            for (here, there) in here.iter_mut().zip(there) {
+                *here = *here || *there;
+            }
+        }
         // Marked on one arm is marked where the arms meet. See ADR-0045.
         for (here, there) in stale.iter_mut().zip(&from.stale) {
             *here = *here || *there;
@@ -2687,9 +2747,27 @@ impl Analysis for Allocations<'_> {
                     } else {
                         Vec::new()
                     };
+                    // **And in the locals the level above may be**, `**t3 = r`
+                    // with `*t3 = &slot` in `slot`, as a write through an
+                    // alias that may land in several locals: by union, the
+                    // proof dropped. See ADR-0045 and ADR-0019.
+                    let deep_targets: Vec<usize> = if deep > 1 {
+                        value
+                            .levels_below(operation.place.local, deep - 1)
+                            .1
+                            .into_iter()
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+                    for &target in &deep_targets {
+                        value.points_to[target].accumulated(&written);
+                        value.points_to[target].freed = None;
+                    }
                     // With a target, what it carries is in that local now, and
                     // the local's address escaped: every call reaches it.
-                    let unplaced = containers.is_empty() && targets.is_empty();
+                    let unplaced =
+                        containers.is_empty() && targets.is_empty() && deep_targets.is_empty();
                     // Written into locals whose addresses escaped, which every
                     // call reaches, so a pending read is told, as at an
                     // exposure. See ADR-0042.
@@ -2716,6 +2794,13 @@ impl Analysis for Allocations<'_> {
                         for container in &containers {
                             for &site in &carried {
                                 value.inside[*container][site] = true;
+                            }
+                            // And the locals whose address it carries, which
+                            // are no site. See ADR-0045.
+                            for (target, &edge) in written.writes_to.iter().enumerate() {
+                                if edge {
+                                    value.inside_locals[*container][target] = true;
+                                }
                             }
                             // **A load out of a marked allocation is one still
                             // when it is stored**, so the allocation it is
@@ -3204,8 +3289,8 @@ impl Analysis for Allocations<'_> {
             Callee::ReturnsFirst | Callee::Copies => {
                 // **A copy of an object carries what it contains**: what each
                 // allocation the destination holds may contain gains what the
-                // source does, which `stored_in` answers for an allocation and,
-                // through its edge, for a local's address; and where the source
+                // source does, which `levels_below` answers for an allocation
+                // and, through its edge, for a local's address; and where the source
                 // may hold one this check stopped following, so may the
                 // destination. Before what follows, which is the whole family's.
                 // See ADR-0039 and ADR-0045.
@@ -3222,7 +3307,8 @@ impl Analysis for Allocations<'_> {
                         let placed = (dest.projection.is_empty() || into_depth > 0)
                             && (source.projection.is_empty() || from_depth > 0);
                         if placed {
-                            let copied = value.stored_below(source.local, from_depth + 1);
+                            let (copied, copied_locals) =
+                                value.levels_below(source.local, from_depth + 1);
                             // The second half has no case: a lost local copied
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)
@@ -3244,6 +3330,11 @@ impl Analysis for Allocations<'_> {
                             for container in into {
                                 for &site in &copied {
                                     value.inside[container][site] = true;
+                                }
+                                // And the locals whose address it copies.
+                                // See ADR-0045.
+                                for &target in &copied_locals {
+                                    value.inside_locals[container][target] = true;
                                 }
                                 if marked {
                                     value.stale[container] = true;
@@ -3452,6 +3543,9 @@ impl Analysis for Allocations<'_> {
                     for held in 0..value.inside.len() {
                         if value.inside[old][held] {
                             value.inside[site][held] = true;
+                        }
+                        if value.inside_locals[old][held] {
+                            value.inside_locals[site][held] = true;
                         }
                     }
                     // And the mark with the row: what the old allocation may

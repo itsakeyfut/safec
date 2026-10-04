@@ -1,0 +1,10 @@
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_live_value_through_two_locals_addresses_is_read_in_silence.c:13:5 ]
+    │
+ 13 │     *t2 = p;
+    │     ───┬───  
+    │        ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it

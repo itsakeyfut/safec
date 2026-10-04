@@ -1,0 +1,20 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_locals_address_read_back_out_of_an_allocation_is_written_through.c:20:5 ]
+    │
+ 20 │     return ***t3;
+    │     ──────┬──────  
+    │           ╰──────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_locals_address_read_back_out_of_an_allocation_is_written_through.c:18:5 ]
+    │
+ 18 │     *m = r;
+    │     ───┬──  
+    │        ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it

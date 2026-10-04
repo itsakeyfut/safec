@@ -1304,6 +1304,24 @@ cases! {
         // one not first. Found by review. Mutation: have `stale_through` ask
         // the first local it points at only; this goes silent at the read.
         a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A local's address stored in an allocation is remembered, and the
+        // walk of a chain steps through the local as through an allocation:
+        // read through `***t3`, read back as `m` and written through, and
+        // written two levels down into the local. Silent with `r` live. See
+        // ADR-0045. Mutation: have the store never mark
+        // `Known::inside_locals`; the first three go silent. Mutation: have a
+        // load carry no edges; the second goes silent. Mutation: have a store
+        // two levels down land in no local; the third goes silent.
+        a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_locals_address_read_back_out_of_an_allocation_is_written_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a local's own address edge below the first level, `t3 = &t2;
+        // t2 = &slot; u = *t3; *u`. Silent with the value live and written
+        // through the alias. Mutation: have `Known::level_below` ignore a
+        // local's own edges; the first goes silent.
+        a_load_through_two_locals_addresses_reads_what_the_last_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_live_value_through_two_locals_addresses_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
