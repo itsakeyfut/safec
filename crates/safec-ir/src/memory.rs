@@ -1420,8 +1420,16 @@ impl Known {
             return;
         }
 
+        // **A live allocation, and not a freed one.** Whoever holds the
+        // address may free what the local holds, which is a doubt about an
+        // allocation still live; one already freed stays freed, as no call
+        // un-frees one. Making it `Unknown` too forgot the free, so `free(a);
+        // use2(&a);` could not be told from a live `a` handed by address. See
+        // ADR-0017.
         for site in self.points_to[local].sites() {
-            self.state[site] = SiteState::Unknown;
+            if matches!(self.state[site], SiteState::Live(_)) {
+                self.state[site] = SiteState::Unknown;
+            }
         }
     }
 
