@@ -477,6 +477,16 @@ struct Held {
     /// level in; and its cost, a read after any such call doubted, is the same
     /// one level in. See ADR-0040.
     from_caller: bool,
+    /// The site a `realloc` returned, where this local holds exactly that
+    /// value: the call's destination and plain copies of it.
+    ///
+    /// **Points-to cannot say a pointer may be null for another reason**, so
+    /// a branch reading only that `q` holds the returned site read `r = q; if
+    /// (c) r = 0; if (r == 0) free(p);` as a failed call on the arm where `r`
+    /// was nulled by hand, and built a double free. Any other assignment
+    /// clears this, arithmetic included, and a join keeps it only where both
+    /// arms agree. Found by review. See ADR-0039.
+    returned_by: Option<usize>,
 }
 
 impl Held {
@@ -497,6 +507,7 @@ impl Held {
             foreign: false,
             stale_read: false,
             from_caller: false,
+            returned_by: None,
         }
     }
 
@@ -550,9 +561,11 @@ impl Held {
             foreign,
             stale_read,
             from_caller,
+            returned_by,
         } = self;
         sites.fill(false);
         *from_caller = false;
+        *returned_by = None;
         *lost = false;
         *loaded = false;
         *foreign = false;
@@ -590,7 +603,11 @@ impl Held {
             foreign,
             stale_read,
             from_caller,
+            returned_by,
         } = self;
+        if *returned_by != other.returned_by {
+            *returned_by = None;
+        }
         *offset = offset.joined(other.offset);
         *from_caller = *from_caller || other.from_caller;
         *loaded = *loaded || other.loaded;
@@ -646,8 +663,12 @@ impl Held {
             foreign,
             stale_read,
             from_caller,
+            returned_by,
         } = self;
         *from_caller = *from_caller || other.from_caller;
+        // Arithmetic builds a new value, which is no longer exactly what a
+        // `realloc` returned. See ADR-0039.
+        *returned_by = None;
 
         // `*tab + 1` is built from a pointer read out of memory, and is one.
         *loaded = *loaded || other.loaded;
@@ -1709,9 +1730,27 @@ impl Known {
     /// made may free it. A proved free stays proved: no call un-frees an
     /// allocation. See ADR-0039.
     fn unproved_exposed(&mut self) {
+        // A call that may free what is exposed may free an old allocation a
+        // `realloc` remembered, so the fact goes too. See ADR-0039.
+        let exposed = self.exposed.clone();
+        self.forget_reallocs_touching(|site| exposed[site]);
         for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
             if exposed && matches!(state, SiteState::Live(_)) {
                 *state = SiteState::Unknown;
+            }
+        }
+    }
+
+    /// Forget every `realloc` fact naming an old allocation `touched` says
+    /// something else may have freed since, so a branch on the result can no
+    /// longer give it back as live. See ADR-0039.
+    fn forget_reallocs_touching(&mut self, touched: impl Fn(usize) -> bool) {
+        for fact in self.realloced.iter_mut() {
+            if fact
+                .as_ref()
+                .is_some_and(|fact| fact.old.iter().any(|&(old, _)| touched(old)))
+            {
+                *fact = None;
             }
         }
     }
@@ -2561,7 +2600,7 @@ impl Analysis for Allocations<'_> {
         let (Some(returned), None) = (sites.next(), sites.next()) else {
             return;
         };
-        if held.lost {
+        if held.lost || held.returned_by != Some(returned) {
             return;
         }
         let Some(fact) = value.realloced[returned].clone() else {
@@ -2626,7 +2665,8 @@ impl Analysis for Allocations<'_> {
         // points at is one more per local, and whether a site may hold such a
         // pointer one more per site, which a join only sets. See ADR-0040.
         // What a `realloc` remembered on a site is one more per site: set by
-        // the call, and a join only takes it away. See ADR-0039.
+        // the call, and a join only takes it away; and which site a local is
+        // exactly the result of is one more per local, the same. See ADR-0039.
         // Which locals' addresses each site may hold is a fourth square table
         // that only grows, one step per pair, and the first term gains a
         // fourth square for it. See ADR-0045.
@@ -2662,7 +2702,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 4 + locals * (locals + 16) + positions * (2 * locals + 3) + locals
+        locals * locals * 4 + locals * (locals + 17) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2735,7 +2775,15 @@ impl Analysis for Allocations<'_> {
         // Kept only where both arms remember the same `realloc`: a fact one
         // arm lacks is one a branch after the join cannot act on. See ADR-0039.
         for (here, there) in realloced.iter_mut().zip(&from.realloced) {
-            if here != there {
+            // And where one arm left an old allocation in another state: a
+            // free on one arm leaves it `Unknown` after the join, which the
+            // null arm would read as the `realloc`'s. Found by review.
+            let disagree = here.as_ref().is_some_and(|fact| {
+                fact.old
+                    .iter()
+                    .any(|&(old, _)| state[old] != from.state[old])
+            });
+            if here != there || disagree {
                 *here = None;
             }
         }
@@ -3381,6 +3429,15 @@ impl Analysis for Allocations<'_> {
         let touched = Self::touching(handed.iter(), value);
         let sites = || named(&touched);
 
+        // **What a later call may have done to an old allocation is not what
+        // the `realloc` did**, so a fact naming one this call touches is
+        // forgotten, before anything this call records: a free of `p`, a
+        // second `realloc` of it, or `g(p)` between the call and the branch
+        // left `p` unproven, and the null arm brought it back live. Found by
+        // review. See ADR-0039.
+        let touched_now: Vec<usize> = sites().collect();
+        value.forget_reallocs_touching(|site| touched_now.contains(&site));
+
         // **What a `realloc` with a non-zero constant size was handed, while
         // it is all live**, before the transfer below makes it unproven: the
         // branch on the result is what says which it became. See ADR-0039.
@@ -3801,10 +3858,13 @@ impl Analysis for Allocations<'_> {
                         value.from_caller[site] = true;
                     }
                 }
-                value.realloced[site] = realloced.map(|old| Realloced {
-                    at: origin.span(),
-                    old,
-                });
+                if let Some(old) = realloced {
+                    value.realloced[site] = Some(Realloced {
+                        at: origin.span(),
+                        old,
+                    });
+                    value.points_to[site].returned_by = Some(site);
+                }
             }
             Callee::Frees
             | Callee::Allocates

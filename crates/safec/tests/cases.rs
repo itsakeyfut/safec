@@ -976,6 +976,27 @@ cases! {
         // have it read the first site of several; the second builds.
         a_free_on_reallocs_failure_branch_after_its_result_was_replaced_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where the null tested may not be the call's, or the old
+        // allocation may not be as the call left it, all found by review: a
+        // copy of the result nulled by hand, the result nulled on one arm, and
+        // the old pointer freed on one arm, reallocated again, or handed to a
+        // call between the `realloc` and the branch. Each is a double free on
+        // some execution. Mutation: have the branch ignore
+        // `Held::returned_by`; the first two build. Mutation: have no call
+        // forget a fact naming what it touches; the fourth loses its report at
+        // the free on the null arm. Three guards overlap on the rest: with
+        // touching and a join's disagreement both gone the third loses it,
+        // and with touching and an exposure both gone the fifth does.
+        a_free_on_a_branch_on_a_copy_of_reallocs_result_nulled_by_hand_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `realloc` of a pointer read out of memory remembers nothing:
+        // what it was handed is not the local the place starts at. Mutation:
+        // let a place with a projection through; three false proofs about
+        // the allocation that held it.
+        a_realloc_of_a_pointer_read_out_of_memory_leaves_what_held_it_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Refused and well defined: a cost ADR-0039 accepts, pinned so that a
         // change to it is seen.
         a_call_after_an_allocation_was_exposed_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
