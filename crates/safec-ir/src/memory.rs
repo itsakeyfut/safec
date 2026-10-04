@@ -976,6 +976,11 @@ impl Known {
         if self.stale_below(local, depth) {
             reached.push(Reached::Lost);
         }
+        // And one level below a pointer to a local this check lost, which is
+        // `**t2` and `*t2` handed on, as a load of `*t2` is. See ADR-0045.
+        if depth == 1 && self.lost_through(local) {
+            reached.push(Reached::Lost);
+        }
         reached
     }
 
@@ -1648,6 +1653,9 @@ fn built_from(
             reached.lost = true;
             reached.stale_read = true;
         }
+        if derefs(load) == 1 && value.lost_through(load.local) {
+            reached.lost = true;
+        }
     }
 
     // **A read through a projection is not followed, and is still a load.**
@@ -1947,7 +1955,7 @@ impl Allocations<'_> {
             // Read through a pointer to a local this check lost. Not
             // `stale_read`, which is for a rebirth's mark; a lost local
             // stored on is #295. See ADR-0045.
-            if value.lost_through(source.local) {
+            if depth == 1 && value.lost_through(source.local) {
                 held.lost = true;
             }
         }

@@ -1189,6 +1189,19 @@ cases! {
         a_live_pointer_written_into_a_local_through_its_address_is_read_back_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_local_this_check_lost_read_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_to_either_of_two_locals_reads_what_both_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same edge read by the other readers: one level below, `**t2`;
+        // handed on, `deref(*t2)`; and moved by arithmetic, `*t2 + i`. Lost
+        // where the local is, for each. Mutation: have `reached_below` ignore
+        // `lost_through`; the first two go silent. Mutation: have
+        // `built_from` ignore it; the third goes silent.
+        a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the local's sites through those readers after a free. Mutation:
+        // have `reached_below` leave out what the edge's local holds; both go
+        // silent.
+        a_read_two_levels_down_through_a_pointer_to_a_local_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_through_a_pointer_to_a_local_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

@@ -1,0 +1,10 @@
+warning[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_load_through_a_pointer_to_a_local_handed_on_after_a_free_is_unproven.c:15:12 ]
+    │
+ 15 │     return deref(*t2);
+    │            ─────┬────  
+    │                 ╰────── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
