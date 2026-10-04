@@ -122,8 +122,15 @@ they copy bytes and a pointer is bytes. Measured, this is what builds
 made and freed itself is a fresh allocation to this rule, and silent: #252.
 [ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 now reports it at the callee's `return`, and the caller still believes it.
-`realloc`'s failure branch, `if (q == 0) free(p);`, is unproven because nothing
-ties the result's nullness to the argument: [#253](https://github.com/itsakeyfut/safec/issues/253).
+`realloc`'s failure branch, `if (q == 0) free(p);`, builds where the size is a
+non-zero constant: the allocation `realloc` returns remembers the live
+allocations it was handed, and a branch testing a pointer holding exactly it
+against null, read by the nullability check's own reader, gives them back as
+live on the null arm and freed at the call on the other, which C17 7.22.3.5 p3
+and p4 say of a failed and a successful call
+([#253](https://github.com/itsakeyfut/safec/issues/253)). With a size of zero,
+whether a failed call frees is implementation-defined, so a variable size, which
+may be zero, is refused as before.
 
 **What this does not reach, found by review, and written down.** A pointer read
 out of memory, `q = *tab`, holds no site, which is ADR-0017's belief about it;
@@ -205,8 +212,14 @@ escaped local holds fails
 alone; not returning the first argument fails the `memset` and `strcpy` cases.
 Not reading `realloc` by name fails its cases; proving its argument freed
 rather than unproven fails
-`a_free_on_reallocs_failure_branch_is_not_proved`, whose `SC0401` would claim
-what C17 7.22.3.5 p3 contradicts; not asking its argument whether it was freed
+`a_free_on_reallocs_failure_branch_builds`, which gains an `SC0401` claiming
+what C17 7.22.3.5 p3 contradicts; the branch on the result restoring nothing
+fails the same case, freeing nothing on the non-null arm fails
+`the_old_pointer_used_after_a_successful_realloc_is_proved`, reading `==` and
+`!=` only fails `a_free_on_reallocs_failure_branch_tested_with_not_builds`, and
+reading any size fails
+`a_free_on_reallocs_failure_branch_with_size_zero_is_not_proved` and
+`a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved`; not asking its argument whether it was freed
 fails `a_freed_pointer_handed_to_realloc_is_freed_twice`; asking its size too
 fails `the_size_realloc_is_handed_is_not_asked_whether_it_was_freed`; not
 carrying what the old object held fails
@@ -239,7 +252,8 @@ transfer, which no C program can show since its size holds no allocation; and `A
   until #173.
 * Bad, because a callee returning what it freed itself is believed (#252,
   reported at the callee's `return` since ADR-0041), and
-  `realloc`'s failure branch is refused (#253).
+  `realloc`'s failure branch is refused where the size may be zero, a variable
+  size included (#253).
 * Bad, because a pointer read out of memory, and a parameter's allocation, are
   not exposed, so a use after free through either still builds (#254).
 * What would reverse this: summaries of functions this translation unit
