@@ -432,8 +432,9 @@ failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
   `a_table_holding_a_freed_pointer_handed_to_a_call_is_reported`; having it
   read edges to locals only fails the second; having it ask every site rather
   than freed ones fails `the_address_of_a_live_pointer_handed_to_a_call_is_not_asked`;
-  leaving out `Reached::Partial` fails the first, which becomes a proof;
-  keying the finding under the place rather than `*place`, or asking it in
+  leaving out `Reached::Partial` fails the first three, which become proofs,
+  and `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`, where the
+  proof takes the caret from `*tab`'s own doubt; keying the finding under the place rather than `*place`, or asking it in
   the same pass as each argument's own question, fails
   `a_table_and_what_it_holds_handed_to_one_call_are_both_asked`.
 * In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails

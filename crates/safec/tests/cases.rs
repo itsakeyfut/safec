@@ -1638,7 +1638,11 @@ cases! {
         a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A table and what it holds, handed to one call, are two places and
         // both are asked. Mutation: have `handed_places` ask one place per
-        // local again; this goes silent, since the table is live.
+        // local again; this goes silent, since the table is live. And it is
+        // one report, with `*tab`'s own words, though `tab` holds a freed
+        // pointer one level in. Mutation: key that finding under `tab`
+        // rather than `*tab`; two reports. Mutation: ask it in the same pass
+        // as each argument's own question; it takes `*tab`'s words.
         a_table_and_what_it_holds_handed_to_one_call_are_both_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What a pointer handed to a call points at, one level in, is asked
         // about allocations proved freed: through a local's address, and
@@ -1647,7 +1651,7 @@ cases! {
         // Mutation: have `Known::unproved` make a freed site `Unknown` again;
         // the first goes silent. Mutation: have `handed_below` read edges to
         // locals only; the second goes silent. Mutation: leave out
-        // `Reached::Partial`; the first becomes a proof.
+        // `Reached::Partial`; both become proofs.
         the_address_of_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_holding_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
