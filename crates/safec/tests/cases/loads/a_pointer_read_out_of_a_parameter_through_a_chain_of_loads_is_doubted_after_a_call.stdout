@@ -1,0 +1,94 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:1:6 "release_all" declared
+  Local "_0" "void" return
+Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:2:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int ***" parameter
+  Local "_2" "int"
+  Local "_3" "int **"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "void"
+  Block "bb0" entry
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 generated
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:21 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:28 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:4:11 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:4:16 generated
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 generated
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:20 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:27 generated
+    Return
+  Block "bb5"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:5:9 generated
+    Goto "bb6"
+  Block "bb6"
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:6:10 written
+      Destination "_5"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:6:14 generated
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_5"
+        Constant 0
+    Branch a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 "bb7" "bb8"
+      Copy "_6"
+  Block "bb7"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 generated
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:19 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:26 generated
+    Return
+  Block "bb8"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:7:9 generated
+    Goto "bb9"
+  Block "bb9"
+    ArgumentsEvaluated a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 generated
+    Call a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 "release_all" "bb10"
+      Destination "_7"
+  Block "bb10"
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 generated
+    Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:9:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:9:12 generated
+    Return

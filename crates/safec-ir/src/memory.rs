@@ -1999,14 +1999,20 @@ impl Allocations<'_> {
     }
 
     /// Whether a load through `local` reads memory a pointer parameter points
-    /// at: whether `local` holds the site of one. Only the parameters
-    /// `exposed_parameters` names, so what the host hands `main` is not this,
-    /// as it is not exposed. One answer for a load assigned and a load as an
-    /// operand, so that the two cannot disagree. See ADR-0040.
+    /// at: whether `local` holds the site of one, or was itself read out of
+    /// such memory. The second is the same read one level further in, `q =
+    /// **ppp` spelled `pp = *ppp; q = *pp;`, and without it `q` held nothing
+    /// a call could make lost. Only the parameters `exposed_parameters` names,
+    /// so what the host hands `main` is not this, as it is not exposed. One
+    /// answer for a load assigned and a load as an operand, so that the two
+    /// cannot disagree. See ADR-0040.
     fn reads_caller_memory(&self, local: LocalId, value: &Known) -> bool {
-        self.exposed_parameters
-            .iter()
-            .any(|parameter| value.points_to[local.index()].sites[parameter.index()])
+        let held = &value.points_to[local.index()];
+        held.from_caller
+            || self
+                .exposed_parameters
+                .iter()
+                .any(|parameter| held.sites[parameter.index()])
     }
 
     /// What an operand may reach beyond the sites it holds, because it may be

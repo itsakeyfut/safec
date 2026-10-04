@@ -1254,6 +1254,10 @@ cases! {
         a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_copied_by_arithmetic_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And by a load through a local that carries it, `pp = *ppp; q = *pp;`,
+        // which is `q = **ppp` one load at a time. Mutation: have
+        // `reads_caller_memory` read only the parameters' sites; it goes silent.
+        a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
