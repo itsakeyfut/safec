@@ -979,6 +979,17 @@ impl Known {
         reached
     }
 
+    /// Whether a local this one points at is one this check stopped
+    /// following, so that a load through the pointer is lost where a direct
+    /// read of the local is. Its sites alone, which is what
+    /// [`Self::stored_in`] carries across, would read as followed.
+    /// See ADR-0045.
+    fn lost_through(&self, local: LocalId) -> bool {
+        self.written_through(local)
+            .iter()
+            .any(|&target| self.points_to[target].lost)
+    }
+
     /// Whether a pointer read `depth` dereferences below `local` may be one
     /// [`Self::stale`] says this check stopped following: whether any
     /// allocation the chain reads through, at any level, is marked.
@@ -1063,6 +1074,13 @@ impl Known {
                     sites.insert(site);
                 }
             }
+        }
+        // **And what a local it points at holds**, the read half of what a
+        // write through it does (ADR-0019): `t2 = &slot; *t2 = p;` puts `p` in
+        // `slot`, and `*t2` read it as nothing, so a use after free through
+        // it built where `*slot` was reported. See ADR-0045.
+        for target in self.written_through(local) {
+            sites.extend(self.points_to[target].sites());
         }
         sites
     }
@@ -1925,6 +1943,12 @@ impl Allocations<'_> {
             if value.stale_below(source.local, depth) {
                 held.lost = true;
                 held.stale_read = true;
+            }
+            // Read through a pointer to a local this check lost. Not
+            // `stale_read`, which is for a rebirth's mark; a lost local
+            // stored on is #295. See ADR-0045.
+            if value.lost_through(source.local) {
+                held.lost = true;
             }
         }
         held

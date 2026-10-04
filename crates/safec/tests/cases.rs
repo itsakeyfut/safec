@@ -1179,6 +1179,16 @@ cases! {
         // mark its container for any lost value; the second reports.
         a_local_given_something_else_after_a_doubted_load_stores_it_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A load through a pointer to a local reads what the local holds, and
+        // is lost where the local is. See ADR-0045. Mutation: have `stored_in`
+        // read no edge to a local; the first and the fourth go silent about
+        // the free. Mutation: have `read_through` ignore `lost_through`; the
+        // third goes silent. Mutation: count `Reached::Partial` as a doubt;
+        // the second reports.
+        a_pointer_written_into_a_local_through_its_address_and_read_back_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_live_pointer_written_into_a_local_through_its_address_is_read_back_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_local_this_check_lost_read_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_to_either_of_two_locals_reads_what_both_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

@@ -1,0 +1,20 @@
+warning[SC0402]: this uses a pointer this check stopped following
+    ╭─[ a_local_this_check_lost_read_through_its_address_is_doubted.c:19:13 ]
+    │
+ 19 │             return *q;
+    │             ─────┬────  
+    │                  ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0401]: this may free a value that was freed already
+    ╭─[ a_local_this_check_lost_read_through_its_address_is_doubted.c:22:9 ]
+    │
+ 22 │         free(p);
+    │         ───┬───  
+    │            ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
