@@ -1295,6 +1295,10 @@ cases! {
         a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the same load moved by arithmetic, which `built_from` reads
+        // rather than `read_through`. Mutation: have `built_from` carry
+        // nothing through a lost local; this goes silent at the read.
+        a_pointer_lost_to_a_free_read_through_its_address_moved_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

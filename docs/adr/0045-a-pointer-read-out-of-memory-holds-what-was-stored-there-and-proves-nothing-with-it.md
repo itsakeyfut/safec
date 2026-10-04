@@ -83,7 +83,7 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 **A lost value stored.**
 
 - **The rebirth never setting `Held::stale_read`** fails `a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back` and `a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back`, which go silent; **setting it whether or not the allocation is gone** fails `a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt`.
-- **A load through a lost local carrying nothing**, in `read_through`, fails `a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back` alone; **a call this check cannot read not setting it** fails `a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back` alone.
+- **A load through a lost local carrying nothing**, in `read_through`, fails `a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back` alone, and in `built_from` fails `a_pointer_lost_to_a_free_read_through_its_address_moved_and_stored_is_doubted_when_read_back` alone; **a call this check cannot read not setting it** fails `a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back` alone.
 
 **A copy or a deep store.**
 
