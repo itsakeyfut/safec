@@ -1,0 +1,10 @@
+warning[SC0402]: this uses a pointer this check stopped following
+    ╭─[ a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:17:13 ]
+    │
+ 17 │             return **t2;
+    │             ──────┬─────  
+    │                   ╰─────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

@@ -781,6 +781,18 @@ struct Known {
     /// exposed `tab`. Square in the locals, which is [`Held::sites`]' condition
     /// for a packed bitset. See ADR-0039.
     inside: Vec<Vec<bool>>,
+    /// Per site, whether what it contains may include an allocation that is
+    /// gone and whose site now names a new one.
+    ///
+    /// **[`Self::inside`]'s column, where [`Held::lose`] is a local's.** A
+    /// loop makes every allocation one `malloc` makes under one site, so `*t2 =
+    /// p; free(p);` on one turn and the next turn's `malloc` leave `t2`'s entry
+    /// naming the new, live allocation, and a load out of `t2` read it in
+    /// silence. Set where the site is reborn, the entry dropped, and read by a
+    /// load out of the allocation as a pointer this check stopped following.
+    /// Nothing clears it: slots are not told apart, so a store into one may
+    /// leave the old pointer in another. See ADR-0045.
+    stale: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///
     /// **Ordered containers because a lattice value has to be canonical, and
@@ -938,6 +950,11 @@ impl Known {
         if !reached.is_empty() {
             reached.push(Reached::Partial);
         }
+        // A level read through a marked allocation may be one this check
+        // stopped following. See ADR-0045.
+        if self.stale_below(local, depth) {
+            reached.push(Reached::Lost);
+        }
         reached
     }
 
@@ -953,6 +970,36 @@ impl Known {
     /// what it stored is not here to be read (#283). Every level is a lower bound read beside
     /// [`Reached::Partial`], and since `inside` only grows, each is finite.
     /// See ADR-0045.
+    /// Whether a pointer read `depth` dereferences below `local` may be one
+    /// [`Self::stale`] says this check stopped following: whether any
+    /// allocation the chain reads through, at any level, is marked.
+    ///
+    /// Walked as [`Self::stored_below`] walks what the levels contain, so the
+    /// two answer the same places. Not for a lost local, whose load is
+    /// answered by [`Self::stored`]. See ADR-0045.
+    fn stale_below(&self, local: LocalId, depth: usize) -> bool {
+        let held = &self.points_to[local.index()];
+        if held.lost {
+            return false;
+        }
+        let mut containers: BTreeSet<usize> = held.sites().collect();
+        for _ in 0..depth {
+            if containers.iter().any(|&c| self.stale[c]) {
+                return true;
+            }
+            let mut next = BTreeSet::new();
+            for container in containers {
+                for (site, &in_it) in self.inside[container].iter().enumerate() {
+                    if in_it {
+                        next.insert(site);
+                    }
+                }
+            }
+            containers = next;
+        }
+        false
+    }
+
     fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
         let mut sites = self.stored_in(local);
         for _ in 1..depth {
@@ -1207,8 +1254,8 @@ impl Known {
             state,
             escaped: _,
             exposed,
-            // Kept, for the reason given below.
-            inside: _,
+            inside,
+            stale,
             pending,
             calls: _,
             exposed_after_call,
@@ -1220,6 +1267,20 @@ impl Known {
             }
         }
 
+        // **What other allocations contain of this site is not kept, when the
+        // allocation it named is gone.** The entry would name the new one,
+        // which is live, so a pointer stored last turn and freed was read as
+        // live. It is dropped and the container marked, which is the column's
+        // `lose` above. Only when gone: while the old allocation is live a read
+        // of it is not a use after free, and marking it doubted a loop that
+        // keeps last turn's allocation, measured. See ADR-0045.
+        let gone = !matches!(state[site], SiteState::Live(_));
+        for container in 0..inside.len() {
+            if gone && inside[container][site] {
+                inside[container][site] = false;
+                stale[container] = true;
+            }
+        }
         state[site] = SiteState::Live(made);
         // A new allocation has not been handed to anybody. What an opaque
         // call's destination may still be is the call transfer's to say,
@@ -1231,7 +1292,8 @@ impl Known {
         // and a pointer read out of it reaches what it held: `release(old);
         // return *p;` with `*old = p` stored last turn built in silence while
         // this row was cleared. The row is a may-set, so a stale entry costs
-        // a report and never a proof. See ADR-0040.
+        // a report and never a proof. See ADR-0040. The column is the other
+        // half, below the state's own write.
         exposed[site] = false;
 
         // **A read of the allocation this site used to name is not a read of
@@ -1536,6 +1598,10 @@ fn built_from(
         for site in value.stored_below(load.local, derefs(load)) {
             reached.hold(site, Offset::Unknown);
         }
+        // And lost where the load would be. See ADR-0045.
+        if value.stale_below(load.local, derefs(load)) {
+            reached.lost = true;
+        }
     }
 
     // **A read through a projection is not followed, and is still a load.**
@@ -1826,6 +1892,11 @@ impl Allocations<'_> {
             for site in value.stored_below(source.local, depth) {
                 held.hold(site, Offset::Unknown);
             }
+            // Read out of an allocation that may hold one that is gone.
+            // See ADR-0045.
+            if value.stale_below(source.local, depth) {
+                held.lost = true;
+            }
         }
         held
     }
@@ -2052,7 +2123,9 @@ impl Analysis for Allocations<'_> {
         // local that a join only sets, one more step each. See ADR-0040.
         // Whether a call this check cannot read may have written into a local
         // is one more bit per local that a join only sets, one more step each.
-        // See ADR-0044.
+        // See ADR-0044. Whether a site may contain an allocation that is gone
+        // is one more bit per site that a join only sets, one more step each.
+        // See ADR-0045.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -2085,7 +2158,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 3 + locals * (locals + 11) + positions * (2 * locals + 3) + locals
+        locals * locals * 3 + locals * (locals + 12) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -2100,6 +2173,7 @@ impl Analysis for Allocations<'_> {
             escaped: vec![false; self.locals],
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
+            stale: vec![false; self.locals],
             // Nothing has been read yet, so there is nothing a free could be
             // unordered against.
             pending: BTreeMap::new(),
@@ -2143,10 +2217,15 @@ impl Analysis for Allocations<'_> {
             escaped,
             exposed,
             inside,
+            stale,
             pending,
             calls,
             exposed_after_call,
         } = into;
+        // Marked on one arm is marked where the arms meet. See ADR-0045.
+        for (here, there) in stale.iter_mut().zip(&from.stale) {
+            *here = *here || *there;
+        }
 
         for (here, there) in points_to.iter_mut().zip(&from.points_to) {
             here.joined(there);
