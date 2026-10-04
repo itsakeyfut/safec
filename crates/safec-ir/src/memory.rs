@@ -3248,9 +3248,11 @@ impl Analysis for Allocations<'_> {
 
         // **A free of what may be the caller's may free anything the caller
         // can see**, as a call this check cannot read may: `f(p, p)` hands
-        // `free(b); return *a;` one allocation twice. Before the free's own
-        // transfer, so what it frees is proved freed rather than unproven.
-        // See ADR-0040.
+        // `free(b); return *a;` one allocation twice. **Before the `match`,
+        // because the free's own arm returns early** for a pointer read out
+        // of memory, which is what a pointer read out of caller memory is:
+        // after it, `q = *pp; free(q); return **pp;` went silent. Found by
+        // review. See ADR-0040.
         if matches!(kind, Callee::Frees | Callee::Reallocates) && self.frees_callers(handed, value)
         {
             value.callers_memory_may_be_freed();

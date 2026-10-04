@@ -1338,6 +1338,12 @@ cases! {
         // See ADR-0040. Mutation: have the free not make such a local lost;
         // this goes silent.
         a_pointer_read_out_of_a_parameter_after_another_is_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a free of a pointer read out of caller memory, which a read
+        // through the parameter reaches again. Found by review. Mutation:
+        // have `frees_callers` ignore `Held::from_caller`; this goes silent at
+        // the read. Mutation: run the rule after the free's own arm, which
+        // returns early for such a pointer; the same.
+        a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

@@ -133,8 +133,9 @@ out of what a parameter points at, or `*pp` itself, therefore does to the
 caller's memory what an unread call does: every exposed allocation still live
 becomes unproven, and every pointer read out of caller memory one this check
 stopped following, by the one function both call. Before the free's own
-transfer, so what it frees is still proved freed. A free of an allocation this
-function made does not, since the caller cannot have handed it (#303).
+transfer, which returns early for a pointer read out of memory, the very free
+this is for. A free of an allocation this function made does not, since the
+caller cannot have handed it (#303).
 
 ### Confirmation
 
@@ -230,7 +231,10 @@ the third alone; and firing for any free fails
 `a_free_of_this_functions_own_allocation_leaves_a_parameter_alone` and twelve
 cases about frees and copies of the function's own allocations. Making no
 pointer read out of caller memory lost, in the function both rules call, fails
-the fourth and every case of the rule one level in.
+the fourth and every case of the rule one level in. Ignoring `Held::from_caller`
+in `frees_callers`, or running the rule after the free's own arm, fails
+`a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter`
+alone, which goes silent at the read.
 
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a
@@ -249,6 +253,13 @@ it is used). `Analysis::height`, as for every other term in it.
   strlen(s)`. The free-and-null idiom, `q = *pp; free(q); *pp = 0;` or `free(*pp);
   *pp = v;`, and a destructor, `free(*pp); free(pp);`, refused already at the
   first free, gain a second report at the write or the second free (#303).
+  A free on an arm that established the pointer null, `if (b == 0) {
+  free(b); }`, fires the rule too, since it runs where the free is reached,
+  before the null answer is read.
+* Bad, because a free of a pointer this check stopped following does not fire
+  the rule: `free(*cc)` with `cc = &c` reports the free and nothing after it,
+  where a call this check cannot read handed the same pointer doubts every
+  live allocation. Neither builds, since the free is reported.
 * Good, because every route #254 and ADR-0039's review measured, by which an
   unread call reaches an allocation, is reported.
 * Good, because no report about a dereference or a free changes, so a wider
