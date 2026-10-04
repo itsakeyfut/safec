@@ -123,9 +123,18 @@ afterwards is one this check stopped following, whether or not the call can
 reach the allocation, since what it may free is the caller's (#302). A load
 is asked about every allocation it reads through, so `r = **bb;` is `b = *bb;
 r = *b;`, and `memcpy` carries the mark as a store does. With no such call it
-is read in silence, as a pointer kept in a local is. A free this
-check can read, of another parameter the caller may have handed in twice,
-doubts nothing (#303).
+is read in silence, as a pointer kept in a local is.
+
+**A free of what the caller owns, as a call this check cannot read.** A
+caller may hand one allocation twice, so `free(b); return *a;` over two
+parameters is a use after free under `f(p, p)`. A `free` or `realloc` handed
+a pointer that may be the caller's, one holding a parameter's site, one read
+out of what a parameter points at, or `*pp` itself, therefore does to the
+caller's memory what an unread call does: every exposed allocation still live
+becomes unproven, and every pointer read out of caller memory one this check
+stopped following, by the one function both call. Before the free's own
+transfer, so what it frees is still proved freed. A free of an allocation this
+function made does not, since the caller cannot have handed it (#303).
 
 ### Confirmation
 
@@ -221,6 +230,12 @@ it is used). `Analysis::height`, as for every other term in it.
 
 ### Consequences
 
+* Bad, because a read through one parameter after another is freed is doubted,
+  `free(p); return q[0];`, though nothing says the caller handed the same
+  allocation twice; read before the free it is not. Of every corpus program and
+  probe measured, one that built is refused, `(realloc(t, 8) != 0) +
+  strlen(s)`, and the free-and-null idiom `q = *pp; free(q); *pp = 0;`, refused
+  already at the free, gains a second report at the write (#303).
 * Good, because every route #254 and ADR-0039's review measured, by which an
   unread call reaches an allocation, is reported.
 * Good, because no report about a dereference or a free changes, so a wider
