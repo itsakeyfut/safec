@@ -1077,13 +1077,25 @@ impl Known {
     /// two answer the same places. Not for a lost local, whose load is
     /// answered by [`Self::stored`]. See ADR-0045.
     fn stale_below(&self, local: LocalId, depth: usize) -> bool {
+        self.marked_below(local, depth, &self.stale)
+    }
+
+    /// Whether any allocation a pointer read `depth` dereferences below
+    /// `local` reads through, at any level, is set in `marks`, a per-site
+    /// column: [`Self::stale`] or [`Self::from_caller`].
+    ///
+    /// **One walk for both**, so that `r = **bb;` and `b = *bb; r = *b;` are
+    /// asked about the same allocations: asked about the local's own sites
+    /// alone, the first read `bb`'s allocation and never the one `*bb` names,
+    /// and built in silence where the second was doubted. Found by review.
+    fn marked_below(&self, local: LocalId, depth: usize, marks: &[bool]) -> bool {
         let held = &self.points_to[local.index()];
         if held.lost {
             return false;
         }
         let mut containers: BTreeSet<usize> = held.sites().collect();
         for _ in 0..depth {
-            if containers.iter().any(|&c| self.stale[c]) {
+            if containers.iter().any(|&c| marks[c]) {
                 return true;
             }
             let mut next = BTreeSet::new();
@@ -1664,7 +1676,7 @@ fn built_from(
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
     may_be_pointer: impl Fn(&Place) -> bool,
-    reads_caller_memory: impl Fn(LocalId) -> bool,
+    reads_caller_memory: impl Fn(LocalId, usize) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
         .iter()
@@ -1746,7 +1758,7 @@ fn built_from(
             reached.lost = true;
         }
         // And what the caller stored, as `read_through` says. See ADR-0040.
-        if reads_caller_memory(load.local) {
+        if reads_caller_memory(load.local, derefs(load)) {
             reached.from_caller = true;
         }
     }
@@ -1949,7 +1961,7 @@ impl Allocations<'_> {
                     value,
                     |local| self.is_pointer(function, local),
                     |place| self.may_be_pointer(function, place),
-                    |local| self.reads_caller_memory(local, value),
+                    |local, depth| self.reads_caller_memory(local, depth, value),
                 );
                 reached.writes_to.fill(false);
                 // Emptying the set says nothing on its own: an empty set is
@@ -2051,27 +2063,30 @@ impl Allocations<'_> {
             if depth == 1 && value.lost_through(source.local) {
                 held.lost = true;
             }
-            if self.reads_caller_memory(source.local, value) {
+            if self.reads_caller_memory(source.local, depth, value) {
                 held.from_caller = true;
             }
         }
         held
     }
 
-    /// Whether a load through `local` reads memory a pointer parameter points
-    /// at: whether `local` holds the site of one, or was itself read out of
-    /// such memory, or holds an allocation one was stored in. The second is
-    /// the same read one level further in, `q = **ppp` spelled `pp = *ppp; q =
-    /// *pp;`, and without it `q` held nothing a call could make lost; the third
-    /// is the same read after a store, `*box = q; r = *box;`, which
+    /// Whether a load `depth` dereferences through `local` reads memory a
+    /// pointer parameter points at: whether `local` holds the site of one, or
+    /// was itself read out of such memory, or the load reads through an
+    /// allocation one was stored in, at any level. The second is the same read
+    /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
+    /// without it `q` held nothing a call could make lost; the third is the
+    /// same read after a store, `*box = q; r = *box;` or `r = **bb;`, which
     /// [`Known::from_caller`] marks. Only the parameters `exposed_parameters` names,
     /// so what the host hands `main` is not this, as it is not exposed. One
     /// answer for a load assigned and a load as an operand, so that the two
     /// cannot disagree. See ADR-0040.
-    fn reads_caller_memory(&self, local: LocalId, value: &Known) -> bool {
+    fn reads_caller_memory(&self, local: LocalId, depth: usize, value: &Known) -> bool {
         let held = &value.points_to[local.index()];
+        // At least the local's own allocations, which a load with no
+        // dereference in its place, an element, still reads through.
         held.from_caller
-            || held.sites().any(|site| value.from_caller[site])
+            || value.marked_below(local, depth.max(1), &value.from_caller)
             || self
                 .exposed_parameters
                 .iter()
@@ -2844,7 +2859,7 @@ impl Analysis for Allocations<'_> {
                             value,
                             |local| self.is_pointer(function, local),
                             |place| self.may_be_pointer(function, place),
-                            |local| self.reads_caller_memory(local, value),
+                            |local, depth| self.reads_caller_memory(local, depth, value),
                         );
                         // **The sites travel and the edge does not.** C17 6.5.6
                         // p8 keeps the result inside the object the operand
@@ -3180,6 +3195,12 @@ impl Analysis for Allocations<'_> {
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)
                                 || (from_depth == 0 && value.lost_through(source.local));
+                            // And what was read out of caller memory, as a
+                            // store of a load of the source would carry it:
+                            // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
+                            // review. See ADR-0040.
+                            let caller =
+                                self.reads_caller_memory(source.local, from_depth + 1, value);
                             let into: Vec<usize> = if into_depth == 0 {
                                 value.sites_of(dest.local).collect()
                             } else {
@@ -3194,6 +3215,9 @@ impl Analysis for Allocations<'_> {
                                 }
                                 if marked {
                                     value.stale[container] = true;
+                                }
+                                if caller {
+                                    value.from_caller[container] = true;
                                 }
                             }
                         }

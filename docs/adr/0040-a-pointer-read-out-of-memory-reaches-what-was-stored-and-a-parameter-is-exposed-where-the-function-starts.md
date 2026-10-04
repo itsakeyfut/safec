@@ -120,8 +120,10 @@ doubted (#281). Stored into an allocation this function made, it marks the
 allocation, `Known::from_caller`: a load out of it carries the mark, and a call
 this check cannot read makes the allocation `Known::stale`, so a load out of it
 afterwards is one this check stopped following, whether or not the call can
-reach the allocation, since what it may free is the caller's (#302). With no
-such call it is read in silence, as a pointer kept in a local is. A free this
+reach the allocation, since what it may free is the caller's (#302). A load
+is asked about every allocation it reads through, so `r = **bb;` is `b = *bb;
+r = *b;`, and `memcpy` carries the mark as a store does. With no such call it
+is read in silence, as a pointer kept in a local is. A free this
 check can read, of another parameter the caller may have handed in twice,
 doubts nothing (#303).
 
@@ -199,6 +201,12 @@ marked site fails the second; the store marking `Known::stale` at once fails
 `a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence`;
 the join dropping the mark fails `a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call`;
 and `realloc` dropping it fails `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call`.
+`reads_caller_memory` asking the local's own allocations only fails
+`a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call`
+and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved`;
+`memcpy` carrying no mark fails
+`a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call`
+and `what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call`.
 Clearing the mark where its site is reborn fails nothing, measured on a loop
 that stores on one turn and reads after it: the rebirth already makes every
 other local holding the site lost, so the read is doubted either way.
