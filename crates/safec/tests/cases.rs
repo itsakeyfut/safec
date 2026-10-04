@@ -1232,6 +1232,28 @@ cases! {
         // silent.
         a_copy_into_a_destination_read_out_of_memory_is_recorded_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_copy_from_a_source_read_out_of_memory_is_recorded: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer read out of what a parameter points at is one this check
+        // stopped following after a call it cannot read, which may free what
+        // the caller stored. See ADR-0040. Mutation: never set
+        // `Held::from_caller`; the first goes silent. Mutation: have the call
+        // not make it lost; the same. Silent with no call between, and for
+        // what the host hands `main`. Mutation: set it for every parameter;
+        // the fourth reports.
+        a_pointer_read_out_of_a_parameter_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_read_out_of_a_parameter_with_no_call_before_its_use_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What ADR-0040 accepts as its cost, one level in: any such call.
+        a_pointer_read_out_of_a_parameter_is_doubted_after_any_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The bit is carried as a load's is: by a load moved by arithmetic, across
+        // a join, and through a copy moved by arithmetic; and cleared by what a
+        // local is given next. Mutation: have `built_from` ignore it; the first
+        // goes silent. Mutation: have `Held::joined` drop it; the second loses
+        // its doubt. Mutation: have `Held::accumulated` drop it; the third goes
+        // silent. Mutation: have `Held::clear` keep it; the fourth reports.
+        a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_read_out_of_a_parameter_and_copied_by_arithmetic_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
