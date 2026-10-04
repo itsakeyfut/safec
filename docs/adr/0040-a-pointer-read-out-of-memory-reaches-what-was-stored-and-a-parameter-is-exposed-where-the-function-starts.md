@@ -246,8 +246,9 @@ it is used). `Analysis::height`, as for every other term in it.
   `free(p); return q[0];`, though nothing says the caller handed the same
   allocation twice; read before the free it is not. Of every corpus program and
   probe measured, one that built is refused, `(realloc(t, 8) != 0) +
-  strlen(s)`, and the free-and-null idiom `q = *pp; free(q); *pp = 0;`, refused
-  already at the free, gains a second report at the write (#303).
+  strlen(s)`. The free-and-null idiom, `q = *pp; free(q); *pp = 0;` or `free(*pp);
+  *pp = v;`, and a destructor, `free(*pp); free(pp);`, refused already at the
+  first free, gain a second report at the write or the second free (#303).
 * Good, because every route #254 and ADR-0039's review measured, by which an
   unread call reaches an allocation, is reported.
 * Good, because no report about a dereference or a free changes, so a wider
