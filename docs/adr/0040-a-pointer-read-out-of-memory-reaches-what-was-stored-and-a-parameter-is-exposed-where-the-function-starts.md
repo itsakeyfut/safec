@@ -220,6 +220,18 @@ Clearing the mark where its site is reborn fails nothing, measured on a loop
 that stores on one turn and reads after it: the rebirth already makes every
 other local holding the site lost, so the read is doubted either way.
 
+**A free of what the caller owns.** The rule never firing fails
+`a_read_through_one_parameter_after_another_is_freed_is_doubted`,
+`a_read_through_one_parameter_after_another_is_reallocated_is_doubted`,
+`a_free_of_what_a_parameter_points_at_doubts_a_read_through_it` and
+`a_pointer_read_out_of_a_parameter_after_another_is_freed_is_doubted`; firing
+for `free` only fails the second alone; asking no place of dereferences fails
+the third alone; and firing for any free fails
+`a_free_of_this_functions_own_allocation_leaves_a_parameter_alone` and twelve
+cases about frees and copies of the function's own allocations. Making no
+pointer read out of caller memory lost, in the function both rules call, fails
+the fourth and every case of the rule one level in.
+
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a
 lost bit from ADR-0029 is on a local whose new contents an unread callee
