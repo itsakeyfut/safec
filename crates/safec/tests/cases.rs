@@ -1282,6 +1282,19 @@ cases! {
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A pointer that lost an allocation that may be gone, stored and read
+        // back, is doubted as it is read directly: lost to a rebirth of a
+        // freed allocation, read through its address, or made lost by a call
+        // this check cannot read. See ADR-0045. Mutation: have the rebirth
+        // never set `Held::stale_read`; the first two go silent. Mutation:
+        // have a load through a lost local carry nothing; the second goes
+        // silent. Mutation: have the call not set it; the third goes silent.
+        // Mutation: have the rebirth set it whether or not the allocation is
+        // gone; `a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt`
+        // is doubted.
+        a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
