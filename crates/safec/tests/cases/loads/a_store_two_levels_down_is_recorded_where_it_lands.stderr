@@ -1,0 +1,10 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_store_two_levels_down_is_recorded_where_it_lands.c:27:5 ]
+    │
+ 27 │     return ***t3;
+    │     ──────┬──────  
+    │           ╰──────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

@@ -1,0 +1,251 @@
+Target "x86_64-pc-windows-msvc"
+Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:3:6 "refill" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:4:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter
+Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:5:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "int" parameter
+Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:7:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int **"
+  Local "_13" "void *"
+  Local "_14" "int"
+  Local "_15" "int *"
+  Local "_16" "int *"
+  Local "_17" "void *"
+  Local "_18" "void"
+  Local "_19" "int *"
+  Local "_20" "int"
+  Block "bb0" entry
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:7:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:8:17 generated
+    Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:8:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:8:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:8:17 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:9:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:9:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:9:9 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:10:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:10:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:9:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:12:14 generated
+    Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:12:14 "malloc" "bb5"
+      Destination "_5"
+      Constant 4
+  Block "bb5"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:12:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:12:14 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:13:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:13:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:13:9 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:14:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:14:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:13:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:16:14 generated
+    Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:16:14 "malloc" "bb9"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:16:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:16:14 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:17:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:17:9 "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:17:9 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:18:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:18:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:17:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:20:5 written
+      Destination "_4"
+        Deref
+      Use
+        Constant 1
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:20:5 written
+      Destination "_10"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:20:5 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:21:5 written
+      Destination "_7"
+        Deref
+      Use
+        Constant 2
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:21:5 written
+      Destination "_11"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:21:5 generated
+    ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:22:17 generated
+    Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:22:17 "malloc" "bb13"
+      Destination "_13"
+      Constant 8
+  Block "bb13"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:22:11 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:22:17 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:23:9 written
+      Destination "_14"
+      Binary "Eq"
+        Copy "_12"
+        Constant 0
+    Branch a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:23:9 "bb14" "bb15"
+      Copy "_14"
+  Block "bb14"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:23:9 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:24:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:24:16 generated
+    Return
+  Block "bb15"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:23:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:26:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:26:5 written
+      Destination "_15"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:26:5 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:27:5 written
+      Destination "_12"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:27:5 written
+      Destination "_16"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:27:5 generated
+    ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:28:5 generated
+    Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:28:5 "memcpy" "bb17"
+      Destination "_17"
+      Copy "_1"
+      Copy "_12"
+      Constant 8
+  Block "bb17"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:28:5 generated
+    ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:29:5 generated
+    Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:29:5 "free" "bb18"
+      Destination "_18"
+      Copy "_4"
+  Block "bb18"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:29:5 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:30:10 written
+      Destination "_19"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:30:14 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 written
+      Destination "_20"
+      Binary "Eq"
+        Copy "_19"
+        Constant 0
+    Branch a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 "bb19" "bb20"
+      Copy "_20"
+  Block "bb19"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 generated
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:32:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:32:16 generated
+    Return
+  Block "bb20"
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 generated
+    Goto "bb21"
+  Block "bb21"
+    Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:34:5 written
+      Destination "_0"
+      Use
+        Copy "_19"
+          Deref
+    Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:34:12 generated
+    Return
