@@ -74,6 +74,8 @@ allocation still live becomes unproven. A proved free stays proved. This covers 
 and both of #250's programs, and it costs one corpus case its wording and
 nothing else.
 
+What an allocation may contain keeps its own row through a rebirth of its site, since the old allocation is still out there. Its entry in other allocations' rows does not, when the allocation it named is gone: the entry would name the new one, and ADR-0045 says what replaces it.
+
 **What a call returns.** A fresh allocation, or any exposed one, at an offset
 nobody said; and it is exposed itself, since the callee had it. That catches a
 pointer handed to one call and returned by another, which is ordinary registry
