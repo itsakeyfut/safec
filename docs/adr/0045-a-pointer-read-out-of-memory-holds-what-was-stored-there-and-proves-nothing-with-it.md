@@ -44,7 +44,7 @@ The two rejected options:
 - Holding no site leaves the use after free silent.
 - An ordinary may-set would let a free of a load write a proof onto sites the load may not name. It would also let a dereference prove a use after free about an allocation the pointer may not hold, since what `inside` records is a lower bound.
 
-A load out of what a parameter points at is outside this rule. The caller stored it, so `inside` records nothing and the load holds no site. That is [#281](https://github.com/itsakeyfut/safec/issues/281).
+A load out of what a parameter points at is outside this rule: the caller stored it, so `inside` records nothing and the load holds no site. ADR-0040 answers it instead, making such a load a pointer this check stopped following at a call it cannot read ([#281](https://github.com/itsakeyfut/safec/issues/281)).
 
 ### Confirmation
 
@@ -101,7 +101,6 @@ Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, 
 
 * Good, because a use after free through a pointer this check saw stored in the function's own memory, and read into a local, is reported, with or without a call between.
 * Bad, because `inside` does not tell slots apart and a store adds to it rather than replacing what was there. `tab[0] = p; tab[1] = r; free(p); q = tab[1]; *q` is reported as unproven though `q` is `r`, and so is `*tab = p; free(p); *tab = malloc(4); q = *tab; *q`. Telling slots apart is a question for how fields and indices are lowered in Phase 9, and the case that holds this answer moves then.
-* Bad, because a load out of a parameter's memory is still silent after a call, which is #281.
 * Bad, because a local's address stored in an allocation is not remembered, so a write or a read through the allocation's copy of it reaches nothing: `*t3 = &slot; **t3 = r; free(r); ***t3` is silent. That is [#300](https://github.com/itsakeyfut/safec/issues/300).
 * Bad, because a copy adds to what its destination may contain and replaces nothing, so a freed pointer the destination held before `memcpy` is still doubted after: `a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it` holds the answer, and it moves when slots are told apart.
 * Bad, because a load does not carry the edges of a local it reads, so `u = *t3; *u` with `t3 = &t2` and `t2 = &slot` reads nothing of `slot`. That is [#298](https://github.com/itsakeyfut/safec/issues/298).

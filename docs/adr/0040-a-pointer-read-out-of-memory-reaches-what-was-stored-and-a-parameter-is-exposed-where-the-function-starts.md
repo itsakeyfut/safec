@@ -109,6 +109,13 @@ the program ends, so no call frees them without undefined behaviour. A program
 that calls `main` itself hands it arguments that are not the host's, which this
 does not see.
 
+**What the caller stored behind it, one level in.** A pointer read out of what
+such a parameter points at, `q = *pp`, holds no site, since this function
+recorded nothing there; it carries `Held::from_caller`, and a call this check
+cannot read makes it a pointer this check stopped following, for the same
+reason the parameter's own site is exposed. The cost is the same one level in:
+such a pointer read after any call this check cannot read is doubted (#281).
+
 ### Confirmation
 
 Every mutation below was applied on its own to the tree as committed, the whole
@@ -166,6 +173,13 @@ clearing independently, each with a program that built.
 its type fails `a_write_through_a_pointer_with_one_target_on_one_arm_only`, and
 exposing `main`'s fails `the_arguments_the_host_hands_main_are_not_exposed`
 alone.
+
+**One level in.** Never setting `Held::from_caller`, or a call not making it
+lost, fails `a_pointer_read_out_of_a_parameter_is_doubted_after_a_call` and
+`a_pointer_read_out_of_a_parameter_is_doubted_after_any_call`; setting it for
+every parameter fails `a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call`;
+and `built_from`, `Held::joined`, `Held::accumulated` and `Held::clear` each
+fail a case named for them.
 
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a
