@@ -113,8 +113,13 @@ does not see.
 such a parameter points at, `q = *pp`, holds no site, since this function
 recorded nothing there; it carries `Held::from_caller`, and a call this check
 cannot read makes it a pointer this check stopped following, for the same
-reason the parameter's own site is exposed. The cost is the same one level in:
-such a pointer read after any call this check cannot read is doubted (#281).
+reason the parameter's own site is exposed. A load through a local that carries
+it carries it too, so `pp = *ppp; q = *pp;` is `q = **ppp`. The cost is the same
+one level in: such a pointer read after any call this check cannot read is
+doubted (#281). The mark is on locals only, so such a pointer stored into an
+allocation this function made and read back after the call is read in silence
+(#302); and a free this check can read, of another parameter the caller may
+have handed in twice, doubts nothing (#303).
 
 ### Confirmation
 
@@ -178,8 +183,10 @@ alone.
 lost, fails `a_pointer_read_out_of_a_parameter_is_doubted_after_a_call` and
 `a_pointer_read_out_of_a_parameter_is_doubted_after_any_call`; setting it for
 every parameter fails `a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call`;
-and `built_from`, `Held::joined`, `Held::accumulated` and `Held::clear` each
-fail a case named for them.
+`built_from`, `Held::joined`, `Held::accumulated` and `Held::clear` each
+fail a case named for them; and `Allocations::reads_caller_memory` reading only
+the parameters' sites fails
+`a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call`.
 
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a
