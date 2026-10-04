@@ -1334,6 +1334,10 @@ cases! {
         // Found by review. Mutation: have `lost_through` ask the first level
         // only; this goes silent.
         a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a pointer read out of one parameter after another is freed.
+        // See ADR-0040. Mutation: have the free not make such a local lost;
+        // this goes silent.
+        a_pointer_read_out_of_a_parameter_after_another_is_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.
@@ -1749,6 +1753,19 @@ cases! {
         // still asked. Found by review. Mutation: have `handed_below` exempt
         // every site the edges reach; this goes silent.
         a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A free or `realloc` of what may be the caller's may free anything
+        // the caller can see, as a call this check cannot read may: a caller
+        // may hand one allocation twice. See ADR-0040. Mutation: have the
+        // rule never fire; the first goes silent. Mutation: have it fire for
+        // `free` only; the second goes silent. Mutation: have it ask no place
+        // of dereferences; the third loses its report at the read. Silent
+        // for a read before the free, and for a free of the function's own
+        // allocation. Mutation: have it fire for any free; the last reports.
+        a_read_through_one_parameter_after_another_is_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_through_one_parameter_after_another_is_reallocated_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_what_a_parameter_points_at_doubts_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_through_a_parameter_before_another_is_freed_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_this_functions_own_allocation_leaves_a_parameter_alone: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Silent: the remedy the report gives, and a live pointer handed by
         // address. Mutation: have `handed_below` ask every unproven site,
         // including those through the address; the second reports.

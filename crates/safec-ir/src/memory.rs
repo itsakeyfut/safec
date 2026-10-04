@@ -1644,6 +1644,34 @@ impl Known {
         }
     }
 
+    /// What a call that may free the caller's memory does to it: a call this
+    /// check cannot read, or a free of a pointer that may be the caller's.
+    ///
+    /// **What the caller stored is out of sight from here on.** A pointer
+    /// read out of memory a parameter points at may be one the caller stashed
+    /// where this call frees it, and no site names it for the call to reach,
+    /// so it is one this check stopped following, and may be gone (ADR-0045).
+    /// **And so is what this function stored of it**, so a load out of such
+    /// an allocation afterwards is one too, whether or not the call can reach
+    /// the allocation: what it may free is the caller's. **And every exposed
+    /// allocation still live is unproven**, since the caller can see it. One
+    /// function for both callers, so the two cannot answer differently. See
+    /// ADR-0040.
+    fn callers_memory_may_be_freed(&mut self) {
+        for held in self.points_to.iter_mut() {
+            if held.from_caller {
+                held.lost = true;
+                held.stale_read = true;
+            }
+        }
+        for (stale, &from_caller) in self.stale.iter_mut().zip(&self.from_caller) {
+            if from_caller {
+                *stale = true;
+            }
+        }
+        self.unproved_exposed();
+    }
+
     /// Every site a call could reach: what its arguments name, and what every
     /// local whose address escaped holds, since the call may have been handed
     /// that address now, earlier, or by another route. A local an argument
@@ -2210,6 +2238,30 @@ impl Allocations<'_> {
                 .exposed_parameters
                 .iter()
                 .any(|parameter| held.sites[parameter.index()])
+    }
+
+    /// Whether a free or `realloc` handed these arguments may free what the
+    /// caller owns: an argument holding an exposed parameter's site, or read
+    /// out of what one points at, or a place of dereferences whose load reads
+    /// caller memory, `free(*pp)`. Not an allocation this function made,
+    /// which the caller cannot have handed it. See ADR-0040.
+    fn frees_callers(&self, handed: &[Operand], value: &Known) -> bool {
+        handed.iter().any(|argument| {
+            let Operand::Copy(place) = argument else {
+                return false;
+            };
+            if place.projection.is_empty() {
+                let held = &value.points_to[place.local.index()];
+                held.from_caller
+                    || self
+                        .exposed_parameters
+                        .iter()
+                        .any(|parameter| held.sites[parameter.index()])
+            } else {
+                let depth = derefs(place);
+                depth > 0 && self.reads_caller_memory(place.local, depth, value)
+            }
+        })
     }
 
     /// What an operand may reach beyond the sites it holds, because it may be
@@ -3194,6 +3246,16 @@ impl Analysis for Allocations<'_> {
         let touched = Self::touching(handed.iter(), value);
         let sites = || named(&touched);
 
+        // **A free of what may be the caller's may free anything the caller
+        // can see**, as a call this check cannot read may: `f(p, p)` hands
+        // `free(b); return *a;` one allocation twice. Before the free's own
+        // transfer, so what it frees is proved freed rather than unproven.
+        // See ADR-0040.
+        if matches!(kind, Callee::Frees | Callee::Reallocates) && self.frees_callers(handed, value)
+        {
+            value.callers_memory_may_be_freed();
+        }
+
         match kind {
             Callee::Frees => {
                 let reached: Vec<usize> = sites().collect();
@@ -3394,28 +3456,9 @@ impl Analysis for Allocations<'_> {
                 value.replaced(|_| true);
             }
             Callee::Opaque => {
-                // **What the caller stored is out of sight from here on.** A
-                // pointer read out of memory a parameter points at may be one
-                // the caller stashed where this call frees it, and no site
-                // names it for the call to reach, so it is one this check
-                // stopped following. See ADR-0040.
-                for held in value.points_to.iter_mut() {
-                    if held.from_caller {
-                        held.lost = true;
-                        // And may be gone, which is the point. See ADR-0045.
-                        held.stale_read = true;
-                    }
-                }
-                // **And so is what this function stored of it**, so a load out
-                // of such an allocation after the call is one too. Whether the
-                // call can reach the allocation does not matter: what it may
-                // free is the caller's, which nothing here names. See
-                // ADR-0040.
-                for (stale, &from_caller) in value.stale.iter_mut().zip(&value.from_caller) {
-                    if from_caller {
-                        *stale = true;
-                    }
-                }
+                // **What the caller stored is out of sight from here on**, as
+                // it is after a free of the caller's pointer. See ADR-0040.
+                value.callers_memory_may_be_freed();
                 // **A load's sites are a lower bound, and a proof is not taken
                 // away on one.** A freed allocation a load may hold is not one
                 // this call is known to have been handed, so blanking it would
