@@ -1202,6 +1202,36 @@ cases! {
         // silent.
         a_read_two_levels_down_through_a_pointer_to_a_local_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_load_through_a_pointer_to_a_local_handed_on_after_a_free_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A copy of an object, and a store more than one dereference down,
+        // are recorded where they land, so a load out of the destination reads
+        // what was copied or stored. See ADR-0039 and ADR-0045. Mutation: have
+        // `Callee::Copies` record nothing; the first two go silent. Mutation:
+        // map `memcpy` back to `Callee::ReturnsFirst`; the same. Mutation:
+        // have the store arm find no containers below one dereference; the
+        // third goes silent. Mutation: count `Reached::Partial` as a doubt;
+        // the fourth reports.
+        a_pointer_copied_by_memcpy_into_a_table_and_freed_is_unproven_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_store_two_levels_down_is_recorded_where_it_lands: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What ADR-0045 accepts as its cost: a copy adds to what the
+        // destination holds and replaces nothing, so a freed pointer it held
+        // before is doubted after, as on `main`.
+        a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A deep store is exposed as well as recorded, since where it may land
+        // is a lower bound: `*t3` may be what the caller stored. Mutation:
+        // have a deep store not count as `unnamed`; the first goes silent at
+        // `return *r`. And a copy out of an allocation a loop's rebirth marked
+        // marks the destination. Mutation: have `Callee::Copies` mark nothing;
+        // the second goes silent.
+        a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a copy whose destination or source is itself read out of memory,
+        // `memcpy(*pp, src, 8)` and `memcpy(tab, *ps, 8)`. Mutation: have
+        // `Callee::Copies` read only plain locals as its arguments; both go
+        // silent.
+        a_copy_into_a_destination_read_out_of_memory_is_recorded_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_copy_from_a_source_read_out_of_memory_is_recorded: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Silent: a loop that keeps last turn's allocation alive, and one that
         // stores and reads within a turn with nothing freed. Mutation: have
         // `reborn` mark whatever the old allocation's state; both report.

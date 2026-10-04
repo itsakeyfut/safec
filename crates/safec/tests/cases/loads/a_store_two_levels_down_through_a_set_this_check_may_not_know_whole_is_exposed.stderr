@@ -1,0 +1,20 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:19:9 ]
+    │
+ 19 │         *t3 = *pp;
+    │         ────┬────  
+    │             ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:28:5 ]
+    │
+ 28 │     return *r;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

@@ -76,6 +76,8 @@ nothing else.
 
 What an allocation may contain keeps its own row through a rebirth of its site, since the old allocation is still out there, and its entry in other allocations' rows is kept too, for what a call reaches through them. When the allocation it named is gone that entry names the new one, and ADR-0045 says how a load out of such a row is answered.
 
+`memcpy` and `memmove` copy an object, so what each allocation their destination holds may contain gains what the source contains, read as a load reads it, and the mark ADR-0045 gives an allocation that may hold something gone goes with it (#283). The string functions stop at a null byte and copy no pointer whole, and stay in the family that only exposes.
+
 **What a call returns.** A fresh allocation, or any exposed one, at an offset
 nobody said; and it is exposed itself, since the callee had it. That catches a
 pointer handed to one call and returned by another, which is ordinary registry

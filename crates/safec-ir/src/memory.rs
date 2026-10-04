@@ -82,13 +82,23 @@ enum Callee {
     /// the old one held (p2). See ADR-0039.
     Reallocates,
     /// A C library function that frees nothing and returns its first argument:
-    /// `memset`, `memcpy`, `memmove`, `strcpy`, `strncpy`, `strcat` and
-    /// `strncat`, whose clauses in C17 7.24.2 to 7.24.6 each say so.
+    /// `memset`, `strcpy`, `strncpy`, `strcat` and `strncat`, whose clauses in
+    /// C17 7.24.2 to 7.24.6 each say so.
     ///
     /// **What it is handed is exposed all the same**, because it copies bytes
     /// and a pointer is bytes, and a local whose address it is handed may be
     /// written through it. See ADR-0039.
     ReturnsFirst,
+    /// `memcpy` and `memmove`: what [`Callee::ReturnsFirst`] is, and a copy of
+    /// an object besides, so that what the destination may contain gains what
+    /// the source contains (C17 7.24.2.1 and 7.24.2.2 copy the object's bytes).
+    ///
+    /// **Not the string functions**, whose copies end at a null byte (7.24.2.3
+    /// and on), which a pointer's representation may hold, so a stored pointer
+    /// is not copied whole by them. A variant of its own rather than a name
+    /// read inside the transfer, so that every reader of the callee answers
+    /// for it. See ADR-0039.
+    Copies,
     /// Anything else. It may free what it was passed and this cannot tell.
     Opaque,
 }
@@ -1032,9 +1042,9 @@ impl Known {
     /// **A chain written as one place is the chain written through locals**:
     /// `q = **t3` is `q2 = *t3; q = *q2;`, and each step reads [`Self::inside`]
     /// as a load through a load does, so the two spellings of a **read** cannot
-    /// be answered differently. A **store** written as one place, `**t3 = r`,
-    /// is one this check cannot place and is exposed rather than recorded, so
-    /// what it stored is not here to be read (#283). Every level is a lower bound read beside
+    /// be answered differently, and a **store** written as one place, `**t3 =
+    /// r`, is recorded where the level above may be, so it is here to be read.
+    /// Every level is a lower bound read beside
     /// [`Reached::Partial`], and each is a set of sites, so finite.
     /// See ADR-0045.
     fn stored_below(&self, local: LocalId, depth: usize) -> BTreeSet<usize> {
@@ -1814,9 +1824,8 @@ impl Allocations<'_> {
             "free" => Callee::Frees,
             "malloc" | "calloc" | "aligned_alloc" => Callee::Allocates,
             "realloc" => Callee::Reallocates,
-            "memset" | "memcpy" | "memmove" | "strcpy" | "strncpy" | "strcat" | "strncat" => {
-                Callee::ReturnsFirst
-            }
+            "memcpy" | "memmove" => Callee::Copies,
+            "memset" | "strcpy" | "strncpy" | "strcat" | "strncat" => Callee::ReturnsFirst,
             _ => Callee::Opaque,
         }
     }
@@ -2479,8 +2488,8 @@ impl Analysis for Allocations<'_> {
                 // **Into the allocations the pointer holds, what the write
                 // carries is inside them**, exposed whenever they are, by
                 // [`Known::expose`]'s closure. A write this check cannot place
-                // exposes what it carries at once: one deeper than one `Deref`,
-                // which has no targets, or one through a pointer that holds
+                // exposes what it carries at once: one deeper than one `Deref`
+                // whose level above names nothing, or one through a pointer that holds
                 // neither an allocation nor a local's address, or, for that
                 // part, one through a pointer that may also point into memory
                 // this check does not model or hold something it lost. A write that
@@ -2499,8 +2508,20 @@ impl Analysis for Allocations<'_> {
                     if let Rvalue::Use(written) = &operation.value {
                         carried.extend(self.read_out(function, written, value));
                     }
+                    // **A store of more than one dereference lands in what the
+                    // level above may be**, `**t3 = r` in what `*t3` may point
+                    // at, and is recorded there as a store through one is;
+                    // `unnamed` below exposes it too, since that set is a lower
+                    // bound. Unplaced, `**t3 = r; free(r); ***t3` read nothing
+                    // of it. See ADR-0045.
+                    let deep = derefs(&operation.place);
                     let containers: Vec<usize> = if one_step {
                         value.sites_of(operation.place.local).collect()
+                    } else if deep > 1 {
+                        value
+                            .stored_below(operation.place.local, deep - 1)
+                            .into_iter()
+                            .collect()
                     } else {
                         Vec::new()
                     };
@@ -2523,7 +2544,7 @@ impl Analysis for Allocations<'_> {
                     // sites: `t = c ? s : *tab; *t = a;` stored `a` only in
                     // `s` and was silent after a later call. See ADR-0044.
                     let held = &value.points_to[pointer];
-                    let unnamed = held.loaded || held.lost || held.foreign;
+                    let unnamed = held.loaded || held.lost || held.foreign || deep > 1;
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
                     } else {
@@ -2870,9 +2891,11 @@ impl Analysis for Allocations<'_> {
         // two readings of one rule cannot drift.
         let handed = match kind {
             Callee::Reallocates => &arguments[..arguments.len().min(1)],
-            Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {
-                &arguments[..]
-            }
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Opaque => &arguments[..],
         };
         let touched = Self::touching(handed.iter(), value);
         let sites = || named(&touched);
@@ -3010,7 +3033,51 @@ impl Analysis for Allocations<'_> {
             // Frees nothing; what it is handed is out of this check's sight
             // from now on, and a local whose address it is handed may have
             // been written through it, as ADR-0029 says of an opaque call.
-            Callee::ReturnsFirst => {
+            Callee::ReturnsFirst | Callee::Copies => {
+                // **A copy of an object carries what it contains**: what each
+                // allocation the destination holds may contain gains what the
+                // source does, which `stored_in` answers for an allocation and,
+                // through its edge, for a local's address; and where the source
+                // may hold one this check stopped following, so may the
+                // destination. Before what follows, which is the whole family's.
+                // See ADR-0039 and ADR-0045.
+                //
+                // **Either argument may be a place of dereferences**, `memcpy(*pp,
+                // *ps, 8)`, read as a store and a load through the same place
+                // are: the destination's allocations are what `*pp` may point
+                // at, and what is copied is one level below what `*ps` may
+                // point at. Read only as plain locals, those built in silence.
+                // Found by review.
+                if matches!(kind, Callee::Copies) {
+                    if let [Operand::Copy(dest), Operand::Copy(source), ..] = &arguments[..] {
+                        let (into_depth, from_depth) = (derefs(dest), derefs(source));
+                        let placed = (dest.projection.is_empty() || into_depth > 0)
+                            && (source.projection.is_empty() || from_depth > 0);
+                        if placed {
+                            let copied = value.stored_below(source.local, from_depth + 1);
+                            // The second half has no case: a lost local copied
+                            // is doubted by its own escape first, measured.
+                            let marked = value.stale_below(source.local, from_depth + 1)
+                                || (from_depth == 0 && value.lost_through(source.local));
+                            let into: Vec<usize> = if into_depth == 0 {
+                                value.sites_of(dest.local).collect()
+                            } else {
+                                value
+                                    .stored_below(dest.local, into_depth)
+                                    .into_iter()
+                                    .collect()
+                            };
+                            for container in into {
+                                for &site in &copied {
+                                    value.inside[container][site] = true;
+                                }
+                                if marked {
+                                    value.stale[container] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 // What a pointer it was handed may be, read out of memory, as
                 // for an opaque call. See ADR-0040.
                 let reach = self.reach(function, handed, sites(), value);
@@ -3119,7 +3186,7 @@ impl Analysis for Allocations<'_> {
             }
             // What it returns is its first argument, unmoved: C17 7.24.2 to
             // 7.24.6 say so of each. See ADR-0039.
-            Callee::ReturnsFirst => {
+            Callee::ReturnsFirst | Callee::Copies => {
                 let first = match arguments.first() {
                     Some(Operand::Copy(source)) if source.projection.is_empty() => {
                         value.points_to[source.local.index()].clone()
@@ -3164,7 +3231,7 @@ impl Analysis for Allocations<'_> {
         // `realloc`, is `Live(None)` and the diagnostic leaves the label off.
         let made = match kind {
             Callee::Allocates | Callee::Reallocates => Some(origin.span()),
-            Callee::Opaque | Callee::Frees | Callee::ReturnsFirst => None,
+            Callee::Opaque | Callee::Frees | Callee::ReturnsFirst | Callee::Copies => None,
         };
         value.reborn(site, made);
         // **`realloc`'s new object holds what the old one held**, C17 7.22.3.5
@@ -3196,7 +3263,11 @@ impl Analysis for Allocations<'_> {
                     }
                 }
             }
-            Callee::Frees | Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => {}
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::ReturnsFirst
+            | Callee::Copies
+            | Callee::Opaque => {}
         }
         // **Or any allocation code this check cannot read may reach**, which a
         // call it cannot read may hand back: `stash(p); q = fetch();` may make
@@ -3220,7 +3291,11 @@ impl Analysis for Allocations<'_> {
                 // and may have kept it where the next call can reach it.
                 value.expose([site], Some(origin.span()));
             }
-            Callee::Frees | Callee::Allocates | Callee::Reallocates | Callee::ReturnsFirst => {}
+            Callee::Frees
+            | Callee::Allocates
+            | Callee::Reallocates
+            | Callee::ReturnsFirst
+            | Callee::Copies => {}
         }
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
@@ -3769,7 +3844,9 @@ fn reported(
     let arguments = match analysis.callee(*callee) {
         Callee::Frees => &arguments[..],
         Callee::Reallocates => &arguments[..arguments.len().min(1)],
-        Callee::Allocates | Callee::ReturnsFirst | Callee::Opaque => return Vec::new(),
+        Callee::Allocates | Callee::ReturnsFirst | Callee::Copies | Callee::Opaque => {
+            return Vec::new();
+        }
     };
 
     // **One answer to what the arguments reached feeds both questions**,
@@ -4239,7 +4316,7 @@ fn handed_places<'a>(
     arguments: &'a [Operand],
 ) -> Vec<&'a Place> {
     let arguments = match analysis.callee(callee) {
-        Callee::Opaque | Callee::ReturnsFirst => arguments,
+        Callee::Opaque | Callee::ReturnsFirst | Callee::Copies => arguments,
         Callee::Reallocates => &arguments[arguments.len().min(1)..],
         Callee::Frees | Callee::Allocates => return Vec::new(),
     };
@@ -4424,7 +4501,7 @@ fn used_before(
         // `malloc` frees nothing and takes no pointer, so a read carried to it
         // is a read this call has nothing to say about; the library functions
         // that return their first argument free nothing either.
-        Callee::Allocates | Callee::ReturnsFirst => return,
+        Callee::Allocates | Callee::ReturnsFirst | Callee::Copies => return,
     };
 
     // The machine behind the paragraph above. Placed here because this is

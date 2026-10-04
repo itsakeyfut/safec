@@ -1,0 +1,206 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:2:5 "cond" declared
+  Local "_0" "int" return
+Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:3:6 "release_all" declared
+  Local "_0" "void" return
+Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int ***" parameter
+  Local "_2" "int"
+  Local "_3" "int ***"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Local "_8" "int"
+  Local "_9" "int **"
+  Local "_10" "int"
+  Local "_11" "int **"
+  Local "_12" "int *"
+  Local "_13" "void *"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "int *"
+  Local "_17" "void"
+  Block "bb0" entry
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 written
+      Destination "_2"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:7:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:17 generated
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:17 "malloc" "bb4"
+      Destination "_4"
+      Constant 8
+  Block "bb4"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:9:17 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 "bb5" "bb6"
+      Copy "_5"
+  Block "bb5"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:11:16 generated
+    Return
+  Block "bb6"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:10:9 generated
+    Goto "bb7"
+  Block "bb7"
+    ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:16 generated
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:16 "malloc" "bb8"
+      Destination "_7"
+      Constant 8
+  Block "bb8"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:11 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:13:16 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 "bb9" "bb10"
+      Copy "_8"
+  Block "bb9"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:15:16 generated
+    Return
+  Block "bb10"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:14:9 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:17:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_6"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:17:5 written
+      Destination "_9"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:17:5 generated
+    ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 generated
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 "cond" "bb12"
+      Destination "_10"
+  Block "bb12"
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 "bb13" "bb14"
+      Copy "_10"
+  Block "bb13"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:19:9 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_1"
+          Deref
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:19:9 written
+      Destination "_11"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:19:9 generated
+    Goto "bb15"
+  Block "bb14"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:18:9 generated
+    Goto "bb15"
+  Block "bb15"
+    ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:14 generated
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:14 "malloc" "bb16"
+      Destination "_13"
+      Constant 4
+  Block "bb16"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:10 written
+      Destination "_12"
+      Use
+        Copy "_13"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:21:14 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 written
+      Destination "_14"
+      Binary "Eq"
+        Copy "_12"
+        Constant 0
+    Branch a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 "bb17" "bb18"
+      Copy "_14"
+  Block "bb17"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:23:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:23:16 generated
+    Return
+  Block "bb18"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:22:9 generated
+    Goto "bb19"
+  Block "bb19"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:25:5 written
+      Destination "_12"
+        Deref
+      Use
+        Constant 1
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:25:5 written
+      Destination "_15"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:25:5 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:26:5 written
+      Destination "_3"
+        Deref
+          Deref
+      Use
+        Copy "_12"
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:26:5 written
+      Destination "_16"
+      Use
+        Copy "_3"
+          Deref
+            Deref
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:26:5 generated
+    ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 generated
+    Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 "release_all" "bb20"
+      Destination "_17"
+  Block "bb20"
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 generated
+    Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:28:5 written
+      Destination "_0"
+      Use
+        Copy "_12"
+          Deref
+    Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:28:12 generated
+    Return

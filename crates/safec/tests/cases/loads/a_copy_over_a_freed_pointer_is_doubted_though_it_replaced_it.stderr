@@ -1,0 +1,10 @@
+warning[SC0402]: this may use a value after it was freed
+    ╭─[ a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:34:5 ]
+    │
+ 34 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
