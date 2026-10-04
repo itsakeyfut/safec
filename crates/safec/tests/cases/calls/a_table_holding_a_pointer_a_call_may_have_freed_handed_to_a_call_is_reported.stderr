@@ -1,5 +1,5 @@
 error[SC0407]: this may pass a pointer to where a freed pointer is stored
-    ╭─[ a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 ]
+    ╭─[ a_table_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_reported.c:16:12 ]
     │
  16 │     return use2(t);
     │            ───┬───  

@@ -980,20 +980,33 @@ impl Known {
         }
     }
 
-    /// What a pointer handed to a call points at may hold that was freed: the
-    /// allocations [`Self::stored_below`] says it may contain one level in,
-    /// through `&a` or through what this function stored in its own memory,
-    /// and only those proved freed.
+    /// What a pointer handed to a call points at may hold that may have been
+    /// freed: the allocations [`Self::stored_below`] says it may contain one
+    /// level in, through `&a` or through what this function stored in its own
+    /// memory, that are freed or unproven.
     ///
-    /// **Only freed ones**, because taking an address makes a live allocation
-    /// `Unknown` (ADR-0017), so asking about every one doubted `use2(&a)` over
-    /// every live pointer. **Never a proof**: [`Reached::Partial`] is always
-    /// beside them, since the callee may only write there. See ADR-0042.
+    /// **Not one unproven through the address handed**, because taking an
+    /// address makes a live allocation `Unknown` (ADR-0017), so asking about
+    /// those doubted `use2(&a)` over every live pointer. A freed one is asked
+    /// whichever way it is reached, and an unproven one reached through this
+    /// function's own memory is, since nothing about the call made it so:
+    /// `*t = a; release(a); use2(t);` was silent. **Never a proof**:
+    /// [`Reached::Partial`] is always beside them, since the callee may only
+    /// write there. See ADR-0042.
     fn handed_below(&self, local: LocalId) -> Vec<Reached> {
+        let through_address: BTreeSet<usize> = self
+            .written_through(local)
+            .into_iter()
+            .flat_map(|target| self.points_to[target].sites())
+            .collect();
         let mut reached: Vec<Reached> = self
             .stored_below(local, 1)
             .into_iter()
-            .filter(|&site| matches!(self.state[site], SiteState::Freed { .. }))
+            .filter(|&site| match self.state[site] {
+                SiteState::Freed { .. } => true,
+                SiteState::Unknown => !through_address.contains(&site),
+                SiteState::Live(_) => false,
+            })
             .map(Reached::Site)
             .collect();
         if !reached.is_empty() {

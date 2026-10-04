@@ -1654,12 +1654,23 @@ cases! {
         // `Reached::Partial`; both become proofs.
         the_address_of_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_holding_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And about one unproven, through this function's own memory only:
+        // a call this check cannot read may have freed it, or one path did.
+        // Mutation: have `handed_below` ask about freed sites only; both go
+        // silent. Through an address it is not asked, which the live address
+        // below holds. Mutation: have `handed_below` ask about every unproven
+        // site; that one reports.
+        a_table_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a live pointer stored in a table after its address escaped,
+        // whose allocation the escape left unproven.
+        a_table_holding_a_live_pointer_whose_address_escaped_is_doubted_when_handed_on: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Silent: the remedy the report gives, and a live pointer handed by
-        // address. Mutation: have `handed_below` ask every site, not only
-        // freed ones; the second reports.
+        // address. Mutation: have `handed_below` ask every unproven site,
+        // including those through the address; the second reports.
         the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_address_of_a_live_pointer_handed_to_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
