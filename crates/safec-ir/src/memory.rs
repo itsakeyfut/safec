@@ -1375,7 +1375,10 @@ impl Known {
             inside,
             stale,
             // Kept, as the entry and `stale` are: the slots of the new
-            // allocation are not told apart from the old one's.
+            // allocation are not told apart from the old one's. No case
+            // tells this from clearing it, measured: every other local
+            // holding the site is lost a few lines below, so a load out of
+            // it is doubted either way.
             from_caller: _,
             pending,
             calls: _,

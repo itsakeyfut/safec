@@ -199,6 +199,9 @@ marked site fails the second; the store marking `Known::stale` at once fails
 `a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence`;
 the join dropping the mark fails `a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call`;
 and `realloc` dropping it fails `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call`.
+Clearing the mark where its site is reborn fails nothing, measured on a loop
+that stores on one turn and reads after it: the rebirth already makes every
+other local holding the site lost, so the read is doubted either way.
 
 **What nothing holds.** `Known::reach_of` reading `Held::lost` for an escaped
 local: every call that gives an escaped local the bit also reaches it, and a
