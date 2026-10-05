@@ -621,7 +621,10 @@ impl Analysis for Allocations<'_> {
         // exactly the result of is one more per local, the same. See ADR-0039.
         // Which locals' addresses each site may hold is a fourth square table
         // that only grows, one step per pair, and the first term gains a
-        // fourth square for it. See ADR-0045.
+        // fourth square for it. See ADR-0045. Whether code this check cannot
+        // read may hold a local's address is one more bit per local that a
+        // join only sets, one more step each, and the per-local term gains it.
+        // See ADR-0047.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -667,7 +670,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 4 + locals * (locals + 22) + positions * (2 * locals + 3) + locals
+        locals * locals * 4 + locals * (locals + 23) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -680,6 +683,7 @@ impl Analysis for Allocations<'_> {
             // Nothing holds a local's address where a function starts, a
             // parameter included: what a caller holds is its own local.
             escaped: vec![false; self.locals],
+            handed_away: vec![false; self.locals],
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
             stale: vec![false; self.locals],
@@ -730,6 +734,7 @@ impl Analysis for Allocations<'_> {
             points_to,
             state,
             escaped,
+            handed_away,
             exposed,
             inside,
             stale,
@@ -792,6 +797,10 @@ impl Analysis for Allocations<'_> {
         // A local whose address escaped on one arm has escaped where the arms
         // meet: the other arm did not un-take it.
         for (here, there) in escaped.iter_mut().zip(&from.escaped) {
+            *here = *here || *there;
+        }
+        // And so has one handed away, for the same reason. See ADR-0047.
+        for (here, there) in handed_away.iter_mut().zip(&from.handed_away) {
             *here = *here || *there;
         }
 
@@ -1048,6 +1057,16 @@ impl Analysis for Allocations<'_> {
                     // `s` and was silent after a later call. See ADR-0044.
                     let held = &value.points_to[pointer];
                     let unnamed = held.loaded || held.lost || held.foreign || deep > 1;
+                    // And the locals whose address it carries are where code
+                    // this check cannot read may find them, in memory it does
+                    // not model. See ADR-0047.
+                    if unplaced || unnamed {
+                        for (target, &edge) in written.writes_to.iter().enumerate() {
+                            if edge {
+                                value.handed_away[target] = true;
+                            }
+                        }
+                    }
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
                     } else {
@@ -1756,7 +1775,10 @@ impl Analysis for Allocations<'_> {
                 // another one, `b = a; release_ref(&b);`, and is asked about
                 // it at the next call by address. Only a local read after
                 // this call counts, and after a call that does not return
-                // nothing is (ADR-0051). See ADR-0047.
+                // nothing is (ADR-0051). What the call was handed comes
+                // first, since a holder it was handed is one it may replace.
+                // See ADR-0047.
+                value.handed_to_a_call(handed);
                 value.held_out_of_reach(|local| {
                     then.is_some_and(|then| self.live_in[then.index()][local])
                 });
