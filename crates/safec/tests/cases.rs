@@ -1024,6 +1024,32 @@ cases! {
         // Mutation: drop `!hatch` from the default in `Lowering::body`; the
         // read in `main` goes silent.
         a_hatch_promises_nothing_by_default_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // The level just below 5 makes no default either, which is the edge
+        // of the comparison in `driver.rs`. Mutation: compute
+        // `nonnull_returns_by_default` from `>= SafetyLevel::Thread`; this
+        // goes silent.
+        a_result_of_a_function_defined_here_is_doubted_at_level_4: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "thread"],
+        // The return's three answers, compared as the parameter's are:
+        // `_Nonnull` against `_Nullable` as well as either against nothing,
+        // a definition before the declaration as well as after, and each
+        // declarator of one declaration on its own. Mutation: compare whether
+        // a specifier was written in `Lowering::agree_on_return`; the first
+        // goes silent. Mutation: hand `declare_one` no specifier for a
+        // definition; the second does. Mutation: drop the specifier
+        // `named_declarator` returns for a later declarator, so it keeps the
+        // first's; `g` promises and the third goes silent.
+        declarations_that_disagree_between_nonnull_and_nullable_about_a_return_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_definition_that_disagrees_with_a_later_declaration_about_its_return_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_second_declarator_does_not_take_the_first_ones_return_specifier: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A function declared in a block is not one `lowering.rs::declare`
+        // reads, so a specifier on its return would mean nothing. Mutation:
+        // let `Parser::placed` accept a return under `Declares::BlockScope`;
+        // this goes silent.
+        a_nonnull_on_the_return_of_a_block_scope_function_is_refused: ["--emit", "ast"],
+        // The second of two specifiers, whichever came first. Mutation: have
+        // `Parser::core` ask whether the one before was `_Nonnull` only; this
+        // is told to write it after the `*`, which it did.
+        a_nonnull_after_a_nullable_on_one_pointer_is_refused: ["--emit", "ast"],
     }
 
     "hatch" => {

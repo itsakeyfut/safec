@@ -1,0 +1,3 @@
+Target "x86_64-pc-windows-msvc"
+Function declarations_that_disagree_between_nonnull_and_nullable_about_a_return_are_refused.c:1:16 "f" declared
+  Local "_0" "int *" return _Nonnull

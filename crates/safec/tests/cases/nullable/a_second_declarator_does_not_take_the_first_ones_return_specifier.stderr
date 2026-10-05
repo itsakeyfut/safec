@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_second_declarator_does_not_take_the_first_ones_return_specifier.c:5:5 ]
+   │
+ 5 │     return *q;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

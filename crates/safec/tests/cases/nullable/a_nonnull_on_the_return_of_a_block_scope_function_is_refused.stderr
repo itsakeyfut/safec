@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_on_the_return_of_a_block_scope_function_is_refused.c:2:11 ]
+   │
+ 2 │     int * _Nonnull f(void);
+   │           ────┬───  
+   │               ╰───── this is not the pointer a parameter holds or a function returns
+───╯
