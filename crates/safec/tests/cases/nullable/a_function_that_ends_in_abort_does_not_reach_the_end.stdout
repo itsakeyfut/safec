@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_function_that_ends_in_abort_does_not_reach_the_end.c:1:6 "abort" declared
+  Local "_0" "void" return
+Function a_function_that_ends_in_abort_does_not_reach_the_end.c:3:16 "f"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    Branch a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 generated
+    Operation a_function_that_ends_in_abort_does_not_reach_the_end.c:5:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:5:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 generated
+    Call a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 "abort" noreturn
+      Destination "_2"
+  Block "bb4"
+    Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 generated
+    Return

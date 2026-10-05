@@ -212,8 +212,8 @@ pub trait Analysis {
     /// tested and nothing would say so. The index means something only inside a
     /// kind: the name says which question was asked, the index says which
     /// answer this edge is. It is called for every edge on purpose, so that the
-    /// day [`Terminator::Call`] gains an edge for a callee that does not return
-    /// normally, the rule an analysis was written against does not change.
+    /// day [`Terminator::Call`] gains an edge for a callee that unwinds, the
+    /// rule an analysis was written against does not change.
     /// `an_edge_is_walked_after_the_terminator_that_named_it` pins the `Goto`
     /// case.
     ///

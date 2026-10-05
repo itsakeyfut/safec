@@ -46,6 +46,10 @@ const PROGRAMS: &[(&str, &str)] = &[
         "x86_64-pc-windows-msvc",
     ),
     (
+        "llvm_ir_of_a_call_that_does_not_return",
+        "x86_64-pc-windows-msvc",
+    ),
+    (
         "an_ir_shape_the_backend_cannot_write",
         "x86_64-pc-windows-msvc",
     ),

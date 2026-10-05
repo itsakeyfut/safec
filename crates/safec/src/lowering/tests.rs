@@ -439,7 +439,7 @@ fn the_mvp_lowers() {
         "add"
     );
     assert_eq!(arguments, &[Operand::Constant(1), Operand::Constant(2)]);
-    assert_eq!(then.index(), 1);
+    assert_eq!(then.map(|then| then.index()), Some(1));
     assert_eq!(lowered.sources.snippet(origin.span()), "add(1, 2)");
 
     let destination = destination.clone().expect("somewhere to put the answer");

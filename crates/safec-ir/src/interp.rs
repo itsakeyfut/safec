@@ -326,7 +326,7 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 }
 
                 frames[current].destination = destination;
-                frames[current].resume = Some(then);
+                frames[current].resume = then;
 
                 if frames.len() >= MAX_FRAMES {
                     return Err(
@@ -382,7 +382,15 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     }
                 }
 
-                frames[below].block = frames[below].resume.expect("a caller resumes somewhere");
+                // A call with no continuation is one the IR says does not
+                // return (ADR-0051), and nothing C compiles makes such a
+                // callee come back: the lowering gives one none only for a
+                // library function this unit does not define, and the
+                // interpreter cannot enter one of those.
+                let Some(resume) = frames[below].resume else {
+                    return Err(Trap::new("a call the IR says does not return came back"));
+                };
+                frames[below].block = resume;
             }
             // ADR-0010 put this in the IR before anything produced one, and
             // nothing does. An interpreter that guessed what it means would be
@@ -1068,7 +1076,7 @@ mod tests {
                     callee,
                     arguments: Vec::new(),
                     destination: None,
-                    then: after,
+                    then: Some(after),
                     origin: Origin::Written(at),
                 },
             },
@@ -1076,6 +1084,51 @@ mod tests {
         let id = unit.push_function(caller);
 
         assert_eq!(run(&unit, id, &[]), Ok(Value::Int(7)));
+    }
+
+    /// A callee that comes back to a call the IR says does not return stops
+    /// the run.
+    ///
+    /// The lowering gives a call no continuation only for a library function
+    /// this unit does not define, which the interpreter cannot enter, so this
+    /// shape only reaches it from a hand-built unit. See ADR-0051.
+    ///
+    /// Mutation: have the return path `expect` a block to resume at, as it did
+    /// before a call could have none. The run panics and this fails.
+    #[test]
+    fn a_callee_that_comes_back_to_a_call_that_does_not_return_stops_the_run() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "void nothing(void);\n");
+        let at = Span::new(file, 5, 12);
+
+        let mut unit = TranslationUnit::new(a_target());
+        let int = unit.push_type(Ty::Int);
+        let void = unit.push_type(Ty::Void);
+
+        let mut callee = Function::new(at, void, []);
+        callee.push_block(Block {
+            elements: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let callee = unit.push_function(callee);
+
+        let mut caller = Function::new(at, int, []);
+        caller.push_block(Block {
+            elements: Vec::new(),
+            terminator: Terminator::Call {
+                callee,
+                arguments: Vec::new(),
+                destination: None,
+                then: None,
+                origin: Origin::Written(at),
+            },
+        });
+        let id = unit.push_function(caller);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("a call with no continuation has nowhere to come back to");
+        };
+        assert!(trap.why.contains("does not return"), "{trap:?}");
     }
 
     /// A projection this cannot follow stops the run.

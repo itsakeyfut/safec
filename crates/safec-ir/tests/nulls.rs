@@ -615,7 +615,7 @@ fn a_call_that_reads_a_pointer_and_writes_it_keeps_neither() {
                     projection: vec![Projection::Deref],
                 })],
                 destination: Some(Place::local(p)),
-                then: after,
+                then: Some(after),
                 origin: Origin::Written(names.at[0]),
             },
         },

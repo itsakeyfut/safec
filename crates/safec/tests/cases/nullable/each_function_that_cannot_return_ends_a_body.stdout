@@ -1,0 +1,115 @@
+Target "x86_64-pc-windows-msvc"
+Function each_function_that_cannot_return_ends_a_body.c:1:6 "abort" declared
+  Local "_0" "void" return
+Function each_function_that_cannot_return_ends_a_body.c:2:6 "exit" declared
+  Local "_0" "void" return
+  Local "_1" "int" parameter
+Function each_function_that_cannot_return_ends_a_body.c:3:6 "_Exit" declared
+  Local "_0" "void" return
+  Local "_1" "int" parameter
+Function each_function_that_cannot_return_ends_a_body.c:4:6 "quick_exit" declared
+  Local "_0" "void" return
+  Local "_1" "int" parameter
+Function each_function_that_cannot_return_ends_a_body.c:6:16 "a"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    Branch each_function_that_cannot_return_ends_a_body.c:7:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:7:9 generated
+    Operation each_function_that_cannot_return_ends_a_body.c:8:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:8:16 generated
+    Return
+  Block "bb2"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:7:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:10:5 generated
+    Call each_function_that_cannot_return_ends_a_body.c:10:5 "abort" noreturn
+      Destination "_2"
+  Block "bb4"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:10:5 generated
+    Return
+Function each_function_that_cannot_return_ends_a_body.c:13:16 "b"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    Branch each_function_that_cannot_return_ends_a_body.c:14:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:14:9 generated
+    Operation each_function_that_cannot_return_ends_a_body.c:15:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:15:16 generated
+    Return
+  Block "bb2"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:14:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:17:5 generated
+    Call each_function_that_cannot_return_ends_a_body.c:17:5 "exit" noreturn
+      Destination "_2"
+      Constant 1
+  Block "bb4"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:17:5 generated
+    Return
+Function each_function_that_cannot_return_ends_a_body.c:20:16 "c"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    Branch each_function_that_cannot_return_ends_a_body.c:21:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:21:9 generated
+    Operation each_function_that_cannot_return_ends_a_body.c:22:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:22:16 generated
+    Return
+  Block "bb2"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:21:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:24:5 generated
+    Call each_function_that_cannot_return_ends_a_body.c:24:5 "_Exit" noreturn
+      Destination "_2"
+      Constant 1
+  Block "bb4"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:24:5 generated
+    Return
+Function each_function_that_cannot_return_ends_a_body.c:27:16 "d"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    Branch each_function_that_cannot_return_ends_a_body.c:28:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:28:9 generated
+    Operation each_function_that_cannot_return_ends_a_body.c:29:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:29:16 generated
+    Return
+  Block "bb2"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:28:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated each_function_that_cannot_return_ends_a_body.c:31:5 generated
+    Call each_function_that_cannot_return_ends_a_body.c:31:5 "quick_exit" noreturn
+      Destination "_2"
+      Constant 1
+  Block "bb4"
+    Sequenced each_function_that_cannot_return_ends_a_body.c:31:5 generated
+    Return

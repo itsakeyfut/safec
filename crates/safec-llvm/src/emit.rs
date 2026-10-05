@@ -708,14 +708,15 @@ impl Emitter<'_> {
         }
     }
 
-    /// Enter another function, and come back.
+    /// Enter another function, and come back, or not where the IR says the
+    /// callee does not return.
     fn call(
         &mut self,
         function: &Function,
         callee: FuncId,
         arguments: &[Operand],
         destination: Option<&Place>,
-        then: BlockId,
+        then: Option<BlockId>,
         out: &mut String,
     ) -> Option<()> {
         let unit = self.unit;
@@ -762,7 +763,13 @@ impl Emitter<'_> {
             self.deliver(function, result, returns, destination, out)?;
         }
 
-        writeln!(out, "  br label %bb{}", then.index()).expect("writing to a string cannot fail");
+        // C says nothing is reached after a call that does not return, and a
+        // block still needs a terminator, so it says so to LLVM. See ADR-0051.
+        match then {
+            Some(then) => writeln!(out, "  br label %bb{}", then.index()),
+            None => writeln!(out, "  unreachable"),
+        }
+        .expect("writing to a string cannot fail");
         Some(())
     }
 

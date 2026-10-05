@@ -705,8 +705,10 @@ pub enum Terminator {
         /// that reads a write as an initialisation would then see one the
         /// source never asked for.
         destination: Option<Place>,
-        /// Where control goes when it returns normally.
-        then: BlockId,
+        /// Where control goes when it returns normally, or `None` where the
+        /// callee does not return, which leaves the call with no edge out of
+        /// it. See ADR-0051.
+        then: Option<BlockId>,
         /// Where this call is, so that a diagnostic can point at it.
         ///
         /// One of the two terminators that carry one, and they are the two a
@@ -766,9 +768,11 @@ impl Terminator {
     /// The fields are written out too, and `..` is deliberately not used. A
     /// second edge on a kind that already exists is the likelier growth than a
     /// new kind: an unwinding call keeps `then` and gains somewhere to go when
-    /// the callee does not return normally. Spelled this way that field is
-    /// `error[E0027]` here, and spelled `..` it would be silently dropped from
-    /// the edge set while every walk kept compiling.
+    /// the callee unwinds. Spelled this way that field is `error[E0027]` here,
+    /// and spelled `..` it would be silently dropped from the edge set while
+    /// every walk kept compiling. Such an edge would be index 1 after a `then`
+    /// and index 0 where there is none (ADR-0051), so an analysis reading it
+    /// would have to match `then` as well as the kind.
     pub fn successors(&self, out: &mut Vec<BlockId>) {
         match self {
             Self::Goto(to) | Self::Abnormal { to } => out.push(*to),
@@ -778,13 +782,15 @@ impl Terminator {
                 otherwise,
                 origin: _,
             } => out.extend([*then, *otherwise]),
+            // A call that does not return has no edge, so what follows it is
+            // reached by no execution. See ADR-0051.
             Self::Call {
                 callee: _,
                 arguments: _,
                 destination: _,
                 then,
                 origin: _,
-            } => out.push(*then),
+            } => out.extend(*then),
             Self::Return => {}
         }
     }

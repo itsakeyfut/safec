@@ -1,0 +1,18 @@
+target triple = "x86_64-pc-windows-msvc"
+
+declare void @abort()
+
+define i32 @main() {
+entry:
+  %_0 = alloca i32
+  br label %bb0
+
+bb0:
+  store i32 0, ptr %_0
+  call void @abort()
+  unreachable
+
+bb1:
+  %t0 = load i32, ptr %_0
+  ret i32 %t0
+}

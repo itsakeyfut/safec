@@ -2225,7 +2225,7 @@ mod tests {
                     callee,
                     arguments: vec![Operand::Copy(Place::local(x))],
                     destination: None,
-                    then,
+                    then: Some(then),
                     origin: Origin::Written(at),
                 },
             }

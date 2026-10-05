@@ -322,7 +322,7 @@ mod tests {
                     callee: callee(&mut unit, span),
                     arguments: Vec::new(),
                     destination: Some(Place::local(function.return_place())),
-                    then: called,
+                    then: Some(called),
                     origin: Origin::Written(span),
                 },
             },

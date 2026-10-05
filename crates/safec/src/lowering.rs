@@ -212,8 +212,10 @@ pub fn lower(
         prototypes: HashMap::new(),
         return_nullability: HashMap::new(),
         refused: HashSet::new(),
+        defined: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
+        root: None,
     };
 
     lowering.declare(diagnostics);
@@ -279,6 +281,12 @@ struct Lowering<'a> {
     /// reported again: the caller wrote an ordinary call and the fault is in a
     /// declaration somewhere else.
     refused: HashSet<String>,
+    /// The names this translation unit defines a function for.
+    ///
+    /// Asked of this rather than of the IR, because bodies are lowered in file
+    /// order and a function defined below a call to it has no body in the IR
+    /// yet when the call is lowered. Read by [`Lowering::does_not_return`].
+    defined: HashSet<String>,
     /// Where a `&&`, `||` or `?:` puts its answer, and where control rejoins.
     ///
     /// Filled when the first operand has been evaluated and read when the last
@@ -299,6 +307,13 @@ struct Lowering<'a> {
     /// True at the root of a full expression, and kept only through the
     /// operands C sequences. See ADR-0022, and [`sequences`] for the list.
     top_level: bool,
+    /// The full expression being lowered, which is the expression
+    /// [`Lowering::value`] was last asked for.
+    ///
+    /// Not [`Lowering::top_level`], which stays true through operands C
+    /// sequences and so through the right operand of a comma. Read by the call
+    /// that decides whether it has a continuation.
+    root: Option<ExprId>,
 }
 
 /// A branch a value is waiting on.
@@ -571,6 +586,7 @@ impl Lowering<'_> {
                 Item::Function(function) => {
                     let (name, ty, written) =
                         (function.name, function.ty, function.return_nullability);
+                    self.defined.insert(self.sources.snippet(name).to_owned());
                     self.declare_one(name, ty, written, true, diagnostics);
                 }
                 Item::Declaration { declarators, .. } => {
@@ -1431,6 +1447,7 @@ impl Lowering<'_> {
         // full expression: Annex C's list and `lower_stmt`'s arms are the same
         // eight places.
         self.top_level = true;
+        self.root = Some(root);
 
         let mut tasks = vec![Task::Value(root)];
         let mut values: Vec<Operand> = Vec::new();
@@ -1968,12 +1985,23 @@ impl Lowering<'_> {
                 let then = builder.function.reserve_block();
 
                 // A call ends a block: control leaves the function here, and
-                // ADR-0010 is where that is argued.
+                // ADR-0010 is where that is argued. One that does not return
+                // names no block to come back to, and whatever is lowered
+                // after it still goes into `then`, which nothing reaches.
+                //
+                // Only where the call is the whole full expression. Inside a
+                // larger one, an operand written before the call may still be
+                // a place this walk reads only where its operator is lowered,
+                // after the call, so `*p + (exit(1), 0)` would move the read
+                // of `*p` into `then` and ask nothing about it, where C17 6.5
+                // p3 lets it happen first. Keeping the edge there costs a
+                // report about code that may not run, which a reader can see.
+                let returns = self.root != Some(id) || !self.does_not_return(called);
                 builder.end(Terminator::Call {
                     callee: called,
                     arguments,
                     destination: Some(Place::local(into)),
-                    then,
+                    then: returns.then_some(then),
                     origin: Origin::Written(span),
                 });
                 builder.switch(then);
@@ -2456,7 +2484,29 @@ impl Lowering<'_> {
 
         named
     }
+
+    /// Whether a call to `called` is one C says does not return.
+    ///
+    /// Decided by name, and only for a function this translation unit does
+    /// not define: one defined here is lowered like any other, and its body is
+    /// what the checks read rather than its name. See ADR-0051.
+    fn does_not_return(&self, called: FuncId) -> bool {
+        let name = self.sources.snippet(self.unit.function(called).name);
+        DOES_NOT_RETURN.contains(&name) && !self.defined.contains(name)
+    }
 }
+
+/// Four of the library functions C says do not return to their caller.
+///
+/// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
+/// `quick_exit` (7.22.4.7). `longjmp` (7.13.2.1) and `thrd_exit` (7.26.5.5)
+/// do not return either: the first takes a `jmp_buf`, which this frontend
+/// cannot declare, and the second belongs to the threads that
+/// `docs/roadmap.md` places in Phase 8. The name is believed because 7.1.3 reserves it: a
+/// program that defines one with external linkage has no behaviour C
+/// defines. [`Lowering::does_not_return`] answers `false` for one defined
+/// here all the same, so its body is what the checks read.
+const DOES_NOT_RETURN: &[&str] = &["abort", "exit", "_Exit", "quick_exit"];
 
 /// Whether an operand is non-zero, as a value.
 ///
