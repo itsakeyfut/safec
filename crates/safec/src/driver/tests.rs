@@ -1,13 +1,17 @@
 use std::fs;
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
 
 use clap::ValueEnum as _;
 
+use super::backend::{Scratch, Unmade, backend_failure};
 use super::*;
+use crate::cli::HOST_TRIPLE;
 use crate::options::{ColorMode, EmitKind};
 use crate::safety::SafetyLevel;
 use safec_ir::source::Span;
 use safec_ir::target::Target;
+use safec_llvm::emit::Refusal;
 
 /// Answer `true` where a test that needs `clang` should go on, and say what
 /// it skipped where there is none.
