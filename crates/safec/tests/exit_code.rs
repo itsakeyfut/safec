@@ -558,8 +558,8 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
 /// adding one to the parser. `clang` compiles both. A thousand terms is what a
 /// generated `.c` file looks like.
 ///
-/// Mutation: make `dump_expr` in `driver.rs` recurse into its children instead
-/// of pushing them onto its own stack. This fails, with exit 101 on the
+/// Mutation: make `dump_expr` in `driver/dumps.rs` recurse into its children
+/// instead of pushing them onto its own stack. This fails, with exit 101 on the
 /// harness's own `unwrap` because the process was killed.
 #[test]
 fn a_long_flat_expression_does_not_end_the_process() {

@@ -16,9 +16,9 @@
 //! them, so a statement tree is at most `parser::MAX_NESTING` deep. An
 //! expression tree has no such bound: a left-associative chain and a run of
 //! postfix operators are folded by loops, so `a + a + ...` is as deep as it is
-//! long. Walking an expression tree therefore takes two things, and only one
-//! of them can be shared: a stack of its own, which `driver.rs`'s `dump_expr`
-//! is what one looks like, and the children of a node, which
+//! long. Walking an expression tree therefore takes two things, and only one of
+//! them can be shared: a stack of its own, which `driver/dumps.rs`'s
+//! `dump_expr` is what one looks like, and the children of a node, which
 //! [`Expr::extend_children`] answers here so that the next walker does not have
 //! to work them out again.
 //!
@@ -669,10 +669,11 @@ impl Expr {
     /// that walks it needs its own stack and needs to know what the children
     /// are. The first is each walker's own problem. The second is this, on the
     /// tree rather than inside whichever walker was written first: `dump_expr`
-    /// was that walker, it is private to `driver.rs`, and the driver is the top
-    /// of the dependency graph, so nothing below it could read the answer even
-    /// within this crate. `docs/roadmap.md` then moves the Safety IR into a
-    /// crate of its own in Phase 2, which is not this crate and not today.
+    /// was that walker, it is private to `driver/dumps.rs`, and the driver is
+    /// the top of the dependency graph, so nothing below it could read the
+    /// answer even within this crate. `docs/roadmap.md` then moves the Safety
+    /// IR into a crate of its own in Phase 2, which is not this crate and not
+    /// today.
     ///
     /// **Appends rather than replaces, and the caller owns the buffer.** That
     /// is the whole of the contract and it is not visible in the signature,

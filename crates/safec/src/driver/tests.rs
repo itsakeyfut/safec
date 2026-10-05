@@ -6,6 +6,7 @@ use clap::ValueEnum as _;
 
 use super::backend::{Scratch, Unmade, backend_failure};
 use super::*;
+use crate::ast::{Item, Stmt, Type};
 use crate::cli::HOST_TRIPLE;
 use crate::options::{ColorMode, EmitKind};
 use crate::safety::SafetyLevel;

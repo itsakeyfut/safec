@@ -277,10 +277,11 @@ impl Resolver<'_> {
     /// than C, which starts each name at the end of its own declarator, and
     /// the direction to be loose in is the one that stays quiet.
     ///
-    /// Only the outermost type, which is what `driver.rs::dump_parameters`
-    /// does as well: a definition whose declarator derives something other than
-    /// a function is a constraint violation, and reporting it is #57's rather
-    /// than this walk's to invent an answer for.
+    /// Only the outermost type, which is what
+    /// `driver/dumps.rs::dump_parameters` does as well: a definition whose
+    /// declarator derives something other than a function is a constraint
+    /// violation, and reporting it is #57's rather than this walk's to invent
+    /// an answer for.
     fn parameters(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let Type::Function {
@@ -328,9 +329,9 @@ impl Resolver<'_> {
 
     /// One statement and everything under it.
     ///
-    /// A recursion, for the reason `driver.rs::dump_stmt` gives: every place a
-    /// statement nests inside another is a recursion in the parser too, and
-    /// `MAX_NESTING` bounds those.
+    /// A recursion, for the reason `driver/dumps.rs::dump_stmt` gives: every
+    /// place a statement nests inside another is a recursion in the parser too,
+    /// and `MAX_NESTING` bounds those.
     fn stmt(&mut self, id: StmtId, diagnostics: &mut DiagnosticSink) {
         // Taken out of `self` so that the walk below can borrow `self` mutably.
         // The tree outlives this resolver and is not what is being changed.
@@ -390,7 +391,7 @@ impl Resolver<'_> {
     ///
     /// An explicit stack rather than a recursion, because an expression tree
     /// has no bound on its depth: two of the parser's rules fold with a loop,
-    /// which is why `driver.rs::dump_expr` carries its own stack as well.
+    /// which is why `driver/dumps.rs::dump_expr` carries its own stack as well.
     ///
     /// Mutation: walk the children by calling this on each of them instead.
     /// `the_artifact_grows_with_the_source_rather_than_with_its_square` and
