@@ -119,13 +119,13 @@ pub const DEEPEST_INDENT: usize = 32;
 /// terminal of whoever compiled it.
 ///
 /// **The indent is written rather than passed to `write!` as a width.** Rust's
-/// format width is a `u16` and `depth` is bounded by nothing: `driver::dump_expr`
-/// says why, and the cost of not knowing it was that a tree 32768 levels deep
-/// panicked inside `write!`, before `expect` could see a `Result`, for exit 101
-/// with nothing on either stream. 32768 is where it starts: two spaces a level
-/// is a width of 65536, and 65535 is the largest a `u16` holds. The smallest
-/// `.c` file reaching it is 96 KB of `i[i][i]...`, 32764 subscripts, which
-/// `clang` parses.
+/// format width is a `u16` and `depth` is bounded by nothing:
+/// `driver::dumps::dump_expr` says why, and the cost of not knowing it was that
+/// a tree 32768 levels deep panicked inside `write!`, before `expect` could see
+/// a `Result`, for exit 101 with nothing on either stream. 32768 is where it
+/// starts: two spaces a level is a width of 65536, and 65535 is the largest a
+/// `u16` holds. The smallest `.c` file reaching it is 96 KB of `i[i][i]...`,
+/// 32764 subscripts, which `clang` parses.
 pub fn dump_node(sources: &SourceMap, kind: &str, span: Span, depth: usize, out: &mut String) {
     let file = sources.file(span.file());
     let at = file.line_col(span.start());

@@ -249,7 +249,7 @@ can go quiet, and the one program measured that it would change, `free(a); if (a
 **A code of its own, `SC0407`.** `SC0402` is a dereference by
 `docs/diagnostics.md`'s own definition, and the fix is at the call or at the
 free rather than at a read, which is ADR-0041's reason for `SC0406`. A new
-`Kind` is `error[E0004]` in `verdict`'s `ordered` and in `driver.rs`'s
+`Kind` is `error[E0004]` in `verdict`'s `ordered` and in `driver/words.rs`'s
 `memory_finding`.
 
 ### Confirmation
@@ -452,16 +452,16 @@ otherwise.
   exempting every unproven site an edge reaches, rather than those the
   address alone reaches, fails
   `a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on`.
-* In `crates/safec/src/driver.rs`, changing the words of the `Lost` row fails
-  `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and giving
-  the `Unsequenced` row the disagreement remedy fails
+* In `crates/safec/src/driver/words.rs`, changing the words of the `Lost` row
+  fails `a_table_allocated_again_by_a_loop_still_holds_what_it_held` alone, and
+  giving the `Unsequenced` row the disagreement remedy fails
   `a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it` alone.
 
-A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in `driver.rs`'s
-`memory_finding`, and a new `Callee` is `error[E0004]` in `handed`, which are
-the guards the compiler holds. That `realloc`'s size and an allocator's
-arguments are never asked is held by the pointer-type condition as much as by
-the `match`, and nothing tells the two apart.
+A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in
+`driver/words.rs`'s `memory_finding`, and a new `Callee` is `error[E0004]` in
+`handed`, which are the guards the compiler holds. That `realloc`'s size and an
+allocator's arguments are never asked is held by the pointer-type condition as
+much as by the `match`, and nothing tells the two apart.
 
 ### Consequences
 

@@ -333,7 +333,7 @@ impl Builder {
 /// The walk is a stack rather than a recursion because the tree is not bounded
 /// by the parser's own nesting limit: a chain folded by a loop, which is how
 /// every left-associative operator is read, adds a level per operator.
-/// `driver.rs`'s `dump_expr` is the walker that paid for it first.
+/// `driver/dumps.rs`'s `dump_expr` is the walker that paid for it first.
 enum Task {
     /// Push the value of this expression.
     Value(ExprId),
@@ -878,8 +878,8 @@ impl Lowering<'_> {
     ///
     /// Recursion is what the statements a walker meets are bounded by:
     /// `parser::MAX_NESTING` counts a nested statement and not a folded
-    /// operator, which is why `driver.rs`'s `dump_stmt` recurses where its
-    /// `dump_expr` does not.
+    /// operator, which is why `driver/dumps.rs`'s `dump_stmt` recurses where
+    /// its `dump_expr` does not.
     fn stmt(
         &mut self,
         builder: &mut Builder,

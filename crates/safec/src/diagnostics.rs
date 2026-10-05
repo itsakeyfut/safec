@@ -258,8 +258,8 @@ impl Label {
 ///
 /// **It carries no span, and that is a decision rather than an omission.**
 /// Every place a remedy would point at today is already a label, `freed here`
-/// and `allocated here` in `driver.rs`, or is not written down anywhere: the
-/// place to test a pointer before reading through it is not a span this
+/// and `allocated here` in `driver/words.rs`, or is not written down anywhere:
+/// the place to test a pointer before reading through it is not a span this
 /// compiler holds. A field set by nobody and read by nobody is breakable by no
 /// mutation, which is a guard in name only. Whoever writes the first remedy
 /// that wants a place adds one then. See ADR-0034.
@@ -275,9 +275,9 @@ impl Remedy {
     /// a check gave up rather than found something, what it says instead is
     /// what it failed to establish, because an instruction there would claim
     /// something about a program nothing was worked out about. `LOST_REMEDY` in
-    /// `driver.rs` is that case and is the reason this sentence does not say
-    /// "in the imperative", which it used to and which was already false of a
-    /// string in the tree.
+    /// `driver/words.rs` is that case and is the reason this sentence does not
+    /// say "in the imperative", which it used to and which was already false of
+    /// a string in the tree.
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),

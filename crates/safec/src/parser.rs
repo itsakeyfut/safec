@@ -149,7 +149,7 @@ pub(crate) const UNREAD_ATTRIBUTE_LABEL: &str =
 /// of postfix operators are folded by a loop, so `a + a + ...` and `a++++` are
 /// as deep in the tree as they are long while `depth` never rises. Anything
 /// that walks the tree owes itself an answer to that; `dump_expr` in
-/// `driver.rs` uses an explicit stack, and says so.
+/// `driver/dumps.rs` uses an explicit stack, and says so.
 /// A test outside this crate reads it, because a process-level test of the
 /// deepest tree the printer can be handed is only honest if the depth it builds
 /// follows this number rather than restating it.

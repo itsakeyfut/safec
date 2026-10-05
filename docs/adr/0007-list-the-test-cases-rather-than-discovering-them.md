@@ -78,7 +78,7 @@ exists to make expensive: whatever replaces the table has to keep answering the
 question of which files are covered.
 
 The other half is confirmed by the shape of the expansion rather than by an
-assertion. Changing the separator in `driver.rs::dump_tokens` fails a test
+assertion. Changing the separator in `driver/dumps.rs::dump_tokens` fails a test
 called `add`, rather than one test standing for the whole corpus, and that is
 only true while the macro generates one function per entry.
 

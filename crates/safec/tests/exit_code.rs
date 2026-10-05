@@ -223,10 +223,10 @@ const LARGEST_PIPE_BUFFER: usize = 1 << 20;
 
 /// A run whose artifact never reached the pipe does not report success.
 ///
-/// `driver.rs::an_artifact_that_could_not_be_written_is_an_error` covers the
-/// library half: given a writer that fails, `run_compiler` returns an error.
-/// What nothing covered is the other side of the process boundary, where that
-/// error becomes the number a build system reads.
+/// `driver/tests.rs::an_artifact_that_could_not_be_written_is_an_error` covers
+/// the library half: given a writer that fails, `run_compiler` returns an
+/// error. What nothing covered is the other side of the process boundary, where
+/// that error becomes the number a build system reads.
 ///
 /// **The artifact has to be larger than the pipe can hold, and that is the
 /// whole of why this is not a race.** `run_compiler` builds the artifact in
@@ -336,7 +336,8 @@ fn a_run_whose_artifact_could_not_be_written_does_not_report_success() {
 ///
 /// Through the binary rather than the library, because this is the half of the
 /// contract a build system reads: `make` names a target, runs the compiler, and
-/// then opens that file. The in-process tests in `driver.rs` cover the rest.
+/// then opens that file. The in-process tests in `driver/tests.rs` cover the
+/// rest.
 ///
 /// This test used to assert the opposite, that the path was left alone, and its
 /// own note said "Mutation: write anything to `options.output` in
@@ -395,7 +396,7 @@ fn an_output_path_is_where_the_artifact_goes() {
 ///
 /// Mutation: raise `MAX_NESTING` in `parser.rs` far enough that the recursion
 /// outruns the stack, 200000 being ample. This fails, with the exit code of a
-/// process nothing in `driver.rs` chose. Which recursion dies first, the
+/// process nothing in the driver chose. Which recursion dies first, the
 /// parser's or the printer's, is not the claim; that neither may be given more
 /// levels than it can hold is.
 #[test]
@@ -546,7 +547,7 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
 ///
 /// Not a corpus case, because the point is the exit code rather than the
 /// artifact: the failure this guards is a stack overflow, which is not a panic
-/// anything can catch and gives a code nothing in `driver.rs` chose. The corpus
+/// anything can catch and gives a code nothing in the driver chose. The corpus
 /// harness turns that into "the compiler was killed by a signal", and the
 /// expected file would be a megabyte of indentation.
 ///
@@ -557,8 +558,8 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
 /// adding one to the parser. `clang` compiles both. A thousand terms is what a
 /// generated `.c` file looks like.
 ///
-/// Mutation: make `dump_expr` in `driver.rs` recurse into its children instead
-/// of pushing them onto its own stack. This fails, with exit 101 on the
+/// Mutation: make `dump_expr` in `driver/dumps.rs` recurse into its children
+/// instead of pushing them onto its own stack. This fails, with exit 101 on the
 /// harness's own `unwrap` because the process was killed.
 #[test]
 fn a_long_flat_expression_does_not_end_the_process() {
