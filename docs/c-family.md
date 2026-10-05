@@ -395,7 +395,18 @@ A `Terminator::Call` whose `then` is `None` has no edge out of it, so every
 analysis reads what follows it as reached by no execution, and **a call is
 given no continuation only where its callee cannot return**. The C frontend
 gives none to a call of `abort`, `exit`, `_Exit` or `quick_exit` that this
-translation unit does not define, and keeps one for every other call.
+translation unit does not define and that is the whole of its full
+expression, and keeps one for every other call.
+
+Two things that look like the answer are not. A callee whose body is in the
+unit keeps its edge whatever it is declared as, because the body is what the
+checks read: `clang` marks a call to a function declared `_Noreturn` as not
+returning even where that function's body returns, and warns about the body
+rather than refusing it, measured with 20.1.6. A written `_Noreturn` or
+`[[noreturn]]` is a promise, and is not a reason to drop an edge until
+something checks it. And a call inside a larger expression keeps its edge
+where an operand evaluated before the call is lowered after it, since that
+operand would land where nothing reaches.
 
 **The two ways to break it fail in opposite directions.** A call given no
 continuation that does return hides the code after it from every check, which
