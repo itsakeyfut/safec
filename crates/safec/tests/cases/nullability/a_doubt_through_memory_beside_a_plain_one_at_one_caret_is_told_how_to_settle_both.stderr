@@ -1,9 +1,9 @@
 error[SC0403]: this may dereference a null pointer
-   ╭─[ a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place.c:4:13 ]
+   ╭─[ a_doubt_through_memory_beside_a_plain_one_at_one_caret_is_told_how_to_settle_both.c:3:16 ]
    │
- 4 │             return **pp;
-   │             ──────┬─────  
-   │                   ╰─────── this check cannot say this is not null
+ 3 │         return *p && **q;
+   │                ────┬────  
+   │                    ╰────── this check cannot say this is not null
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

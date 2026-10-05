@@ -130,13 +130,63 @@ pub struct Finding {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Asked {
     /// Whether a pointer read or written through is null.
-    Dereference,
+    Dereference {
+        /// Whether a pointer this goes through was read out of memory, as the
+        /// one `**pp` reads through second is.
+        ///
+        /// Not a different question, and not a different code: what differs is
+        /// the remedy. A test of `*pp` is kept nowhere, because this lattice
+        /// has a row per local and none for `*pp`, so telling the reader to
+        /// test the pointer is advice to do what may already have been done.
+        /// What settles it is reading the pointer into a local and testing
+        /// that (#333).
+        through_memory: bool,
+    },
     /// Whether an argument passed to a `_Nonnull` parameter is null.
     Argument {
         /// Where the parameter was declared `_Nonnull`, which is the promise
         /// this argument is checked against.
         promise: Span,
     },
+}
+
+impl Asked {
+    /// Whether two findings at one caret answer one question, so that one of
+    /// them is enough to say.
+    ///
+    /// A dereference is one question whether or not it went through memory:
+    /// `*p && **q` writes both operands at one span, and the reader is told
+    /// one thing about it. An argument is a question per promise.
+    fn same_question(self, other: Self) -> bool {
+        match (self, other) {
+            (Self::Dereference { through_memory: _ }, Self::Dereference { through_memory: _ }) => {
+                true
+            }
+            (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
+            (Self::Dereference { through_memory: _ }, Self::Argument { promise: _ })
+            | (Self::Argument { promise: _ }, Self::Dereference { through_memory: _ }) => false,
+        }
+    }
+
+    /// One question out of two that [`Asked::same_question`] calls the same.
+    ///
+    /// A dereference that went through memory in either keeps saying so,
+    /// because the remedy the reader is given has to settle both: the one
+    /// written for a pointer read out of memory covers the other pointer too,
+    /// and the plain one does not cover it.
+    fn joined(self, other: Self) -> Self {
+        match (self, other) {
+            (
+                Self::Dereference { through_memory },
+                Self::Dereference {
+                    through_memory: other,
+                },
+            ) => Self::Dereference {
+                through_memory: through_memory || other,
+            },
+            (asked, _) => asked,
+        }
+    }
 }
 
 /// Which locals are known null, known not null, or neither.
@@ -729,7 +779,9 @@ fn report(
             function,
             conclusion,
             at,
-            asked: Asked::Dereference,
+            asked: Asked::Dereference {
+                through_memory: places.iter().any(|place| read_out_of_memory(place)),
+            },
         });
     }
 }
@@ -922,7 +974,9 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // **The question is part of the key.** A call that passes two arguments
     // to two `_Nonnull` parameters has one caret and two promises, and a
     // dereference inside a call's arguments shares its caret with the call.
-    // Each of those is a different thing to say.
+    // Each of those is a different thing to say. Whether a dereference went
+    // through memory is not part of it, and the survivor keeps it if either
+    // did, which `Asked::joined` says why.
     //
     // **So is the function.** The sort above is over the whole unit, and a
     // finding is routed by the function it names: two functions sharing a
@@ -931,9 +985,12 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     findings.dedup_by(|later, earlier| {
         let same = later.function == earlier.function
             && later.at == earlier.at
-            && later.asked == earlier.asked;
-        if same && severity(later.conclusion) > severity(earlier.conclusion) {
-            std::mem::swap(later, earlier);
+            && later.asked.same_question(earlier.asked);
+        if same {
+            if severity(later.conclusion) > severity(earlier.conclusion) {
+                std::mem::swap(later, earlier);
+            }
+            earlier.asked = earlier.asked.joined(later.asked);
         }
         same
     });

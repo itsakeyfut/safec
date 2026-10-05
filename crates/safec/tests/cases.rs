@@ -775,9 +775,21 @@ cases! {
         a_null_pointer_read_two_dereferences_down_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_two_dereferences_down_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What that costs, pinned: a test of `*pp` is kept nowhere, so the read
-        // through it in place stays a doubt. Copying the pointer into a local
-        // first is what proves it.
+        // through it in place stays a doubt, and the remedy says so rather
+        // than asking for the test the program already has. Copying the
+        // pointer into a local and comparing it, `q != 0`, is what proves it,
+        // which is the second case and the remedy's promise. `if (q)` on that
+        // local does not prove it yet, which is a gap of the branch's reading
+        // rather than of this rule.
         a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p && **q` writes both operands at one caret, a plain doubt about
+        // `p` first and one through memory about `q` second, and the reader is
+        // told one thing. It has to settle both, so the remedy for a pointer
+        // read out of memory survives. Mutation: have `Asked::joined` keep the
+        // first question as it is; the remedy becomes the plain one, which
+        // would leave `**q` refused after it was followed.
+        a_doubt_through_memory_beside_a_plain_one_at_one_caret_is_told_how_to_settle_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The root's own answer still counts, and a proof outranks the doubt
         // beside it. Mutation: answer only the deeper question whenever there
         // is one; this fails as unproven where it expects proved.
