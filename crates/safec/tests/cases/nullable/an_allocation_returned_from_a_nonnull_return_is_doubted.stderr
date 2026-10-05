@@ -1,0 +1,13 @@
+error[SC0408]: this may return a null pointer from a function that promised not to
+   ╭─[ an_allocation_returned_from_a_nonnull_return_is_doubted.c:4:5 ]
+   │
+ 3 │ int * _Nonnull f(void) {
+   │       ────┬───  
+   │           ╰───── the return is declared `_Nonnull` here
+ 4 │     return malloc(4);
+   │     ────────┬────────  
+   │             ╰────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: return only a pointer this check can see is not null, testing it first where it came from a call, or remove `_Nonnull` from the return type in every declaration of the function

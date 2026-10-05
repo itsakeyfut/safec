@@ -1,0 +1,11 @@
+error[SC0307]: the declarations of `f` disagree about nullability
+   ╭─[ an_unprototyped_declaration_disagrees_about_a_return.c:2:7 ]
+   │
+ 1 │ int *f();
+   │      ┬  
+   │      ╰── the first declaration says nothing
+ 2 │ int * _Nonnull f(void);
+   │       ────┬───  
+   │           ╰───── one declaration says `_Nonnull` here
+───╯
+  = note: every declaration of a function has to agree about its nullability specifiers, because a caller is checked against the declaration it sees

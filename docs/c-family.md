@@ -371,6 +371,24 @@ live. `a_free_after_the_write_into_the_return_place_is_not_asked_about` in
 writes, so that closing the boundary later fails a named test rather than
 passing quietly.
 
+**A seventh arrived with**
+[ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md).
+The nullability check asks a function that promised the pointer it returns is
+not null at every `Terminator::Return`, and points at the last write into the
+return place in that block, so **a `return`'s write into the return place is in
+the block its `Terminator::Return` ends**. A `Return` reached with no write in
+its block is read as the end of the body, reached on a path that returned
+nothing. The C frontend writes the value, marks the end of the full expression,
+and ends the block, `return g();` included, measured.
+
+**What an omission costs here is words, not a silence.** What is asked is the
+return place's value where the `Return` runs, which the analysis carries across
+blocks, so a frontend that writes in one block and returns from another is
+still asked about the pointer it returns; it is only told the body can end
+without a `return` where it wrote one.
+`a_return_place_written_in_an_earlier_block_is_asked_where_it_returns` in
+`crates/safec-ir/tests/nulls.rs` builds that shape by hand.
+
 The testable half is smaller and just as useful: **an analysis should be
 runnable over IR built by hand in a test, with no frontend present.** If that
 test can be written, the IR is frontend-independent by construction, and the

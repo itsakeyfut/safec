@@ -828,6 +828,23 @@ pub struct Parameter {
     pub nonnull: Option<Span>,
 }
 
+/// Why the pointer a function returns is believed not to be null, which is
+/// where a report about breaking the promise points.
+///
+/// **The IR says what was promised and not why the level made it so.** A
+/// default is resolved where the IR is built, so nothing that reads this asks
+/// what level a run is at, which is ADR-0011's boundary held for the safety
+/// level as for everything else above this crate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Promise {
+    /// `_Nonnull` was written here, on the return.
+    Written(Span),
+    /// Nothing was written, and level 5 makes the pointer a function defined
+    /// in this translation unit returns non-null unless it is written
+    /// `_Nullable` (ADR-0050). The span is the function's name.
+    Defaulted(Span),
+}
+
 /// A parameter declared with nothing but its type.
 fn unannotated(ty: TyId) -> Parameter {
     Parameter { ty, nonnull: None }
@@ -844,6 +861,8 @@ pub struct Function {
     nonnull: Vec<Option<Span>>,
     /// Whether this is a hatch.
     hatch: bool,
+    /// Whether the pointer it returns is promised not to be null.
+    returns: Option<Promise>,
     body: Body,
 }
 
@@ -884,6 +903,7 @@ impl Function {
             locals,
             nonnull,
             hatch: false,
+            returns: None,
             body: Body::Defined(Vec::new()),
         }
     }
@@ -911,6 +931,23 @@ impl Function {
     /// Whether this is a hatch.
     pub fn hatch(&self) -> bool {
         self.hatch
+    }
+
+    /// This function, promising that the pointer it returns is not null.
+    ///
+    /// The body is asked at every `return` whether it keeps the promise, and a
+    /// call believes it of what it returns. Where nobody here can ask the
+    /// body, because it is a declaration or a hatch, the promise is believed
+    /// unasked, which is the boundary ADR-0037 and ADR-0050 accept.
+    pub fn promising(mut self, promise: Promise) -> Self {
+        self.returns = Some(promise);
+        self
+    }
+
+    /// What it promised of the pointer it returns, or `None` where a call
+    /// believes nothing about it.
+    pub fn promised(&self) -> Option<Promise> {
+        self.returns
     }
 
     /// A function this translation unit calls and does not contain.

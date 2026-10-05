@@ -190,6 +190,9 @@ struct Declared {
     name: Span,
     /// The type this declarator derived from `base`.
     ty: TypeId,
+    /// The nullability specifier on the pointer the declared function
+    /// returns, which [`Parser::placed`] allows only at file scope.
+    returns: Option<Nullability>,
     /// What the declaration declares, which every later declarator in it
     /// shares.
     declares: Declares,
@@ -530,6 +533,7 @@ impl Parser<'_> {
                 body,
                 span,
                 attribute,
+                returns: declared.returns,
             });
         }
 
@@ -572,13 +576,14 @@ impl Parser<'_> {
     ) -> Option<Declared> {
         let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
-        let (name, ty) = self.named_declarator(start, base, declares, diagnostics)?;
+        let (name, ty, returns) = self.named_declarator(start, base, declares, diagnostics)?;
 
         Some(Declared {
             start,
             base,
             name,
             ty,
+            returns,
             declares,
         })
     }
@@ -596,9 +601,9 @@ impl Parser<'_> {
         base: TypeId,
         declares: Declares,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<(Span, TypeId)> {
+    ) -> Option<(Span, TypeId, Option<Nullability>)> {
         let (name, derivations) = self.declarator(true, diagnostics)?;
-        let ty = self.apply(start, base, derivations, declares, diagnostics)?;
+        let (ty, returns) = self.apply(start, base, derivations, declares, diagnostics)?;
 
         let Some(name) = name else {
             // `declarator` was asked for a name and reports before it returns
@@ -611,7 +616,7 @@ impl Parser<'_> {
             return None;
         };
 
-        Some((name, ty))
+        Some((name, ty, returns))
     }
 
     /// The rest of C17 6.7's `init-declarator-list`, after [`Parser::declared`]
@@ -633,6 +638,7 @@ impl Parser<'_> {
             base,
             mut name,
             mut ty,
+            mut returns,
             declares,
         } = declared;
         let mut declarators = Vec::new();
@@ -647,9 +653,9 @@ impl Parser<'_> {
                     // this one's initializer. `Declaration::span` says why they
                     // all begin at the same byte and what tells them apart.
                     span: Span::new(self.file, start.start(), self.previous().span.end()),
-                    // Only a parameter carries one, and `apply` has refused it
-                    // everywhere else before this is reached.
-                    nullability: None,
+                    // The pointer a function declared at file scope returns,
+                    // the one place besides a parameter `apply` allows one.
+                    nullability: returns,
                 },
                 init,
             });
@@ -662,7 +668,7 @@ impl Parser<'_> {
             // loop always consumes a token and `spend`'s budget is not what
             // stops it going round forever.
             let at = self.peek().span;
-            (name, ty) = self.named_declarator(at, base, declares, diagnostics)?;
+            (name, ty, returns) = self.named_declarator(at, base, declares, diagnostics)?;
         }
     }
 
@@ -1018,7 +1024,7 @@ impl Parser<'_> {
                 Some(Derivation::Pointer { nullability }) => *nullability,
                 _ => None,
             };
-            let ty = self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
+            let (ty, _) = self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
             parameters.push(Declaration {
@@ -1068,10 +1074,13 @@ impl Parser<'_> {
     /// implementation to manage "63 nesting levels of parenthesized declarators
     /// within a full declarator".
     ///
-    /// It is also where `_Nonnull` is placed or refused, because this is the
-    /// first point at which the whole declarator is known: which derivation is
-    /// the declared entity's own type is only settled once the last one is
-    /// read. See [`MISPLACED_ANNOTATION`].
+    /// It is also where a nullability specifier is placed or refused, because
+    /// this is the first point at which the whole declarator is known: which
+    /// derivation is the declared entity's own type is only settled once the
+    /// last one is read. See [`MISPLACED_ANNOTATION`]. The specifier on the
+    /// pointer a function declared at file scope returns comes back beside the
+    /// type, because that pointer is not the declared entity's own and no
+    /// derivation of the type keeps it.
     fn apply(
         &mut self,
         start: Span,
@@ -1079,7 +1088,7 @@ impl Parser<'_> {
         derivations: Vec<Derivation>,
         declares: Declares,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<TypeId> {
+    ) -> Option<(TypeId, Option<Nullability>)> {
         if derivations.len() > MAX_NESTING {
             // At the declarator, not at whatever follows it. The count is only
             // known once the whole declarator has been read, so reporting where
@@ -1095,7 +1104,7 @@ impl Parser<'_> {
             return None;
         }
 
-        self.placed(&derivations, declares, diagnostics)?;
+        let returns = self.placed(&derivations, declares, diagnostics)?;
 
         let mut ty = base;
         for derivation in derivations {
@@ -1112,28 +1121,36 @@ impl Parser<'_> {
             });
         }
 
-        Some(ty)
+        Some((ty, returns))
     }
 
-    /// Refuse every `_Nonnull` in one declarator that is not on a parameter's
-    /// own pointer.
+    /// Refuse every nullability specifier in one declarator that is not on a
+    /// parameter's own pointer or on the pointer a declared function returns,
+    /// and hand back the second.
     ///
     /// Two places can hold one. A pointer derivation holds the one written
-    /// after its `*`, which is allowed only where it is the last derivation of
-    /// a parameter. A function derivation holds its parameters, whose own
-    /// `_Nonnull` was allowed when each was read, and is kept only where the
-    /// function is the declared one: the last derivation of a file-scope
-    /// declarator. Everywhere else, `void (*fp)(int * _Nonnull)` among them,
-    /// there is no declared function whose calls could be checked against it.
+    /// after its `*`, which is allowed where it is the last derivation of a
+    /// parameter, or the one just before the last of a file-scope declarator
+    /// whose last is a function, which is that function's return. A function
+    /// derivation holds its parameters, whose own specifiers were allowed when
+    /// each was read, and is kept only where the function is the declared one:
+    /// the last derivation of a file-scope declarator. Everywhere else,
+    /// `void (*fp)(int * _Nonnull)` and `int * _Nonnull (*fp)(void)` among
+    /// them, there is no declared function whose calls could be checked
+    /// against it.
     ///
-    /// `Some(())` is placed and `None` has been reported.
+    /// `Some` is placed, carrying the return's specifier if one was written,
+    /// and `None` has been reported.
     fn placed(
         &mut self,
         derivations: &[Derivation],
         declares: Declares,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<()> {
+    ) -> Option<Option<Nullability>> {
         let last = derivations.len().saturating_sub(1);
+        let declares_a_function = declares == Declares::FileScope
+            && matches!(derivations.last(), Some(Derivation::Function(_)));
+        let mut returns = None;
 
         for (index, derivation) in derivations.iter().enumerate() {
             let own = index == last;
@@ -1146,9 +1163,14 @@ impl Parser<'_> {
                         *written,
                         "this qualifies a pointer inside the parameter's type",
                     )),
-                    Declares::FileScope | Declares::BlockScope => {
-                        Some((*written, "this is not the pointer a parameter holds"))
+                    Declares::FileScope if declares_a_function && index + 1 == last => {
+                        returns = Some(*written);
+                        None
                     }
+                    Declares::FileScope | Declares::BlockScope => Some((
+                        *written,
+                        "this is not the pointer a parameter holds or a function returns",
+                    )),
                 },
                 Derivation::Function(Parameters::Prototype(parameters))
                     if !(own && declares == Declares::FileScope) =>
@@ -1184,7 +1206,7 @@ impl Parser<'_> {
             }
         }
 
-        Some(())
+        Some(returns)
     }
 
     /// A braced sequence of statements.

@@ -122,6 +122,12 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
                 spell_type(sources, ast, function.ty)
             )
             .expect("writing to a string cannot fail");
+            // Where a declaration of it prints its own, and for the reason
+            // `dump_declaration` gives.
+            if let Some(written) = function.returns {
+                write!(out, " {}", written.specifier.spelling())
+                    .expect("writing to a string cannot fail");
+            }
             // The name and the string as written, because the tree records what
             // was read and `sema::resolve` is what says whether it is a hatch.
             // Both are the file's text, written with `{:?}` because source

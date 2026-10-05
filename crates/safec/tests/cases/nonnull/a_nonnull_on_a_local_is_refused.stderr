@@ -3,5 +3,5 @@ error[SC0204]: `_Nonnull` cannot apply here
    │
  2 │     int * _Nonnull q = 0;
    │           ────┬───  
-   │               ╰───── this is not the pointer a parameter holds
+   │               ╰───── this is not the pointer a parameter holds or a function returns
 ───╯

@@ -1,0 +1,5 @@
+Function a_nullable_return_of_a_definition_is_read_into_the_tree.c:1:1 "f" "int *(int *)" _Nullable
+  Parameter a_nullable_return_of_a_definition_is_read_into_the_tree.c:1:19 "p" "int *"
+  Compound a_nullable_return_of_a_definition_is_read_into_the_tree.c:1:27
+    Return a_nullable_return_of_a_definition_is_read_into_the_tree.c:2:5
+      Identifier a_nullable_return_of_a_definition_is_read_into_the_tree.c:2:12 "p"

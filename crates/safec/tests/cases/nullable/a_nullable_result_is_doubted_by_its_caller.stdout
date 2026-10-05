@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_nullable_result_is_doubted_by_its_caller.c:1:17 "g" declared
+  Local "_0" "int *" return
+Function a_nullable_result_is_doubted_by_its_caller.c:3:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int *"
+  Block "bb0" entry
+    Operation a_nullable_result_is_doubted_by_its_caller.c:3:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_nullable_result_is_doubted_by_its_caller.c:4:14 generated
+    Call a_nullable_result_is_doubted_by_its_caller.c:4:14 "g" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_nullable_result_is_doubted_by_its_caller.c:4:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_nullable_result_is_doubted_by_its_caller.c:4:14 generated
+    Operation a_nullable_result_is_doubted_by_its_caller.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_nullable_result_is_doubted_by_its_caller.c:5:12 generated
+    Return

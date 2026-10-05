@@ -172,10 +172,11 @@ pub struct Declaration {
     /// tells two of them apart is [`Declaration::name`].
     pub span: Span,
     /// The nullability specifier written on this declaration's own pointer, if
-    /// one was.
+    /// one was: a parameter's, or, for a function declared at file scope, the
+    /// pointer it returns.
     ///
-    /// Only a parameter carries one. The parser refuses it everywhere else,
-    /// with `SC0204`, before a declaration is built. It is not part of
+    /// Only those two carry one. The parser refuses it everywhere else, with
+    /// `SC0204`, before a declaration is built. It is not part of
     /// [`Declaration::ty`]: it selects no type and changes no code, and what it
     /// does mean is ADR-0037 for `_Nonnull` and ADR-0050 for `_Nullable`.
     pub nullability: Option<Nullability>,
@@ -614,6 +615,12 @@ pub struct Function {
     /// Only a definition carries one: the parser refuses it on a declaration,
     /// because what a hatch says is about a body. See ADR-0038.
     pub attribute: Option<Attribute>,
+    /// The nullability specifier on the pointer it returns, if one was
+    /// written, which [`Declaration::nullability`] carries for a declaration.
+    ///
+    /// Not on [`Type::Function`]: types are compared for compatibility, and a
+    /// specifier is not part of the type (ADR-0037).
+    pub returns: Option<Nullability>,
 }
 
 /// `__attribute__((name("argument")))`, written before a function definition.

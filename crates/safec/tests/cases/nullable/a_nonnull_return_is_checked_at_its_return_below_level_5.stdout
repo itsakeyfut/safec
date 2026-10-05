@@ -1,0 +1,10 @@
+Target "x86_64-pc-windows-msvc"
+Function a_nonnull_return_is_checked_at_its_return_below_level_5.c:1:16 "f"
+  Local "_0" "int *" return _Nonnull
+  Block "bb0" entry
+    Operation a_nonnull_return_is_checked_at_its_return_below_level_5.c:2:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_nonnull_return_is_checked_at_its_return_below_level_5.c:2:12 generated
+    Return

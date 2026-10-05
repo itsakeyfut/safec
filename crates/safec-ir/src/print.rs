@@ -22,7 +22,8 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use crate::ir::{
-    Element, LocalId, Operand, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Element, LocalId, Operand, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty,
+    TyId,
 };
 use crate::source::{SourceMap, Span};
 
@@ -219,6 +220,13 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
             .expect("writing to a string cannot fail");
             if local == function.return_place() {
                 out.push_str(" return");
+                // Every promise written out, so that a third is answered for
+                // here by `error[E0004]` rather than printed as none.
+                match function.promised() {
+                    Some(Promise::Written(_)) => out.push_str(" _Nonnull"),
+                    Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull default"),
+                    None => {}
+                }
             } else if function.parameters().any(|parameter| parameter == local) {
                 out.push_str(" parameter");
                 if function.nonnull(local).is_some() {

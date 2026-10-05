@@ -261,8 +261,8 @@ void consume(owner int *p);
 
 The exact syntax is not fixed.
 
-**One annotation exists, and it answers the third question.** `_Nonnull`,
-written after the `*` of a pointer parameter, says the parameter is not null:
+**Two annotations answer the third question.** `_Nonnull`, written after the
+`*` of a pointer parameter, says the parameter is not null:
 
 ```c
 void process(int * _Nonnull p) { *p = 1; }
@@ -276,6 +276,13 @@ translation unit, another file of the same `safec` run among them, or one
 compiled by something else. That is the boundary promise
 [ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) asks
 of a hatch, at the scale of one declaration.
+
+Written after the `*` of the pointer a function returns, it says the same of the
+result: every `return` in the body is checked against it, so `return 0;` is an
+error and so is reaching the end of the body without a `return`, and every call
+believes it of what it returns. `_Nullable`, the other specifier, says a
+pointer may be null, which below level 5 is what an unannotated one already
+is.
 
 It is `clang`'s spelling rather than one in the style sketched above, because it
 is reserved to the implementation, `clang` compiles it unchanged, and it changes

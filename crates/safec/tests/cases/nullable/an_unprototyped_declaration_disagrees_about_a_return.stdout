@@ -1,0 +1,3 @@
+Target "x86_64-pc-windows-msvc"
+Function an_unprototyped_declaration_disagrees_about_a_return.c:1:6 "f" declared
+  Local "_0" "int *" return

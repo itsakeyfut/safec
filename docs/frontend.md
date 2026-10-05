@@ -250,8 +250,9 @@ which below level 5 is what an unannotated one already is, and at level 5 is
 what keeps a pointer from being non-null by default
 ([ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)).
 
-So they are read in one place, after the `*` of a parameter's own pointer in a
-function declared at file scope, and refused everywhere else. `clang` reads them
+So they are read in two places, after the `*` of a parameter's own pointer in a
+function declared at file scope and after the `*` of the pointer such a
+function returns, and refused everywhere else. `clang` reads them
 in more places than that, because there they are specifiers on any pointer type
 and mean nothing it has to check. `clang` also accepts `_Null_unspecified` and
 `_Nullable_result` in C, and this compiler refuses both wherever a declarator
@@ -263,7 +264,12 @@ can hold them, as annotations it does not read.
 | `void g(int _Nonnull p);` | `error[SC0204]` | error: not a pointer | error |
 | `void g(int * _Nonnull * p);` | `error[SC0204]` | accepts | error: an extension |
 | `int * _Nonnull q;` at file scope or in a block | `error[SC0204]` | accepts | error: an extension |
-| `int * _Nonnull f(void);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull f(void);` | accepts | accepts | error: an extension |
+| `int * _Nullable f(void);` | accepts | accepts | error: an extension |
+| `int * _Nonnull * f(void);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull (*fp)(void);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull f(void);` then `int *f(void);` | `error[SC0307]` | accepts | error: an extension |
+| `int * _Nonnull f(void) { return 0; }` | `error[SC0408]` | warning: null returned | error: an extension |
 | `void g(void (*callback)(int * _Nonnull p));` | `error[SC0204]` | accepts | error: an extension |
 | `void g(int * _Nonnull p);` inside a block | `error[SC0204]` | accepts | error: an extension |
 | `void g(int *p);` then `void g(int * _Nonnull p) { ... }` | `error[SC0307]` | accepts | error: an extension |
