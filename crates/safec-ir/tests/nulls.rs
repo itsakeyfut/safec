@@ -814,3 +814,131 @@ fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
 
     assert!(found.is_empty(), "{found:?}");
 }
+
+/// A write to another local between a comparison and its branch changes
+/// nothing the comparison read, and the arm is refined all the same.
+///
+/// `c = p != 0; x = 1; if (c) { *p = 1; }` is the shape. The walk back from the
+/// branch steps over `x = 1`, records that `x` changed, reaches the comparison,
+/// and refuses it only if the comparison was about `x`, which it is not.
+///
+/// **This compiler's own frontend cannot produce it**, for the reason the
+/// module doc gives: nothing is lowered between a comparison and its branch.
+/// So this is the only guard of the per-local refusal. Its old argument,
+/// `int x = 5; if (p) { *p = x; }`, was held by nothing and no longer reaches
+/// the walk (#334).
+///
+/// Mutation: have `nullability::tested_against_null` stop the walk at a write
+/// to another local, the positional rule. The comparison is never reached,
+/// `p` is not refined, and this fails with one finding where it expects none.
+#[test]
+fn a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refinement() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let p = function.parameters().next().expect("a first parameter");
+    let x = function.push_local(int);
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(p)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin: Origin::Written(names.at[0]),
+                }),
+                // `x = 1`, below the comparison, about a local it did not read.
+                Element::Assign(Operation {
+                    place: Place::local(x),
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(names.at[1]),
+                }),
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// A branch on a pointer tests that pointer, whatever wrote it just above.
+///
+/// `p = q; if (p) { *p = 1; }` is the shape, with `q` a parameter nothing
+/// established. The branch reads `p` where it runs, so the taken arm holds a
+/// pointer that is not null, and the write through it is nothing to say. This
+/// frontend lowers `int *p = q; if (p)` to exactly this block.
+///
+/// Mutation: delete the early return for a pointer condition in
+/// `nullability::tested_against_null`. The walk reaches `p = q`, a copy is
+/// not a comparison it can read, `p` is not refined, and this fails with one
+/// finding where it expects none (#334).
+#[test]
+fn a_pointer_condition_written_just_above_its_branch_is_refined() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let q = function.parameters().next().expect("a first parameter");
+    let p = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(p),
+                value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                origin: Origin::Written(names.at[0]),
+            })],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(p)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[1]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[2])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}

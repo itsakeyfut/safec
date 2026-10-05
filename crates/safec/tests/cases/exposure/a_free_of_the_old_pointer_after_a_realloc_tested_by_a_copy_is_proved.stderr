@@ -1,0 +1,17 @@
+error[SC0401]: this frees a value that was freed already
+    ╭─[ a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:12:9 ]
+    │
+  6 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 10 │     int *q = realloc(p, 8);
+    │              ──────┬──────  
+    │                    ╰──────── freed here
+    │ 
+ 12 │         free(p);
+    │         ───┬───  
+    │            ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

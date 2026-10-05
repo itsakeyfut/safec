@@ -777,12 +777,19 @@ cases! {
         // What that costs, pinned: a test of `*pp` is kept nowhere, so the read
         // through it in place stays a doubt, and the remedy says so rather
         // than asking for the test the program already has. Copying the
-        // pointer into a local and comparing it, `q != 0`, is what proves it,
-        // which is the second case and the remedy's promise. `if (q)` on that
-        // local does not prove it yet, which is a gap of the branch's reading
-        // rather than of this rule.
+        // pointer into a local and testing it is what proves it, compared
+        // with `q != 0` or tested as `if (q)`, which are the two cases after
+        // it and the remedy's promise.
         a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `if (q)` right after a copy into `q` tests the pointer the copy put
+        // there, as `q != 0` does. The branch was walked back to its last
+        // write first, and a copy answered nothing (#334). Mutation: delete
+        // the early return for a pointer condition in
+        // `nullability::tested_against_null`; this and the case above it are
+        // refused.
+        a_pointer_copied_into_a_local_and_tested_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*p && **q` writes both operands at one caret, a plain doubt about
         // `p` first and one through memory about `q` second, and the reader is
         // told one thing. It has to settle both, so the remedy for a pointer
@@ -1025,6 +1032,13 @@ cases! {
         a_free_on_reallocs_failure_branch_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_on_reallocs_failure_branch_tested_with_not_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_used_on_reallocs_failure_branch_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same branch read off `if (q)` with `q` copied from the result in
+        // the block above it, which the memory check learns from through the
+        // nullability check's reading. Mutation: delete the early return for a
+        // pointer condition in `nullability::tested_against_null`; the first
+        // goes back to `SC0401` may, and the second's proof to a doubt (#334).
+        a_free_on_reallocs_failure_branch_tested_by_a_copy_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Refused as before where the size may be zero, which leaves whether a
         // failed call frees implementation-defined. Mutation: read any size;
         // both build. Mutation: read any size but a literal zero; the second
