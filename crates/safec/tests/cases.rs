@@ -2176,6 +2176,43 @@ cases! {
         // escaped locals included; both are refused.
         a_pointer_handed_by_address_twice_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_by_address_around_another_call_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call that reached an allocation through another local's address,
+        // handed or stored in memory, may have freed it and cannot replace
+        // `a`, so `use2(&a)` is asked. Mutation: drop the call to
+        // `Known::held_out_of_reach`; both build. The in-out idiom through a
+        // copy still builds, because only a holder read after the call
+        // counts. Mutation: have its `live_after` answer `true`; both of the
+        // last two are refused. See ADR-0047.
+        a_pointer_a_call_reached_through_another_locals_address_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_grown_twice_by_address_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_dead_copy_does_not_doubt_a_pointer_grown_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A holder is exempt only where code this check cannot read may hold
+        // its address, not wherever its address was taken: `int **pa = &a;`
+        // goes nowhere. Mutation: have `Known::held_out_of_reach` test
+        // `escaped` instead of `handed_away`; the first goes silent. The
+        // other two are the routes `handed_away` is set by besides an
+        // argument, a store into memory this check does not model and memory
+        // a call was handed. Mutation: drop the `inside_locals` loop of
+        // `Known::handed_to_a_call`; the second and third are refused. The
+        // fourth stores the address through a load, which is memory this
+        // check does not model. Mutation: drop the marking in the store
+        // transfer; it is refused. The fifth hands `a` away on one arm only.
+        // Mutation: have the join union `handed_away`; it goes silent. See
+        // ADR-0047.
+        a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_grown_through_the_memory_its_address_was_stored_in_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_is_in_exposed_memory_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_is_stored_through_a_load_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A holder read by value after the call counts as one read by
+        // address does, and a holder of another allocation does not count.
+        // Mutation: have `live_after` count only a local whose address is
+        // taken, `&& self.live_in[0][local]`; the first goes silent.
+        // Mutation: have `Known::held_out_of_reach` ask whether the holder
+        // holds any site rather than this one; the second is refused.
+        a_copy_read_by_value_after_a_call_reached_it_through_another_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_reached_through_a_copy_of_another_allocation_does_not_doubt_this_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

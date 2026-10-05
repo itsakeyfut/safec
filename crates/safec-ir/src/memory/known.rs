@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ir::{LocalId, Place};
+use crate::ir::{LocalId, Operand, Place};
 use crate::source::Span;
 
 use super::parts::{Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key};
@@ -30,6 +30,17 @@ pub(super) struct Known {
     /// no more proved than what it held before, because the write that put it
     /// there is not the only write that can reach it.
     pub(super) escaped: Vec<bool>,
+    /// Per local, whether code this check cannot read may hold its address:
+    /// it was handed to such a call, stored in memory such a call reached, or
+    /// stored in memory this check does not model.
+    ///
+    /// **Narrower than [`Self::escaped`]**, which `int **pa = &a;` sets though
+    /// nothing outside the function can see `pa`. That one makes every call
+    /// distrust what the local holds, the safe direction for it.
+    /// [`Self::held_out_of_reach`] reads this one to exempt a holder, where
+    /// the wide answer is a silence: a route missed here leaves a holder
+    /// counted, which is a report. See ADR-0047.
+    pub(super) handed_away: Vec<bool>,
     /// Per site, whether code this check cannot read may reach a pointer to it.
     ///
     /// **Once set, set for as long as the allocation lives**, because nothing
@@ -719,6 +730,8 @@ impl Known {
             points_to,
             state,
             escaped: _,
+            // A local's, as `escaped` is, and a site being reborn is not.
+            handed_away: _,
             exposed,
             inside,
             // Kept, as `inside` is: what the old allocation may hold stays
@@ -902,6 +915,66 @@ impl Known {
         for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
             if exposed {
                 state.doubted();
+            }
+        }
+    }
+
+    /// A call this check cannot read may have freed what it reached only
+    /// through an address, and cannot have replaced a holder whose address it
+    /// cannot reach: so a site still [`SiteState::Reachable`] that such a
+    /// local holds, and still reads after the call, is `Unknown`.
+    ///
+    /// `b = a; release_ref(&b); use2(&a);` is the program. The call may free
+    /// the allocation through `b` and put a new one there, and cannot put
+    /// anything in `a`, so `use2(&a)` may be handed a dangling pointer. A
+    /// holder whose address code this check cannot read may hold, by
+    /// [`Self::handed_away`], is one the call may have replaced, so it leaves
+    /// the site as it was. Not [`Self::escaped`]: `int **pa = &a;` sets that
+    /// with nothing outside the function able to see `pa`, and exempting `a`
+    /// for it was silent about the program above with that line added.
+    ///
+    /// **Only a holder live after the call**, by `live_after`. A copy nothing
+    /// reads again holds the site as well, and counting it refused `b = a;
+    /// grow(&b); grow(&b);` and `b = a; grow(&a); use2(&a);`, which C
+    /// defines. See ADR-0047.
+    pub(super) fn held_out_of_reach(&mut self, live_after: impl Fn(usize) -> bool) {
+        for site in 0..self.state.len() {
+            if self.state[site] != SiteState::Reachable {
+                continue;
+            }
+            let out_of_reach = (0..self.points_to.len()).any(|holder| {
+                !self.handed_away[holder]
+                    && live_after(holder)
+                    && self.points_to[holder].sites().any(|held| held == site)
+            });
+            if out_of_reach {
+                self.state[site].may_be_freed();
+            }
+        }
+    }
+
+    /// Record that a call this check cannot read was handed `handed`: the
+    /// locals whose address an argument carries, and those whose address is
+    /// stored in memory code it cannot read may reach, are
+    /// [`Self::handed_away`] from here on.
+    ///
+    /// **Not what an argument read out of memory may carry**, nor what a
+    /// library call is handed: either is a route missed, which leaves a holder
+    /// counted by [`Self::held_out_of_reach`] and costs a report rather than
+    /// a silence.
+    pub(super) fn handed_to_a_call(&mut self, handed: &[Operand]) {
+        for argument in handed {
+            if let Operand::Copy(place) = argument {
+                for target in self.written_through(place.local) {
+                    self.handed_away[target] = true;
+                }
+            }
+        }
+        for site in self.reachable_now() {
+            for (local, &held) in self.inside_locals[site].iter().enumerate() {
+                if held {
+                    self.handed_away[local] = true;
+                }
             }
         }
     }
