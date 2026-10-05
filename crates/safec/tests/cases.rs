@@ -337,6 +337,15 @@ cases! {
         // the second builds.
         a_pointer_stored_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_made_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer that is a freed allocation on one path and a local's
+        // address on the other is doubted, not proved: the path through `&x`
+        // reads `x`. Under `--allow-unknown`, so a proof would be exit 1 and a
+        // doubt is exit 0. Found by review of ADR-0048, whose join made the
+        // first a proof; the second was one on `main`. Mutation: have
+        // `Known::reached_by` leave out the `Partial` beside a local's
+        // address; both become proofs.
+        a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_escaped_local_read_twice_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

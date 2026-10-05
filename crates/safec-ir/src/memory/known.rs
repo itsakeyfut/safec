@@ -205,6 +205,20 @@ impl Known {
         if self.points_to[local.index()].loaded && !reached.is_empty() {
             reached.push(Reached::Partial);
         }
+        // **And so is a set beside a local's address**: on the path that gave
+        // it `&x`, it points at `x` and at none of its sites, so the sites
+        // being freed proves nothing about every path. `if (c) q = p; else q
+        // = &x; free(p); return *q;` was a proved use after free that the
+        // `else` path does not commit. Found by review of ADR-0048, whose
+        // join opened a second way to it.
+        if self.points_to[local.index()]
+            .writes_to
+            .iter()
+            .any(|&edge| edge)
+            && !reached.is_empty()
+        {
+            reached.push(Reached::Partial);
+        }
 
         reached
     }
