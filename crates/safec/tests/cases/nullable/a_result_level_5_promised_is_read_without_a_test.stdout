@@ -1,6 +1,6 @@
 Target "x86_64-pc-windows-msvc"
 Function a_result_level_5_promised_is_read_without_a_test.c:1:6 "pick"
-  Local "_0" "int *" return _Nonnull default
+  Local "_0" "int *" return _Nonnull defaulted
   Local "_1" "int *" parameter _Nonnull
   Block "bb0" entry
     Operation a_result_level_5_promised_is_read_without_a_test.c:2:5 written

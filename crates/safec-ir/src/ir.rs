@@ -839,8 +839,11 @@ pub struct Parameter {
 /// level as for everything else above this crate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Promise {
-    /// `_Nonnull` was written here.
-    Written(Span),
+    /// `_Nonnull` was written here, on a declaration of it.
+    ///
+    /// `Declared` rather than `Written`, which [`Origin::Written`] already
+    /// means for an operation the source wrote.
+    Declared(Span),
     /// Nothing was written, and level 5 makes the pointer non-null unless it is
     /// written `_Nullable` (ADR-0050). The span is the name of what was
     /// promised: the function's, for the pointer it returns.

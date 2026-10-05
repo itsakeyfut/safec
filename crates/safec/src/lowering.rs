@@ -122,7 +122,7 @@ fn written_promise(written: Option<Nullability>) -> Option<Promise> {
         Some(Nullability {
             specifier: Specifier::Nonnull,
             at,
-        }) => Some(Promise::Written(at)),
+        }) => Some(Promise::Declared(at)),
         Some(Nullability {
             specifier: Specifier::Nullable,
             at: _,
@@ -750,7 +750,7 @@ impl Lowering<'_> {
                         Some(Nullability {
                             specifier: Specifier::Nonnull,
                             at,
-                        }) => Some(Promise::Written(at)),
+                        }) => Some(Promise::Declared(at)),
                         Some(Nullability {
                             specifier: Specifier::Nullable,
                             at: _,

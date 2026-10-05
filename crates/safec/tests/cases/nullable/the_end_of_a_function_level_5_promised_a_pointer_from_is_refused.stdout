@@ -1,6 +1,6 @@
 Target "x86_64-pc-windows-msvc"
 Function the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:1:6 "pick"
-  Local "_0" "int *" return _Nonnull default
+  Local "_0" "int *" return _Nonnull defaulted
   Local "_1" "int" parameter
   Local "_2" "int"
   Local "_3" "int *"

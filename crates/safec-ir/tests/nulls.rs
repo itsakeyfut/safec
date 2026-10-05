@@ -968,7 +968,7 @@ fn a_return_place_written_in_an_earlier_block_is_asked_where_it_returns() {
     let int = unit.push_type(Ty::Int);
     let pointer = unit.push_type(Ty::Pointer(int));
     let mut function =
-        Function::new(names.function, pointer, vec![]).promising(Promise::Written(names.at[0]));
+        Function::new(names.function, pointer, vec![]).promising(Promise::Declared(names.at[0]));
     let x = function.push_local(int);
 
     let entry = function.reserve_block();

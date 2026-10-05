@@ -1,6 +1,6 @@
 Target "x86_64-pc-windows-msvc"
 Function a_null_returned_where_level_5_promised_a_pointer_is_refused.c:1:6 "find"
-  Local "_0" "int *" return _Nonnull default
+  Local "_0" "int *" return _Nonnull defaulted
   Block "bb0" entry
     Operation a_null_returned_where_level_5_promised_a_pointer_is_refused.c:2:5 written
       Destination "_0"

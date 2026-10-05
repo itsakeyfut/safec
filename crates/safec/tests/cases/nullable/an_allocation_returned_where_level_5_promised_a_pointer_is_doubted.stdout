@@ -3,7 +3,7 @@ Function an_allocation_returned_where_level_5_promised_a_pointer_is_doubted.c:1:
   Local "_0" "void *" return
   Local "_1" "int" parameter
 Function an_allocation_returned_where_level_5_promised_a_pointer_is_doubted.c:3:6 "make"
-  Local "_0" "int *" return _Nonnull default
+  Local "_0" "int *" return _Nonnull defaulted
   Local "_1" "void *"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_returned_where_level_5_promised_a_pointer_is_doubted.c:4:12 generated

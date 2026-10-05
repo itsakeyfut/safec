@@ -519,7 +519,7 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
 /// promise that was wrong rather than a call that was.
 fn passed(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnostic> {
     let (promised_at, described, promise_label, take_back, level) = match promise {
-        Promise::Written(written) => (
+        Promise::Declared(written) => (
             written,
             "a parameter declared `_Nonnull`",
             "the parameter is declared `_Nonnull` here",
@@ -575,7 +575,7 @@ fn returned(
     reached_end: bool,
 ) -> Option<Diagnostic> {
     let (promised_at, promise_label, take_back, level) = match promise {
-        Promise::Written(written) => (
+        Promise::Declared(written) => (
             written,
             "the return is declared `_Nonnull` here",
             "remove `_Nonnull` from the return type",

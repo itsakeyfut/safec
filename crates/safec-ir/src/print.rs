@@ -223,8 +223,8 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                 // Every promise written out, so that a third is answered for
                 // here by `error[E0004]` rather than printed as none.
                 match function.promised() {
-                    Some(Promise::Written(_)) => out.push_str(" _Nonnull"),
-                    Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull default"),
+                    Some(Promise::Declared(_)) => out.push_str(" _Nonnull"),
+                    Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull defaulted"),
                     None => {}
                 }
             } else if function.parameters().any(|parameter| parameter == local) {
@@ -232,8 +232,8 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                 // As the return place's promise is printed, for the same
                 // reason.
                 match function.nonnull(local) {
-                    Some(Promise::Written(_)) => out.push_str(" _Nonnull"),
-                    Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull default"),
+                    Some(Promise::Declared(_)) => out.push_str(" _Nonnull"),
+                    Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull defaulted"),
                     None => {}
                 }
             }
