@@ -465,10 +465,10 @@ cases! {
         // are made before the branch rather than on its arms: allocated on an
         // arm, each site meets the other arm's `Live(None)` at the join and
         // arrives with no line to name, so the fold has nothing to get wrong.
-        // Mutation: in `memory.rs::interior`, fold `made` by keeping the first
-        // site's, or by keeping the last site's. Each fails on the label, and
-        // both directions are measured because a fold has a wrong version on
-        // each side and a case can hold only some of them.
+        // Mutation: in `memory/report.rs::interior`, fold `made` by keeping the
+        // first site's, or by keeping the last site's. Each fails on the label,
+        // and both directions are measured because a fold has a wrong version
+        // on each side and a case can hold only some of them.
         a_free_past_the_start_of_either_of_two_allocations_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_offset_on_both_arms_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_offset_on_one_arm_only_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

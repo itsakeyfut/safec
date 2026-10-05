@@ -4,7 +4,7 @@
 //! awaiting the free it is unordered against and a `realloc` awaiting its branch;
 //! and what a call's name says, [`Callee`].
 //!
-//! [`Known`](super::Known) is the value they make up, in its own module.
+//! [`Known`](super::known::Known) is the value they make up, in its own module.
 
 use std::collections::BTreeSet;
 
@@ -280,7 +280,7 @@ pub(super) enum Reached {
     ///
     /// **Not a doubt on its own, which is what keeps it apart from
     /// [`Reached::Lost`].** A pointer read out of memory holds what
-    /// [`Known::inside`](super::Known::inside) records for the allocation it was read from, and
+    /// [`Known::inside`](super::known::Known::inside) records for the allocation it was read from, and
     /// that is a lower bound: slots are not told apart, and a store this check
     /// cannot place is exposed rather than recorded. So nothing proves from
     /// such a set, but a set of live sites says nothing either, and a
@@ -293,14 +293,14 @@ pub(super) enum Reached {
 /// A struct rather than the bit vector this was, because the two halves travel
 /// together everywhere: a copy writes both, arithmetic unions both, and
 /// anything else clears both. Kept apart they have to be kept in step by hand
-/// in every arm of [`Allocations::element`](super::Allocations#method.element), and forgetting one is a silence
+/// in every arm of [`Allocations::element`](super::transfer::Allocations#method.element), and forgetting one is a silence
 /// rather than a build error. See ADR-0018.
 ///
 /// **What lives here is what an assignment destroys.** Giving a local a fresh
 /// value replaces everything in this struct, which is why [`Held::clear`] can
 /// answer for a field without being told what it means. A fact that outlives
 /// an assignment does not belong here however much it looks like one:
-/// [`Known::escaped`](super::Known::escaped) is per local and stays on [`Known`](super::Known) for exactly that
+/// [`Known::escaped`](super::known::Known::escaped) is per local and stays on [`Known`](super::known::Known) for exactly that
 /// reason, and putting it here would answer `false` after `p = q;` and undo
 /// #155.
 #[derive(Clone, PartialEq, Eq)]
@@ -319,7 +319,7 @@ pub(super) struct Held {
     /// cent more. A packed bitset is the answer when a third square field
     /// arrives or when somebody hits this on real code.
     ///
-    /// **The third square field has arrived**: [`Known::inside`](super::Known::inside). Measured on
+    /// **The third square field has arrived**: [`Known::inside`](super::known::Known::inside). Measured on
     /// a 456-line function with 150 allocations, release build, peak memory
     /// went from 485 MB to 711 MB and time from 0.49 s to 0.71 s. The bitset is
     /// #173's; the number is here so that it is a decision rather than a
@@ -389,7 +389,7 @@ pub(super) struct Held {
     pub(super) offset: Offset,
     /// Whether this local may hold a pointer read out of memory.
     ///
-    /// Such a pointer holds what [`Known::inside`](super::Known::inside) records for the allocation
+    /// Such a pointer holds what [`Known::inside`](super::known::Known::inside) records for the allocation
     /// it was read from, which may be missing members, and this bit is what
     /// says so: the report reads [`Reached::Partial`] beside those sites, and
     /// a free of it stays a doubt (ADR-0045). **For the other readers**, what
@@ -406,17 +406,17 @@ pub(super) struct Held {
     /// Whether a call this check cannot read may have written into this
     /// local, through its address, something no site names.
     ///
-    /// [`Known::replaced`](super::Known::replaced) cannot say this with [`Held::lost`] for a local
+    /// [`Known::replaced`](super::known::Known::replaced) cannot say this with [`Held::lost`] for a local
     /// holding no site, because the report reads that bit and ADR-0017 does
     /// not report an output parameter. So `get(&u)` sets this instead, and
     /// the report never reads it. A write through such a local exposes what
     /// it carries, as one through a load does. See ADR-0044.
     pub(super) foreign: bool,
-    /// Whether this was read out of an allocation [`Known::stale`](super::Known::stale) marks, or
+    /// Whether this was read out of an allocation [`Known::stale`](super::known::Known::stale) marks, or
     /// otherwise lost an allocation that may be gone, and may be one.
     ///
     /// Set too where a local loses a site whose allocation is not live
-    /// ([`Known::reborn`](super::Known::reborn)), by a load through a pointer to such a local, and
+    /// ([`Known::reborn`](super::known::Known::reborn)), by a load through a pointer to such a local, and
     /// by a call this check cannot read for what it makes lost of the
     /// caller's. A store of any of them was recorded as nothing and read back
     /// in silence, where read directly it was doubted. See ADR-0045.
@@ -773,7 +773,7 @@ pub(super) struct PendingRead {
     /// orders the call's arguments before its body: `keep(a) + release_all()`
     /// builds. A parameter, a store into an exposed allocation, or another
     /// call in the expression does, since any of them may run first. Filled
-    /// by [`Known::meeting`](super::Known::meeting) and [`Known::noticed`](super::Known::noticed). See ADR-0042.
+    /// by [`Known::meeting`](super::known::Known::meeting) and [`Known::noticed`](super::known::Known::noticed). See ADR-0042.
     pub(super) reachable: BTreeSet<usize>,
     /// Whether something made what this read read reachable to code this
     /// check cannot read while a call that code may be in was pending.
@@ -781,7 +781,7 @@ pub(super) struct PendingRead {
     /// **The order a forward walk cannot see from either end.** C may run the
     /// exposing event, then the call, then the read, so the call may free what
     /// was read; but the call was walked before the event and the read before
-    /// both. [`Known::noticed`](super::Known::noticed) sets this at the event, and [`after_a_call`](super::after_a_call)
+    /// both. [`Known::noticed`](super::known::Known::noticed) sets this at the event, and [`after_a_call`](super::report::after_a_call)
     /// reports it. See ADR-0042.
     pub(super) after_call: bool,
 }
@@ -793,7 +793,7 @@ pub(super) struct PendingRead {
 /// the fix for the second is at the call or at the free rather than at a read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Read {
-    /// `*p`, met by [`Known::met`](super::Known::met).
+    /// `*p`, met by [`Known::met`](super::known::Known::met).
     Dereference,
     /// `g(p)`, met where the call's terminator is.
     Argument,
@@ -807,7 +807,7 @@ pub(super) enum Read {
 /// [`earlier`]'s reason.
 ///
 /// **The place is the fourth part because this is the pair a report is
-/// collapsed on**, and [`say`](super::say) says what each half of it costs when it goes.
+/// collapsed on**, and [`say`](super::report::say) says what each half of it costs when it goes.
 /// Two reads at one span through one place are one report; two reads at one
 /// span through two places are two. **Which read it is, the fifth**, for the
 /// reason [`PendingRead::read`] gives.

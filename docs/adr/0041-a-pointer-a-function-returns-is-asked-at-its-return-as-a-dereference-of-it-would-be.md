@@ -78,18 +78,18 @@ return is the last point anything can be said about it, and the check is of
 what the caller was promised rather than of the read itself.
 
 **What the return asks, exactly.** Where the lowering writes a `return`'s value
-into the return place, the local being written is asked what
-`Known::reached_by` answers for it, as a dereference asks, so an escaped local
-is distrusted as ADR-0017 distrusts it. Only in a function whose return type is
-a pointer, because every call's result is a site and exposed, a later call this
-check cannot read unproves it, and an addition of integers keeps its operands'
-sites (ADR-0030), so `return f() + g();` reached `f`'s result after `g` ran and
-was refused, in six corpus cases. A value read through a projection is not
-asked, because a pointer read out of memory holds no site and this check says
-nothing about a dereference of one either (ADR-0017, #256). The order is not
-asked: a `return` leaves the function after its whole expression, so any free
-in it has run, and `memory::verdict` answers `true` for this question as it
-does for a double free.
+into the return place, the local being written is asked what `Known::reached_by`
+answers for it, as a dereference asks, so an escaped local is distrusted as
+ADR-0017 distrusts it. Only in a function whose return type is a pointer,
+because every call's result is a site and exposed, a later call this check
+cannot read unproves it, and an addition of integers keeps its operands' sites
+(ADR-0030), so `return f() + g();` reached `f`'s result after `g` ran and was
+refused, in six corpus cases. A value read through a projection is not asked,
+because a pointer read out of memory holds no site and this check says nothing
+about a dereference of one either (ADR-0017, #256). The order is not asked: a
+`return` leaves the function after its whole expression, so any free in it has
+run, and `memory::report::verdict` answers `true` for this question as it does
+for a double free.
 
 **A code of its own, `SC0406`.** `SC0402` is a dereference by
 `docs/diagnostics.md`'s own definition, and the fix here is at the return or

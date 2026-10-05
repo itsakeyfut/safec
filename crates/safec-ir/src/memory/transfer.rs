@@ -306,7 +306,7 @@ impl Allocations<'_> {
     /// out of memory may be. Not closed over what those allocations hold.
     ///
     /// One function for the two arms of the transfer that expose it and for
-    /// [`used_before`](super::used_before), which asks a read carried to the call about it, so
+    /// [`used_before`](super::report::used_before), which asks a read carried to the call about it, so
     /// that what a call is asked about and what it is taken to have reached
     /// cannot disagree. See ADR-0039 and ADR-0040.
     pub(super) fn reach(

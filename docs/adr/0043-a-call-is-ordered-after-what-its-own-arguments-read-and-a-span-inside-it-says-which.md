@@ -50,8 +50,8 @@ with no free anywhere in it. The dereference spelling of the same residue,
 ## Decision Outcome
 
 Chosen option: **a read whose span lies strictly inside the call's span**,
-because it answers the question with what the IR already carries. The answer
-is checked where a carried read is asked, in `memory.rs::used_before`, and
+because it answers the question with what the IR already carries. The answer is
+checked where a carried read is asked, in `memory/report.rs::used_before`, and
 nowhere else. The read is not removed from the set, because C orders it before
 this call and before nothing else: `strlen(strcpy(s, t)) + (free(s), 0)` still
 carries `strcpy`'s argument to the free.

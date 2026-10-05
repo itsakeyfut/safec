@@ -885,8 +885,8 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // so an unproven `*p` and a proved `*q` arrive as two findings at one
     // caret, the unproven one first. Keeping the first reported a proof as a
     // suspicion, and inside a hatch, where a suspicion is listed rather than
-    // reported, a proved null dereference built and ran. `memory::say` answers
-    // the same shape with `supersedes`; this is the same rule.
+    // reported, a proved null dereference built and ran. `memory::report::say`
+    // answers the same shape with `supersedes`; this is the same rule.
     //
     // **The question is part of the key.** A call that passes two arguments
     // to two `_Nonnull` parameters has one caret and two promises, and a
@@ -1053,12 +1053,12 @@ pub(crate) fn null_at_terminators(
 /// **A named type rather than the `Vec<Vec<bool>>` it holds**, because the
 /// consumer is a rule that can go quiet. `docs/roadmap.md` queues three more
 /// analyses against this framework and each will want to hand a settled fact to
-/// a sibling the same way, so a reader of `memory::reported` would soon be
-/// given several `&[bool]` that no type tells apart: measured, adding a second
-/// one and passing the two in the wrong order builds with no warning at all,
-/// and what fails is a named test rather than the compiler. A mistake the
-/// compiler refuses is better than one a test has to catch, and a named type
-/// is what moves this one there.
+/// a sibling the same way, so a reader of `memory::report::reported` would soon
+/// be given several `&[bool]` that no type tells apart: measured, adding a
+/// second one and passing the two in the wrong order builds with no warning at
+/// all, and what fails is a named test rather than the compiler. A mistake the
+/// compiler refuses is better than one a test has to catch, and a named type is
+/// what moves this one there.
 ///
 /// Both axes are named for the same reason. A bare row is indexed by a local,
 /// a bare table by a block, and `null[block.index()]` and `null[local.index()]`

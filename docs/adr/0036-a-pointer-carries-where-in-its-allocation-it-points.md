@@ -65,7 +65,7 @@ by a comment, which is the question of what makes an analysis stop believing
 a fact, answered at the IR's shape.
 
 A `free` is then asked a second question beside the double free, in
-`memory.rs::interior`, out of the same `Allocations::touching` answer. A
+`memory/report.rs::interior`, out of the same `Allocations::touching` answer. A
 `Reached::Lost` among what the argument reached answers nothing, which is where
 the escape pays for this: ADR-0017 answers `Lost` for an escaped local that
 holds sites, so the offset, a positive claim about a local, is not believed once

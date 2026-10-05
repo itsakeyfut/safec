@@ -1065,8 +1065,8 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
         // conditionally, so it stays true of a double free that arrives this
         // way if one ever does.
         // `Unproven::Offset` is here and in the `UseAfterFree` row below
-        // although neither kind can carry it: `memory::interior` is the only
-        // producer and it builds only an `InteriorFree`. Named rather than
+        // although neither kind can carry it: `memory::report::interior` is the
+        // only producer and it builds only an `InteriorFree`. Named rather than
         // taken by `_`, for the reason above.
         (
             Kind::DoubleFree,
@@ -1118,10 +1118,11 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "this check cannot say what this points at",
             LOST_REMEDY,
         ),
-        // `Unsequenced` cannot arrive, because `memory::verdict` answers that a
-        // `return` is ordered after every free in its expression, and `Offset`
-        // cannot because only `memory::interior` builds it. Named rather than
-        // taken by `_`, for the reason the double-free rows give.
+        // `Unsequenced` cannot arrive, because `memory::report::verdict`
+        // answers that a `return` is ordered after every free in its
+        // expression, and `Offset` cannot because only
+        // `memory::report::interior` builds it. Named rather than taken by `_`,
+        // for the reason the double-free rows give.
         (
             Kind::ReturnAfterFree,
             Conclusion::Unknown,
@@ -1150,9 +1151,9 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "passed here, perhaps after the free",
             UNSEQUENCED_REMEDY,
         ),
-        // `Offset` cannot arrive, because only `memory::interior` builds it.
-        // Named rather than taken by `_`, for the reason the double-free rows
-        // give.
+        // `Offset` cannot arrive, because only `memory::report::interior`
+        // builds it. Named rather than taken by `_`, for the reason the
+        // double-free rows give.
         (
             Kind::ArgumentAfterFree,
             Conclusion::Unknown,
@@ -1201,7 +1202,8 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
         // `DISAGREEMENT_REMEDY`'s own reason.
         //
         // Every reason named, although only `Offset` arrives: the other three
-        // come out of `verdict`, which `memory::interior` does not call.
+        // come out of `verdict`, which `memory::report::interior` does not
+        // call.
         (
             Kind::InteriorFree,
             Conclusion::Unknown,

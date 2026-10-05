@@ -2389,7 +2389,7 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
 /// Nothing says the read is behind the free, so it is carried to it and
 /// reported, which is the direction ADR-0043 chose for this mistake.
 ///
-/// Mutation: let `memory.rs::inside` answer `true` for an equal span, by
+/// Mutation: let `memory/report.rs::inside` answer `true` for an equal span, by
 /// dropping its `inner != outer`. The read is skipped as if it were an
 /// argument, nothing is reported, and this fails.
 #[test]
@@ -2435,9 +2435,9 @@ fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
 /// after the call and is never pending when it is asked. Nothing orders the
 /// read below before the free, so it is carried to it and reported.
 ///
-/// Mutation: drop `inner.end() <= outer.end()` from `memory.rs::inside`. The
-/// read counts as inside the free, is skipped, nothing is reported, and this
-/// fails. Nothing else in the workspace fails, which is why this exists.
+/// Mutation: drop `inner.end() <= outer.end()` from `memory/report.rs::inside`.
+/// The read counts as inside the free, is skipped, nothing is reported, and
+/// this fails. Nothing else in the workspace fails, which is why this exists.
 #[test]
 fn a_read_reaching_past_a_later_free_is_still_carried_to_it() {
     let (sources, names) = sources();

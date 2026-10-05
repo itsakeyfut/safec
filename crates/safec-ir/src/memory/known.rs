@@ -138,7 +138,7 @@ impl Known {
     /// fact about the heap and is written on the sites by [`Known::unproved`].
     /// See ADR-0017.
     ///
-    /// **A local reaching no site answers nothing, escaped or not.** [`used`](super::used)
+    /// **A local reaching no site answers nothing, escaped or not.** [`used`](super::report::used)
     /// says nothing about a place it follows no allocation for, however it came
     /// to follow none, and an address taken does not change that: a pointer
     /// this check never had a site for is an indeterminate pointer, which is a
@@ -154,7 +154,7 @@ impl Known {
     /// anyway. The cost that rule was written to avoid is paid on that program
     /// regardless, by a route that knows what it is talking about.
     ///
-    /// [`Allocations::touching`](super::Allocations::touching) wants the opposite answer for an empty set and
+    /// [`Allocations::touching`](super::transfer::Allocations::touching) wants the opposite answer for an empty set and
     /// writes its own, which is why the rule is not written here.
     ///
     /// [`escaped`]: Known::escaped
@@ -286,7 +286,7 @@ impl Known {
     /// own sites alone, so a use after free one level down said nothing:
     /// `*tab = p; release(*tab); return **tab;`. Each level below the first is
     /// asked **after** the ones above it rather than in place of them, which
-    /// is what [`used`](super::used) does: asked instead, `free(tab); return **tab;` went
+    /// is what [`used`](super::report::used) does: asked instead, `free(tab); return **tab;` went
     /// from a proof to silence. See ADR-0045.
     pub(super) fn reached_below(&self, local: LocalId, depth: usize) -> Vec<Reached> {
         let mut reached: Vec<Reached> = self
@@ -499,19 +499,19 @@ impl Known {
     ///
     /// **A place reaching no site records nothing, and that is a size rather
     /// than a rule.** Measured: recording one anyway changes no answer, because
-    /// what [`used_before`](super::used_before) compares is sites and an entry with none can never
+    /// what [`used_before`](super::report::used_before) compares is sites and an entry with none can never
     /// meet a free's. So this is skipped to keep the value small, and the
     /// asymmetry between an empty set's two readers, for whom it means
     /// opposite things, is held by the comparison rather than by this
     /// line: a dereference of a pointer this check never followed says nothing
-    /// here for the same reason it says nothing in [`used`](super::used), which is that
+    /// here for the same reason it says nothing in [`used`](super::report::used), which is that
     /// there is no allocation to say it about.
     ///
     /// The sites arrive ascending, because [`Held::sites`] walks a row of a
     /// table in order, and stay that way.
     ///
     /// It takes what [`dereferenced_in_element`](super::dereferenced_in_element) answers rather than one place,
-    /// so that what the walk carries forwards and what [`used`](super::used) reports on are
+    /// so that what the walk carries forwards and what [`used`](super::report::used) reports on are
     /// decided by one function with two callers. One rule written in two places
     /// drifts apart inside the change that touches one of them.
     pub(super) fn met(&mut self, read: Option<(Span, Vec<&Place>)>) {
@@ -526,7 +526,7 @@ impl Known {
     }
 
     /// One place of one element, for [`Self::met`], or one argument of one
-    /// call, for [`Allocations::terminator`](super::Allocations#method.terminator).
+    /// call, for [`Allocations::terminator`](super::transfer::Allocations#method.terminator).
     ///
     /// **`reached` is the caller's**, because the two differ for one place: a
     /// dereference of `*tab` reads through `tab`'s own sites, and `*tab` handed
@@ -1017,7 +1017,7 @@ impl Known {
     /// output-parameter idiom, and ADR-0017 declined to report it on purpose.
     /// There is nothing to lose by leaving it, because a local holding no site
     /// shares none with anybody, and a `free` of it is reported by
-    /// [`Allocations::touching`](super::Allocations::touching)'s own rule whatever this says.
+    /// [`Allocations::touching`](super::transfer::Allocations::touching)'s own rule whatever this says.
     pub(super) fn replaced(&mut self, may_hold: impl Fn(usize) -> bool) {
         for local in 0..self.escaped.len() {
             if may_hold(local)

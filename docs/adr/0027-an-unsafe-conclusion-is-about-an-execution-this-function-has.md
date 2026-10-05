@@ -113,9 +113,9 @@ an implementation holding the other three is what found it:
 `crates/safec/tests/cases`, whose `main` passes `0` to the function that frees
 its parameter twice, and whose `.stderr` holds the error. The mutation is the
 third option, written as requiring `made.is_some()` in the `Unsafe` arm of
-`verdict` in `crates/safec-ir/src/memory.rs`: measured, that case fails along
-with `a_parameter_freed_twice` and every other case whose proof stands on a site
-this check did not watch being allocated.
+`verdict` in `crates/safec-ir/src/memory/report.rs`: measured, that case fails
+along with `a_parameter_freed_twice` and every other case whose proof stands on
+a site this check did not watch being allocated.
 
 **No mutation fails that case alone**, and the record says so rather than
 implying otherwise. What it holds over `a_parameter_freed_twice` is the caller,
@@ -128,15 +128,15 @@ what is being given up, and finds this record from there.
 **The exemption is held by three corpus cases**, one per condition above, and
 each of them is exit 1 becoming exit 0 under its own mutation, which is the
 direction that matters. `a_free_of_a_pointer_proved_null` is the rule itself:
-dropping the filter in `memory.rs::reported` puts `this frees a pointer this
-check stopped following` back on a program C defines, and fails it along with
-`a_pointer_set_to_nothing_after_a_free_holds_nothing` and
-`a_local_given_nothing_forgets_the_set_it_freed`, which are the two spellings
-of `free(p); p = 0; free(p);` the corpus keeps.
-`a_pointer_proved_null_before_its_address_escaped_is_not_exempt` holds the
-mask: reading the lattice rather than `Nullability::known` in
-`nullability.rs::null_at_terminators` exempts both frees of a local a store
-this check cannot follow has given an allocation, and that case goes silent.
+dropping the filter in `memory/report.rs::reported` puts `this frees a pointer
+this check stopped following` back on a program C defines, and fails it along
+with `a_pointer_set_to_nothing_after_a_free_holds_nothing` and
+`a_local_given_nothing_forgets_the_set_it_freed`, which are the two spellings of
+`free(p); p = 0; free(p);` the corpus keeps.
+`a_pointer_proved_null_before_its_address_escaped_is_not_exempt` holds the mask:
+reading the lattice rather than `Nullability::known` in
+`nullability.rs::null_at_terminators` exempts both frees of a local a store this
+check cannot follow has given an allocation, and that case goes silent.
 `a_pointer_that_stopped_being_null_before_the_free_is_not_exempt` holds the
 position: recording the row before a block's elements rather than after exempts
 a **proved** double free, and that case goes silent too. The position mutation
@@ -178,10 +178,10 @@ with it the row says which neighbours and why, which is the part a later reader
 can check.
 
 The report-not-the-transfer condition is held by where the exemption is called
-from rather than by a case. `memory.rs::asked` is reached only from the walk that reports;
-`Analysis::terminator` has no access to the nullness, so a free of a pointer
-established null still marks its sites freed and still leaves the local holding
-them. What that costs is in the Consequences below.
+from rather than by a case. `memory/report.rs::asked` is reached only from the
+walk that reports; `Analysis::terminator` has no access to the nullness, so a
+free of a pointer established null still marks its sites freed and still leaves
+the local holding them. What that costs is in the Consequences below.
 
 ### Consequences
 
@@ -200,19 +200,19 @@ them. What that costs is in the Consequences below.
   transfer that believes a nullness, and a nullness this compiler is wrong
   about would then be a real free nobody recorded, which is saying safe
   wrongly.
-* Not bad in the other reader of what a call frees, although it reads as
-  though it should be. `memory.rs::used_before` carries a read forwards to a
+* Not bad in the other reader of what a call frees, although it reads as though
+  it should be. `memory/report.rs::used_before` carries a read forwards to a
   `free` it is unordered against and asks `Allocations::touching` without the
   filter, and #219 was filed because a program exists where that reports a read
-  as racing a free of a pointer this check proved null. **The report is real
-  and the filter is not what is missing**: the exemption and that walk are
-  mutually exclusive by construction, because the marker the fourth condition
-  reads is also what clears `Known::pending`, which is the only thing that walk
-  reports out of. Where a row can exempt anything there is nothing pending to
-  report, and where something is pending the row is `false` for every local.
-  Adding the filter there was measured and moved no program. `used_before`'s
-  own doc comment carries the three lines and a `debug_assert!` holds them;
-  what the program on #219 is really an instance of is the bullet below.
+  as racing a free of a pointer this check proved null. **The report is real and
+  the filter is not what is missing**: the exemption and that walk are mutually
+  exclusive by construction, because the marker the fourth condition reads is
+  also what clears `Known::pending`, which is the only thing that walk reports
+  out of. Where a row can exempt anything there is nothing pending to report,
+  and where something is pending the row is `false` for every local. Adding the
+  filter there was measured and moved no program. `used_before`'s own doc
+  comment carries the three lines and a `debug_assert!` holds them; what the
+  program on #219 is really an instance of is the bullet below.
 * Bad, because the marker the fourth condition reads answers a narrower question
   than the condition states. `Element::ArgumentsEvaluated` is emitted where no
   unsequenced operator encloses the *call*, so the exemption reaches a free at

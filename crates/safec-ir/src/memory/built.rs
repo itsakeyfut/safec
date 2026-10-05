@@ -216,7 +216,7 @@ fn offset_of(op: BinOp, operands: [&Operand; 2], followed: &[usize], value: &Kno
 /// a write it cannot narrow.
 ///
 /// A free function rather than a method, because it is the whole of what one
-/// call site does and reads nothing of [`Allocations`](super::Allocations) but the unit.
+/// call site does and reads nothing of [`Allocations`](super::transfer::Allocations) but the unit.
 pub(super) fn replaced_by(
     unit: &TranslationUnit,
     function: &Function,
