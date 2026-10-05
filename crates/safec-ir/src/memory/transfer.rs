@@ -98,6 +98,7 @@ impl Allocations<'_> {
                     value,
                     |local| self.is_pointer(function, local),
                     |place| self.may_be_pointer(function, place),
+                    |place| self.reads_a_byte(function, place),
                     |local, depth| self.reads_caller_memory(local, depth, value),
                 );
                 // What the arithmetic leaves of the edge, as the direct
@@ -149,10 +150,10 @@ impl Allocations<'_> {
     ///
     /// **A `char` answers no**, though C17 6.5 p7 lets one copy a pointer a
     /// byte at a time and [`replaced_by`] reads it as reaching everything for
-    /// that reason. Reading every character as a load would expose every
-    /// stored pointer at any call a character reaches, and what that costs is
-    /// unmeasured; a use after free through such a copy builds, which is
-    /// #257.
+    /// that reason. The copy is followed where the byte is read, by
+    /// [`Self::read_through`]; answering yes here would also read every
+    /// character handed to a call as everything stored anywhere, which refused
+    /// correct string code. See ADR-0046.
     pub(super) fn may_be_pointer(&self, function: &Function, place: &Place) -> bool {
         match self
             .unit
@@ -164,8 +165,24 @@ impl Allocations<'_> {
         }
     }
 
+    /// Whether a place is a byte: of character type, which C17 6.5 p7 lets read
+    /// any object, a pointer included.
+    ///
+    /// Written out rather than as a `matches!`, so a kind of type added later
+    /// is asked whether it can copy a pointer too. See ADR-0046.
+    pub(super) fn reads_a_byte(&self, function: &Function, place: &Place) -> bool {
+        match self
+            .unit
+            .place_ty(function, place)
+            .map(|ty| self.unit.ty(ty))
+        {
+            Some(Ty::Char) => true,
+            Some(Ty::Pointer(_) | Ty::Int | Ty::Void) | None => false,
+        }
+    }
+
     /// What a value read through a projection holds: no site, and whether it
-    /// may be a pointer read out of memory.
+    /// may be a pointer, or a byte of one, read out of memory.
     ///
     /// One answer for the three places a load is given to something: an
     /// assignment, a write through a pointer, and what a library copy returns
@@ -173,7 +190,11 @@ impl Allocations<'_> {
     /// See ADR-0040.
     fn read_through(&self, function: &Function, source: &Place, value: &Known) -> Held {
         let mut held = Held::none(value.points_to.len());
-        held.loaded = self.may_be_pointer(function, source);
+        // **A byte is a load too.** C17 6.5 p7 lets a character type read any
+        // object, so a pointer copied a byte at a time is copied, and the byte
+        // carries what was stored where it was read from, marked as a load is
+        // so that it proves nothing about what it names. See ADR-0046.
+        held.loaded = self.may_be_pointer(function, source) || self.reads_a_byte(function, source);
         // **And what was stored where it was read from**, at an offset nobody
         // said, so that a dereference of it can be asked about what it may
         // point at. `loaded` stays set, which is what marks the set as
@@ -272,6 +293,19 @@ impl Allocations<'_> {
         let Operand::Copy(place) = operand else {
             return Vec::new();
         };
+        // **A byte read out of memory handed to a call reaches what was stored
+        // where it was read**, as a byte assigned first does: a callee can keep
+        // the bytes of a pointer and put it back together. Never everything
+        // stored anywhere, which is what refused a character handed to a call
+        // in correct string code. See ADR-0046.
+        let depth = derefs(place);
+        if depth > 0 && self.reads_a_byte(function, place) {
+            return known
+                .levels_below(place.local, depth)
+                .0
+                .into_iter()
+                .collect();
+        }
         if !self.may_be_pointer(function, place) {
             return Vec::new();
         }
@@ -1142,6 +1176,7 @@ impl Analysis for Allocations<'_> {
                             value,
                             |local| self.is_pointer(function, local),
                             |place| self.may_be_pointer(function, place),
+                            |place| self.reads_a_byte(function, place),
                             |local, depth| self.reads_caller_memory(local, depth, value),
                         );
                         // **The sites travel, and the edge only where the offset

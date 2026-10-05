@@ -2902,3 +2902,65 @@ fn a_free_after_the_write_into_the_return_place_is_not_asked_about() {
     let found = run(false);
     assert!(found.is_empty(), "{found:?}");
 }
+
+/// A byte read out of a table that holds an allocation names that allocation
+/// for nothing: freeing the byte leaves the allocation unproven, and a free of
+/// the allocation afterwards is a doubt rather than a proved double free.
+///
+/// A byte is a load, which ADR-0046 decides and ADR-0045 says proves nothing.
+/// Built by hand because `free(c)` of a `char` breaks C17 6.5.2.2 p2, and
+/// what this holds is the marker on the byte rather than any frontend.
+///
+/// Mutation: give a byte read the sites stored where it was read from without
+/// marking it `loaded`, in `Allocations::read_through`. The free of the byte
+/// marks the allocation freed, the second free is `Unsafe`, and this fails.
+///
+/// Mutation: drop the byte from that marker altogether. The byte holds
+/// nothing, the free of the allocation is not asked about at all, and this
+/// fails as well, beside the three corpus cases that go silent.
+#[test]
+fn a_free_of_a_byte_read_out_of_memory_proves_nothing() {
+    let (sources, names) = sources();
+    let (mut unit, mut function, types, callees) = a_unit(&names, 0);
+    let char_ty = unit.push_type(Ty::Char);
+    let bytes = unit.push_type(Ty::Pointer(char_ty));
+    let table = function.push_local(types.ptr_ptr);
+    let held = function.push_local(types.ptr);
+    let through = function.push_local(bytes);
+    let byte = function.push_local(char_ty);
+
+    let make_table = function.reserve_block();
+    let make_held = function.reserve_block();
+    let store = function.reserve_block();
+    let alias = function.reserve_block();
+    let load = function.reserve_block();
+    let free_byte = function.reserve_block();
+    let free_held = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(make_table, malloc(&callees, table, names.at[0], make_held));
+    function.fill_block(make_held, malloc(&callees, held, names.at[1], store));
+    function.fill_block(store, write(table, held, names.at[2], alias));
+    function.fill_block(alias, copy(through, table, names.at[3], load));
+    function.fill_block(load, read(byte, through, names.at[4], free_byte));
+    function.fill_block(free_byte, free(&callees, byte, names.at[5], free_held));
+    function.fill_block(
+        free_held,
+        after_the_statement(names.at[5], free(&callees, held, names.at[6], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[6], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert!(
+        found
+            .iter()
+            .all(|found| found.conclusion != Conclusion::Unsafe),
+        "{found:?}"
+    );
+    let second = found
+        .iter()
+        .find(|found| found.at == names.at[6])
+        .expect("the free of the allocation is asked about");
+    assert_eq!(second.conclusion, Conclusion::Unknown, "{found:?}");
+}

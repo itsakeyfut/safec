@@ -292,7 +292,9 @@ it is used). `Analysis::height`, as for every other term in it.
   narrowing it for `memset` is a question about that rule.
 * Bad, because a pointer copied a byte at a time through `char` is not a load,
   and a use after free through the copy builds, as it did before this record.
-  That is [#257](https://github.com/itsakeyfut/safec/issues/257).
+  That is [#257](https://github.com/itsakeyfut/safec/issues/257), and
+  [ADR-0046](./0046-a-byte-read-out-of-memory-is-a-load-and-carries-what-was-stored-there.md)
+  makes such a byte a load.
 * What would reverse this: summaries of the functions this translation unit
   defines, or an annotation saying what a callee may free, either of which
   would let a parameter's allocation stay proved across a call that provably

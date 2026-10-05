@@ -36,6 +36,7 @@ pub(super) fn built_from(
     value: &Known,
     is_pointer: impl Fn(LocalId) -> bool,
     may_be_pointer: impl Fn(&Place) -> bool,
+    reads_a_byte: impl Fn(&Place) -> bool,
     reads_caller_memory: impl Fn(LocalId, usize) -> bool,
 ) -> Held {
     let followed: Vec<LocalId> = operands
@@ -90,6 +91,18 @@ pub(super) fn built_from(
         followed.iter().map(|local| local.index()).collect()
     };
 
+    // **A byte read out of memory contributes what was stored where it was
+    // read**, as a load does, but is no pointer operand: two bytes added are
+    // not pointer arithmetic, so it narrows nothing beside it. `*d = *s + 0`
+    // is the byte `*d = *s` copies. See ADR-0046.
+    let bytes: Vec<&Place> = operands
+        .iter()
+        .filter_map(|operand| match operand {
+            Operand::Copy(source) if derefs(source) > 0 && reads_a_byte(source) => Some(source),
+            _ => None,
+        })
+        .collect();
+
     let mut reached = Held::none(value.points_to.len());
     for &source in &followed {
         reached.accumulated(&value.points_to[source]);
@@ -105,7 +118,7 @@ pub(super) fn built_from(
     // distance is not carried (ADR-0036). `loaded` below keeps every reader
     // from proving anything with it, so `t3[i][i]` is asked as `t3[0][0]` is.
     // See ADR-0045.
-    for load in &loads {
+    for load in loads.iter().chain(&bytes) {
         let (sites, locals) = value.levels_below(load.local, derefs(load));
         for site in sites {
             reached.hold(site, Offset::Unknown);
@@ -138,7 +151,9 @@ pub(super) fn built_from(
     // carries in [`Held`] never arrives for it: `q = *tab + 1; show(q);`
     // exposed nothing, found by mutating [`Held::accumulated`]. See ADR-0040.
     reached.loaded |= operands.iter().any(|operand| match operand {
-        Operand::Copy(source) => !source.projection.is_empty() && may_be_pointer(source),
+        Operand::Copy(source) => {
+            !source.projection.is_empty() && (may_be_pointer(source) || reads_a_byte(source))
+        }
         Operand::Constant(_) => false,
     });
 
