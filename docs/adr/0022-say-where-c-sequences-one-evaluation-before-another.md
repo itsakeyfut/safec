@@ -164,9 +164,10 @@ sequencing, and a free is a call.
 
 `error[E0004]` at every reader of `Element` if the kind is removed:
 `print.rs`, `interp.rs`, `emit.rs`, `memory.rs`, the hand-built analysis in
-`crates/safec-ir/tests/written.rs` and two helpers in `lowering/tests.rs`. `error[E0063]` at `Freeing::new` and `Freeing::joined` if a field is
-added to the pair a free carries, and `error[E0004]` at `verdict` if a variant
-is added to `Kind`, which is what says a third check has to answer whether its
+`crates/safec-ir/tests/written.rs` and two helpers in `lowering/tests.rs`.
+`error[E0063]` at `Freeing::new` and `Freeing::joined` if a field is added
+to the pair a free carries, and `error[E0004]` at `verdict` if a variant is
+added to `Kind`, which is what says a third check has to answer whether its
 question turns on the order.
 
 Each mutation applied on its own, the whole workspace suite run with
