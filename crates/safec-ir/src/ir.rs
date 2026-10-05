@@ -937,8 +937,10 @@ impl Function {
     ///
     /// The body is asked at every `return` whether it keeps the promise, and a
     /// call believes it of what it returns. Where nobody here can ask the
-    /// body, because it is a declaration or a hatch, the promise is believed
-    /// unasked, which is the boundary ADR-0037 and ADR-0050 accept.
+    /// body, because it is a declaration, the promise is believed unasked
+    /// (ADR-0050). A hatch's body is asked, and what it could not prove is
+    /// listed rather than reported, so its callers believe it unchecked too
+    /// (ADR-0038).
     pub fn promising(mut self, promise: Promise) -> Self {
         self.returns = Some(promise);
         self

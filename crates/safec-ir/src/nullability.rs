@@ -726,9 +726,10 @@ impl Analysis for Nullability<'_> {
                 // what makes it sound: every `return` of a function that
                 // promises is asked by `report_return`. What is believed
                 // unasked is a hatch's unproven return, which is listed rather
-                // than reported (ADR-0038), and a `_Nonnull` on a function
-                // this unit does not define, which nobody here can ask; both
-                // are the boundary ADR-0050 accepts, as ADR-0037 does of a
+                // than reported and is the hatch's own boundary (ADR-0038),
+                // and a `_Nonnull` on a function this unit does not define,
+                // which nobody here can ask (ADR-0050); both are the boundary
+                // a written promise draws, as ADR-0037 does of a
                 // parameter.
                 //
                 // Two `if`s rather than a let chain, which the workspace's

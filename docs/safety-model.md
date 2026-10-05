@@ -357,8 +357,11 @@ has the reasoning and the forms it rejected, and
 [`frontend.md`](frontend.md#where-the-hatch-is-read) says where it is read.
 
 **Its boundary is its prototype.** A `_Nonnull` parameter of a hatch is
-checked at every call in the translation unit, as any other is. A caller
-assumes the worst of what the hatch may have done: after a call to one, every
+checked at every call in the translation unit, as any other is, and a
+`_Nonnull` written on the pointer a hatch returns is believed at every call,
+while a `return` that does not keep it is listed under the hatch. Level 5's
+default is not made for a hatch, so it promises only what it writes. Otherwise a
+caller assumes the worst of what the hatch may have done: after a call to one, every
 allocation the caller still holds live is unproven, whether or not the hatch
 was handed it, because what a hatch can reach through memory is not something
 this check follows and its body is the one whose unproven conclusions are not
