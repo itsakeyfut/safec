@@ -25,7 +25,7 @@ use super::{Finding, Kind, Unproven};
 /// from one member of its set: its join is forced to be right by the lattice,
 /// and the code that
 /// reads the answer is where the same rule gets lost.
-pub(super) struct Verdict {
+struct Verdict {
     conclusion: Conclusion,
     /// The earliest free reaching here, where there is one to name.
     freed: Option<Span>,
@@ -62,7 +62,7 @@ pub(super) fn derefs(place: &Place) -> usize {
 /// `reached`: a free hands a [`Reached::Lost`] for an argument it stopped
 /// following, and a dereference hands an empty iterator. That asymmetry is the
 /// design rather than an accident, and [`used`] says why.
-pub(super) fn verdict(
+fn verdict(
     kind: Kind,
     reached: impl IntoIterator<Item = Reached>,
     known: &Known,
@@ -366,7 +366,7 @@ pub(super) fn reported(
 ///
 /// `freed` is `None` whatever the answer: what this reports is not about a free
 /// that already happened.
-pub(super) fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdict> {
+fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdict> {
     let mut sites = Vec::new();
     for entry in reached {
         match entry {
@@ -431,7 +431,7 @@ pub(super) fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Op
 /// lost, which is silence, and that is the right answer to a call C says does
 /// nothing. What is lost still arrives as a `Reached::Lost` from the arguments
 /// that were asked about.
-pub(super) fn asked<'o>(
+fn asked<'o>(
     arguments: &'o [Operand],
     null: &'o NullAtTerminators,
     block: BlockId,
@@ -1196,7 +1196,7 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 /// cannot arise say so rather than falling through, because a fallthrough in
 /// this file was once reached by "proved" and by "gave up" at once and
 /// reported the second as the first.
-pub(super) fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
+fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
     match (standing, new) {
         // First, because a wildcard below would absorb them. [`verdict`]
         // answers `None` where there is nothing to report, so no `Finding`

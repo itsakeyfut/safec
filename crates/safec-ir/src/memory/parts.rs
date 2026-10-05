@@ -228,7 +228,7 @@ pub(super) fn same(here: Option<Span>, there: Option<Span>) -> Option<Span> {
 /// A total order over the pair, so a value carrying one can only move one way
 /// and the walk ends. The file is the first half because a span names its
 /// own file and two of them need not share one.
-pub(super) fn earlier(here: Span, there: Span) -> Span {
+fn earlier(here: Span, there: Span) -> Span {
     if (here.file().index(), here.start()) <= (there.file().index(), there.start()) {
         here
     } else {
