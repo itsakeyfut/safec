@@ -396,7 +396,7 @@ fn an_output_path_is_where_the_artifact_goes() {
 ///
 /// Mutation: raise `MAX_NESTING` in `parser.rs` far enough that the recursion
 /// outruns the stack, 200000 being ample. This fails, with the exit code of a
-/// process nothing in `driver.rs` chose. Which recursion dies first, the
+/// process nothing in the driver chose. Which recursion dies first, the
 /// parser's or the printer's, is not the claim; that neither may be given more
 /// levels than it can hold is.
 #[test]
@@ -547,7 +547,7 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
 ///
 /// Not a corpus case, because the point is the exit code rather than the
 /// artifact: the failure this guards is a stack overflow, which is not a panic
-/// anything can catch and gives a code nothing in `driver.rs` chose. The corpus
+/// anything can catch and gives a code nothing in the driver chose. The corpus
 /// harness turns that into "the compiler was killed by a signal", and the
 /// expected file would be a megabyte of indentation.
 ///
