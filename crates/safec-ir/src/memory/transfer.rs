@@ -1603,16 +1603,32 @@ impl Analysis for Allocations<'_> {
                     {
                         continue;
                     }
-                    // **What it is handed by value it may have freed; what it
-                    // reaches only through an address or a load it may have
-                    // freed and replaced**, so only the first is what a later
-                    // call by address asks about: `grow(&a); grow(&a);` is how
-                    // C hands a pointer to be replaced. See ADR-0047.
+                    // **What it is handed it may have freed, by name or as a
+                    // load**: a load is a pointer the callee holds, and holding
+                    // it is all a free needs, so a later call by address asks
+                    // about it. What is named outright loses a proof as well;
+                    // a load's freed site keeps it, as above. See ADR-0047.
                     if outright.contains(&site) {
                         value.state[site] = SiteState::Unknown;
                     } else {
-                        value.state[site].doubted();
+                        value.state[site].may_be_freed();
                     }
+                }
+                // **And what it reaches through the memory it was handed**,
+                // what that memory holds however deep, and what an argument
+                // read out of memory may be: `*d = a; release_in(d);` may free
+                // `a`'s allocation and cannot replace `a`. Not `reach`, which
+                // adds every escaped local's sites to every call, so
+                // `grow(&a)` would reach `a` there and the in-out idiom would
+                // be doubted at the next call by address; what only an
+                // address or an earlier exposure reaches stays `Reachable`,
+                // below. See ADR-0047.
+                let mut handed_memory: Vec<usize> = sites().collect();
+                for argument in handed {
+                    handed_memory.extend(self.read_out(function, argument, value));
+                }
+                for site in value.closure(handed_memory) {
+                    value.state[site].may_be_freed();
                 }
 
                 // **Everything this call could reach, and everything reached
