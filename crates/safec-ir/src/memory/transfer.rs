@@ -1914,22 +1914,21 @@ pub(super) fn live_in(function: &Function) -> Vec<Vec<bool>> {
     for block in function.blocks() {
         let mut read = vec![false; locals];
         let mut written = vec![false; locals];
-        let reads_of_place = |place: &Place, read: &mut Vec<bool>, written: &[bool]| {
+        // A function rather than a closure, since an `Index` operand is a
+        // place with projections of its own, `a[b[x]]`, and is read however
+        // deep. Found by review.
+        fn reads_of_place(place: &Place, read: &mut Vec<bool>, written: &[bool]) {
             if !written[place.local.index()] {
                 read[place.local.index()] = true;
             }
             for step in &place.projection {
                 match step {
                     Projection::Deref => {}
-                    Projection::Index(Operand::Copy(index)) => {
-                        if !written[index.local.index()] {
-                            read[index.local.index()] = true;
-                        }
-                    }
+                    Projection::Index(Operand::Copy(index)) => reads_of_place(index, read, written),
                     Projection::Index(Operand::Constant(_)) => {}
                 }
             }
-        };
+        }
         let reads_of_operand =
             |operand: &Operand, read: &mut Vec<bool>, written: &[bool]| match operand {
                 Operand::Copy(place) => reads_of_place(place, read, written),
@@ -2234,6 +2233,25 @@ mod tests {
                 otherwise: then,
                 origin: Origin::Written(at),
             },
+        });
+        assert!(at_read);
+        assert!(!at_write);
+    }
+
+    /// Mutation: count only the local an `Index` operand names, not the
+    /// indices inside it; this fails.
+    #[test]
+    fn a_local_used_as_an_index_inside_an_index_is_read() {
+        let (at_read, at_write) = liveness(|_, x, y, at, then| {
+            let inner = Place {
+                local: y,
+                projection: vec![Projection::Index(Operand::Copy(Place::local(x)))],
+            };
+            let place = Place {
+                local: y,
+                projection: vec![Projection::Index(Operand::Copy(inner))],
+            };
+            assign(Place::local(y), Rvalue::Use(Operand::Copy(place)), at, then)
         });
         assert!(at_read);
         assert!(!at_write);
