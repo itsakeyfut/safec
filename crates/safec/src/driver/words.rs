@@ -453,8 +453,10 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
         // A pointer read out of memory and read through in place, `**pp`,
         // which a test of `*pp` does not settle: this check keeps nothing
         // about `*pp`, so the row above would be advice to do what the
-        // program may already do (#333). Any test of the local settles it,
-        // `if (q)` among them since #334.
+        // program may already do (#333). A test of the local itself settles
+        // it, `q != 0` or `if (q)` since #334. A test of an assignment,
+        // `if ((q = *pp))`, does not yet, because the branch reads a temporary
+        // the assigned value was copied into (#336).
         (
             Asked::Dereference {
                 through_memory: true,

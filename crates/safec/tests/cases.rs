@@ -737,7 +737,7 @@ cases! {
         a_null_pointer_dereferenced_is_unsafe: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **Three tests of a pointer are three cases and not one**, because the
         // shapes reach the check differently: `if (p)` hands the pointer's own
-        // place to the terminator with no element in the block, and `p != 0`
+        // place to the terminator, whatever wrote it above, and `p != 0`
         // and `p == 0` put a comparison above it that has to be read back
         // through the block. A reader of the C cannot tell those apart, which
         // is why each is held.
@@ -788,7 +788,8 @@ cases! {
         // write first, and a copy answered nothing (#334). Mutation: delete
         // the early return for a pointer condition in
         // `nullability::tested_against_null`; this and the case above it are
-        // refused.
+        // refused, along with every plain `if (p)` case, since nothing after
+        // it answers a pointer.
         a_pointer_copied_into_a_local_and_tested_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*p && **q` writes both operands at one caret, a plain doubt about
         // `p` first and one through memory about `q` second, and the reader is
@@ -1032,8 +1033,8 @@ cases! {
         a_free_on_reallocs_failure_branch_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_on_reallocs_failure_branch_tested_with_not_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_used_on_reallocs_failure_branch_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same branch read off `if (q)` with `q` copied from the result in
-        // the block above it, which the memory check learns from through the
+        // The same branch read off `if (q)` with `q` copied from the result just
+        // above the branch, which the memory check learns from through the
         // nullability check's reading. Mutation: delete the early return for a
         // pointer condition in `nullability::tested_against_null`; the first
         // goes back to `SC0401` may, and the second's proof to a doubt (#334).

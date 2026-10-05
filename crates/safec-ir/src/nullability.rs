@@ -369,7 +369,9 @@ pub(crate) fn tested_against_null(
         return None;
     }
     // The first shape: the branch tests the pointer itself, so it is refined
-    // whatever wrote it.
+    // whatever wrote it. The type is asked rather than assumed, because a
+    // short-circuited `&&` or `||` branches on an `int` temporary holding a
+    // comparison, which is the second shape and the walk's to read.
     if pointer_typed(unit, function, condition.local) {
         return Some((condition.local, Nullness::NonNull));
     }
@@ -463,6 +465,13 @@ pub(crate) fn tested_against_null(
 
     // Nothing in this block wrote a condition that is not a pointer, so there
     // is no comparison here for this walk to read.
+    //
+    // **Nothing holds this `None`, and nothing can.** Answering such a
+    // condition non-null instead leaves the suite green, because an `int` is
+    // never read through, and the memory check acts on a branch only for a
+    // local holding exactly what a `realloc` returned, which an `int` does
+    // not, so no report moves. It is the answer that is right about the
+    // branch rather than one a test can tell apart.
     None
 }
 

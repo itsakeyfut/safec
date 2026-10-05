@@ -359,14 +359,12 @@ fn a_comparison_above_a_storage_boundary_refines_nothing() {
 /// computes into no local, so it cannot have replaced what the comparison read,
 /// and the walk has to go past it rather than give up.
 ///
-/// **This is the only direction the refusal rule can be wrong in that nothing
-/// else here asserts.** Its siblings all assert that a refinement is *not*
-/// made; this one asserts that one still is, which is what a walk that gave up
-/// on everything would take away. That direction has been wrong here once:
-/// stopping the walk at the first write to any local, rather than recording
-/// which local it changed, took the proof out of `int x = 5; if (p) { *p = x; }`
-/// and reported it as an unproven dereference. The three markers are one arm
-/// for the same reason the storage pair is, so this is that arm's whole guard.
+/// **It asserts the direction its siblings do not.** They assert that a
+/// refinement is *not* made; this one and
+/// `a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refinement`
+/// assert that one still is, which is what a walk that gave up on everything
+/// would take away. The three markers are one arm for the same reason the
+/// storage pair is, so this is that arm's whole guard.
 ///
 /// Both arms are written through, so that the assertion is what each arm
 /// concluded rather than a count of nothing. The taken arm has `p` proved not
