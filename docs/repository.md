@@ -154,7 +154,10 @@ look; the concerns decide. A file of one concern stays whole however long:
 `crates/safec/src/lowering.rs` is almost all one `impl Lowering`, and cut by
 size its pieces would not read apart. A small file of two concerns stays whole
 too, because every file a reader has to hold costs them more than a section
-does.
+does. A concern is a part a reader can follow with the others closed, such as
+a lattice and the transfer functions that move it; the several answers one walk
+over one lattice gives, which a module's own doc may count, are not concerns
+apart from each other, because they are read together.
 
 **`foo.rs` stays the module root, and the parts go in `foo/`.** The root keeps
 the public surface and the `mod` declarations, so a reference to the module's
@@ -163,22 +166,24 @@ public API by its file still names the right one. This is the shape
 no `mod.rs` is used.
 
 **Inline tests over about 500 lines move to `foo/tests.rs`**, declared
-`#[cfg(test)] mod tests;`, whether or not the code splits. The code a reader is
-in stops sharing a file with them, and none of its lines move.
+`#[cfg(test)] mod tests;`, whether or not the code splits; for a file that is
+already a submodule, `foo/bar.rs`, that is `foo/bar/tests.rs`. The code a reader
+is in stops sharing a file with them, and none of its lines move.
 
 **A split is a pure move, and lands with every reference.** No behaviour
-changes and nothing is renamed on the way, so the diff is moved lines and the
-suite and every blessed corpus output say so. Every path in `docs/` and in code
+changes and nothing is renamed on the way, so the diff is moved lines, the
+suite passes, and no blessed corpus output changes. Every path in `docs/` and in code
 comments that names a moved item is updated in the same change: the records
 name files by path, and nothing checks prose for one.
 
 What the rules say of the files they apply to today, measured on `main` at
-`d3406e7`. Each split updates its row when it lands.
+`d3406e7`, with code counted up to and including the `#[cfg(test)]` line and
+tests from there to the end. Each split updates its row when it lands.
 
-| file | code, tests excluded | concerns | inline tests | the rules say |
+| file | code, tests excluded | concerns that read apart | inline tests | the rules say |
 |---|---|---|---|---|
-| `crates/safec-ir/src/memory.rs` | 5,497 | five | 0 | split |
-| `crates/safec/src/driver.rs` | 2,466 | four | 1,509 | split, and its tests move |
+| `crates/safec-ir/src/memory.rs` | 5,497 | the lattice's parts, the lattice value, building a value out of operands, the transfer functions, the report | 0 | split |
+| `crates/safec/src/driver.rs` | 2,466 | the pipeline, the words of each safety diagnostic, running the backend, the `--emit` dumps | 1,509 | split, and its tests move |
 | `crates/safec/src/lowering.rs` | 2,250 | one | 1,464 | its tests move |
 | `crates/safec/src/parser.rs` | 1,888 | one | 948 | its tests move |
 | `crates/safec/src/types.rs` | 1,617 | one | 1,476 | its tests move |
