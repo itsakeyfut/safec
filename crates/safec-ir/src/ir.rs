@@ -864,7 +864,7 @@ pub struct Function {
     /// Whether this is a hatch.
     hatch: bool,
     /// Whether the pointer it returns is promised not to be null.
-    returns: Option<Promise>,
+    return_promise: Option<Promise>,
     body: Body,
 }
 
@@ -905,7 +905,7 @@ impl Function {
             locals,
             nonnull,
             hatch: false,
-            returns: None,
+            return_promise: None,
             body: Body::Defined(Vec::new()),
         }
     }
@@ -944,14 +944,14 @@ impl Function {
     /// listed rather than reported, so its callers believe it unchecked too
     /// (ADR-0038).
     pub fn promising(mut self, promise: Promise) -> Self {
-        self.returns = Some(promise);
+        self.return_promise = Some(promise);
         self
     }
 
     /// What it promised of the pointer it returns, or `None` where a call
     /// believes nothing about it.
     pub fn promised(&self) -> Option<Promise> {
-        self.returns
+        self.return_promise
     }
 
     /// A function this translation unit calls and does not contain.

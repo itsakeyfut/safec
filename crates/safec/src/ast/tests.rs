@@ -457,7 +457,7 @@ fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
             body: StmtId(0),
             span: s,
             attribute: None,
-            returns: None,
+            return_nullability: None,
         })
         .name(),
         "Function"

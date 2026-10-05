@@ -137,7 +137,7 @@ fn written_promise(written: Option<Nullability>) -> Option<Promise> {
 /// program is not one thing that fails, and a caller of a function this stage
 /// refused still resolves, because the refusal leaves a declaration behind.
 ///
-/// `nonnull_by_default` is level 5's default, that a pointer is not null
+/// `nonnull_returns_by_default` is level 5's default, that a pointer is not null
 /// unless it is written `_Nullable` (ADR-0050). **The level is resolved here
 /// and not carried into the IR**: what reaches the IR is the promise it made,
 /// [`Promise::Defaulted`], so nothing that reads an IR asks what level a run
@@ -148,13 +148,13 @@ pub fn lower(
     resolution: &Resolution,
     types: &Types,
     target: Target,
-    nonnull_by_default: bool,
+    nonnull_returns_by_default: bool,
     diagnostics: &mut DiagnosticSink,
 ) -> TranslationUnit {
     let mut lowering = Lowering {
         sources,
         ast,
-        nonnull_by_default,
+        nonnull_returns_by_default,
         resolution,
         types,
         // The one thing this stage learns about the machine, and it only
@@ -164,7 +164,7 @@ pub fn lower(
         scopes: Vec::new(),
         functions: HashMap::new(),
         prototypes: HashMap::new(),
-        returns: HashMap::new(),
+        return_nullability: HashMap::new(),
         refused: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
@@ -180,7 +180,7 @@ struct Lowering<'a> {
     sources: &'a SourceMap,
     ast: &'a Ast,
     /// Level 5's default, which [`lower`] says why this stage resolves.
-    nonnull_by_default: bool,
+    nonnull_returns_by_default: bool,
     resolution: &'a Resolution,
     types: &'a Types,
     unit: TranslationUnit,
@@ -226,7 +226,7 @@ struct Lowering<'a> {
     /// [`Lowering::prototypes`]: `void g();` declares no parameters and does
     /// declare what `g` returns, so it is a declaration of the return to agree
     /// with like any other.
-    returns: HashMap<String, (Span, Option<Nullability>)>,
+    return_nullability: HashMap<String, (Span, Option<Nullability>)>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -523,8 +523,9 @@ impl Lowering<'_> {
         for item in self.ast.items() {
             match item {
                 Item::Function(function) => {
-                    let (name, ty, returns) = (function.name, function.ty, function.returns);
-                    self.declare_one(name, ty, returns, true, diagnostics);
+                    let (name, ty, written) =
+                        (function.name, function.ty, function.return_nullability);
+                    self.declare_one(name, ty, written, true, diagnostics);
                 }
                 Item::Declaration { declarators, .. } => {
                     for declarator in declarators {
@@ -543,8 +544,8 @@ impl Lowering<'_> {
                         // come back for this initializer.
                         let declaration = &declarator.declaration;
                         if let Some(name) = declaration.name {
-                            let (ty, returns) = (declaration.ty, declaration.nullability);
-                            self.declare_one(name, ty, returns, false, diagnostics);
+                            let (ty, written) = (declaration.ty, declaration.nullability);
+                            self.declare_one(name, ty, written, false, diagnostics);
                         }
                     }
                 }
@@ -684,7 +685,7 @@ impl Lowering<'_> {
     ///
     /// The same three answers [`Lowering::agree`] compares, for the same
     /// reason, and against the first declaration rather than the first
-    /// prototype, for the reason [`Lowering::returns`] gives.
+    /// prototype, for the reason [`Lowering::return_nullability`] gives.
     fn agree_on_return(
         &mut self,
         name: Span,
@@ -692,8 +693,9 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) {
         let key = self.sources.snippet(name);
-        let Some((first_name, first)) = self.returns.get(key) else {
-            self.returns.insert(key.to_owned(), (name, later));
+        let Some((first_name, first)) = self.return_nullability.get(key) else {
+            self.return_nullability
+                .insert(key.to_owned(), (name, later));
             return;
         };
         let specifier = |written: Option<Nullability>| written.map(|written| written.specifier);
@@ -768,8 +770,12 @@ impl Lowering<'_> {
             let Item::Function(function) = &self.ast.items()[index] else {
                 continue;
             };
-            let (name, ty, body, written) =
-                (function.name, function.ty, function.body, function.returns);
+            let (name, ty, body, written) = (
+                function.name,
+                function.ty,
+                function.body,
+                function.return_nullability,
+            );
             let hatch = function
                 .attribute
                 .is_some_and(|attribute| self.resolution.is_hatch(attribute));
@@ -850,7 +856,7 @@ impl Lowering<'_> {
         // worst of the rest.
         let promise = match written {
             Some(_) => written_promise(written),
-            None => (self.nonnull_by_default
+            None => (self.nonnull_returns_by_default
                 && !hatch
                 && matches!(self.unit.ty(returns), Ty::Pointer(_)))
             .then_some(Promise::Defaulted(name)),

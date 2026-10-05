@@ -620,7 +620,7 @@ pub struct Function {
     ///
     /// Not on [`Type::Function`]: types are compared for compatibility, and a
     /// specifier is not part of the type (ADR-0037).
-    pub returns: Option<Nullability>,
+    pub return_nullability: Option<Nullability>,
 }
 
 /// `__attribute__((name("argument")))`, written before a function definition.

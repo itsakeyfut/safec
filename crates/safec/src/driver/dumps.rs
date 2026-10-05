@@ -124,7 +124,7 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
             .expect("writing to a string cannot fail");
             // Where a declaration of it prints its own, and for the reason
             // `dump_declaration` gives.
-            if let Some(written) = function.returns {
+            if let Some(written) = function.return_nullability {
                 write!(out, " {}", written.specifier.spelling())
                     .expect("writing to a string cannot fail");
             }

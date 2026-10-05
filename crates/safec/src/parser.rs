@@ -192,7 +192,7 @@ struct Declared {
     ty: TypeId,
     /// The nullability specifier on the pointer the declared function
     /// returns, which [`Parser::placed`] allows only at file scope.
-    returns: Option<Nullability>,
+    return_nullability: Option<Nullability>,
     /// What the declaration declares, which every later declarator in it
     /// shares.
     declares: Declares,
@@ -533,7 +533,7 @@ impl Parser<'_> {
                 body,
                 span,
                 attribute,
-                returns: declared.returns,
+                return_nullability: declared.return_nullability,
             });
         }
 
@@ -583,7 +583,7 @@ impl Parser<'_> {
             base,
             name,
             ty,
-            returns,
+            return_nullability: returns,
             declares,
         })
     }
@@ -638,7 +638,7 @@ impl Parser<'_> {
             base,
             mut name,
             mut ty,
-            mut returns,
+            return_nullability: mut returns,
             declares,
         } = declared;
         let mut declarators = Vec::new();

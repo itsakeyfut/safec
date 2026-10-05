@@ -998,7 +998,7 @@ cases! {
         a_result_level_5_promised_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         // The same program below level 5, where nothing is promised. This is
         // what keeps levels 1 to 4 answering as before. Mutation: compute
-        // `nonnull_by_default` as `true` in `driver.rs`; this goes silent,
+        // `nonnull_returns_by_default` as `true` in `driver.rs`; this goes silent,
         // and every existing case whose pointer function may return null
         // gains `SC0408`, `a_pointer_read_out_of_a_freed_table_and_returned`
         // among them.
