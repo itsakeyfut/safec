@@ -1214,6 +1214,9 @@ cases! {
         a_use_after_free_through_a_chain_written_as_one_place_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_three_levels_down_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_three_levels_down_through_a_freed_middle_level_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // "In silence" is the memory check's: no use after free is reported.
+        // The nullability check doubts the read through memory in place, as a
+        // warning under `--allow-unknown` (#333).
         a_live_value_read_three_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And one level deeper on each path, so that "however long" is held
         // past the depths above. Mutation: have `read_through` follow no more
@@ -1327,6 +1330,9 @@ cases! {
         a_pointer_copied_by_memcpy_into_a_table_and_freed_is_unproven_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_store_two_levels_down_is_recorded_where_it_lands: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // "In silence" is the memory check's: no use after free is reported.
+        // The nullability check doubts the read through memory in place, as a
+        // warning under `--allow-unknown` (#333).
         a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // What ADR-0045 accepts as its cost: a copy adds to what the
         // destination holds and replaces nothing, so a freed pointer it held
@@ -1429,6 +1435,9 @@ cases! {
         a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_locals_address_read_back_out_of_an_allocation_is_written_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // "In silence" is the memory check's: no use after free is reported.
+        // The nullability check doubts the read through memory in place, as a
+        // warning under `--allow-unknown` (#333).
         a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a local's own address edge below the first level, `t3 = &t2;
         // t2 = &slot; u = *t3; *u`. Silent with the value live and written
