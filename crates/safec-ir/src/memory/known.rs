@@ -959,6 +959,51 @@ impl Known {
         reach
     }
 
+    /// Per site, whether anything in this value may still name it: a local's
+    /// sites, what an allocation contains, an exposure, a call left pending
+    /// beside one, a read carried forwards, and a `realloc`'s remembered fact.
+    /// Every site, where a local may name one this check cannot: lost,
+    /// loaded, or written by a call it cannot read.
+    ///
+    /// **It over-counts, and must**: a site answered as held by nothing takes
+    /// its state from the other side of a join, so one held by something
+    /// missed here is one whose free could be forgotten. See ADR-0048.
+    pub(super) fn held_sites(&self) -> Vec<bool> {
+        let sites = self.state.len();
+        if self
+            .points_to
+            .iter()
+            .any(|held| held.lost || held.loaded || held.foreign)
+        {
+            return vec![true; sites];
+        }
+        let mut held = vec![false; sites];
+        for local in &self.points_to {
+            for site in local.sites() {
+                held[site] = true;
+            }
+        }
+        for contents in &self.inside {
+            for (site, &inside) in contents.iter().enumerate() {
+                held[site] |= inside;
+            }
+        }
+        for (site, held) in held.iter_mut().enumerate() {
+            *held |= self.exposed[site] || self.exposed_after_call.contains(&site);
+        }
+        for read in self.pending.values() {
+            for &site in read.sites.iter().chain(&read.reachable) {
+                held[site] = true;
+            }
+        }
+        for fact in self.realloced.iter().flatten() {
+            for &(old, _) in &fact.old {
+                held[old] = true;
+            }
+        }
+        held
+    }
+
     /// Every site a pointer stored in some allocation may hold.
     ///
     /// What a pointer read out of memory this check cannot say which may be:

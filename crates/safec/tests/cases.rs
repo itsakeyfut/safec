@@ -312,6 +312,25 @@ cases! {
         // `a_local_given_a_constant_forgets_the_site_it_held` is where the
         // lattice half is asked on its own.
         a_pointer_set_to_nothing_after_a_free_holds_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The free-and-null idiom: on the arm that freed it, nothing read
+        // again holds the allocation, so the join takes the other arm's live
+        // state. See ADR-0048. Built: returned, read after a null test, and
+        // inside a loop. Mutation: have the join join every site as before;
+        // all three are refused.
+        a_pointer_freed_and_set_to_null_on_one_arm_is_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_freed_and_set_to_null_in_a_loop_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Doubted, where something read again still holds it: the pointer
+        // itself with no null, a copy, a copy freed after, a slot of memory,
+        // and the pointer read back through its address. Mutation: have
+        // `held_sites` leave out locals' sites; the copy builds. Mutation:
+        // leave out `inside`; the slot builds. Mutation: have `live_in` leave
+        // out a local whose address is taken; the last builds.
+        a_pointer_freed_on_one_arm_and_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_of_a_pointer_freed_and_set_to_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_escaped_local_read_twice_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
