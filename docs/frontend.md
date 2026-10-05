@@ -273,8 +273,10 @@ two declarations disagreeing is refused rather than inherited, which is what
 `clang` does, because a caller is checked against the declaration it sees; what
 is compared is the first prototype, so a `void g();` above them changes
 nothing. **The refusals hold at every safety level, `--safety off` included**,
-because a level decides which checks run and these are the frontend reading
-the language. The
+because a level decides which checks run, and at level 5 what may be written,
+and neither moves where the frontend reads an annotation
+([ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)):
+these are the frontend reading the language. The
 last two rows are the check rather than the frontend, and `clang`'s answer to
 them is the reason the check exists: it warns about a literal null and says
 nothing about a local that holds one.
