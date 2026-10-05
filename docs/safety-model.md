@@ -182,11 +182,12 @@ beside `--safety strict` rather than ignored.
 Levels 1 to 4 accept any C the frontend accepts, so an existing program adopts
 the checks without being rewritten first. Some programs cannot be proved as they
 are written, so leaving nothing `Unknown` takes a subset: level 5 does not accept
-some of what C allows, and a construct outside it is reported as a diagnostic
+some of what C allows. A construct outside it is reported by the check that
+already settles it where one does, as null is, and otherwise as a diagnostic
 about the program's text, with a code of its own and a remedy saying how to write
 it inside, rather than as a conclusion it could not prove. The level is chosen
-per translation unit, and what a declaration from lower-level code does not say
-is answered conservatively. What level 5 restricts is a list, and an entry is
+per translation unit, and what a declaration from code the translation unit
+cannot see does not say is answered conservatively. What level 5 restricts is a list, and an entry is
 added by the phase whose check needs it, with a record of its own; the first is
 null, under [Annotations](#annotations) below.
 [ADR-0049](adr/0049-level-5-restricts-what-may-be-written-and-levels-1-to-4-do-not.md)
@@ -285,12 +286,15 @@ where it is refused. It says nothing about the other four questions, which wait
 for the phases that ask them.
 
 **At level 5 the default turns over.** A pointer is not null unless it is written
-`_Nullable`, the other nullability specifier `clang` accepts, and giving a
-pointer that is not `_Nullable` a value that may be null is a level-5
-diagnostic. A pointer from a
-declaration not written at level 5 that says neither is `_Nullable`, since
-believing what lower-level code never said is how a null would be dereferenced
-in silence. Below level 5, `_Nullable` restricts nothing.
+`_Nullable`, the other nullability specifier `clang` accepts, and the
+nullability check reports giving a pointer that is not `_Nullable` a value that
+may be null, as it does for a `_Nonnull` parameter today. Across a translation
+unit's boundary nothing unannotated is believed: what a function declared and
+not defined here takes and returns, and what a function with external linkage
+defined here takes, is `_Nullable` where the declaration says neither, since
+believing what the other side never said is how a null would be dereferenced in
+silence. Which pointers the default covers, beyond a declaration's own, is
+decided with the implementation. Below level 5, `_Nullable` restricts nothing.
 [ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)
 has the reasoning; it is not implemented yet.
 

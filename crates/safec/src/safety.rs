@@ -20,9 +20,10 @@ use clap::ValueEnum;
 /// analysis pass ask `level >= SafetyLevel::Lifetime` instead of matching on
 /// every variant it applies to.
 ///
-/// A level decides which checks run and nothing else. How loudly a check speaks
-/// is decided by what it concluded and by the policy the run resolved to, not by
-/// the level: a result the analysis proved is an error at every level that runs
+/// At levels 1 to 4 a level decides which checks run and nothing else; level 5
+/// also restricts what may be written, which nothing implements yet (ADR-0049).
+/// How loudly a check speaks is decided by what it concluded and by the policy
+/// the run resolved to, not by the level: a result the analysis proved is an error at every level that runs
 /// the check that proved it. What the level does decide is whether any check
 /// runs at all, which is why [`crate::diagnostics::Policy`] reads it: see
 /// ADR-0033.

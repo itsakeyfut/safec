@@ -102,9 +102,10 @@ nothing to agree with.
 **The refusals hold at every safety level, `--safety off` included.** Where
 `_Nonnull` may be written, and whether two prototypes agree, is the frontend
 reading the language, and [`safety-model.md`](../safety-model.md) makes a level
-decide which checks run and nothing else. So `--safety off` ignores what the
-annotation means, since no check runs to believe or ask about it, and still
-refuses it where it cannot apply. What that costs is that a file `clang` builds
+decide which checks run, and at level 5 also what may be written, neither of
+which moves where the frontend reads an annotation (ADR-0049, ADR-0050). So
+`--safety off` ignores what the annotation means, since no check runs to
+believe or ask about it, and still refuses it where it cannot apply. What that costs is that a file `clang` builds
 with `_Nonnull` on a local is refused at every level, which is a false report
 the reader can see.
 
