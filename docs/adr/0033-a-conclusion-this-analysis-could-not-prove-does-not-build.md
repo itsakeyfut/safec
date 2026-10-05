@@ -91,7 +91,7 @@ taken in two places.
 ### Confirmation
 
 `every_level_that_runs_a_check_denies_unknown_unless_it_was_allowed` in
-`crates/safec/src/diagnostics.rs` is the rule. It walks a written-out table of
+`crates/safec/src/diagnostics/tests.rs` is the rule. It walks a written-out table of
 every level against both answers, and checks that table's length against
 `SafetyLevel::value_variants()`, so a level added without an answer fails it by
 name rather than passing quietly.

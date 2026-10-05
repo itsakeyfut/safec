@@ -92,7 +92,7 @@ Which code goes where is held by tests.
 `each_lexical_diagnostic_keeps_the_code_it_was_assigned` in
 `crates/safec/src/lexer.rs` pins the five lexical codes by string,
 `each_syntax_diagnostic_keeps_the_code_it_was_assigned` in
-`crates/safec/src/parser.rs` pins the two syntax codes, and thirteen expected
+`crates/safec/src/parser/tests.rs` pins the two syntax codes, and thirteen expected
 files under `crates/safec/tests/cases/` hold a rendered code byte for byte.
 Changing any of the seven fails a test by name. The two are not redundant:
 `SC0202` is reported only past the nesting limit, which no corpus case reaches,

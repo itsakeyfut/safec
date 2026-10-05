@@ -169,7 +169,7 @@ The resolution itself is guarded by three tests, one at each level it can be
 reached from:
 
 * `the_strictest_safety_level_denies_unknown_however_the_policy_is_built` in
-  `crates/safec/src/diagnostics.rs` calls `Policy::new(SafetyLevel::Strict,
+  `crates/safec/src/diagnostics/tests.rs` calls `Policy::new(SafetyLevel::Strict,
   false)` directly, which is the adapter's path, and asserts both the resolved
   answer and that an unproven diagnostic reaching the sink becomes an error.
 * `the_strictest_safety_level_denies_unknown_even_unresolved` in the same file

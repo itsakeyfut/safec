@@ -139,7 +139,7 @@ test helper that reads one. Every arm names its fields; none writes `..`,
 except `Element::name`, where the name does not depend on what the kind carries.
 
 The two programs are `the_same_program_in_a_nested_scope_is_not_the_same_ir` in
-`crates/safec/src/lowering.rs`: it lowers both and fails if the `StorageDead`
+`crates/safec/src/lowering/tests.rs`: it lowers both and fails if the `StorageDead`
 loop goes from the `Compound` arm. `a_local_the_function_declares_has_no_marker`
 holds the other half, that a local whose scope is the function's gets nothing,
 and fails if the depth test goes.

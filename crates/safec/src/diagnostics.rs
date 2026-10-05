@@ -344,7 +344,7 @@ impl Diagnostic {
     /// on [`Self::concluded`].
     ///
     /// Reachable inside this module **and its children**, which is why the two
-    /// tests in `render.rs` can iterate all four severities: privacy holds
+    /// tests in `render/tests.rs` can iterate all four severities: privacy holds
     /// against the rest of the crate and against a user of it, not against
     /// this module's own subtree.
     fn new(severity: Severity, message: impl Into<String>) -> Self {

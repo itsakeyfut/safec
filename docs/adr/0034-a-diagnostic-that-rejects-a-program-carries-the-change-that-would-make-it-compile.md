@@ -18,7 +18,7 @@ The vocabulary is already half here, which is the part worth checking before
 deciding anything. `Severity::Help` exists in
 `crates/safec/src/diagnostics.rs`, and its doc comment reads "A suggested way to
 resolve a diagnostic reported alongside it". **No production code constructs
-one**, though two tests in `crates/safec/src/diagnostics/render.rs` do, by
+one**, though two tests in `crates/safec/src/diagnostics/render/tests.rs` do, by
 iterating every severity. A `Diagnostic` holds a severity, a certainty, a
 level, a code, a message, labels and notes, so a remedy written today is a
 `with_note` string like any other.
@@ -128,7 +128,7 @@ nothing about the next one, which is the whole population here.
 
 **Reaching the reader is a second thing and takes two more mutations.**
 `a_remedy_is_written_after_the_notes_on_both_rendering_paths` in
-`crates/safec/src/diagnostics/render.rs` renders one diagnostic twice, with a
+`crates/safec/src/diagnostics/render/tests.rs` renders one diagnostic twice, with a
 label and without, because `write_one` and `render_header_only` each call
 `write_remedies` and dropping either is a silence on half the diagnostics.
 Mutation: drop the call from `write_one`, and that test fails; restore it and
