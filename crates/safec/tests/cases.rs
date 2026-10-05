@@ -775,6 +775,11 @@ cases! {
         code_after_an_if_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         code_under_an_if_on_zero_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_zero_is_never_entered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(x, 1)` lowers to the constant 1 and is not a constant expression
+        // (C17 6.6 p3), so the loop keeps its exit and what follows it is
+        // asked. Mutation: have `Lowering::constant_expression` answer `true`
+        // for everything; this goes silent.
+        a_loop_on_a_comma_expression_is_not_taken_for_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A dereference past the first in one place reads a pointer out of
         // memory, which has no row in the lattice, and is asked as unproven
         // (#333). The first is the program that built in silence, written

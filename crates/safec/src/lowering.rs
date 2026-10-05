@@ -148,14 +148,27 @@ fn written_promise(written: Option<Nullability>) -> Option<Promise> {
 /// meaning an edge to each arm, on a constant or not. IR built by another
 /// frontend, or by hand, is answered as it was, which is conservatively.
 ///
-/// **Only a condition that already lowered to a constant.** `1 == 1` and `!0`
-/// are constant expressions too, and this frontend evaluates none yet, so they
-/// stay a `Branch` and a false report rather than a guess. The arm not taken
-/// is still lowered, into blocks nothing reaches.
-fn decided(condition: Operand, then: BlockId, otherwise: BlockId, origin: Origin) -> Terminator {
-    match condition {
-        Operand::Constant(value) => Terminator::Goto(if value != 0 { then } else { otherwise }),
-        condition @ Operand::Copy(_) => Terminator::Branch {
+/// **Only a constant expression that already lowered to a constant**, which
+/// `constant` says of the expression as written. `(x, 1)` lowers to the
+/// constant its right operand is, and is not a constant expression: C17 6.6 p3
+/// forbids a comma operator in one, and 6.8.5 p6 lets an implementation assume
+/// a loop on an expression that is not one terminates, so `while ((x, 1)) {}`
+/// is not `while (1) {}` and is left a `Branch`. `1 == 1` and `!0` are
+/// constant expressions this frontend does not evaluate yet, so they stay a
+/// `Branch` and a false report rather than a guess. The arm not taken is still
+/// lowered, into blocks nothing reaches.
+fn decided(
+    condition: Operand,
+    constant: bool,
+    then: BlockId,
+    otherwise: BlockId,
+    origin: Origin,
+) -> Terminator {
+    match (condition, constant) {
+        (Operand::Constant(value), true) => {
+            Terminator::Goto(if value != 0 { then } else { otherwise })
+        }
+        (condition, _) => Terminator::Branch {
             condition,
             then,
             otherwise,
@@ -797,6 +810,26 @@ impl Lowering<'_> {
         Some((returns, lowered))
     }
 
+    /// Whether an expression is one of the constant expressions [`decided`]
+    /// folds: an integer constant, or one under unary `+`.
+    ///
+    /// Not every constant expression (C17 6.6), only those this frontend can
+    /// already lower to an `Operand::Constant`, and never one with a comma
+    /// operator in it, which 6.6 p3 forbids and which lowers to a constant
+    /// anyway. Every expression kind written out, so that one added later is
+    /// answered for here rather than folded or not by default.
+    fn constant_expression(&self, expr: ExprId) -> bool {
+        match self.ast.expr(expr) {
+            Expr::Number { span: _ } => true,
+            Expr::Unary {
+                op: AstUnOp::Plus,
+                operand,
+                span: _,
+            } => self.constant_expression(*operand),
+            _ => false,
+        }
+    }
+
     /// Lower every function that has a body.
     fn define(&mut self, diagnostics: &mut DiagnosticSink) {
         for index in 0..self.ast.items().len() {
@@ -1248,11 +1281,18 @@ impl Lowering<'_> {
                 // asks for where the expression that decides is written, and
                 // one line down there is no expression left to ask.
                 let asked = self.ast.expr(condition).span();
+                let constant = self.constant_expression(condition);
                 let condition = self.value(builder, condition, diagnostics)?;
                 let taken = builder.function.reserve_block();
                 let skipped = builder.function.reserve_block();
                 let join = builder.function.reserve_block();
-                builder.end(decided(condition, taken, skipped, Origin::Written(asked)));
+                builder.end(decided(
+                    condition,
+                    constant,
+                    taken,
+                    skipped,
+                    Origin::Written(asked),
+                ));
 
                 builder.enter(taken, Some(asked));
                 self.stmt(builder, then, diagnostics)?;
@@ -1284,10 +1324,17 @@ impl Lowering<'_> {
                 // end of the body arrives here, above the branch.
                 builder.switch(header);
                 let asked = self.ast.expr(condition).span();
+                let constant = self.constant_expression(condition);
                 let condition = self.value(builder, condition, diagnostics)?;
                 let inside = builder.function.reserve_block();
                 let after = builder.function.reserve_block();
-                builder.end(decided(condition, inside, after, Origin::Written(asked)));
+                builder.end(decided(
+                    condition,
+                    constant,
+                    inside,
+                    after,
+                    Origin::Written(asked),
+                ));
 
                 builder.enter(inside, Some(asked));
                 self.stmt(builder, body, diagnostics)?;
@@ -1325,8 +1372,15 @@ impl Lowering<'_> {
                 match condition {
                     Some(condition) => {
                         let asked = asked.expect("a condition carries a span");
+                        let constant = self.constant_expression(condition);
                         let condition = self.value(builder, condition, diagnostics)?;
-                        builder.end(decided(condition, inside, after, Origin::Written(asked)));
+                        builder.end(decided(
+                            condition,
+                            constant,
+                            inside,
+                            after,
+                            Origin::Written(asked),
+                        ));
                     }
                     // 6.8.5.3 p2: an absent condition is replaced by a non-zero
                     // constant, so the loop has no exit edge of its own.
