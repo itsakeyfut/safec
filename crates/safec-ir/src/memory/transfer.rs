@@ -583,9 +583,7 @@ impl Analysis for Allocations<'_> {
         // Each local's set of sites only grows, so it takes at most one step
         // per site, and a site is a local. Each site's state walks `Live` to
         // `Freed` or to `Reachable`, and on to `Unknown`, which is still two
-        // steps since the join of those two is `Unknown` (ADR-0047), and a
-        // third below them, since a state nothing on one side holds is beneath
-        // every state the join can meet it with (ADR-0048); its
+        // steps since the join of those two is `Unknown` (ADR-0047); its
         // `freed` span can only move to an earlier
         // one, which it can do at most once per site that frees; and its `made`
         // span can only fall from `Some` to `None`, once. A local's `escaped`
@@ -634,6 +632,19 @@ impl Analysis for Allocations<'_> {
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
+        // **One join does not union: a site's state where the entry did not
+        // hold the site and the arriving value does.** It is replaced rather
+        // than joined (ADR-0048), so it can move down, `Freed` to `Live`, which
+        // review measured once in the corpus. That happens at most once per
+        // site at each block, because what holds a site at an entry only
+        // accumulates there, and after it the state can climb its two steps
+        // again, its `made` span fall once more and its `freed` span move once
+        // more: five more steps per site, counted below. The exception is a
+        // site held only by a `realloc` fact, which a join drops where the
+        // arms disagree; on the arm carrying the fact the site is `Unknown` or
+        // `Freed` already, so the only move it allows is to `Freed`, and
+        // review found no program where it moves twice.
+        //
         // **What has been read since the last sequence point is a set of
         // positions, so it is counted in positions rather than in locals.** A
         // block's entry value can gain one entry per place read at one element
@@ -656,7 +667,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 4 + locals * (locals + 18) + positions * (2 * locals + 3) + locals
+        locals * locals * 4 + locals * (locals + 22) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {

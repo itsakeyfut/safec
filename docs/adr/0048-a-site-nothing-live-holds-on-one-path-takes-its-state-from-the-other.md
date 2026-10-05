@@ -61,7 +61,8 @@ The cases are in `crates/safec/tests/cases/memory`, and every mutation is in `cr
 
 * Good, because the idiom builds, and every control that frees and keeps a reader is refused as before.
 * Bad, because the check now rests on liveness: a read liveness misses clears a local that is read later, and a dereference of a local holding nothing says nothing. The rule above over-counts reads for that reason, and each kind of read has a unit test.
-* Bad, because the height gains one step per site: a site held on neither side is below every state.
+* Bad, because the join is no longer a union for a site's state: where the entry did not hold the site and the arriving value does, the state is replaced, and can move down. It happens once per site at each block, since holders only accumulate at an entry, and the height gains five steps per site for it and for the climb after it. A site held only by a `realloc` fact is the exception, and review found no program where it moves twice.
+* Bad, because a pointer that holds a site beside a local's address is never a proof now (`Known::reached_by` adds `Reached::Partial`): on the path that gave it the address it reads the local. That was a false proof on `main` for `if (c) q = p; else q = &x; free(p); return *q;`, and this join made a second shape of it one; `a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted` and `a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted` become proofs without it.
 * What would reverse this: a state per local and site, which would make liveness unnecessary for this question.
 
 ## More Information
