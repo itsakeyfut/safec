@@ -141,8 +141,9 @@ caller cannot have handed it (#303).
 
 Every mutation below was applied on its own to the tree as committed, the whole
 workspace was run with `--no-fail-fast`, and the file was restored. The tests
-named are the ones that failed. The cases are in `crates/safec/tests/cases`
-and every mutation is in `crates/safec-ir/src/memory.rs`.
+named are the ones that failed. The cases are in `crates/safec/tests/cases` and
+every mutation is in the memory check (`crates/safec-ir/src/memory.rs` and
+`memory/`).
 
 **What a load reaches at a call.** `Allocations::read_out` answering nothing
 for a read through one `Deref` fails

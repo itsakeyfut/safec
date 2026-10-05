@@ -39,7 +39,7 @@ drawn inside one goes.
 * Replacing `clang` with `safec` must not change what a program does, which is
   the driver ADR-0037 already applied to a spelling.
 * What the analysis already does at a boundary. Every callee other than `free`
-  and `malloc` is `Callee::Opaque` in `crates/safec-ir/src/memory.rs`, a
+  and `malloc` is `Callee::Opaque` in `crates/safec-ir/src/memory/parts.rs`, a
   function defined in the same translation unit included, so a caller already
   assumes the worst of what a call can reach through its arguments. Review
   found that this is not all a call can reach, and that a hatch needs one

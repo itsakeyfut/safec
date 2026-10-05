@@ -328,9 +328,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
 
 ## More Information
 
-* `Known::pending` and `used_before` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs), and
-  `Builder::enter` in
+* `Known::pending` and `used_before` in the memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/), and `Builder::enter` in
   [`crates/safec/src/lowering.rs`](../../crates/safec/src/lowering.rs).
 * C17 Annex C is the complete list of sequence points; 6.5 p3 is what makes
   everything not on it unsequenced, and 6.5.2.2 p10 is what a call is answered

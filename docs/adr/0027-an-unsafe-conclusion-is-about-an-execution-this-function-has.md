@@ -282,8 +282,9 @@ them. What that costs is in the Consequences below.
 
 * [`docs/safety-model.md`](../safety-model.md), *Safe, Unsafe, Unknown*, which
   this record is the reasoning behind.
-* `Allocations::touching` and `verdict` in `crates/safec-ir/src/memory.rs`, and
-  `Nullness` in `crates/safec-ir/src/nullability.rs`.
+* `Allocations::touching` and `verdict` in the memory check
+  (`crates/safec-ir/src/memory.rs` and `memory/`), and `Nullness` in
+  `crates/safec-ir/src/nullability.rs`.
 * [ADR-0020](./0020-a-free-of-a-may-set-is-a-fact-about-the-set.md), which is the
   other rule about when a free is a proof, and answers a different question: what
   a set of sites says, rather than what an execution is.

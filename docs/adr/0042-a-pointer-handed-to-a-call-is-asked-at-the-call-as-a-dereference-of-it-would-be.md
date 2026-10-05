@@ -257,7 +257,8 @@ free rather than at a read, which is ADR-0041's reason for `SC0406`. A new
 Every mutation below was applied on its own, the whole workspace was run with
 `--no-fail-fast`, and the file was restored. The tests named are the ones that
 failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
-`crates/safec-ir/src/memory.rs` unless it says otherwise.
+the memory check (`crates/safec-ir/src/memory.rs` and `memory/`) unless it says
+otherwise.
 
 * Dropping the call to `handed` from `findings` fails
   `a_freed_pointer_handed_to_a_function_defined_in_the_file`, which is #263's

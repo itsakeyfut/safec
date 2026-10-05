@@ -251,8 +251,9 @@ it rather than none.
 
 ## More Information
 
-* `crates/safec-ir/src/memory.rs`: `Offset`, `Held::offset`, `offset_of`,
-  `interior`, and `reported`, which asks both questions of one call.
+* The memory check, `crates/safec-ir/src/memory.rs` and `memory/`: `Offset`,
+  `Held::offset`, `offset_of`, `interior`, and `reported`, which asks both
+  questions of one call.
 * `crates/safec/src/driver.rs`: `INTERIOR_FREE` and its two rows in
   `memory_finding`.
 * [`docs/diagnostics.md`](../diagnostics.md) for why `SC0404` is a class of

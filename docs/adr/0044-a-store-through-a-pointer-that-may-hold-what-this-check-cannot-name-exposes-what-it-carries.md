@@ -44,7 +44,7 @@ More than ten such programs were found across four review lenses. The closure ea
 
 ### Confirmation
 
-Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. The cases are in `crates/safec/tests/cases`.
+Every mutation below was applied on its own to the memory check (`crates/safec-ir/src/memory.rs` and `memory/`), the whole workspace was run with `--no-fail-fast`, and the file was restored. The cases are in `crates/safec/tests/cases`.
 
 - **Dropping `loaded` from the store's condition** fails `a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores` and `a_read_before_a_store_through_a_pointer_that_may_be_a_load_is_asked_at_a_later_call`, which go silent. It also fails `a_list_built_and_appended_to_in_one_function_is_refused`, which builds.
 - **The output-parameter cases.** Dropping `foreign` from the store's condition, or not setting it in `Known::replaced`, fails each of these, which go silent:

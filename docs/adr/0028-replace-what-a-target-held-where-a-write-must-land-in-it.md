@@ -126,9 +126,10 @@ answers for.
 
 ### Confirmation
 
-Each mutation applied on its own to `crates/safec-ir/src/memory.rs`, the whole
-workspace suite run with `--no-fail-fast`, the file restored from a copy rather
-than from `git`, because the branch had uncommitted work.
+Each mutation applied on its own to the memory check
+(`crates/safec-ir/src/memory.rs` and `memory/`), the whole workspace suite run
+with `--no-fail-fast`, the file restored from a copy rather than from `git`,
+because the branch had uncommitted work.
 
 | Mutation | Named test that fails |
 |---|---|
@@ -257,8 +258,9 @@ as ADR-0018, ADR-0019 and ADR-0020 say of the last three fields added.
 ## More Information
 
 * `Held::writes_elsewhere`, the `Rvalue::Address` arm and the `Deref` arm of
-  `Allocations::element` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+  `Allocations::element` in the memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/).
 * [`docs/diagnostics.md`](../diagnostics.md) carries what a reader of `SC0402`
   is told about a write through a pointer.
 * ADR-0019 has the measurement that made the union right when it was taken, and

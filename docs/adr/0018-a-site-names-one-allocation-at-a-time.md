@@ -90,9 +90,10 @@ what `Reached::Lost` is for.
 
 ### Confirmation
 
-Each mutation below was applied to `crates/safec-ir/src/memory.rs` on its own,
-the whole workspace suite was run with `--no-fail-fast`, and the named test
-failed and nothing else did.
+Each mutation below was applied to the memory check
+(`crates/safec-ir/src/memory.rs` and `memory/`) on its own, the whole workspace
+suite was run with `--no-fail-fast`, and the named test failed and nothing else
+did.
 
 | Mutation | Named test that fails |
 |---|---|
@@ -188,8 +189,10 @@ naming it.
 
 ## More Information
 
-* `Held`, `Known::reached_by` and the reset in `Allocations::terminator` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+* `Held`, `Known::reached_by` and the reset in `Allocations::terminator` in the
+  memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/).
 * [`docs/diagnostics.md`](../diagnostics.md) carries what this means for a
   reader of `SC0401` and `SC0402`.
 * Issue #168 has the measurements taken before the design was chosen.

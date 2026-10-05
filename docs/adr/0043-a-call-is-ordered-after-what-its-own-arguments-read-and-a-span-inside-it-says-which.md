@@ -88,9 +88,10 @@ reach either.
 
 ### Confirmation
 
-Each mutation below was applied on its own to `crates/safec-ir/src/memory.rs`,
-the whole workspace was run with `--no-fail-fast`, and the file was restored.
-The cases are in `crates/safec/tests/cases` unless named otherwise.
+Each mutation below was applied on its own to the memory check
+(`crates/safec-ir/src/memory.rs` and `memory/`), the whole workspace was run
+with `--no-fail-fast`, and the file was restored. The cases are in
+`crates/safec/tests/cases` unless named otherwise.
 
 * Dropping the `inside` test in `used_before` fails
   `a_call_nested_in_an_argument_is_ordered_before_the_call_around_it`,

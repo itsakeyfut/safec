@@ -133,9 +133,9 @@ frontend breaks it and this fifth one costs a suspicion.
 ### Confirmation
 
 Eight cases in `crates/safec/tests/cases` and one hand-built unit in
-`crates/safec-ir/tests/freed.rs`. Nine mutations in
-`crates/safec-ir/src/memory.rs`, each measured against the whole workspace with
-`--no-fail-fast`, each failing named tests and nothing else.
+`crates/safec-ir/tests/freed.rs`. Nine mutations in the memory check
+(`crates/safec-ir/src/memory.rs` and `memory/`), each measured against the whole
+workspace with `--no-fail-fast`, each failing named tests and nothing else.
 
 Dropping the `replaced_by` call fails seven at once:
 `a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds`,

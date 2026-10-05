@@ -48,7 +48,7 @@ A load out of what a parameter points at is outside this rule: the caller stored
 
 ### Confirmation
 
-Every mutation below was applied on its own to `crates/safec-ir/src/memory.rs`, the whole workspace was run with `--no-fail-fast`, and the file was restored. Each list is every test that failed. The cases are in `crates/safec/tests/cases`.
+Every mutation below was applied on its own to the memory check (`crates/safec-ir/src/memory.rs` and `memory/`), the whole workspace was run with `--no-fail-fast`, and the file was restored. Each list is every test that failed. The cases are in `crates/safec/tests/cases`.
 
 **The load.**
 
