@@ -2176,6 +2176,17 @@ cases! {
         // escaped locals included; both are refused.
         a_pointer_handed_by_address_twice_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_by_address_around_another_call_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call that reached an allocation through another local's address,
+        // handed or stored in memory, may have freed it and cannot replace
+        // `a`, so `use2(&a)` is asked. Mutation: drop the call to
+        // `Known::held_out_of_reach`; both build. The in-out idiom through a
+        // copy still builds, because only a holder read after the call
+        // counts. Mutation: have its `live_after` answer `true`; both of the
+        // last two are refused. See ADR-0047.
+        a_pointer_a_call_reached_through_another_locals_address_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_grown_twice_by_address_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_dead_copy_does_not_doubt_a_pointer_grown_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

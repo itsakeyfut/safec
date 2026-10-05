@@ -1353,7 +1353,7 @@ impl Analysis for Allocations<'_> {
             callee,
             arguments,
             destination,
-            then: _,
+            then,
             origin,
         } = terminator
         else {
@@ -1665,7 +1665,9 @@ impl Analysis for Allocations<'_> {
                 // name or as a load, the allocations the memory it was handed
                 // holds however deep, and what an argument read out of memory
                 // may be. Not the locals whose address that memory holds,
-                // which `Known::closure` does not follow (ADR-0047 lists it). `q = *t; release(q);` and `*d = a; release_in(d);` may
+                // which `Known::closure` does not follow; what the call
+                // reaches through one is answered by `held_out_of_reach`,
+                // below. `q = *t; release(q);` and `*d = a; release_in(d);` may
                 // each free `a`'s allocation, and neither can replace `a`, so
                 // a later call by address asks about it. A proved free stays
                 // proved here; only what is named outright lost it above. Not
@@ -1747,6 +1749,17 @@ impl Analysis for Allocations<'_> {
                 // one would need an annotation saying what a callee writes,
                 // and `_Nonnull` is not one.
                 value.replaced(|_| true);
+
+                // **And what it cannot replace keeps what it may have freed.**
+                // The other half of the line above: a local whose address the
+                // call cannot reach still holds what the call reached through
+                // another one, `b = a; release_ref(&b);`, and is asked about
+                // it at the next call by address. Only a local read after
+                // this call counts, and after a call that does not return
+                // nothing is (ADR-0051). See ADR-0047.
+                value.held_out_of_reach(|local| {
+                    then.is_some_and(|then| self.live_in[then.index()][local])
+                });
             }
         }
 

@@ -149,7 +149,8 @@ pub(super) enum SiteState {
     /// Live as far as this check saw, and within reach of code it cannot read:
     /// a local holding it had its address taken, or it was exposed to a call,
     /// or a call reached it only through an address. Nothing that may have
-    /// freed it happened here.
+    /// freed it happened here, or a call may have and could have replaced
+    /// every local still read afterwards that holds it.
     ///
     /// **A doubt everywhere `Unknown` is**, so no report says less for it.
     /// What tells the two apart is the one question a call handed an address

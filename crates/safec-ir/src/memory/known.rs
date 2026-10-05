@@ -906,6 +906,37 @@ impl Known {
         }
     }
 
+    /// A call this check cannot read may have freed what it reached only
+    /// through an address, and cannot have replaced a holder whose address it
+    /// cannot reach: so a site still [`SiteState::Reachable`] that such a
+    /// local holds, and still reads after the call, is `Unknown`.
+    ///
+    /// `b = a; release_ref(&b); use2(&a);` is the program. The call may free
+    /// the allocation through `b` and put a new one there, and cannot put
+    /// anything in `a`, so `use2(&a)` may be handed a dangling pointer. A
+    /// holder whose address has escaped is one the call may have replaced,
+    /// which [`Self::replaced`] says of it, so it leaves the site as it was.
+    ///
+    /// **Only a holder live after the call**, by `live_after`. A copy nothing
+    /// reads again holds the site as well, and counting it refused `b = a;
+    /// grow(&b); grow(&b);` and `b = a; grow(&a); use2(&a);`, which C
+    /// defines. See ADR-0047.
+    pub(super) fn held_out_of_reach(&mut self, live_after: impl Fn(usize) -> bool) {
+        for site in 0..self.state.len() {
+            if self.state[site] != SiteState::Reachable {
+                continue;
+            }
+            let out_of_reach = (0..self.points_to.len()).any(|holder| {
+                !self.escaped[holder]
+                    && live_after(holder)
+                    && self.points_to[holder].sites().any(|held| held == site)
+            });
+            if out_of_reach {
+                self.state[site].may_be_freed();
+            }
+        }
+    }
+
     /// Forget every `realloc` fact naming an old allocation `touched` says
     /// something else may have freed since, so a branch on the result can no
     /// longer give it back as live. See ADR-0039.
