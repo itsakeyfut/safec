@@ -1194,7 +1194,7 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 /// derive `Ord` and should not: its three variants are three answers rather
 /// than three degrees, and `Safe` is not a weaker `Unsafe`. The pairs that
 /// cannot arise say so rather than falling through, because a fallthrough in
-/// this file was once reached by "proved" and by "gave up" at once and
+/// this check was once reached by "proved" and by "gave up" at once and
 /// reported the second as the first.
 fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
     match (standing, new) {
