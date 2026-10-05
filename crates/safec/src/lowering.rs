@@ -2483,8 +2483,9 @@ impl Lowering<'_> {
 ///
 /// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
 /// `quick_exit` (7.22.4.7). The name is believed because 7.1.3 reserves it: a
-/// program that defines one of these at file scope has no behaviour C
-/// defines, and [`Lowering::does_not_return`] reads the definition instead.
+/// program that defines one with external linkage has no behaviour C
+/// defines. [`Lowering::does_not_return`] answers `false` for one defined
+/// here all the same, so its body is what the checks read.
 const DOES_NOT_RETURN: &[&str] = &["abort", "exit", "_Exit", "quick_exit"];
 
 /// Whether an operand is non-zero, as a value.
