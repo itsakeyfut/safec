@@ -21,6 +21,10 @@
 //! failures read as, and `dumps.rs` what `--emit tokens`, `--emit ast` and
 //! `--emit hatches` write. The tests are in `tests.rs`.
 
+mod backend;
+mod dumps;
+mod words;
+
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -41,11 +45,15 @@ use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{FuncId, TranslationUnit};
-use safec_ir::memory::{self};
-use safec_ir::nullability::{self};
+use safec_ir::memory;
+use safec_ir::nullability;
 use safec_ir::print::dump_ir;
 use safec_ir::source::{FileId, FileName, SourceMap};
 use safec_ir::target::Integer;
+
+use backend::{Module, assembled, clang_failure, link_failure, linked, module};
+use dumps::{dump_ast, dump_hatches, dump_tokens};
+use words::{memory_finding, nullability_finding};
 
 /// Everything one run of the compiler produced.
 ///
@@ -1110,9 +1118,3 @@ fn write_failure(path: &Path, error: &io::Error) -> Diagnostic {
 
 #[cfg(test)]
 mod tests;
-mod words;
-use words::{memory_finding, nullability_finding};
-mod backend;
-use backend::{Module, assembled, clang_failure, link_failure, linked, module};
-mod dumps;
-use dumps::{dump_ast, dump_hatches, dump_tokens};
