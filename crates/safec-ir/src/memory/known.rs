@@ -230,12 +230,15 @@ impl Known {
     /// level in, through `&a` or through what this function stored in its own
     /// memory, that are freed or unproven.
     ///
-    /// **Not one unproven through the address handed**, because taking an
-    /// address makes a live allocation `Unknown` (ADR-0017), so asking about
-    /// those doubted `use2(&a)` over every live pointer. A freed one is asked
-    /// whichever way it is reached, and an unproven one reached through this
-    /// function's own memory is, since nothing about the call made it so:
-    /// `*t = a; release(a); use2(t);` was silent. **Never a proof**:
+    /// **Not one only [`SiteState::Reachable`] through the address handed**,
+    /// because taking an address makes a live allocation that (ADR-0017), so
+    /// asking about it doubted `use2(&a)` over every live pointer. One this
+    /// check saw may have been freed, `Unknown`, is asked however it is
+    /// reached: freed on one path, or handed to `release(a)`, and then
+    /// `use2(&a)` was silent (ADR-0047). A freed one is asked whichever way it
+    /// is reached, and a reachable one through this function's own memory is,
+    /// since nothing about the call made it so: `*t = a; release(a); use2(t);`
+    /// was silent. **Never a proof**:
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     pub(super) fn handed_below(&self, local: LocalId) -> Vec<Reached> {
@@ -267,7 +270,8 @@ impl Known {
             .into_iter()
             .filter(|&site| match self.state[site] {
                 SiteState::Freed { .. } => true,
-                SiteState::Unknown => !through_address.contains(&site),
+                SiteState::Unknown => true,
+                SiteState::Reachable => !through_address.contains(&site),
                 SiteState::Live(_) => false,
             })
             .map(Reached::Site)
@@ -737,7 +741,7 @@ impl Known {
                 *fact = None;
             }
         }
-        let gone = !matches!(state[site], SiteState::Live(_));
+        let gone = !matches!(state[site], SiteState::Live(_) | SiteState::Reachable);
         for (other, held) in points_to.iter_mut().enumerate() {
             if other != site {
                 if gone && held.sites[site] {
@@ -832,11 +836,11 @@ impl Known {
         // allocation still live; one already freed stays freed, as no call
         // un-frees one. Making it `Unknown` too forgot the free, so `free(a);
         // use2(&a);` could not be told from a live `a` handed by address. See
-        // ADR-0017.
+        // ADR-0017. And it is `Reachable` rather than `Unknown`, since nothing
+        // here may have freed it yet, which is what a call by address asks.
+        // See ADR-0047.
         for site in self.points_to[local].sites() {
-            if matches!(self.state[site], SiteState::Live(_)) {
-                self.state[site] = SiteState::Unknown;
-            }
+            self.state[site].doubted();
         }
     }
 
@@ -870,15 +874,16 @@ impl Known {
 
     /// Every exposed allocation still live is unproven, because the call being
     /// made may free it. A proved free stays proved: no call un-frees an
-    /// allocation. See ADR-0039.
+    /// allocation. See ADR-0039. Unproven as [`SiteState::Reachable`], since
+    /// the call reaches it only through what was exposed. See ADR-0047.
     pub(super) fn unproved_exposed(&mut self) {
         // A call that may free what is exposed may free an old allocation a
         // `realloc` remembered, so the fact goes too. See ADR-0039.
         let exposed = self.exposed.clone();
         self.forget_reallocs_touching(|site| exposed[site]);
         for (state, &exposed) in self.state.iter_mut().zip(&self.exposed) {
-            if exposed && matches!(state, SiteState::Live(_)) {
-                *state = SiteState::Unknown;
+            if exposed {
+                state.doubted();
             }
         }
     }
