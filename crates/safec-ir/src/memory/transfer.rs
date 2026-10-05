@@ -551,11 +551,9 @@ impl Analysis for Allocations<'_> {
     /// still names on one of them takes its state from the other. See
     /// ADR-0048. The `realloc` branch first, because it reads the local the
     /// branch tested, which is often read nowhere after it: cleared first,
-    /// four `realloc` cases lost their answer, measured.
-    ///
-    /// **Not a local whose address has escaped**, since a pointer may read it
-    /// wherever it is, which [`live_in`] answers for an address taken in this
-    /// function and `escaped` for one that arrived another way.
+    /// three `realloc` cases lost their answer, measured. A local whose
+    /// address was taken is never cleared, since [`live_in`] counts it live
+    /// everywhere: `Rvalue::Address` is the only way an address is taken.
     fn edge(
         &self,
         function: &Function,
@@ -572,7 +570,7 @@ impl Analysis for Allocations<'_> {
         };
         let live = &self.live_in[successor.index()];
         for local in function.locals() {
-            if !live[local.index()] && !value.escaped[local.index()] {
+            if !live[local.index()] {
                 value.clear(local);
             }
         }
