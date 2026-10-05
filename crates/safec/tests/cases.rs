@@ -963,6 +963,11 @@ cases! {
         // is asked. Mutation: have `report_return` ask only where the block
         // wrote the return place; this goes silent.
         the_end_of_a_function_promising_a_nonnull_return_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The block that ends the body writes something, and not the return
+        // place, so it is still the end. Mutation: have `findings` take any
+        // write in the block as the `return`'s; this is told it may return
+        // null at `x = 1` instead.
+        the_end_of_a_body_after_a_statement_is_still_its_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: have the call's destination answer `Unknown` whatever the
         // callee promised, in `Analysis::terminator`; both are doubted.
         a_result_promised_nonnull_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
