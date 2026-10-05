@@ -453,9 +453,10 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
         // A pointer read out of memory and read through in place, `**pp`,
         // which a test of `*pp` does not settle: this check keeps nothing
         // about `*pp`, so the row above would be advice to do what the
-        // program may already do (#333). The test is spelled out, because
-        // `if (q)` on a local just copied from memory is not read as one yet
-        // and following a remedy into the same refusal breaks its promise.
+        // program may already do (#333). A test of the local itself settles
+        // it, `q != 0` or `if (q)` since #334. A test of an assignment,
+        // `if ((q = *pp))`, does not yet, because the branch reads a temporary
+        // the assigned value was copied into (#336).
         (
             Asked::Dereference {
                 through_memory: true,
@@ -465,7 +466,7 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             NULL_DEREFERENCE,
             "this may dereference a null pointer",
             "this check cannot say this is not null",
-            "read each pointer this goes through into a local, and test that local with `!= 0` before reading through it",
+            "read each pointer this goes through into a local, and test that local against null before reading through it",
         ),
         (Asked::Argument { promise: _ }, Conclusion::Unsafe) => (
             NULL_ARGUMENT,

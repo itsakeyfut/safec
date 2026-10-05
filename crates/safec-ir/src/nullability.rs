@@ -325,11 +325,17 @@ impl Nullability<'_> {
 /// Two shapes reach here and the difference is not something a reader of
 /// the C could predict, so both are answered:
 ///
-/// - `if (p)` hands the pointer's own place to the terminator, and no
-///   element of the block writes it. Measured on this compiler's lowering.
+/// - `if (p)` hands the pointer's own place to the terminator. The branch
+///   reads that pointer where it runs, so whatever wrote it before, `int *q
+///   = r; if (q)` included, the refinement is about the value tested, and it
+///   is answered before the walk. Walking to the last write first answered a
+///   copy with nothing, which doubted `if (q)` where `q != 0` was proved
+///   (#334).
 /// - `if (p != 0)` writes the comparison to a temporary and hands a copy of
 ///   that, so the comparison is an element of this block, above the
-///   terminator. Reaching it is what [`Analysis::edge`]'s block is for.
+///   terminator. Reaching it is what [`Analysis::edge`]'s block is for, and
+///   the walk below is for this shape alone. A comparison's result is an
+///   `int`, which is how the two are told apart.
 ///
 /// **A local something below the comparison may have changed is not
 /// refined.** The walk records every local it steps over a write to, and
@@ -341,12 +347,15 @@ impl Nullability<'_> {
 ///
 /// **The refusal is per local rather than positional**, and that is not a
 /// refinement of taste. Stopping the walk at the first write to anything
-/// reaches the second shape above as well: `if (p)` has no comparison to
-/// stop above, so a walk that stops early never gets to the answer at the
-/// end, and `int x = 5; if (p) { *p = x; }` loses the proof that makes
-/// every null test in the language work. Measured: that program is reported
-/// as an unproven dereference under the positional rule and is silent under
-/// this one.
+/// refuses a comparison whose branch is reached past a write to some other
+/// local, which changed nothing the comparison read. This frontend never
+/// lowers a write between a comparison and its branch, so the shape is
+/// another frontend's, and
+/// `a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refinement`
+/// in `crates/safec-ir/tests/nulls.rs` holds it. It used to be argued from
+/// `int x = 5; if (p) { *p = x; }`, which the positional rule did refuse,
+/// and nothing failed when it was applied: no case held that program, and
+/// it no longer reaches the walk at all (#334).
 pub(crate) fn tested_against_null(
     unit: &TranslationUnit,
     function: &Function,
@@ -358,6 +367,13 @@ pub(crate) fn tested_against_null(
     // `Analysis::terminator`, which is a different fact.
     if !condition.projection.is_empty() {
         return None;
+    }
+    // The first shape: the branch tests the pointer itself, so it is refined
+    // whatever wrote it. The type is asked rather than assumed, because a
+    // short-circuited `&&` or `||` branches on an `int` temporary holding a
+    // comparison, which is the second shape and the walk's to read.
+    if pointer_typed(unit, function, condition.local) {
+        return Some((condition.local, Nullness::NonNull));
     }
 
     // Which locals something below the comparison may have changed. A
@@ -447,11 +463,16 @@ pub(crate) fn tested_against_null(
         .filter(|(local, _)| !changed[local.index()]);
     }
 
-    // Nothing in this block wrote it, so the branch tests the place itself.
-    // A block with no elements at all is ordinary: `if (p)` is one, and so
-    // is the arm a short-circuited condition jumps to, which is why the
-    // type is asked rather than assumed.
-    pointer_typed(unit, function, condition.local).then_some((condition.local, Nullness::NonNull))
+    // Nothing in this block wrote a condition that is not a pointer, so there
+    // is no comparison here for this walk to read.
+    //
+    // **Nothing holds this `None`, and nothing can.** Answering such a
+    // condition non-null instead leaves the suite green, because an `int` is
+    // never read through, and the memory check acts on a branch only for a
+    // local holding exactly what a `realloc` returned, which an `int` does
+    // not, so no report moves. It is the answer that is right about the
+    // branch rather than one a test can tell apart.
+    None
 }
 
 /// The local an equality against a null pointer constant names, and what

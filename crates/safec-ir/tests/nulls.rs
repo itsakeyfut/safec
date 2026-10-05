@@ -111,7 +111,7 @@ fn concluded(mut unit: TranslationUnit, function: Function) -> Vec<nullability::
 /// written immediately above the branch that reads it. Measured on the
 /// lowering.
 ///
-/// Mutation: drop the arm in `Nullability::tested` that gives up on a store
+/// Mutation: drop the arm in `nullability::tested_against_null` that gives up on a store
 /// through a projection. The comparison above it is resolved, `p` is refined on
 /// the taken arm, the write through `p` stops being reported, and this fails
 /// with one finding where it expects two.
@@ -199,7 +199,7 @@ fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
 /// corpus, no block whose branch reads a bare local has anything at all
 /// between that local's write and the terminator.
 ///
-/// Mutation: have `Nullability::tested` step over a direct store without
+/// Mutation: have `nullability::tested_against_null` step over a direct store without
 /// recording the local it changed. The comparison above it is resolved and
 /// nothing refuses the answer, `p` is refined to non-null on the taken arm,
 /// the write through it is reported by nobody, and this fails with no findings
@@ -291,7 +291,7 @@ fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
 /// one behaviour is what keeps one test enough; split into two, whichever half
 /// this block does not reach first would be held by nothing.
 ///
-/// Mutation: have `Nullability::tested` step over a storage boundary without
+/// Mutation: have `nullability::tested_against_null` step over a storage boundary without
 /// recording the local it changed. `p` is refined to non-null on the taken
 /// arm, the write through it is reported by nobody, and this fails with no
 /// findings where it expects one.
@@ -359,21 +359,19 @@ fn a_comparison_above_a_storage_boundary_refines_nothing() {
 /// computes into no local, so it cannot have replaced what the comparison read,
 /// and the walk has to go past it rather than give up.
 ///
-/// **This is the only direction the refusal rule can be wrong in that nothing
-/// else here asserts.** Its siblings all assert that a refinement is *not*
-/// made; this one asserts that one still is, which is what a walk that gave up
-/// on everything would take away. That direction has been wrong here once:
-/// stopping the walk at the first write to any local, rather than recording
-/// which local it changed, took the proof out of `int x = 5; if (p) { *p = x; }`
-/// and reported it as an unproven dereference. The three markers are one arm
-/// for the same reason the storage pair is, so this is that arm's whole guard.
+/// **It asserts the direction its siblings do not.** They assert that a
+/// refinement is *not* made; this one and
+/// `a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refinement`
+/// assert that one still is, which is what a walk that gave up on everything
+/// would take away. The three markers are one arm for the same reason the
+/// storage pair is, so this is that arm's whole guard.
 ///
 /// Both arms are written through, so that the assertion is what each arm
 /// concluded rather than a count of nothing. The taken arm has `p` proved not
 /// null and is reported by nobody; the other arm has it proved null and is the
 /// one finding.
 ///
-/// Mutation: have `Nullability::tested` give up at a marker instead of
+/// Mutation: have `nullability::tested_against_null` give up at a marker instead of
 /// stepping over it. Neither arm is refined, both writes are reported as
 /// unproven, and this fails with two findings where it expects one.
 #[test]
@@ -809,6 +807,134 @@ fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
             terminator: Terminator::Return,
         },
     );
+
+    let found = concluded(unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// A write to another local between a comparison and its branch changes
+/// nothing the comparison read, and the arm is refined all the same.
+///
+/// `c = p != 0; x = 1; if (c) { *p = 1; }` is the shape. The walk back from the
+/// branch steps over `x = 1`, records that `x` changed, reaches the comparison,
+/// and refuses it only if the comparison was about `x`, which it is not.
+///
+/// **This compiler's own frontend cannot produce it**, for the reason the
+/// module doc gives: nothing is lowered between a comparison and its branch.
+/// So this is the only guard of the per-local refusal. Its old argument,
+/// `int x = 5; if (p) { *p = x; }`, was held by nothing and no longer reaches
+/// the walk (#334).
+///
+/// Mutation: have `nullability::tested_against_null` stop the walk at a write
+/// to another local, the positional rule. The comparison is never reached,
+/// `p` is not refined, and this fails with one finding where it expects none.
+#[test]
+fn a_write_to_another_local_between_a_comparison_and_its_branch_keeps_the_refinement() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let p = function.parameters().next().expect("a first parameter");
+    let x = function.push_local(int);
+    let condition = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(condition),
+                    value: Rvalue::Binary {
+                        op: BinOp::Ne,
+                        lhs: Operand::Copy(Place::local(p)),
+                        rhs: Operand::Constant(0),
+                    },
+                    origin: Origin::Written(names.at[0]),
+                }),
+                // `x = 1`, below the comparison, about a local it did not read.
+                Element::Assign(Operation {
+                    place: Place::local(x),
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(names.at[1]),
+                }),
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(condition)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// A branch on a pointer tests that pointer, whatever wrote it just above.
+///
+/// `p = q; if (p) { *p = 1; }` is the shape, with `q` a parameter nothing
+/// established. The branch reads `p` where it runs, so the taken arm holds a
+/// pointer that is not null, and the write through it is nothing to say. This
+/// frontend lowers `int *p = q; if (p)` to exactly this block.
+///
+/// Mutation: delete the early return for a pointer condition in
+/// `nullability::tested_against_null`. The walk reaches `p = q`, a copy is
+/// not a comparison it can read, `p` is not refined, and this fails with one
+/// finding where it expects none (#334).
+#[test]
+fn a_pointer_condition_written_just_above_its_branch_is_refined() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let q = function.parameters().next().expect("a first parameter");
+    let p = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![Element::Assign(Operation {
+                place: Place::local(p),
+                value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                origin: Origin::Written(names.at[0]),
+            })],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(p)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[1]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(p, names.at[2])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
 
     let found = concluded(unit, function);
 

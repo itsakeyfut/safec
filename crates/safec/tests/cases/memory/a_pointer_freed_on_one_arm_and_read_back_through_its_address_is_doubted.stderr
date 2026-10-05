@@ -27,4 +27,4 @@ error[SC0403]: this may dereference a null pointer
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: read each pointer this goes through into a local, and test that local with `!= 0` before reading through it
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
