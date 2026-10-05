@@ -421,7 +421,7 @@ fn a_call_that_returns_nothing_stores_nothing() {
                 callee,
                 arguments: Vec::new(),
                 destination: None,
-                then: after,
+                then: Some(after),
                 origin: Origin::Written(at),
             },
         },

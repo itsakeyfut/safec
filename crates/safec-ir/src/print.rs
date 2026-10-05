@@ -468,12 +468,15 @@ fn dump_terminator(
             then,
             origin: _,
         } => {
-            write!(
-                out,
-                " {:?} {:?}",
-                quoted(sources, unit.function(*callee).name),
-                block_name(then.index())
-            )
+            write!(out, " {:?}", quoted(sources, unit.function(*callee).name))
+                .expect("writing to a string cannot fail");
+            // A call with no continuation names no block and says why, so the
+            // artifact tells a call that does not return from one whose block
+            // was left out. See ADR-0051.
+            match then {
+                Some(then) => write!(out, " {:?}", block_name(then.index())),
+                None => write!(out, " noreturn"),
+            }
             .expect("writing to a string cannot fail");
             out.push('\n');
 
@@ -671,7 +674,7 @@ mod tests {
                 callee,
                 arguments: Vec::new(),
                 destination: None,
-                then: after,
+                then: Some(after),
                 origin: Origin::Written(at),
             },
         });

@@ -326,7 +326,7 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 }
 
                 frames[current].destination = destination;
-                frames[current].resume = Some(then);
+                frames[current].resume = then;
 
                 if frames.len() >= MAX_FRAMES {
                     return Err(
@@ -382,7 +382,15 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                     }
                 }
 
-                frames[below].block = frames[below].resume.expect("a caller resumes somewhere");
+                // A call with no continuation is one the IR says does not
+                // return (ADR-0051), and nothing C compiles makes such a
+                // callee come back: the lowering gives one none only for a
+                // library function this unit does not define, and the
+                // interpreter cannot enter one of those.
+                let Some(resume) = frames[below].resume else {
+                    return Err(Trap::new("a call the IR says does not return came back"));
+                };
+                frames[below].block = resume;
             }
             // ADR-0010 put this in the IR before anything produced one, and
             // nothing does. An interpreter that guessed what it means would be
@@ -1068,7 +1076,7 @@ mod tests {
                     callee,
                     arguments: Vec::new(),
                     destination: None,
-                    then: after,
+                    then: Some(after),
                     origin: Origin::Written(at),
                 },
             },

@@ -705,8 +705,10 @@ pub enum Terminator {
         /// that reads a write as an initialisation would then see one the
         /// source never asked for.
         destination: Option<Place>,
-        /// Where control goes when it returns normally.
-        then: BlockId,
+        /// Where control goes when it returns normally, or `None` where the
+        /// callee does not return, which leaves the call with no edge out of
+        /// it. See ADR-0051.
+        then: Option<BlockId>,
         /// Where this call is, so that a diagnostic can point at it.
         ///
         /// One of the two terminators that carry one, and they are the two a
@@ -778,13 +780,15 @@ impl Terminator {
                 otherwise,
                 origin: _,
             } => out.extend([*then, *otherwise]),
+            // A call that does not return has no edge, so what follows it is
+            // reached by no execution. See ADR-0051.
             Self::Call {
                 callee: _,
                 arguments: _,
                 destination: _,
                 then,
                 origin: _,
-            } => out.push(*then),
+            } => out.extend(*then),
             Self::Return => {}
         }
     }

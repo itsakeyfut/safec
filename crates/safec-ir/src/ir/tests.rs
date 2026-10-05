@@ -215,6 +215,9 @@ fn an_edge_no_statement_produced_can_be_built() {
 /// compiling with `error[E0004]`, and so does every other walk over one,
 /// which is what ADR-0010 is for. Mutation: have the `Branch` arm push
 /// only `then`. This fails.
+///
+/// A call that does not return goes nowhere (ADR-0051). Mutation: have the
+/// `Call` arm push `BlockId(0)` where `then` is `None`. This fails.
 #[test]
 fn every_terminator_says_where_control_can_go() {
     let (_sources, at) = spans();
@@ -237,10 +240,20 @@ fn every_terminator_says_where_control_can_go() {
                 callee: FuncId(0),
                 arguments: Vec::new(),
                 destination: Some(Place::local(LocalId(0))),
-                then: two,
+                then: Some(two),
                 origin: Origin::Written(at),
             },
             vec![two],
+        ),
+        (
+            Terminator::Call {
+                callee: FuncId(0),
+                arguments: Vec::new(),
+                destination: None,
+                then: None,
+                origin: Origin::Written(at),
+            },
+            Vec::new(),
         ),
         (Terminator::Return, Vec::new()),
         (Terminator::Abnormal { to: one }, vec![one]),
@@ -529,7 +542,7 @@ fn a_call_says_where_it_is_and_may_write_nowhere() {
             callee: free,
             arguments: vec![Operand::Copy(Place::local(p))],
             destination: None,
-            then: after,
+            then: Some(after),
             origin: Origin::Written(at),
         },
     });

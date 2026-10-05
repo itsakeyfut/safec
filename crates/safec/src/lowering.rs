@@ -1973,7 +1973,7 @@ impl Lowering<'_> {
                     callee: called,
                     arguments,
                     destination: Some(Place::local(into)),
-                    then,
+                    then: Some(then),
                     origin: Origin::Written(span),
                 });
                 builder.switch(then);
