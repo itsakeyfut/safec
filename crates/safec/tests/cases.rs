@@ -1446,6 +1446,23 @@ cases! {
         // freed.
         a_live_slot_of_a_table_with_a_freed_one_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_stored_again_after_what_it_held_was_freed_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer copied a byte at a time through `char`, which C17 6.5 p7
+        // defines, is the pointer: a byte read out of memory is a load and
+        // carries what was stored where it was read from. See ADR-0046, whose
+        // Confirmation names the mutation each of these fails under.
+        //
+        // Reported, copied into a table, into a local whose address escaped,
+        // and through a `char` temporary. Mutation: drop the byte from
+        // `read_through`'s `loaded`; all three go silent.
+        a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Built, which is what keeps the byte out of `may_be_pointer`: a
+        // character handed to a call this check cannot read is not everything
+        // stored anywhere. Mutation: answer `true` for `Ty::Char` there; both
+        // are refused at the read of the table.
+        a_character_handed_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_string_copied_a_byte_at_a_time_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "returns" => {

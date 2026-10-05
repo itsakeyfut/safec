@@ -1,0 +1,273 @@
+Target "x86_64-pc-windows-msvc"
+Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:2:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter
+Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int *"
+  Local "_11" "void *"
+  Local "_12" "void *"
+  Local "_13" "char *"
+  Local "_14" "char *"
+  Local "_15" "int"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "char"
+  Local "_20" "char *"
+  Local "_21" "char *"
+  Local "_22" "char *"
+  Local "_23" "char *"
+  Local "_24" "int"
+  Local "_25" "int"
+  Local "_26" "void"
+  Block "bb0" entry
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:5:17 generated
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:5:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:5:17 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:6:9 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:9:19 generated
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:9:19 "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:9:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:9:19 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:10:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:10:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:10:9 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:11:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:13:14 generated
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:13:14 "malloc" "bb9"
+      Destination "_8"
+      Constant 4
+  Block "bb9"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:13:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:13:14 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:14:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:14:9 "bb10" "bb11"
+      Copy "_9"
+  Block "bb10"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:14:9 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:15:16 generated
+    Return
+  Block "bb11"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:14:9 generated
+    Goto "bb12"
+  Block "bb12"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:17:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:17:5 written
+      Destination "_10"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:17:5 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:18:11 written
+      Destination "_11"
+      Use
+        Copy "_4"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:18:16 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:19:11 written
+      Destination "_12"
+      Use
+        Copy "_1"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:19:16 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:20:11 written
+      Destination "_13"
+      Use
+        Copy "_11"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:20:15 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:21:11 written
+      Destination "_14"
+      Use
+        Copy "_12"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:21:15 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:22:9 written
+      Destination "_15"
+      Use
+        Constant 0
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:22:13 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:23:12 written
+      Destination "_16"
+      Binary "Lt"
+        Copy "_15"
+        Constant 8
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:23:12 "bb14" "bb15"
+      Copy "_16"
+  Block "bb14"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:23:12 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:24:13 written
+      Destination "_17"
+      Binary "Ne"
+        Copy "_13"
+        Constant 0
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:24:13 "bb16" "bb17"
+      Copy "_17"
+  Block "bb15"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:23:12 generated
+    ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:33:5 generated
+    Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:33:5 "release" "bb22"
+      Destination "_26"
+      Copy "_4"
+        Deref
+  Block "bb16"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:24:13 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:25:17 written
+      Destination "_18"
+      Binary "Ne"
+        Copy "_14"
+        Constant 0
+    Branch a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:25:17 "bb19" "bb20"
+      Copy "_18"
+  Block "bb17"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:24:13 generated
+    Goto "bb18"
+  Block "bb18"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:29:13 written
+      Destination "_20"
+      Binary "Add"
+        Copy "_13"
+        Constant 1
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:29:9 written
+      Destination "_13"
+      Use
+        Copy "_20"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:29:9 written
+      Destination "_21"
+      Use
+        Copy "_13"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:29:9 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:30:13 written
+      Destination "_22"
+      Binary "Add"
+        Copy "_14"
+        Constant 1
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:30:9 written
+      Destination "_14"
+      Use
+        Copy "_22"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:30:9 written
+      Destination "_23"
+      Use
+        Copy "_14"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:30:9 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:31:13 written
+      Destination "_24"
+      Binary "Add"
+        Copy "_15"
+        Constant 1
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:31:9 written
+      Destination "_15"
+      Use
+        Copy "_24"
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:31:9 written
+      Destination "_25"
+      Use
+        Copy "_15"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:31:9 generated
+    Goto "bb13"
+  Block "bb19"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:25:17 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:26:17 written
+      Destination "_13"
+        Deref
+      Use
+        Copy "_14"
+          Deref
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:26:17 written
+      Destination "_19"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:26:17 generated
+    Goto "bb21"
+  Block "bb20"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:25:17 generated
+    Goto "bb21"
+  Block "bb21"
+    Goto "bb18"
+  Block "bb22"
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:33:5 generated
+    Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:34:5 written
+      Destination "_0"
+      Use
+        Copy "_7"
+          Deref
+    Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported.c:34:12 generated
+    Return
