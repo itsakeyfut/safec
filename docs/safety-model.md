@@ -164,7 +164,8 @@ Level 5
 
 This allows incremental adoption.
 
-A level says **which checks run**, and nothing else. It does not decide how
+At levels 1 to 4, a level says **which checks run**, and nothing else. It does
+not decide how
 loudly a check speaks: a result the analysis proved is an error at every level,
 because there is no safety argument for knowing something is wrong and saying it
 quietly. What varies is the result the analysis could *not* prove, and that is
@@ -176,6 +177,21 @@ conclusion to promote. See [Safe, Unsafe, Unknown](#safe-unsafe-unknown) above,
 
 Level 5 is defined as leaving nothing `Unknown`, so `--allow-unknown` is refused
 beside `--safety strict` rather than ignored.
+
+**Level 5 is the other kind of safety: it restricts what may be written.**
+Levels 1 to 4 accept any C the frontend accepts, so an existing program adopts
+the checks without being rewritten first. Some programs cannot be proved as they
+are written, so leaving nothing `Unknown` takes a subset: level 5 does not accept
+some of what C allows, and a construct outside it is reported as a diagnostic
+about the program's text, with a code of its own and a remedy saying how to write
+it inside, rather than as a conclusion it could not prove. The level is chosen
+per translation unit, and what a declaration from lower-level code does not say
+is answered conservatively. What level 5 restricts is a list, and an entry is
+added by the phase whose check needs it, with a record of its own; the first is
+null, under [Annotations](#annotations) below.
+[ADR-0049](adr/0049-level-5-restricts-what-may-be-written-and-levels-1-to-4-do-not.md)
+has the reasoning and the options it rejected. None of it is implemented yet;
+`--safety strict` is wired in Phase 8.
 
 **A level can be asked for and not delivered**, and two independent things cause
 it: the checks a level selects may not exist yet, which is true of every level
@@ -208,7 +224,9 @@ is level 1 and rejects what it cannot prove, because `--safety` defaults to
 `--allow-unknown`, which reports the same conclusions and lets the build
 through.
 
-The exact safety-level design is intentionally undecided and should be explored during development.
+What is decided is the two kinds and the first restriction. Which restrictions
+follow, and whether levels can be mixed inside one translation unit, are decided
+as the phases that need them are built.
 
 ## Annotations
 
@@ -265,6 +283,16 @@ has the reasoning and the options it rejected, and
 [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read) says where it is read and
 where it is refused. It says nothing about the other four questions, which wait
 for the phases that ask them.
+
+**At level 5 the default turns over.** A pointer is not null unless it is written
+`_Nullable`, the other nullability specifier `clang` accepts, and giving a
+pointer that is not `_Nullable` a value that may be null is a level-5
+diagnostic. A pointer from a
+declaration not written at level 5 that says neither is `_Nullable`, since
+believing what lower-level code never said is how a null would be dereferenced
+in silence. Below level 5, `_Nullable` restricts nothing.
+[ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)
+has the reasoning; it is not implemented yet.
 
 The desired migration model is:
 
