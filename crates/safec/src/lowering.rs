@@ -2496,10 +2496,13 @@ impl Lowering<'_> {
     }
 }
 
-/// The library functions C says do not return to their caller.
+/// Four of the library functions C says do not return to their caller.
 ///
 /// `abort` (C17 7.22.4.1), `exit` (7.22.4.4), `_Exit` (7.22.4.5) and
-/// `quick_exit` (7.22.4.7). The name is believed because 7.1.3 reserves it: a
+/// `quick_exit` (7.22.4.7). `longjmp` (7.13.2.1) and `thrd_exit` (7.26.5.5)
+/// do not return either: the first takes a `jmp_buf`, which this frontend
+/// cannot declare, and the second belongs to the threads that
+/// `docs/roadmap.md` places in Phase 8. The name is believed because 7.1.3 reserves it: a
 /// program that defines one with external linkage has no behaviour C
 /// defines. [`Lowering::does_not_return`] answers `false` for one defined
 /// here all the same, so its body is what the checks read.

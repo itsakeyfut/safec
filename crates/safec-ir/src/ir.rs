@@ -768,9 +768,11 @@ impl Terminator {
     /// The fields are written out too, and `..` is deliberately not used. A
     /// second edge on a kind that already exists is the likelier growth than a
     /// new kind: an unwinding call keeps `then` and gains somewhere to go when
-    /// the callee does not return normally. Spelled this way that field is
-    /// `error[E0027]` here, and spelled `..` it would be silently dropped from
-    /// the edge set while every walk kept compiling.
+    /// the callee unwinds. Spelled this way that field is `error[E0027]` here,
+    /// and spelled `..` it would be silently dropped from the edge set while
+    /// every walk kept compiling. Such an edge would be index 1 after a `then`
+    /// and index 0 where there is none (ADR-0051), so an analysis reading it
+    /// would have to match `then` as well as the kind.
     pub fn successors(&self, out: &mut Vec<BlockId>) {
         match self {
             Self::Goto(to) | Self::Abnormal { to } => out.push(*to),
