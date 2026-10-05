@@ -1,0 +1,20 @@
+Target "x86_64-pc-windows-msvc"
+Function code_after_abort_is_not_asked.c:1:6 "abort" declared
+  Local "_0" "void" return
+Function code_after_abort_is_not_asked.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated code_after_abort_is_not_asked.c:4:5 generated
+    Call code_after_abort_is_not_asked.c:4:5 "abort" noreturn
+      Destination "_2"
+  Block "bb1"
+    Sequenced code_after_abort_is_not_asked.c:4:5 generated
+    Operation code_after_abort_is_not_asked.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced code_after_abort_is_not_asked.c:5:12 generated
+    Return

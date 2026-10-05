@@ -775,6 +775,13 @@ cases! {
         code_after_an_if_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         code_under_an_if_on_zero_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_zero_is_never_entered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Code after a call that does not return is reached by nothing, and a
+        // function defined here is read rather than believed by its name
+        // (ADR-0051). Mutation: have the lowering give every call its
+        // continuation; the first is reported. Mutation: have
+        // `Lowering::does_not_return` ignore `defined`; the second goes silent.
+        code_after_abort_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        code_after_a_function_defined_here_named_abort_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and
@@ -1002,6 +1009,13 @@ cases! {
         // second is.
         a_for_loop_on_a_constant_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call to a function C says does not return has no edge out of it,
+        // so the end after it is not reached (ADR-0051). Mutation: have the
+        // lowering give every call its continuation; both are told they may
+        // reach the end. Mutation: drop any one name from `DOES_NOT_RETURN`;
+        // the second is, at that function.
+        a_function_that_ends_in_abort_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        each_function_that_cannot_return_ends_a_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: have the call's destination answer `Unknown` whatever the
         // callee promised, in `Analysis::terminator`; both are doubted.
         a_result_promised_nonnull_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2404,6 +2418,11 @@ cases! {
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A block ending in a call that does not return ends in `unreachable`,
+        // and `tests/llvm.rs` hands it to `clang`. Mutation: have `emit.rs`'s
+        // `call` write nothing for no continuation; this fails, and so does
+        // `tests/llvm.rs`, since the block is left with no terminator.
+        llvm_ir_of_a_call_that_does_not_return: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_pointers_branches_and_a_loop: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         the_mvp_becomes_llvm_ir: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
     }

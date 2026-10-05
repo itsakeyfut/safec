@@ -389,6 +389,22 @@ without a `return` where it wrote one.
 `a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end` in
 `crates/safec-ir/tests/nulls.rs` builds that shape by hand.
 
+**An eighth arrived with**
+[ADR-0051](adr/0051-a-call-that-does-not-return-has-no-edge-out-of-it.md).
+A `Terminator::Call` whose `then` is `None` has no edge out of it, so every
+analysis reads what follows it as reached by no execution, and **a call is
+given no continuation only where its callee cannot return**. The C frontend
+gives none to a call of `abort`, `exit`, `_Exit` or `quick_exit` that this
+translation unit does not define, and keeps one for every other call.
+
+**The two ways to break it fail in opposite directions.** A call given no
+continuation that does return hides the code after it from every check, which
+is a silence: `code_after_a_function_defined_here_named_abort_is_asked` in
+`crates/safec/tests/cases` holds that a definition here keeps its edge. A call
+given a continuation it never takes keeps code no execution reaches in the
+graph, which is a false report, and is what a call to a function of the
+program's own that never returns still costs.
+
 The testable half is smaller and just as useful: **an analysis should be
 runnable over IR built by hand in a test, with no frontend present.** If that
 test can be written, the IR is frontend-independent by construction, and the

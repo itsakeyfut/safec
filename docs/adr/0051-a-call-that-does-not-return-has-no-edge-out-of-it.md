@@ -35,7 +35,13 @@ What decides it is the name, for now: a call is made with no continuation when i
 
 ### Confirmation
 
-Nothing holds this yet: [#341](https://github.com/itsakeyfut/safec/issues/341) implements it and is to name the cases that hold the edge being dropped, the four names, and a definition here keeping its edge, and this section is to be rewritten then.
+Every reader of a call's continuation is `error[E0308]` until it answers for `None`, which is how the interpreter, the printer and the backend came to say what they do without one. The cases are in `crates/safec/tests/cases`, and the mutations in `crates/safec/src/lowering.rs` unless named.
+
+- The lowering giving every call its continuation fails `a_function_that_ends_in_abort_does_not_reach_the_end`, `each_function_that_cannot_return_ends_a_body` and `code_after_abort_is_not_asked`, which are refused.
+- Dropping any one name from `DOES_NOT_RETURN` fails `each_function_that_cannot_return_ends_a_body`, at that name's function.
+- `Lowering::does_not_return` ignoring `defined` fails `code_after_a_function_defined_here_named_abort_is_asked`, which goes silent.
+- `Terminator::successors` pushing a block for `None` fails `every_terminator_says_where_control_can_go` in `crates/safec-ir/src/ir/tests.rs`.
+- The backend writing nothing after a call with no continuation fails `llvm_ir_of_a_call_that_does_not_return` and, where `clang` is present, `tests/llvm.rs`, which hands it the module.
 
 ### Consequences
 
