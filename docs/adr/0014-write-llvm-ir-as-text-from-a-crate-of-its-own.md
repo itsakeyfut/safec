@@ -123,7 +123,7 @@ widening it and then re-blessing the corpus leaves all 94 cases green and that
 test still failing.
 
 That the backend can be reached with no frontend in the graph is held by the
-fifteen hand-built tests in `crates/safec-llvm/src/emit.rs`, of which
+fifteen hand-built tests in `crates/safec-llvm/src/emit/tests.rs`, of which
 `a_unit_built_by_hand_becomes_a_module` is the whole module written out byte for
 byte. `cargo tree -p safec-llvm` prints two lines, which is the same claim from
 the other side.
