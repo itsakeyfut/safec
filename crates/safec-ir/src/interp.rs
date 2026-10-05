@@ -1086,6 +1086,51 @@ mod tests {
         assert_eq!(run(&unit, id, &[]), Ok(Value::Int(7)));
     }
 
+    /// A callee that comes back to a call the IR says does not return stops
+    /// the run.
+    ///
+    /// The lowering gives a call no continuation only for a library function
+    /// this unit does not define, which the interpreter cannot enter, so this
+    /// shape only reaches it from a hand-built unit. See ADR-0051.
+    ///
+    /// Mutation: have the return path `expect` a block to resume at, as it did
+    /// before a call could have none. The run panics and this fails.
+    #[test]
+    fn a_callee_that_comes_back_to_a_call_that_does_not_return_stops_the_run() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "void nothing(void);\n");
+        let at = Span::new(file, 5, 12);
+
+        let mut unit = TranslationUnit::new(a_target());
+        let int = unit.push_type(Ty::Int);
+        let void = unit.push_type(Ty::Void);
+
+        let mut callee = Function::new(at, void, []);
+        callee.push_block(Block {
+            elements: Vec::new(),
+            terminator: Terminator::Return,
+        });
+        let callee = unit.push_function(callee);
+
+        let mut caller = Function::new(at, int, []);
+        caller.push_block(Block {
+            elements: Vec::new(),
+            terminator: Terminator::Call {
+                callee,
+                arguments: Vec::new(),
+                destination: None,
+                then: None,
+                origin: Origin::Written(at),
+            },
+        });
+        let id = unit.push_function(caller);
+
+        let Err(trap) = run(&unit, id, &[]) else {
+            panic!("a call with no continuation has nowhere to come back to");
+        };
+        assert!(trap.why.contains("does not return"), "{trap:?}");
+    }
+
     /// A projection this cannot follow stops the run.
     ///
     /// Nothing builds a `Projection::Index`: an array is a type the lowering
