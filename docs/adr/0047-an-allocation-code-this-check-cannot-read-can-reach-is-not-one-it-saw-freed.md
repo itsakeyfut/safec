@@ -47,9 +47,10 @@ What the chosen option still does not ask, each of which builds on `main` as wel
 The cases are in `crates/safec/tests/cases`, and every mutation is in `crates/safec-ir/src/memory/`.
 
 - `error[E0004]` at every `match` on `SiteState` if a variant is added, which is how every reader was made to answer `Reachable`.
-- `handed_below` exempting `Unknown` through the address again fails `a_pointer_freed_on_one_path_and_handed_by_address_is_asked`, `a_pointer_whose_address_was_taken_before_a_free_on_one_path_is_asked` and `a_pointer_handed_to_a_call_and_then_by_address_is_asked`, which lose their `SC0407`. The second is the two events in the other order, since a rule about two events is held only in the order a case writes them.
-- The join giving `Reachable` for a freed side fails the first two; an opaque call writing `Reachable` on what it is handed by value fails the third.
-- Writing `Unknown` wherever an address or an exposure reaches, the rejected option, fails `a_pointer_handed_by_address_twice_builds` and `a_pointer_handed_by_address_around_another_call_builds`, which are refused.
+- `handed_below` exempting `Unknown` through the address again fails `a_pointer_freed_on_one_path_and_handed_by_address_is_asked`, `a_pointer_whose_address_was_taken_before_a_free_on_one_path_is_asked`, `a_pointer_handed_to_a_call_and_then_by_address_is_asked` and `a_may_set_freed_then_written_through_an_alias`, which lose their `SC0407`. The second is the two events in the other order, since a rule about two events is held only in the order a case writes them; this mutation is the only one of the four it fails under, since there the free is of an escaped local, which writes `Unknown` on its arm before any join.
+- The join giving `Reachable` for a freed side fails `a_pointer_freed_on_one_path_and_handed_by_address_is_asked`, and seventeen other cases whose doubt rests on the same join.
+- An opaque call writing `Reachable` on what it is handed by value fails `a_pointer_handed_to_a_call_and_then_by_address_is_asked`, beside two cases about a call between two frees.
+- Every producer but an address taken writing `Unknown`, which is the rejected option, fails `a_pointer_handed_by_address_twice_builds` and `a_pointer_handed_by_address_around_another_call_builds` and nothing else, which are refused.
 
 ### Consequences
 
