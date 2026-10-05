@@ -2136,9 +2136,10 @@ impl Lowering<'_> {
             .expect("a place this lowering built has a type");
 
         // Written out rather than spelled `matches!`, for the reason
-        // `memory.rs::Allocations::is_pointer` gives: a kind of type nobody has
-        // added yet is not a number, and `error[E0004]` here is what asks a
-        // fourth kind whether an operation on it happens at its own type.
+        // `memory/transfer.rs::Allocations::is_pointer` gives: a kind of type
+        // nobody has added yet is not a number, and `error[E0004]` here is what
+        // asks a fourth kind whether an operation on it happens at its own
+        // type.
         match self.unit.ty(ty) {
             Ty::Pointer(_) => builder.function.push_local(ty),
             Ty::Int | Ty::Char | Ty::Void => {

@@ -129,8 +129,9 @@ rule as an offset that may be zero, and is followed.
 
 ### Confirmation
 
-Each mutation was applied to `crates/safec-ir/src/memory.rs` on its own, the
-whole workspace suite run with `--no-fail-fast`, and the file restored.
+Each mutation was applied to the memory check (`crates/safec-ir/src/memory.rs`
+and `memory/`) on its own, the whole workspace suite run with `--no-fail-fast`,
+and the file restored.
 
 | Mutation | Named test that fails |
 |---|---|
@@ -247,8 +248,9 @@ this method and what ADR-0018 says about the last field added.
 ## More Information
 
 * `Held::writes_to`, `Known::written_through` and the `Deref` arm of
-  `Allocations::element` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+  `Allocations::element` in the memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/).
 * [`docs/diagnostics.md`](../diagnostics.md) carries which half of the `SC0402`
   boundary this moved and which half stayed.
 * Issue #162 has the withdrawn implementation and its measurements.

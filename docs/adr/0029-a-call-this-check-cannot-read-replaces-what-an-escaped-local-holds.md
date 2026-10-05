@@ -208,4 +208,4 @@ case alone.
   which this does not close: telling a write into an `int` apart from a write
   into a pointer needs #143.
 * `Known::replaced` and the `Callee::Frees` arm of `Allocations::terminator` in
-  `crates/safec-ir/src/memory.rs`.
+  the memory check (`crates/safec-ir/src/memory.rs` and `memory/`).

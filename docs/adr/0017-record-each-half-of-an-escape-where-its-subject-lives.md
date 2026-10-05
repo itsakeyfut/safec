@@ -99,7 +99,7 @@ local that shares the allocation, because a report about the escaped local
 itself now stands on `reached_by` whatever the sites say, and would not notice
 the site marking going.
 
-| Mutation in `crates/safec-ir/src/memory.rs` | Named test that fails |
+| Mutation in the memory check (`crates/safec-ir/src/memory.rs` and `memory/`) | Named test that fails |
 |---|---|
 | `reached_by` answers `Reached::Lost` for an escaped local whose set is empty | `an_escaped_local_that_reaches_no_site_at_all`, which frees nothing and is silent. It replaced an earlier case that wrote through the alias, which [ADR-0019](./0019-follow-a-write-through-a-pointer-only-where-it-lands.md) made this check follow, so the local stopped reaching no site |
 | `reached_by` answers an escaped local's sites as `Reached::Lost` instead of listing them | `a_free_through_an_escaped_local_is_seen_by_a_sharer`, whose proved double free drops to two suspicions |
@@ -176,7 +176,7 @@ in `crates/safec/tests/cases.rs`, per
 ## More Information
 
 * `Known::reached_by`, `Known::unproved` and `Known::settle` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+  [`crates/safec-ir/src/memory/known.rs`](../../crates/safec-ir/src/memory/known.rs).
 * [`docs/diagnostics.md`](../diagnostics.md) records what this means for a
   reader of `SC0402`, which is where a user meets it.
 * [ADR-0016](./0016-an-analysis-is-a-trait-and-an-unreached-block-has-no-value.md)

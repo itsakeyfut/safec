@@ -267,9 +267,10 @@ it is a proof about a pointer the write may have replaced.
 
 ## More Information
 
-* `Held::joined` and `Held::accumulated` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs), and
-  the `Deref` arm of `Allocations::element` beside them.
+* `Held::joined` and `Held::accumulated` in the memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/), and the `Deref` arm of
+  `Allocations::element`.
 * ADR-0020 is what put a proof in this struct; ADR-0018 is what the struct holds
   and why; ADR-0017 is the escape answer the unguarded line rests on;
   [ADR-0030](./0030-a-pointer-operand-decides-what-pointer-arithmetic-reaches.md)

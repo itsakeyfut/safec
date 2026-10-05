@@ -1748,9 +1748,9 @@ fn freed_after(
 /// it points and a constant beside it proves nothing. Only `+` and `-` move a
 /// pointer by a distance this check can read. See ADR-0036.
 ///
-/// Mutation: in `memory.rs::offset_of`, accept any operator beside a non-zero
-/// constant. The free becomes `Conclusion::Unsafe` and this fails on that
-/// field.
+/// Mutation: in `memory/built.rs::offset_of`, accept any operator beside a
+/// non-zero constant. The free becomes `Conclusion::Unsafe` and this fails on
+/// that field.
 #[test]
 fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
     let found = freed_after(|to, p, at, then| {
@@ -1780,9 +1780,9 @@ fn a_pointer_scaled_by_a_constant_is_not_proved_to_be_off_the_start() {
 /// can see, where assuming the
 /// constant moved the pointer would be a false proof. See ADR-0036.
 ///
-/// Mutation: in `memory.rs::offset_of`, answer `true` for every constant rather
-/// than reading it. The free becomes `Conclusion::Unsafe` and this fails on
-/// that field.
+/// Mutation: in `memory/built.rs::offset_of`, answer `true` for every constant
+/// rather than reading it. The free becomes `Conclusion::Unsafe` and this fails
+/// on that field.
 #[test]
 fn a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start() {
     let found = freed_after(|to, p, at, then| stepped_by(to, p, 0, at, then));
@@ -1800,9 +1800,9 @@ fn a_pointer_plus_a_literal_zero_is_not_proved_to_be_off_the_start() {
 /// from a pointer, says nothing about where it points. `+` is the
 /// operator either side of which the pointer may stand. See ADR-0036.
 ///
-/// Mutation: in `memory.rs::offset_of`, let `-` take its constant on either
-/// side, the way `+` does. The free becomes `Conclusion::Unsafe` and this
-/// fails on that field.
+/// Mutation: in `memory/built.rs::offset_of`, let `-` take its constant on
+/// either side, the way `+` does. The free becomes `Conclusion::Unsafe` and
+/// this fails on that field.
 #[test]
 fn a_pointer_subtracted_from_a_constant_is_not_proved_to_be_off_the_start() {
     let found = freed_after(|to, p, at, then| {
@@ -2389,7 +2389,7 @@ fn a_read_of_a_site_handed_to_a_second_allocation_is_not_carried_to_its_free() {
 /// Nothing says the read is behind the free, so it is carried to it and
 /// reported, which is the direction ADR-0043 chose for this mistake.
 ///
-/// Mutation: let `memory.rs::inside` answer `true` for an equal span, by
+/// Mutation: let `memory/report.rs::inside` answer `true` for an equal span, by
 /// dropping its `inner != outer`. The read is skipped as if it were an
 /// argument, nothing is reported, and this fails.
 #[test]
@@ -2435,9 +2435,9 @@ fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
 /// after the call and is never pending when it is asked. Nothing orders the
 /// read below before the free, so it is carried to it and reported.
 ///
-/// Mutation: drop `inner.end() <= outer.end()` from `memory.rs::inside`. The
-/// read counts as inside the free, is skipped, nothing is reported, and this
-/// fails. Nothing else in the workspace fails, which is why this exists.
+/// Mutation: drop `inner.end() <= outer.end()` from `memory/report.rs::inside`.
+/// The read counts as inside the free, is skipped, nothing is reported, and
+/// this fails. Nothing else in the workspace fails, which is why this exists.
 #[test]
 fn a_read_reaching_past_a_later_free_is_still_carried_to_it() {
     let (sources, names) = sources();

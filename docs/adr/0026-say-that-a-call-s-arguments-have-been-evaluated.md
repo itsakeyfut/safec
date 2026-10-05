@@ -129,7 +129,7 @@ kind for the same reason.
 
 Three mutations, each measured, each failing named cases and nothing else:
 
-* The arm in `memory.rs` that reads the element doing nothing:
+* The arm in `memory/transfer.rs` that reads the element doing nothing:
   `a_read_in_a_frees_own_argument_is_ordered_before_it` and
   `a_read_in_a_frees_argument_through_a_call_is_ordered_before_it` fail on their
   `.stderr`, with the `SC0402` back. That is the consumer half.

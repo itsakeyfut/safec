@@ -89,8 +89,9 @@ struct holds, and `Held::clear` answers for the field because it destructures.
 
 ### Confirmation
 
-Each mutation applied on its own to `crates/safec-ir/src/memory.rs`, the whole
-workspace suite run with `--no-fail-fast`, the file restored.
+Each mutation applied on its own to the memory check
+(`crates/safec-ir/src/memory.rs` and `memory/`), the whole workspace suite run
+with `--no-fail-fast`, the file restored.
 
 | Mutation | Named test that fails |
 |---|---|
@@ -176,8 +177,9 @@ and ADR-0018 and ADR-0019 say of the last two fields.
 ## More Information
 
 * `Held::freed`, `Reached::SetFreed` and the `Callee::Frees` arm of
-  `Allocations::terminator` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+  `Allocations::terminator` in the memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/).
 * [`docs/diagnostics.md`](../diagnostics.md) carries what it means for a reader
   of `SC0401`.
 * The report side of this rule, one level down: a may-analysis proves nothing

@@ -50,8 +50,8 @@ with no free anywhere in it. The dereference spelling of the same residue,
 ## Decision Outcome
 
 Chosen option: **a read whose span lies strictly inside the call's span**,
-because it answers the question with what the IR already carries. The answer
-is checked where a carried read is asked, in `memory.rs::used_before`, and
+because it answers the question with what the IR already carries. The answer is
+checked where a carried read is asked, in `memory/report.rs::used_before`, and
 nowhere else. The read is not removed from the set, because C orders it before
 this call and before nothing else: `strlen(strcpy(s, t)) + (free(s), 0)` still
 carries `strcpy`'s argument to the free.
@@ -88,9 +88,10 @@ reach either.
 
 ### Confirmation
 
-Each mutation below was applied on its own to `crates/safec-ir/src/memory.rs`,
-the whole workspace was run with `--no-fail-fast`, and the file was restored.
-The cases are in `crates/safec/tests/cases` unless named otherwise.
+Each mutation below was applied on its own to the memory check
+(`crates/safec-ir/src/memory.rs` and `memory/`), the whole workspace was run
+with `--no-fail-fast`, and the file was restored. The cases are in
+`crates/safec/tests/cases` unless named otherwise.
 
 * Dropping the `inside` test in `used_before` fails
   `a_call_nested_in_an_argument_is_ordered_before_the_call_around_it`,

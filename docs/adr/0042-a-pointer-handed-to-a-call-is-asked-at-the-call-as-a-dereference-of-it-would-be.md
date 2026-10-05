@@ -241,10 +241,10 @@ exposes what the table holds and an escape leaves an allocation unproven. It
 is `Kind::FreedBehindArgument`, with words of its own under `SC0407`, because
 `a pointer to an allocation that was freed` is false about `&a`.
 
-**No null exemption.** `memory::asked` exempts a pointer established null from
-a free, and nothing here does. An exemption is the half of a rule that can go
-quiet, and the one program measured that it would change, `free(a); if (a == 0)
-{ use(a); }`, reads `a` inside an arm no execution reaches.
+**No null exemption.** `memory::report::asked` exempts a pointer established
+null from a free, and nothing here does. An exemption is the half of a rule that
+can go quiet, and the one program measured that it would change, `free(a); if (a
+== 0) { use(a); }`, reads `a` inside an arm no execution reaches.
 
 **A code of its own, `SC0407`.** `SC0402` is a dereference by
 `docs/diagnostics.md`'s own definition, and the fix is at the call or at the
@@ -257,7 +257,8 @@ free rather than at a read, which is ADR-0041's reason for `SC0406`. A new
 Every mutation below was applied on its own, the whole workspace was run with
 `--no-fail-fast`, and the file was restored. The tests named are the ones that
 failed. The cases are in `crates/safec/tests/cases`, and every mutation is in
-`crates/safec-ir/src/memory.rs` unless it says otherwise.
+the memory check (`crates/safec-ir/src/memory.rs` and `memory/`) unless it says
+otherwise.
 
 * Dropping the call to `handed` from `findings` fails
   `a_freed_pointer_handed_to_a_function_defined_in_the_file`, which is #263's

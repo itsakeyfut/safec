@@ -130,13 +130,13 @@ cases! {
         // `Element::ArgumentsEvaluated` is what they are about, and ADR-0026 is
         // why it says less than `Element::Sequenced`.
         //
-        // Mutation: the arm in `memory.rs` that reads that element doing
-        // nothing. These two fail on their `.stderr` with the `SC0402` back,
-        // and nothing else fails. The rule's other half is the lowering that
-        // emits it, and mutating that fails these two on their `.stdout` along
-        // with every other artifact holding a call, so the halves are mutated
-        // apart: a mutation is measured by which assertion it broke, not only
-        // by whether one did.
+        // Mutation: the arm in `memory/transfer.rs` that reads that element
+        // doing nothing. These two fail on their `.stderr` with the `SC0402`
+        // back, and nothing else fails. The rule's other half is the lowering
+        // that emits it, and mutating that fails these two on their `.stdout`
+        // along with every other artifact holding a call, so the halves are
+        // mutated apart: a mutation is measured by which assertion it broke,
+        // not only by whether one did.
         a_read_in_a_frees_own_argument_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_in_a_frees_argument_through_a_call_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same question asked of a call this check cannot read, which may
@@ -451,8 +451,8 @@ cases! {
         // start are both off it, whatever the distances; one that did not
         // leaves the answer open. `+` with the constant on the left, which C17
         // 6.5.6 p8 makes the same addition. Mutation: in
-        // `memory.rs::offset_of`, drop the arm that reads the constant on the
-        // left. This fails with the proof down to `may`.
+        // `memory/built.rs::offset_of`, drop the arm that reads the constant on
+        // the left. This fails with the proof down to `may`.
         a_free_of_a_constant_plus_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer moved off the start and back is at the start again, and
         // this check carries no distance to know it, so the second move proves
@@ -465,10 +465,10 @@ cases! {
         // are made before the branch rather than on its arms: allocated on an
         // arm, each site meets the other arm's `Live(None)` at the join and
         // arrives with no line to name, so the fold has nothing to get wrong.
-        // Mutation: in `memory.rs::interior`, fold `made` by keeping the first
-        // site's, or by keeping the last site's. Each fails on the label, and
-        // both directions are measured because a fold has a wrong version on
-        // each side and a case can hold only some of them.
+        // Mutation: in `memory/report.rs::interior`, fold `made` by keeping the
+        // first site's, or by keeping the last site's. Each fails on the label,
+        // and both directions are measured because a fold has a wrong version
+        // on each side and a case can hold only some of them.
         a_free_past_the_start_of_either_of_two_allocations_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_offset_on_both_arms_is_still_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_offset_on_one_arm_only_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -865,7 +865,7 @@ cases! {
         // A hatch's body is the one whose unproven conclusions are not
         // reported, so what the caller cannot see it do is assumed to be the
         // worst: every allocation still live is unproven after a call to one.
-        // Mutation: drop the loop over `value.state` in `memory.rs`'s
+        // Mutation: drop the loop over `value.state` in `memory/transfer.rs`'s
         // `Callee::Opaque` arm; the first two fail, and the first is a use
         // after free going silent.
         what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

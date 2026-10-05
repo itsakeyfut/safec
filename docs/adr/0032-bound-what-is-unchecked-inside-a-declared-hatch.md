@@ -81,12 +81,12 @@ false reports the reader can see. Under the permissive one the same omission
 produces silence, which is saying safe wrongly. The two are not
 comparable, and the more convenient default is the one that fails the wrong way.
 
-**The conservative half is already built.** `crates/safec-ir/src/memory.rs` has
-`Callee::Opaque`, whose doc comment says it may free what it was passed and that
-this cannot tell, and ADR-0029 and ADR-0031 are what a call and a write this
-check cannot follow do to an escaped local. A region hatch is that treatment
-with a way to narrow it, so what this decision costs is vocabulary rather than
-an analysis.
+**The conservative half is already built.**
+`crates/safec-ir/src/memory/parts.rs` has `Callee::Opaque`, whose doc comment
+says it may free what it was passed and that this cannot tell, and ADR-0029 and
+ADR-0031 are what a call and a write this check cannot follow do to an escaped
+local. A region hatch is that treatment with a way to narrow it, so what this
+decision costs is vocabulary rather than an analysis.
 
 **This record decides the stance and not the syntax.** What the region and the
 promise are spelled as belongs with the annotation experiment
@@ -108,9 +108,9 @@ suppression this record rules out, fails
 the hatch, and is refused.
 
 That a hatch which declared no effects assumes the worst: having
-`memory.rs::Allocations::callee` answer that a call to a hatch touches nothing
-fails `freeing_what_was_handed_to_a_hatch_is_not_proved`. A definition cannot
-declare effects at all yet, so every hatch is this case.
+`memory/transfer.rs::Allocations::callee` answer that a call to a hatch touches
+nothing fails `freeing_what_was_handed_to_a_hatch_is_not_proved`. A definition
+cannot declare effects at all yet, so every hatch is this case.
 
 **The region half is not built.** A hatch that is a stretch of statements
 inside a function, and the vocabulary for either form to narrow what it may do,

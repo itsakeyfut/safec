@@ -39,7 +39,7 @@ drawn inside one goes.
 * Replacing `clang` with `safec` must not change what a program does, which is
   the driver ADR-0037 already applied to a spelling.
 * What the analysis already does at a boundary. Every callee other than `free`
-  and `malloc` is `Callee::Opaque` in `crates/safec-ir/src/memory.rs`, a
+  and `malloc` is `Callee::Opaque` in `crates/safec-ir/src/memory/parts.rs`, a
   function defined in the same translation unit included, so a caller already
   assumes the worst of what a call can reach through its arguments. Review
   found that this is not all a call can reach, and that a hatch needs one
@@ -196,10 +196,11 @@ marking a hatch wherever an attribute is present, rather than where
 `sema::resolve` accepted one, fails
 `an_unproven_dereference_behind_a_refused_attribute_is_still_reported` alone.
 
-**What a call to a hatch leaves behind.** Dropping the loop in `memory.rs`'s
-`Callee::Opaque` arm that marks every live allocation unproven after a call to
-a hatch fails `what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it`,
-which is a use after free going silent, and
+**What a call to a hatch leaves behind.** Dropping the loop in
+`memory/transfer.rs`'s `Callee::Opaque` arm that marks every live allocation
+unproven after a call to a hatch fails
+`what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it`, which is a
+use after free going silent, and
 `an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too`. Marking every
 allocation, freed ones included, fails
 `a_free_proved_before_a_call_to_a_hatch_stays_proved` alone.

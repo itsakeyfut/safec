@@ -8,14 +8,15 @@ decision-makers: itsakeyfut
 
 ## Context and Problem Statement
 
-`Callee::Opaque` in `crates/safec-ir/src/memory.rs` is what a call this check
-cannot read does to what it knows. [ADR-0029](./0029-a-call-this-check-cannot-read-replaces-what-an-escaped-local-holds.md)
-made it assume the worst of the allocations its arguments name and of the
-locals whose address escaped, and took the call's result as a fresh
-allocation. [#250](https://github.com/itsakeyfut/safec/issues/250) measured two
-programs where that lets a use after free build, which is saying safe wrongly,
-the answer [`docs/safety-model.md`](../safety-model.md) calls the worst this
-compiler can give.
+`Callee::Opaque` in `crates/safec-ir/src/memory/parts.rs` is what a call this
+check cannot read does to what it knows.
+[ADR-0029](./0029-a-call-this-check-cannot-read-replaces-what-an-escaped-local-holds.md)
+made it assume the worst of the allocations its arguments name and of the locals
+whose address escaped, and took the call's result as a fresh allocation.
+[#250](https://github.com/itsakeyfut/safec/issues/250) measured two programs
+where that lets a use after free build, which is saying safe wrongly, the answer
+[`docs/safety-model.md`](../safety-model.md) calls the worst this compiler can
+give.
 
 A first design closed those two by marking the routes one at a time. Review
 found four more routes it left open, each measured to exit 0 and two run to a
@@ -155,7 +156,7 @@ workspace was run with `--no-fail-fast`, and the file was restored from git. The
 tests named are the ones that failed; how many there were is not written down,
 because a count is a fact about the suite of the day rather than about the rule.
 The cases are in `crates/safec/tests/cases` and every mutation is in
-`crates/safec-ir/src/memory.rs`.
+the memory check (`crates/safec-ir/src/memory.rs` and `memory/`).
 
 **What a call reaches.** Leaving the arguments out of `Known::reach_of` fails
 `what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it`

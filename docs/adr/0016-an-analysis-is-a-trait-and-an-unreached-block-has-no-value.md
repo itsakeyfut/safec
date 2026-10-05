@@ -223,10 +223,10 @@ and rewrite all of them on each pass, for a reader that does not exist.
   it the terminator of a block other than the one control is leaving fails
   `the_terminator_an_edge_is_walked_with_is_the_one_that_named_it` alone, and
   that one is the narrowest of them, which is why it is the guard on the
-  argument rather than on the walk. Taking the default off it is
-  `error[E0046]`, at `memory.rs`'s `Allocations` before the test suite is
-  reached, which is what makes "an analysis that does not implement it is
-  unaffected" a claim the compiler holds rather than one this record asserts.
+  argument rather than on the walk. Taking the default off it is `error[E0046]`,
+  at `memory/transfer.rs`'s `Allocations` before the test suite is reached,
+  which is what makes "an analysis that does not implement it is unaffected" a
+  claim the compiler holds rather than one this record asserts.
 * Handing `Analysis::edge` the entry block's id rather than the block control
   is leaving fails
   `the_block_an_edge_leaves_is_the_one_whose_elements_it_can_read`, which is

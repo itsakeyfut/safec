@@ -65,7 +65,7 @@ by a comment, which is the question of what makes an analysis stop believing
 a fact, answered at the IR's shape.
 
 A `free` is then asked a second question beside the double free, in
-`memory.rs::interior`, out of the same `Allocations::touching` answer. A
+`memory/report.rs::interior`, out of the same `Allocations::touching` answer. A
 `Reached::Lost` among what the argument reached answers nothing, which is where
 the escape pays for this: ADR-0017 answers `Lost` for an escaped local that
 holds sites, so the offset, a positive claim about a local, is not believed once
@@ -251,8 +251,9 @@ it rather than none.
 
 ## More Information
 
-* `crates/safec-ir/src/memory.rs`: `Offset`, `Held::offset`, `offset_of`,
-  `interior`, and `reported`, which asks both questions of one call.
+* The memory check, `crates/safec-ir/src/memory.rs` and `memory/`: `Offset`,
+  `Held::offset`, `offset_of`, `interior`, and `reported`, which asks both
+  questions of one call.
 * `crates/safec/src/driver.rs`: `INTERIOR_FREE` and its two rows in
   `memory_finding`.
 * [`docs/diagnostics.md`](../diagnostics.md) for why `SC0404` is a class of

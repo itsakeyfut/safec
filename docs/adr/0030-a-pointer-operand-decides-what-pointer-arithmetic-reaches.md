@@ -237,8 +237,9 @@ masked by the same escape; #196 is what still describes that work.
 
 ## More Information
 
-* `built_from` and `Allocations::is_pointer` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+* `built_from` and `Allocations::is_pointer` in the memory check,
+  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs) and
+  [`memory/`](../../crates/safec-ir/src/memory/).
 * ADR-0024 is the proof's algebra, whose rule this one feeds; ADR-0020 is what
   put the proof in `Held`; ADR-0021 folds a zero offset away so that `p[0]` and
   `*p` are one shape before this is asked anything.
