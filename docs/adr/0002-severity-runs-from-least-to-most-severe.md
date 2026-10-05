@@ -69,7 +69,7 @@ idiom.
 
 ### Confirmation
 
-Two unit tests in `crates/safec/src/diagnostics.rs`, and the mutation that fails
+Two unit tests in `crates/safec/src/diagnostics/tests.rs`, and the mutation that fails
 them is the same one: putting the variants back in descending order.
 
 * `severities_are_ordered_from_least_to_most_serious` spells the chain out

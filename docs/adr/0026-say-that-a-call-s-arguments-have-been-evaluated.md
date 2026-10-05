@@ -124,7 +124,7 @@ matches in three crates, and `error[E0027]` at the six that walk the IR if a
 field is added to it, because each of those names the field rather than writing
 `..`. Three write `..` and answer for nothing below the kind: `Element::name`
 in `ir.rs`, which is asking which kind it is in order to print it, and the
-`assigns` and `markers` helpers in `lowering.rs`'s test module, which filter by
+`assigns` and `markers` helpers in `lowering/tests.rs`, which filter by
 kind for the same reason.
 
 Three mutations, each measured, each failing named cases and nothing else:

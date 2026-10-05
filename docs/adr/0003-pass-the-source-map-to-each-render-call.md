@@ -74,7 +74,7 @@ to do instead.
 ### Confirmation
 
 `a_renderer_does_not_hold_the_source_map` in
-`crates/safec/src/diagnostics/render.rs` renders a diagnostic, adds a file to
+`crates/safec/src/diagnostics/render/tests.rs` renders a diagnostic, adds a file to
 the map while the renderer is still alive, and renders a diagnostic against the
 new file.
 

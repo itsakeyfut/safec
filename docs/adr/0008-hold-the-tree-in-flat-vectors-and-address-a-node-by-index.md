@@ -52,7 +52,7 @@ not accidental complexity.
 
 ### Confirmation
 
-`an_id_still_names_its_node_after_more_are_pushed` in `crates/safec/src/ast.rs`.
+`an_id_still_names_its_node_after_more_are_pushed` in `crates/safec/src/ast/tests.rs`.
 
 The mutation: take the id from `len()` **after** the push rather than before. It
 fails, because every id then names the node written after the one it was handed
@@ -99,7 +99,7 @@ because nothing can break it and still build.
   node owns its id, and a function that has pushed must hand the id back rather
   than the node. Returning the node lets the caller push a second copy, and one
   construct with two ids is this decision defeated while looking like it holds.
-  `a_nested_block_is_one_node_in_the_arena` in `crates/safec/src/parser.rs` is
+  `a_nested_block_is_one_node_in_the_arena` in `crates/safec/src/parser/tests.rs` is
   what says so, and it reads the arena through `Debug` because the duplicate is
   unreachable from the root and so invisible to every walk of the tree.
 * What would reverse this: giving a node a reference to another node. That is

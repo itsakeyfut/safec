@@ -105,7 +105,7 @@ change.
 ### Confirmation
 
 The promotion is `DiagnosticSink::report`'s only branch on certainty, so the
-guards are unit tests in `crates/safec/src/diagnostics.rs`, each named with the
+guards are unit tests in `crates/safec/src/diagnostics/tests.rs`, each named with the
 mutation that makes it fail:
 
 * Removing the promotion from `report` fails the test that a sink with
@@ -117,7 +117,7 @@ mutation that makes it fail:
 * Counting before promoting rather than after fails the test that `error_count()`
   equals a recount over `diagnostics()` in both policies.
 * Dropping the `|| safety >= SafetyLevel::Strict` clause fails the
-  `diagnostics.rs` tests that the strictest level denies unknown however the
+  `diagnostics/tests.rs` tests that the strictest level denies unknown however the
   policy is built. That clause was resolved in `cli.rs` as well until #209,
   which left `Options` carrying the request rather than an answer; `Policy::new`
   is now the only place it is resolved.
@@ -127,7 +127,7 @@ mutation that makes it fail:
   `a_sink_that_denies_unknown_raises_an_unproven_warning_to_an_error`,
   `every_conclusion_is_reported_the_way_the_model_says`,
   `the_error_count_agrees_with_the_diagnostics_under_either_policy`, the two
-  `the_strictest_safety_level_denies_unknown` tests, and two in `render.rs`.
+  `the_strictest_safety_level_denies_unknown` tests, and two in `diagnostics/render/tests.rs`.
   Measured before #209 inverted the default, so the count is a fact about the
   suite of the day rather than about the rule.
 
