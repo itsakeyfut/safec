@@ -1,0 +1,14 @@
+error: `--safety strict` asks for more than this run delivers
+  = note: `memory` is the highest level with checks behind it
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: ask for `--safety memory`
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_nullable_return_is_tested_before_it_is_read.c:15:5 ]
+    │
+ 15 │     return *q;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

@@ -136,17 +136,25 @@ fn written_promise(written: Option<Nullability>) -> Option<Promise> {
 /// Every function that can be lowered is, whatever the ones beside it did: a
 /// program is not one thing that fails, and a caller of a function this stage
 /// refused still resolves, because the refusal leaves a declaration behind.
+///
+/// `nonnull_by_default` is level 5's default, that a pointer is not null
+/// unless it is written `_Nullable` (ADR-0050). **The level is resolved here
+/// and not carried into the IR**: what reaches the IR is the promise it made,
+/// [`Promise::Defaulted`], so nothing that reads an IR asks what level a run
+/// is at, which is ADR-0011's boundary.
 pub fn lower(
     sources: &SourceMap,
     ast: &Ast,
     resolution: &Resolution,
     types: &Types,
     target: Target,
+    nonnull_by_default: bool,
     diagnostics: &mut DiagnosticSink,
 ) -> TranslationUnit {
     let mut lowering = Lowering {
         sources,
         ast,
+        nonnull_by_default,
         resolution,
         types,
         // The one thing this stage learns about the machine, and it only
@@ -171,6 +179,8 @@ pub fn lower(
 struct Lowering<'a> {
     sources: &'a SourceMap,
     ast: &'a Ast,
+    /// Level 5's default, which [`lower`] says why this stage resolves.
+    nonnull_by_default: bool,
     resolution: &'a Resolution,
     types: &'a Types,
     unit: TranslationUnit,
@@ -825,7 +835,19 @@ impl Lowering<'_> {
         // The definition carries its own promise, since it replaces the
         // declaration callers were lowered against, and `agree_on_return` has
         // made every declaration say the same.
-        if let Some(promise) = written_promise(written) {
+        //
+        // **Level 5's default is made here, on a body, and nowhere else.** A
+        // function this unit only declares returns `_Nullable` where it says
+        // neither, since nobody here can ask its body (ADR-0050), and a
+        // definition this stage refused stays a declaration with no promise,
+        // so its callers doubt what it returns rather than believe a body
+        // nobody asked; the build has already failed on `SC0304` beside it.
+        let promise = match written {
+            Some(_) => written_promise(written),
+            None => (self.nonnull_by_default && matches!(self.unit.ty(returns), Ty::Pointer(_)))
+                .then_some(Promise::Defaulted(name)),
+        };
+        if let Some(promise) = promise {
             function = function.promising(promise);
         }
 

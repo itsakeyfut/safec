@@ -58,6 +58,7 @@ fn ran_for(triple: &str, text: &str) -> Result<Value, Trap> {
         &resolution,
         &types,
         target,
+        false,
         &mut diagnostics,
     );
     assert!(!diagnostics.has_errors(), "the program did not compile");
@@ -483,6 +484,7 @@ fn a_trap_points_at_what_stopped_it() {
         &resolution,
         &types,
         target,
+        false,
         &mut diagnostics,
     );
 
@@ -529,6 +531,7 @@ fn a_trap_on_a_call_points_at_the_call() {
         &resolution,
         &types,
         target,
+        false,
         &mut diagnostics,
     );
 

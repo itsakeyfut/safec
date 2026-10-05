@@ -980,6 +980,39 @@ cases! {
         // silent. Mutation: call it only for a prototype; the second does.
         declarations_that_disagree_about_a_nonnull_return_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_unprototyped_declaration_disagrees_about_a_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Level 5: the pointer a function defined here returns is not null
+        // unless it is written `_Nullable`, asked at every `return` as a
+        // written `_Nonnull` is, and believed by every call. Each run is
+        // refused beside that, since level 5 asks for checks that are not
+        // implemented yet; the default is what this run delivers of it.
+        // Mutation: never set `Promise::Defaulted` in `Lowering::body`; the
+        // first three go silent and the fourth is doubted.
+        a_null_returned_where_level_5_promised_a_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        an_allocation_returned_where_level_5_promised_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        the_end_of_a_function_level_5_promised_a_pointer_from_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_result_level_5_promised_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // The same program below level 5, where nothing is promised. This is
+        // what keeps levels 1 to 4 answering as before. Mutation: compute
+        // `nonnull_by_default` as `true` in `driver.rs`; this goes silent,
+        // and every existing case whose pointer function may return null
+        // gains `SC0408`, `a_pointer_read_out_of_a_freed_table_and_returned`
+        // among them.
+        a_result_of_a_function_defined_here_is_doubted_below_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `_Nullable` takes the promise back: the result is doubted until a
+        // test settles it. Mutation: let the default apply where `_Nullable`
+        // was written, in `Lowering::body`; the untested read goes silent.
+        a_nullable_return_is_tested_before_it_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // The boundary, which believes nothing unannotated in either
+        // direction: what a function only declared here returns is doubted,
+        // and what one defined here with external linkage takes is too, so a
+        // null passed to one needs nothing. Mutation: make the default in
+        // `Lowering::declare_one` as well; the first goes silent. Mutation:
+        // give an unannotated parameter a promise at level 5 in
+        // `Lowering::signature`; the second goes silent and the third is
+        // refused with `SC0405`.
+        a_result_of_a_function_only_declared_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_parameter_of_a_function_defined_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_null_passed_to_a_function_only_declared_here_is_accepted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
     }
 
     "hatch" => {

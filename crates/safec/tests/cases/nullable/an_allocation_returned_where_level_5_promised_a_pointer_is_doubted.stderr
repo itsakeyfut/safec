@@ -1,0 +1,17 @@
+error: `--safety strict` asks for more than this run delivers
+  = note: `memory` is the highest level with checks behind it
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: ask for `--safety memory`
+error[SC0408]: this may return a null pointer from a function that promised not to
+   ╭─[ an_allocation_returned_where_level_5_promised_a_pointer_is_doubted.c:4:5 ]
+   │
+ 3 │ int *make(void) {
+   │      ──┬─  
+   │        ╰─── at level 5 this returns a pointer that is not null, because it is not written `_Nullable`
+ 4 │     return malloc(4);
+   │     ────────┬────────  
+   │             ╰────────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 5
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: return only a pointer this check can see is not null, testing it first where it came from a call, or write `_Nullable` after the `*` of the return type in every declaration of the function

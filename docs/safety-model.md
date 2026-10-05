@@ -300,10 +300,17 @@ unit's boundary nothing unannotated is believed: what a function declared and
 not defined here takes and returns, and what a function with external linkage
 defined here takes, is `_Nullable` where the declaration says neither, since
 believing what the other side never said is how a null would be dereferenced in
-silence. Which pointers the default covers, beyond a declaration's own, is
-decided with the implementation. Below level 5, `_Nullable` restricts nothing.
+silence. The default covers a declaration's own pointers, a parameter's and
+the one a function returns, and not a local, whose every write the check
+already sees, or a pointer inside another, which is believed of nothing until a
+specifier can be written on it. Every function here has external linkage
+today, because the parser reads no storage class, so what the default changes
+is the pointer a function defined here returns, and a `return` that may hand
+back null is `SC0408`. Below level 5, `_Nullable` restricts nothing.
 [ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)
-has the reasoning; it is not implemented yet.
+has the reasoning and the measurement. Until the checks below level 5 are
+implemented, a run asked for it is refused as asking for more than it
+delivers, and what the default finds is reported beside that.
 
 The desired migration model is:
 

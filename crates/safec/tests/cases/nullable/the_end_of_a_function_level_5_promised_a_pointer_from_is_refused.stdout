@@ -1,0 +1,31 @@
+Target "x86_64-pc-windows-msvc"
+Function the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:1:6 "pick"
+  Local "_0" "int *" return _Nonnull default
+  Local "_1" "int" parameter
+  Local "_2" "int"
+  Local "_3" "int *"
+  Block "bb0" entry
+    Operation the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:2:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:2:13 generated
+    Branch the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:3:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:3:9 generated
+    Operation the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:4:16 written
+      Destination "_3"
+      Address
+        Place "_2"
+    Operation the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:4:9 written
+      Destination "_0"
+      Use
+        Copy "_3"
+    Sequenced the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:4:16 generated
+    Return
+  Block "bb2"
+    Sequenced the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:3:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Return
