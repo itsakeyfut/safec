@@ -179,13 +179,14 @@ than `Function::with_parameters` fails the definition's cases, and
 that case alone; not printing it in the IR fails every case that emits the IR.
 Reading a parameter's annotation from the first derivation of its declarator
 rather than the last fails `a_nonnull_after_the_last_star_of_a_parameter_is_read`
-alone. `the_annotation_table_is_the_spellings_this_compiler_reads` in
+alone. `the_annotation_table_is_the_spellings_this_compiler_knows` in
 `crates/safec/src/token.rs` holds the spelling, and
 `a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not` in
 `crates/safec/src/lexer.rs` fails when `scan_word` never asks for one.
 
 **Refused where it cannot apply.** Deleting the call to `Parser::placed` fails
-the six `a_nonnull_on_..._is_refused` cases, one per reason that function gives.
+every `a_nonnull_on_..._is_refused` case, at least one per reason that function
+gives, along with the `_Nullable` cases ADR-0050 added beside them.
 Choosing the label for a block-scope function on whether the function type is
 the declarator's own alone fails
 `a_nonnull_on_a_parameter_of_a_parameter_that_is_a_function_is_refused` alone.
@@ -242,8 +243,9 @@ it can.
   [#247](https://github.com/itsakeyfut/safec/issues/247).
 * Bad, because it is stricter than `clang` in two places a user will meet:
   `clang` inherits `_Nonnull` from one declaration to another in silence, and
-  accepts it on a local or a return type. Both are refused here, at every level.
-  Both are false reports the reader can see.
+  accepts it on a local. Both are refused here, at every level. Both are false
+  reports the reader can see. A return was a third until ADR-0050 gave a
+  specifier there a meaning.
 * Bad, because `_Nonnull` is a `clang` extension and GCC does not read it.
   Mitigated by nothing yet; a macro is the usual answer and there is no
   preprocessor to define one.

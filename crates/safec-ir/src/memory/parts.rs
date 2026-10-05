@@ -14,8 +14,9 @@ use crate::source::Span;
 /// What this check can read in a callee's name.
 ///
 /// By name because nothing else is available: no annotation says what a
-/// function does to what it is passed. The one annotation there is,
-/// `_Nonnull`, says only that a parameter is not null, which is ADR-0037.
+/// function does to what it is passed. The nullability specifiers say only
+/// whether a pointer a function takes or returns may be null, which is
+/// ADR-0037 and ADR-0050.
 /// Besides `malloc` and `free`, the names read are the library functions
 /// ADR-0039 lists, each for what its clause says it does to what it is handed.
 /// C17 7.1.3 reserves the identifiers the library declares, so a program

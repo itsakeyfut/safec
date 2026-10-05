@@ -289,19 +289,21 @@ the tables above are. **Every refusal here is a decision rather than a gap**, an
 each is the same one: an annotation read where it means nothing is a promise
 written down and dropped, and a reader who wrote it would believe it held. The
 two declarations disagreeing is refused rather than inherited, which is what
-`clang` does, because a caller is checked against the declaration it sees; what
-is compared is the first prototype, so a `void g();` above them changes
-nothing. `_Nullable` and writing nothing are a disagreement too, although below
+`clang` does, because a caller is checked against the declaration it sees; for a
+parameter what is compared is the first prototype, so a `void g();` above them
+changes nothing, and for a return it is the first declaration, since
+`int *g();` does declare what `g` returns. `_Nullable` and writing nothing are a disagreement too, although below
 level 5 they mean the same, because where a specifier is read does not depend
-on the level. `_Null_unspecified` would leave a pointer as if unannotated and
-`_Nullable_result` means nothing in C, so reading either would be dropping it. **The refusals hold at every safety level, `--safety off` included**,
+on the level. `_Null_unspecified` would leave a pointer as if unannotated, which
+is reading it and dropping it, and
+`_Nullable_result` is read by `clang` as `_Nullable` is, so reading it would be a second spelling for one answer, which is why `_Nullable` was chosen over a name of this compiler's own. **The refusals hold at every safety level, `--safety off` included**,
 because a level decides which checks run, and at level 5 what may be written,
 and neither moves where the frontend reads an annotation
 ([ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)):
 these are the frontend reading the language. The
-last two rows are the check rather than the frontend, and `clang`'s answer to
-them is the reason the check exists: it warns about a literal null and says
-nothing about a local that holds one.
+`SC0405` and `SC0408` rows are the check rather than the frontend, and `clang`'s
+answer to them is the reason the check exists: it warns about a literal null and
+says nothing about a local that holds one.
 
 ### Where the hatch is read
 

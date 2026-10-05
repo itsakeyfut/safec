@@ -178,8 +178,8 @@ impl Asked {
     ///
     /// A dereference is one question whether or not it went through memory:
     /// `*p && **q` writes both operands at one span, and the reader is told
-    /// one thing about it. An argument is a question per promise, and so is a
-    /// return.
+    /// one thing about it. An argument is a question per promise, and a return
+    /// is one per promise and per whether it is the end of the body.
     ///
     /// The first element of every pair written out, so that a fourth question
     /// is answered for here by `error[E0004]`.

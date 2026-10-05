@@ -936,8 +936,8 @@ cases! {
         declarations_that_disagree_between_nonnull_and_nullable_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         declarations_that_disagree_between_nullable_and_nothing_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A specifier on the pointer a function returns, read at every level.
-        // Mutation: have `dump_declaration`'s neighbour for a definition print
-        // nothing for `Function::returns`; this fails.
+        // Mutation: have the `Item::Function` arm of `dumps.rs::dump_item`
+        // print nothing for `Function::return_nullability`; this fails.
         a_nullable_return_of_a_definition_is_read_into_the_tree: ["--emit", "ast"],
         // Accepted only on the derivation just before a declared function's
         // own, which is the pointer it returns. A pointer inside that one is

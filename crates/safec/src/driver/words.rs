@@ -566,8 +566,9 @@ fn passed(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnost
 /// level named is the one that made the promise, so a default says level 5.
 ///
 /// **The end of a body is told to end with a `return`**, whatever was
-/// concluded, because there is no pointer to test and `_Nullable` would not
-/// make the value the caller reads any less indeterminate (C17 6.9.1 p12).
+/// concluded, because there is no pointer to test, and writing `_Nullable`
+/// would not help: C17 6.9.1 p12 makes the caller's use of the value
+/// undefined whatever the declaration says.
 fn returned(
     at: Span,
     conclusion: Conclusion,

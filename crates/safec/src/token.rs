@@ -230,7 +230,8 @@ impl Keyword {
 }
 
 spellings! {
-    /// A word this compiler reads as a safety annotation.
+    /// A word this compiler knows as a safety annotation: one it reads, or one
+    /// it refuses as an annotation it does not read.
     ///
     /// `_Nonnull` and `_Nullable` are `clang`'s nullability specifiers,
     /// written where `clang` writes them: after the `*` of the pointer they
@@ -554,7 +555,7 @@ mod tests {
     /// spelling. A typo here is an annotation nobody can write, and every use
     /// of it in a program becomes a name.
     #[test]
-    fn the_annotation_table_is_the_spellings_this_compiler_reads() {
+    fn the_annotation_table_is_the_spellings_this_compiler_knows() {
         let spellings: Vec<_> = Annotation::ALL.iter().map(|a| a.as_str()).collect();
 
         assert_eq!(

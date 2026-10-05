@@ -67,14 +67,14 @@ const BRACED_INITIALIZER: Code = Code::new("SC0203");
 /// nowhere else, because the one form of it this compiler reads makes that
 /// definition a hatch and a hatch is about a body. See ADR-0038.
 ///
-/// `_Nonnull` and `_Nullable` apply to one thing, the pointer a parameter of a
-/// declared function holds, because that is the one place ADR-0037 and
-/// ADR-0050 give them a meaning: the body believes `_Nonnull` and every call is
-/// checked against it, and `_Nullable` says what level 5 would otherwise not
-/// assume. Anywhere else one would be read and mean nothing, which is a
-/// promise written down and silently dropped, so it is refused instead.
-/// `clang` accepts them on a local and on a return type; `docs/frontend.md`
-/// carries those rows.
+/// `_Nonnull` and `_Nullable` apply to two things, the pointer a parameter of a
+/// declared function holds and the pointer such a function returns, because
+/// those are the places ADR-0037 and ADR-0050 give them a meaning: the body or
+/// the caller believes `_Nonnull` and the other side is checked against it, and
+/// `_Nullable` says what level 5 would otherwise not assume. Anywhere else one
+/// would be read and mean nothing, which is a promise written down and silently
+/// dropped, so it is refused instead. `clang` accepts them on a local and on a
+/// pointer inside another; `docs/frontend.md` carries those rows.
 ///
 /// The parser's rather than a later stage's, because it is the stage that
 /// knows what a declarator declares: whether it is a parameter, and whether the
@@ -914,9 +914,10 @@ impl Parser<'_> {
     ///
     /// Read as a word and refused, rather than read as a name and refused for
     /// something else, so that the reader is told the compiler does not read
-    /// it. Taken without meaning, `_Null_unspecified` would leave the pointer
-    /// as unannotated and `_Nullable_result` would mean nothing in C, and a
-    /// promise written down and dropped is what this stage refuses (ADR-0050).
+    /// it. `_Null_unspecified` would leave the pointer as unannotated, which
+    /// is a promise written down and dropped, and `_Nullable_result` is read by
+    /// `clang` as `_Nullable` is, so reading it would be a second spelling for
+    /// one answer (ADR-0050).
     fn unread_specifier(&mut self, diagnostics: &mut DiagnosticSink) -> bool {
         let TokenKind::Annotation(
             annotation @ (Annotation::NullUnspecified | Annotation::NullableResult),

@@ -573,7 +573,8 @@ mod tests {
     /// not this compiler's to read. `_Nullable` is the prefix of
     /// `_Nullable_result`, so the longer word is a word of its own and not the
     /// shorter one followed by a name. Mutation: have `scan_word` never ask
-    /// `Annotation::from_spelling`, and the first row fails.
+    /// `Annotation::from_spelling`, and the first row fails. Mutation: remove
+    /// `NullableResult` from `Annotation`; the last row lexes as a name.
     #[test]
     fn a_word_spelled_as_an_annotation_is_one_and_its_neighbours_are_not() {
         let scan = scan(
