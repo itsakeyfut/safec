@@ -20,7 +20,7 @@ decision-makers: itsakeyfut
 
 * **Keep one `Unknown`**, and the exemption, as now.
 * **A second state for "code this check cannot read can reach it", made only where an address is taken**, with every call, exposure and hatch still writing `Unknown`.
-* **A second state made wherever the allocation is reached only through an address or an exposure**: taking an address, an exposure at a call, a call left unordered against an exposure, a hatch. A free on one path, a free of a set or of a pointer this check stopped following, a `realloc`, and a call that holds the pointer, by name, as a load, or inside memory it was handed, still write `Unknown`.
+* **A second state made wherever the allocation is reached only through an address or an exposure**: taking an address, an exposure at a call, a call left unordered against an exposure, a hatch. A free on one path, a free of a set or of a pointer this check stopped following, a `realloc`, and a call that holds the pointer, by name, as a load, read out of memory, or inside an allocation it was handed, still write `Unknown`.
 
 ## Decision Outcome
 
@@ -46,7 +46,7 @@ The chosen option first drew its line at a call naming the allocation by value, 
 
 Neither option changes any answer in the corpus but one: `a_may_set_freed_then_written_through_an_alias` now also reports `SC0407` at `opaque(pp)`, where `pp` is the address of a pointer whose set was freed (ADR-0020), which is true.
 
-What the chosen option still does not ask, each of which builds on `main` as well: a call handed only an address that frees what is there and does not replace it, followed by a second call handed the address, which is the callee's contract; and an allocation exposed to code this check cannot read, freed by a later call through what it kept, and then handed by address.
+What the chosen option still does not ask, each of which builds on `main` as well: a call handed only an address that frees what is there and does not replace it, followed by a second call handed the address, which is the callee's contract; an allocation exposed to code this check cannot read, freed by a later call through what it kept, and then handed by address; and an allocation a call reached through the address of another local, `b = a; release_ref(&b); use2(&a);`, or through a local's address held in memory it was handed, `*box = &b; release_deep(box); use2(&a);`. The last two can free it and cannot replace `a`, as the load and memory routes above, but a site's state cannot say which address made it `Reachable` (#326).
 
 ### Confirmation
 
@@ -56,7 +56,7 @@ The cases are in `crates/safec/tests/cases`, and every mutation is in `crates/sa
 - `handed_below` exempting `Unknown` through the address again fails `a_pointer_freed_on_one_path_and_handed_by_address_is_asked`, `a_pointer_whose_address_was_taken_before_a_free_on_one_path_is_asked`, `a_pointer_handed_to_a_call_and_then_by_address_is_asked` and `a_may_set_freed_then_written_through_an_alias`, which lose their `SC0407`. The second is the two events in the other order, since a rule about two events is held only in the order a case writes them; this mutation is the only one of the four it fails under, since there the free is of an escaped local, which writes `Unknown` on its arm before any join.
 - The join giving `Reachable` for a freed side fails `a_pointer_freed_on_one_path_and_handed_by_address_is_asked`, and seventeen other cases whose doubt rests on the same join.
 - An opaque call writing `Reachable` on what it is handed by value fails `a_pointer_handed_to_a_call_and_then_by_address_is_asked`, beside two cases about a call between two frees.
-- The opaque call leaving out what it holds, by name, as a load or through the memory it was handed, fails `a_pointer_a_call_was_handed_through_a_load_is_asked_by_address` and `a_pointer_a_call_reached_through_memory_is_asked_by_address`, which go silent; taking only what it is handed, without what that memory holds, fails the second alone. Writing `Unknown` on all of `reach` instead fails the two in-out cases below and nothing else.
+- The opaque call leaving out what it holds, by name, as a load or through the memory it was handed, fails `a_pointer_a_call_was_handed_through_a_load_is_asked_by_address` and `a_pointer_a_call_reached_through_memory_is_asked_by_address`, which go silent; taking only what it is handed, without what that memory holds, fails the second alone. Leaving `read_out` out of what it holds fails `a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address`, `release(*t)`, alone. Writing `Unknown` on all of `reach` instead fails the two in-out cases below and nothing else.
 - Every producer but an address taken writing `Unknown`, which is the rejected option, fails `a_pointer_handed_by_address_twice_builds` and `a_pointer_handed_by_address_around_another_call_builds` and nothing else, which are refused.
 
 ### Consequences

@@ -1601,9 +1601,10 @@ impl Analysis for Allocations<'_> {
                     value.state[site] = SiteState::Unknown;
                 }
                 // **What it holds it may have freed**: what it is handed, by
-                // name or as a load, what the memory it was handed holds
-                // however deep, and what an argument read out of memory may
-                // be. `q = *t; release(q);` and `*d = a; release_in(d);` may
+                // name or as a load, the allocations the memory it was handed
+                // holds however deep, and what an argument read out of memory
+                // may be. Not the locals whose address that memory holds,
+                // which `Known::closure` does not follow (ADR-0047 lists it). `q = *t; release(q);` and `*d = a; release_in(d);` may
                 // each free `a`'s allocation, and neither can replace `a`, so
                 // a later call by address asks about it. A proved free stays
                 // proved here; only what is named outright lost it above. Not

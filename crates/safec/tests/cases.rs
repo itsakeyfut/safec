@@ -1861,6 +1861,10 @@ cases! {
         // memory holds; the second does.
         a_pointer_a_call_was_handed_through_a_load_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_reached_through_memory_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And handed straight out of memory, `release(*t)`, which is no local
+        // the call names. Found by review. Mutation: leave `read_out` out of
+        // what the call holds; this goes silent.
+        a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And not where only an address or an exposure reached it: a call
         // handed an address may have replaced what it freed, which is how C
         // hands a pointer to be replaced. Mutation: have every producer but an
