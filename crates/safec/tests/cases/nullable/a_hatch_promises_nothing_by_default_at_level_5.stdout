@@ -1,0 +1,50 @@
+Target "x86_64-pc-windows-msvc"
+Function a_hatch_promises_nothing_by_default_at_level_5.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_hatch_promises_nothing_by_default_at_level_5.c:4:6 "make" hatch
+  Local "_0" "int *" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_hatch_promises_nothing_by_default_at_level_5.c:5:14 generated
+    Call a_hatch_promises_nothing_by_default_at_level_5.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_hatch_promises_nothing_by_default_at_level_5.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_hatch_promises_nothing_by_default_at_level_5.c:5:14 generated
+    Operation a_hatch_promises_nothing_by_default_at_level_5.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_hatch_promises_nothing_by_default_at_level_5.c:6:12 generated
+    Return
+Function a_hatch_promises_nothing_by_default_at_level_5.c:9:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int *"
+  Block "bb0" entry
+    Operation a_hatch_promises_nothing_by_default_at_level_5.c:9:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_hatch_promises_nothing_by_default_at_level_5.c:10:14 generated
+    Call a_hatch_promises_nothing_by_default_at_level_5.c:10:14 "make" "bb1"
+      Destination "_2"
+  Block "bb1"
+    Operation a_hatch_promises_nothing_by_default_at_level_5.c:10:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_hatch_promises_nothing_by_default_at_level_5.c:10:14 generated
+    Operation a_hatch_promises_nothing_by_default_at_level_5.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_hatch_promises_nothing_by_default_at_level_5.c:11:12 generated
+    Return

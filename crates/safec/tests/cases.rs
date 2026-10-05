@@ -1018,6 +1018,12 @@ cases! {
         a_result_of_a_function_only_declared_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         a_parameter_of_a_function_defined_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         a_null_passed_to_a_function_only_declared_here_is_accepted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // A hatch promises what it writes and nothing by default, since what
+        // its body could not prove is listed rather than reported, and a
+        // default would be believed by every caller and asked by nobody.
+        // Mutation: drop `!hatch` from the default in `Lowering::body`; the
+        // read in `main` goes silent.
+        a_hatch_promises_nothing_by_default_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
     }
 
     "hatch" => {

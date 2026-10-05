@@ -838,14 +838,22 @@ impl Lowering<'_> {
         //
         // **Level 5's default is made here, on a body, and nowhere else.** A
         // function this unit only declares returns `_Nullable` where it says
-        // neither, since nobody here can ask its body (ADR-0050), and a
-        // definition this stage refused stays a declaration with no promise,
-        // so its callers doubt what it returns rather than believe a body
-        // nobody asked; the build has already failed on `SC0304` beside it.
+        // neither, since nobody here can ask its body (ADR-0050). A definition
+        // this stage refused stays the declaration `declare_one` made, which
+        // carries what was written and no default, and the build has already
+        // failed on `SC0304` beside it.
+        //
+        // **Not on a hatch.** What a hatch's body could not prove is listed
+        // rather than reported (ADR-0038), so a default promise on one would
+        // be believed by every caller and asked by nobody: a promise no one
+        // wrote. A hatch promises what it writes, and its callers assume the
+        // worst of the rest.
         let promise = match written {
             Some(_) => written_promise(written),
-            None => (self.nonnull_by_default && matches!(self.unit.ty(returns), Ty::Pointer(_)))
-                .then_some(Promise::Defaulted(name)),
+            None => (self.nonnull_by_default
+                && !hatch
+                && matches!(self.unit.ty(returns), Ty::Pointer(_)))
+            .then_some(Promise::Defaulted(name)),
         };
         if let Some(promise) = promise {
             function = function.promising(promise);
