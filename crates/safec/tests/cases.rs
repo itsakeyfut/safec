@@ -775,6 +775,11 @@ cases! {
         code_after_an_if_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         code_under_an_if_on_zero_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_zero_is_never_entered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `for` on zero is not entered, so what follows it is reached and
+        // asked. Mutation: have the `for` site swap its arms where the
+        // condition is a constant; the loop is entered and never left, and
+        // this goes silent.
+        code_after_a_for_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `(x, 1)` lowers to the constant 1 and is not a constant expression
         // (C17 6.6 p3), so the loop keeps its exit and what follows it is
         // asked. Mutation: have `Lowering::constant_expression` answer `true`
@@ -989,6 +994,14 @@ cases! {
         // second is.
         a_loop_left_only_by_a_return_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_any_constant_but_zero_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a `for` and through unary `+`, which are the other
+        // site that calls `decided` and the other constant expression
+        // `Lowering::constant_expression` reads. Mutation: have the `for`
+        // build a `Branch` again; the first is told it may reach the end.
+        // Mutation: drop the unary `+` arm of `constant_expression`; the
+        // second is.
+        a_for_loop_on_a_constant_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: have the call's destination answer `Unknown` whatever the
         // callee promised, in `Analysis::terminator`; both are doubted.
         a_result_promised_nonnull_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2390,6 +2403,11 @@ cases! {
         an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A branch on a constant still reaches the backend through the operand
+        // of `&&`, which is an expression rather than a statement's controlling
+        // expression and is not folded. Mutation: have `emit.rs::condition`
+        // answer `0` for a constant; this fails.
+        llvm_ir_of_a_constant_operand_of_a_logical_and: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_pointers_branches_and_a_loop: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         the_mvp_becomes_llvm_ir: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],

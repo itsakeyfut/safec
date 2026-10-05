@@ -494,9 +494,12 @@ much as by the `match`, and nothing tells the two apart.
   are the doubt the first bullet describes, and a free in place of `release`
   was already refused as `SC0401`.
 * Bad, because the join is not path-sensitive, so a free followed by a call in
-  an arm no execution reaches, `free(a); if (0) { use(a); }`, is reported as a
-  proof. `SC0402` already did the same with `*a` in that arm; a call there is
-  the commoner shape.
+  an arm no execution reaches is reported as a proof wherever the condition is
+  not one the lowering decides: `free(a); if (c && !c) { use(a); }`. `SC0402`
+  already did the same with `*a` in that arm; a call there is the commoner
+  shape. A condition that is a constant, `if (0)`, has been decided where it is
+  lowered since [#338](https://github.com/itsakeyfut/safec/issues/338), so its
+  arm is reached by nothing and asked by nothing.
 * Bad, because a program this check already refuses can gain a second report
   about one full expression, at a different caret: `g(a) + (free(a), 0)` is
   `SC0401` at the free, since `g` may free `a`, and now `SC0407` at `g` as

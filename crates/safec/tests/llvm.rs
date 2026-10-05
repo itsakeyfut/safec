@@ -42,6 +42,10 @@ const PROGRAMS: &[(&str, &str)] = &[
         "x86_64-pc-windows-msvc",
     ),
     (
+        "llvm_ir_of_a_constant_operand_of_a_logical_and",
+        "x86_64-pc-windows-msvc",
+    ),
+    (
         "llvm_ir_of_pointers_branches_and_a_loop",
         "x86_64-pc-windows-msvc",
     ),
