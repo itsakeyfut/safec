@@ -160,7 +160,7 @@ than about the rule.
 * `Held::hold` without its offset: `error[E0061]` at the parameter in
   `Analysis::on_entry` and at a call's destination in `Analysis::terminator`.
 * a fifth `Unproven` variant: `error[E0004]` at `memory_finding` in
-  `crates/safec/src/driver.rs`.
+  `crates/safec/src/driver/words.rs`.
 * the double free pushed after the interior free rather than before:
   `an_addition_of_two_integers_carries_what_both_hold` and
   `an_offset_by_a_second_pointer_loses_the_proof`, whose two findings share a
@@ -254,7 +254,7 @@ it rather than none.
 * The memory check, `crates/safec-ir/src/memory.rs` and `memory/`: `Offset`,
   `Held::offset`, `offset_of`, `interior`, and `reported`, which asks both
   questions of one call.
-* `crates/safec/src/driver.rs`: `INTERIOR_FREE` and its two rows in
+* `crates/safec/src/driver/words.rs`: `INTERIOR_FREE` and its two rows in
   `memory_finding`.
 * [`docs/diagnostics.md`](../diagnostics.md) for why `SC0404` is a class of
   its own.

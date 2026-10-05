@@ -336,9 +336,10 @@ of the change that adds it.
 A diagnostic about the invocation, or about the machine a run is on, rather than
 about a program's text has no code. `no input files`, `cannot read <path>` and
 `--emit object needs clang` are that kind, and eleven of the twelve diagnostics
-`crates/safec/src/driver.rs` builds with `Diagnostic::error` carry none. There
-is no class of program for a reader to search for and nothing for an
-explanation to hang on, so a number there would be a handle onto nothing.
+the driver, `crates/safec/src/driver.rs` and `driver/`, builds with
+`Diagnostic::error` carry none. There is no class of program for a reader to
+search for and nothing for an explanation to hang on, so a number there would be
+a handle onto nothing.
 
 `SC0801` is the one of those twelve that does not, and is the other kind. The
 backend refusing an IR shape is a fact about a function in a program, with a
@@ -386,8 +387,8 @@ touches the prose, and two commands settle this one, which is one more than it
 used to take:
 
 ```sh
-grep -c "Diagnostic::error("     crates/safec/src/driver.rs   # the twelve
-grep -c "Diagnostic::concluded(" crates/safec/src/driver.rs   # the three: two checks, one invocation
+cat crates/safec/src/driver.rs crates/safec/src/driver/*.rs | grep -c "Diagnostic::error("       # the twelve
+cat crates/safec/src/driver.rs crates/safec/src/driver/*.rs | grep -c "Diagnostic::concluded("   # the three: two checks, one invocation
 ```
 
 The second exists because a safety check does not build its diagnostic the same

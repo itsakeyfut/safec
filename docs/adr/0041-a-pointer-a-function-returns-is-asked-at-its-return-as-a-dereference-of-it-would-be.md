@@ -132,8 +132,8 @@ and `memory/`), applied and measured, and a named case in
   `a_pointer_kept_from_the_last_turn_of_a_loop_and_returned`, the one case
   that reaches it.
 
-A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in `driver.rs`'s
-`memory_finding`, which is the guard the compiler holds.
+A new `Kind` is `error[E0004]` in `verdict`'s `ordered` and in
+`driver/words.rs`'s `memory_finding`, which is the guard the compiler holds.
 
 **`ordered` answering `true` is held only against `false`.** Answering
 `false` fails `a_function_that_returns_what_it_freed` and

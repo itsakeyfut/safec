@@ -95,7 +95,7 @@ choosing between them for the reader is not this layer's job.
 
 **No entry carries a span, and this paragraph proposed that they would.** The
 design run found that every place a remedy would point at is already a label,
-`freed here` and `allocated here` in `driver.rs`, or is not a span this
+`freed here` and `allocated here` in `driver/words.rs`, or is not a span this
 compiler holds: there is nowhere written down that says where to test a pointer
 before reading through it. A field set by nobody and read by nobody is
 breakable by no mutation, so it would have been a guard in name only. The
@@ -112,14 +112,14 @@ either way.
 ### Confirmation
 
 **The constructor, and the build stops rather than a test failing.**
-`Diagnostic::concluded` in `crates/safec/src/diagnostics.rs` takes a `Remedy`
-as its third argument. Mutation: remove that parameter and the two
-`with_remedy` calls in its arms. The library does not compile:
-`error[E0061]` at `memory_finding` and at `nullability_finding` in
-`crates/safec/src/driver.rs`, which are every place a safety finding is built.
-The test modules fail the same way under `cargo test`; how many of them there
-are is a fact about the suite rather than about this decision, and the suite
-grows, so it is not written down here.
+`Diagnostic::concluded` in `crates/safec/src/diagnostics.rs` takes a `Remedy` as
+its third argument. Mutation: remove that parameter and the two `with_remedy`
+calls in its arms. The library does not compile: `error[E0061]` at
+`memory_finding` and at `nullability_finding` in
+`crates/safec/src/driver/words.rs`, which are every place a safety finding is
+built. The test modules fail the same way under `cargo test`; how many of them
+there are is a fact about the suite rather than about this decision, and the
+suite grows, so it is not written down here.
 
 That is the guard this record is about, and it is a failure to compile.
 A guard spelled as a test instead, asserting that some particular diagnostic
