@@ -35,8 +35,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator,
-    TranslationUnit, Ty, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue,
+    Terminator, TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::Span;
@@ -130,7 +130,18 @@ pub struct Finding {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Asked {
     /// Whether a pointer read or written through is null.
-    Dereference,
+    Dereference {
+        /// Whether a pointer this goes through was read out of memory, as the
+        /// one `**pp` reads through second is.
+        ///
+        /// Not a different question, and not a different code: what differs is
+        /// the remedy. A test of `*pp` is kept nowhere, because this lattice
+        /// has a row per local and none for `*pp`, so telling the reader to
+        /// test the pointer is advice to do what may already have been done.
+        /// What settles it is reading the pointer into a local and testing
+        /// that (#333).
+        through_memory: bool,
+    },
     /// Whether an argument passed to a `_Nonnull` parameter is null.
     Argument {
         /// Where the parameter was declared `_Nonnull`, which is the promise
@@ -139,14 +150,55 @@ pub enum Asked {
     },
 }
 
+impl Asked {
+    /// Whether two findings at one caret answer one question, so that one of
+    /// them is enough to say.
+    ///
+    /// A dereference is one question whether or not it went through memory:
+    /// `*p && **q` writes both operands at one span, and the reader is told
+    /// one thing about it. An argument is a question per promise.
+    fn same_question(self, other: Self) -> bool {
+        match (self, other) {
+            (Self::Dereference { through_memory: _ }, Self::Dereference { through_memory: _ }) => {
+                true
+            }
+            (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
+            (Self::Dereference { through_memory: _ }, Self::Argument { promise: _ })
+            | (Self::Argument { promise: _ }, Self::Dereference { through_memory: _ }) => false,
+        }
+    }
+
+    /// One question out of two that [`Asked::same_question`] calls the same.
+    ///
+    /// A dereference that went through memory in either keeps saying so,
+    /// because the remedy the reader is given has to settle both: the one
+    /// written for a pointer read out of memory covers the other pointer too,
+    /// and the plain one does not cover it.
+    fn joined(self, other: Self) -> Self {
+        match (self, other) {
+            (
+                Self::Dereference { through_memory },
+                Self::Dereference {
+                    through_memory: other,
+                },
+            ) => Self::Dereference {
+                through_memory: through_memory || other,
+            },
+            (asked, _) => asked,
+        }
+    }
+}
+
 /// Which locals are known null, known not null, or neither.
 ///
 /// **Keyed by the local rather than by the place.** [`Place`]'s own doc comment
 /// asks a real analysis for a place, and that is right about the memory axis,
 /// where `p` and `*p` have separate states. The question here is about the
 /// pointer value a local holds, so the local is the key, and what it costs is
-/// that `int **pp; *pp` answers [`Nullness::Unknown`]: a warning on correct C
-/// rather than silence about it. It also makes [`Analysis::height`] the local
+/// that the pointer `*pp` holds answers [`Nullness::Unknown`], however it is
+/// reached: copied into a local, or dereferenced in place as `**pp`, which
+/// [`report`] answers because no row here can. A warning on correct C rather
+/// than silence about it. It also makes [`Analysis::height`] the local
 /// count, read straight off the function, which is an answer the trait asks
 /// each analysis for rather than guessing one on its behalf.
 struct Nullability<'a> {
@@ -692,6 +744,15 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
 /// is #136, so two findings at one caret are two diagnostics nobody can tell
 /// apart. The worst rather than the first, because a proved null dereference
 /// beside an unproven one is still a proved null dereference.
+///
+/// **A place asks two questions where it goes through memory.** Its first
+/// dereference reads the local's own value, which is what this lattice knows.
+/// Every one after that reads a pointer the dereference above it loaded, and
+/// that pointer has no row here, so it is asked as [`Nullness::Unknown`]: a
+/// pointer read out of memory proves nothing, which is ADR-0045 on the memory
+/// axis. Asking the local alone was how `int *p = 0; int **pp = &p; return
+/// **pp;` built in silence while `int *q = *pp; return *q;` was refused, and the
+/// two are one C program (#333).
 fn report(
     analysis: &Nullability<'_>,
     findings: &mut Vec<Finding>,
@@ -705,7 +766,12 @@ fn report(
 
     let worst = places
         .iter()
-        .filter_map(|place| analysis.known(known, place.local).concluded())
+        .flat_map(|place| {
+            let below = read_out_of_memory(place).then_some(Nullness::Unknown);
+            [Some(analysis.known(known, place.local)), below]
+        })
+        .flatten()
+        .filter_map(Nullness::concluded)
         .max_by_key(|conclusion| severity(*conclusion));
 
     if let Some(conclusion) = worst {
@@ -713,9 +779,26 @@ fn report(
             function,
             conclusion,
             at,
-            asked: Asked::Dereference,
+            asked: Asked::Dereference {
+                through_memory: places.iter().any(|place| read_out_of_memory(place)),
+            },
         });
     }
+}
+
+/// Whether a place dereferences a pointer that was read out of memory.
+///
+/// A `Deref` anywhere after the first element, rather than two or more of
+/// them, so that an element selected by an index and then dereferenced counts
+/// too: the pointer an index selects is just as much a load. Nothing builds a
+/// [`Projection::Index`] from C today, so a unit test with IR built by hand is
+/// what holds that half.
+fn read_out_of_memory(place: &Place) -> bool {
+    place
+        .projection
+        .iter()
+        .skip(1)
+        .any(|projection| matches!(projection, Projection::Deref))
 }
 
 /// One finding for each argument a call passes to a `_Nonnull` parameter,
@@ -891,7 +974,9 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // **The question is part of the key.** A call that passes two arguments
     // to two `_Nonnull` parameters has one caret and two promises, and a
     // dereference inside a call's arguments shares its caret with the call.
-    // Each of those is a different thing to say.
+    // Each of those is a different thing to say. Whether a dereference went
+    // through memory is not part of it, and the survivor keeps it if either
+    // did, which `Asked::joined` says why.
     //
     // **So is the function.** The sort above is over the whole unit, and a
     // finding is routed by the function it names: two functions sharing a
@@ -900,9 +985,12 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     findings.dedup_by(|later, earlier| {
         let same = later.function == earlier.function
             && later.at == earlier.at
-            && later.asked == earlier.asked;
-        if same && severity(later.conclusion) > severity(earlier.conclusion) {
-            std::mem::swap(later, earlier);
+            && later.asked.same_question(earlier.asked);
+        if same {
+            if severity(later.conclusion) > severity(earlier.conclusion) {
+                std::mem::swap(later, earlier);
+            }
+            earlier.asked = earlier.asked.joined(later.asked);
         }
         same
     });

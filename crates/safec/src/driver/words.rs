@@ -433,17 +433,39 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
     // `_Nonnull` that a caller has a reason to pass null to is a promise that
     // was wrong rather than a call that was.
     let (code, message, label, remedy) = match (finding.asked, finding.conclusion) {
-        (Asked::Dereference, Conclusion::Unsafe) => (
+        (Asked::Dereference { through_memory: _ }, Conclusion::Unsafe) => (
             NULL_DEREFERENCE,
             "this dereferences a null pointer",
             "this is null when it is read through",
             "give this pointer a value before reading through it, or do not read through it here",
         ),
-        (Asked::Dereference, Conclusion::Unknown) => (
+        (
+            Asked::Dereference {
+                through_memory: false,
+            },
+            Conclusion::Unknown,
+        ) => (
             NULL_DEREFERENCE,
             "this may dereference a null pointer",
             "this check cannot say this is not null",
             "test this pointer against null before reading through it",
+        ),
+        // A pointer read out of memory and read through in place, `**pp`,
+        // which a test of `*pp` does not settle: this check keeps nothing
+        // about `*pp`, so the row above would be advice to do what the
+        // program may already do (#333). The test is spelled out, because
+        // `if (q)` on a local just copied from memory is not read as one yet
+        // and following a remedy into the same refusal breaks its promise.
+        (
+            Asked::Dereference {
+                through_memory: true,
+            },
+            Conclusion::Unknown,
+        ) => (
+            NULL_DEREFERENCE,
+            "this may dereference a null pointer",
+            "this check cannot say this is not null",
+            "read each pointer this goes through into a local, and test that local with `!= 0` before reading through it",
         ),
         (Asked::Argument { promise: _ }, Conclusion::Unsafe) => (
             NULL_ARGUMENT,
@@ -457,9 +479,10 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             "this check cannot say this is not null",
             "test this pointer against null before passing it",
         ),
-        (Asked::Dereference | Asked::Argument { promise: _ }, Conclusion::Safe) => {
-            (NULL_DEREFERENCE, "nothing", "nothing", "nothing")
-        }
+        (
+            Asked::Dereference { through_memory: _ } | Asked::Argument { promise: _ },
+            Conclusion::Safe,
+        ) => (NULL_DEREFERENCE, "nothing", "nothing", "nothing"),
     };
 
     let mut diagnostic = Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?

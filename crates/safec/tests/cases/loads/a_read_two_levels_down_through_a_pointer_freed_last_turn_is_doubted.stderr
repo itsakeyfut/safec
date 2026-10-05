@@ -8,3 +8,13 @@ warning[SC0402]: this uses a pointer this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:17:13 ]
+    │
+ 17 │             return **t2;
+    │             ──────┬─────  
+    │                   ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: read each pointer this goes through into a local, and test that local with `!= 0` before reading through it

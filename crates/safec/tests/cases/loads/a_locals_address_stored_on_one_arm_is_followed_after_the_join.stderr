@@ -8,3 +8,23 @@ warning[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:19:5 ]
+    │
+ 19 │     **t3 = r;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: read each pointer this goes through into a local, and test that local with `!= 0` before reading through it
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:21:5 ]
+    │
+ 21 │     return ***t3;
+    │     ──────┬──────  
+    │           ╰──────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: read each pointer this goes through into a local, and test that local with `!= 0` before reading through it

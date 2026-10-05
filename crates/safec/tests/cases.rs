@@ -766,6 +766,34 @@ cases! {
         // one rule: a callee handed `&p` is the same escape through a different
         // door.
         a_pointer_written_through_its_own_address_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A dereference past the first in one place reads a pointer out of
+        // memory, which has no row in the lattice, and is asked as unproven
+        // (#333). The first is the program that built in silence, written
+        // once as a read and once as an operand. Mutation: have
+        // `nullability::report` ask the root local alone, which is the code
+        // before #333; the first two fail and go silent.
+        a_null_pointer_read_two_dereferences_down_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_two_dereferences_down_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What that costs, pinned: a test of `*pp` is kept nowhere, so the read
+        // through it in place stays a doubt, and the remedy says so rather
+        // than asking for the test the program already has. Copying the
+        // pointer into a local and comparing it, `q != 0`, is what proves it,
+        // which is the second case and the remedy's promise. `if (q)` on that
+        // local does not prove it yet, which is a gap of the branch's reading
+        // rather than of this rule.
+        a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p && **q` writes both operands at one caret, a plain doubt about
+        // `p` first and one through memory about `q` second, and the reader is
+        // told one thing. It has to settle both, so the remedy for a pointer
+        // read out of memory survives. Mutation: have `Asked::joined` keep the
+        // first question as it is; the remedy becomes the plain one, which
+        // would leave `**q` refused after it was followed.
+        a_doubt_through_memory_beside_a_plain_one_at_one_caret_is_told_how_to_settle_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The root's own answer still counts, and a proof outranks the doubt
+        // beside it. Mutation: answer only the deeper question whenever there
+        // is one; this fails as unproven where it expects proved.
+        a_null_root_beside_a_pointer_read_out_of_memory_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The two that hold ADR-0025, and the second is the one that says the
         // fact is per path: the arm that skips the dereference joins back in.
         a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1186,7 +1214,10 @@ cases! {
         a_use_after_free_through_a_chain_written_as_one_place_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_three_levels_down_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_three_levels_down_through_a_freed_middle_level_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_live_value_read_three_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // "In silence" is the memory check's: no use after free is reported.
+        // The nullability check doubts the read through memory in place, as a
+        // warning under `--allow-unknown` (#333).
+        a_live_value_read_three_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And one level deeper on each path, so that "however long" is held
         // past the depths above. Mutation: have `read_through` follow no more
         // than two `Deref`s; the first goes silent. Mutation: have `used` ask
@@ -1299,6 +1330,9 @@ cases! {
         a_pointer_copied_by_memcpy_into_a_table_and_freed_is_unproven_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_store_two_levels_down_is_recorded_where_it_lands: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // "In silence" is the memory check's: no use after free is reported.
+        // The nullability check doubts the read through memory in place, as a
+        // warning under `--allow-unknown` (#333).
         a_live_pointer_copied_or_stored_two_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // What ADR-0045 accepts as its cost: a copy adds to what the
         // destination holds and replaces nothing, so a freed pointer it held
@@ -1401,6 +1435,9 @@ cases! {
         a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_locals_address_read_back_out_of_an_allocation_is_written_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // "In silence" is the memory check's: no use after free is reported.
+        // The nullability check doubts the read through memory in place, as a
+        // warning under `--allow-unknown` (#333).
         a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a local's own address edge below the first level, `t3 = &t2;
         // t2 = &slot; u = *t3; *u`. Silent with the value live and written
@@ -1507,14 +1544,18 @@ cases! {
         // Built, which is what keeps the byte out of `may_be_pointer`: a
         // character handed to a call this check cannot read is not everything
         // stored anywhere. Mutation: answer `true` for `Ty::Char` there; both
-        // are refused at the read of the table.
-        a_character_handed_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_string_copied_a_byte_at_a_time_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // doubt a use after free and a double free at the table. Warnings
+        // rather than refusals, because both run with `--allow-unknown`: each
+        // reads a pointer out of the table in place, which the nullability
+        // check doubts (#333).
+        a_character_handed_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_string_copied_a_byte_at_a_time_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Built: a byte handed straight to a call reaches what was stored
         // where it was read, here nothing, and never everything stored
         // anywhere. Mutation: answer a byte in `read_out` with
-        // `Known::stored`; this is refused at the read of the table.
-        a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `Known::stored`; this doubts a use after free and a double free at
+        // the table, as warnings for the reason the two above give.
+        a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     }
 
     "returns" => {

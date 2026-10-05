@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_doubt_through_memory_beside_a_plain_one_at_one_caret_is_told_how_to_settle_both.c:3:16 ]
+   │
+ 3 │         return *p && **q;
+   │                ────┬────  
+   │                    ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local with `!= 0` before reading through it

@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_null_root_beside_a_pointer_read_out_of_memory_is_proved.c:3:5 ]
+   │
+ 3 │     return **pp;
+   │     ──────┬─────  
+   │           ╰─────── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here
