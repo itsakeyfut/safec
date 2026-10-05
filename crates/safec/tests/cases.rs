@@ -1190,6 +1190,13 @@ cases! {
         // ignore it; the second. Mutation: have `stale_below` read one level
         // only; the third. Mutation: drop `stale` at the join; the fourth.
         a_pointer_stored_and_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And where a call that may have freed it reached it through memory,
+        // which leaves it `Reachable` rather than `Unknown`: a doubt is gone to
+        // `reborn` whichever it is. Found by review of ADR-0047. Mutation: have
+        // `reborn` count `Reachable` as live; both go silent, the first through
+        // the container's mark and the second through the copy's.
+        a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],

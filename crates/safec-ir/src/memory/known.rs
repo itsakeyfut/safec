@@ -741,7 +741,11 @@ impl Known {
                 *fact = None;
             }
         }
-        let gone = !matches!(state[site], SiteState::Live(_) | SiteState::Reachable);
+        // **`Reachable` is gone here**, as every doubt is: a call that may have
+        // freed the old allocation through what it reached writes that, and
+        // counting it live let a pointer stored last turn be read as the new
+        // allocation. Found by review. See ADR-0047.
+        let gone = !matches!(state[site], SiteState::Live(_));
         for (other, held) in points_to.iter_mut().enumerate() {
             if other != site {
                 if gone && held.sites[site] {

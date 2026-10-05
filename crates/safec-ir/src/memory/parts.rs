@@ -188,9 +188,11 @@ impl SiteState {
     /// itself, a free it cannot pin down, a `realloc`. A proved free stays
     /// proved, since nothing un-frees an allocation.
     ///
-    /// **Every writer of a doubt goes through this or [`Self::doubted`]**, so
-    /// that a new one has to choose between them rather than write `Unknown`
-    /// over `Live` alone and leave a `Reachable` site looking unfreed. See
+    /// **A writer of a doubt that keeps a proved free goes through this or
+    /// [`Self::doubted`]**, so that a new one has to choose between them rather
+    /// than write `Unknown` over `Live` alone and leave a `Reachable` site
+    /// looking unfreed. The few that write `Unknown` over anything, a proof
+    /// included, need neither, since nothing is a stronger doubt. See
     /// ADR-0047.
     pub(super) fn may_be_freed(&mut self) {
         match self {
