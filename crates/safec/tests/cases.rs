@@ -1856,9 +1856,9 @@ cases! {
         a_pointer_handed_to_a_call_and_then_by_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And where the call held the pointer as a load, or reached it
         // through memory it was handed: either may free it, and neither can
-        // replace `a`. Mutation: have the opaque call write `Reachable` on a
-        // load's sites again; the first goes silent. Mutation: leave out what
-        // it reaches through the memory it was handed; the second does.
+        // replace `a`. Mutation: have the opaque call leave out what it holds;
+        // both go silent. Mutation: take what it is handed without what that
+        // memory holds; the second does.
         a_pointer_a_call_was_handed_through_a_load_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_reached_through_memory_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And not where only an address or an exposure reached it: a call
