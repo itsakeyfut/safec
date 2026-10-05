@@ -182,7 +182,7 @@ tests from there to the end. Each split updates its row when it lands.
 
 | file | code, tests excluded | concerns that read apart | inline tests | the rules say |
 |---|---|---|---|---|
-| `crates/safec-ir/src/memory.rs` | 5,497 | the lattice's parts, the lattice value, building a value out of operands, the transfer functions, the report | 0 | split |
+| `crates/safec-ir/src/memory.rs` | 5,497 | the lattice's parts, the lattice value, building a value out of operands, the transfer functions, the report | 0 | split into `memory/` (#316) |
 | `crates/safec/src/driver.rs` | 2,466 | the pipeline, the words of each safety diagnostic, running the backend, the `--emit` dumps | 1,509 | split, and its tests move |
 | `crates/safec/src/lowering.rs` | 2,250 | one | 0 | its tests moved to `lowering/tests.rs` (#318) |
 | `crates/safec/src/parser.rs` | 1,888 | one | 0 | its tests moved to `parser/tests.rs` (#318) |

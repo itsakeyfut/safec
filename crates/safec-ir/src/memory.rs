@@ -34,6 +34,14 @@
 //! boundary rather than a defect in it, and what moves the boundary is a
 //! summary per function, which nothing here has.
 //!
+//! **One concern per file.** `memory/parts.rs` holds what the lattice value is
+//! made of, `known.rs` the value and the walks over it, `built.rs` what a value
+//! built out of operands holds, `transfer.rs` the analysis and what each
+//! element, terminator and edge does to the value, and `report.rs` what is asked
+//! once the walk has settled. This file keeps what a caller names: [`findings`],
+//! [`Finding`], [`Kind`], [`Unproven`], and the two readers of a dereference the
+//! nullability check shares.
+//!
 //! [the safety model]: https://github.com/itsakeyfut/safec/blob/main/docs/safety-model.md
 //! [`LocalId`]: crate::ir::LocalId
 
