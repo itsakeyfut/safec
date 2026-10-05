@@ -1166,13 +1166,13 @@ fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
         // **Words of its own, under the same code**: what is passed is live,
         // and `a pointer to an allocation that was freed` would be false about
         // `use2(&a)`. The fix is the same, at the call or at the free. Only
-        // `Disagreement` arrives, because `memory::handed_below` always answers
-        // `Reached::Partial` beside a site freed or unproven; every other
-        // reason is named rather than taken by `_`, for the reason the
-        // double-free rows give. The label says `perhaps` and the remedy has
-        // `DISAGREEMENT_REMEDY`'s two halves because the site may be unproven
-        // rather than freed: a free on one path, or a call this check cannot
-        // read. See ADR-0042.
+        // `Disagreement` arrives, because `memory::known::Known::handed_below`
+        // always answers `Reached::Partial` beside a site freed or unproven;
+        // every other reason is named rather than taken by `_`, for the reason
+        // the double-free rows give. The label says `perhaps` and the remedy
+        // has `DISAGREEMENT_REMEDY`'s two halves because the site may be
+        // unproven rather than freed: a free on one path, or a call this check
+        // cannot read. See ADR-0042.
         (
             Kind::FreedBehindArgument,
             Conclusion::Unsafe | Conclusion::Unknown,

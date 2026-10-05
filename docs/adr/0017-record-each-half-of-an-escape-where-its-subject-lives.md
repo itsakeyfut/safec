@@ -176,7 +176,7 @@ in `crates/safec/tests/cases.rs`, per
 ## More Information
 
 * `Known::reached_by`, `Known::unproved` and `Known::settle` in
-  [`crates/safec-ir/src/memory.rs`](../../crates/safec-ir/src/memory.rs).
+  [`crates/safec-ir/src/memory/known.rs`](../../crates/safec-ir/src/memory/known.rs).
 * [`docs/diagnostics.md`](../diagnostics.md) records what this means for a
   reader of `SC0402`, which is where a user meets it.
 * [ADR-0016](./0016-an-analysis-is-a-trait-and-an-unreached-block-has-no-value.md)
