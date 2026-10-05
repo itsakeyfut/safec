@@ -52,7 +52,7 @@ The last row is what this does not reach: a parameter's allocation is exposed wh
 The cases are in `crates/safec/tests/cases/memory`, and every mutation is in `crates/safec-ir/src/memory/`.
 
 - The join joining every site as before fails `a_pointer_freed_and_set_to_null_on_one_arm_is_returned`, `a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test` and `a_pointer_freed_and_set_to_null_in_a_loop_builds`, which are refused.
-- `Known::held_sites` leaving out what locals hold fails `a_copy_of_a_pointer_freed_and_set_to_null_is_doubted`; leaving out `inside` fails `a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted`. Each builds.
+- `Known::held_sites` leaving out `inside` fails `a_pointer_stored_on_the_arm_that_freed_it_is_doubted`, and leaving out what locals hold fails `a_copy_made_on_the_arm_that_freed_it_is_doubted`; each builds. Only an asymmetric case can hold one kind of holder: where both sides hold the site by the same kind, leaving that kind out makes it held on neither, and the states join as they always did, so the symmetric controls in the table do not fail under these mutations, measured.
 - `live_in` leaving out a local whose address is taken fails `a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted`, which builds, and the unit test `a_local_whose_address_is_taken_is_live_everywhere`.
 - `live_in` leaving out one kind of read fails that kind's unit test in `memory/transfer.rs`: a copy, a dereference, an `Index` operand, a write through the local, arithmetic, an `Evaluate`, a call's argument, a branch's condition.
 - The edge clearing before its own `realloc` logic fails four `realloc` cases in `cases/exposure`.

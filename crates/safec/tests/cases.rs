@@ -323,14 +323,20 @@ cases! {
         // Doubted, where something read again still holds it: the pointer
         // itself with no null, a copy, a copy freed after, a slot of memory,
         // and the pointer read back through its address. Mutation: have
-        // `held_sites` leave out locals' sites; the copy builds. Mutation:
-        // leave out `inside`; the slot builds. Mutation: have `live_in` leave
-        // out a local whose address is taken; the last builds.
+        // `live_in` leave out a local whose address is taken; the last builds.
         a_pointer_freed_on_one_arm_and_returned_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_of_a_pointer_freed_and_set_to_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_freed_after_a_free_and_null_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where what holds it on the arm that freed it is of one kind and
+        // the other arm holds it by another, which is the only shape where a
+        // kind `held_sites` leaves out changes the answer: held on neither
+        // side, the states join as before. Mutation: have `held_sites` leave
+        // out `inside`; the first builds. Mutation: leave out locals' sites;
+        // the second builds.
+        a_pointer_stored_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_made_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_escaped_local_read_twice_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
