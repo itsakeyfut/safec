@@ -1190,6 +1190,13 @@ cases! {
         // ignore it; the second. Mutation: have `stale_below` read one level
         // only; the third. Mutation: drop `stale` at the join; the fourth.
         a_pointer_stored_and_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And where a call that may have freed it reached it through memory,
+        // which leaves it `Reachable` rather than `Unknown`: a doubt is gone to
+        // `reborn` whichever it is. Found by review of ADR-0047. Mutation: have
+        // `reborn` count `Reachable` as live; both go silent, the first through
+        // the container's mark and the second through the copy's.
+        a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -1829,14 +1836,30 @@ cases! {
         // `Reached::Partial`; both become proofs.
         the_address_of_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_holding_a_freed_pointer_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // And about one unproven, through this function's own memory only:
-        // a call this check cannot read may have freed it, or one path did.
+        // And about one unproven, through this function's own memory: a call
+        // this check cannot read may have freed it, or one path did.
         // Mutation: have `handed_below` ask about freed sites only; both go
-        // silent. Through an address it is not asked, which the live address
-        // below holds. Mutation: have `handed_below` ask about every unproven
-        // site; that one reports.
+        // silent. Through an address, what is only reachable is not asked,
+        // which the live address below holds. Mutation: have `handed_below`
+        // ask about every unproven or reachable site; that one reports.
         a_table_holding_a_pointer_a_call_may_have_freed_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_table_holding_a_pointer_freed_on_one_path_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Through an address too, where what made it unproven may have freed
+        // it: one path freed it, before or after its address was taken, or a
+        // call was handed the pointer itself. See ADR-0047. Mutation: have
+        // `handed_below` exempt `Unknown` through the address; all three go
+        // silent. Mutation: have the join give `Reachable` for a freed side;
+        // the first does. Mutation: have an opaque call write `Reachable` on
+        // what it is handed by value; the third does.
+        a_pointer_freed_on_one_path_and_handed_by_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_was_taken_before_a_free_on_one_path_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_handed_to_a_call_and_then_by_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And not where only an address or an exposure reached it: a call
+        // handed an address may have replaced what it freed, which is how C
+        // hands a pointer to be replaced. Mutation: have every producer but an
+        // address taken write `Unknown`; both are refused, and nothing else.
+        a_pointer_handed_by_address_twice_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_handed_by_address_around_another_call_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

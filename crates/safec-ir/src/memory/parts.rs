@@ -143,8 +143,20 @@ pub(super) enum SiteState {
         freed: Freeing,
     },
     /// Freed on one path and not on another, or handed to a call this check
-    /// cannot read.
+    /// cannot read: something this check saw may have freed it.
     Unknown,
+    /// Live as far as this check saw, and within reach of code it cannot read:
+    /// a local holding it had its address taken, or it was exposed to a call,
+    /// or a call reached it only through an address. Nothing that may have
+    /// freed it happened here.
+    ///
+    /// **A doubt everywhere `Unknown` is**, so no report says less for it.
+    /// What tells the two apart is the one question a call handed an address
+    /// asks, [`Known::handed_below`](super::known::Known::handed_below): what
+    /// the address reaches is asked about when it is `Unknown`, and not when
+    /// it is only `Reachable`, which every `use2(&a)` over a live pointer is.
+    /// See ADR-0047.
+    Reachable,
 }
 
 impl SiteState {
@@ -165,7 +177,37 @@ impl SiteState {
                 made: same(here, there),
                 freed: from_here.joined(from_there),
             },
+            // Live on both sides as far as this check saw, and reachable on
+            // at least one. See ADR-0047.
+            (Self::Live(_) | Self::Reachable, Self::Live(_) | Self::Reachable) => Self::Reachable,
             _ => Self::Unknown,
+        }
+    }
+
+    /// Something this check saw may have freed it: a call handed the pointer
+    /// itself, a free it cannot pin down, a `realloc`. A proved free stays
+    /// proved, since nothing un-frees an allocation.
+    ///
+    /// **A writer of a doubt that keeps a proved free goes through this or
+    /// [`Self::doubted`]**, so that a new one has to choose between them rather
+    /// than write `Unknown` over `Live` alone and leave a `Reachable` site
+    /// looking unfreed. The few that write `Unknown` over anything, a proof
+    /// included, need neither, since nothing is a stronger doubt. See
+    /// ADR-0047.
+    pub(super) fn may_be_freed(&mut self) {
+        match self {
+            Self::Live(_) | Self::Reachable => *self = Self::Unknown,
+            Self::Freed { .. } | Self::Unknown => {}
+        }
+    }
+
+    /// Code this check cannot read can now reach it, and nothing that may
+    /// have freed it has happened: an address taken, an exposure, a call that
+    /// reaches it only through an address. See ADR-0047.
+    pub(super) fn doubted(&mut self) {
+        match self {
+            Self::Live(_) => *self = Self::Reachable,
+            Self::Freed { .. } | Self::Unknown | Self::Reachable => {}
         }
     }
 }

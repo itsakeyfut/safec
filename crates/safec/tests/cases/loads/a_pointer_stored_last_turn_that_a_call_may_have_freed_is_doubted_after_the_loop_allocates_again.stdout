@@ -1,0 +1,245 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:2:6 "release_in" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int **"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "int"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int"
+  Local "_13" "int *"
+  Local "_14" "int **"
+  Local "_15" "void *"
+  Local "_16" "int"
+  Local "_17" "int *"
+  Local "_18" "void"
+  Local "_19" "int"
+  Local "_20" "int"
+  Block "bb0" entry
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:5:15 generated
+    Call a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:5:15 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:5:15 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:6:9 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:9:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 0
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:9:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:9:5 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:10:9 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:10:13 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:11:12 written
+      Destination "_6"
+      Binary "Lt"
+        Copy "_5"
+        Constant 2
+    Branch a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:11:12 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:11:12 generated
+    StorageLive a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:12:9 generated "_7"
+    ArgumentsEvaluated a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:12:18 generated
+    Call a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:12:18 "malloc" "bb8"
+      Destination "_8"
+      Constant 4
+  Block "bb7"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:11:12 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:31:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:31:12 generated
+    Return
+  Block "bb8"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:12:14 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:12:18 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:13:13 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_7"
+        Constant 0
+    Branch a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:13:13 "bb9" "bb10"
+      Copy "_9"
+  Block "bb9"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:13:13 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:14:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:14:20 generated
+    Return
+  Block "bb10"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:13:13 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:16:13 written
+      Destination "_10"
+      Binary "Eq"
+        Copy "_5"
+        Constant 1
+    Branch a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:16:13 "bb12" "bb13"
+      Copy "_10"
+  Block "bb12"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:16:13 generated
+    StorageLive a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:17:13 generated "_11"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:17:18 written
+      Destination "_11"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:17:24 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:18:17 written
+      Destination "_12"
+      Binary "Ne"
+        Copy "_11"
+        Constant 0
+    Branch a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:18:17 "bb15" "bb16"
+      Copy "_12"
+  Block "bb13"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:16:13 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:22:9 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:22:9 written
+      Destination "_13"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:22:9 generated
+    StorageLive a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:23:9 generated "_14"
+    ArgumentsEvaluated a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:23:19 generated
+    Call a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:23:19 "malloc" "bb18"
+      Destination "_15"
+      Constant 8
+  Block "bb15"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:18:17 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:19:17 written
+      Destination "_0"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:19:24 generated
+    Return
+  Block "bb16"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:18:17 generated
+    Goto "bb17"
+  Block "bb17"
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:21:9 generated "_11"
+    Goto "bb14"
+  Block "bb18"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:23:15 written
+      Destination "_14"
+      Use
+        Copy "_15"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:23:19 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:24:13 written
+      Destination "_16"
+      Binary "Eq"
+        Copy "_14"
+        Constant 0
+    Branch a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:24:13 "bb19" "bb20"
+      Copy "_16"
+  Block "bb19"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:24:13 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:25:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:25:20 generated
+    Return
+  Block "bb20"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:24:13 generated
+    Goto "bb21"
+  Block "bb21"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:27:9 written
+      Destination "_14"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:27:9 written
+      Destination "_17"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:27:9 generated
+    ArgumentsEvaluated a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:28:9 generated
+    Call a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:28:9 "release_in" "bb22"
+      Destination "_18"
+      Copy "_14"
+  Block "bb22"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:28:9 generated
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:29:13 written
+      Destination "_19"
+      Binary "Add"
+        Copy "_5"
+        Constant 1
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:29:9 written
+      Destination "_5"
+      Use
+        Copy "_19"
+    Operation a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:29:9 written
+      Destination "_20"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:29:9 generated
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:30:5 generated "_14"
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:30:5 generated "_7"
+    Goto "bb5"

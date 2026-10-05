@@ -547,7 +547,9 @@ impl Analysis for Allocations<'_> {
         let locals = function.locals().len();
         // Each local's set of sites only grows, so it takes at most one step
         // per site, and a site is a local. Each site's state walks `Live` to
-        // `Freed` to `Unknown`; its `freed` span can only move to an earlier
+        // `Freed` or to `Reachable`, and on to `Unknown`, which is still two
+        // steps since the join of those two is `Unknown` (ADR-0047); its
+        // `freed` span can only move to an earlier
         // one, which it can do at most once per site that frees; and its `made`
         // span can only fall from `Some` to `None`, once. A local's `escaped`
         // bit goes from `false` to `true` and never back, once each, and its
@@ -843,10 +845,10 @@ impl Analysis for Allocations<'_> {
                 // `r = release_all() + (memset(a, 0, 4) != 0); r = r + a[0];`
                 // read `a` in silence. A proved free stays proved. See
                 // ADR-0042.
+                // Reachable rather than freed: the call reached it through
+                // the exposure. See ADR-0047.
                 for &site in &value.exposed_after_call {
-                    if let SiteState::Live(_) = value.state[site] {
-                        value.state[site] = SiteState::Unknown;
-                    }
+                    value.state[site].doubted();
                 }
                 value.exposed_after_call.clear();
             }
@@ -1366,7 +1368,7 @@ impl Analysis for Allocations<'_> {
                     .sites()
                     .filter_map(|site| match value.state[site] {
                         SiteState::Live(made) => Some((site, made)),
-                        SiteState::Freed { .. } | SiteState::Unknown => None,
+                        SiteState::Freed { .. } | SiteState::Unknown | SiteState::Reachable => None,
                     })
                     .collect();
                 (!held.lost && !old.is_empty() && old.len() == held.sites().count()).then_some(old)
@@ -1483,7 +1485,7 @@ impl Analysis for Allocations<'_> {
                     // the free: the diagnostic wants to name it.
                     let made = match value.state[site] {
                         SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-                        SiteState::Unknown => None,
+                        SiteState::Unknown | SiteState::Reachable => None,
                     };
                     // **A free already ordered before here is the one to
                     // keep.** It is what proves anything about what follows,
@@ -1511,9 +1513,7 @@ impl Analysis for Allocations<'_> {
             // May have freed it, and has not if it failed. See ADR-0039.
             Callee::Reallocates => {
                 for site in sites().collect::<Vec<_>>() {
-                    if let SiteState::Live(_) = value.state[site] {
-                        value.state[site] = SiteState::Unknown;
-                    }
+                    value.state[site].may_be_freed();
                 }
             }
             // Frees nothing; what it is handed is out of this check's sight
@@ -1603,7 +1603,16 @@ impl Analysis for Allocations<'_> {
                     {
                         continue;
                     }
-                    value.state[site] = SiteState::Unknown;
+                    // **What it is handed by value it may have freed; what it
+                    // reaches only through an address or a load it may have
+                    // freed and replaced**, so only the first is what a later
+                    // call by address asks about: `grow(&a); grow(&a);` is how
+                    // C hands a pointer to be replaced. See ADR-0047.
+                    if outright.contains(&site) {
+                        value.state[site] = SiteState::Unknown;
+                    } else {
+                        value.state[site].doubted();
+                    }
                 }
 
                 // **Everything this call could reach, and everything reached
@@ -1635,9 +1644,9 @@ impl Analysis for Allocations<'_> {
                 // proved: nothing a callee does un-frees it. See ADR-0038.
                 if self.frees_anything(*callee) {
                     for state in &mut value.state {
-                        if let SiteState::Live(_) = state {
-                            *state = SiteState::Unknown;
-                        }
+                        // Reachable: a hatch reaches what it was not handed
+                        // only as code this check cannot read. See ADR-0047.
+                        state.doubted();
                     }
                 }
 

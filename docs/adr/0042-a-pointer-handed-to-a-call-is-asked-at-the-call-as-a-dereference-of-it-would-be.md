@@ -218,28 +218,31 @@ that says which arguments are asked, for `handed` at the call and for the
 transfer that carries them, and `handed` reports through `say`, because
 `used_before` can reach the same caret about the same local.
 
-**And one level in, about what may have been freed.** A pointer argument
-that is a local, and says nothing itself, is asked what `Known::stored_below`
-says it points at may hold: through a local's address, `free(a); use2(&a);`,
-and through what the function stored in its own memory, `*t = a; free(a);
-use2(t);`. Both built, and in both the callee may read the freed pointer out
-and use it (#271). An allocation proved freed is asked whichever way it is
-reached. One unproven is asked through the function's own memory, `*t = a;
-release(a); use2(t);` and a free on one path, as a pointer handed itself
-would be, but not through the address handed: taking an address makes a live
-allocation unproven (ADR-0017), and asking about those refused `use2(&a)`
-over every live pointer, measured. Only what the address alone reaches is
-exempt: a pointer read out of memory carries the locals it may be as edges
-too (ADR-0045), and exempting everything they hold silenced a freed pointer
-the memory held beside them. It is never a proof, since the callee may
-only write there, and it is reported under the key of `*place`, so
-`give(tab, *tab)` stays one report, with `*tab`'s own words: each argument is
-asked for itself first. It is not carried forwards to a later free as a
-handed pointer is: the shapes measured, `use2(t) + (free(a), 0)` and
-`use2(&a) + (free(a), 0)`, are refused at the free already, since the call
-exposes what the table holds and an escape leaves an allocation unproven. It
-is `Kind::FreedBehindArgument`, with words of its own under `SC0407`, because
-`a pointer to an allocation that was freed` is false about `&a`.
+**And one level in, about what may have been freed.** A pointer argument that is
+a local, and says nothing itself, is asked what `Known::stored_below` says it
+points at may hold: through a local's address, `free(a); use2(&a);`, and through
+what the function stored in its own memory, `*t = a; free(a); use2(t);`. Both
+built, and in both the callee may read the freed pointer out and use it (#271).
+An allocation proved freed is asked whichever way it is reached. One unproven is
+asked through the function's own memory, `*t = a; release(a); use2(t);` and a
+free on one path, as a pointer handed itself would be, but not through the
+address handed: taking an address makes a live allocation unproven (ADR-0017),
+and asking about those refused `use2(&a)` over every live pointer, measured.
+[ADR-0047](./0047-an-allocation-code-this-check-cannot-read-can-reach-is-not-one-it-saw-freed.md)
+narrows this to an allocation unproven only because code this check cannot read
+can reach it, so one freed on one path, or handed to `release(a)`, is asked
+through the address too. Only what the address alone reaches is exempt: a
+pointer read out of memory carries the locals it may be as edges too (ADR-0045),
+and exempting everything they hold silenced a freed pointer the memory held
+beside them. It is never a proof, since the callee may only write there, and it
+is reported under the key of `*place`, so `give(tab, *tab)` stays one report,
+with `*tab`'s own words: each argument is asked for itself first. It is not
+carried forwards to a later free as a handed pointer is: the shapes measured,
+`use2(t) + (free(a), 0)` and `use2(&a) + (free(a), 0)`, are refused at the free
+already, since the call exposes what the table holds and an escape leaves an
+allocation unproven. It is `Kind::FreedBehindArgument`, with words of its own
+under `SC0407`, because `a pointer to an allocation that was freed` is false
+about `&a`.
 
 **No null exemption.** `memory::report::asked` exempts a pointer established
 null from a free, and nothing here does. An exemption is the half of a rule that
