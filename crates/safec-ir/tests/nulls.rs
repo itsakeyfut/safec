@@ -756,3 +756,61 @@ fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
     assert_eq!(found[0].at, names.at[1]);
 }
+
+/// An index after a dereference selects an element of what the pointer points
+/// at, and reads no pointer out of memory, so it is not asked.
+///
+/// `p = &x; (*p)[0] = 1;` as a place `[Deref, Index]`, with `p` established
+/// non-null by the address. Only the `Deref` reads a pointer, and it reads
+/// `p`'s own value, which this check proved.
+///
+/// **This compiler's own frontend cannot produce it**, for the reason the
+/// test above gives.
+///
+/// Mutation: have `nullability::read_out_of_memory` answer for any element
+/// after the first rather than for a `Deref`. The index is counted, the write
+/// is doubted, and this fails with one finding where it expects none.
+#[test]
+fn an_index_after_a_dereference_reads_no_pointer_out_of_memory() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![]);
+    let x = function.push_local(int);
+    let p = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                // `p = &x;`, which is the one thing this check proves non-null.
+                Element::Assign(Operation {
+                    place: Place::local(p),
+                    value: Rvalue::Address(Place::local(x)),
+                    origin: Origin::Written(names.at[0]),
+                }),
+                Element::Assign(Operation {
+                    place: Place {
+                        local: p,
+                        projection: vec![
+                            Projection::Deref,
+                            Projection::Index(Operand::Constant(0)),
+                        ],
+                    },
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(names.at[1]),
+                }),
+            ],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let found = concluded(unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
