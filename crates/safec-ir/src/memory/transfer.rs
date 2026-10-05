@@ -1597,22 +1597,28 @@ impl Analysis for Allocations<'_> {
                 // a hatch built. What an argument names outright is blanked as
                 // before. See ADR-0045.
                 let outright = Self::named_outright(handed, value);
-                for site in sites().collect::<Vec<_>>() {
-                    if matches!(value.state[site], SiteState::Freed { .. })
-                        && !outright.contains(&site)
-                    {
-                        continue;
-                    }
-                    // **What it is handed by value it may have freed; what it
-                    // reaches only through an address or a load it may have
-                    // freed and replaced**, so only the first is what a later
-                    // call by address asks about: `grow(&a); grow(&a);` is how
-                    // C hands a pointer to be replaced. See ADR-0047.
-                    if outright.contains(&site) {
-                        value.state[site] = SiteState::Unknown;
-                    } else {
-                        value.state[site].doubted();
-                    }
+                for site in outright {
+                    value.state[site] = SiteState::Unknown;
+                }
+                // **What it holds it may have freed**: what it is handed, by
+                // name or as a load, the allocations the memory it was handed
+                // holds however deep, and what an argument read out of memory
+                // may be. Not the locals whose address that memory holds,
+                // which `Known::closure` does not follow (ADR-0047 lists it). `q = *t; release(q);` and `*d = a; release_in(d);` may
+                // each free `a`'s allocation, and neither can replace `a`, so
+                // a later call by address asks about it. A proved free stays
+                // proved here; only what is named outright lost it above. Not
+                // `reach`, which adds every escaped local's sites to every
+                // call, so `grow(&a)` would reach `a` there and the in-out
+                // idiom would be doubted at the next call by address; what
+                // only an address or an earlier exposure reaches stays
+                // `Reachable`, below. See ADR-0047.
+                let mut handed_memory: Vec<usize> = sites().collect();
+                for argument in handed {
+                    handed_memory.extend(self.read_out(function, argument, value));
+                }
+                for site in value.closure(handed_memory) {
+                    value.state[site].may_be_freed();
                 }
 
                 // **Everything this call could reach, and everything reached
