@@ -1,5 +1,5 @@
 error[SC0205]: safec does not read `_Nullable_result`
-   ╭─[ a_nullable_result_is_refused.c:1:7 ]
+   ╭─[ a_nullable_result_specifier_is_refused.c:1:7 ]
    │
  1 │ int * _Nullable_result f(void);
    │       ────────┬───────  

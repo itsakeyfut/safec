@@ -386,7 +386,7 @@ return place's value where the `Return` runs, which the analysis carries across
 blocks, so a frontend that writes in one block and returns from another is
 still asked about the pointer it returns; it is only told the body can end
 without a `return` where it wrote one.
-`a_return_place_written_in_an_earlier_block_is_asked_where_it_returns` in
+`a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end` in
 `crates/safec-ir/tests/nulls.rs` builds that shape by hand.
 
 The testable half is smaller and just as useful: **an analysis should be

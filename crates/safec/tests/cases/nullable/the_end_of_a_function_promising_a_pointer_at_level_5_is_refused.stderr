@@ -3,7 +3,7 @@ error: `--safety strict` asks for more than this run delivers
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: ask for `--safety memory`
 error[SC0408]: this function may reach the end of its body without returning a pointer
-   ╭─[ the_end_of_a_function_level_5_promised_a_pointer_from_is_refused.c:1:6 ]
+   ╭─[ the_end_of_a_function_promising_a_pointer_at_level_5_is_refused.c:1:6 ]
    │
  1 │ int *pick(int c) {
    │      ──┬─  

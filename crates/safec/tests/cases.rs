@@ -927,7 +927,7 @@ cases! {
         // Mutation: have `Parser::unread_specifier` answer `false`; each is
         // refused as a name instead, with `SC0201`.
         an_unspecified_nullability_is_refused: ["--emit", "ast"],
-        a_nullable_result_is_refused: ["--emit", "ast"],
+        a_nullable_result_specifier_is_refused: ["--emit", "ast"],
         an_unspecified_nullability_not_after_a_star_is_refused: ["--emit", "ast"],
         // Three answers, compared as written. Mutation: compare whether a
         // specifier was written rather than which, in `Lowering::agree`; the
@@ -994,7 +994,7 @@ cases! {
         // first three go silent and the fourth is doubted.
         a_null_returned_where_level_5_promised_a_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         an_allocation_returned_where_level_5_promised_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
-        the_end_of_a_function_level_5_promised_a_pointer_from_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        the_end_of_a_function_promising_a_pointer_at_level_5_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         a_result_level_5_promised_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         // The same program below level 5, where nothing is promised. This is
         // what keeps levels 1 to 4 answering as before. Mutation: compute
@@ -1017,7 +1017,7 @@ cases! {
         // refused with `SC0405`.
         a_result_of_a_function_only_declared_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         a_parameter_of_a_function_defined_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
-        a_null_passed_to_a_function_only_declared_here_is_accepted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
         // A hatch promises what it writes and nothing by default, since what
         // its body could not prove is listed rather than reported, and a
         // default would be believed by every caller and asked by nobody.

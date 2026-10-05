@@ -959,7 +959,7 @@ fn a_pointer_condition_written_just_above_its_branch_is_refined() {
 /// wherever the block wrote nothing, whatever the return place holds. This
 /// fails with one finding where it expects none.
 #[test]
-fn a_return_place_written_in_an_earlier_block_is_asked_where_it_returns() {
+fn a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end() {
     let (_sources, names) = sources();
 
     let mut unit = TranslationUnit::new(
