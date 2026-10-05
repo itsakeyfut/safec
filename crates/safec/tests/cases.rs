@@ -451,8 +451,8 @@ cases! {
         // start are both off it, whatever the distances; one that did not
         // leaves the answer open. `+` with the constant on the left, which C17
         // 6.5.6 p8 makes the same addition. Mutation: in
-        // `memory.rs::offset_of`, drop the arm that reads the constant on the
-        // left. This fails with the proof down to `may`.
+        // `memory/built.rs::offset_of`, drop the arm that reads the constant on
+        // the left. This fails with the proof down to `may`.
         a_free_of_a_constant_plus_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer moved off the start and back is at the start again, and
         // this check carries no distance to know it, so the second move proves
