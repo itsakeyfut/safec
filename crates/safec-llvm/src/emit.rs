@@ -686,7 +686,10 @@ impl Emitter<'_> {
     /// Not converted to anything: a condition is tested against zero at its own
     /// type, and a constant one has no place to take a type from. The target's
     /// `int` is what C gives an integer constant, absent a suffix this frontend
-    /// does not read. `while (1)` is the shape that reaches it.
+    /// does not read. No C program reaches it any more: a statement's constant
+    /// controlling expression is lowered to a `Goto` (#338), and every other
+    /// branch is on a temporary. IR built by hand or by another frontend can,
+    /// and `a_branch_on_a_constant_tests_the_constant` holds it.
     fn condition(
         &mut self,
         function: &Function,

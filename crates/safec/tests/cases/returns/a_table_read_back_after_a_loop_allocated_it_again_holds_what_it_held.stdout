@@ -93,8 +93,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:13:13 generated
     Goto "bb9"
   Block "bb9"
-    Branch a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:14:12 "bb10" "bb11"
-      Constant 1
+    Goto "bb10"
   Block "bb10"
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:14:12 generated
     StorageLive a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:15:9 generated "_8"

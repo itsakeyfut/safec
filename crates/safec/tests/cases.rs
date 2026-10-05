@@ -766,6 +766,25 @@ cases! {
         // one rule: a callee handed `&p` is the same escape through a different
         // door.
         a_pointer_written_through_its_own_address_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A constant condition decides its branch where it is lowered (#338).
+        // The first is the direction a wrong fold goes silent in: the read
+        // after an `if (0)` is reached and asked. Mutation: have
+        // `lowering::decided` take the `then` arm where the constant is zero;
+        // the first goes silent. Mutation: have it always build a `Branch`;
+        // the other two are reported, from code no execution reaches.
+        code_after_an_if_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        code_under_an_if_on_zero_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_loop_on_zero_is_never_entered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `for` on zero is not entered, so what follows it is reached and
+        // asked. Mutation: have the `for` site swap its arms where the
+        // condition is a constant; the loop is entered and never left, and
+        // this goes silent.
+        code_after_a_for_on_zero_is_still_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `(x, 1)` lowers to the constant 1 and is not a constant expression
+        // (C17 6.6 p3), so the loop keeps its exit and what follows it is
+        // asked. Mutation: have `Lowering::constant_expression` answer `true`
+        // for everything; this goes silent.
+        a_loop_on_a_comma_expression_is_not_taken_for_a_constant: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A dereference past the first in one place reads a pointer out of
         // memory, which has no row in the lattice, and is asked as unproven
         // (#333). The first is the program that built in silence, written
@@ -968,6 +987,21 @@ cases! {
         // write in the block as the `return`'s; this is told it may return
         // null at `x = 1` instead.
         the_end_of_a_body_after_a_statement_is_still_its_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A loop on a constant has no exit edge, so the end after it is not
+        // reached, whatever the constant is but zero (#338). Mutation: have
+        // `lowering::decided` always build a `Branch`; both are told they may
+        // reach the end. Mutation: fold only the constants 0 and 1; the
+        // second is.
+        a_loop_left_only_by_a_return_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_loop_on_any_constant_but_zero_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same through a `for` and through unary `+`, which are the other
+        // site that calls `decided` and the other constant expression
+        // `Lowering::constant_expression` reads. Mutation: have the `for`
+        // build a `Branch` again; the first is told it may reach the end.
+        // Mutation: drop the unary `+` arm of `constant_expression`; the
+        // second is.
+        a_for_loop_on_a_constant_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: have the call's destination answer `Unknown` whatever the
         // callee promised, in `Analysis::terminator`; both are doubted.
         a_result_promised_nonnull_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

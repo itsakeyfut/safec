@@ -1,0 +1,28 @@
+Target "x86_64-pc-windows-msvc"
+Function a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:1:16 "f"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int *" parameter
+  Block "bb0" entry
+    Goto "bb1"
+  Block "bb1"
+    Goto "bb2"
+  Block "bb2"
+    Sequenced a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:2:12 generated
+    Branch a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:3:13 "bb4" "bb5"
+      Copy "_1"
+  Block "bb3"
+    Sequenced a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:2:12 generated
+    Return
+  Block "bb4"
+    Sequenced a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:3:13 generated
+    Operation a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:4:13 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:4:20 generated
+    Return
+  Block "bb5"
+    Sequenced a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end.c:3:13 generated
+    Goto "bb6"
+  Block "bb6"
+    Goto "bb1"

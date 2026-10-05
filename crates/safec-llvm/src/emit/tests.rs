@@ -614,3 +614,99 @@ fn the_header_names_the_target_once() {
         "{out}"
     );
 }
+
+/// A branch on a constant is written as a test of that constant at the
+/// target's `int`, which is what C gives an integer constant.
+///
+/// **No C program reaches this any more**: the lowering decides a statement's
+/// constant controlling expression and ends the block with a `Goto` (#338),
+/// and every other branch is on a temporary. IR built by hand, or by another
+/// frontend, still branches on a constant, so this is built by hand.
+///
+/// Mutation: have `condition` answer `0` for a constant. The test reads
+/// `icmp ne i32 0, 0` and this fails.
+#[test]
+fn a_branch_on_a_constant_tests_the_constant() {
+    let (sources, at) = named("pick");
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::Int);
+    let mut pick = Function::new(at, int, []);
+    let entry = pick.reserve_block();
+    let taken = pick.reserve_block();
+    let skipped = pick.reserve_block();
+    let result = pick.return_place();
+    let returns = |value| Block {
+        elements: vec![Element::Assign(Operation {
+            place: Place::local(result),
+            value: Rvalue::Use(Operand::Constant(value)),
+            origin: Origin::Written(at),
+        })],
+        terminator: Terminator::Return,
+    };
+    pick.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: taken,
+                otherwise: skipped,
+                origin: Origin::Written(at),
+            },
+        },
+    );
+    pick.fill_block(taken, returns(1));
+    pick.fill_block(skipped, returns(0));
+    unit.push_function(pick);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    assert_eq!(refusals, Vec::new());
+    assert_eq!(
+        out,
+        concat!(
+            "target triple = \"x86_64-pc-windows-msvc\"
+",
+            "
+",
+            "define i32 @pick() {
+",
+            "entry:
+",
+            "  %_0 = alloca i32
+",
+            "  br label %bb0
+",
+            "
+",
+            "bb0:
+",
+            "  %t0 = icmp ne i32 1, 0
+",
+            "  br i1 %t0, label %bb1, label %bb2
+",
+            "
+",
+            "bb1:
+",
+            "  store i32 1, ptr %_0
+",
+            "  %t1 = load i32, ptr %_0
+",
+            "  ret i32 %t1
+",
+            "
+",
+            "bb2:
+",
+            "  store i32 0, ptr %_0
+",
+            "  %t2 = load i32, ptr %_0
+",
+            "  ret i32 %t2
+",
+            "}
+",
+        )
+    );
+}

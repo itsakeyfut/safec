@@ -63,59 +63,58 @@ bb0:
   store i8 44, ptr %_2
   %t1 = load i8, ptr %_2
   store i8 %t1, ptr %_4
-  %t2 = icmp ne i32 1, 0
-  br i1 %t2, label %bb1, label %bb2
+  br label %bb1
 
 bb1:
-  %t3 = call i32 @narrow(i8 44)
-  store i32 %t3, ptr %_5
+  %t2 = call i32 @narrow(i8 44)
+  store i32 %t2, ptr %_5
   br label %bb4
 
 bb2:
   br label %bb3
 
 bb3:
-  %t4 = load i32, ptr %_1
-  %t5 = load i8, ptr %_2
-  %t6 = sext i8 %t5 to i32
-  %t7 = add nsw i32 %t4, %t6
-  store i32 %t7, ptr %_8
-  %t8 = load i32, ptr %_8
-  store i32 %t8, ptr %_1
-  %t9 = load i32, ptr %_1
-  store i32 %t9, ptr %_9
-  %t10 = call i32 @mix(i32 1, i8 4)
-  store i32 %t10, ptr %_10
+  %t3 = load i32, ptr %_1
+  %t4 = load i8, ptr %_2
+  %t5 = sext i8 %t4 to i32
+  %t6 = add nsw i32 %t3, %t5
+  store i32 %t6, ptr %_8
+  %t7 = load i32, ptr %_8
+  store i32 %t7, ptr %_1
+  %t8 = load i32, ptr %_1
+  store i32 %t8, ptr %_9
+  %t9 = call i32 @mix(i32 1, i8 4)
+  store i32 %t9, ptr %_10
   br label %bb5
 
 bb4:
-  %t11 = load i32, ptr %_1
-  %t12 = load i32, ptr %_5
-  %t13 = add nsw i32 %t11, %t12
-  store i32 %t13, ptr %_6
-  %t14 = load i32, ptr %_6
-  store i32 %t14, ptr %_1
-  %t15 = load i32, ptr %_1
-  store i32 %t15, ptr %_7
+  %t10 = load i32, ptr %_1
+  %t11 = load i32, ptr %_5
+  %t12 = add nsw i32 %t10, %t11
+  store i32 %t12, ptr %_6
+  %t13 = load i32, ptr %_6
+  store i32 %t13, ptr %_1
+  %t14 = load i32, ptr %_1
+  store i32 %t14, ptr %_7
   br label %bb3
 
 bb5:
-  %t16 = load i32, ptr %_1
-  %t17 = load i32, ptr %_10
-  %t18 = add nsw i32 %t16, %t17
-  store i32 %t18, ptr %_11
-  %t19 = load i32, ptr %_11
-  store i32 %t19, ptr %_1
+  %t15 = load i32, ptr %_1
+  %t16 = load i32, ptr %_10
+  %t17 = add nsw i32 %t15, %t16
+  store i32 %t17, ptr %_11
+  %t18 = load i32, ptr %_11
+  store i32 %t18, ptr %_1
+  %t19 = load i32, ptr %_1
+  store i32 %t19, ptr %_12
   %t20 = load i32, ptr %_1
-  store i32 %t20, ptr %_12
-  %t21 = load i32, ptr %_1
-  %t22 = trunc i32 %t21 to i8
-  store i8 %t22, ptr %_2
+  %t21 = trunc i32 %t20 to i8
+  store i8 %t21, ptr %_2
+  %t22 = load i8, ptr %_2
+  store i8 %t22, ptr %_13
   %t23 = load i8, ptr %_2
-  store i8 %t23, ptr %_13
-  %t24 = load i8, ptr %_2
-  %t25 = sext i8 %t24 to i32
-  store i32 %t25, ptr %_0
-  %t26 = load i32, ptr %_0
-  ret i32 %t26
+  %t24 = sext i8 %t23 to i32
+  store i32 %t24, ptr %_0
+  %t25 = load i32, ptr %_0
+  ret i32 %t25
 }

@@ -67,8 +67,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:10:13 generated
     Goto "bb5"
   Block "bb5"
-    Branch a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:11:12 "bb6" "bb7"
-      Constant 1
+    Goto "bb6"
   Block "bb6"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:11:12 generated
     StorageLive a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:12:9 generated "_6"
