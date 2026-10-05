@@ -127,7 +127,7 @@ mutation that makes it fail:
   `a_sink_that_denies_unknown_raises_an_unproven_warning_to_an_error`,
   `every_conclusion_is_reported_the_way_the_model_says`,
   `the_error_count_agrees_with_the_diagnostics_under_either_policy`, the two
-  `the_strictest_safety_level_denies_unknown` tests, and two in `render.rs`.
+  `the_strictest_safety_level_denies_unknown` tests, and two in `diagnostics/render/tests.rs`.
   Measured before #209 inverted the default, so the count is a fact about the
   suite of the day rather than about the rule.
 
