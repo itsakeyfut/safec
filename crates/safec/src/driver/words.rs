@@ -478,18 +478,9 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             "this check cannot say this is not null",
             "read each pointer this goes through into a local, and test that local against null before reading through it",
         ),
-        (Asked::Argument { promise: _ }, Conclusion::Unsafe) => (
-            NULL_ARGUMENT,
-            "this passes a null pointer to a parameter declared `_Nonnull`",
-            "this is null when it is passed",
-            "pass a pointer to an object here, or remove `_Nonnull` from the parameter",
-        ),
-        (Asked::Argument { promise: _ }, Conclusion::Unknown) => (
-            NULL_ARGUMENT,
-            "this may pass a null pointer to a parameter declared `_Nonnull`",
-            "this check cannot say this is not null",
-            "test this pointer against null before passing it",
-        ),
+        (Asked::Argument { promise }, conclusion) => {
+            return passed(finding.at, conclusion, promise);
+        }
         (
             Asked::Return {
                 promise,
@@ -497,24 +488,73 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             },
             conclusion,
         ) => return returned(finding.at, conclusion, promise, reached_end),
-        (
-            Asked::Dereference { through_memory: _ } | Asked::Argument { promise: _ },
-            Conclusion::Safe,
-        ) => (NULL_DEREFERENCE, "nothing", "nothing", "nothing"),
+        (Asked::Dereference { through_memory: _ }, Conclusion::Safe) => {
+            (NULL_DEREFERENCE, "nothing", "nothing", "nothing")
+        }
     };
 
-    let mut diagnostic = Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
-        .with_code(code)
-        .with_safety_level(SafetyLevel::Memory)
-        .with_label(Label::primary(finding.at, label));
-    if let Asked::Argument { promise } = finding.asked {
-        diagnostic = diagnostic.with_label(Label::secondary(
-            promise,
-            "the parameter is declared `_Nonnull` here",
-        ));
-    }
+    Some(
+        Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
+            .with_code(code)
+            .with_safety_level(SafetyLevel::Memory)
+            .with_label(Label::primary(finding.at, label)),
+    )
+}
 
-    Some(diagnostic)
+/// What the nullability check concluded about an argument, as what a user
+/// reads.
+///
+/// Its own function for the reason [`returned`] is: what the parameter
+/// promised decides what it is called, how the promise is taken back, and
+/// which level made it.
+///
+/// **Nothing makes a parameter's promise by default yet.** Every function here
+/// has external linkage, and level 5 makes a parameter of one `_Nullable`
+/// where it says neither (ADR-0050). The `Defaulted` words are written so that
+/// the day a function with internal linkage is read, a parameter level 5 made
+/// non-null is not reported as declared `_Nonnull`.
+///
+/// The unsafe remedy offers the promise as the other way out, because a
+/// parameter promised not null that a caller has a reason to pass null to is a
+/// promise that was wrong rather than a call that was.
+fn passed(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnostic> {
+    let (promised_at, described, promise_label, take_back, level) = match promise {
+        Promise::Written(written) => (
+            written,
+            "a parameter declared `_Nonnull`",
+            "the parameter is declared `_Nonnull` here",
+            "remove `_Nonnull` from the parameter",
+            SafetyLevel::Memory,
+        ),
+        Promise::Defaulted(name) => (
+            name,
+            "a parameter that is not `_Nullable`",
+            "at level 5 this parameter is not null, because it is not written `_Nullable`",
+            "write `_Nullable` after the `*` of the parameter in every declaration of the function",
+            SafetyLevel::Strict,
+        ),
+    };
+    let (message, label, remedy) = match conclusion {
+        Conclusion::Unsafe => (
+            format!("this passes a null pointer to {described}"),
+            "this is null when it is passed",
+            format!("pass a pointer to an object here, or {take_back}"),
+        ),
+        Conclusion::Unknown => (
+            format!("this may pass a null pointer to {described}"),
+            "this check cannot say this is not null",
+            "test this pointer against null before passing it".to_owned(),
+        ),
+        Conclusion::Safe => return None,
+    };
+
+    Some(
+        Diagnostic::concluded(conclusion, message, Remedy::new(remedy))?
+            .with_code(NULL_ARGUMENT)
+            .with_safety_level(level)
+            .with_label(Label::primary(at, label))
+            .with_label(Label::secondary(promised_at, promise_label)),
+    )
 }
 
 /// What the nullability check concluded about a `return`, as what a user

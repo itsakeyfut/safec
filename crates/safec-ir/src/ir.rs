@@ -820,16 +820,18 @@ enum Body {
 pub struct Parameter {
     /// Its type, which is the type of the local it becomes.
     pub ty: TyId,
-    /// Where `_Nonnull` was written on it, if it was.
+    /// Whether it is promised not to be null, and why.
     ///
     /// A promise rather than a type: the body may believe it and every call
-    /// is checked against it, which is ADR-0037. A span rather than a `bool`,
-    /// because a report about a call points at the promise it broke.
-    pub nonnull: Option<Span>,
+    /// is checked against it, which is ADR-0037. A [`Promise`] rather than a
+    /// span, so that a parameter level 5 made non-null by default is told
+    /// apart from one written `_Nonnull` by the type: a report about a call
+    /// names the promise it broke, and the two are taken back differently.
+    pub nonnull: Option<Promise>,
 }
 
-/// Why the pointer a function returns is believed not to be null, which is
-/// where a report about breaking the promise points.
+/// Why a pointer a function takes or returns is believed not to be null, which
+/// is where a report about breaking the promise points.
 ///
 /// **The IR says what was promised and not why the level made it so.** A
 /// default is resolved where the IR is built, so nothing that reads this asks
@@ -837,11 +839,11 @@ pub struct Parameter {
 /// level as for everything else above this crate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Promise {
-    /// `_Nonnull` was written here, on the return.
+    /// `_Nonnull` was written here.
     Written(Span),
-    /// Nothing was written, and level 5 makes the pointer a function defined
-    /// in this translation unit returns non-null unless it is written
-    /// `_Nullable` (ADR-0050). The span is the function's name.
+    /// Nothing was written, and level 5 makes the pointer non-null unless it is
+    /// written `_Nullable` (ADR-0050). The span is the name of what was
+    /// promised: the function's, for the pointer it returns.
     Defaulted(Span),
 }
 
@@ -858,7 +860,7 @@ pub struct Function {
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
     /// One per parameter, in the order they were declared.
-    nonnull: Vec<Option<Span>>,
+    nonnull: Vec<Option<Promise>>,
     /// Whether this is a hatch.
     hatch: bool,
     /// Whether the pointer it returns is promised not to be null.
@@ -981,7 +983,7 @@ impl Function {
     /// # Panics
     ///
     /// If `local` came from a different [`Function`].
-    pub fn nonnull(&self, local: LocalId) -> Option<Span> {
+    pub fn nonnull(&self, local: LocalId) -> Option<Promise> {
         assert!(
             local.index() < self.locals.len(),
             "no local {}",

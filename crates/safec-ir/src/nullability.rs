@@ -152,9 +152,9 @@ pub enum Asked {
     },
     /// Whether an argument passed to a `_Nonnull` parameter is null.
     Argument {
-        /// Where the parameter was declared `_Nonnull`, which is the promise
-        /// this argument is checked against.
-        promise: Span,
+        /// What the parameter promised, which is what this argument is
+        /// checked against and where a report points.
+        promise: Promise,
     },
     /// Whether the pointer a function returns is null, where it promised not.
     Return {

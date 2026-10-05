@@ -229,8 +229,12 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                 }
             } else if function.parameters().any(|parameter| parameter == local) {
                 out.push_str(" parameter");
-                if function.nonnull(local).is_some() {
-                    out.push_str(" _Nonnull");
+                // As the return place's promise is printed, for the same
+                // reason.
+                match function.nonnull(local) {
+                    Some(Promise::Written(_)) => out.push_str(" _Nonnull"),
+                    Some(Promise::Defaulted(_)) => out.push_str(" _Nonnull default"),
+                    None => {}
                 }
             }
             out.push('\n');

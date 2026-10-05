@@ -748,7 +748,7 @@ impl Lowering<'_> {
                         Some(Nullability {
                             specifier: Specifier::Nonnull,
                             at,
-                        }) => Some(at),
+                        }) => Some(Promise::Written(at)),
                         Some(Nullability {
                             specifier: Specifier::Nullable,
                             at: _,
