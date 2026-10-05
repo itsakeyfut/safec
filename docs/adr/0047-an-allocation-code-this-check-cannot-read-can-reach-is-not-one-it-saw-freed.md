@@ -46,7 +46,20 @@ The chosen option first drew its line at a call naming the allocation by value, 
 
 Neither option changes any answer in the corpus but one: `a_may_set_freed_then_written_through_an_alias` now also reports `SC0407` at `opaque(pp)`, where `pp` is the address of a pointer whose set was freed (ADR-0020), which is true.
 
-What the chosen option still does not ask, each of which builds on `main` as well: a call handed only an address that frees what is there and does not replace it, followed by a second call handed the address, which is the callee's contract; an allocation exposed to code this check cannot read, freed by a later call through what it kept, and then handed by address; and an allocation a call reached through the address of another local, `b = a; release_ref(&b); use2(&a);`, or through a local's address held in memory it was handed, `*box = &b; release_deep(box); use2(&a);`. The last two can free it and cannot replace `a`, as the load and memory routes above, but a site's state cannot say which address made it `Reachable` (#326).
+The route is drawn at the holder too ([#326](https://github.com/itsakeyfut/safec/issues/326)). A call this check cannot read leaves `Reachable` only where it could have replaced every local still read after it that holds the allocation, which is a local whose address has escaped. Where one whose address has not holds it, the call may have freed it through another route and cannot have put anything new there, so it is `Unknown`: `b = a; release_ref(&b); use2(&a);` and `*box = &b; release_deep(box); use2(&a);` are asked at `use2(&a)`, as the load and memory routes above are. Recording which address made a site `Reachable` would say the same on every probe below and needs a route through every writer of the state and the join. Only a holder live after the call counts, by the liveness ADR-0048 computes:
+
+| probe | C defines it | before #326 | every holder | a holder live after the call (chosen) |
+|---|---|---|---|---|
+| `b = a; release_ref(&b); use2(&a);` | no, if `release_ref` frees | builds | refused | refused |
+| `*box = &b; release_deep(box); use2(&a);` | no, if `release_deep` frees | builds | refused | refused |
+| `b = a; use2(&b); use2(&a);` | yes, if `use2` only reads | builds | refused | refused |
+| `b = a; grow(&b); grow(&b);` | yes | builds | **refused** | builds |
+| `b = a; grow(&b); use2(&b);` | yes | builds | **refused** | builds |
+| `b = a; grow(&a); use2(&a);`, `b` never read again | yes | builds | **refused** | builds |
+
+The third row is the cost the table above already pays for `show1(q)` before `use2(&a)`. A hole in the liveness would take a holder for dead and leave the site `Reachable`, which is a silence; ADR-0048's unit tests, one per kind of read, are what hold that.
+
+What the chosen option still does not ask, each of which builds on `main` as well: a call handed only an address that frees what is there and does not replace it, followed by a second call handed the address, which is the callee's contract; and an allocation exposed to code this check cannot read, freed by a later call through what it kept, and then handed by address.
 
 ### Confirmation
 
@@ -58,13 +71,14 @@ The cases are in `crates/safec/tests/cases`, and every mutation is in `crates/sa
 - An opaque call writing `Reachable` on what it is handed by value fails `a_pointer_handed_to_a_call_and_then_by_address_is_asked`, beside two cases about a call between two frees.
 - The opaque call leaving out what it holds, by name, as a load or through the memory it was handed, fails `a_pointer_a_call_was_handed_through_a_load_is_asked_by_address` and `a_pointer_a_call_reached_through_memory_is_asked_by_address`, which go silent; taking only what it is handed, without what that memory holds, fails the second alone. Leaving `read_out` out of what it holds fails `a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address`, `release(*t)`, alone. Writing `Unknown` on all of `reach` instead fails the two in-out cases below and nothing else.
 - Every producer but an address taken writing `Unknown`, which is the rejected option, fails `a_pointer_handed_by_address_twice_builds` and `a_pointer_handed_by_address_around_another_call_builds` and nothing else, which are refused.
+- Dropping the call to `Known::held_out_of_reach` fails `a_pointer_a_call_reached_through_another_locals_address_is_asked_by_address` and `a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address`, which build. Its `live_after` answering `true` fails `a_copy_grown_twice_by_address_builds` and `a_dead_copy_does_not_doubt_a_pointer_grown_by_address`, which are refused, and dropping its test that the holder's address has not escaped fails `a_pointer_handed_by_address_twice_builds`.
 
 ### Consequences
 
 * Good, because the doubt a call by address is asked about is a doubt about a free, and the in-out idiom keeps building.
 * Good, because `Reachable` is doubted everywhere `Unknown` was, so nothing reported on `main` stops being reported.
 * Bad, because a site's state now carries why it is doubted, which is one more thing a new producer of a doubt has to choose between. It costs `Analysis::height` nothing: `Reachable` and `Freed` join to `Unknown`, so a site still walks at most two steps.
-* Bad, because the choice is made per site, not per local: a site freed on one path through one local and reached through the address of another is `Unknown` for both.
+* Bad, because the choice is made per site, not per local: a site freed on one path through one local and reached through the address of another is `Unknown` for both, and so is a site a call reached through a copy's address while the original is still read.
 * What would reverse this: summaries of the callees this translation unit defines, or an annotation saying what a callee does with an address, which would answer the residual case above rather than exempt it.
 
 ## More Information
