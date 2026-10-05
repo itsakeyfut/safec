@@ -2403,11 +2403,6 @@ cases! {
         an_ir_shape_the_backend_cannot_write: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_follows_the_target: ["--emit", "llvm-ir", "--target", "aarch64-unknown-linux-gnu"],
         llvm_ir_of_conversions_and_a_constant_condition: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A branch on a constant still reaches the backend through the operand
-        // of `&&`, which is an expression rather than a statement's controlling
-        // expression and is not folded. Mutation: have `emit.rs::condition`
-        // answer `0` for a constant; this fails.
-        llvm_ir_of_a_constant_operand_of_a_logical_and: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_every_operator: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         llvm_ir_of_pointers_branches_and_a_loop: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
         the_mvp_becomes_llvm_ir: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
