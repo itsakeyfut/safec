@@ -980,7 +980,8 @@ cases! {
         // A loop on a constant has no exit edge, so the end after it is not
         // reached, whatever the constant is but zero (#338). Mutation: have
         // `lowering::decided` always build a `Branch`; both are told they may
-        // reach the end. Mutation: fold only `Constant(1)`; the second is.
+        // reach the end. Mutation: fold only the constants 0 and 1; the
+        // second is.
         a_loop_left_only_by_a_return_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_any_constant_but_zero_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: have the call's destination answer `Unknown` whatever the
