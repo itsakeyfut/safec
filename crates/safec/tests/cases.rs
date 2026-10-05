@@ -779,9 +779,20 @@ cases! {
         // function defined here is read rather than believed by its name
         // (ADR-0051). Mutation: have the lowering give every call its
         // continuation; the first is reported. Mutation: have
-        // `Lowering::does_not_return` ignore `defined`; the second goes silent.
+        // `Lowering::does_not_return` ignore `defined`; the second and third
+        // go silent. Mutation: have it ask the IR whether the callee has a
+        // body instead of `defined`; the third goes silent, because a body
+        // below the call is not lowered yet. The `SC0402` beside the `SC0403`
+        // in both is the memory check doubting `p` after a call whose body it
+        // does not read, as it does after `g();` for any `g` defined here.
         code_after_abort_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         code_after_a_function_defined_here_named_abort_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        code_after_a_function_defined_below_named_abort_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call inside a larger full expression keeps its edge, because a
+        // read written before it is lowered after it. Mutation: drop the
+        // `root` test where the call decides its continuation; both reads go
+        // silent.
+        a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `for` on zero is not entered, so what follows it is reached and
         // asked. Mutation: have the `for` site swap its arms where the
         // condition is a constant; the loop is entered and never left, and

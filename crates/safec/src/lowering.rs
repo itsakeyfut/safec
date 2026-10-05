@@ -215,6 +215,7 @@ pub fn lower(
         defined: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
+        root: None,
     };
 
     lowering.declare(diagnostics);
@@ -306,6 +307,13 @@ struct Lowering<'a> {
     /// True at the root of a full expression, and kept only through the
     /// operands C sequences. See ADR-0022, and [`sequences`] for the list.
     top_level: bool,
+    /// The full expression being lowered, which is the expression
+    /// [`Lowering::value`] was last asked for.
+    ///
+    /// Not [`Lowering::top_level`], which stays true through operands C
+    /// sequences and so through the right operand of a comma. Read by the call
+    /// that decides whether it has a continuation.
+    root: Option<ExprId>,
 }
 
 /// A branch a value is waiting on.
@@ -1439,6 +1447,7 @@ impl Lowering<'_> {
         // full expression: Annex C's list and `lower_stmt`'s arms are the same
         // eight places.
         self.top_level = true;
+        self.root = Some(root);
 
         let mut tasks = vec![Task::Value(root)];
         let mut values: Vec<Operand> = Vec::new();
@@ -1979,7 +1988,15 @@ impl Lowering<'_> {
                 // ADR-0010 is where that is argued. One that does not return
                 // names no block to come back to, and whatever is lowered
                 // after it still goes into `then`, which nothing reaches.
-                let returns = !self.does_not_return(called);
+                //
+                // Only where the call is the whole full expression. Inside a
+                // larger one, an operand written before the call may still be
+                // a place this walk reads only where its operator is lowered,
+                // after the call, so `*p + (exit(1), 0)` would move the read
+                // of `*p` into `then` and ask nothing about it, where C17 6.5
+                // p3 lets it happen first. Keeping the edge there costs a
+                // report about code that may not run, which a reader can see.
+                let returns = self.root != Some(id) || !self.does_not_return(called);
                 builder.end(Terminator::Call {
                     callee: called,
                     arguments,
