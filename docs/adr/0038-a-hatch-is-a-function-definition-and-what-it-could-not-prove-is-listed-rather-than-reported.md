@@ -196,10 +196,11 @@ marking a hatch wherever an attribute is present, rather than where
 `sema::resolve` accepted one, fails
 `an_unproven_dereference_behind_a_refused_attribute_is_still_reported` alone.
 
-**What a call to a hatch leaves behind.** Dropping the loop in `memory.rs`'s
-`Callee::Opaque` arm that marks every live allocation unproven after a call to
-a hatch fails `what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it`,
-which is a use after free going silent, and
+**What a call to a hatch leaves behind.** Dropping the loop in
+`memory/transfer.rs`'s `Callee::Opaque` arm that marks every live allocation
+unproven after a call to a hatch fails
+`what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it`, which is a
+use after free going silent, and
 `an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too`. Marking every
 allocation, freed ones included, fails
 `a_free_proved_before_a_call_to_a_hatch_stays_proved` alone.

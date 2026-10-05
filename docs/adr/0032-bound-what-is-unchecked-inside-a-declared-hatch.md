@@ -108,9 +108,9 @@ suppression this record rules out, fails
 the hatch, and is refused.
 
 That a hatch which declared no effects assumes the worst: having
-`memory.rs::Allocations::callee` answer that a call to a hatch touches nothing
-fails `freeing_what_was_handed_to_a_hatch_is_not_proved`. A definition cannot
-declare effects at all yet, so every hatch is this case.
+`memory/transfer.rs::Allocations::callee` answer that a call to a hatch touches
+nothing fails `freeing_what_was_handed_to_a_hatch_is_not_proved`. A definition
+cannot declare effects at all yet, so every hatch is this case.
 
 **The region half is not built.** A hatch that is a stretch of statements
 inside a function, and the vocabulary for either form to narrow what it may do,

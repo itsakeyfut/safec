@@ -130,13 +130,13 @@ cases! {
         // `Element::ArgumentsEvaluated` is what they are about, and ADR-0026 is
         // why it says less than `Element::Sequenced`.
         //
-        // Mutation: the arm in `memory.rs` that reads that element doing
-        // nothing. These two fail on their `.stderr` with the `SC0402` back,
-        // and nothing else fails. The rule's other half is the lowering that
-        // emits it, and mutating that fails these two on their `.stdout` along
-        // with every other artifact holding a call, so the halves are mutated
-        // apart: a mutation is measured by which assertion it broke, not only
-        // by whether one did.
+        // Mutation: the arm in `memory/transfer.rs` that reads that element
+        // doing nothing. These two fail on their `.stderr` with the `SC0402`
+        // back, and nothing else fails. The rule's other half is the lowering
+        // that emits it, and mutating that fails these two on their `.stdout`
+        // along with every other artifact holding a call, so the halves are
+        // mutated apart: a mutation is measured by which assertion it broke,
+        // not only by whether one did.
         a_read_in_a_frees_own_argument_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_in_a_frees_argument_through_a_call_is_ordered_before_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same question asked of a call this check cannot read, which may
@@ -865,7 +865,7 @@ cases! {
         // A hatch's body is the one whose unproven conclusions are not
         // reported, so what the caller cannot see it do is assumed to be the
         // worst: every allocation still live is unproven after a call to one.
-        // Mutation: drop the loop over `value.state` in `memory.rs`'s
+        // Mutation: drop the loop over `value.state` in `memory/transfer.rs`'s
         // `Callee::Opaque` arm; the first two fail, and the first is a use
         // after free going silent.
         what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
