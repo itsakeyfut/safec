@@ -622,9 +622,9 @@ impl Analysis for Allocations<'_> {
         // Which locals' addresses each site may hold is a fourth square table
         // that only grows, one step per pair, and the first term gains a
         // fourth square for it. See ADR-0045. Whether code this check cannot
-        // read may hold a local's address is one more bit per local that a
-        // join only sets, one more step each, and the per-local term gains it.
-        // See ADR-0047.
+        // read may hold a local's address is one more bit per local that the
+        // transfer only sets and a join only clears, so an entry value moves
+        // it once, and the per-local term gains it. See ADR-0047.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -799,9 +799,13 @@ impl Analysis for Allocations<'_> {
         for (here, there) in escaped.iter_mut().zip(&from.escaped) {
             *here = *here || *there;
         }
-        // And so has one handed away, for the same reason. See ADR-0047.
+        // **And one handed away on both arms is handed away where they meet,
+        // which is an intersection, not the union above.** The fact exempts a
+        // holder, so it has to hold on every path: a union exempted `a` after
+        // `if (c) stash(pa);` on the path that never handed it, and was
+        // silent there. See ADR-0047.
         for (here, there) in handed_away.iter_mut().zip(&from.handed_away) {
-            *here = *here || *there;
+            *here = *here && *there;
         }
 
         // Exposed on one arm is exposed where the arms meet, and what an

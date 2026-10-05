@@ -2193,12 +2193,18 @@ cases! {
         // `escaped` instead of `handed_away`; the first goes silent. The
         // other two are the routes `handed_away` is set by besides an
         // argument, a store into memory this check does not model and memory
-        // a call was handed. Mutation: drop the marking in the store
-        // transfer; the second is refused. Mutation: drop the `inside_locals`
-        // loop of `Known::handed_to_a_call`; the third is. See ADR-0047.
+        // a call was handed. Mutation: drop the `inside_locals` loop of
+        // `Known::handed_to_a_call`; the second and third are refused. The
+        // fourth stores the address through a load, which is memory this
+        // check does not model. Mutation: drop the marking in the store
+        // transfer; it is refused. The fifth hands `a` away on one arm only.
+        // Mutation: have the join union `handed_away`; it goes silent. See
+        // ADR-0047.
         a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_grown_through_the_memory_its_address_was_stored_in_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_whose_address_is_in_exposed_memory_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_is_stored_through_a_load_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
