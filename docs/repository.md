@@ -142,3 +142,48 @@ sharing a crate with an LLVM one shares its dependencies the day one arrives.
 Nothing else has been split, and the paragraphs above still hold for the rest:
 the lexer, the parser and sema are boundaries nothing is pushing on, so
 enforcing them would cost the crates and buy nothing.
+
+## When a file becomes a directory
+
+Inside a crate the question is not a boundary cargo enforces but whether a file
+can still be read, and four rules answer it.
+
+**A file splits when it holds two or more concerns that can be read apart, and
+its code, tests excluded, is over about 2,000 lines.** The number is when to
+look; the concerns decide. A file of one concern stays whole however long:
+`crates/safec/src/lowering.rs` is almost all one `impl Lowering`, and cut by
+size its pieces would not read apart. A small file of two concerns stays whole
+too, because every file a reader has to hold costs them more than a section
+does.
+
+**`foo.rs` stays the module root, and the parts go in `foo/`.** The root keeps
+the public surface and the `mod` declarations, so a reference to the module's
+public API by its file still names the right one. This is the shape
+`crates/safec/src/diagnostics.rs` and `diagnostics/render.rs` already have, and
+no `mod.rs` is used.
+
+**Inline tests over about 500 lines move to `foo/tests.rs`**, declared
+`#[cfg(test)] mod tests;`, whether or not the code splits. The code a reader is
+in stops sharing a file with them, and none of its lines move.
+
+**A split is a pure move, and lands with every reference.** No behaviour
+changes and nothing is renamed on the way, so the diff is moved lines and the
+suite and every blessed corpus output say so. Every path in `docs/` and in code
+comments that names a moved item is updated in the same change: the records
+name files by path, and nothing checks prose for one.
+
+What the rules say of the files they apply to today, measured on `main` at
+`d3406e7`. Each split updates its row when it lands.
+
+| file | code, tests excluded | concerns | inline tests | the rules say |
+|---|---|---|---|---|
+| `crates/safec-ir/src/memory.rs` | 5,497 | five | 0 | split |
+| `crates/safec/src/driver.rs` | 2,466 | four | 1,509 | split, and its tests move |
+| `crates/safec/src/lowering.rs` | 2,250 | one | 1,464 | its tests move |
+| `crates/safec/src/parser.rs` | 1,888 | one | 948 | its tests move |
+| `crates/safec/src/types.rs` | 1,617 | one | 1,476 | its tests move |
+| `crates/safec-ir/src/ir.rs` | 1,279 | one | 635 | its tests move |
+| `crates/safec/src/ast.rs` | 1,084 | one | 552 | its tests move |
+| `crates/safec-llvm/src/emit.rs` | 947 | one | 619 | its tests move |
+| `crates/safec/src/diagnostics.rs` | 678 | one | 521 | its tests move |
+| `crates/safec/src/diagnostics/render.rs` | 574 | one | 690 | its tests move |
