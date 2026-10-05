@@ -235,6 +235,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                     Ty::Int | Ty::Char | Ty::Void => false,
                 })
                 .collect(),
+            live_in: transfer::live_in(function),
         };
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);

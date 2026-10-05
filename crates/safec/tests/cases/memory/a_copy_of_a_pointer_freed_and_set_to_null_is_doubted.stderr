@@ -1,0 +1,10 @@
+error[SC0406]: this may return a pointer to an allocation that was freed
+    ╭─[ a_copy_of_a_pointer_freed_and_set_to_null_is_doubted.c:11:5 ]
+    │
+ 11 │     return q;
+    │     ────┬────  
+    │         ╰────── returned here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

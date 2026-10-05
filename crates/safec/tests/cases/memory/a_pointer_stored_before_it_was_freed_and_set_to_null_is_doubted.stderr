@@ -1,0 +1,20 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:19:5 ]
+    │
+ 19 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:19:5 ]
+    │
+ 19 │     return *q;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
