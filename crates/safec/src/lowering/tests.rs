@@ -88,6 +88,7 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
         &resolution,
         &types,
         target,
+        false,
         &mut diagnostics,
     );
     Lowered {

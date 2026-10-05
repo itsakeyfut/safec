@@ -1,0 +1,12 @@
+error[SC0408]: this function may reach the end of its body without returning a pointer
+   ╭─[ the_end_of_a_body_after_a_statement_is_still_its_end.c:1:16 ]
+   │
+ 1 │ int * _Nonnull f(int c) {
+   │       ────┬─── ┬  
+   │           ╰─────── the return is declared `_Nonnull` here
+   │                │  
+   │                ╰── the end of this function's body can be reached without a `return`
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: end every path through the body with a `return`

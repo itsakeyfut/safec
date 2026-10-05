@@ -235,22 +235,28 @@ constraints of simple assignment, so the two spellings answer alike, and C17
 integer, so a comparison answers alike too. The rows stop being refused the day
 a constant expression can be evaluated.
 
-### Where the nonnull annotation is read
+### Where a nullability specifier is read
 
-`_Nonnull` is what `clang` calls a type nullability specifier, and the first
-annotation this compiler reads. It is not C, and `-pedantic-errors` refuses it
-for that reason, as an extension. C17 7.1.3 p1 reserves every identifier that
+`_Nonnull` and `_Nullable` are what `clang` calls type nullability specifiers,
+and `_Nonnull` was the first annotation this compiler read. They are not C, and
+`-pedantic-errors` refuses them for that reason, as an extension. C17 7.1.3 p1 reserves every identifier that
 begins with an underscore and an uppercase letter to the implementation, which
 is what lets a compiler read one without taking a name from a conforming
 program. What it means here is
 [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md):
 the body of a function believes it of a parameter, and every call in the
-translation unit is checked against it.
+translation unit is checked against it. `_Nullable` says a pointer may be null,
+which below level 5 is what an unannotated one already is, and at level 5 is
+what keeps a pointer from being non-null by default
+([ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)).
 
-So it is read in one place, after the `*` of a parameter's own pointer in a
-function declared at file scope, and refused everywhere else. `clang` reads it
-in more places than that, because there it is a specifier on any pointer type
-and means nothing it has to check.
+So they are read in two places, after the `*` of a parameter's own pointer in a
+function declared at file scope and after the `*` of the pointer such a
+function returns, and refused everywhere else. `clang` reads them
+in more places than that, because there they are specifiers on any pointer type
+and mean nothing it has to check. `clang` also accepts `_Null_unspecified` and
+`_Nullable_result` in C, and this compiler refuses both wherever a declarator
+can hold them, as annotations it does not read.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
@@ -258,10 +264,23 @@ and means nothing it has to check.
 | `void g(int _Nonnull p);` | `error[SC0204]` | error: not a pointer | error |
 | `void g(int * _Nonnull * p);` | `error[SC0204]` | accepts | error: an extension |
 | `int * _Nonnull q;` at file scope or in a block | `error[SC0204]` | accepts | error: an extension |
-| `int * _Nonnull f(void);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull f(void);` | accepts | accepts | error: an extension |
+| `int * _Nullable f(void);` | accepts | accepts | error: an extension |
+| `int * _Nonnull * f(void);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull (*fp)(void);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nonnull f(void);` then `int *f(void);` | `error[SC0307]` | accepts | error: an extension |
+| `int * _Nonnull f(void) { return 0; }` | `error[SC0408]` | warning: null returned | error: an extension |
 | `void g(void (*callback)(int * _Nonnull p));` | `error[SC0204]` | accepts | error: an extension |
 | `void g(int * _Nonnull p);` inside a block | `error[SC0204]` | accepts | error: an extension |
 | `void g(int *p);` then `void g(int * _Nonnull p) { ... }` | `error[SC0307]` | accepts | error: an extension |
+| `void g(int * _Nullable p);` | accepts | accepts | error: an extension |
+| `void g(int * _Nullable * p);` | `error[SC0204]` | accepts | error: an extension |
+| `int * _Nullable q;` in a block | `error[SC0204]` | accepts | error: an extension |
+| `void g(int * _Nonnull _Nullable p);` | `error[SC0204]` | error: the two conflict | error |
+| `void g(int * _Nullable p);` then `void g(int *p);` | `error[SC0307]` | accepts | error: an extension |
+| `void g(int * _Nonnull p);` then `void g(int * _Nullable p);` | `error[SC0307]` | warning: the two conflict | error: an extension |
+| `void g(int * _Null_unspecified p);` | `error[SC0205]` | accepts | error: an extension |
+| `int * _Nullable_result f(void);` | `error[SC0205]` | accepts | error: an extension |
 | `g(0)` with `g` as in the first row | `error[SC0405]` | warning: null passed | error: an extension |
 | `int *q = 0; g(q);` | `error[SC0405]` | accepts | error: an extension |
 
@@ -270,16 +289,21 @@ the tables above are. **Every refusal here is a decision rather than a gap**, an
 each is the same one: an annotation read where it means nothing is a promise
 written down and dropped, and a reader who wrote it would believe it held. The
 two declarations disagreeing is refused rather than inherited, which is what
-`clang` does, because a caller is checked against the declaration it sees; what
-is compared is the first prototype, so a `void g();` above them changes
-nothing. **The refusals hold at every safety level, `--safety off` included**,
+`clang` does, because a caller is checked against the declaration it sees; for a
+parameter what is compared is the first prototype, so a `void g();` above them
+changes nothing, and for a return it is the first declaration, since
+`int *g();` does declare what `g` returns. `_Nullable` and writing nothing are a disagreement too, although below
+level 5 they mean the same, because where a specifier is read does not depend
+on the level. `_Null_unspecified` would leave a pointer as if unannotated, which
+is reading it and dropping it, and
+`_Nullable_result` is read by `clang` as `_Nullable` is, so reading it would be a second spelling for one answer, which is why `_Nullable` was chosen over a name of this compiler's own. **The refusals hold at every safety level, `--safety off` included**,
 because a level decides which checks run, and at level 5 what may be written,
 and neither moves where the frontend reads an annotation
 ([ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)):
 these are the frontend reading the language. The
-last two rows are the check rather than the frontend, and `clang`'s answer to
-them is the reason the check exists: it warns about a literal null and says
-nothing about a local that holds one.
+`SC0405` and `SC0408` rows are the check rather than the frontend, and `clang`'s
+answer to them is the reason the check exists: it warns about a literal null and
+says nothing about a local that holds one.
 
 ### Where the hatch is read
 

@@ -572,12 +572,20 @@ fn lowered(
     // lowering says so about each piece rather than saying it once here.
     let (resolution, types) = analysed.typed.as_ref()?;
 
+    // **The level asked for, not the level delivered.** Level 5's default is
+    // implemented, so a run asked for level 5 delivers it, beside the
+    // refusal `undelivered` makes for the checks below it that are not yet.
+    // A comparison rather than a match for the reason `Cli::check` gives at
+    // its own: the levels are cumulative, so a level above this one would owe
+    // the default too.
+    let nonnull_returns_by_default = options.safety >= SafetyLevel::Strict;
     let unit = lower(
         sources,
         &analysed.ast,
         resolution,
         types,
         options.target,
+        nonnull_returns_by_default,
         diagnostics,
     );
 

@@ -820,12 +820,34 @@ enum Body {
 pub struct Parameter {
     /// Its type, which is the type of the local it becomes.
     pub ty: TyId,
-    /// Where `_Nonnull` was written on it, if it was.
+    /// Whether it is promised not to be null, and why.
     ///
     /// A promise rather than a type: the body may believe it and every call
-    /// is checked against it, which is ADR-0037. A span rather than a `bool`,
-    /// because a report about a call points at the promise it broke.
-    pub nonnull: Option<Span>,
+    /// is checked against it, which is ADR-0037. A [`Promise`] rather than a
+    /// span, so that a parameter level 5 made non-null by default is told
+    /// apart from one written `_Nonnull` by the type: a report about a call
+    /// names the promise it broke, and the two are taken back differently.
+    pub nonnull: Option<Promise>,
+}
+
+/// Why a pointer a function takes or returns is believed not to be null, which
+/// is where a report about breaking the promise points.
+///
+/// **The IR says what was promised and not why the level made it so.** A
+/// default is resolved where the IR is built, so nothing that reads this asks
+/// what level a run is at, which is ADR-0011's boundary held for the safety
+/// level as for everything else above this crate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Promise {
+    /// `_Nonnull` was written here, on a declaration of it.
+    ///
+    /// `Declared` rather than `Written`, which [`Origin::Written`] already
+    /// means for an operation the source wrote.
+    Declared(Span),
+    /// Nothing was written, and level 5 makes the pointer non-null unless it is
+    /// written `_Nullable` (ADR-0050). The span is the name of what was
+    /// promised: the function's, for the pointer it returns.
+    Defaulted(Span),
 }
 
 /// A parameter declared with nothing but its type.
@@ -841,9 +863,11 @@ pub struct Function {
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
     /// One per parameter, in the order they were declared.
-    nonnull: Vec<Option<Span>>,
+    nonnull: Vec<Option<Promise>>,
     /// Whether this is a hatch.
     hatch: bool,
+    /// Whether the pointer it returns is promised not to be null.
+    return_promise: Option<Promise>,
     body: Body,
 }
 
@@ -884,6 +908,7 @@ impl Function {
             locals,
             nonnull,
             hatch: false,
+            return_promise: None,
             body: Body::Defined(Vec::new()),
         }
     }
@@ -911,6 +936,25 @@ impl Function {
     /// Whether this is a hatch.
     pub fn hatch(&self) -> bool {
         self.hatch
+    }
+
+    /// This function, promising that the pointer it returns is not null.
+    ///
+    /// The body is asked at every `return` whether it keeps the promise, and a
+    /// call believes it of what it returns. Where nobody here can ask the
+    /// body, because it is a declaration, the promise is believed unasked
+    /// (ADR-0050). A hatch's body is asked, and what it could not prove is
+    /// listed rather than reported, so its callers believe it unchecked too
+    /// (ADR-0038).
+    pub fn promising(mut self, promise: Promise) -> Self {
+        self.return_promise = Some(promise);
+        self
+    }
+
+    /// What it promised of the pointer it returns, or `None` where a call
+    /// believes nothing about it.
+    pub fn promised(&self) -> Option<Promise> {
+        self.return_promise
     }
 
     /// A function this translation unit calls and does not contain.
@@ -942,7 +986,7 @@ impl Function {
     /// # Panics
     ///
     /// If `local` came from a different [`Function`].
-    pub fn nonnull(&self, local: LocalId) -> Option<Span> {
+    pub fn nonnull(&self, local: LocalId) -> Option<Promise> {
         assert!(
             local.index() < self.locals.len(),
             "no local {}",

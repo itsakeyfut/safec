@@ -1,0 +1,48 @@
+Target "x86_64-pc-windows-msvc"
+Function a_result_level_5_promised_is_read_without_a_test.c:1:6 "pick"
+  Local "_0" "int *" return _Nonnull defaulted
+  Local "_1" "int *" parameter _Nonnull
+  Block "bb0" entry
+    Operation a_result_level_5_promised_is_read_without_a_test.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+    Sequenced a_result_level_5_promised_is_read_without_a_test.c:2:12 generated
+    Return
+Function a_result_level_5_promised_is_read_without_a_test.c:5:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int"
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Block "bb0" entry
+    Operation a_result_level_5_promised_is_read_without_a_test.c:5:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_result_level_5_promised_is_read_without_a_test.c:6:9 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_result_level_5_promised_is_read_without_a_test.c:6:13 generated
+    Operation a_result_level_5_promised_is_read_without_a_test.c:7:19 written
+      Destination "_3"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_result_level_5_promised_is_read_without_a_test.c:7:14 generated
+    Call a_result_level_5_promised_is_read_without_a_test.c:7:14 "pick" "bb1"
+      Destination "_4"
+      Copy "_3"
+  Block "bb1"
+    Operation a_result_level_5_promised_is_read_without_a_test.c:7:10 written
+      Destination "_2"
+      Use
+        Copy "_4"
+    Sequenced a_result_level_5_promised_is_read_without_a_test.c:7:14 generated
+    Operation a_result_level_5_promised_is_read_without_a_test.c:8:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_result_level_5_promised_is_read_without_a_test.c:8:12 generated
+    Return

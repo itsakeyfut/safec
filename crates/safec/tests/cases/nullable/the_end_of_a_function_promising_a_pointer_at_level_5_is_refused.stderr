@@ -1,0 +1,14 @@
+error: `--safety strict` asks for more than this run delivers
+  = note: `memory` is the highest level with checks behind it
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: ask for `--safety memory`
+error[SC0408]: this function may reach the end of its body without returning a pointer
+   ╭─[ the_end_of_a_function_promising_a_pointer_at_level_5_is_refused.c:1:6 ]
+   │
+ 1 │ int *pick(int c) {
+   │      ──┬─  
+   │        ╰─── the end of this function's body can be reached without a `return`
+───╯
+  = note: this check belongs to safety level 5
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: end every path through the body with a `return`

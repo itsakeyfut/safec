@@ -1,4 +1,4 @@
-error[SC0307]: the declarations of `g` disagree about `_Nonnull`
+error[SC0307]: the declarations of `g` disagree about nullability
    ╭─[ a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused.c:1:14 ]
    │
  1 │ void g(int * _Nonnull p) {
@@ -7,6 +7,6 @@ error[SC0307]: the declarations of `g` disagree about `_Nonnull`
    │ 
  4 │ void g(int *p);
    │      ┬  
-   │      ╰── this declaration does not
+   │      ╰── this declaration says nothing
 ───╯
-  = note: every declaration of a function has to agree about `_Nonnull`, because a caller is checked against the declaration it sees
+  = note: every declaration of a function has to agree about its nullability specifiers, because a caller is checked against the declaration it sees

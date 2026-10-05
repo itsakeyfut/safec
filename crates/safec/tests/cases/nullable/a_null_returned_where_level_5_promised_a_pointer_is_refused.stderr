@@ -1,0 +1,16 @@
+error: `--safety strict` asks for more than this run delivers
+  = note: `memory` is the highest level with checks behind it
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: ask for `--safety memory`
+error[SC0408]: this returns a null pointer from a function that promised not to
+   ╭─[ a_null_returned_where_level_5_promised_a_pointer_is_refused.c:2:5 ]
+   │
+ 1 │ int *find(void) {
+   │      ──┬─  
+   │        ╰─── at level 5 this returns a pointer that is not null, because it is not written `_Nullable`
+ 2 │     return 0;
+   │     ────┬────  
+   │         ╰────── this is null when it is returned
+───╯
+  = note: this check belongs to safety level 5
+  = help: return a pointer to an object here, or write `_Nullable` after the `*` of the return type in every declaration of the function

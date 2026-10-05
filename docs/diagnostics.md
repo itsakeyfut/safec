@@ -49,7 +49,7 @@ records why the prefix is this one and what was rejected.
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106` |
 | `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307` |
-| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407` |
+| `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408` |
 | `SC05xx` | lifetime | none yet |
 | `SC06xx` | ownership | `SC0601` |
 | `SC07xx` | thread | none yet |
@@ -58,14 +58,15 @@ records why the prefix is this one and what was rejected.
 
 `SC04xx` through `SC07xx` are the four safeties [`concept.md`](concept.md) asks
 the question about, in the order it names them, so they were reserved before
-anything could emit from them. The first of the four now does, seven times:
+anything could emit from them. The first of the four now does, eight times:
 `SC0401` is a value freed where it may already have been freed, `SC0402` is
 a value used where it may already have been freed, `SC0403` is a value read
 or written through a pointer that may be null, `SC0404` is a value freed
 through a pointer that may not be the start of its allocation, `SC0405` is
-a pointer that may be null passed to a parameter declared `_Nonnull`, and
+a pointer that may be null passed to a parameter declared `_Nonnull`,
 `SC0406` is a pointer to an allocation that may have been freed, handed back by
-a `return`, and `SC0407` is the same pointer handed to a call. They are
+a `return`, `SC0407` is the same pointer handed to a call, and `SC0408` is a
+pointer that may be null handed back by a function that promised it is not. They are
 the first codes in this compiler that say something about what a program does
 rather than about how it is written.
 
@@ -83,9 +84,22 @@ unit passes a pointer it established is not null, and `SC0405` is that call
 when it does not. The fix is at the call, or at the promise if the promise was wrong,
 and never inside the body. It carries a second label at the `_Nonnull` it
 broke. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
-is the decision. The two frontend refusals that come with it, `SC0204` for a
-`_Nonnull` where it cannot apply and `SC0307` for two declarations that
-disagree about one, are in [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read).
+is the decision.
+
+**`SC0408` is `SC0405` the other way round.** A function that promises the
+pointer it returns is not null, by writing `_Nonnull` on its return or by level
+5's default, is believed by every call, and `SC0408` is a `return` that does not
+keep the promise, or the end of a body reached without a `return` at all. The
+fix is at the `return`, or at the promise, and it carries a second label at the
+promise it broke: the `_Nonnull`, or the function's name where level 5 made it.
+[ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)
+is the decision.
+
+The frontend refusals that come with these, `SC0204` for a
+nullability specifier where it cannot apply, `SC0307` for two declarations
+that disagree about one, and `SC0205` for `_Null_unspecified` and
+`_Nullable_result`, which this compiler does not read, are in
+[`frontend.md`](frontend.md#where-a-nullability-specifier-is-read).
 
 **A hatch moves an unproven conclusion rather than removing it.** Inside a
 function definition declared a hatch, an `SC04xx` that could not be proved is
@@ -95,8 +109,10 @@ was proved is reported as it would be anywhere. The code does not change in
 either place, so a reader searching for `SC0403` finds it in the listing as
 well. [ADR-0038](adr/0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
 is the decision. `SC0204` also refuses the hatch's attribute where it cannot
-apply, and `SC0205` is an attribute this compiler does not read, which is every
-one but the hatch's; both are in [`frontend.md`](frontend.md#where-the-hatch-is-read).
+apply, and `SC0205` is an annotation this compiler does not read: an
+attribute, which is every one but the hatch's, or one of the two nullability
+specifiers above. The attribute's rows are in
+[`frontend.md`](frontend.md#where-the-hatch-is-read).
 
 **`SC0404` is a fourth class, for the same reason.** It is about a pointer that
 points somewhere real and is not the thing `free` takes: C17 7.22.3.3 p2 makes

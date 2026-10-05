@@ -230,17 +230,27 @@ impl Keyword {
 }
 
 spellings! {
-    /// A word this compiler reads as a safety annotation.
+    /// A word this compiler knows as a safety annotation: one it reads, or one
+    /// it refuses as an annotation it does not read.
     ///
-    /// `_Nonnull` is `clang`'s spelling, written where `clang` writes it:
-    /// after the `*` of the pointer it qualifies. ADR-0037 says why this
-    /// spelling and what it means.
+    /// `_Nonnull` and `_Nullable` are `clang`'s nullability specifiers,
+    /// written where `clang` writes them: after the `*` of the pointer they
+    /// qualify. ADR-0037 says why this spelling and what `_Nonnull` means, and
+    /// ADR-0050 what `_Nullable` means.
+    ///
+    /// `_Null_unspecified` and `_Nullable_result` are the two `clang` also
+    /// accepts in C. They are words here so that they can be refused as
+    /// annotations this compiler does not read, rather than read as names and
+    /// refused for a reason that has nothing to do with them (ADR-0050).
     ///
     /// `__attribute__` is GNU C's, and is read in one form only, the one that
     /// declares a function definition a hatch. ADR-0038 says why that form and
     /// what it means.
     Annotation {
         Nonnull => "_Nonnull",
+        Nullable => "_Nullable",
+        NullUnspecified => "_Null_unspecified",
+        NullableResult => "_Nullable_result",
         Attribute => "__attribute__",
     }
 }
@@ -545,10 +555,19 @@ mod tests {
     /// spelling. A typo here is an annotation nobody can write, and every use
     /// of it in a program becomes a name.
     #[test]
-    fn the_annotation_table_is_the_spellings_this_compiler_reads() {
+    fn the_annotation_table_is_the_spellings_this_compiler_knows() {
         let spellings: Vec<_> = Annotation::ALL.iter().map(|a| a.as_str()).collect();
 
-        assert_eq!(spellings, ["_Nonnull", "__attribute__"]);
+        assert_eq!(
+            spellings,
+            [
+                "_Nonnull",
+                "_Nullable",
+                "_Null_unspecified",
+                "_Nullable_result",
+                "__attribute__"
+            ]
+        );
     }
 
     /// Every spelling in the table is the one C uses, and no two variants share

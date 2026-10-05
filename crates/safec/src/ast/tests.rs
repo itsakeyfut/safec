@@ -52,7 +52,7 @@ fn two_types_are_compatible_when_c_says_they_are() {
         name: None,
         ty,
         span: Span::new(file, 0, 1),
-        nonnull: None,
+        nullability: None,
     };
     let of = |ast: &mut Ast, returns, parameters| {
         ast.push_type(Type::Function {
@@ -212,7 +212,7 @@ fn every_type_is_spelled_the_way_c_declares_it() {
         name: None,
         ty,
         span: Span::new(file, 0, 2),
-        nonnull: None,
+        nullability: None,
     };
     let takes_int = |returns| Type::Function {
         returns,
@@ -457,6 +457,7 @@ fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
             body: StmtId(0),
             span: s,
             attribute: None,
+            return_nullability: None,
         })
         .name(),
         "Function"

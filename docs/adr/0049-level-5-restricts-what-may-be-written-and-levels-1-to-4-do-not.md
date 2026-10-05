@@ -34,7 +34,7 @@ Chosen option: **two kinds on the one level axis.** Levels 1 to 4 accept any C t
 
 ### Confirmation
 
-Nothing holds this yet: no level-5 restriction is implemented, and `--safety strict` is wired in Phase 8. The decision is held by `docs/safety-model.md`, which says it, and the first restriction, [#330](https://github.com/itsakeyfut/safec/issues/330), will hold it in code. This record's Confirmation is to be rewritten then.
+The first restriction, ADR-0050, holds it in code. At `--safety strict` the pointer a function defined here returns is not null unless it is written `_Nullable`, and never making that default fails `a_null_returned_where_level_5_promised_a_pointer_is_refused`; at every lower level nothing is promised, and making the default at every level fails `a_result_of_a_function_defined_here_is_doubted_below_level_5` and existing cases such as `a_pointer_read_out_of_a_freed_table_and_returned`. A construct level 5 does not accept is reported by the check that settles it, `SC0408` here, and no diagnostic about a program's text exists yet. `--safety strict` is still refused as asking for more than a run delivers until Phase 8 wires the checks below it, and the restriction is reported beside that refusal.
 
 ### Consequences
 

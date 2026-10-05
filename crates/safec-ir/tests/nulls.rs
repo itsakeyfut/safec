@@ -20,7 +20,7 @@
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, Function, LocalId, Operand, Operation, Origin, Place,
-    Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
 use safec_ir::nullability;
 use safec_ir::source::{SourceMap, Span};
@@ -935,6 +935,56 @@ fn a_pointer_condition_written_just_above_its_branch_is_refined() {
     function.fill_block(taken, goto(after, vec![write_through(p, names.at[2])]));
     function.fill_block(untaken, goto(after, vec![]));
     function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert!(found.is_empty(), "{found:?}");
+}
+
+/// A function that promised its result is not null is asked what the return
+/// place holds where it returns, even where the write was in another block.
+///
+/// `_0 = &x; goto ret; ret: return;`, with the function promising its result.
+/// The return place is established not null by the address, and the `Return`
+/// is in a block that writes nothing. What is asked is the value, which the
+/// analysis carried across the edge, so nothing is reported; only the caret
+/// would have been the function's name had anything been.
+///
+/// **This compiler's own frontend cannot produce it**: a `return` writes the
+/// return place in the block its `Return` ends, which `docs/c-family.md`
+/// records as a requirement on another frontend and this is the shape that
+/// breaks it.
+///
+/// Mutation: have `nullability::report_return` report the end of the body
+/// wherever the block wrote nothing, whatever the return place holds. This
+/// fails with one finding where it expects none.
+#[test]
+fn a_return_place_written_in_an_earlier_block_is_not_taken_for_the_end() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function =
+        Function::new(names.function, pointer, vec![]).promising(Promise::Declared(names.at[0]));
+    let x = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let ret = function.reserve_block();
+    function.fill_block(
+        entry,
+        goto(
+            ret,
+            vec![Element::Assign(Operation {
+                place: Place::local(function.return_place()),
+                value: Rvalue::Address(Place::local(x)),
+                origin: Origin::Written(names.at[1]),
+            })],
+        ),
+    );
+    function.fill_block(ret, returns());
 
     let found = concluded(unit, function);
 

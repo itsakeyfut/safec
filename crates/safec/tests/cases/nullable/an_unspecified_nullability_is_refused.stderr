@@ -1,0 +1,7 @@
+error[SC0205]: safec does not read `_Null_unspecified`
+   ╭─[ an_unspecified_nullability_is_refused.c:1:14 ]
+   │
+ 1 │ void g(int * _Null_unspecified p);
+   │              ────────┬────────  
+   │                      ╰────────── the nullability specifiers it reads are `_Nonnull` and `_Nullable`
+───╯

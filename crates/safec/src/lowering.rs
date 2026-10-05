@@ -28,13 +28,13 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Ast, BinOp as AstBinOp, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type};
-use crate::ast::{TypeId, UnOp as AstUnOp, spell_type};
+use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use crate::types::Types;
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin,
-    Parameter, Place, Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    Parameter, Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
@@ -47,7 +47,8 @@ use safec_ir::target::Target;
 /// that can happen.
 const LOWERING: Code = Code::new("SC0304");
 
-/// Two declarations of one function that disagree about `_Nonnull`.
+/// Two declarations of one function that disagree about a nullability
+/// specifier.
 ///
 /// Refused rather than resolved, because the declaration a caller sees is the
 /// one its call is checked against, and a header that leaves the promise out is
@@ -60,22 +61,100 @@ const LOWERING: Code = Code::new("SC0304");
 /// declarations are the same function would be a second place to drift.
 const DISAGREEING_ANNOTATION: Code = Code::new("SC0307");
 
+/// The report for two declarations of `name` that disagree about one
+/// nullability specifier: what the first wrote and what a later one did.
+///
+/// One function for a parameter's and a return's, so that the two say the same
+/// thing about the same mistake. `first_is` says which earlier declaration is
+/// compared, "prototype" or "declaration".
+///
+/// The primary label goes on a specifier one of the two wrote, because it is
+/// the only token either declaration has that says what differs: the later
+/// one's where it wrote one, and the first one's otherwise. The other
+/// declaration is pointed at by what it wrote, or by its name where it wrote
+/// nothing.
+fn disagreement(
+    sources: &SourceMap,
+    name: Span,
+    first_name: Span,
+    first_is: &str,
+    first: Option<Nullability>,
+    later: Option<Nullability>,
+) -> Diagnostic {
+    let (said, other, other_label) = match (first, later) {
+        (Some(first), Some(said)) => (
+            said,
+            first.at,
+            format!("the first {first_is} says `{}`", first.specifier.spelling()),
+        ),
+        (None, Some(said)) => (
+            said,
+            first_name,
+            format!("the first {first_is} says nothing"),
+        ),
+        (Some(said), None) => (said, name, "this declaration says nothing".to_owned()),
+        (None, None) => unreachable!("the two were found to differ"),
+    };
+
+    Diagnostic::error(format!(
+        "the declarations of `{}` disagree about nullability",
+        sources.snippet(name)
+    ))
+    .with_code(DISAGREEING_ANNOTATION)
+    .with_label(Label::primary(
+        said.at,
+        format!("one declaration says `{}` here", said.specifier.spelling()),
+    ))
+    .with_label(Label::secondary(other, other_label))
+    .with_note(
+        "every declaration of a function has to agree about its nullability \
+         specifiers, because a caller is checked against the declaration it sees",
+    )
+}
+
+/// What a written specifier promises of the pointer a function returns.
+///
+/// `_Nonnull` is a promise and `_Nullable` is none, which is what writing
+/// nothing is below level 5. Every specifier written out, so that a third is
+/// answered for here by `error[E0004]`.
+fn written_promise(written: Option<Nullability>) -> Option<Promise> {
+    match written {
+        Some(Nullability {
+            specifier: Specifier::Nonnull,
+            at,
+        }) => Some(Promise::Declared(at)),
+        Some(Nullability {
+            specifier: Specifier::Nullable,
+            at: _,
+        })
+        | None => None,
+    }
+}
+
 /// Build the IR of one translation unit.
 ///
 /// Every function that can be lowered is, whatever the ones beside it did: a
 /// program is not one thing that fails, and a caller of a function this stage
 /// refused still resolves, because the refusal leaves a declaration behind.
+///
+/// `nonnull_returns_by_default` is level 5's default, that a pointer is not null
+/// unless it is written `_Nullable` (ADR-0050). **The level is resolved here
+/// and not carried into the IR**: what reaches the IR is the promise it made,
+/// [`Promise::Defaulted`], so nothing that reads an IR asks what level a run
+/// is at, which is ADR-0011's boundary.
 pub fn lower(
     sources: &SourceMap,
     ast: &Ast,
     resolution: &Resolution,
     types: &Types,
     target: Target,
+    nonnull_returns_by_default: bool,
     diagnostics: &mut DiagnosticSink,
 ) -> TranslationUnit {
     let mut lowering = Lowering {
         sources,
         ast,
+        nonnull_returns_by_default,
         resolution,
         types,
         // The one thing this stage learns about the machine, and it only
@@ -85,6 +164,7 @@ pub fn lower(
         scopes: Vec::new(),
         functions: HashMap::new(),
         prototypes: HashMap::new(),
+        return_nullability: HashMap::new(),
         refused: HashSet::new(),
         pending: HashMap::new(),
         top_level: false,
@@ -99,6 +179,8 @@ pub fn lower(
 struct Lowering<'a> {
     sources: &'a SourceMap,
     ast: &'a Ast,
+    /// Level 5's default, which [`lower`] says why this stage resolves.
+    nonnull_returns_by_default: bool,
     resolution: &'a Resolution,
     types: &'a Types,
     unit: TranslationUnit,
@@ -129,14 +211,22 @@ struct Lowering<'a> {
     /// `sema.rs::lookup` already compares.
     functions: HashMap<String, FuncId>,
     /// The first prototype each file-scope name was declared with: where its
-    /// name was, and which of its parameters were `_Nonnull`.
+    /// name was, and the nullability specifier each of its parameters wrote.
     ///
     /// Not [`Lowering::functions`]' entry, which is the first *declaration*:
     /// `void g();` declares no parameters (C17 6.7.6.3 p14), so every later
     /// declaration would agree with it, and `void g(); void g(int *p);` above a
     /// `_Nonnull` definition passed in silence. That was found by review.
     /// See [`DISAGREEING_ANNOTATION`].
-    prototypes: HashMap<String, (Span, Vec<Option<Span>>)>,
+    prototypes: HashMap<String, (Span, Vec<Option<Nullability>>)>,
+    /// The first declaration each file-scope function name had: where its name
+    /// was, and the nullability specifier on the pointer it returns.
+    ///
+    /// The first declaration and not the first prototype, unlike
+    /// [`Lowering::prototypes`]: `void g();` declares no parameters and does
+    /// declare what `g` returns, so it is a declaration of the return to agree
+    /// with like any other.
+    return_nullability: HashMap<String, (Span, Option<Nullability>)>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -433,7 +523,9 @@ impl Lowering<'_> {
         for item in self.ast.items() {
             match item {
                 Item::Function(function) => {
-                    self.declare_one(function.name, function.ty, true, diagnostics);
+                    let (name, ty, written) =
+                        (function.name, function.ty, function.return_nullability);
+                    self.declare_one(name, ty, written, true, diagnostics);
                 }
                 Item::Declaration { declarators, .. } => {
                     for declarator in declarators {
@@ -450,8 +542,10 @@ impl Lowering<'_> {
                         // that went missing. #85 is where a global gets
                         // somewhere to live, and it is the change that has to
                         // come back for this initializer.
-                        if let Some(name) = declarator.declaration.name {
-                            self.declare_one(name, declarator.declaration.ty, false, diagnostics);
+                        let declaration = &declarator.declaration;
+                        if let Some(name) = declaration.name {
+                            let (ty, written) = (declaration.ty, declaration.nullability);
+                            self.declare_one(name, ty, written, false, diagnostics);
                         }
                     }
                 }
@@ -468,10 +562,14 @@ impl Lowering<'_> {
     ///
     /// `definition` says whether a body was written. Only an [`Item::Function`]
     /// carries one, and it decides the diagnostic below.
+    ///
+    /// `written` is the nullability specifier on the pointer it returns, which
+    /// the parser allows only on a function declared at file scope.
     fn declare_one(
         &mut self,
         name: Span,
         ty: TypeId,
+        written: Option<Nullability>,
         definition: bool,
         diagnostics: &mut DiagnosticSink,
     ) {
@@ -521,68 +619,98 @@ impl Lowering<'_> {
         // Before the function is recorded, because `lowered` moves into it.
         // `()` says nothing about the parameters, so it has nothing to agree
         // or disagree with, which is why only a prototype is asked.
-        if let Parameters::Prototype(_) = parameters {
-            self.agree(name, &lowered, diagnostics);
+        if let Parameters::Prototype(parameters) = &parameters {
+            let specifiers = parameters.iter().map(|parameter| parameter.nullability);
+            self.agree(name, specifiers.collect(), diagnostics);
         }
+        self.agree_on_return(name, written, diagnostics);
 
         // A name declared twice is one function. The first declaration is
         // the one whose span the IR carries, which is where a reader of a
         // diagnostic about the callee is pointed.
         if !self.functions.contains_key(self.sources.snippet(name)) {
-            let id = self
-                .unit
-                .push_function(Function::declaration_with_parameters(
-                    name, returns, lowered,
-                ));
+            let mut declared = Function::declaration_with_parameters(name, returns, lowered);
+            // A written promise is believed of a function this unit does not
+            // define, since nobody here can ask its body: the boundary
+            // ADR-0050 accepts, as ADR-0037 accepts it of a parameter.
+            if let Some(promise) = written_promise(written) {
+                declared = declared.promising(promise);
+            }
+            let id = self.unit.push_function(declared);
             self.functions
                 .insert(self.sources.snippet(name).to_owned(), id);
         }
     }
 
     /// Refuse a prototype of a function that disagrees with the first prototype
-    /// of it about which parameters are `_Nonnull`, or record this one as the
-    /// first. See [`DISAGREEING_ANNOTATION`].
+    /// of it about a parameter's nullability specifier, or record this one as
+    /// the first. See [`DISAGREEING_ANNOTATION`].
     ///
     /// Position by position, over as many parameters as both have. A
     /// declaration with a different count is a different disagreement, which is
     /// #57's and is not answered here.
-    fn agree(&mut self, name: Span, later: &[Parameter], diagnostics: &mut DiagnosticSink) {
+    ///
+    /// **Three answers, compared as written**: `_Nonnull`, `_Nullable`, and
+    /// none. The last two lower alike, which is why the specifiers are compared
+    /// here rather than what the IR carries, and they are still a disagreement:
+    /// at level 5 they would not be, where a parameter of a function with
+    /// internal linkage is non-null unless written `_Nullable` (ADR-0050), and
+    /// where a specifier is read does not depend on the level.
+    fn agree(
+        &mut self,
+        name: Span,
+        later: Vec<Option<Nullability>>,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         let key = self.sources.snippet(name);
         let Some((first_name, first)) = self.prototypes.get(key) else {
-            let promises = later.iter().map(|parameter| parameter.nonnull).collect();
-            self.prototypes.insert(key.to_owned(), (name, promises));
+            self.prototypes.insert(key.to_owned(), (name, later));
             return;
         };
+        let specifier = |written: &Option<Nullability>| written.map(|written| written.specifier);
         let differs = first
             .iter()
-            .zip(later)
-            .find(|(first, later)| first.is_some() != later.nonnull.is_some());
+            .zip(&later)
+            .find(|(first, later)| specifier(first) != specifier(later));
         let Some((first, later)) = differs else {
             return;
         };
+        let report = disagreement(self.sources, name, *first_name, "prototype", *first, *later);
+        diagnostics.report(report);
+    }
 
-        // The primary label goes on the `_Nonnull` that one of the two wrote,
-        // because it is the only token either declaration has that says what
-        // differs. The other declaration is pointed at by its name.
-        let (said, silent, silent_label) = match (*first, later.nonnull) {
-            (Some(said), _) => (said, name, "this declaration does not"),
-            (None, Some(said)) => (said, *first_name, "the first prototype does not"),
-            (None, None) => unreachable!("the two were found to differ"),
+    /// Refuse a declaration of a function that disagrees with the first one
+    /// about the nullability specifier on the pointer it returns, or record
+    /// this one as the first. See [`DISAGREEING_ANNOTATION`].
+    ///
+    /// The same three answers [`Lowering::agree`] compares, for the same
+    /// reason, and against the first declaration rather than the first
+    /// prototype, for the reason [`Lowering::return_nullability`] gives.
+    fn agree_on_return(
+        &mut self,
+        name: Span,
+        later: Option<Nullability>,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let key = self.sources.snippet(name);
+        let Some((first_name, first)) = self.return_nullability.get(key) else {
+            self.return_nullability
+                .insert(key.to_owned(), (name, later));
+            return;
         };
-
-        diagnostics.report(
-            Diagnostic::error(format!(
-                "the declarations of `{}` disagree about `_Nonnull`",
-                self.sources.snippet(name)
-            ))
-            .with_code(DISAGREEING_ANNOTATION)
-            .with_label(Label::primary(said, "one declaration says `_Nonnull` here"))
-            .with_label(Label::secondary(silent, silent_label))
-            .with_note(
-                "every declaration of a function has to agree about `_Nonnull`, because \
-                 a caller is checked against the declaration it sees",
-            ),
+        let specifier = |written: Option<Nullability>| written.map(|written| written.specifier);
+        if specifier(*first) == specifier(later) {
+            return;
+        }
+        let report = disagreement(
+            self.sources,
+            name,
+            *first_name,
+            "declaration",
+            *first,
+            later,
         );
+        diagnostics.report(report);
     }
 
     /// The declaration a call is checked against, and the locals a body starts
@@ -591,6 +719,13 @@ impl Lowering<'_> {
     /// Local 0 is the return place and the parameters follow it, which is what
     /// [`Function::with_parameters`] lays out. Each carries the `_Nonnull` its
     /// declaration wrote, which is what a call is checked against.
+    ///
+    /// **`_Nullable` makes no promise**, which is what an unannotated parameter
+    /// is below level 5, and at level 5 too for a function with external
+    /// linkage, whose callers in other translation units nobody checks
+    /// (ADR-0050). Every function here has external linkage, because the
+    /// parser reads no storage class, so no parameter is non-null unless it
+    /// was written `_Nonnull`.
     ///
     /// An empty parameter list is lowered as no parameters: C17 6.7.6.3 p14
     /// makes `()` say nothing about the count rather than say there are none,
@@ -611,7 +746,17 @@ impl Lowering<'_> {
                 let at = parameter.name.unwrap_or(parameter.span);
                 lowered.push(Parameter {
                     ty: self.ty(at, parameter.ty, diagnostics)?,
-                    nonnull: parameter.nonnull,
+                    nonnull: match parameter.nullability {
+                        Some(Nullability {
+                            specifier: Specifier::Nonnull,
+                            at,
+                        }) => Some(Promise::Declared(at)),
+                        Some(Nullability {
+                            specifier: Specifier::Nullable,
+                            at: _,
+                        })
+                        | None => None,
+                    },
                 });
             }
         }
@@ -625,7 +770,12 @@ impl Lowering<'_> {
             let Item::Function(function) = &self.ast.items()[index] else {
                 continue;
             };
-            let (name, ty, body) = (function.name, function.ty, function.body);
+            let (name, ty, body, written) = (
+                function.name,
+                function.ty,
+                function.body,
+                function.return_nullability,
+            );
             let hatch = function
                 .attribute
                 .is_some_and(|attribute| self.resolution.is_hatch(attribute));
@@ -653,7 +803,7 @@ impl Lowering<'_> {
                 );
                 continue;
             }
-            let Some(built) = self.body(name, ty, body, hatch, diagnostics) else {
+            let Some(built) = self.body(name, ty, body, hatch, written, diagnostics) else {
                 continue;
             };
 
@@ -664,13 +814,15 @@ impl Lowering<'_> {
     /// One function's blocks, or nothing where something could not be lowered.
     ///
     /// `hatch` is whether `sema::resolve` accepted the attribute written before
-    /// it as a hatch. See ADR-0038.
+    /// it as a hatch. See ADR-0038. `written` is the nullability specifier on
+    /// the pointer it returns.
     fn body(
         &mut self,
         name: Span,
         ty: TypeId,
         body: StmtId,
         hatch: bool,
+        written: Option<Nullability>,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Function> {
         let Type::Function {
@@ -685,6 +837,32 @@ impl Lowering<'_> {
         let mut function = Function::with_parameters(name, returns, lowered);
         if hatch {
             function = function.hatched();
+        }
+        // The definition carries its own promise, since it replaces the
+        // declaration callers were lowered against, and `agree_on_return` has
+        // made every declaration say the same.
+        //
+        // **Level 5's default is made here, on a body, and nowhere else.** A
+        // function this unit only declares returns `_Nullable` where it says
+        // neither, since nobody here can ask its body (ADR-0050). A definition
+        // this stage refused stays the declaration `declare_one` made, which
+        // carries what was written and no default, and the build has already
+        // failed on `SC0304` beside it.
+        //
+        // **Not on a hatch.** What a hatch's body could not prove is listed
+        // rather than reported (ADR-0038), so a default promise on one would
+        // be believed by every caller and asked by nobody: a promise no one
+        // wrote. A hatch promises what it writes, and its callers assume the
+        // worst of the rest.
+        let promise = match written {
+            Some(_) => written_promise(written),
+            None => (self.nonnull_returns_by_default
+                && !hatch
+                && matches!(self.unit.ty(returns), Ty::Pointer(_)))
+            .then_some(Promise::Defaulted(name)),
+        };
+        if let Some(promise) = promise {
+            function = function.promising(promise);
         }
 
         // A parameter is a local before the body's first statement, and its

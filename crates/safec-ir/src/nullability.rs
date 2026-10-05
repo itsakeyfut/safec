@@ -27,6 +27,11 @@
 //! asked what a dereference is asked. What is believed is only what no call in
 //! the translation unit reaches, which is ADR-0037.
 //!
+//! **A function that promises the pointer it returns is not null is asked at
+//! every `return`, and a call believes it.** The promise is
+//! [`crate::ir::Function::promised`], written `_Nonnull` or made by level 5's
+//! default, and this check reads only that it was made (ADR-0050).
+//!
 //! **Nothing here reports.** This builds a [`Conclusion`] and a span; `safec`
 //! turns one into a diagnostic, because this crate cannot see one, which is
 //! ADR-0011.
@@ -35,8 +40,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue,
-    Terminator, TranslationUnit, Ty, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Promise,
+    Rvalue, Terminator, TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::Span;
@@ -96,7 +101,8 @@ impl Nullness {
     }
 }
 
-/// One dereference, or one argument, this check concluded about, and where.
+/// One dereference, one argument, or one `return`, this check concluded about,
+/// and where.
 ///
 /// Not a diagnostic: this crate cannot see one. What each conclusion costs a
 /// build is `Diagnostic::concluded`'s in `safec`, which is the one place that
@@ -115,8 +121,9 @@ pub struct Finding {
     pub function: FuncId,
     /// What this check concluded about the pointer.
     pub conclusion: Conclusion,
-    /// Where a caret goes: the element or terminator that dereferences, or
-    /// the call that passes the argument.
+    /// Where a caret goes: the element or terminator that dereferences, the
+    /// call that passes the argument, or the `return` that hands the pointer
+    /// back.
     pub at: Span,
     /// Which question the conclusion answers.
     pub asked: Asked,
@@ -124,9 +131,10 @@ pub struct Finding {
 
 /// Which question a [`Finding`] answers.
 ///
-/// Two, because they are two different programs to fix and two different codes
-/// for a reader to search for: a read through a pointer that may be null, and
-/// a pointer that may be null handed to a parameter that promised it is not.
+/// Three, because they are three different programs to fix and three different
+/// codes for a reader to search for: a read through a pointer that may be
+/// null, a pointer that may be null handed to a parameter that promised it is
+/// not, and one handed back by a function that promised it is not.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Asked {
     /// Whether a pointer read or written through is null.
@@ -144,9 +152,23 @@ pub enum Asked {
     },
     /// Whether an argument passed to a `_Nonnull` parameter is null.
     Argument {
-        /// Where the parameter was declared `_Nonnull`, which is the promise
-        /// this argument is checked against.
-        promise: Span,
+        /// What the parameter promised, which is what this argument is
+        /// checked against and where a report points.
+        promise: Promise,
+    },
+    /// Whether the pointer a function returns is null, where it promised not.
+    Return {
+        /// What the function promised, which is where a report points the
+        /// reader who decides the promise was wrong.
+        promise: Promise,
+        /// Whether the `return` is the end of the body, reached on a path
+        /// that wrote nothing to return.
+        ///
+        /// Its own answer, because the caller would believe whatever the
+        /// return place holds and there is no `return` to point at: the caret
+        /// goes on the function's name and the reader is told the body can
+        /// end without one. C17 6.9.1 p12 makes using that value undefined.
+        reached_end: bool,
     },
 }
 
@@ -156,15 +178,36 @@ impl Asked {
     ///
     /// A dereference is one question whether or not it went through memory:
     /// `*p && **q` writes both operands at one span, and the reader is told
-    /// one thing about it. An argument is a question per promise.
+    /// one thing about it. An argument is a question per promise, and a return
+    /// is one per promise and per whether it is the end of the body.
+    ///
+    /// The first element of every pair written out, so that a fourth question
+    /// is answered for here by `error[E0004]`.
     fn same_question(self, other: Self) -> bool {
         match (self, other) {
             (Self::Dereference { through_memory: _ }, Self::Dereference { through_memory: _ }) => {
                 true
             }
             (Self::Argument { promise }, Self::Argument { promise: other }) => promise == other,
-            (Self::Dereference { through_memory: _ }, Self::Argument { promise: _ })
-            | (Self::Argument { promise: _ }, Self::Dereference { through_memory: _ }) => false,
+            (
+                Self::Return {
+                    promise: _,
+                    reached_end: _,
+                },
+                Self::Return {
+                    promise: _,
+                    reached_end: _,
+                },
+            ) => self == other,
+            (
+                Self::Dereference { through_memory: _ }
+                | Self::Argument { promise: _ }
+                | Self::Return {
+                    promise: _,
+                    reached_end: _,
+                },
+                _,
+            ) => false,
         }
     }
 
@@ -668,21 +711,35 @@ impl Analysis for Nullability<'_> {
 
         match terminator {
             Terminator::Call {
-                callee: _,
+                callee,
                 arguments: _,
                 destination,
                 then: _,
                 origin: _,
             } => {
-                // Whatever the callee is. `malloc` is not special here, which
-                // is this module's own doc comment and the reason the
-                // roadmap's example warns.
+                // Nothing, unless the callee promised otherwise. `malloc` is
+                // not special here, which is this module's own doc comment and
+                // the reason the roadmap's example warns.
+                //
+                // **A promise is believed of what the call returns**, and this
+                // is a new place that mints `NonNull`, so it is worth saying
+                // what makes it sound: every `return` of a function that
+                // promises is asked by `report_return`. What is believed
+                // unasked is a hatch's unproven return, which is listed rather
+                // than reported and is the hatch's own boundary (ADR-0038),
+                // and a `_Nonnull` on a function this unit does not define,
+                // which nobody here can ask (ADR-0050); both are the boundary
+                // a written promise draws, as ADR-0037 does of a
+                // parameter.
                 //
                 // Two `if`s rather than a let chain, which the workspace's
                 // `rust-version` of 1.85 does not have.
                 if let Some(place) = destination {
                     if place.projection.is_empty() {
-                        value[place.local.index()] = Nullness::Unknown;
+                        value[place.local.index()] = match self.unit.function(*callee).promised() {
+                            Some(_) => Nullness::NonNull,
+                            None => Nullness::Unknown,
+                        };
                     }
                 }
             }
@@ -906,6 +963,71 @@ fn report_arguments(
     }
 }
 
+/// One finding for a `return` of a function that promised the pointer it
+/// returns is not null, unless the pointer is established not null there.
+///
+/// **Asked at the `Return` terminator rather than at the write into the
+/// return place**, because a path that reaches the end of the body writes
+/// nothing, and a caller would believe whatever the return place holds:
+/// `int *f(int c) { int x; if (c) return &x; }` lowers to a `Return` in a block
+/// with no write. The caret is the span of the last write into the return
+/// place in this block, which is the `return` statement, and the function's
+/// name where there is none. The lowering puts a `return`'s write in the block
+/// its `Return` ends, measured with `return g();` among others, and
+/// `docs/c-family.md` says what that asks of another frontend.
+///
+/// Read through [`Nullability::known`] like every other answer, though the
+/// return place cannot have its address taken from C.
+fn report_return(
+    analysis: &Nullability<'_>,
+    findings: &mut Vec<Finding>,
+    terminator: &Terminator,
+    known: &[Nullness],
+    returned_at: Option<Span>,
+    function: FuncId,
+) {
+    // Every terminator written out rather than `let ... else`, for the reason
+    // `report_arguments` gives.
+    match terminator {
+        Terminator::Return => {}
+        Terminator::Goto(_)
+        | Terminator::Branch {
+            condition: _,
+            then: _,
+            otherwise: _,
+            origin: _,
+        }
+        | Terminator::Call {
+            callee: _,
+            arguments: _,
+            destination: _,
+            then: _,
+            origin: _,
+        }
+        | Terminator::Abnormal { to: _ } => return,
+    }
+    let Some(promise) = analysis.function.promised() else {
+        return;
+    };
+    let returned = analysis.known(known, analysis.function.return_place());
+    let Some(conclusion) = returned.concluded() else {
+        return;
+    };
+    let (at, reached_end) = match returned_at {
+        Some(at) => (at, false),
+        None => (analysis.function.name, true),
+    };
+    findings.push(Finding {
+        function,
+        conclusion,
+        at,
+        asked: Asked::Return {
+            promise,
+            reached_end,
+        },
+    });
+}
+
 /// Every dereference of a null pointer this unit contains, and every one it
 /// cannot rule out.
 ///
@@ -947,6 +1069,10 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
             };
 
             let block = function.block(id);
+            // The last `return` statement's write into the return place in
+            // this block, which is where a report about what it returned
+            // points.
+            let mut returned_at = None;
             for element in &block.elements {
                 // Before the transfer, which is what the element does: the
                 // question is what was true where it runs.
@@ -957,6 +1083,11 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                     &known,
                     func,
                 );
+                if let Element::Assign(operation) = element {
+                    if operation.place == Place::local(function.return_place()) {
+                        returned_at = Some(operation.origin.span());
+                    }
+                }
                 analysis.element(function, element, &mut known);
             }
 
@@ -968,6 +1099,14 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                 func,
             );
             report_arguments(&analysis, &mut findings, &block.terminator, &known, func);
+            report_return(
+                &analysis,
+                &mut findings,
+                &block.terminator,
+                &known,
+                returned_at,
+                func,
+            );
         }
     }
 

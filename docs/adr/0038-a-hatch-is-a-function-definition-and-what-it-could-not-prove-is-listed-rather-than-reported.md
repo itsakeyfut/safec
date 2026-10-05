@@ -133,7 +133,13 @@ the implementation would be the filter the record's guard is written against.
 prototype. A `_Nonnull` parameter of a hatch is checked at every call in the
 translation unit, as any other is; what is believed is what the body does, and
 it is believed by nobody, because a caller assumes the worst of it, as the next
-paragraph says. #134's answer and this one are the same answer.
+paragraph says. #134's answer and this one are the same answer. The one thing a
+caller believes of a hatch's body is what its prototype writes on the pointer
+it returns: a `_Nonnull` there is believed at every call, and a `return` that
+does not keep it is listed under the hatch like any other conclusion it could
+not prove. Level 5's default promise is not made for a hatch, so it promises
+only what it writes
+([ADR-0050](./0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)).
 
 **What a call to a hatch leaves behind: every allocation still live is
 unproven.** Found by review. An opaque call makes unproven the allocations its

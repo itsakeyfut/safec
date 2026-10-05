@@ -261,8 +261,8 @@ void consume(owner int *p);
 
 The exact syntax is not fixed.
 
-**One annotation exists, and it answers the third question.** `_Nonnull`,
-written after the `*` of a pointer parameter, says the parameter is not null:
+**Two annotations answer the third question.** `_Nonnull`, written after the
+`*` of a pointer parameter, says the parameter is not null:
 
 ```c
 void process(int * _Nonnull p) { *p = 1; }
@@ -277,11 +277,18 @@ compiled by something else. That is the boundary promise
 [ADR-0032](adr/0032-bound-what-is-unchecked-inside-a-declared-hatch.md) asks
 of a hatch, at the scale of one declaration.
 
+Written after the `*` of the pointer a function returns, it says the same of the
+result: every `return` in the body is checked against it, so `return 0;` is an
+error and so is reaching the end of the body without a `return`, and every call
+believes it of what it returns. `_Nullable`, the other specifier, says a
+pointer may be null, which below level 5 is what an unannotated one already
+is.
+
 It is `clang`'s spelling rather than one in the style sketched above, because it
 is reserved to the implementation, `clang` compiles it unchanged, and it changes
 no code. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
 has the reasoning and the options it rejected, and
-[`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read) says where it is read and
+[`frontend.md`](frontend.md#where-a-nullability-specifier-is-read) says where it is read and
 where it is refused. It says nothing about the other four questions, which wait
 for the phases that ask them.
 
@@ -293,10 +300,17 @@ unit's boundary nothing unannotated is believed: what a function declared and
 not defined here takes and returns, and what a function with external linkage
 defined here takes, is `_Nullable` where the declaration says neither, since
 believing what the other side never said is how a null would be dereferenced in
-silence. Which pointers the default covers, beyond a declaration's own, is
-decided with the implementation. Below level 5, `_Nullable` restricts nothing.
+silence. The default covers a declaration's own pointers, a parameter's and
+the one a function returns, and not a local, whose every write the check
+already sees, or a pointer inside another, which is believed of nothing until a
+specifier can be written on it. Every function here has external linkage
+today, because the parser reads no storage class, so what the default changes
+is the pointer a function defined here returns, and a `return` that may hand
+back null is `SC0408`. Below level 5, `_Nullable` restricts nothing.
 [ADR-0050](adr/0050-at-level-5-a-pointer-is-non-null-unless-it-is-written-nullable.md)
-has the reasoning; it is not implemented yet.
+has the reasoning and the measurement. Until the checks below level 5 are
+implemented, a run asked for it is refused as asking for more than it
+delivers, and what the default finds is reported beside that.
 
 The desired migration model is:
 
@@ -343,8 +357,11 @@ has the reasoning and the forms it rejected, and
 [`frontend.md`](frontend.md#where-the-hatch-is-read) says where it is read.
 
 **Its boundary is its prototype.** A `_Nonnull` parameter of a hatch is
-checked at every call in the translation unit, as any other is. A caller
-assumes the worst of what the hatch may have done: after a call to one, every
+checked at every call in the translation unit, as any other is, and a
+`_Nonnull` written on the pointer a hatch returns is believed at every call,
+while a `return` that does not keep it is listed under the hatch. Level 5's
+default is not made for a hatch, so it promises only what it writes. Otherwise a
+caller assumes the worst of what the hatch may have done: after a call to one, every
 allocation the caller still holds live is unproven, whether or not the hatch
 was handed it, because what a hatch can reach through memory is not something
 this check follows and its body is the one whose unproven conclusions are not

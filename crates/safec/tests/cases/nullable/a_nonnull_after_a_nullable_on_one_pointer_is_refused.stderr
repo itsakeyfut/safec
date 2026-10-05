@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_nonnull_after_a_nullable_on_one_pointer_is_refused.c:1:24 ]
+   │
+ 1 │ void g(int * _Nullable _Nonnull p);
+   │                        ────┬───  
+   │                            ╰───── a pointer takes one nullability specifier, and this is the second
+───╯

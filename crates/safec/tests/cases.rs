@@ -836,6 +836,9 @@ cases! {
         // guarded at one stage is unguarded at every stage that reads it: the
         // tree, a declaration's IR, and a definition read by the analysis.
         a_nonnull_parameter_is_read_into_the_tree: ["--emit", "ast"],
+        // And on the pointer a function declared at file scope returns, which
+        // ADR-0050 opened. It was refused here until it had a meaning.
+        a_nonnull_on_a_return_type_is_read_into_the_tree: ["--emit", "ast"],
         // The parameter's own pointer is the last one written, not the first.
         // Mutation: have `parameter_list` read `derivations.first()`, which
         // drops this annotation in silence; only this case fails.
@@ -874,7 +877,6 @@ cases! {
         a_nonnull_on_a_pointer_inside_a_parameter_is_refused: ["--emit", "ast"],
         a_nonnull_on_a_file_scope_object_is_refused: ["--emit", "ast"],
         a_nonnull_on_a_local_is_refused: ["--emit", "ast"],
-        a_nonnull_on_a_return_type_is_refused: ["--emit", "ast"],
         a_nonnull_on_a_parameter_of_a_function_pointer_is_refused: ["--emit", "ast"],
         a_nonnull_on_a_parameter_of_a_block_scope_function_is_refused: ["--emit", "ast"],
         // C17 6.7.6.3 p8 adjusts a parameter of function type to a pointer, so
@@ -896,6 +898,158 @@ cases! {
         // built from the definition, so it believes nothing and its dereference
         // is reported beside the refusal.
         a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    }
+    "nullable" => {
+        // `_Nullable`, the other specifier, and what level 5 does with a
+        // pointer that writes neither. See ADR-0050, whose Confirmation names
+        // the mutation each of these fails under.
+        //
+        // Read where `_Nonnull` is read, and into the tree. Mutation: have
+        // `dump_declaration` print nothing for a specifier; this fails.
+        a_nullable_parameter_is_read_into_the_tree: ["--emit", "ast"],
+        // Below level 5 it restricts nothing: a `_Nullable` parameter is what
+        // an unannotated one is. Mutation: lower `_Nullable` to a promise in
+        // `Lowering::signature`, as `_Nonnull` is; the first goes silent and
+        // the second is refused with `SC0405`.
+        a_nullable_parameter_is_doubted_by_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_null_passed_to_a_nullable_parameter_is_accepted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Refused where `_Nonnull` is refused, which `parser.rs::placed` and
+        // `Parser::core` answer for both alike.
+        a_nullable_on_a_local_is_refused: ["--emit", "ast"],
+        a_nullable_on_a_pointer_inside_a_parameter_is_refused: ["--emit", "ast"],
+        // `clang` refuses this pair as two that conflict. Mutation: have
+        // `Parser::core` ask only for `_Nonnull` again; the second becomes a
+        // name and the refusal says something else.
+        two_nullability_specifiers_on_one_pointer_are_refused: ["--emit", "ast"],
+        // The two `clang` also accepts in C, refused as annotations this
+        // compiler does not read. One after a `*`, one where a return's
+        // pointer is, and one not after a `*`, which `Parser::core` answers.
+        // Mutation: have `Parser::unread_specifier` answer `false`; each is
+        // refused as a name instead, with `SC0201`.
+        an_unspecified_nullability_is_refused: ["--emit", "ast"],
+        a_nullable_result_specifier_is_refused: ["--emit", "ast"],
+        an_unspecified_nullability_not_after_a_star_is_refused: ["--emit", "ast"],
+        // Three answers, compared as written. Mutation: compare whether a
+        // specifier was written rather than which, in `Lowering::agree`; the
+        // first goes silent. Mutation: compare what the lowering carries; the
+        // second goes silent, since `_Nullable` and nothing lower alike.
+        declarations_that_disagree_between_nonnull_and_nullable_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        declarations_that_disagree_between_nullable_and_nothing_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A specifier on the pointer a function returns, read at every level.
+        // Mutation: have the `Item::Function` arm of `dumps.rs::dump_item`
+        // print nothing for `Function::return_nullability`; this fails.
+        a_nullable_return_of_a_definition_is_read_into_the_tree: ["--emit", "ast"],
+        // Accepted only on the derivation just before a declared function's
+        // own, which is the pointer it returns. A pointer inside that one is
+        // not, the pointer under a pointer at file scope is not a return at
+        // all, and the pointer a function pointer's function returns is not a
+        // declared function's, so nothing could check a call against it.
+        // Mutation: let `Parser::placed` accept any derivation before the last
+        // of a function; the first goes silent. Mutation: let it accept the one
+        // before the last whatever the last is; the second does. The third
+        // needs both at once, since its last derivation is a pointer and its
+        // specifier is not the one before it.
+        a_nonnull_on_a_pointer_inside_a_return_is_refused: ["--emit", "ast"],
+        a_nonnull_on_a_pointer_to_a_pointer_at_file_scope_is_refused: ["--emit", "ast"],
+        a_nonnull_on_the_return_of_a_function_pointer_is_refused: ["--emit", "ast"],
+        // `_Nonnull` on a return is a promise at every level, asked at every
+        // `return` and believed by every call, which is `SC0408`'s three rows
+        // and a caller of each kind. Mutation: never set the written promise
+        // in `Lowering::body`; the first three go silent and the fourth is
+        // doubted.
+        a_nonnull_return_is_checked_at_its_return_below_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_returned_from_a_nonnull_return_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The end of a body writes nothing to return, so the `Return` is what
+        // is asked. Mutation: have `report_return` ask only where the block
+        // wrote the return place; this goes silent.
+        the_end_of_a_function_promising_a_nonnull_return_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The block that ends the body writes something, and not the return
+        // place, so it is still the end. Mutation: have `findings` take any
+        // write in the block as the `return`'s; this is told it may return
+        // null at `x = 1` instead.
+        the_end_of_a_body_after_a_statement_is_still_its_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Mutation: have the call's destination answer `Unknown` whatever the
+        // callee promised, in `Analysis::terminator`; both are doubted.
+        a_result_promised_nonnull_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The boundary: a function only declared here is believed where its
+        // declaration writes `_Nonnull`. Mutation: never set the written
+        // promise in `Lowering::declare_one`; this is doubted.
+        a_result_a_declaration_promises_is_believed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And doubted where it writes `_Nullable`. Mutation: have
+        // `lowering::written_promise` promise for either specifier; this goes
+        // silent.
+        a_nullable_result_is_doubted_by_its_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The return's specifier agrees across every declaration, `void g();`
+        // among them, which declares what `g` returns. Mutation: have
+        // `Lowering::agree_on_return` record and never compare; both go
+        // silent. Mutation: call it only for a prototype; the second does.
+        declarations_that_disagree_about_a_nonnull_return_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_unprototyped_declaration_disagrees_about_a_return: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Level 5: the pointer a function defined here returns is not null
+        // unless it is written `_Nullable`, asked at every `return` as a
+        // written `_Nonnull` is, and believed by every call. Each run is
+        // refused beside that, since level 5 asks for checks that are not
+        // implemented yet; the default is what this run delivers of it.
+        // Mutation: never set `Promise::Defaulted` in `Lowering::body`; the
+        // first three go silent and the fourth is doubted.
+        a_null_returned_where_level_5_promised_a_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        an_allocation_returned_where_level_5_promised_a_pointer_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        the_end_of_a_function_promising_a_pointer_at_level_5_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_result_level_5_promised_is_read_without_a_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // The same program below level 5, where nothing is promised. This is
+        // what keeps levels 1 to 4 answering as before. Mutation: compute
+        // `nonnull_returns_by_default` as `true` in `driver.rs`; this goes silent,
+        // and every existing case whose pointer function may return null
+        // gains `SC0408`, `a_pointer_read_out_of_a_freed_table_and_returned`
+        // among them.
+        a_result_of_a_function_defined_here_is_doubted_below_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `_Nullable` takes the promise back: the result is doubted until a
+        // test settles it. Mutation: let the default apply where `_Nullable`
+        // was written, in `Lowering::body`; the untested read goes silent.
+        a_nullable_return_is_tested_before_it_is_read: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // The boundary, which believes nothing unannotated in either
+        // direction: what a function only declared here returns is doubted,
+        // and what one defined here with external linkage takes is too, so a
+        // null passed to one needs nothing. Mutation: make the default in
+        // `Lowering::declare_one` as well; the first goes silent. Mutation:
+        // give an unannotated parameter a promise at level 5 in
+        // `Lowering::signature`; the second goes silent and the third is
+        // refused with `SC0405`.
+        a_result_of_a_function_only_declared_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_parameter_of_a_function_defined_here_is_doubted_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        a_null_passed_to_a_function_only_declared_here_is_not_reported_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // A hatch promises what it writes and nothing by default, since what
+        // its body could not prove is listed rather than reported, and a
+        // default would be believed by every caller and asked by nobody.
+        // Mutation: drop `!hatch` from the default in `Lowering::body`; the
+        // read in `main` goes silent.
+        a_hatch_promises_nothing_by_default_at_level_5: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "strict"],
+        // The level just below 5 makes no default either, which is the edge
+        // of the comparison in `driver.rs`. Mutation: compute
+        // `nonnull_returns_by_default` from `>= SafetyLevel::Thread`; this
+        // goes silent.
+        a_result_of_a_function_defined_here_is_doubted_at_level_4: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "thread"],
+        // The return's three answers, compared as the parameter's are:
+        // `_Nonnull` against `_Nullable` as well as either against nothing,
+        // a definition before the declaration as well as after, and each
+        // declarator of one declaration on its own. Mutation: compare whether
+        // a specifier was written in `Lowering::agree_on_return`; the first
+        // goes silent. Mutation: hand `declare_one` no specifier for a
+        // definition; the second does. Mutation: drop the specifier
+        // `named_declarator` returns for a later declarator, so it keeps the
+        // first's; `g` promises and the third goes silent.
+        declarations_that_disagree_between_nonnull_and_nullable_about_a_return_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_definition_that_disagrees_with_a_later_declaration_about_its_return_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_second_declarator_does_not_take_the_first_ones_return_specifier: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A function declared in a block is not one `lowering.rs::declare`
+        // reads, so a specifier on its return would mean nothing. Mutation:
+        // let `Parser::placed` accept a return under `Declares::BlockScope`;
+        // this goes silent.
+        a_nonnull_on_the_return_of_a_block_scope_function_is_refused: ["--emit", "ast"],
+        // The second of two specifiers, whichever came first. Mutation: have
+        // `Parser::core` ask whether the one before was `_Nonnull` only; this
+        // is told to write it after the `*`, which it did.
+        a_nonnull_after_a_nullable_on_one_pointer_is_refused: ["--emit", "ast"],
     }
 
     "hatch" => {

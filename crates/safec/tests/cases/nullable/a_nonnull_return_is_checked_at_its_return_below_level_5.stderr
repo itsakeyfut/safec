@@ -1,0 +1,12 @@
+error[SC0408]: this returns a null pointer from a function that promised not to
+   ╭─[ a_nonnull_return_is_checked_at_its_return_below_level_5.c:2:5 ]
+   │
+ 1 │ int * _Nonnull f(void) {
+   │       ────┬───  
+   │           ╰───── the return is declared `_Nonnull` here
+ 2 │     return 0;
+   │     ────┬────  
+   │         ╰────── this is null when it is returned
+───╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer to an object here, or remove `_Nonnull` from the return type in every declaration of the function

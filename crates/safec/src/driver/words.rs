@@ -8,8 +8,10 @@
 use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
+use safec_ir::ir::Promise;
 use safec_ir::memory::{self, Kind, Unproven};
 use safec_ir::nullability::{self, Asked};
+use safec_ir::source::Span;
 
 /// A value freed where it may already have been freed.
 ///
@@ -46,6 +48,14 @@ const NULL_DEREFERENCE: Code = Code::new("SC0403");
 /// nowhere, where this one points somewhere real that `free` does not take.
 /// See ADR-0036.
 const INTERIOR_FREE: Code = Code::new("SC0404");
+
+/// A pointer that may be null handed back by a function that promised the
+/// pointer it returns is not null.
+///
+/// Not `NULL_ARGUMENT`'s, though it is the same question asked of the other
+/// direction of a call, because the fix is at a different place: at the
+/// `return`, or at the promise the function made. See ADR-0050.
+const NULL_RETURN: Code = Code::new("SC0408");
 
 /// A pointer that may be null passed to a parameter declared `_Nonnull`.
 ///
@@ -468,34 +478,148 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             "this check cannot say this is not null",
             "read each pointer this goes through into a local, and test that local against null before reading through it",
         ),
-        (Asked::Argument { promise: _ }, Conclusion::Unsafe) => (
-            NULL_ARGUMENT,
-            "this passes a null pointer to a parameter declared `_Nonnull`",
-            "this is null when it is passed",
-            "pass a pointer to an object here, or remove `_Nonnull` from the parameter",
-        ),
-        (Asked::Argument { promise: _ }, Conclusion::Unknown) => (
-            NULL_ARGUMENT,
-            "this may pass a null pointer to a parameter declared `_Nonnull`",
-            "this check cannot say this is not null",
-            "test this pointer against null before passing it",
-        ),
+        (Asked::Argument { promise }, conclusion) => {
+            return passed(finding.at, conclusion, promise);
+        }
         (
-            Asked::Dereference { through_memory: _ } | Asked::Argument { promise: _ },
-            Conclusion::Safe,
-        ) => (NULL_DEREFERENCE, "nothing", "nothing", "nothing"),
+            Asked::Return {
+                promise,
+                reached_end,
+            },
+            conclusion,
+        ) => return returned(finding.at, conclusion, promise, reached_end),
+        (Asked::Dereference { through_memory: _ }, Conclusion::Safe) => {
+            (NULL_DEREFERENCE, "nothing", "nothing", "nothing")
+        }
     };
 
-    let mut diagnostic = Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
-        .with_code(code)
-        .with_safety_level(SafetyLevel::Memory)
-        .with_label(Label::primary(finding.at, label));
-    if let Asked::Argument { promise } = finding.asked {
-        diagnostic = diagnostic.with_label(Label::secondary(
-            promise,
-            "the parameter is declared `_Nonnull` here",
-        ));
-    }
+    Some(
+        Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
+            .with_code(code)
+            .with_safety_level(SafetyLevel::Memory)
+            .with_label(Label::primary(finding.at, label)),
+    )
+}
 
+/// What the nullability check concluded about an argument, as what a user
+/// reads.
+///
+/// Its own function for the reason [`returned`] is: what the parameter
+/// promised decides what it is called, how the promise is taken back, and
+/// which level made it.
+///
+/// **Nothing makes a parameter's promise by default yet.** Every function here
+/// has external linkage, and level 5 makes a parameter of one `_Nullable`
+/// where it says neither (ADR-0050). The `Defaulted` words are written so that
+/// the day a function with internal linkage is read, a parameter level 5 made
+/// non-null is not reported as declared `_Nonnull`.
+///
+/// The unsafe remedy offers the promise as the other way out, because a
+/// parameter promised not null that a caller has a reason to pass null to is a
+/// promise that was wrong rather than a call that was.
+fn passed(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnostic> {
+    let (promised_at, described, promise_label, take_back, level) = match promise {
+        Promise::Declared(written) => (
+            written,
+            "a parameter declared `_Nonnull`",
+            "the parameter is declared `_Nonnull` here",
+            "remove `_Nonnull` from the parameter",
+            SafetyLevel::Memory,
+        ),
+        Promise::Defaulted(name) => (
+            name,
+            "a parameter that is not `_Nullable`",
+            "at level 5 this parameter is not null, because it is not written `_Nullable`",
+            "write `_Nullable` after the `*` of the parameter in every declaration of the function",
+            SafetyLevel::Strict,
+        ),
+    };
+    let (message, label, remedy) = match conclusion {
+        Conclusion::Unsafe => (
+            format!("this passes a null pointer to {described}"),
+            "this is null when it is passed",
+            format!("pass a pointer to an object here, or {take_back}"),
+        ),
+        Conclusion::Unknown => (
+            format!("this may pass a null pointer to {described}"),
+            "this check cannot say this is not null",
+            "test this pointer against null before passing it".to_owned(),
+        ),
+        Conclusion::Safe => return None,
+    };
+
+    Some(
+        Diagnostic::concluded(conclusion, message, Remedy::new(remedy))?
+            .with_code(NULL_ARGUMENT)
+            .with_safety_level(level)
+            .with_label(Label::primary(at, label))
+            .with_label(Label::secondary(promised_at, promise_label)),
+    )
+}
+
+/// What the nullability check concluded about a `return`, as what a user
+/// reads.
+///
+/// Its own function because its remedy depends on why the return was
+/// promised, which is a value rather than a row: a written `_Nonnull` is taken
+/// back by removing it, and level 5's default by writing `_Nullable`. The
+/// level named is the one that made the promise, so a default says level 5.
+///
+/// **The end of a body is told to end with a `return`**, whatever was
+/// concluded, because there is no pointer to test, and writing `_Nullable`
+/// would not help: C17 6.9.1 p12 makes the caller's use of the value
+/// undefined whatever the declaration says.
+fn returned(
+    at: Span,
+    conclusion: Conclusion,
+    promise: Promise,
+    reached_end: bool,
+) -> Option<Diagnostic> {
+    let (promised_at, promise_label, take_back, level) = match promise {
+        Promise::Declared(written) => (
+            written,
+            "the return is declared `_Nonnull` here",
+            "remove `_Nonnull` from the return type",
+            SafetyLevel::Memory,
+        ),
+        Promise::Defaulted(name) => (
+            name,
+            "at level 5 this returns a pointer that is not null, because it is not written `_Nullable`",
+            "write `_Nullable` after the `*` of the return type",
+            SafetyLevel::Strict,
+        ),
+    };
+    let (message, label, remedy) = match (reached_end, conclusion) {
+        (true, Conclusion::Unsafe | Conclusion::Unknown | Conclusion::Safe) => (
+            "this function may reach the end of its body without returning a pointer",
+            "the end of this function's body can be reached without a `return`",
+            "end every path through the body with a `return`".to_owned(),
+        ),
+        (false, Conclusion::Unsafe) => (
+            "this returns a null pointer from a function that promised not to",
+            "this is null when it is returned",
+            format!(
+                "return a pointer to an object here, or {take_back} in every declaration of the function"
+            ),
+        ),
+        (false, Conclusion::Unknown) => (
+            "this may return a null pointer from a function that promised not to",
+            "this check cannot say this is not null",
+            format!(
+                "return only a pointer this check can see is not null, testing it first where it came from a call, or {take_back} in every declaration of the function"
+            ),
+        ),
+        (false, Conclusion::Safe) => return None,
+    };
+
+    let mut diagnostic = Diagnostic::concluded(conclusion, message, Remedy::new(remedy))?
+        .with_code(NULL_RETURN)
+        .with_safety_level(level)
+        .with_label(Label::primary(at, label));
+    // A default promise at the end of a body points at the function's name
+    // twice, and one label there is enough.
+    if promised_at != at {
+        diagnostic = diagnostic.with_label(Label::secondary(promised_at, promise_label));
+    }
     Some(diagnostic)
 }

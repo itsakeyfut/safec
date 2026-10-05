@@ -1,0 +1,14 @@
+error: `--safety strict` asks for more than this run delivers
+  = note: `memory` is the highest level with checks behind it
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: ask for `--safety memory`
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_hatch_promises_nothing_by_default_at_level_5.c:11:5 ]
+    │
+ 11 │     return *q;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

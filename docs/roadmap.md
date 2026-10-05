@@ -242,7 +242,9 @@ Safety levels 4 and 5.
   nothing `Unknown` and therefore refuses `--allow-unknown` rather than
   ignoring it
 - the first restriction level 5 makes on what may be written: a pointer is not
-  null unless written `_Nullable` (ADR-0049, ADR-0050)
+  null unless written `_Nullable` (ADR-0049, ADR-0050). Implemented ahead of the
+  wiring, so a level-5 run reports it beside the refusal for what is not wired
+  yet
 
 **Done when:** a value shared between threads without synchronization is
 reported, and `--safety strict` on a program the analysis cannot fully prove
