@@ -2914,6 +2914,10 @@ fn a_free_after_the_write_into_the_return_place_is_not_asked_about() {
 /// Mutation: give a byte read the sites stored where it was read from without
 /// marking it `loaded`, in `Allocations::read_through`. The free of the byte
 /// marks the allocation freed, the second free is `Unsafe`, and this fails.
+///
+/// Mutation: drop the byte from that marker altogether. The byte holds
+/// nothing, the free of the allocation is not asked about at all, and this
+/// fails as well, beside the three corpus cases that go silent.
 #[test]
 fn a_free_of_a_byte_read_out_of_memory_proves_nothing() {
     let (sources, names) = sources();
