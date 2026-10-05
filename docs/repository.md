@@ -184,11 +184,11 @@ tests from there to the end. Each split updates its row when it lands.
 |---|---|---|---|---|
 | `crates/safec-ir/src/memory.rs` | 5,497 | the lattice's parts, the lattice value, building a value out of operands, the transfer functions, the report | 0 | split |
 | `crates/safec/src/driver.rs` | 2,466 | the pipeline, the words of each safety diagnostic, running the backend, the `--emit` dumps | 1,509 | split, and its tests move |
-| `crates/safec/src/lowering.rs` | 2,250 | one | 1,464 | its tests move |
-| `crates/safec/src/parser.rs` | 1,888 | one | 948 | its tests move |
-| `crates/safec/src/types.rs` | 1,617 | one | 1,476 | its tests move |
-| `crates/safec-ir/src/ir.rs` | 1,279 | one | 635 | its tests move |
-| `crates/safec/src/ast.rs` | 1,084 | one | 552 | its tests move |
-| `crates/safec-llvm/src/emit.rs` | 947 | one | 619 | its tests move |
-| `crates/safec/src/diagnostics.rs` | 678 | one | 521 | its tests move |
-| `crates/safec/src/diagnostics/render.rs` | 574 | one | 690 | its tests move |
+| `crates/safec/src/lowering.rs` | 2,250 | one | 0 | its tests moved to `lowering/tests.rs` (#318) |
+| `crates/safec/src/parser.rs` | 1,888 | one | 0 | its tests moved to `parser/tests.rs` (#318) |
+| `crates/safec/src/types.rs` | 1,617 | one | 0 | its tests moved to `types/tests.rs` (#318) |
+| `crates/safec-ir/src/ir.rs` | 1,279 | one | 0 | its tests moved to `ir/tests.rs` (#318) |
+| `crates/safec/src/ast.rs` | 1,084 | one | 0 | its tests moved to `ast/tests.rs` (#318) |
+| `crates/safec-llvm/src/emit.rs` | 947 | one | 0 | its tests moved to `emit/tests.rs` (#318) |
+| `crates/safec/src/diagnostics.rs` | 678 | one | 0 | its tests moved to `diagnostics/tests.rs` (#318) |
+| `crates/safec/src/diagnostics/render.rs` | 574 | one | 0 | its tests moved to `render/tests.rs` (#318) |
