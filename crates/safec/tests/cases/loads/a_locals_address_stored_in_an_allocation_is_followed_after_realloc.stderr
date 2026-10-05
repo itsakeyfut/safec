@@ -8,3 +8,23 @@ warning[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:22:5 ]
+    │
+ 22 │     **t4 = r;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it
+warning[SC0403]: this may dereference a null pointer
+    ╭─[ a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:24:5 ]
+    │
+ 24 │     return ***t4;
+    │     ──────┬──────  
+    │           ╰──────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it

@@ -35,8 +35,8 @@ use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
 use crate::ir::{
-    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Rvalue, Terminator,
-    TranslationUnit, Ty, UnOp,
+    BinOp, BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue,
+    Terminator, TranslationUnit, Ty, UnOp,
 };
 use crate::memory::{dereferenced_in_element, dereferenced_in_terminator};
 use crate::source::Span;
@@ -145,8 +145,10 @@ pub enum Asked {
 /// asks a real analysis for a place, and that is right about the memory axis,
 /// where `p` and `*p` have separate states. The question here is about the
 /// pointer value a local holds, so the local is the key, and what it costs is
-/// that `int **pp; *pp` answers [`Nullness::Unknown`]: a warning on correct C
-/// rather than silence about it. It also makes [`Analysis::height`] the local
+/// that the pointer `*pp` holds answers [`Nullness::Unknown`], however it is
+/// reached: copied into a local, or dereferenced in place as `**pp`, which
+/// [`report`] answers because no row here can. A warning on correct C rather
+/// than silence about it. It also makes [`Analysis::height`] the local
 /// count, read straight off the function, which is an answer the trait asks
 /// each analysis for rather than guessing one on its behalf.
 struct Nullability<'a> {
@@ -692,6 +694,15 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
 /// is #136, so two findings at one caret are two diagnostics nobody can tell
 /// apart. The worst rather than the first, because a proved null dereference
 /// beside an unproven one is still a proved null dereference.
+///
+/// **A place asks two questions where it goes through memory.** Its first
+/// dereference reads the local's own value, which is what this lattice knows.
+/// Every one after that reads a pointer the dereference above it loaded, and
+/// that pointer has no row here, so it is asked as [`Nullness::Unknown`]: a
+/// pointer read out of memory proves nothing, which is ADR-0045 on the memory
+/// axis. Asking the local alone was how `int *p = 0; int **pp = &p; return
+/// **pp;` built in silence while `int *q = *pp; return *q;` was refused, and the
+/// two are one C program (#333).
 fn report(
     analysis: &Nullability<'_>,
     findings: &mut Vec<Finding>,
@@ -705,7 +716,12 @@ fn report(
 
     let worst = places
         .iter()
-        .filter_map(|place| analysis.known(known, place.local).concluded())
+        .flat_map(|place| {
+            let below = read_out_of_memory(place).then_some(Nullness::Unknown);
+            [Some(analysis.known(known, place.local)), below]
+        })
+        .flatten()
+        .filter_map(Nullness::concluded)
         .max_by_key(|conclusion| severity(*conclusion));
 
     if let Some(conclusion) = worst {
@@ -716,6 +732,21 @@ fn report(
             asked: Asked::Dereference,
         });
     }
+}
+
+/// Whether a place dereferences a pointer that was read out of memory.
+///
+/// A `Deref` anywhere after the first element, rather than two or more of
+/// them, so that an element selected by an index and then dereferenced counts
+/// too: the pointer an index selects is just as much a load. Nothing builds a
+/// [`Projection::Index`] from C today, so a unit test with IR built by hand is
+/// what holds that half.
+fn read_out_of_memory(place: &Place) -> bool {
+    place
+        .projection
+        .iter()
+        .skip(1)
+        .any(|projection| matches!(projection, Projection::Deref))
 }
 
 /// One finding for each argument a call passes to a `_Nonnull` parameter,

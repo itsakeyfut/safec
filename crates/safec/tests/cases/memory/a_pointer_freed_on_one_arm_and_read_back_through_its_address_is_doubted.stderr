@@ -18,3 +18,13 @@ error[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:13:5 ]
+    │
+ 13 │     return **pp;
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

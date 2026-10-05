@@ -692,3 +692,67 @@ fn two_functions_that_share_a_caret_are_asked_about_apart() {
         "{found:?}"
     );
 }
+
+/// A pointer an index selects and a dereference then reads through was read
+/// out of memory, and is asked as unproven whatever the local it started from
+/// is known to be.
+///
+/// `t = &x; t[0][..] = 1;` as a place `[Index, Deref]`, with `t` established
+/// non-null by the address. The `Deref` reads the pointer the index selected,
+/// which has no row in the lattice.
+///
+/// **This compiler's own frontend cannot produce it**: nothing it lowers
+/// builds a `Projection::Index`, and a subscript becomes arithmetic into a
+/// temporary. Measured, see #333.
+///
+/// Mutation: have `nullability::read_out_of_memory` count `Deref`s and answer
+/// for two or more, rather than for one after the first element. The index is
+/// not counted, nothing is reported, and this fails with no finding where it
+/// expects one.
+#[test]
+fn a_pointer_selected_by_an_index_and_read_through_is_not_proved() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
+    let mut function = Function::new(names.function, int, vec![]);
+    let x = function.push_local(pointer);
+    let t = function.push_local(pointer_to_pointer);
+
+    let entry = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                // `t = &x;`, which is the one thing this check proves non-null.
+                Element::Assign(Operation {
+                    place: Place::local(t),
+                    value: Rvalue::Address(Place::local(x)),
+                    origin: Origin::Written(names.at[0]),
+                }),
+                Element::Assign(Operation {
+                    place: Place {
+                        local: t,
+                        projection: vec![
+                            Projection::Index(Operand::Constant(0)),
+                            Projection::Deref,
+                        ],
+                    },
+                    value: Rvalue::Use(Operand::Constant(1)),
+                    origin: Origin::Written(names.at[1]),
+                }),
+            ],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[1]);
+}

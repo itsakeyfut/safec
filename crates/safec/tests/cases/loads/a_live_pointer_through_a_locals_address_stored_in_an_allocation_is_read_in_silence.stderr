@@ -1,17 +1,7 @@
-warning[SC0402]: this may use a value after it was freed
-    ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:25:5 ]
-    │
- 25 │     return ***t4;
-    │     ──────┬──────  
-    │           ╰──────── used here, perhaps after the free
-────╯
-  = note: this check belongs to safety level 1
-  = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0403]: this may dereference a null pointer
-    ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:23:5 ]
+    ╭─[ a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:17:5 ]
     │
- 23 │     **t4 = r;
+ 17 │     **t3 = r;
     │     ────┬───  
     │         ╰───── this check cannot say this is not null
 ────╯
@@ -19,9 +9,9 @@ warning[SC0403]: this may dereference a null pointer
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: test this pointer against null before reading through it
 warning[SC0403]: this may dereference a null pointer
-    ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:25:5 ]
+    ╭─[ a_live_pointer_through_a_locals_address_stored_in_an_allocation_is_read_in_silence.c:18:5 ]
     │
- 25 │     return ***t4;
+ 18 │     return ***t3;
     │     ──────┬──────  
     │           ╰──────── this check cannot say this is not null
 ────╯

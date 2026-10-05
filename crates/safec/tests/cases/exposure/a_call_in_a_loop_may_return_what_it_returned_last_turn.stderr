@@ -28,3 +28,13 @@ error[SC0404]: this may free a pointer that is not the start of an allocation
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: free the pointer the allocation was made with if this offset can be non-zero
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:19:9 ]
+    │
+ 19 │         **ppp = t;
+    │         ────┬────  
+    │             ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

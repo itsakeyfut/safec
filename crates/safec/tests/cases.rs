@@ -766,6 +766,22 @@ cases! {
         // one rule: a callee handed `&p` is the same escape through a different
         // door.
         a_pointer_written_through_its_own_address_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A dereference past the first in one place reads a pointer out of
+        // memory, which has no row in the lattice, and is asked as unproven
+        // (#333). The first is the program that built in silence, written
+        // once as a read and once as an operand. Mutation: have
+        // `nullability::report` ask the root local alone, which is the code
+        // before #333; the first two fail and go silent.
+        a_null_pointer_read_two_dereferences_down_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_two_dereferences_down_through_a_parameter_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What that costs, pinned: a test of `*pp` is kept nowhere, so the read
+        // through it in place stays a doubt. Copying the pointer into a local
+        // first is what proves it.
+        a_test_of_a_pointer_in_memory_does_not_settle_a_read_through_it_in_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The root's own answer still counts, and a proof outranks the doubt
+        // beside it. Mutation: answer only the deeper question whenever there
+        // is one; this fails as unproven where it expects proved.
+        a_null_root_beside_a_pointer_read_out_of_memory_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The two that hold ADR-0025, and the second is the one that says the
         // fact is per path: the arm that skips the dereference joins back in.
         a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1186,7 +1202,7 @@ cases! {
         a_use_after_free_through_a_chain_written_as_one_place_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_three_levels_down_after_a_free_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_three_levels_down_through_a_freed_middle_level_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_live_value_read_three_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_live_value_read_three_levels_down_is_read_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And one level deeper on each path, so that "however long" is held
         // past the depths above. Mutation: have `read_through` follow no more
         // than two `Deref`s; the first goes silent. Mutation: have `used` ask
@@ -1507,14 +1523,18 @@ cases! {
         // Built, which is what keeps the byte out of `may_be_pointer`: a
         // character handed to a call this check cannot read is not everything
         // stored anywhere. Mutation: answer `true` for `Ty::Char` there; both
-        // are refused at the read of the table.
-        a_character_handed_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_string_copied_a_byte_at_a_time_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // doubt a use after free and a double free at the table. Warnings
+        // rather than refusals, because both run with `--allow-unknown`: each
+        // reads a pointer out of the table in place, which the nullability
+        // check doubts (#333).
+        a_character_handed_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_string_copied_a_byte_at_a_time_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // Built: a byte handed straight to a call reaches what was stored
         // where it was read, here nothing, and never everything stored
         // anywhere. Mutation: answer a byte in `read_out` with
-        // `Known::stored`; this is refused at the read of the table.
-        a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `Known::stored`; this doubts a use after free and a double free at
+        // the table, as warnings for the reason the two above give.
+        a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
     }
 
     "returns" => {
