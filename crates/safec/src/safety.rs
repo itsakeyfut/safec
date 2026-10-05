@@ -63,7 +63,7 @@ impl SafetyLevel {
     /// silent about a level nothing checks, and here silence *means* the level
     /// was delivered, which is saying safe wrongly, the worst answer
     /// `docs/safety-model.md` says this compiler can give.
-    /// `driver.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not`
+    /// `driver/tests.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not`
     /// is what refuses that: the four expectations that also change read as
     /// housekeeping, and that one reads as the check that is missing.
     pub const IMPLEMENTED: Self = Self::Memory;

@@ -145,15 +145,15 @@ Offering `--allow-unknown` whatever the level fails the same case: `Cli::check`
 refuses that pair at `strict`, so following the advice was an argument conflict.
 
 **The level this compiler says it implements.** Moving
-`SafetyLevel::IMPLEMENTED` up one without wiring a check for the level it moves to
-fails five tests, and only
-`driver.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not` says
-something is absent. The other four are three `.stderr` files and a table row,
-every one of which reads as an expectation to re-bless, and re-blessing them ships
-a run that exits 0 with an empty stderr on `int *foo(void) { int x = 42; return
-&x; }` at `--safety lifetime`, where the silence now means the level was
-delivered. That is saying safe wrongly, reached through housekeeping, and it is
-what this record claimed the expiring corpus case prevented. It did not; it
+`SafetyLevel::IMPLEMENTED` up one without wiring a check for the level it moves
+to fails five tests, and only
+`driver/tests.rs::the_implemented_level_runs_a_check_the_level_below_it_does_not`
+says something is absent. The other four are three `.stderr` files and a table
+row, every one of which reads as an expectation to re-bless, and re-blessing
+them ships a run that exits 0 with an empty stderr on `int *foo(void) { int x =
+42; return &x; }` at `--safety lifetime`, where the silence now means the level
+was delivered. That is saying safe wrongly, reached through housekeeping, and it
+is what this record claimed the expiring corpus case prevented. It did not; it
 only asked for an edit.
 
 **The level a user reads.** Special-casing one variant inside

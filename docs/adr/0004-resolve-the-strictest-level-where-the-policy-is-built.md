@@ -175,8 +175,9 @@ reached from:
 * `the_strictest_safety_level_denies_unknown_even_unresolved` in the same file
   goes through an `Options` built by hand with `safety: Strict` and
   `deny_unknown: false`.
-* `the_strictest_safety_level_denies_unknown_in_the_sink` in `crates/safec/src/driver.rs`
-  goes through `compile`, so the guard covers the path an actual run takes.
+* `the_strictest_safety_level_denies_unknown_in_the_sink` in
+  `crates/safec/src/driver/tests.rs` goes through `compile`, so the guard covers
+  the path an actual run takes.
 
 Verified by mutation. Replacing the body of `Policy::new` with
 

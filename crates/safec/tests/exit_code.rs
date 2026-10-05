@@ -223,10 +223,10 @@ const LARGEST_PIPE_BUFFER: usize = 1 << 20;
 
 /// A run whose artifact never reached the pipe does not report success.
 ///
-/// `driver.rs::an_artifact_that_could_not_be_written_is_an_error` covers the
-/// library half: given a writer that fails, `run_compiler` returns an error.
-/// What nothing covered is the other side of the process boundary, where that
-/// error becomes the number a build system reads.
+/// `driver/tests.rs::an_artifact_that_could_not_be_written_is_an_error` covers
+/// the library half: given a writer that fails, `run_compiler` returns an
+/// error. What nothing covered is the other side of the process boundary, where
+/// that error becomes the number a build system reads.
 ///
 /// **The artifact has to be larger than the pipe can hold, and that is the
 /// whole of why this is not a race.** `run_compiler` builds the artifact in
@@ -336,7 +336,8 @@ fn a_run_whose_artifact_could_not_be_written_does_not_report_success() {
 ///
 /// Through the binary rather than the library, because this is the half of the
 /// contract a build system reads: `make` names a target, runs the compiler, and
-/// then opens that file. The in-process tests in `driver.rs` cover the rest.
+/// then opens that file. The in-process tests in `driver/tests.rs` cover the
+/// rest.
 ///
 /// This test used to assert the opposite, that the path was left alone, and its
 /// own note said "Mutation: write anything to `options.output` in
