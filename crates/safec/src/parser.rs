@@ -22,8 +22,8 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, Attribute, BinOp, Declaration, Expr, ExprId, Function, InitDeclarator, Item, Parameters,
-    Stmt, StmtId, Type, TypeId, UnOp,
+    Ast, Attribute, BinOp, Declaration, Expr, ExprId, Function, InitDeclarator, Item, Nullability,
+    Parameters, Specifier, Stmt, StmtId, Type, TypeId, UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
@@ -61,31 +61,35 @@ const TOO_DEEP: Code = Code::new("SC0202");
 /// gap from a decision.
 const BRACED_INITIALIZER: Code = Code::new("SC0203");
 
-/// `_Nonnull` or `__attribute__` written where it cannot apply.
+/// A nullability specifier or `__attribute__` written where it cannot apply.
 ///
 /// `__attribute__` applies before a function definition at file scope, and
 /// nowhere else, because the one form of it this compiler reads makes that
 /// definition a hatch and a hatch is about a body. See ADR-0038.
 ///
-/// `_Nonnull` applies to one thing, the pointer a parameter of a declared function
-/// holds, because that is the one place ADR-0037 gives it a meaning: the body
-/// believes it and every call is checked against it. Anywhere else it would be
-/// read and mean nothing, which is a promise written down and silently dropped,
-/// so it is refused instead. `clang` accepts it on a local and on a return
-/// type; `docs/frontend.md` carries those rows.
+/// `_Nonnull` and `_Nullable` apply to one thing, the pointer a parameter of a
+/// declared function holds, because that is the one place ADR-0037 and
+/// ADR-0050 give them a meaning: the body believes `_Nonnull` and every call is
+/// checked against it, and `_Nullable` says what level 5 would otherwise not
+/// assume. Anywhere else one would be read and mean nothing, which is a
+/// promise written down and silently dropped, so it is refused instead.
+/// `clang` accepts them on a local and on a return type; `docs/frontend.md`
+/// carries those rows.
 ///
 /// The parser's rather than a later stage's, because it is the stage that
 /// knows what a declarator declares: whether it is a parameter, and whether the
 /// function type a parameter list belongs to is the declared function's own.
 const MISPLACED_ANNOTATION: Code = Code::new("SC0204");
 
-/// An attribute this compiler does not read.
+/// An annotation this compiler does not read: an attribute, or a nullability
+/// specifier other than the two it reads.
 ///
 /// `__attribute__` is read in one form, the hatch ADR-0038 decides, and
 /// anything else written with it is refused rather than skipped. A skipped
 /// attribute is one whose meaning this compiler changed without saying so, and
 /// ADR-0037 measured `clang` deleting a test the author wrote on the strength of
-/// `nonnull`.
+/// `nonnull`. `_Null_unspecified` and `_Nullable_result` are refused for the
+/// same reason, wherever a declarator can hold them (ADR-0050).
 ///
 /// Its own code rather than [`MISPLACED_ANNOTATION`], because it is a different
 /// program to fix: that one is a known word in the wrong place, and this is a
@@ -93,9 +97,10 @@ const MISPLACED_ANNOTATION: Code = Code::new("SC0204");
 /// what the shape alone shows; `sema::resolve` refuses a name that is not
 /// `annotate` and a string that is not `"safec_unchecked"`, because comparing
 /// text is not the parser's. See [`Attribute`].
-pub(crate) const UNREAD_ATTRIBUTE: Code = Code::new("SC0205");
+pub(crate) const UNREAD_ANNOTATION: Code = Code::new("SC0205");
 
-/// What [`UNREAD_ATTRIBUTE`] says under its caret, from either stage.
+/// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
+/// either stage.
 pub(crate) const UNREAD_ATTRIBUTE_LABEL: &str =
     "the one attribute it reads is `annotate(\"safec_unchecked\")`";
 
@@ -190,20 +195,20 @@ struct Declared {
     declares: Declares,
 }
 
-/// What a declarator declares, which is what decides whether `_Nonnull` may be
-/// written in it.
+/// What a declarator declares, which is what decides whether a nullability
+/// specifier may be written in it.
 ///
 /// See [`MISPLACED_ANNOTATION`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Declares {
-    /// A parameter, whose own pointer is what `_Nonnull` qualifies.
+    /// A parameter, whose own pointer is what a nullability specifier qualifies.
     Parameter,
     /// A declaration or definition at file scope, whose function type's
     /// parameters are the declared function's own.
     FileScope,
     /// A declaration inside a block. `lowering.rs::declare` reads only
     /// file-scope items, so a function declared here is not one a call is
-    /// checked against, and nothing in it may carry `_Nonnull`.
+    /// checked against, and nothing in it may carry a nullability specifier.
     BlockScope,
 }
 
@@ -215,10 +220,11 @@ enum Declares {
 /// fold happen once, at the end, in the order C17 6.7.6 p4 to p6 derive.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Derivation {
-    /// C17 6.7.6.1, and the `_Nonnull` written after its `*`, if one was.
+    /// C17 6.7.6.1, and the nullability specifier written after its `*`, if
+    /// one was.
     Pointer {
-        /// Where the `_Nonnull` was written.
-        nonnull: Option<Span>,
+        /// Which one, and where.
+        nullability: Option<Nullability>,
     },
     /// C17 6.7.6.2.
     Array(Option<ExprId>),
@@ -245,6 +251,22 @@ fn specifier(kind: TokenKind) -> Option<Type> {
         TokenKind::Keyword(Keyword::Char) => Some(Type::Char),
         TokenKind::Keyword(Keyword::Void) => Some(Type::Void),
         _ => None,
+    }
+}
+
+/// The nullability specifier this token is, if it is one this compiler reads.
+///
+/// Every annotation written out, so that one added later is answered for here
+/// by `error[E0004]` rather than read as no specifier at all. The two refused
+/// ones are [`Parser::unread_specifier`]'s.
+fn read_specifier(kind: TokenKind) -> Option<Specifier> {
+    let TokenKind::Annotation(annotation) = kind else {
+        return None;
+    };
+    match annotation {
+        Annotation::Nonnull => Some(Specifier::Nonnull),
+        Annotation::Nullable => Some(Specifier::Nullable),
+        Annotation::NullUnspecified | Annotation::NullableResult | Annotation::Attribute => None,
     }
 }
 
@@ -627,7 +649,7 @@ impl Parser<'_> {
                     span: Span::new(self.file, start.start(), self.previous().span.end()),
                     // Only a parameter carries one, and `apply` has refused it
                     // everywhere else before this is reached.
-                    nonnull: None,
+                    nullability: None,
                 },
                 init,
             });
@@ -682,7 +704,7 @@ impl Parser<'_> {
     /// reads. See [`Attribute`] for what is left to `sema::resolve`.
     ///
     /// Everything else inside the inner parentheses is refused with
-    /// [`UNREAD_ATTRIBUTE`]: an attribute with no argument, one whose argument
+    /// [`UNREAD_ANNOTATION`]: an attribute with no argument, one whose argument
     /// is not a string, one with more than one argument or string, and a list
     /// of more than one attribute. Each is an attribute that is not the
     /// hatch's, and telling which from the shape alone needs no text.
@@ -728,7 +750,7 @@ impl Parser<'_> {
     fn unread(&mut self, at: Span, diagnostics: &mut DiagnosticSink) -> Option<Attribute> {
         self.report_at(
             at,
-            UNREAD_ATTRIBUTE,
+            UNREAD_ANNOTATION,
             "safec does not read this attribute",
             UNREAD_ATTRIBUTE_LABEL,
             diagnostics,
@@ -784,10 +806,8 @@ impl Parser<'_> {
             self.advance();
             // One, and only directly after the `*`, which is where `clang`
             // reads it. A second is left for `core`, which refuses it.
-            let nonnull = self
-                .check(TokenKind::Annotation(Annotation::Nonnull))
-                .then(|| self.advance().span);
-            derivations.push(Derivation::Pointer { nonnull });
+            let nullability = self.nullability(diagnostics)?;
+            derivations.push(Derivation::Pointer { nullability });
         }
 
         let (name, inner) = self.core(named, diagnostics)?;
@@ -832,20 +852,24 @@ impl Parser<'_> {
         // nothing about why. The other way to arrive here is a second one
         // after the first, which is after a `*` and needs its own words:
         // telling that reader to write it after the `*` is telling them what
-        // they did. `clang` warns about the duplicate and reads one.
-        if self.check(TokenKind::Annotation(Annotation::Nonnull)) {
-            let label = if self.previous().kind == TokenKind::Annotation(Annotation::Nonnull) {
-                "a pointer takes one `_Nonnull`, and this is the second"
+        // they did. `clang` warns about a duplicate and reads one, and refuses
+        // `_Nonnull _Nullable` as two that conflict.
+        if let Some(specifier) = read_specifier(self.peek().kind) {
+            let label = if read_specifier(self.previous().kind).is_some() {
+                "a pointer takes one nullability specifier, and this is the second"
             } else {
-                "`_Nonnull` is written after the `*` of the pointer it qualifies"
+                "a nullability specifier is written after the `*` of the pointer it qualifies"
             };
             self.report_at(
                 self.peek().span,
                 MISPLACED_ANNOTATION,
-                "`_Nonnull` cannot apply here",
+                format!("`{}` cannot apply here", specifier.spelling()),
                 label,
                 diagnostics,
             );
+            return None;
+        }
+        if self.unread_specifier(diagnostics) {
             return None;
         }
 
@@ -862,6 +886,45 @@ impl Parser<'_> {
         }
 
         Some((None, Vec::new()))
+    }
+
+    /// The nullability specifier after a `*`, if one is there.
+    ///
+    /// `Some(None)` is a pointer with none, which is the ordinary case, and
+    /// `None` is a specifier this compiler does not read, already reported.
+    fn nullability(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Option<Nullability>> {
+        if let Some(specifier) = read_specifier(self.peek().kind) {
+            let at = self.advance().span;
+            return Some(Some(Nullability { specifier, at }));
+        }
+        if self.unread_specifier(diagnostics) {
+            return None;
+        }
+        Some(None)
+    }
+
+    /// Refuse `_Null_unspecified` or `_Nullable_result` if one is there, and
+    /// say whether one was.
+    ///
+    /// Read as a word and refused, rather than read as a name and refused for
+    /// something else, so that the reader is told the compiler does not read
+    /// it. Taken without meaning, `_Null_unspecified` would leave the pointer
+    /// as unannotated and `_Nullable_result` would mean nothing in C, and a
+    /// promise written down and dropped is what this stage refuses (ADR-0050).
+    fn unread_specifier(&mut self, diagnostics: &mut DiagnosticSink) -> bool {
+        let TokenKind::Annotation(
+            annotation @ (Annotation::NullUnspecified | Annotation::NullableResult),
+        ) = self.peek().kind
+        else {
+            return false;
+        };
+        self.report_as(
+            UNREAD_ANNOTATION,
+            format!("safec does not read `{}`", annotation.as_str()),
+            "the nullability specifiers it reads are `_Nonnull` and `_Nullable`",
+            diagnostics,
+        );
+        true
     }
 
     /// Refuse the `__attribute__` that is there, which is not before a
@@ -951,8 +1014,8 @@ impl Parser<'_> {
             // The parameter's own pointer is the last derivation, the one that
             // makes the parameter's type. `apply` refuses one written anywhere
             // else, so this is the only one there is to keep.
-            let nonnull = match derivations.last() {
-                Some(Derivation::Pointer { nonnull }) => *nonnull,
+            let nullability = match derivations.last() {
+                Some(Derivation::Pointer { nullability }) => *nullability,
                 _ => None,
             };
             let ty = self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
@@ -962,7 +1025,7 @@ impl Parser<'_> {
                 name,
                 ty,
                 span,
-                nonnull,
+                nullability,
             });
 
             if !self.eat(TokenKind::Punct(Punct::Comma)) {
@@ -1037,7 +1100,7 @@ impl Parser<'_> {
         let mut ty = base;
         for derivation in derivations {
             ty = self.ast.push_type(match derivation {
-                Derivation::Pointer { nonnull: _ } => Type::Pointer(ty),
+                Derivation::Pointer { nullability: _ } => Type::Pointer(ty),
                 Derivation::Array(length) => Type::Array {
                     element: ty,
                     length,
@@ -1075,13 +1138,16 @@ impl Parser<'_> {
         for (index, derivation) in derivations.iter().enumerate() {
             let own = index == last;
             let refused = match derivation {
-                Derivation::Pointer { nonnull: Some(at) } => match declares {
+                Derivation::Pointer {
+                    nullability: Some(written),
+                } => match declares {
                     Declares::Parameter if own => None,
-                    Declares::Parameter => {
-                        Some((*at, "this qualifies a pointer inside the parameter's type"))
-                    }
+                    Declares::Parameter => Some((
+                        *written,
+                        "this qualifies a pointer inside the parameter's type",
+                    )),
                     Declares::FileScope | Declares::BlockScope => {
-                        Some((*at, "this is not the pointer a parameter holds"))
+                        Some((*written, "this is not the pointer a parameter holds"))
                     }
                 },
                 Derivation::Function(Parameters::Prototype(parameters))
@@ -1098,19 +1164,19 @@ impl Parser<'_> {
                     };
                     parameters
                         .iter()
-                        .find_map(|parameter| parameter.nonnull)
-                        .map(|at| (at, label))
+                        .find_map(|parameter| parameter.nullability)
+                        .map(|written| (written, label))
                 }
-                Derivation::Pointer { nonnull: None }
+                Derivation::Pointer { nullability: None }
                 | Derivation::Array(_)
                 | Derivation::Function(_) => None,
             };
 
-            if let Some((at, label)) = refused {
+            if let Some((written, label)) = refused {
                 self.report_at(
-                    at,
+                    written.at,
                     MISPLACED_ANNOTATION,
-                    "`_Nonnull` cannot apply here",
+                    format!("`{}` cannot apply here", written.specifier.spelling()),
                     label,
                     diagnostics,
                 );

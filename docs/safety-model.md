@@ -281,7 +281,7 @@ It is `clang`'s spelling rather than one in the style sketched above, because it
 is reserved to the implementation, `clang` compiles it unchanged, and it changes
 no code. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
 has the reasoning and the options it rejected, and
-[`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read) says where it is read and
+[`frontend.md`](frontend.md#where-a-nullability-specifier-is-read) says where it is read and
 where it is refused. It says nothing about the other four questions, which wait
 for the phases that ask them.
 

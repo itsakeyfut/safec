@@ -897,6 +897,43 @@ cases! {
         // is reported beside the refusal.
         a_declaration_that_says_nonnull_where_its_definition_does_not_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
+    "nullable" => {
+        // `_Nullable`, the other specifier, and what level 5 does with a
+        // pointer that writes neither. See ADR-0050, whose Confirmation names
+        // the mutation each of these fails under.
+        //
+        // Read where `_Nonnull` is read, and into the tree. Mutation: have
+        // `dump_declaration` print nothing for a specifier; this fails.
+        a_nullable_parameter_is_read_into_the_tree: ["--emit", "ast"],
+        // Below level 5 it restricts nothing: a `_Nullable` parameter is what
+        // an unannotated one is. Mutation: lower `_Nullable` to a promise in
+        // `Lowering::signature`, as `_Nonnull` is; the first goes silent and
+        // the second is refused with `SC0405`.
+        a_nullable_parameter_is_doubted_by_its_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_null_passed_to_a_nullable_parameter_is_accepted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Refused where `_Nonnull` is refused, which `parser.rs::placed` and
+        // `Parser::core` answer for both alike.
+        a_nullable_on_a_local_is_refused: ["--emit", "ast"],
+        a_nullable_on_a_pointer_inside_a_parameter_is_refused: ["--emit", "ast"],
+        // `clang` refuses this pair as two that conflict. Mutation: have
+        // `Parser::core` ask only for `_Nonnull` again; the second becomes a
+        // name and the refusal says something else.
+        two_nullability_specifiers_on_one_pointer_are_refused: ["--emit", "ast"],
+        // The two `clang` also accepts in C, refused as annotations this
+        // compiler does not read. One after a `*`, one where a return's
+        // pointer is, and one not after a `*`, which `Parser::core` answers.
+        // Mutation: have `Parser::unread_specifier` answer `false`; each is
+        // refused as a name instead, with `SC0201`.
+        an_unspecified_nullability_is_refused: ["--emit", "ast"],
+        a_nullable_result_is_refused: ["--emit", "ast"],
+        an_unspecified_nullability_not_after_a_star_is_refused: ["--emit", "ast"],
+        // Three answers, compared as written. Mutation: compare whether a
+        // specifier was written rather than which, in `Lowering::agree`; the
+        // first goes silent. Mutation: compare what the lowering carries; the
+        // second goes silent, since `_Nullable` and nothing lower alike.
+        declarations_that_disagree_between_nonnull_and_nullable_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        declarations_that_disagree_between_nullable_and_nothing_are_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+    }
 
     "hatch" => {
         // A hatch: a function definition whose unproven conclusions are listed

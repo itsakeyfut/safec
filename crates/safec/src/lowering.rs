@@ -28,7 +28,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Ast, BinOp as AstBinOp, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type};
-use crate::ast::{TypeId, UnOp as AstUnOp, spell_type};
+use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
 use crate::types::Types;
@@ -47,7 +47,8 @@ use safec_ir::target::Target;
 /// that can happen.
 const LOWERING: Code = Code::new("SC0304");
 
-/// Two declarations of one function that disagree about `_Nonnull`.
+/// Two declarations of one function that disagree about a nullability
+/// specifier.
 ///
 /// Refused rather than resolved, because the declaration a caller sees is the
 /// one its call is checked against, and a header that leaves the promise out is
@@ -129,14 +130,14 @@ struct Lowering<'a> {
     /// `sema.rs::lookup` already compares.
     functions: HashMap<String, FuncId>,
     /// The first prototype each file-scope name was declared with: where its
-    /// name was, and which of its parameters were `_Nonnull`.
+    /// name was, and the nullability specifier each of its parameters wrote.
     ///
     /// Not [`Lowering::functions`]' entry, which is the first *declaration*:
     /// `void g();` declares no parameters (C17 6.7.6.3 p14), so every later
     /// declaration would agree with it, and `void g(); void g(int *p);` above a
     /// `_Nonnull` definition passed in silence. That was found by review.
     /// See [`DISAGREEING_ANNOTATION`].
-    prototypes: HashMap<String, (Span, Vec<Option<Span>>)>,
+    prototypes: HashMap<String, (Span, Vec<Option<Nullability>>)>,
     /// The names whose signature this stage could not read.
     ///
     /// Reported once, where the declaration is. A call to one of them is not
@@ -521,8 +522,9 @@ impl Lowering<'_> {
         // Before the function is recorded, because `lowered` moves into it.
         // `()` says nothing about the parameters, so it has nothing to agree
         // or disagree with, which is why only a prototype is asked.
-        if let Parameters::Prototype(_) = parameters {
-            self.agree(name, &lowered, diagnostics);
+        if let Parameters::Prototype(written) = &parameters {
+            let specifiers = written.iter().map(|parameter| parameter.nullability);
+            self.agree(name, specifiers.collect(), diagnostics);
         }
 
         // A name declared twice is one function. The first declaration is
@@ -540,47 +542,73 @@ impl Lowering<'_> {
     }
 
     /// Refuse a prototype of a function that disagrees with the first prototype
-    /// of it about which parameters are `_Nonnull`, or record this one as the
-    /// first. See [`DISAGREEING_ANNOTATION`].
+    /// of it about a parameter's nullability specifier, or record this one as
+    /// the first. See [`DISAGREEING_ANNOTATION`].
     ///
     /// Position by position, over as many parameters as both have. A
     /// declaration with a different count is a different disagreement, which is
     /// #57's and is not answered here.
-    fn agree(&mut self, name: Span, later: &[Parameter], diagnostics: &mut DiagnosticSink) {
+    ///
+    /// **Three answers, compared as written**: `_Nonnull`, `_Nullable`, and
+    /// none. The last two lower alike, which is why the specifiers are compared
+    /// here rather than what the IR carries, and they are still a disagreement:
+    /// at level 5 they would not be, where a parameter of a function with
+    /// internal linkage is non-null unless written `_Nullable` (ADR-0050), and
+    /// where a specifier is read does not depend on the level.
+    fn agree(
+        &mut self,
+        name: Span,
+        later: Vec<Option<Nullability>>,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         let key = self.sources.snippet(name);
         let Some((first_name, first)) = self.prototypes.get(key) else {
-            let promises = later.iter().map(|parameter| parameter.nonnull).collect();
-            self.prototypes.insert(key.to_owned(), (name, promises));
+            self.prototypes.insert(key.to_owned(), (name, later));
             return;
         };
+        let specifier = |written: &Option<Nullability>| written.map(|written| written.specifier);
         let differs = first
             .iter()
-            .zip(later)
-            .find(|(first, later)| first.is_some() != later.nonnull.is_some());
+            .zip(&later)
+            .find(|(first, later)| specifier(first) != specifier(later));
         let Some((first, later)) = differs else {
             return;
         };
 
-        // The primary label goes on the `_Nonnull` that one of the two wrote,
-        // because it is the only token either declaration has that says what
-        // differs. The other declaration is pointed at by its name.
-        let (said, silent, silent_label) = match (*first, later.nonnull) {
-            (Some(said), _) => (said, name, "this declaration does not"),
-            (None, Some(said)) => (said, *first_name, "the first prototype does not"),
+        // The primary label goes on a specifier one of the two wrote, because
+        // it is the only token either declaration has that says what differs:
+        // this one's where it wrote one, and the first prototype's otherwise.
+        let (said, other, other_label) = match (*first, *later) {
+            (_, Some(said)) => match first {
+                Some(first) => (
+                    said,
+                    first.at,
+                    format!("the first prototype says `{}`", first.specifier.spelling()),
+                ),
+                None => (
+                    said,
+                    *first_name,
+                    "the first prototype says nothing".to_owned(),
+                ),
+            },
+            (Some(said), None) => (said, name, "this declaration says nothing".to_owned()),
             (None, None) => unreachable!("the two were found to differ"),
         };
 
         diagnostics.report(
             Diagnostic::error(format!(
-                "the declarations of `{}` disagree about `_Nonnull`",
+                "the declarations of `{}` disagree about nullability",
                 self.sources.snippet(name)
             ))
             .with_code(DISAGREEING_ANNOTATION)
-            .with_label(Label::primary(said, "one declaration says `_Nonnull` here"))
-            .with_label(Label::secondary(silent, silent_label))
+            .with_label(Label::primary(
+                said.at,
+                format!("one declaration says `{}` here", said.specifier.spelling()),
+            ))
+            .with_label(Label::secondary(other, other_label))
             .with_note(
-                "every declaration of a function has to agree about `_Nonnull`, because \
-                 a caller is checked against the declaration it sees",
+                "every declaration of a function has to agree about its nullability \
+                 specifiers, because a caller is checked against the declaration it sees",
             ),
         );
     }
@@ -591,6 +619,13 @@ impl Lowering<'_> {
     /// Local 0 is the return place and the parameters follow it, which is what
     /// [`Function::with_parameters`] lays out. Each carries the `_Nonnull` its
     /// declaration wrote, which is what a call is checked against.
+    ///
+    /// **`_Nullable` makes no promise**, which is what an unannotated parameter
+    /// is below level 5, and at level 5 too for a function with external
+    /// linkage, whose callers in other translation units nobody checks
+    /// (ADR-0050). Every function here has external linkage, because the
+    /// parser reads no storage class, so no parameter is non-null unless it
+    /// was written `_Nonnull`.
     ///
     /// An empty parameter list is lowered as no parameters: C17 6.7.6.3 p14
     /// makes `()` say nothing about the count rather than say there are none,
@@ -611,7 +646,17 @@ impl Lowering<'_> {
                 let at = parameter.name.unwrap_or(parameter.span);
                 lowered.push(Parameter {
                     ty: self.ty(at, parameter.ty, diagnostics)?,
-                    nonnull: parameter.nonnull,
+                    nonnull: match parameter.nullability {
+                        Some(Nullability {
+                            specifier: Specifier::Nonnull,
+                            at,
+                        }) => Some(at),
+                        Some(Nullability {
+                            specifier: Specifier::Nullable,
+                            at: _,
+                        })
+                        | None => None,
+                    },
                 });
             }
         }

@@ -83,9 +83,11 @@ unit passes a pointer it established is not null, and `SC0405` is that call
 when it does not. The fix is at the call, or at the promise if the promise was wrong,
 and never inside the body. It carries a second label at the `_Nonnull` it
 broke. [ADR-0037](adr/0037-a-nonnull-parameter-is-believed-by-its-body-and-checked-at-every-call-in-its-translation-unit.md)
-is the decision. The two frontend refusals that come with it, `SC0204` for a
-`_Nonnull` where it cannot apply and `SC0307` for two declarations that
-disagree about one, are in [`frontend.md`](frontend.md#where-the-nonnull-annotation-is-read).
+is the decision. The frontend refusals that come with it, `SC0204` for a
+nullability specifier where it cannot apply, `SC0307` for two declarations
+that disagree about one, and `SC0205` for `_Null_unspecified` and
+`_Nullable_result`, which this compiler does not read, are in
+[`frontend.md`](frontend.md#where-a-nullability-specifier-is-read).
 
 **A hatch moves an unproven conclusion rather than removing it.** Inside a
 function definition declared a hatch, an `SC04xx` that could not be proved is
@@ -95,8 +97,10 @@ was proved is reported as it would be anywhere. The code does not change in
 either place, so a reader searching for `SC0403` finds it in the listing as
 well. [ADR-0038](adr/0038-a-hatch-is-a-function-definition-and-what-it-could-not-prove-is-listed-rather-than-reported.md)
 is the decision. `SC0204` also refuses the hatch's attribute where it cannot
-apply, and `SC0205` is an attribute this compiler does not read, which is every
-one but the hatch's; both are in [`frontend.md`](frontend.md#where-the-hatch-is-read).
+apply, and `SC0205` is an annotation this compiler does not read: an
+attribute, which is every one but the hatch's, or one of the two nullability
+specifiers above. The attribute's rows are in
+[`frontend.md`](frontend.md#where-the-hatch-is-read).
 
 **`SC0404` is a fourth class, for the same reason.** It is about a pointer that
 points somewhere real and is not the thing `free` takes: C17 7.22.3.3 p2 makes

@@ -171,13 +171,48 @@ pub struct Declaration {
     /// because C17 6.7 gives them one set of specifiers between them. What
     /// tells two of them apart is [`Declaration::name`].
     pub span: Span,
-    /// Where `_Nonnull` was written on this declaration's own pointer.
+    /// The nullability specifier written on this declaration's own pointer, if
+    /// one was.
     ///
     /// Only a parameter carries one. The parser refuses it everywhere else,
     /// with `SC0204`, before a declaration is built. It is not part of
     /// [`Declaration::ty`]: it selects no type and changes no code, and what it
-    /// does mean is ADR-0037.
-    pub nonnull: Option<Span>,
+    /// does mean is ADR-0037 for `_Nonnull` and ADR-0050 for `_Nullable`.
+    pub nullability: Option<Nullability>,
+}
+
+/// A nullability specifier written after a `*`, and where.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Nullability {
+    /// Which of the two this compiler reads.
+    pub specifier: Specifier,
+    /// The word itself.
+    pub at: Span,
+}
+
+/// Which nullability specifier was written.
+///
+/// Two, and not the four `clang` accepts in C: the parser refuses
+/// `_Null_unspecified` and `_Nullable_result` as annotations it does not read
+/// (ADR-0050).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Specifier {
+    /// `_Nonnull`: the pointer is not null, which the body believes and every
+    /// call is checked against (ADR-0037).
+    Nonnull,
+    /// `_Nullable`: the pointer may be null, which is what an unannotated one
+    /// already is below level 5 (ADR-0050).
+    Nullable,
+}
+
+impl Specifier {
+    /// How it is written.
+    pub fn spelling(self) -> &'static str {
+        match self {
+            Self::Nonnull => "_Nonnull",
+            Self::Nullable => "_Nullable",
+        }
+    }
 }
 
 /// One declarator of a declaration, with the initializer that followed it.

@@ -1,11 +1,10 @@
 error[SC0307]: the declarations of `g` disagree about nullability
-   ╭─[ a_definition_that_disagrees_with_a_later_declaration_about_nonnull_is_refused.c:1:14 ]
+   ╭─[ declarations_that_disagree_between_nullable_and_nothing_are_refused.c:1:14 ]
    │
- 1 │ void g(int * _Nonnull p) {
-   │              ────┬───  
-   │                  ╰───── one declaration says `_Nonnull` here
-   │ 
- 4 │ void g(int *p);
+ 1 │ void g(int * _Nullable p);
+   │              ────┬────  
+   │                  ╰────── one declaration says `_Nullable` here
+ 2 │ void g(int *p);
    │      ┬  
    │      ╰── this declaration says nothing
 ───╯

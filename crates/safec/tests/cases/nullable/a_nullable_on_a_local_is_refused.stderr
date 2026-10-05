@@ -1,0 +1,7 @@
+error[SC0204]: `_Nullable` cannot apply here
+   ╭─[ a_nullable_on_a_local_is_refused.c:3:11 ]
+   │
+ 3 │     int * _Nullable p = &x;
+   │           ────┬────  
+   │               ╰────── this is not the pointer a parameter holds
+───╯

@@ -187,8 +187,8 @@ fn dump_declarators(
     }
 }
 
-/// The tail of a line that declares something: the name, the type, and
-/// `_Nonnull` where it was written.
+/// The tail of a line that declares something: the name, the type, and the
+/// nullability specifier where one was written.
 ///
 /// A name is the file's own bytes and is quoted because source text is
 /// content. A
@@ -196,16 +196,16 @@ fn dump_declarators(
 /// beside it so that the two read alike; the only file text inside one is the
 /// length of an array, which [`spell_type`] answers for.
 ///
-/// `_Nonnull` is a word on the line rather than part of the type string,
-/// because it is not part of the type: [`Declaration::nonnull`] says why.
+/// The specifier is a word on the line rather than part of the type string,
+/// because it is not part of the type: [`Declaration::nullability`] says why.
 fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, out: &mut String) {
     if let Some(name) = declaration.name {
         write!(out, " {:?}", quoted(sources, name)).expect("writing to a string cannot fail");
     }
     write!(out, " {:?}", spell_type(sources, ast, declaration.ty))
         .expect("writing to a string cannot fail");
-    if declaration.nonnull.is_some() {
-        out.push_str(" _Nonnull");
+    if let Some(written) = declaration.nullability {
+        write!(out, " {}", written.specifier.spelling()).expect("writing to a string cannot fail");
     }
     out.push('\n');
 }

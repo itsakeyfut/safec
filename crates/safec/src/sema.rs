@@ -24,7 +24,7 @@ use crate::ast::{
     Type, TypeId,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
-use crate::parser::{UNREAD_ATTRIBUTE, UNREAD_ATTRIBUTE_LABEL};
+use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
 use safec_ir::source::{SourceMap, Span};
 
 /// A name used where nothing declares it.
@@ -213,7 +213,7 @@ impl Resolver<'_> {
 
         diagnostics.report(
             Diagnostic::error("safec does not read this attribute")
-                .with_code(UNREAD_ATTRIBUTE)
+                .with_code(UNREAD_ANNOTATION)
                 .with_label(Label::primary(refused, UNREAD_ATTRIBUTE_LABEL)),
         );
     }

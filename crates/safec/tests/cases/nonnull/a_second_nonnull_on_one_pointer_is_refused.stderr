@@ -3,5 +3,5 @@ error[SC0204]: `_Nonnull` cannot apply here
    │
  1 │ void g(int * _Nonnull _Nonnull p);
    │                       ────┬───  
-   │                           ╰───── a pointer takes one `_Nonnull`, and this is the second
+   │                           ╰───── a pointer takes one nullability specifier, and this is the second
 ───╯

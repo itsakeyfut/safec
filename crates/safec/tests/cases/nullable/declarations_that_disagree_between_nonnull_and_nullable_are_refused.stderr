@@ -1,0 +1,11 @@
+error[SC0307]: the declarations of `g` disagree about nullability
+   ╭─[ declarations_that_disagree_between_nonnull_and_nullable_are_refused.c:2:14 ]
+   │
+ 1 │ void g(int * _Nonnull p);
+   │              ────┬───  
+   │                  ╰───── the first prototype says `_Nonnull`
+ 2 │ void g(int * _Nullable p);
+   │              ────┬────  
+   │                  ╰────── one declaration says `_Nullable` here
+───╯
+  = note: every declaration of a function has to agree about its nullability specifiers, because a caller is checked against the declaration it sees
