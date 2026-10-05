@@ -1457,12 +1457,23 @@ cases! {
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_through_a_temporary_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Reported where the byte reaches what takes it as an operand rather
+        // than through a local: added to nothing, `*d = *s + 0`, and handed to
+        // a call that may keep it, `stash(*s)`. Mutation: leave the bytes out
+        // of `built_from`'s loads, or out of `read_out`; each goes silent.
+        a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_use_after_free_through_bytes_handed_to_a_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Built, which is what keeps the byte out of `may_be_pointer`: a
         // character handed to a call this check cannot read is not everything
         // stored anywhere. Mutation: answer `true` for `Ty::Char` there; both
         // are refused at the read of the table.
         a_character_handed_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_string_copied_a_byte_at_a_time_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Built: a byte handed straight to a call reaches what was stored
+        // where it was read, here nothing, and never everything stored
+        // anywhere. Mutation: answer a byte in `read_out` with
+        // `Known::stored`; this is refused at the read of the table.
+        a_byte_handed_straight_to_a_call_beside_a_table_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "returns" => {
