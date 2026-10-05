@@ -2205,6 +2205,14 @@ cases! {
         a_pointer_whose_address_is_in_exposed_memory_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_whose_address_is_stored_through_a_load_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A holder read by value after the call counts as one read by
+        // address does, and a holder of another allocation does not count.
+        // Mutation: have `live_after` count only a local whose address is
+        // taken, `&& self.live_in[0][local]`; the first goes silent.
+        // Mutation: have `Known::held_out_of_reach` ask whether the holder
+        // holds any site rather than this one; the second is refused.
+        a_copy_read_by_value_after_a_call_reached_it_through_another_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_reached_through_a_copy_of_another_allocation_does_not_doubt_this_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
