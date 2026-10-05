@@ -15,6 +15,11 @@
 //! [`compile`] does the work and hands back what it found, so that a caller can
 //! read the diagnostics rather than scrape them out of a stream. [`run_compiler`] is the
 //! half that reports and decides the outcome.
+//!
+//! **One concern per file.** This file is the pipeline. `driver/words.rs` holds
+//! what a safety finding reads as, `backend.rs` running `clang` and what its
+//! failures read as, and `dumps.rs` what `--emit tokens`, `--emit ast` and
+//! `--emit hatches` write. The tests are in `tests.rs`.
 
 use std::collections::HashSet;
 use std::fs;
