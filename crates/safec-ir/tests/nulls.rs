@@ -111,7 +111,7 @@ fn concluded(mut unit: TranslationUnit, function: Function) -> Vec<nullability::
 /// written immediately above the branch that reads it. Measured on the
 /// lowering.
 ///
-/// Mutation: drop the arm in `Nullability::tested` that gives up on a store
+/// Mutation: drop the arm in `nullability::tested_against_null` that gives up on a store
 /// through a projection. The comparison above it is resolved, `p` is refined on
 /// the taken arm, the write through `p` stops being reported, and this fails
 /// with one finding where it expects two.
@@ -199,7 +199,7 @@ fn a_comparison_behind_a_store_through_a_pointer_refines_nothing() {
 /// corpus, no block whose branch reads a bare local has anything at all
 /// between that local's write and the terminator.
 ///
-/// Mutation: have `Nullability::tested` step over a direct store without
+/// Mutation: have `nullability::tested_against_null` step over a direct store without
 /// recording the local it changed. The comparison above it is resolved and
 /// nothing refuses the answer, `p` is refined to non-null on the taken arm,
 /// the write through it is reported by nobody, and this fails with no findings
@@ -291,7 +291,7 @@ fn a_comparison_above_a_store_to_the_pointer_it_tested_refines_nothing() {
 /// one behaviour is what keeps one test enough; split into two, whichever half
 /// this block does not reach first would be held by nothing.
 ///
-/// Mutation: have `Nullability::tested` step over a storage boundary without
+/// Mutation: have `nullability::tested_against_null` step over a storage boundary without
 /// recording the local it changed. `p` is refined to non-null on the taken
 /// arm, the write through it is reported by nobody, and this fails with no
 /// findings where it expects one.
@@ -371,7 +371,7 @@ fn a_comparison_above_a_storage_boundary_refines_nothing() {
 /// null and is reported by nobody; the other arm has it proved null and is the
 /// one finding.
 ///
-/// Mutation: have `Nullability::tested` give up at a marker instead of
+/// Mutation: have `nullability::tested_against_null` give up at a marker instead of
 /// stepping over it. Neither arm is refined, both writes are reported as
 /// unproven, and this fails with two findings where it expects one.
 #[test]
