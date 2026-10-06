@@ -1,0 +1,9 @@
+error[SC0302]: cannot assign `void` to `int`
+   ╭─[ assigning_a_void_value_is_a_type_error.c:6:9 ]
+   │
+ 6 │     x = h();
+   │     ┬   ─┬─  
+   │     ╰──────── this holds `int`
+   │          │   
+   │          ╰─── this is `void`
+───╯

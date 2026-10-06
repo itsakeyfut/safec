@@ -1,0 +1,16 @@
+Function initializing_with_a_void_value_is_a_type_error.c:1:1 "h" "void (void)"
+  Compound initializing_with_a_void_value_is_a_type_error.c:1:14
+Function initializing_with_a_void_value_is_a_type_error.c:4:1 "f" "int (void)"
+  Compound initializing_with_a_void_value_is_a_type_error.c:4:13
+    Declaration initializing_with_a_void_value_is_a_type_error.c:5:5 "x" "int"
+      Call initializing_with_a_void_value_is_a_type_error.c:5:13
+        Identifier initializing_with_a_void_value_is_a_type_error.c:5:13 "h"
+    Declaration initializing_with_a_void_value_is_a_type_error.c:6:5 "p" "int *"
+      Call initializing_with_a_void_value_is_a_type_error.c:6:14
+        Identifier initializing_with_a_void_value_is_a_type_error.c:6:14 "h"
+    Return initializing_with_a_void_value_is_a_type_error.c:7:5
+      Binary initializing_with_a_void_value_is_a_type_error.c:7:12 "+"
+        Identifier initializing_with_a_void_value_is_a_type_error.c:7:12 "x"
+        Binary initializing_with_a_void_value_is_a_type_error.c:7:17 "=="
+          Identifier initializing_with_a_void_value_is_a_type_error.c:7:17 "p"
+          Number initializing_with_a_void_value_is_a_type_error.c:7:22 "0"

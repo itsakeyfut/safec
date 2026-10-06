@@ -1,0 +1,13 @@
+Function assigning_a_void_value_is_a_type_error.c:1:1 "h" "void (void)"
+  Compound assigning_a_void_value_is_a_type_error.c:1:14
+Function assigning_a_void_value_is_a_type_error.c:4:1 "f" "int (void)"
+  Compound assigning_a_void_value_is_a_type_error.c:4:13
+    Declaration assigning_a_void_value_is_a_type_error.c:5:5 "x" "int"
+      Number assigning_a_void_value_is_a_type_error.c:5:13 "0"
+    Expression assigning_a_void_value_is_a_type_error.c:6:5
+      Assign assigning_a_void_value_is_a_type_error.c:6:5 "="
+        Identifier assigning_a_void_value_is_a_type_error.c:6:5 "x"
+        Call assigning_a_void_value_is_a_type_error.c:6:9
+          Identifier assigning_a_void_value_is_a_type_error.c:6:9 "h"
+    Return assigning_a_void_value_is_a_type_error.c:7:5
+      Identifier assigning_a_void_value_is_a_type_error.c:7:12 "x"

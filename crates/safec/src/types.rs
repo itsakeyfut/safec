@@ -1199,8 +1199,14 @@ impl Checker<'_> {
             // pointer from an integer.
             (Type::Pointer(_), Type::Int | Type::Char) => Some(source_is_null),
             (Type::Int | Type::Char, Type::Pointer(_)) => Some(false),
+            // 6.5.16.1 p1 lists what may be assigned to an object, and a
+            // `void` expression has no value to be any of it; 6.8.6.4 p3 and
+            // 6.7.9 p11 hold a returned value and an initializer to the same
+            // list. Answering `None` here let `return h();` from a function
+            // returning `int` build in silence.
+            (Type::Int | Type::Char | Type::Pointer(_), Type::Void) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
-            | (_, Type::Void | Type::Array { .. } | Type::Function { .. }) => None,
+            | (_, Type::Array { .. } | Type::Function { .. }) => None,
         }
     }
 

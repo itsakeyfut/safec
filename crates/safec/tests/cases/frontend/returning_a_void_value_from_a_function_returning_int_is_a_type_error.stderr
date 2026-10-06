@@ -1,0 +1,10 @@
+error[SC0302]: cannot return `void` from a function returning `int`
+   ╭─[ returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:5:12 ]
+   │
+ 4 │ int f(void) {
+   │     ┬  
+   │     ╰── declared to return `int`
+ 5 │     return h();
+   │            ─┬─  
+   │             ╰─── this is `void`
+───╯
