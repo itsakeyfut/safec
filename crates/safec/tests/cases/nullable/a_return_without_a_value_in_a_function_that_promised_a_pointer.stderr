@@ -1,5 +1,5 @@
 error[SC0308]: `return` without a value in a function returning `int *`
-   ╭─[ a_valueless_return_in_a_function_that_promised_a_pointer.c:3:9 ]
+   ╭─[ a_return_without_a_value_in_a_function_that_promised_a_pointer.c:3:9 ]
    │
  1 │ int * _Nonnull f(int c, int * _Nonnull q) {
    │                ┬  
@@ -10,7 +10,7 @@ error[SC0308]: `return` without a value in a function returning `int *`
    │            ╰───── this returns nothing
 ───╯
 error[SC0408]: this function may reach the end of its body without returning a pointer
-   ╭─[ a_valueless_return_in_a_function_that_promised_a_pointer.c:1:16 ]
+   ╭─[ a_return_without_a_value_in_a_function_that_promised_a_pointer.c:1:16 ]
    │
  1 │ int * _Nonnull f(int c, int * _Nonnull q) {
    │       ────┬─── ┬  

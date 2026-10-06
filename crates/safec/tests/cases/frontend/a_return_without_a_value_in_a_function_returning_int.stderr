@@ -1,5 +1,5 @@
 error[SC0308]: `return` without a value in a function returning `int`
-   ╭─[ a_return_without_a_value_in_a_function_returning_one.c:2:5 ]
+   ╭─[ a_return_without_a_value_in_a_function_returning_int.c:2:5 ]
    │
  1 │ int f(void) {
    │     ┬  

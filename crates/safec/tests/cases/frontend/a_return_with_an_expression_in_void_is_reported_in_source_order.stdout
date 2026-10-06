@@ -1,0 +1,14 @@
+Function a_return_with_an_expression_in_void_is_reported_in_source_order.c:1:1 "g" "int (int)"
+  Parameter a_return_with_an_expression_in_void_is_reported_in_source_order.c:1:7 "c" "int"
+  Compound a_return_with_an_expression_in_void_is_reported_in_source_order.c:1:14
+    Declaration a_return_with_an_expression_in_void_is_reported_in_source_order.c:2:5 "x" "int *"
+      Identifier a_return_with_an_expression_in_void_is_reported_in_source_order.c:2:14 "c"
+    Return a_return_with_an_expression_in_void_is_reported_in_source_order.c:3:5
+      Number a_return_with_an_expression_in_void_is_reported_in_source_order.c:3:12 "1"
+Function a_return_with_an_expression_in_void_is_reported_in_source_order.c:6:1 "f" "void (int)"
+  Parameter a_return_with_an_expression_in_void_is_reported_in_source_order.c:6:8 "c" "int"
+  Compound a_return_with_an_expression_in_void_is_reported_in_source_order.c:6:15
+    Declaration a_return_with_an_expression_in_void_is_reported_in_source_order.c:7:5 "y" "int *"
+      Identifier a_return_with_an_expression_in_void_is_reported_in_source_order.c:7:14 "c"
+    Return a_return_with_an_expression_in_void_is_reported_in_source_order.c:8:5
+      Identifier a_return_with_an_expression_in_void_is_reported_in_source_order.c:8:12 "c"

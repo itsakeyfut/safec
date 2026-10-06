@@ -1010,12 +1010,6 @@ cases! {
         // `lowering::decided` always build a `Branch`; both are told they may
         // reach the end. Mutation: fold only the constants 0 and 1; the
         // second is.
-        // `return;` where a pointer was promised is refused where it is, by
-        // the type checker, and the nullability check still reads it as the
-        // end of the body, so its `SC0408` follows. Mutation: accept a
-        // `return` without a value in `Checker::receivers_in`; only the
-        // `SC0408` on the name is left.
-        a_valueless_return_in_a_function_that_promised_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_left_only_by_a_return_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_any_constant_but_zero_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a `for` and through unary `+`, which are the other
@@ -1026,6 +1020,13 @@ cases! {
         // second is.
         a_for_loop_on_a_constant_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `return;` where a pointer was promised is refused where it is, by
+        // the type checker, and the nullability check still reads it as the
+        // end of the body, so its `SC0408` follows, in words that are not
+        // true of this program: every path ends in a `return`. Mutation:
+        // accept a `return` without a value in `Checker::receivers_in`; only
+        // the `SC0408` on the name is left.
+        a_return_without_a_value_in_a_function_that_promised_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call to a function C says does not return has no edge out of it,
         // so the end after it is not reached (ADR-0051). Mutation: have the
         // lowering give every call its continuation; both are told they may
@@ -2397,11 +2398,18 @@ cases! {
         // C17 6.8.6.4 p1, both halves, the `void` expression included, which
         // `clang` accepts without `-pedantic-errors`. Mutation: accept a
         // `return` without a value in `Checker::receivers_in`; the first
-        // builds. Mutation: accept one with a value where the function
-        // returns `void`; the second and third build.
-        a_return_without_a_value_in_a_function_returning_one: ["--emit", "ast"],
-        a_return_with_a_value_in_a_function_returning_void: ["--emit", "ast"],
+        // builds. Mutation: accept one with an expression where the function
+        // returns `void`; the second and third build. And `return;` in a
+        // `void` function stays legal. Mutation: report a `return` without a
+        // value whatever the function returns; the fourth is refused.
+        a_return_without_a_value_in_a_function_returning_int: ["--emit", "ast"],
+        a_return_with_an_expression_in_a_function_returning_void: ["--emit", "ast"],
         a_return_of_a_void_expression_in_a_function_returning_void: ["--emit", "ast"],
+        a_return_without_a_value_in_a_function_returning_void_builds: ["--emit", "ast"],
+        // One with an expression is reported beside it, in the order the
+        // expressions are, after the type errors on lines above it. Mutation:
+        // report it while the receivers are collected; it comes first.
+        a_return_with_an_expression_in_void_is_reported_in_source_order: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.

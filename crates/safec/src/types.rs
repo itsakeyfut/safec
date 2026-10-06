@@ -77,14 +77,15 @@ const ARGUMENTS: Code = Code::new("SC0303");
 const OPERANDS: Code = Code::new("SC0306");
 
 /// A `return` that does not match whether its function returns a value,
-/// C17 6.8.6.4 p1: one without an expression where the return type is not
-/// `void`, or one with an expression, a `void` one included, where it is.
+/// the two constraints of C17 6.8.6.4 p1: `return;` where the return type is
+/// not `void`, and `return e;` where it is, `e` a `void` expression such as
+/// `h()` included.
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: this is
-/// whether there is a value at all, as `OPERANDS` is kept apart from it.
-/// `clang` refuses the first two shapes and accepts `return h();` in a
-/// `void` function without `-pedantic-errors`; C makes all three one
-/// constraint, and this reads constraints as C states them.
+/// whether there is an expression at all, as `OPERANDS` is kept apart from
+/// it. `clang` 20 refuses `return;` and `return 1;` by default and accepts
+/// `return h();` in a `void` function unless `-pedantic-errors` is given;
+/// C forbids it, and it is refused here as `docs/frontend.md` lists.
 const RETURN_SHAPE: Code = Code::new("SC0308");
 
 /// The type of every expression in one translation unit.
@@ -192,6 +193,9 @@ struct Returning {
 enum Receiving {
     /// C17 6.8.6.4 p3.
     Return(Returning),
+    /// An expression returned from a function that returns `void`, which
+    /// C17 6.8.6.4 p1 forbids whatever its type. See `RETURN_SHAPE`.
+    ReturnFromVoid(Returning),
     /// C17 6.7.9 p11.
     Initializer {
         /// The type the declarator derived.
@@ -220,9 +224,12 @@ struct Checker<'a> {
     /// expression rather than among them, and a reader would find them out of
     /// order. One map is enough because no expression is both.
     ///
-    /// **A `return` whose shape is wrong is reported while this is
-    /// collected**, before every expression's report, since one without a
-    /// value has no expression to be reported beside. See `RETURN_SHAPE`.
+    /// **A `return;` that owes a value is reported while this is
+    /// collected**, before every expression's report, since it has no
+    /// expression to be reported beside: a type error on an earlier line is
+    /// printed after it. One with an expression where the function returns
+    /// `void` is recorded here and reported beside its expression, in order.
+    /// See `RETURN_SHAPE`.
     receivers: HashMap<ExprId, Receiving>,
 }
 
@@ -293,15 +300,10 @@ impl Checker<'_> {
                             )),
                         );
                     }
-                    (Some(value), true) => diagnostics.report(
-                        Diagnostic::error("`return` with a value in a function returning `void`")
-                            .with_code(RETURN_SHAPE)
-                            .with_label(Label::primary(ast.expr(value).span(), "this is a value"))
-                            .with_label(Label::secondary(
-                                returning.name,
-                                "declared to return `void`",
-                            )),
-                    ),
+                    (Some(value), true) => {
+                        self.receivers
+                            .insert(value, Receiving::ReturnFromVoid(returning));
+                    }
                 }
             }
             Stmt::Declaration { declarators, .. } => self.initializers(declarators),
@@ -1053,11 +1055,26 @@ impl Checker<'_> {
         let Some(receiving) = self.receivers.get(&value).copied() else {
             return;
         };
+        if let Receiving::ReturnFromVoid(returning) = receiving {
+            diagnostics.report(
+                Diagnostic::error("`return` with an expression in a function returning `void`")
+                    .with_code(RETURN_SHAPE)
+                    .with_label(Label::primary(
+                        ast.expr(value).span(),
+                        "this is an expression",
+                    ))
+                    .with_label(Label::secondary(
+                        returning.name,
+                        "declared to return `void`",
+                    )),
+            );
+            return;
+        }
         let Some(source) = self.types[value.index()] else {
             return;
         };
         let target = match receiving {
-            Receiving::Return(returning) => returning.ty,
+            Receiving::Return(returning) | Receiving::ReturnFromVoid(returning) => returning.ty,
             Receiving::Initializer { ty, .. } => ty,
         };
 
@@ -1069,7 +1086,7 @@ impl Checker<'_> {
         let source_spelled = self.spelled(ast, source);
         let target_spelled = self.spelled(ast, target);
         let (message, place, place_label) = match receiving {
-            Receiving::Return(returning) => (
+            Receiving::Return(returning) | Receiving::ReturnFromVoid(returning) => (
                 format!(
                     "cannot return `{source_spelled}` from a function returning `{target_spelled}`"
                 ),

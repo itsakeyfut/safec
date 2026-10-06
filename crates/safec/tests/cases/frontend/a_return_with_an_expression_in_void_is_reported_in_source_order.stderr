@@ -1,0 +1,29 @@
+error[SC0302]: cannot initialize `int *` with `int`
+   ╭─[ a_return_with_an_expression_in_void_is_reported_in_source_order.c:2:14 ]
+   │
+ 2 │     int *x = c;
+   │          ┬   ┬  
+   │          ╰────── this holds `int *`
+   │              │  
+   │              ╰── this is `int`
+───╯
+error[SC0302]: cannot initialize `int *` with `int`
+   ╭─[ a_return_with_an_expression_in_void_is_reported_in_source_order.c:7:14 ]
+   │
+ 7 │     int *y = c;
+   │          ┬   ┬  
+   │          ╰────── this holds `int *`
+   │              │  
+   │              ╰── this is `int`
+───╯
+error[SC0308]: `return` with an expression in a function returning `void`
+   ╭─[ a_return_with_an_expression_in_void_is_reported_in_source_order.c:8:12 ]
+   │
+ 6 │ void f(int c) {
+   │      ┬  
+   │      ╰── declared to return `void`
+   │ 
+ 8 │     return c;
+   │            ┬  
+   │            ╰── this is an expression
+───╯
