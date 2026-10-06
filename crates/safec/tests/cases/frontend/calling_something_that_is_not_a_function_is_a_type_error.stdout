@@ -1,0 +1,17 @@
+Function calling_something_that_is_not_a_function_is_a_type_error.c:1:1 "f" "int (int, int *, int (**)(int))"
+  Parameter calling_something_that_is_not_a_function_is_a_type_error.c:1:7 "x" "int"
+  Parameter calling_something_that_is_not_a_function_is_a_type_error.c:1:14 "p" "int *"
+  Parameter calling_something_that_is_not_a_function_is_a_type_error.c:1:22 "pp" "int (**)(int)"
+  Compound calling_something_that_is_not_a_function_is_a_type_error.c:1:39
+    Return calling_something_that_is_not_a_function_is_a_type_error.c:2:5
+      Binary calling_something_that_is_not_a_function_is_a_type_error.c:2:12 "+"
+        Binary calling_something_that_is_not_a_function_is_a_type_error.c:2:12 "+"
+          Call calling_something_that_is_not_a_function_is_a_type_error.c:2:12
+            Identifier calling_something_that_is_not_a_function_is_a_type_error.c:2:12 "x"
+            Number calling_something_that_is_not_a_function_is_a_type_error.c:2:14 "1"
+          Call calling_something_that_is_not_a_function_is_a_type_error.c:2:19
+            Identifier calling_something_that_is_not_a_function_is_a_type_error.c:2:19 "p"
+            Number calling_something_that_is_not_a_function_is_a_type_error.c:2:21 "1"
+        Call calling_something_that_is_not_a_function_is_a_type_error.c:2:26
+          Identifier calling_something_that_is_not_a_function_is_a_type_error.c:2:26 "pp"
+          Number calling_something_that_is_not_a_function_is_a_type_error.c:2:29 "1"
