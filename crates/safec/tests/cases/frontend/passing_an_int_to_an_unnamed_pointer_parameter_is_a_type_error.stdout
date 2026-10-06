@@ -1,0 +1,8 @@
+Declaration passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:1:1 "g" "int (int *)"
+  Parameter passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:1:7 "int *"
+Function passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:3:1 "f" "int (void)"
+  Compound passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:3:13
+    Return passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:4:5
+      Call passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:4:12
+        Identifier passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:4:12 "g"
+        Number passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:4:14 "1"

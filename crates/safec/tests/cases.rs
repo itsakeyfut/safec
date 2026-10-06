@@ -2436,6 +2436,10 @@ cases! {
         // Every argument, not only the first. Mutation: check only the first
         // pair in `Checker::call`; this builds.
         a_mismatch_in_a_later_argument_is_a_type_error: ["--emit", "ast"],
+        // A parameter with no name is pointed at by its declaration.
+        // Mutation: point at the argument instead of `parameter.span` in
+        // `Checker::call`; the secondary label moves.
+        passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.
