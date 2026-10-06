@@ -1022,8 +1022,8 @@ impl Known {
     /// or `*k = &a; *k = &b;`, marking both exempted `a` after `grow(q)` or
     /// `grow(*k)` and `use2(&a)` built over a pointer `grow` may have freed
     /// through `b`. So a plain local counts where its address edges are one
-    /// local and all of what it may point at, the condition a write through
-    /// it replaces under (ADR-0028), and a place of dereferences never does:
+    /// local and all of what it may point at ([`Held::certain_target`]),
+    /// and a place of dereferences never does:
     /// what memory holds is a lower bound, so one local read there is not
     /// one local certainly. Every route missed leaves a holder counted by
     /// [`Self::held_out_of_reach`], which costs a report rather than a
