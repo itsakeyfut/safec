@@ -115,12 +115,13 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Two more are where the type checker declines an extension.
+Three more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `v + 1` with `void *v` | `error[SC0306]` | accepts | `error: arithmetic on a pointer to void is a GNU extension` |
 | `fp + 1` with `int (*fp)(void)` | `error[SC0306]` | accepts | `error: arithmetic on a pointer to the function type 'int (void)' is a GNU extension` |
+| `return h();` in a `void` function, `h` returning `void` | `error[SC0308]` | accepts | `error: void function 'g' should not return void expression` |
 
 **Both are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
@@ -134,6 +135,13 @@ refused citing 6.5.2.4 p2, `--v` citing 6.5.3.1 p2, and `v[1]` and `1[v]`
 citing 6.5.2.1 p1, whichever operand of `[]` the pointer is. A pointer to an array
 of unknown length is refused by the same rule and is not a row, because `clang`
 refuses it too, with or without `-pedantic-errors`.
+
+**The third is a constraint too.** C17 6.8.6.4 p1 forbids a `return` with an
+expression in a function returning `void`, and `h()` is an expression whatever
+its type; `clang` 20 accepts it unless asked to be pedantic, and refuses
+`return 1;` there by default. `types.rs`'s `RETURN_SHAPE` reads the constraint
+as written, with the other half of the paragraph, `return;` where a value is
+owed.
 
 ### What an integer constant is worth, and what type it is not
 
