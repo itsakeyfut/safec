@@ -436,9 +436,9 @@ impl Checker<'_> {
                 // the arm above.
                 Type::Function { .. } => operand_ty,
                 // Valid C: 6.3.2.1 p3 makes `a` a pointer to its first
-                // element, and that decay is not modelled. Having no type
-                // here is this compiler's gap, so it is not reported as the
-                // program's.
+                // element, and `*` does not ask `decayed` for it. Having no
+                // type here is this compiler's gap, so it is not reported as
+                // the program's.
                 Type::Array { .. } => None,
                 // p2: the operand of `*` shall have pointer type. Reported,
                 // and `None` rather than a type kept the way `binary` keeps
@@ -472,17 +472,22 @@ impl Checker<'_> {
             // `+`, `-` and `~` an `int` for every operand p1 lets them take,
             // and p5 makes `!` an `int` outright. Still `None` for an operand
             // nothing typed, because an operand that is not a number at all
-            // makes an expression with no type rather than an `int`, and
-            // `p = -nowhere` reported twice while this said otherwise.
+            // makes an expression with no type rather than an `int`: an `int`
+            // there would have `p = -nowhere` reported a second time, as an
+            // `int` given to a pointer.
             UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => {
-                let ty = operand_ty?;
+                // Decayed first, as `binary` does, so an array or a function
+                // is the pointer 6.3.2.1 p3 and p4 make it, and is spelled as
+                // one in the report.
+                let ty = self.decayed(ast, operand_ty?);
                 // p1: `+` and `-` take an arithmetic operand, `~` an integer
-                // one, and `!` a scalar one. An array or a function is a
-                // pointer by 6.3.2.1 p3 and p4, which `!` takes and the other
-                // three do not, so the answer is the same whether or not that
-                // conversion is modelled.
+                // one, and `!` a scalar one. One arm answers both of the
+                // first two, because every arithmetic type this compiler has
+                // is an integer type; a floating type would split it.
                 let takes = match ast.ty(ty) {
                     Type::Int | Type::Char => true,
+                    // `decayed` answers neither an array nor a function, and
+                    // each would be the pointer it decays to if it did.
                     Type::Pointer(_) | Type::Array { .. } | Type::Function { .. } => {
                         matches!(op, UnOp::Not)
                     }

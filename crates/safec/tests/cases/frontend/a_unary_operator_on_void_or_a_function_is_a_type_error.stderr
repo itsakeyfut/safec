@@ -26,45 +26,45 @@ error[SC0306]: `!` cannot take `void`
     │          ─┬─  
     │           ╰─── this is `void`
 ────╯
-error[SC0306]: `+` cannot take `int[3]`
+error[SC0306]: `+` cannot take `int *`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:10 ]
     │
  11 │     i = +a;
     │          ┬  
-    │          ╰── this is `int[3]`
+    │          ╰── this is `int *`
 ────╯
-error[SC0306]: `-` cannot take `int[3]`
+error[SC0306]: `-` cannot take `int *`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:10 ]
     │
  12 │     i = -a;
     │          ┬  
-    │          ╰── this is `int[3]`
+    │          ╰── this is `int *`
 ────╯
-error[SC0306]: `~` cannot take `int[3]`
+error[SC0306]: `~` cannot take `int *`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:10 ]
     │
  13 │     i = ~a;
     │          ┬  
-    │          ╰── this is `int[3]`
+    │          ╰── this is `int *`
 ────╯
-error[SC0306]: `+` cannot take `int (int)`
+error[SC0306]: `+` cannot take `int (*)(int)`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:10 ]
     │
  14 │     i = +g;
     │          ┬  
-    │          ╰── this is `int (int)`
+    │          ╰── this is `int (*)(int)`
 ────╯
-error[SC0306]: `-` cannot take `int (int)`
+error[SC0306]: `-` cannot take `int (*)(int)`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:10 ]
     │
  15 │     i = -g;
     │          ┬  
-    │          ╰── this is `int (int)`
+    │          ╰── this is `int (*)(int)`
 ────╯
-error[SC0306]: `~` cannot take `int (int)`
+error[SC0306]: `~` cannot take `int (*)(int)`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:10 ]
     │
  16 │     i = ~g;
     │          ┬  
-    │          ╰── this is `int (int)`
+    │          ╰── this is `int (*)(int)`
 ────╯
