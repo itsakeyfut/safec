@@ -1,0 +1,11 @@
+error[SC0302]: cannot pass `int` to a parameter of type `int *`
+   ╭─[ passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error.c:4:14 ]
+   │
+ 1 │ int g(int *);
+   │       ──┬──  
+   │         ╰──── declared `int *` here
+   │ 
+ 4 │     return g(1);
+   │              ┬  
+   │              ╰── this is `int`
+───╯

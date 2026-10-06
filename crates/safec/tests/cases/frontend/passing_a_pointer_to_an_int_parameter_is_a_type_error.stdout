@@ -1,0 +1,12 @@
+Function passing_a_pointer_to_an_int_parameter_is_a_type_error.c:1:1 "g" "int (int)"
+  Parameter passing_a_pointer_to_an_int_parameter_is_a_type_error.c:1:7 "a" "int"
+  Compound passing_a_pointer_to_an_int_parameter_is_a_type_error.c:1:14
+    Return passing_a_pointer_to_an_int_parameter_is_a_type_error.c:2:5
+      Identifier passing_a_pointer_to_an_int_parameter_is_a_type_error.c:2:12 "a"
+Function passing_a_pointer_to_an_int_parameter_is_a_type_error.c:5:1 "f" "int (int *)"
+  Parameter passing_a_pointer_to_an_int_parameter_is_a_type_error.c:5:7 "p" "int *"
+  Compound passing_a_pointer_to_an_int_parameter_is_a_type_error.c:5:15
+    Return passing_a_pointer_to_an_int_parameter_is_a_type_error.c:6:5
+      Call passing_a_pointer_to_an_int_parameter_is_a_type_error.c:6:12
+        Identifier passing_a_pointer_to_an_int_parameter_is_a_type_error.c:6:12 "g"
+        Identifier passing_a_pointer_to_an_int_parameter_is_a_type_error.c:6:14 "p"

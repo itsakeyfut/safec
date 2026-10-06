@@ -55,12 +55,14 @@ const NO_TYPE: Code = Code::new("SC0305");
 
 /// A value of the wrong type, C17 6.5.16.1 p1.
 ///
-/// One code for an assignment, an initializer and a `return`, because C17
-/// makes them one rule: 6.7.9 p11 gives an initializer "the same type
-/// constraints and conversions as for simple assignment", and 6.8.6.4 p3
+/// One code for an assignment, an initializer, a `return` and an argument,
+/// because C17 makes them one rule: 6.7.9 p11 gives an initializer "the same
+/// type constraints and conversions as for simple assignment", 6.8.6.4 p3
 /// converts a returned value as if it were assigned to an object of the
-/// return type. What differs is the message, which is the same reason
-/// `parser.rs`'s `EXPECTED` is one code for every shape of syntax error.
+/// return type, and 6.5.2.2 p2 requires an argument's value to be assignable
+/// to an object of its parameter's type. What differs is the message, which
+/// is the same reason `parser.rs`'s `EXPECTED` is one code for every shape of
+/// syntax error.
 const MISMATCH: Code = Code::new("SC0302");
 
 /// A call whose argument count is not the parameter count, C17 6.5.2.2 p2.
@@ -1114,7 +1116,9 @@ impl Checker<'_> {
         );
     }
 
-    /// C17 6.5.2.2 p2: the number of arguments and the number of parameters.
+    /// C17 6.5.2.2 p2: the number of arguments against the number of
+    /// parameters, and where they agree, each argument against its parameter
+    /// in `check_argument`.
     ///
     /// Only where the callee's type includes a prototype, which is what that
     /// paragraph conditions the constraint on. `()` is never one: 6.7.6.3 p14
@@ -1149,7 +1153,17 @@ impl Checker<'_> {
         let (what, expected, found) = match arguments.len().cmp(&parameters.len()) {
             Ordering::Less => ("too few", parameters.len(), arguments.len()),
             Ordering::Greater => ("too many", parameters.len(), arguments.len()),
-            Ordering::Equal => return Some(returns),
+            Ordering::Equal => {
+                // Unchecked, a pointer passed for an `int` parameter arrived
+                // in the callee's body as a local declared `int`, which breaks
+                // what the memory check needs of a local that may hold an
+                // allocation. See ADR-0030.
+                for (&argument, parameter) in arguments.iter().zip(parameters) {
+                    let declared = parameter.name.unwrap_or(parameter.span);
+                    self.check_argument(ast, argument, parameter.ty, declared, diagnostics);
+                }
+                return Some(returns);
+            }
         };
 
         let mut diagnostic = Diagnostic::error(format!(
@@ -1167,6 +1181,51 @@ impl Checker<'_> {
 
         diagnostics.report(diagnostic);
         Some(returns)
+    }
+
+    /// One argument against its parameter, C17 6.5.2.2 p2, asked of
+    /// `assignable` as an initializer is and refused with `MISMATCH`.
+    ///
+    /// Not a `Receiving` variant beside the initializer and the `return`:
+    /// those are collected from statements before anything is typed, and an
+    /// argument's target is only known once the callee is. `None` from
+    /// `assignable`, an array or a function on either side, is passed over
+    /// as it is there.
+    ///
+    /// The primary label is the initializer's; the message and the secondary
+    /// label are this one's own, and the secondary points at the parameter's
+    /// name, or at its declaration where it has none.
+    fn check_argument(
+        &self,
+        ast: &Ast,
+        argument: ExprId,
+        parameter: TypeId,
+        declared: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let Some(source) = self.types[argument.index()] else {
+            return;
+        };
+        let null = self.is_null_pointer_constant(argument);
+        if self.assignable(ast, parameter, source, null) != Some(false) {
+            return;
+        }
+        let source_spelled = self.spelled(ast, source);
+        let target_spelled = self.spelled(ast, parameter);
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "cannot pass `{source_spelled}` to a parameter of type `{target_spelled}`"
+            ))
+            .with_code(MISMATCH)
+            .with_label(Label::primary(
+                ast.expr(argument).span(),
+                format!("this is `{source_spelled}`"),
+            ))
+            .with_label(Label::secondary(
+                declared,
+                format!("declared `{target_spelled}` here"),
+            )),
+        );
     }
 
     /// Whether a value of type `source` may be assigned to a place of type

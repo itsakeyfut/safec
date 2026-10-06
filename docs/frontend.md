@@ -115,15 +115,18 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Three more are where the type checker declines what `clang` accepts.
+Six more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `v + 1` with `void *v` | `error[SC0306]` | accepts | `error: arithmetic on a pointer to void is a GNU extension` |
 | `fp + 1` with `int (*fp)(void)` | `error[SC0306]` | accepts | `error: arithmetic on a pointer to the function type 'int (void)' is a GNU extension` |
 | `return h();` in a `void` function, `h` returning `void` | `error[SC0308]` | accepts | `error: void function 'g' should not return void expression` |
+| `int *p = c;` with `char *c` | `error[SC0302]` | warns | `error: incompatible pointer types initializing 'int *' with an expression of type 'char *'` |
+| `p = c;` with `int *p` and `char *c` | `error[SC0302]` | warns | `error: incompatible pointer types assigning to 'int *' from 'char *'` |
+| `g(c)` with `int g(int *p)` and `char *c` | `error[SC0302]` | warns | `error: incompatible pointer types passing 'char *' to parameter of type 'int *'` |
 
-**Both are constraint violations, and this compiler takes neither extension.** C17
+**The first two are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
 same of `-`, and 6.5.16.2 p1 says it of `+=` and `-=`; `void` is incomplete
 and a function is not an object. `clang` gives each a size of one unless asked
@@ -142,6 +145,13 @@ its type; `clang` 20 accepts it unless asked to be pedantic, and refuses
 `return 1;` there by default. `types.rs`'s `RETURN_SHAPE` reads the constraint
 as written, with the other half of the paragraph, `return;` where a value is
 owed.
+
+**The last three are one constraint.** C17 6.5.16.1 p1 lets a pointer be
+assigned a pointer to a compatible type, or be assigned to or from a `void *`,
+and nothing else; 6.7.9 p11 holds an initializer to it and 6.5.2.2 p2 an
+argument. `clang` 20 warns with `-Wincompatible-pointer-types` unless asked to
+be pedantic. All three spellings ask `types.rs::assignable`, so they answer
+alike.
 
 ### What an integer constant is worth, and what type it is not
 
@@ -229,6 +239,7 @@ an identifier, and a character constant is refused as `expected an expression`.
 | `int *p = 1 - 1;` | `error[SC0302]` | accepts | accepts |
 | `int *p = -0;` | `error[SC0302]` | accepts | accepts |
 | `p = 1 - 1;` with `int *p` | `error[SC0302]` | accepts | accepts |
+| `g(1 - 1)` with `int g(int *p)` | `error[SC0302]` | accepts | accepts |
 | `p == 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
 | `p == -0` with `int *p` | `error[SC0306]` | accepts | accepts |
 
@@ -238,7 +249,8 @@ evaluates a constant expression, so only a literal zero is recognised as one.
 The alternative was not reporting an integer given to a pointer at all, which
 is the mistake the check exists for; `types.rs::is_null_pointer_constant` says
 why the false report costs less. C17 6.7.9 p11 gives an initializer the
-constraints of simple assignment, so the two spellings answer alike, and C17
+constraints of simple assignment and 6.5.2.2 p2 gives an argument them too, so
+the three spellings answer alike, and C17
 6.5.9 p2 lets a pointer be compared with a null pointer constant and no other
 integer, so a comparison answers alike too. The rows stop being refused the day
 a constant expression can be evaluated.

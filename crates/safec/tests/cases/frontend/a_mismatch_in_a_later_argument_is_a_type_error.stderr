@@ -1,0 +1,11 @@
+error[SC0302]: cannot pass `int` to a parameter of type `int *`
+   ╭─[ a_mismatch_in_a_later_argument_is_a_type_error.c:4:17 ]
+   │
+ 1 │ int k(int a, int *p);
+   │                   ┬  
+   │                   ╰── declared `int *` here
+   │ 
+ 4 │     return k(1, 2);
+   │                 ┬  
+   │                 ╰── this is `int`
+───╯
