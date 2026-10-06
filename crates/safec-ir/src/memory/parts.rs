@@ -560,7 +560,9 @@ impl Held {
     /// which exempts a holder and so has to hold rather than may. Read where
     /// an argument hands an address to a call and where a store puts one in
     /// memory this check does not model, so that the two cannot disagree
-    /// about what certain means. See ADR-0047.
+    /// about what certain means. The `writes_elsewhere` half is held by no
+    /// case: every program found that it would decide has a second holder
+    /// asked anyway. See ADR-0047.
     pub(super) fn certain_target(&self) -> Option<usize> {
         if self.writes_elsewhere {
             return None;

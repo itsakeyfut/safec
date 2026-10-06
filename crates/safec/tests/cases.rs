@@ -2276,8 +2276,11 @@ cases! {
         an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A load out of memory names one local here, but `*other` may have
         // written `*k` behind this check's back, so the edge is not all of
-        // it. Mutation: have `Known::handed_to_a_call` ignore
-        // `writes_elsewhere`; this builds. See ADR-0047.
+        // it. **Held by nothing since #350.** Ignoring `writes_elsewhere` in
+        // `Held::certain_target` made this build while memory a call reached
+        // handed `b` away; with that route gone, `b` is a holder the call
+        // cannot replace and is asked whatever the test says, so the case
+        // stays for the shape and the condition for the rule. See ADR-0047.
         a_single_address_read_out_of_memory_another_pointer_may_write_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What memory a call can reach may hold is not handed to it: a slot
         // keeps every address it was ever given in `inside_locals`, and the
