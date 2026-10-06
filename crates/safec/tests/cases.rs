@@ -2252,16 +2252,28 @@ cases! {
         a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A place of dereferences handed to a call is asked what it points at
-        // as its load would be, and hands on what its load would carry. The
-        // first was silent. Mutation: have `report::handed` ask only a plain
-        // local one level in; the first builds. Mutation: have
-        // `Known::handed_to_a_call` read a place's own edges rather than
-        // `handed_level`; the second is refused. Mutation: ask a place of
-        // dereferences without the exemption for what only an address
-        // reaches; the third and second are refused. See ADR-0045.
+        // as its load would be. The first was silent. Mutation: have
+        // `report::handed` ask only a plain local one level in; the first
+        // builds. Mutation: in `Known::handed_below`'s `Reachable` arm, ask a
+        // place of dereferences whatever reached it; the third is refused.
+        // The fourth is one report, not two, because the place's report one
+        // level in is keyed as the `**k` handed beside it. Mutation: key it
+        // `*k` instead; a second `SC0407` appears.
+        //
+        // And a call is taken to hold an address only where the argument
+        // certainly names one local, since that exempts a holder. A place of
+        // dereferences never does, so the second is asked at its second call
+        // (a report, where marking from memory was a silence). Mutation: have
+        // `Known::handed_to_a_call` mark a place's level as well; the fifth
+        // builds, `grow` having been handed only `&b`. Mutation: have it mark
+        // every local a plain argument may name; the sixth builds. See
+        // ADR-0045 and ADR-0047.
         a_freed_pointer_whose_address_is_read_out_of_memory_and_handed_on_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_place_and_what_it_points_at_handed_to_one_call_are_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_address_overwritten_in_memory_does_not_hand_its_old_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
