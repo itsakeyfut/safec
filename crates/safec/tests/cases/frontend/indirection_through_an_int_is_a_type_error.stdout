@@ -1,0 +1,15 @@
+Declaration indirection_through_an_int_is_a_type_error.c:1:1 "h" "void (void)"
+Function indirection_through_an_int_is_a_type_error.c:3:1 "f" "int (int, char)"
+  Parameter indirection_through_an_int_is_a_type_error.c:3:7 "x" "int"
+  Parameter indirection_through_an_int_is_a_type_error.c:3:14 "c" "char"
+  Compound indirection_through_an_int_is_a_type_error.c:3:22
+    Expression indirection_through_an_int_is_a_type_error.c:4:5
+      Unary indirection_through_an_int_is_a_type_error.c:4:5 "*"
+        Call indirection_through_an_int_is_a_type_error.c:4:6
+          Identifier indirection_through_an_int_is_a_type_error.c:4:6 "h"
+    Return indirection_through_an_int_is_a_type_error.c:5:5
+      Binary indirection_through_an_int_is_a_type_error.c:5:12 "+"
+        Unary indirection_through_an_int_is_a_type_error.c:5:12 "*"
+          Identifier indirection_through_an_int_is_a_type_error.c:5:13 "x"
+        Unary indirection_through_an_int_is_a_type_error.c:5:17 "*"
+          Identifier indirection_through_an_int_is_a_type_error.c:5:18 "c"

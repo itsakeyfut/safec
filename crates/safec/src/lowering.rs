@@ -2102,8 +2102,8 @@ impl Lowering<'_> {
     /// Everything this stage builds a value from is either a constant or a
     /// copy of a place, so a projection onto a constant is the only way to get
     /// here: `*0` is that shape. The frontend refuses it today, because
-    /// `types.rs` gives an indirection through a non-pointer no type at all,
-    /// and reporting rather than returning is what keeps that from being an
+    /// `types.rs` reports an indirection through a non-pointer and gives it
+    /// no type, and reporting rather than returning is what keeps that from being an
     /// invariant somebody has to remember: the two stacks stay in step, and a
     /// change upstream cannot turn this into a panic.
     fn pointed_at(

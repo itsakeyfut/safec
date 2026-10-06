@@ -2465,6 +2465,19 @@ cases! {
         // its mutation with `passing_a_null_pointer_constant_to_a_pointer_parameter_builds`:
         // have `Checker::check_argument` pass `false` for it; this is refused.
         passing_a_null_pointer_constant_through_a_function_pointer_builds: ["--emit", "ast"],
+        // The operand of `*` shall have pointer type, C17 6.5.3.2 p2, and
+        // breaking it is the program's fault rather than this compiler's
+        // gap. Mutation: answer `None` without reporting for a non-pointer
+        // operand in `Checker::unary`; this builds.
+        indirection_through_an_int_is_a_type_error: ["--emit", "ast"],
+        // An array is the one non-pointer operand of `*` that is valid C,
+        // through a decay this compiler does not model. Mutation: report it
+        // with the others; this is refused.
+        indirection_through_an_array_is_not_reported_as_one: ["--emit", "ast"],
+        // What is called shall be a pointer to a function, C17 6.5.2.2 p1.
+        // Mutation: answer `None` without reporting for any other callee in
+        // `Checker::call`; this builds.
+        calling_something_that_is_not_a_function_is_a_type_error: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.

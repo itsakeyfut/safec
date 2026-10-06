@@ -1,0 +1,21 @@
+error[SC0306]: `*` cannot take `void`
+   ╭─[ indirection_through_an_int_is_a_type_error.c:4:6 ]
+   │
+ 4 │     *h();
+   │      ─┬─  
+   │       ╰─── this is `void`
+───╯
+error[SC0306]: `*` cannot take `int`
+   ╭─[ indirection_through_an_int_is_a_type_error.c:5:13 ]
+   │
+ 5 │     return *x + *c;
+   │             ┬  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `*` cannot take `char`
+   ╭─[ indirection_through_an_int_is_a_type_error.c:5:18 ]
+   │
+ 5 │     return *x + *c;
+   │                  ┬  
+   │                  ╰── this is `char`
+───╯
