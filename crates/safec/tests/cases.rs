@@ -2238,6 +2238,22 @@ cases! {
         a_pointer_built_from_one_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where paths meet and where the allocation is copied or grown,
+        // and an assignment over the pointer ends what it carried. Mutation:
+        // have `Held::joined` intersect `unreplaced_read`; the first builds.
+        // Mutation: have the join intersect `Known::unreplaced`; the second
+        // builds. Mutation: drop the mark where `built_from` reads a load;
+        // the third builds. Mutation: drop it in the `memcpy` arm, or where
+        // `realloc` carries a row to the new site; the fourth and fifth build.
+        // Mutation: have `Held::clear` keep it; the sixth is refused, since
+        // `z`'s allocation is reachable only through its address. See
+        // ADR-0047.
+        a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_over_one_read_out_of_a_slot_a_call_could_not_replace_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

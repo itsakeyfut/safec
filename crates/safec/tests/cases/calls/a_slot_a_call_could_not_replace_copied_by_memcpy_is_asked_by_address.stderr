@@ -1,0 +1,20 @@
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:22:5 ]
+    │
+ 22 │     memcpy(g, h, 8);
+    │     ───────┬───────  
+    │            ╰───────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address.c:24:12 ]
+    │
+ 24 │     return use2(&c);
+    │            ────┬───  
+    │                ╰───── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

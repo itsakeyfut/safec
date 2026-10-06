@@ -1,0 +1,168 @@
+Target "x86_64-pc-windows-msvc"
+Function a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:2:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+Function a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:3:6 "release_ref" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:4:5 "use2" declared
+  Local "_0" "int" return
+  Local "_1" "int **" parameter
+Function a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:6:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int **"
+  Local "_10" "void"
+  Local "_11" "int **"
+  Local "_12" "void *"
+  Local "_13" "int"
+  Local "_14" "int *"
+  Local "_15" "int **"
+  Local "_16" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:7:14 generated
+    Call a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:7:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:7:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:7:14 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:8:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:8:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:8:9 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:9:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:9:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:11:15 generated
+    Call a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:11:15 "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:11:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:11:15 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:12:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:12:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:12:9 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:13:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:13:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:12:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:15:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:15:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:15:5 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:16:10 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:16:14 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:17:17 written
+      Destination "_9"
+      Address
+        Place "_8"
+    ArgumentsEvaluated a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:17:5 generated
+    Call a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:17:5 "release_ref" "bb9"
+      Destination "_10"
+      Copy "_9"
+  Block "bb9"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:17:5 generated
+    ArgumentsEvaluated a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:18:16 generated
+    Call a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:18:16 "realloc" "bb10"
+      Destination "_12"
+      Copy "_4"
+      Constant 16
+  Block "bb10"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:18:11 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:18:16 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:19:9 written
+      Destination "_13"
+      Binary "Eq"
+        Copy "_11"
+        Constant 0
+    Branch a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:19:9 "bb11" "bb12"
+      Copy "_13"
+  Block "bb11"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:19:9 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:20:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:20:16 generated
+    Return
+  Block "bb12"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:19:9 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:22:10 written
+      Destination "_14"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:22:14 generated
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:23:17 written
+      Destination "_15"
+      Address
+        Place "_14"
+    ArgumentsEvaluated a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:23:12 generated
+    Call a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:23:12 "use2" "bb14"
+      Destination "_16"
+      Copy "_15"
+  Block "bb14"
+    Operation a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:23:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+    Sequenced a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address.c:23:12 generated
+    Return

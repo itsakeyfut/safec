@@ -1,0 +1,137 @@
+Target "x86_64-pc-windows-msvc"
+Function arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:2:6 "release_ref" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:3:5 "use2" declared
+  Local "_0" "int" return
+  Local "_1" "int **" parameter
+Function arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int **"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int *"
+  Local "_9" "int **"
+  Local "_10" "void"
+  Local "_11" "int *"
+  Local "_12" "int *"
+  Local "_13" "int **"
+  Local "_14" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:6:14 generated
+    Call arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:6:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:6:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:6:14 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:7:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:7:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:7:9 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:10:15 generated
+    Call arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:10:15 "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:10:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:10:15 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:11:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:11:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:11:9 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:12:16 generated
+    Return
+  Block "bb7"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:11:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:14:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:14:5 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:14:5 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:15:10 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:15:14 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:16:17 written
+      Destination "_9"
+      Address
+        Place "_8"
+    ArgumentsEvaluated arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:16:5 generated
+    Call arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:16:5 "release_ref" "bb9"
+      Destination "_10"
+      Copy "_9"
+  Block "bb9"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:16:5 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:17:14 written
+      Destination "_12"
+      Binary "Add"
+        Copy "_4"
+          Deref
+        Constant 1
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:17:10 written
+      Destination "_11"
+      Use
+        Copy "_12"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:17:14 generated
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:18:17 written
+      Destination "_13"
+      Address
+        Place "_11"
+    ArgumentsEvaluated arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:18:12 generated
+    Call arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:18:12 "use2" "bb10"
+      Destination "_14"
+      Copy "_13"
+  Block "bb10"
+    Operation arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:18:5 written
+      Destination "_0"
+      Use
+        Copy "_14"
+    Sequenced arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address.c:18:12 generated
+    Return
