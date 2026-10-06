@@ -70,8 +70,9 @@ const ARGUMENTS: Code = Code::new("SC0303");
 
 /// An operand an operator does not take, C17 6.5.5 p2 to 6.5.14 p2 for a
 /// binary operator, 6.5.16.2 p1 and p2 for a compound assignment, 6.5.2.4 p2
-/// and 6.5.3.1 p2 for an increment or a decrement, and 6.5.2.1 p1 for a
-/// subscript.
+/// and 6.5.3.1 p2 for an increment or a decrement, 6.5.2.1 p1 for a
+/// subscript, 6.5.3.2 p2 for `*`, and 6.5.2.2 p1 for a callee, the operand of
+/// a call's `()`.
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
 /// is refused because `*=` does not take a pointer, whatever `p` holds. A
@@ -434,7 +435,24 @@ impl Checker<'_> {
                 // checked as `g(x)` is. `*fp` reaches the function through
                 // the arm above.
                 Type::Function { .. } => operand_ty,
-                Type::Int | Type::Char | Type::Void | Type::Array { .. } => None,
+                // Valid C: 6.3.2.1 p3 makes `a` a pointer to its first
+                // element, and that decay is not modelled. Having no type
+                // here is this compiler's gap, so it is not reported as the
+                // program's.
+                Type::Array { .. } => None,
+                // p2: the operand of `*` shall have pointer type.
+                Type::Int | Type::Char | Type::Void => {
+                    let spelled = self.spelled(ast, operand_ty?);
+                    diagnostics.report(
+                        Diagnostic::error(format!("`*` cannot take `{spelled}`"))
+                            .with_code(OPERANDS)
+                            .with_label(Label::primary(
+                                ast.expr(operand).span(),
+                                format!("this is `{spelled}`"),
+                            )),
+                    );
+                    None
+                }
             },
             // Each form cites its own paragraph, the one that sends it to the
             // additive operators, and the arms are split so that the clause is
@@ -1151,6 +1169,19 @@ impl Checker<'_> {
             parameters,
         } = ast.ty(called)
         else {
+            // 6.5.2.2 p1 again: what is called is a pointer to a function.
+            // Spelled as the callee was declared, so `pp` with
+            // `int (**pp)(int)` is named `int (**)(int)` rather than the
+            // type one level in.
+            let spelled = self.spelled(ast, self.types[callee.index()]?);
+            diagnostics.report(
+                Diagnostic::error(format!("cannot call `{spelled}`"))
+                    .with_code(OPERANDS)
+                    .with_label(Label::primary(
+                        ast.expr(callee).span(),
+                        format!("this is `{spelled}`"),
+                    )),
+            );
             return None;
         };
         let returns = *returns;

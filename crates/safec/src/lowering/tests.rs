@@ -1399,17 +1399,24 @@ fn an_expression_that_names_no_place_is_reported() {
     assert!(!function(&lowered, "f").is_defined());
 }
 
-/// A call to something that is not a function is reported.
+/// A call whose callee has no type is reported.
 ///
 /// The report comes from the type check having no type for the call rather
 /// than from `callee`, which is what `callee`'s own doc comment says: a
 /// callee that could name a pointer is refused at its declaration, because
 /// the IR has no function type to give it.
 ///
+/// The callee is a conditional whose arms are different functions, which
+/// the type check leaves untyped without a report because it does not yet
+/// check a conditional's arms against each other (#358). A callee that is
+/// not a function at all, `p(1)` with `int p`, was this test's input until
+/// the type check reported it as `SC0306`; #358 will move this one too.
+///
 /// Mutation: refuse an untyped expression without reporting. This fails.
 #[test]
-fn a_call_to_something_that_is_not_a_function_is_reported() {
-    let lowered = lowered("int f(int p) {\n    return p(1);\n}\n");
+fn a_call_whose_callee_has_no_type_is_reported() {
+    let lowered =
+        lowered("int g(int a);\nint h(int *p);\n\nint f(int c) {\n    return (c ? g : h)(1);\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }
