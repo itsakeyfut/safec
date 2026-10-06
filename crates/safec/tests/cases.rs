@@ -2413,7 +2413,9 @@ cases! {
         // A `void` value where an assignment needs one, C17 6.5.16.1 p1 as
         // 6.8.6.4 p3 and 6.7.9 p11 apply it. Mutation: have
         // `Checker::assignable` answer `None` for a `void` source again; all
-        // three build.
+        // three build. The second holds each target that arm names, `int`,
+        // `char` and a pointer: answering `None` for any one of them drops
+        // that line's report.
         returning_a_void_value_from_a_function_returning_int_is_a_type_error: ["--emit", "ast"],
         initializing_with_a_void_value_is_a_type_error: ["--emit", "ast"],
         assigning_a_void_value_is_a_type_error: ["--emit", "ast"],
