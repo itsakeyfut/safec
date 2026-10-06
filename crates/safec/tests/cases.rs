@@ -2256,7 +2256,9 @@ cases! {
         // first was silent. Mutation: have `report::handed` ask only a plain
         // local one level in; the first builds. Mutation: have
         // `Known::handed_to_a_call` read a place's own edges rather than
-        // `handed_level`; the second is refused. See ADR-0045.
+        // `handed_level`; the second is refused. Mutation: ask a place of
+        // dereferences without the exemption for what only an address
+        // reaches; the third and second are refused. See ADR-0045.
         a_freed_pointer_whose_address_is_read_out_of_memory_and_handed_on_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
