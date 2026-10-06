@@ -2433,6 +2433,9 @@ cases! {
         passing_a_void_value_as_an_argument_is_a_type_error: ["--emit", "ast"],
         passing_an_int_to_a_pointer_parameter_is_a_type_error: ["--emit", "ast"],
         passing_a_null_pointer_constant_to_a_pointer_parameter_builds: ["--emit", "ast"],
+        // Every argument, not only the first. Mutation: check only the first
+        // pair in `Checker::call`; this builds.
+        a_mismatch_in_a_later_argument_is_a_type_error: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.
