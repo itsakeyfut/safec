@@ -1,0 +1,9 @@
+Function too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:1:1 "f" "int (int (*)(int))"
+  Parameter too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:1:7 "fp" "int (*)(int)"
+  Compound too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:1:23
+    Return too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:5
+      Call too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:13
+        Unary too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:13 "*"
+          Identifier too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:14 "fp"
+        Number too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:18 "1"
+        Number too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:21 "2"

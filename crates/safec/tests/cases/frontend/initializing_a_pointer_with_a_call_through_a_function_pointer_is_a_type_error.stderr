@@ -1,0 +1,9 @@
+error[SC0302]: cannot initialize `int *` with `int`
+   ╭─[ initializing_a_pointer_with_a_call_through_a_function_pointer_is_a_type_error.c:2:14 ]
+   │
+ 2 │     int *q = fp(1);
+   │          ┬   ──┬──  
+   │          ╰────────── this holds `int *`
+   │                │    
+   │                ╰──── this is `int`
+───╯

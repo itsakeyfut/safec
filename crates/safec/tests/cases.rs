@@ -2441,16 +2441,29 @@ cases! {
         // `Checker::call`; the secondary label moves.
         passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error: ["--emit", "ast"],
         // A callee of pointer-to-function type is held to its function's
-        // prototype, C17 6.5.2.2 p1. Mutation: stop seeing through the
-        // pointer in `Checker::call`; the first three build. `*g` is typed as
-        // `g`. Mutation: answer `None` for `*` of a function in
-        // `Checker::unary`; the fourth builds. A null pointer constant still
-        // passes through a function pointer. Mutation: have
-        // `Checker::check_argument` pass `false` for it; the fifth is refused.
+        // prototype, C17 6.5.2.2 p1, and its call has the function's return
+        // type. Mutation: stop seeing through the pointer in
+        // `Checker::call`; the first four build.
         too_many_arguments_through_a_function_pointer_is_a_type_error: ["--emit", "ast"],
         passing_a_pointer_through_a_function_pointer_is_a_type_error: ["--emit", "ast"],
         passing_an_int_through_an_address_of_a_function_is_a_type_error: ["--emit", "ast"],
+        initializing_a_pointer_with_a_call_through_a_function_pointer_is_a_type_error: ["--emit", "ast"],
+        // `*g` is typed as `g`, which the mutation above does not reach,
+        // because `*g` is a function rather than a pointer to one. Mutation:
+        // answer `None` for `*` of a function in `Checker::unary`; this
+        // builds.
         passing_an_int_through_a_dereferenced_function_is_a_type_error: ["--emit", "ast"],
+        // `*fp` is the function `fp` points at, through `*`'s pointer arm.
+        // Mutation: answer `None` there for a pointer to a function; this
+        // builds.
+        too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error: ["--emit", "ast"],
+        // Seeing through the pointer does not make `()` a prototype, C17
+        // 6.7.6.3 p14. Mutation: check a pointer to a function declared
+        // `()` as if it took no parameters; this is refused.
+        a_call_through_a_pointer_to_a_function_without_a_prototype_builds: ["--emit", "ast"],
+        // The null pointer constant still passes on the new path. It shares
+        // its mutation with `passing_a_null_pointer_constant_to_a_pointer_parameter_builds`:
+        // have `Checker::check_argument` pass `false` for it; this is refused.
         passing_a_null_pointer_constant_through_a_function_pointer_builds: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
