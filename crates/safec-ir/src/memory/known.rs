@@ -956,7 +956,7 @@ impl Known {
                 continue;
             }
             for container in 0..self.inside.len() {
-                if container != site && self.inside[container][site] {
+                if self.inside[container][site] {
                     self.stale[container] = true;
                 }
             }
