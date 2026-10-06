@@ -503,8 +503,8 @@ struct Analysed {
 /// Read one input as far as the frontend goes, or nothing where the scan
 /// reported about it.
 ///
-/// The two gates live here rather than in each `--emit` arm, because they are
-/// one decision about one input. The `Emitted` enum below is the same shape
+/// The three gates live here rather than in each `--emit` arm, because they
+/// are one decision about one input. The `Emitted` enum below is the same shape
 /// for the same reason, and its doc comment carries what one decision spelled
 /// in two places cost this compiler.
 ///
@@ -519,6 +519,13 @@ struct Analysed {
 /// The second is the parse. What the parser says about a token stream with a
 /// hole in it is a second diagnostic about the first one's problem, and the
 /// resolution and the types are what would draw one.
+///
+/// The third is names and types, the last stage that refuses a program as C.
+/// Everything after it reads the types it gave, so a lowering, a safety check
+/// or a backend run on a tree it refused speaks about a program that is not
+/// the one written: `return;` where a pointer was promised was followed by
+/// an `SC0408` saying the body can end without a `return`, and `*x` with
+/// `int x` by an `SC0304` calling the program this compiler's gap.
 fn analysed(
     sources: &SourceMap,
     file: FileId,
@@ -538,6 +545,9 @@ fn analysed(
 
     let resolution = resolve(sources, &ast, diagnostics);
     let types = check(sources, &mut ast, &resolution, int_range, diagnostics);
+    if diagnostics.error_count() != read_whole {
+        return Some(Analysed { ast, typed: None });
+    }
 
     Some(Analysed {
         ast,

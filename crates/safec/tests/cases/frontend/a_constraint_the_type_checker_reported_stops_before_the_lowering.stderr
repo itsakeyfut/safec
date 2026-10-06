@@ -1,0 +1,14 @@
+error[SC0306]: `*` cannot take `int`
+   ╭─[ a_constraint_the_type_checker_reported_stops_before_the_lowering.c:2:13 ]
+   │
+ 2 │     return *x + x(1);
+   │             ┬  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: cannot call `int`
+   ╭─[ a_constraint_the_type_checker_reported_stops_before_the_lowering.c:2:17 ]
+   │
+ 2 │     return *x + x(1);
+   │                 ┬  
+   │                 ╰── this is `int`
+───╯

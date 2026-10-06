@@ -1,0 +1,7 @@
+error[SC0205]: safec does not read this attribute
+   ╭─[ a_refused_attribute_stops_the_run_before_the_checks.c:1:25 ]
+   │
+ 1 │ __attribute__((annotate("unchecked")))
+   │                         ─────┬─────  
+   │                              ╰─────── the one attribute it reads is `annotate("safec_unchecked")`
+───╯

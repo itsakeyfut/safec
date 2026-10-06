@@ -1,0 +1,10 @@
+error[SC0308]: `return` with an expression in a function returning `void`
+   ╭─[ a_void_function_returning_a_value_stops_before_the_backend.c:2:12 ]
+   │
+ 1 │ void g(void) {
+   │      ┬  
+   │      ╰── declared to return `void`
+ 2 │     return 1;
+   │            ┬  
+   │            ╰── this is an expression
+───╯

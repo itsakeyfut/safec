@@ -199,8 +199,10 @@ fails every case above that has a hatch in it and
 `hatch` fails the cases that emit the IR of a hatch, and not printing the
 attribute in the tree fails `a_hatch_is_read_into_the_tree`. The lowering
 marking a hatch wherever an attribute is present, rather than where
-`sema::resolve` accepted one, fails
-`an_unproven_dereference_behind_a_refused_attribute_is_still_reported` alone.
+`sema::resolve` accepted one, fails nothing since #354, and cannot: a refused
+attribute is an error, and the driver lowers nothing after names and types
+report one. That gate is what keeps a refused attribute from being a hatch
+now, and dropping it fails `a_refused_attribute_stops_the_run_before_the_checks`.
 
 **What a call to a hatch leaves behind.** Dropping the loop in
 `memory/transfer.rs`'s `Callee::Opaque` arm that marks every live allocation
