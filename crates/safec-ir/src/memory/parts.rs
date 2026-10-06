@@ -552,6 +552,30 @@ impl Held {
         self.offset = self.offset.joined(offset);
     }
 
+    /// The one local this is certainly the address of: one address edge, and
+    /// that edge all of what it may point at, the condition a write through
+    /// it replaces under (ADR-0028). `None` for anything less certain.
+    ///
+    /// **The one test for [`Known::handed_away`](super::known::Known::handed_away)**,
+    /// which exempts a holder and so has to hold rather than may. Read where
+    /// an argument hands an address to a call and where a store puts one in
+    /// memory this check does not model, so that the two cannot disagree
+    /// about what certain means. See ADR-0047.
+    pub(super) fn certain_target(&self) -> Option<usize> {
+        if self.writes_elsewhere {
+            return None;
+        }
+        let mut targets = self
+            .writes_to
+            .iter()
+            .enumerate()
+            .filter_map(|(target, &edge)| edge.then_some(target));
+        match (targets.next(), targets.next()) {
+            (Some(target), None) => Some(target),
+            _ => None,
+        }
+    }
+
     /// Every site held, in order.
     pub(super) fn sites(&self) -> impl Iterator<Item = usize> + '_ {
         self.sites

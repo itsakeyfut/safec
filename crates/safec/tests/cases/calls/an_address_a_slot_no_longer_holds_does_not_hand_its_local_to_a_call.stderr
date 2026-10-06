@@ -1,0 +1,20 @@
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:19:5 ]
+    │
+ 19 │     release_ref(&b);
+    │     ───────┬───────  
+    │            ╰───────── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:12 ]
+    │
+ 20 │     return use2(&a);
+    │            ────┬───  
+    │                ╰───── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

@@ -1078,12 +1078,11 @@ impl Analysis for Allocations<'_> {
                     let unnamed = held.loaded || held.lost || held.foreign || deep > 1;
                     // And the locals whose address it carries are where code
                     // this check cannot read may find them, in memory it does
-                    // not model. See ADR-0047.
+                    // not model. Only a local the value certainly names, as
+                    // for an argument. See ADR-0047.
                     if unplaced || unnamed {
-                        for (target, &edge) in written.writes_to.iter().enumerate() {
-                            if edge {
-                                value.handed_away[target] = true;
-                            }
+                        if let Some(target) = written.certain_target() {
+                            value.handed_away[target] = true;
                         }
                     }
                     if unplaced {
