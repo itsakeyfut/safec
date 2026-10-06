@@ -1,0 +1,21 @@
+Declaration indirection_through_a_refused_unary_operator_is_reported_once.c:1:1 "h" "void (void)"
+Function indirection_through_a_refused_unary_operator_is_reported_once.c:3:1 "f" "int (int *)"
+  Parameter indirection_through_a_refused_unary_operator_is_reported_once.c:3:7 "p" "int *"
+  Compound indirection_through_a_refused_unary_operator_is_reported_once.c:3:15
+    Return indirection_through_a_refused_unary_operator_is_reported_once.c:4:5
+      Binary indirection_through_a_refused_unary_operator_is_reported_once.c:4:12 "+"
+        Binary indirection_through_a_refused_unary_operator_is_reported_once.c:4:12 "+"
+          Binary indirection_through_a_refused_unary_operator_is_reported_once.c:4:12 "+"
+            Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:12 "*"
+              Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:13 "+"
+                Identifier indirection_through_a_refused_unary_operator_is_reported_once.c:4:14 "p"
+            Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:18 "*"
+              Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:19 "-"
+                Identifier indirection_through_a_refused_unary_operator_is_reported_once.c:4:20 "p"
+          Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:24 "*"
+            Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:25 "~"
+              Identifier indirection_through_a_refused_unary_operator_is_reported_once.c:4:26 "p"
+        Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:30 "*"
+          Unary indirection_through_a_refused_unary_operator_is_reported_once.c:4:31 "!"
+            Call indirection_through_a_refused_unary_operator_is_reported_once.c:4:32
+              Identifier indirection_through_a_refused_unary_operator_is_reported_once.c:4:32 "h"

@@ -71,8 +71,8 @@ const ARGUMENTS: Code = Code::new("SC0303");
 /// An operand an operator does not take, C17 6.5.5 p2 to 6.5.14 p2 for a
 /// binary operator, 6.5.16.2 p1 and p2 for a compound assignment, 6.5.2.4 p2
 /// and 6.5.3.1 p2 for an increment or a decrement, 6.5.2.1 p1 for a
-/// subscript, 6.5.3.2 p2 for `*`, and 6.5.2.2 p1 for a callee, the operand of
-/// a call's `()`.
+/// subscript, 6.5.3.2 p2 for `*`, 6.5.3.3 p1 for unary `+`, `-`, `~` and `!`,
+/// and 6.5.2.2 p1 for a callee, the operand of a call's `()`.
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
 /// is refused because `*=` does not take a pointer, whatever `p` holds. A
@@ -436,9 +436,9 @@ impl Checker<'_> {
                 // the arm above.
                 Type::Function { .. } => operand_ty,
                 // Valid C: 6.3.2.1 p3 makes `a` a pointer to its first
-                // element, and that decay is not modelled. Having no type
-                // here is this compiler's gap, so it is not reported as the
-                // program's.
+                // element, and `*` does not ask `decayed` for it. Having no
+                // type here is this compiler's gap, so it is not reported as
+                // the program's.
                 Type::Array { .. } => None,
                 // p2: the operand of `*` shall have pointer type. Reported,
                 // and `None` rather than a type kept the way `binary` keeps
@@ -469,12 +469,49 @@ impl Checker<'_> {
                 self.increment(ast, op, operand, "C17 6.5.3.1 p2", diagnostics)
             }
             // 6.5.3.3: the integer promotions of 6.3.1.1 make the result of
-            // `+`, `-` and `~` an `int` for every operand this compiler can
-            // write, and p5 makes `!` an `int` outright. Still `None` for an
-            // operand nothing typed, because an operand that is not a number
-            // at all makes an expression with no type rather than an `int`,
-            // and `p = -nowhere` reported twice while this said otherwise.
-            UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => operand_ty.map(|_| self.int),
+            // `+`, `-` and `~` an `int` for every operand p1 lets them take,
+            // and p5 makes `!` an `int` outright. Still `None` for an operand
+            // nothing typed, because an operand that is not a number at all
+            // makes an expression with no type rather than an `int`: an `int`
+            // there would have `p = -nowhere` reported a second time, as an
+            // `int` given to a pointer.
+            UnOp::Plus | UnOp::Minus | UnOp::Not | UnOp::BitNot => {
+                // Decayed first, as `binary` does, so an array or a function
+                // is the pointer 6.3.2.1 p3 and p4 make it, and is spelled as
+                // one in the report.
+                let ty = self.decayed(ast, operand_ty?);
+                // p1: `+` and `-` take an arithmetic operand, `~` an integer
+                // one, and `!` a scalar one. One arm answers both of the
+                // first two, because every arithmetic type this compiler has
+                // is an integer type; a floating type would split it.
+                let takes = match ast.ty(ty) {
+                    Type::Int | Type::Char => true,
+                    // `decayed` answers neither an array nor a function, and
+                    // each would be the pointer it decays to if it did.
+                    Type::Pointer(_) | Type::Array { .. } | Type::Function { .. } => {
+                        matches!(op, UnOp::Not)
+                    }
+                    Type::Void => false,
+                };
+                if !takes {
+                    let spelled = self.spelled(ast, ty);
+                    diagnostics.report(
+                        Diagnostic::error(format!("`{}` cannot take `{spelled}`", op.as_str()))
+                            .with_code(OPERANDS)
+                            .with_label(Label::primary(
+                                ast.expr(operand).span(),
+                                format!("this is `{spelled}`"),
+                            )),
+                    );
+                    // No type rather than the `int` `binary` keeps for a
+                    // refused operation: `-p` has none C would give it, as
+                    // `*x` has none, and an `int` here would have `*+p`
+                    // reported a second time at the `*`. What a later stage
+                    // says after this is #354's.
+                    return None;
+                }
+                Some(self.int)
+            }
         }
     }
 

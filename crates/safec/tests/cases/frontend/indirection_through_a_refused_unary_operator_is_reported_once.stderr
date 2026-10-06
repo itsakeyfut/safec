@@ -1,0 +1,28 @@
+error[SC0306]: `+` cannot take `int *`
+   ╭─[ indirection_through_a_refused_unary_operator_is_reported_once.c:4:14 ]
+   │
+ 4 │     return *+p + *-p + *~p + *!h();
+   │              ┬  
+   │              ╰── this is `int *`
+───╯
+error[SC0306]: `-` cannot take `int *`
+   ╭─[ indirection_through_a_refused_unary_operator_is_reported_once.c:4:20 ]
+   │
+ 4 │     return *+p + *-p + *~p + *!h();
+   │                    ┬  
+   │                    ╰── this is `int *`
+───╯
+error[SC0306]: `~` cannot take `int *`
+   ╭─[ indirection_through_a_refused_unary_operator_is_reported_once.c:4:26 ]
+   │
+ 4 │     return *+p + *-p + *~p + *!h();
+   │                          ┬  
+   │                          ╰── this is `int *`
+───╯
+error[SC0306]: `!` cannot take `void`
+   ╭─[ indirection_through_a_refused_unary_operator_is_reported_once.c:4:32 ]
+   │
+ 4 │     return *+p + *-p + *~p + *!h();
+   │                                ─┬─  
+   │                                 ╰─── this is `void`
+───╯
