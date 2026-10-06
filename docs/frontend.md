@@ -229,6 +229,7 @@ an identifier, and a character constant is refused as `expected an expression`.
 | `int *p = 1 - 1;` | `error[SC0302]` | accepts | accepts |
 | `int *p = -0;` | `error[SC0302]` | accepts | accepts |
 | `p = 1 - 1;` with `int *p` | `error[SC0302]` | accepts | accepts |
+| `g(1 - 1)` with `int g(int *p)` | `error[SC0302]` | accepts | accepts |
 | `p == 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
 | `p == -0` with `int *p` | `error[SC0306]` | accepts | accepts |
 
@@ -238,7 +239,8 @@ evaluates a constant expression, so only a literal zero is recognised as one.
 The alternative was not reporting an integer given to a pointer at all, which
 is the mistake the check exists for; `types.rs::is_null_pointer_constant` says
 why the false report costs less. C17 6.7.9 p11 gives an initializer the
-constraints of simple assignment, so the two spellings answer alike, and C17
+constraints of simple assignment and 6.5.2.2 p2 gives an argument them too, so
+the three spellings answer alike, and C17
 6.5.9 p2 lets a pointer be compared with a null pointer constant and no other
 integer, so a comparison answers alike too. The rows stop being refused the day
 a constant expression can be evaluated.

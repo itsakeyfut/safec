@@ -308,8 +308,12 @@ writing a multiplication over an `int *` into a local declared `int`; every
 binary operator's operands are now checked against its own clause of C17 6.5.5
 to 6.5.14, so it is `error[SC0306]` too, which was #236.
 `an_allocation_multiplied_into_an_integer_is_a_type_error` in
-`crates/safec/tests/cases` holds it. A cast would reach the shape, and the
-grammar has none. `i = -p;` is accepted and breaks C17 6.5.3.3 p1, but it is
+`crates/safec/tests/cases` holds it. An argument reached the shape too:
+`g(p)` with `int g(int a)` put a pointer into a parameter, which the callee's
+body holds as a local declared `int`. C17 6.5.2.2 p2 checks each argument
+against its parameter, so it is `error[SC0302]`, which was #356, and
+`passing_a_pointer_to_an_int_parameter_is_a_type_error` holds it. A cast
+would reach the shape, and the grammar has none. `i = -p;` is accepted and breaks C17 6.5.3.3 p1, but it is
 not this shape: the memory check follows no allocation through a unary
 operator. Nothing enforces the requirement at the IR boundary, so an adapter
 that accepts such a program still has to answer for it.
