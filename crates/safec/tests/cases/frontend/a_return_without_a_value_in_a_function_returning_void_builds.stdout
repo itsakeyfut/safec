@@ -1,0 +1,7 @@
+Function a_return_without_a_value_in_a_function_returning_void_builds.c:1:1 "f" "void (int)"
+  Parameter a_return_without_a_value_in_a_function_returning_void_builds.c:1:8 "c" "int"
+  Compound a_return_without_a_value_in_a_function_returning_void_builds.c:1:15
+    If a_return_without_a_value_in_a_function_returning_void_builds.c:2:5
+      Identifier a_return_without_a_value_in_a_function_returning_void_builds.c:2:9 "c"
+      Compound a_return_without_a_value_in_a_function_returning_void_builds.c:2:12
+        Return a_return_without_a_value_in_a_function_returning_void_builds.c:3:9

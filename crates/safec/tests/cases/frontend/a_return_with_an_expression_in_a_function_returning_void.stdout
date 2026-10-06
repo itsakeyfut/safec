@@ -1,0 +1,4 @@
+Function a_return_with_an_expression_in_a_function_returning_void.c:1:1 "g" "void (void)"
+  Compound a_return_with_an_expression_in_a_function_returning_void.c:1:14
+    Return a_return_with_an_expression_in_a_function_returning_void.c:2:5
+      Number a_return_with_an_expression_in_a_function_returning_void.c:2:12 "1"

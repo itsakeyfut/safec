@@ -1,0 +1,3 @@
+Function a_return_without_a_value_in_a_function_returning_int.c:1:1 "f" "int (void)"
+  Compound a_return_without_a_value_in_a_function_returning_int.c:1:13
+    Return a_return_without_a_value_in_a_function_returning_int.c:2:5

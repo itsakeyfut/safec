@@ -76,6 +76,18 @@ const ARGUMENTS: Code = Code::new("SC0303");
 /// code is never reassigned, so the two are kept apart from the start.
 const OPERANDS: Code = Code::new("SC0306");
 
+/// A `return` that does not match whether its function returns a value,
+/// the two constraints of C17 6.8.6.4 p1: `return;` where the return type is
+/// not `void`, and `return e;` where it is, `e` a `void` expression such as
+/// `h()` included.
+///
+/// Not `MISMATCH`, which is a value of the wrong type for a place: this is
+/// whether there is an expression at all, as `OPERANDS` is kept apart from
+/// it. `clang` 20 refuses `return;` and `return 1;` by default and accepts
+/// `return h();` in a `void` function unless `-pedantic-errors` is given;
+/// C forbids it, and it is refused here as `docs/frontend.md` lists.
+const RETURN_SHAPE: Code = Code::new("SC0308");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -148,7 +160,7 @@ pub fn check(
         receivers: HashMap::new(),
     };
 
-    checker.collect_receivers(ast);
+    checker.collect_receivers(ast, diagnostics);
 
     for id in ast.expr_ids().collect::<Vec<_>>() {
         let ty = checker.type_of(ast, id, diagnostics);
@@ -181,6 +193,9 @@ struct Returning {
 enum Receiving {
     /// C17 6.8.6.4 p3.
     Return(Returning),
+    /// An expression returned from a function that returns `void`, which
+    /// C17 6.8.6.4 p1 forbids whatever its type. See `RETURN_SHAPE`.
+    ReturnFromVoid(Returning),
     /// C17 6.7.9 p11.
     Initializer {
         /// The type the declarator derived.
@@ -208,13 +223,21 @@ struct Checker<'a> {
     /// over the arena, so without this they would be reported after every
     /// expression rather than among them, and a reader would find them out of
     /// order. One map is enough because no expression is both.
+    ///
+    /// **A `return;` that owes a value is reported while this is
+    /// collected**, before every expression's report, since it has no
+    /// expression to be reported beside: a type error on an earlier line is
+    /// printed after it. One with an expression where the function returns
+    /// `void` is recorded here and reported beside its expression, in order.
+    /// See `RETURN_SHAPE`.
     receivers: HashMap<ExprId, Receiving>,
 }
 
 impl Checker<'_> {
     /// Find every `return` with a value and every initializer, and what each
-    /// has to be assignable to.
-    fn collect_receivers(&mut self, ast: &Ast) {
+    /// has to be assignable to, and report every `return` that has a value
+    /// where it may not or lacks one where it must.
+    fn collect_receivers(&mut self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         for item in ast.items() {
             let function = match item {
                 Item::Function(function) => function,
@@ -237,6 +260,7 @@ impl Checker<'_> {
                     ty: *returns,
                     name: function.name,
                 },
+                diagnostics,
             );
         }
     }
@@ -247,29 +271,57 @@ impl Checker<'_> {
     /// walk here is, and exhaustive so that a statement kind that can hold
     /// another has to be answered for rather than silently dropping the
     /// returns and initializers inside it.
-    fn receivers_in(&mut self, ast: &Ast, id: StmtId, returning: Returning) {
+    fn receivers_in(
+        &mut self,
+        ast: &Ast,
+        id: StmtId,
+        returning: Returning,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         match ast.stmt(id) {
-            Stmt::Return { value, .. } => {
-                if let Some(value) = *value {
-                    self.receivers.insert(value, Receiving::Return(returning));
+            Stmt::Return { value, span } => {
+                let void = matches!(ast.ty(returning.ty), Type::Void);
+                match (*value, void) {
+                    (Some(value), false) => {
+                        self.receivers.insert(value, Receiving::Return(returning));
+                    }
+                    (None, true) => {}
+                    (None, false) => {
+                        let spelled = self.spelled(ast, returning.ty);
+                        diagnostics.report(
+                            Diagnostic::error(format!(
+                                "`return` without a value in a function returning `{spelled}`"
+                            ))
+                            .with_code(RETURN_SHAPE)
+                            .with_label(Label::primary(*span, "this returns nothing"))
+                            .with_label(Label::secondary(
+                                returning.name,
+                                format!("declared to return `{spelled}`"),
+                            )),
+                        );
+                    }
+                    (Some(value), true) => {
+                        self.receivers
+                            .insert(value, Receiving::ReturnFromVoid(returning));
+                    }
                 }
             }
             Stmt::Declaration { declarators, .. } => self.initializers(declarators),
             Stmt::Compound { body, .. } => {
                 for &statement in body {
-                    self.receivers_in(ast, statement, returning);
+                    self.receivers_in(ast, statement, returning, diagnostics);
                 }
             }
             Stmt::If {
                 then, otherwise, ..
             } => {
-                self.receivers_in(ast, *then, returning);
+                self.receivers_in(ast, *then, returning, diagnostics);
                 if let Some(otherwise) = *otherwise {
-                    self.receivers_in(ast, otherwise, returning);
+                    self.receivers_in(ast, otherwise, returning, diagnostics);
                 }
             }
             Stmt::While { body, .. } | Stmt::For { body, .. } => {
-                self.receivers_in(ast, *body, returning);
+                self.receivers_in(ast, *body, returning, diagnostics);
             }
             Stmt::Expression { .. } | Stmt::Error { .. } => {}
         }
@@ -1003,11 +1055,26 @@ impl Checker<'_> {
         let Some(receiving) = self.receivers.get(&value).copied() else {
             return;
         };
+        if let Receiving::ReturnFromVoid(returning) = receiving {
+            diagnostics.report(
+                Diagnostic::error("`return` with an expression in a function returning `void`")
+                    .with_code(RETURN_SHAPE)
+                    .with_label(Label::primary(
+                        ast.expr(value).span(),
+                        "this is an expression",
+                    ))
+                    .with_label(Label::secondary(
+                        returning.name,
+                        "declared to return `void`",
+                    )),
+            );
+            return;
+        }
         let Some(source) = self.types[value.index()] else {
             return;
         };
         let target = match receiving {
-            Receiving::Return(returning) => returning.ty,
+            Receiving::Return(returning) | Receiving::ReturnFromVoid(returning) => returning.ty,
             Receiving::Initializer { ty, .. } => ty,
         };
 
@@ -1019,7 +1086,7 @@ impl Checker<'_> {
         let source_spelled = self.spelled(ast, source);
         let target_spelled = self.spelled(ast, target);
         let (message, place, place_label) = match receiving {
-            Receiving::Return(returning) => (
+            Receiving::Return(returning) | Receiving::ReturnFromVoid(returning) => (
                 format!(
                     "cannot return `{source_spelled}` from a function returning `{target_spelled}`"
                 ),
