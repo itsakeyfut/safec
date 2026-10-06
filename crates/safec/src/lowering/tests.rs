@@ -43,11 +43,10 @@ fn lowered(text: &str) -> Lowered {
 
 /// The same, for a program the frontend has already reported about.
 ///
-/// The gate `lowered` applies is right for everything else and wrong for
-/// exactly one case: a constant `types.rs` could not read has no type, so
-/// the frontend reports and the driver lowers anyway. What is asserted
-/// through here is that this stage adds nothing to what was already said,
-/// which is a claim about a tree that did not check.
+/// The driver does not lower such a tree: `driver.rs::analysed` stops at a
+/// type error. What is asserted through here is the lowering's own defence
+/// for when that gate is open, that a constant `types.rs` could not read
+/// gains nothing from this stage beyond what was already said.
 fn lowered_after_a_report(text: &str) -> Lowered {
     compiled(text, false)
 }

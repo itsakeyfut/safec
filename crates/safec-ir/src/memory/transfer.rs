@@ -405,11 +405,11 @@ impl Allocations<'_> {
                 // What keeps that from mattering is not this line: C17
                 // 6.5.2.2 p2 makes the call a constraint violation, so a
                 // conforming implementation has to diagnose it before any
-                // analysis runs, and the reason this one does not is the
-                // missing assignment-constraint check that #154 is about.
-                // `a_free_of_a_null_constant` pins the half the clause
-                // supports; the other half is held by nobody here and is not
-                // this check's to hold.
+                // analysis runs. This frontend does, `SC0302` since #356, and
+                // its driver runs no analysis on a tree the type check
+                // reported, since #354. `a_free_of_a_null_constant` pins the
+                // half the clause supports; the other half is held by nobody
+                // here and is not this check's to hold.
                 //
                 // **The same clause reaches a local**, where the constant was
                 // given a name first, and that is `asked`'s rather than this

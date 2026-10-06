@@ -1054,19 +1054,18 @@ impl Lowering<'_> {
         let span = self.ast.expr(id).span();
         let Some(ty) = self.types.of(id) else {
             // The match below is the list of expressions `types.rs` reports
-            // about itself, and it grows with that list: a constant has no
-            // type exactly when the frontend could not read its spelling, and
-            // said so at this span with `SC0106` or `SC0305`. A second report
-            // here would put two carets on one problem, and its note would be
-            // false for `123abc`, which is the program's fault and not this
-            // compiler's. Every expression *not* in the list is a gap nobody
-            // has reported yet, which is what the message says.
+            // about itself: a constant has no type exactly when the frontend
+            // could not read its spelling, and said so at this span with
+            // `SC0106` or `SC0305`. A second report here would put two carets
+            // on one problem, and its note would be false for `123abc`, which
+            // is the program's fault and not this compiler's. Every
+            // expression *not* in the list is a gap nobody has reported yet,
+            // which is what the message says.
             //
-            // A character constant and anything a constant-expression
-            // evaluator refuses will each join it. Forgetting to add one is
-            // two carets on one problem, which the corpus catches by the byte
-            // on the next run, so a list kept here is cheaper than a second
-            // table in `Types` saying which ids were reported.
+            // The driver does not lower a tree the type check reported
+            // about, so no run reaches the list today. It is kept as the
+            // defence it was: were that gate to open, a constant's error
+            // would not gain a second caret and a false note.
             if !matches!(self.ast.expr(id), Expr::Number { .. }) {
                 diagnostics.report(
                     Diagnostic::error("cannot compile an expression whose type is not known")
@@ -2371,8 +2370,8 @@ impl Lowering<'_> {
     /// the pair rather than at what promoting the left operand gives. `void`
     /// takes this arm to keep the `match` total and is not an answer about C:
     /// 6.5.16.2 p1 wants an arithmetic or a pointer left operand and `void` is
-    /// neither, so `*v += 1` on a `void *` is `error[SC0306]` in `types.rs`
-    /// and reaches here only because a type error does not stop the run.
+    /// neither, so `*v += 1` on a `void *` is `error[SC0306]` in `types.rs`,
+    /// and the driver does not lower a tree that reported one.
     ///
     /// Without that, `c += 100` on a `char` writes its addition straight into
     /// an 8-bit place, and the interpreter reads that place's type as the width
