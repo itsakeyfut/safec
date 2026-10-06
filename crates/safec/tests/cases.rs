@@ -2195,15 +2195,15 @@ cases! {
         // hands nothing since #350: what memory may hold is a may-set, so the
         // in-out idiom through it is asked. Mutation: mark the locals memory
         // a call reached may hold; both build. The fourth stores the address
-        // through a load, which is memory this check does not model, and a
-        // value certainly naming one local is handed away there. Mutation:
-        // drop the marking in the store transfer; it is refused. The fifth
+        // through a load, into memory this check does not model, which hands
+        // nothing either, for the reason the cases below give. Mutation: mark
+        // the local the stored value certainly names; it builds. The fifth
         // hands `a` away on one arm only. Mutation: have the join union
         // `handed_away`; it goes silent. See ADR-0047.
         a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_grown_through_the_memory_its_address_was_stored_in_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_pointer_whose_address_is_stored_through_a_load_builds_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_is_stored_through_a_load_is_asked_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A holder read by value after the call counts as one read by
         // address does, and a holder of another allocation does not count.
@@ -2276,20 +2276,37 @@ cases! {
         an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A load out of memory names one local here, but `*other` may have
         // written `*k` behind this check's back, so the edge is not all of
-        // it. **Held by nothing since #350.** Ignoring `writes_elsewhere` in
-        // `Held::certain_target` made this build while memory a call reached
-        // handed `b` away; with that route gone, `b` is a holder the call
-        // cannot replace and is asked whatever the test says, so the case
-        // stays for the shape and the condition for the rule. See ADR-0047.
+        // it. `b` is a second holder asked whatever `writes_elsewhere` says,
+        // so this decides nothing about that test on its own; the case with
+        // no second holder below is what holds it. See ADR-0047.
         a_single_address_read_out_of_memory_another_pointer_may_write_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What memory a call can reach may hold is not handed to it: a slot
         // keeps every address it was ever given in `inside_locals`, and the
         // second's slot holds null when `stash` sees it. Mutation: mark the
         // locals memory a call reached may hold; the first builds. Mutation:
-        // mark them where there is one and no site; the second builds. See
-        // ADR-0047.
+        // mark them only where `inside_locals` names one local and `inside`
+        // no site, the rejected half-measure; the second builds. The second's
+        // report at `release_ref(&b)` is a false one C defines whatever the
+        // callees do: `stash` saw null, yet `inside_locals` still puts `a` in
+        // every call's reach, the cost #345 is about. See ADR-0047.
         an_address_memory_may_hold_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Nor is an address a store puts in memory this check does not model:
+        // the slot may be written again before any code outside sees it, and
+        // an `unnamed` pointer may be this function's own memory on another
+        // path. Mutation: mark the local a stored value certainly names in
+        // the store transfer; both build. See ADR-0047.
+        an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What an argument must be to hand a call a local, each part of
+        // `Held::certain_target` and the skip before it. Mutation: ignore
+        // `writes_elsewhere`; the first builds. Mutation: answer the first of
+        // several edges; the second builds. Mutation: let a place of
+        // dereferences hand its own edges; the third loses its second
+        // report. See ADR-0047.
+        a_single_address_read_out_of_memory_another_pointer_may_overwrite_is_asked_with_no_second_holder: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_argument_that_may_be_either_of_two_unrelated_locals_hands_neither_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_place_of_dereferences_handed_to_a_call_hands_no_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

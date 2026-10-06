@@ -31,10 +31,10 @@ pub(super) struct Known {
     /// there is not the only write that can reach it.
     pub(super) escaped: Vec<bool>,
     /// Per local, whether code this check cannot read certainly holds its
-    /// address: it was handed to such a call, or stored in memory this check
-    /// does not model, by a value certainly naming it
-    /// ([`Held::certain_target`]). Not what memory such a call reached may
-    /// hold, which is a may-set.
+    /// address: an argument of such a call certainly named it
+    /// ([`Held::certain_target`]). Not an address memory may hold, whether a
+    /// call reached that memory or a store put it there, since both are
+    /// may-facts.
     ///
     /// **Narrower than [`Self::escaped`]**, which `int **pa = &a;` sets though
     /// nothing outside the function can see `pa`. That one makes every call
@@ -969,7 +969,7 @@ impl Known {
     /// `b = a; release_ref(&b); use2(&a);` is the program. The call may free
     /// the allocation through `b` and put a new one there, and cannot put
     /// anything in `a`, so `use2(&a)` may be handed a dangling pointer. A
-    /// holder whose address code this check cannot read may hold, by
+    /// holder whose address code this check cannot read certainly holds, by
     /// [`Self::handed_away`], is one the call may have replaced, so it leaves
     /// the site as it was. Not [`Self::escaped`]: `int **pa = &a;` sets that
     /// with nothing outside the function able to see `pa`, and exempting `a`
