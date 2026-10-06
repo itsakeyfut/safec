@@ -1,0 +1,7 @@
+Function passing_a_null_pointer_constant_through_a_function_pointer_builds.c:1:1 "f" "int (int (*)(int *))"
+  Parameter passing_a_null_pointer_constant_through_a_function_pointer_builds.c:1:7 "fp" "int (*)(int *)"
+  Compound passing_a_null_pointer_constant_through_a_function_pointer_builds.c:1:25
+    Return passing_a_null_pointer_constant_through_a_function_pointer_builds.c:2:5
+      Call passing_a_null_pointer_constant_through_a_function_pointer_builds.c:2:12
+        Identifier passing_a_null_pointer_constant_through_a_function_pointer_builds.c:2:12 "fp"
+        Number passing_a_null_pointer_constant_through_a_function_pointer_builds.c:2:15 "0"

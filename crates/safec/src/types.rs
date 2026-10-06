@@ -427,11 +427,14 @@ impl Checker<'_> {
             // p4: `*p` is what `p` points at.
             UnOp::Deref => match ast.ty(operand_ty?) {
                 Type::Pointer(pointee) => Some(*pointee),
-                Type::Int
-                | Type::Char
-                | Type::Void
-                | Type::Array { .. }
-                | Type::Function { .. } => None,
+                // An operand of function type is a function designator.
+                // 6.3.2.1 p4 converts it to a pointer to the function, and
+                // 6.5.3.2 p4 makes `*` of that pointer a designator of the
+                // same function, so `*g` has `g`'s type and `(*g)(x)` is
+                // checked as `g(x)` is. `*fp` reaches the function through
+                // the arm above.
+                Type::Function { .. } => operand_ty,
+                Type::Int | Type::Char | Type::Void | Type::Array { .. } => None,
             },
             // Each form cites its own paragraph, the one that sends it to the
             // additive operators, and the arms are split so that the clause is
@@ -1120,6 +1123,11 @@ impl Checker<'_> {
     /// parameters, and where they agree, each argument against its parameter
     /// in `check_argument`.
     ///
+    /// A callee of pointer-to-function type is asked as the function it
+    /// points at. 6.5.2.2 p1 makes every callee a pointer to a function, a
+    /// designator becoming one by 6.3.2.1 p4, so `fp(x)` and `(&g)(x)` are
+    /// held to the same constraint as `g(x)`.
+    ///
     /// Only where the callee's type includes a prototype, which is what that
     /// paragraph conditions the constraint on. `()` is never one: 6.7.6.3 p14
     /// makes it an empty identifier list, and a call to a function declared
@@ -1134,10 +1142,14 @@ impl Checker<'_> {
         arguments: &[ExprId],
         diagnostics: &mut DiagnosticSink,
     ) -> Option<TypeId> {
+        let mut called = self.types[callee.index()]?;
+        if let Type::Pointer(pointee) = ast.ty(called) {
+            called = *pointee;
+        }
         let Type::Function {
             returns,
             parameters,
-        } = ast.ty(self.types[callee.index()]?)
+        } = ast.ty(called)
         else {
             return None;
         };
@@ -1172,6 +1184,8 @@ impl Checker<'_> {
         .with_code(ARGUMENTS)
         .with_label(Label::primary(ast.expr(call).span(), "this call"));
 
+        // Only a callee that is a name has a declaration to point at, so
+        // `(*g)(1, 2)` and `(&g)(1, 2)` are reported without one.
         if let Some(binding) = self.resolution.resolved(callee) {
             diagnostic = diagnostic.with_label(Label::secondary(
                 self.resolution.binding(binding).name,

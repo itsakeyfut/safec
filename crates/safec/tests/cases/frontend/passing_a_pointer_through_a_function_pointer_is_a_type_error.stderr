@@ -1,0 +1,10 @@
+error[SC0302]: cannot pass `int *` to a parameter of type `int`
+   ╭─[ passing_a_pointer_through_a_function_pointer_is_a_type_error.c:7:15 ]
+   │
+ 6 │     int (*fp)(int) = g;
+   │               ─┬─  
+   │                ╰─── declared `int` here
+ 7 │     return fp(p);
+   │               ┬  
+   │               ╰── this is `int *`
+───╯

@@ -1,0 +1,8 @@
+Function a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:1:1 "f" "int (int (*)())"
+  Parameter a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:1:7 "h" "int (*)()"
+  Compound a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:1:19
+    Return a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:2:5
+      Call a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:2:12
+        Identifier a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:2:12 "h"
+        Number a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:2:14 "1"
+        Number a_call_through_a_pointer_to_a_function_without_a_prototype_builds.c:2:17 "2"

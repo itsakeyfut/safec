@@ -1,0 +1,7 @@
+error[SC0303]: too many arguments: expected 1, found 2
+   ╭─[ too_many_arguments_through_a_dereferenced_function_pointer_is_a_type_error.c:2:13 ]
+   │
+ 2 │     return (*fp)(1, 2);
+   │             ─────┬────  
+   │                  ╰────── this call
+───╯

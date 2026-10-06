@@ -1,0 +1,10 @@
+error[SC0303]: too many arguments: expected 1, found 2
+   ╭─[ too_many_arguments_through_a_function_pointer_is_a_type_error.c:2:12 ]
+   │
+ 1 │ int f(int (*fp)(int)) {
+   │             ─┬  
+   │              ╰── declared with 1 parameters here
+ 2 │     return fp(1, 2);
+   │            ────┬───  
+   │                ╰───── this call
+───╯

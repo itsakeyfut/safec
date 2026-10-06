@@ -1,0 +1,11 @@
+error[SC0302]: cannot pass `int` to a parameter of type `int *`
+   ╭─[ passing_an_int_through_a_dereferenced_function_is_a_type_error.c:4:17 ]
+   │
+ 1 │ int g(int *p);
+   │            ┬  
+   │            ╰── declared `int *` here
+   │ 
+ 4 │     return (*g)(x);
+   │                 ┬  
+   │                 ╰── this is `int`
+───╯
