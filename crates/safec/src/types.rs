@@ -440,7 +440,12 @@ impl Checker<'_> {
                 // here is this compiler's gap, so it is not reported as the
                 // program's.
                 Type::Array { .. } => None,
-                // p2: the operand of `*` shall have pointer type.
+                // p2: the operand of `*` shall have pointer type. Reported,
+                // and `None` rather than a type kept the way `binary` keeps
+                // one: there is no type `*x` would have had. So the lowering
+                // still follows this with its `SC0304` and the note that
+                // calls it this compiler's gap, which is a later stage
+                // repeating a type error, #354.
                 Type::Int | Type::Char | Type::Void => {
                     let spelled = self.spelled(ast, operand_ty?);
                     diagnostics.report(
@@ -1144,7 +1149,9 @@ impl Checker<'_> {
     /// A callee of pointer-to-function type is asked as the function it
     /// points at. 6.5.2.2 p1 makes every callee a pointer to a function, a
     /// designator becoming one by 6.3.2.1 p4, so `fp(x)` and `(&g)(x)` are
-    /// held to the same constraint as `g(x)`.
+    /// held to the same constraint as `g(x)`. Any other callee breaks p1 and
+    /// is reported as `OPERANDS`, with no type for the call, because there is
+    /// no return type to give it; the lowering's `SC0304` after it is #354.
     ///
     /// Only where the callee's type includes a prototype, which is what that
     /// paragraph conditions the constraint on. `()` is never one: 6.7.6.3 p14
