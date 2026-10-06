@@ -1,0 +1,11 @@
+error[SC0302]: cannot pass `void` to a parameter of type `int`
+   ╭─[ passing_a_void_value_as_an_argument_is_a_type_error.c:9:14 ]
+   │
+ 4 │ int g(int a) {
+   │           ┬  
+   │           ╰── declared `int` here
+   │ 
+ 9 │     return g(h());
+   │              ─┬─  
+   │               ╰─── this is `void`
+───╯

@@ -1,0 +1,14 @@
+Function passing_a_void_value_as_an_argument_is_a_type_error.c:1:1 "h" "void (void)"
+  Compound passing_a_void_value_as_an_argument_is_a_type_error.c:1:14
+Function passing_a_void_value_as_an_argument_is_a_type_error.c:4:1 "g" "int (int)"
+  Parameter passing_a_void_value_as_an_argument_is_a_type_error.c:4:7 "a" "int"
+  Compound passing_a_void_value_as_an_argument_is_a_type_error.c:4:14
+    Return passing_a_void_value_as_an_argument_is_a_type_error.c:5:5
+      Identifier passing_a_void_value_as_an_argument_is_a_type_error.c:5:12 "a"
+Function passing_a_void_value_as_an_argument_is_a_type_error.c:8:1 "f" "int (void)"
+  Compound passing_a_void_value_as_an_argument_is_a_type_error.c:8:13
+    Return passing_a_void_value_as_an_argument_is_a_type_error.c:9:5
+      Call passing_a_void_value_as_an_argument_is_a_type_error.c:9:12
+        Identifier passing_a_void_value_as_an_argument_is_a_type_error.c:9:12 "g"
+        Call passing_a_void_value_as_an_argument_is_a_type_error.c:9:14
+          Identifier passing_a_void_value_as_an_argument_is_a_type_error.c:9:14 "h"

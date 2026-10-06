@@ -466,6 +466,10 @@ cases! {
         // only case that reaches it: treating `None` as ordered leaves this
         // program silent about the double free and fails nothing else.
         a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An `int` holding zero is not a null pointer constant, so this free
+        // is not exempt. Passing an `int` for `free`'s `void *` is itself a
+        // constraint violation, `SC0302` since #356, and the memory check
+        // still runs after a type error, so its `SC0401` is what this holds.
         a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2419,6 +2423,16 @@ cases! {
         returning_a_void_value_from_a_function_returning_int_is_a_type_error: ["--emit", "ast"],
         initializing_with_a_void_value_is_a_type_error: ["--emit", "ast"],
         assigning_a_void_value_is_a_type_error: ["--emit", "ast"],
+        // An argument is checked against its parameter, C17 6.5.2.2 p2, as
+        // an initializer is. Mutation: skip the per-argument check in
+        // `Checker::call`; the first three build. A null pointer constant
+        // still passes for a pointer. Mutation: have
+        // `Checker::check_argument` pass `false` for it; the fourth is
+        // refused.
+        passing_a_pointer_to_an_int_parameter_is_a_type_error: ["--emit", "ast"],
+        passing_a_void_value_as_an_argument_is_a_type_error: ["--emit", "ast"],
+        passing_an_int_to_a_pointer_parameter_is_a_type_error: ["--emit", "ast"],
+        passing_a_null_pointer_constant_to_a_pointer_parameter_builds: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.

@@ -1,0 +1,10 @@
+Declaration passing_an_int_to_a_pointer_parameter_is_a_type_error.c:1:1 "q" "int *(int *)"
+  Parameter passing_an_int_to_a_pointer_parameter_is_a_type_error.c:1:8 "p" "int *"
+Function passing_an_int_to_a_pointer_parameter_is_a_type_error.c:3:1 "f" "int (void)"
+  Compound passing_an_int_to_a_pointer_parameter_is_a_type_error.c:3:13
+    Return passing_an_int_to_a_pointer_parameter_is_a_type_error.c:4:5
+      Binary passing_an_int_to_a_pointer_parameter_is_a_type_error.c:4:12 "=="
+        Call passing_an_int_to_a_pointer_parameter_is_a_type_error.c:4:12
+          Identifier passing_an_int_to_a_pointer_parameter_is_a_type_error.c:4:12 "q"
+          Number passing_an_int_to_a_pointer_parameter_is_a_type_error.c:4:14 "1"
+        Number passing_an_int_to_a_pointer_parameter_is_a_type_error.c:4:20 "0"
