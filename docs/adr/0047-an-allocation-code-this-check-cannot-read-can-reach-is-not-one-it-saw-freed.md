@@ -59,9 +59,22 @@ The route is drawn at the holder too ([#326](https://github.com/itsakeyfut/safec
 
 The third row is the cost the first table already pays in its `show1(q)` row. The same cost reaches the cursor idiom wherever the original is used again by address: `p = buf; next_token(&p); release_buf(&buf);` is refused, since `next_token` may have freed what `buf` holds and cannot replace `buf`, and is defined where it only advances `p`. A hole in the liveness would take a holder for dead and leave the site `Reachable`, which is a silence; ADR-0048's unit tests, one per kind of read, are what hold that. A route `handed_away` misses leaves a holder counted, which is a report.
 
+A slot in memory is a holder the call may not be able to replace either, and it has no liveness to say whether it is read again ([#346](https://github.com/itsakeyfut/safec/issues/346)). So it is not counted: each allocation that may contain the site is marked `stale`, as ADR-0045 marks one whose contents may name something gone, and a pointer later read out of it is asked where it is handed by address, whatever its sites' state. Measured against counting the slot as a holder:
+
+| probe, after `*h = a;` | C defines it | before #346 | slot counted | slot marked (chosen) |
+|---|---|---|---|---|
+| `b = a; release_ref(&b); c = *h; use2(&c);` | no, if `release_ref` frees and `use2` reads `*pp` | builds | refused | refused |
+| `b = a; grow(&b); c = *h; use2(&c);` | no, if `grow` reallocates and `use2` reads | builds | refused | refused |
+| `use2(&a); log_line(); c = *h; use2(&c);` | no, if either frees | builds | refused | refused |
+| `grow(&a); use2(&a);`, `*h` never read again | yes | builds | **refused** | builds |
+| `use2(&a); use2(&a);`, `*h` never read again | yes | builds | **refused** | builds |
+| `*h = 0; b = a; grow(&b); use2(&b);` | yes | builds | **refused** | builds |
+
+Every allocation that may contain the site is marked, not only those the call did not reach: a load out of one it reached is doubted already, and skipping those, the ones no live local reaches, or the ones already freed moved no probe and no corpus case. A stale read for any other reason is now asked at a call by address as well, which moved no corpus case either.
+
 The rule also turns a site `Unknown` at a call that did not reach it: every escaped local's sites are in every call's reach (ADR-0039), so after `b = a; int **pb = &b; log_line();`, which reaches nothing in C, `use2(&a)` is refused. Narrowing the sites to the ones the call reached through an address handed away would make a missed route a silence, so it stays a report, and [#345](https://github.com/itsakeyfut/safec/issues/345) is where the reach itself is to narrow.
 
-What the chosen option still does not ask, each of which builds on `main` as well: a call handed only an address that frees what is there and does not replace it, followed by a second call handed the address, which is the callee's contract; an allocation exposed to code this check cannot read, freed by a later call through what it kept, and then handed by address; and an allocation whose other holder is a slot in memory rather than a local, `*h = a; b = a; release_ref(&b); c = *h; use2(&c);`, since only locals are counted as holders ([#346](https://github.com/itsakeyfut/safec/issues/346)).
+What the chosen option still does not ask, each of which builds on `main` as well: a call handed only an address that frees what is there and does not replace it, followed by a second call handed the address, which is the callee's contract; an allocation exposed to code this check cannot read, freed by a later call through what it kept, and then handed by address.
 
 ### Confirmation
 
@@ -75,6 +88,7 @@ The cases are in `crates/safec/tests/cases`, and every mutation is in `crates/sa
 - Every producer but an address taken writing `Unknown`, which is the rejected option, fails `a_pointer_handed_by_address_twice_builds` and `a_pointer_handed_by_address_around_another_call_builds` and nothing else, which are refused.
 - Dropping the call to `Known::held_out_of_reach` fails `a_pointer_a_call_reached_through_another_locals_address_is_asked_by_address`, `a_pointer_a_call_reached_through_a_locals_address_in_memory_is_asked_by_address`, `a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy`, `a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it` and `a_copy_read_by_value_after_a_call_reached_it_through_another_address_is_asked`, which build. Its `live_after` answering `true` refuses `a_copy_grown_twice_by_address_builds`, `a_dead_copy_does_not_doubt_a_pointer_grown_by_address` and two more, and counting only a holder whose address is taken silences the last of the five above. Asking whether a holder holds any site rather than this one refuses `a_call_reached_through_a_copy_of_another_allocation_does_not_doubt_this_one`.
 - Testing `escaped` in place of `handed_away` silences `a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy` and the one-arm case. Each route that sets `handed_away` fails its own: dropping the argument fails `a_pointer_handed_by_address_twice_builds` and five more, dropping memory a call reached refuses `a_pointer_whose_address_is_in_exposed_memory_builds_after_a_call` and `a_pointer_grown_through_the_memory_its_address_was_stored_in_builds`, and dropping a store into memory this check does not model refuses `a_pointer_whose_address_is_stored_through_a_load_builds_after_a_call`. A join that unions it silences `a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it`.
+- Dropping the marking of a slot in `held_out_of_reach`, or the `stale` test in `handed_below`, silences `a_pointer_copied_out_of_a_slot_a_call_could_not_replace_is_asked_by_address`; turning the site `Unknown` for a slot instead refuses `a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address`.
 
 ### Consequences
 
