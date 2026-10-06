@@ -276,15 +276,25 @@ impl Known {
     /// reached what `*h` holds through another route. **Never a proof**:
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
-    pub(super) fn handed_below(&self, local: LocalId) -> Vec<Reached> {
+    ///
+    /// **A place of dereferences is asked from the level its load would
+    /// hold**, by [`Self::handed_level`], so `use2(*k)` and `q = *k;
+    /// use2(q);` are one question. Before, only a plain local was asked one
+    /// level in, and `free(a); *k = &a; use2(*k);` built where the second
+    /// spelling was refused. See ADR-0045.
+    pub(super) fn handed_below(&self, place: &Place) -> Vec<Reached> {
+        let Some((sites, locals)) = self.handed_level(place) else {
+            return Vec::new();
+        };
         // **Only what the address alone reaches.** A load out of memory
         // carries the locals it may be as edges too, so `m = *h;` with `*h`
         // holding either `&slot` or `x` reaches `x`'s contents through
         // memory and `slot`'s through an edge, and exempting everything
         // `slot` holds silenced a freed pointer `x` held as well. Found by
         // review.
-        let through_memory: BTreeSet<usize> = self.points_to[local.index()]
-            .sites()
+        let through_memory: BTreeSet<usize> = sites
+            .iter()
+            .copied()
             .flat_map(|container| {
                 self.inside[container]
                     .iter()
@@ -294,15 +304,17 @@ impl Known {
                     .collect::<Vec<_>>()
             })
             .collect();
-        let through_address: BTreeSet<usize> = self
-            .written_through(local)
-            .into_iter()
-            .flat_map(|target| self.points_to[target].sites())
+        let through_address: BTreeSet<usize> = locals
+            .iter()
+            .flat_map(|&target| self.points_to[target].sites())
             .filter(|site| !through_memory.contains(site))
             .collect();
-        let read_unreplaced = self.unreplaced_through(local, 1);
+        let read_unreplaced = locals
+            .iter()
+            .any(|&target| self.points_to[target].unreplaced_read);
         let mut reached: Vec<Reached> = self
-            .stored_below(local, 1)
+            .level_below(&sites, &locals)
+            .0
             .into_iter()
             .filter(|&site| match self.state[site] {
                 SiteState::Freed { .. } => true,
@@ -398,13 +410,18 @@ impl Known {
             .any(|target| self.points_to[target].stale_read)
     }
 
-    /// Whether a local a read through `local` passes through was read out of
-    /// an allocation [`Self::unreplaced`] marks, as [`Self::stale_through`]
-    /// asks of [`Held::stale_read`]. See ADR-0047.
-    pub(super) fn unreplaced_through(&self, local: LocalId, depth: usize) -> bool {
-        self.locals_read_through(local, depth)
-            .into_iter()
-            .any(|target| self.points_to[target].unreplaced_read)
+    /// What a pointer handed to a call holds: the allocations it may point
+    /// at and the locals whose address it may be. For a plain local, what it
+    /// holds and its address edges; for a place of dereferences, the level a
+    /// load of it would hold, which is what `q = *k;` puts in `q`. Nothing
+    /// for a local this check lost, whose contents are not named. See
+    /// ADR-0045.
+    fn handed_level(&self, place: &Place) -> Option<(BTreeSet<usize>, BTreeSet<usize>)> {
+        if place.projection.is_empty() {
+            self.level_zero(place.local)
+        } else {
+            Some(self.levels_below(place.local, derefs(place)))
+        }
     }
 
     /// Whether a pointer read `depth` dereferences below `local` may be one
@@ -998,16 +1015,29 @@ impl Known {
     /// stored in memory code it cannot read may reach, are
     /// [`Self::handed_away`] from here on.
     ///
-    /// **Not what an argument read out of memory may carry**, nor what a
-    /// library call is handed: either is a route missed, which leaves a holder
-    /// counted by [`Self::held_out_of_reach`] and costs a report rather than
-    /// a silence.
+    /// **Only a local the argument certainly names.** The fact exempts a
+    /// holder, so a local the argument may only be the address of is one the
+    /// call may never have been handed: with `if (c) q = &a; else q = &b;`,
+    /// or `*k = &a; *k = &b;`, marking both exempted `a` after `grow(q)` or
+    /// `grow(*k)` and `use2(&a)` built over a pointer `grow` may have freed
+    /// through `b`. So a plain local counts where its address edges are one
+    /// local and all of what it may point at, the condition a write through
+    /// it replaces under (ADR-0028), and a place of dereferences never does:
+    /// what memory holds is a lower bound, so one local read there is not
+    /// one local certainly. Every route missed leaves a holder counted by
+    /// [`Self::held_out_of_reach`], which costs a report rather than a
+    /// silence: `grow(*k); grow(*k);` is asked at the second call.
     pub(super) fn handed_to_a_call(&mut self, handed: &[Operand]) {
         for argument in handed {
-            if let Operand::Copy(place) = argument {
-                for target in self.written_through(place.local) {
-                    self.handed_away[target] = true;
-                }
+            let Operand::Copy(place) = argument else {
+                continue;
+            };
+            if !place.projection.is_empty() || self.points_to[place.local.index()].writes_elsewhere
+            {
+                continue;
+            }
+            if let [target] = self.written_through(place.local)[..] {
+                self.handed_away[target] = true;
             }
         }
         for site in self.reachable_now() {
