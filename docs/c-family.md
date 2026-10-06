@@ -313,8 +313,9 @@ to 6.5.14, so it is `error[SC0306]` too, which was #236.
 body holds as a local declared `int`. C17 6.5.2.2 p2 checks each argument
 against its parameter, so it is `error[SC0302]`, which was #356, and
 `passing_a_pointer_to_an_int_parameter_is_a_type_error` holds it. A cast
-would reach the shape, and the grammar has none. `i = -p;` is accepted and breaks C17 6.5.3.3 p1, but it is
-not this shape: the memory check follows no allocation through a unary
+would reach the shape, and the grammar has none. `i = -p;` breaks C17
+6.5.3.3 p1 and is `error[SC0306]`, which was #240, but it was never this
+shape: the memory check follows no allocation through a unary
 operator. Nothing enforces the requirement at the IR boundary, so an adapter
 that accepts such a program still has to answer for it.
 
