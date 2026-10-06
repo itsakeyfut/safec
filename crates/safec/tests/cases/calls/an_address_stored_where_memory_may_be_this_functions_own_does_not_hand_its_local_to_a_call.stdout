@@ -1,0 +1,177 @@
+Target "x86_64-pc-windows-msvc"
+Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:2:6 "release_ref" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:3:5 "use2" declared
+  Local "_0" "int" return
+  Local "_1" "int **" parameter
+Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int ****" parameter _Nonnull
+  Local "_2" "int" parameter
+  Local "_3" "int ***"
+  Local "_4" "void *"
+  Local "_5" "int"
+  Local "_6" "int ***"
+  Local "_7" "int ***"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "int **"
+  Local "_14" "int **"
+  Local "_15" "int **"
+  Local "_16" "void"
+  Local "_17" "int **"
+  Local "_18" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:6:16 generated
+    Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:6:16 "malloc" "bb1"
+      Destination "_4"
+      Constant 8
+  Block "bb1"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:6:12 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:6:16 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:7:9 written
+      Destination "_5"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:7:9 "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:7:9 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:10:12 written
+      Destination "_6"
+      Use
+        Copy "_3"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:10:16 generated
+    Branch an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:11:9 "bb5" "bb6"
+      Copy "_2"
+  Block "bb5"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:11:9 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:12:9 written
+      Destination "_6"
+      Use
+        Copy "_1"
+          Deref
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:12:9 written
+      Destination "_7"
+      Use
+        Copy "_6"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:12:9 generated
+    Goto "bb7"
+  Block "bb6"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:11:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:14:9 written
+      Destination "_8"
+      Binary "Eq"
+        Copy "_6"
+        Constant 0
+    Branch an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:14:9 "bb8" "bb9"
+      Copy "_8"
+  Block "bb8"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:14:9 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:15:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:15:16 generated
+    Return
+  Block "bb9"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:14:9 generated
+    Goto "bb10"
+  Block "bb10"
+    ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:17:14 generated
+    Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:17:14 "malloc" "bb11"
+      Destination "_10"
+      Constant 4
+  Block "bb11"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:17:10 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:17:14 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:18:9 written
+      Destination "_11"
+      Binary "Eq"
+        Copy "_9"
+        Constant 0
+    Branch an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:18:9 "bb12" "bb13"
+      Copy "_11"
+  Block "bb12"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:18:9 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:19:16 generated
+    Return
+  Block "bb13"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:18:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:21:10 written
+      Destination "_12"
+      Use
+        Copy "_9"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:21:14 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:22:10 written
+      Destination "_13"
+      Address
+        Place "_9"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:22:5 written
+      Destination "_6"
+        Deref
+      Use
+        Copy "_13"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:22:5 written
+      Destination "_14"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:22:5 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:17 written
+      Destination "_15"
+      Address
+        Place "_12"
+    ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:5 generated
+    Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:5 "release_ref" "bb15"
+      Destination "_16"
+      Copy "_15"
+  Block "bb15"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:5 generated
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:17 written
+      Destination "_17"
+      Address
+        Place "_9"
+    ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 generated
+    Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 "use2" "bb16"
+      Destination "_18"
+      Copy "_17"
+  Block "bb16"
+    Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:5 written
+      Destination "_0"
+      Use
+        Copy "_18"
+    Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 generated
+    Return

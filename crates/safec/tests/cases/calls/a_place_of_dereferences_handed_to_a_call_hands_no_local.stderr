@@ -1,0 +1,20 @@
+error[SC0407]: this may pass a pointer to an allocation that was freed
+    ╭─[ a_place_of_dereferences_handed_to_a_call_hands_no_local.c:11:5 ]
+    │
+ 11 │     drop(*k);
+    │     ────┬───  
+    │         ╰───── passed here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ a_place_of_dereferences_handed_to_a_call_hands_no_local.c:12:12 ]
+    │
+ 12 │     return use2(&a);
+    │            ────┬───  
+    │                ╰───── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

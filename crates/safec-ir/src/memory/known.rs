@@ -30,9 +30,11 @@ pub(super) struct Known {
     /// no more proved than what it held before, because the write that put it
     /// there is not the only write that can reach it.
     pub(super) escaped: Vec<bool>,
-    /// Per local, whether code this check cannot read may hold its address:
-    /// it was handed to such a call, stored in memory such a call reached, or
-    /// stored in memory this check does not model.
+    /// Per local, whether code this check cannot read certainly holds its
+    /// address: an argument of such a call certainly named it
+    /// ([`Held::certain_target`]). Not an address memory may hold, whether a
+    /// call reached that memory or a store put it there, since both are
+    /// may-facts.
     ///
     /// **Narrower than [`Self::escaped`]**, which `int **pa = &a;` sets though
     /// nothing outside the function can see `pa`. That one makes every call
@@ -967,7 +969,7 @@ impl Known {
     /// `b = a; release_ref(&b); use2(&a);` is the program. The call may free
     /// the allocation through `b` and put a new one there, and cannot put
     /// anything in `a`, so `use2(&a)` may be handed a dangling pointer. A
-    /// holder whose address code this check cannot read may hold, by
+    /// holder whose address code this check cannot read certainly holds, by
     /// [`Self::handed_away`], is one the call may have replaced, so it leaves
     /// the site as it was. Not [`Self::escaped`]: `int **pa = &a;` sets that
     /// with nothing outside the function able to see `pa`, and exempting `a`
@@ -1011,8 +1013,7 @@ impl Known {
     }
 
     /// Record that a call this check cannot read was handed `handed`: the
-    /// locals whose address an argument carries, and those whose address is
-    /// stored in memory code it cannot read may reach, are
+    /// local whose address an argument certainly carries is
     /// [`Self::handed_away`] from here on.
     ///
     /// **Only a local the argument certainly names.** The fact exempts a
@@ -1021,30 +1022,28 @@ impl Known {
     /// or `*k = &a; *k = &b;`, marking both exempted `a` after `grow(q)` or
     /// `grow(*k)` and `use2(&a)` built over a pointer `grow` may have freed
     /// through `b`. So a plain local counts where its address edges are one
-    /// local and all of what it may point at, the condition a write through
-    /// it replaces under (ADR-0028), and a place of dereferences never does:
+    /// local and all of what it may point at ([`Held::certain_target`]),
+    /// and a place of dereferences never does:
     /// what memory holds is a lower bound, so one local read there is not
     /// one local certainly. Every route missed leaves a holder counted by
     /// [`Self::held_out_of_reach`], which costs a report rather than a
     /// silence: `grow(*k); grow(*k);` is asked at the second call.
+    ///
+    /// **Not what memory the call can reach may hold**, for the same reason:
+    /// what a slot was given stays in [`Self::inside_locals`] after the slot
+    /// is given something else, so `*t = &a; *t = 0; stash(t);` exempted `a`
+    /// though `stash` saw only null. The in-out idiom through memory a call
+    /// can reach is asked for it. See ADR-0047.
     pub(super) fn handed_to_a_call(&mut self, handed: &[Operand]) {
         for argument in handed {
             let Operand::Copy(place) = argument else {
                 continue;
             };
-            if !place.projection.is_empty() || self.points_to[place.local.index()].writes_elsewhere
-            {
+            if !place.projection.is_empty() {
                 continue;
             }
-            if let [target] = self.written_through(place.local)[..] {
+            if let Some(target) = self.points_to[place.local.index()].certain_target() {
                 self.handed_away[target] = true;
-            }
-        }
-        for site in self.reachable_now() {
-            for (local, &held) in self.inside_locals[site].iter().enumerate() {
-                if held {
-                    self.handed_away[local] = true;
-                }
             }
         }
     }

@@ -1076,16 +1076,13 @@ impl Analysis for Allocations<'_> {
                     // `s` and was silent after a later call. See ADR-0044.
                     let held = &value.points_to[pointer];
                     let unnamed = held.loaded || held.lost || held.foreign || deep > 1;
-                    // And the locals whose address it carries are where code
-                    // this check cannot read may find them, in memory it does
-                    // not model. See ADR-0047.
-                    if unplaced || unnamed {
-                        for (target, &edge) in written.writes_to.iter().enumerate() {
-                            if edge {
-                                value.handed_away[target] = true;
-                            }
-                        }
-                    }
+                    // **Not a local whose address it carries**, though code
+                    // this check cannot read may find it there: the slot may
+                    // be written again before any such code runs, and an
+                    // `unnamed` pointer may land in this function's own
+                    // memory on another path, so the address being out there
+                    // is a may-fact and would exempt a holder from being
+                    // asked. See ADR-0047.
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
                     } else {
