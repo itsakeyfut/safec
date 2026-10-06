@@ -2478,6 +2478,19 @@ cases! {
         // Mutation: answer `None` without reporting for any other callee in
         // `Checker::call`; this builds.
         calling_something_that_is_not_a_function_is_a_type_error: ["--emit", "ast"],
+        // Unary `+` and `-` take an arithmetic operand, `~` an integer one
+        // and `!` a scalar one, C17 6.5.3.3 p1. Mutation: answer `int` for
+        // any typed operand in `Checker::unary` again; the first two build.
+        // Mutation: let `!` take `void`; the second loses its report on
+        // `!h()`. Mutation: refuse `!` of a pointer, an array or a
+        // function; the third is refused.
+        a_unary_operator_on_a_pointer_is_a_type_error: ["--emit", "ast"],
+        a_unary_operator_on_void_or_a_function_is_a_type_error: ["--emit", "ast"],
+        a_unary_operator_on_an_operand_c_allows_builds: ["--emit", "ast"],
+        // A refused unary operator has no type, so the `*` around it is not
+        // reported again. Mutation: answer `int` after the refusal; a second
+        // report appears at the `*`.
+        indirection_through_a_refused_unary_plus_is_reported_once: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.

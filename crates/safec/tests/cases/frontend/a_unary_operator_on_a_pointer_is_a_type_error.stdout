@@ -1,0 +1,26 @@
+Declaration a_unary_operator_on_a_pointer_is_a_type_error.c:1:1 "malloc" "void *(int)"
+  Parameter a_unary_operator_on_a_pointer_is_a_type_error.c:1:14 "n" "int"
+Function a_unary_operator_on_a_pointer_is_a_type_error.c:3:1 "f" "int (void)"
+  Compound a_unary_operator_on_a_pointer_is_a_type_error.c:3:13
+    Declaration a_unary_operator_on_a_pointer_is_a_type_error.c:4:5 "p" "int *"
+      Call a_unary_operator_on_a_pointer_is_a_type_error.c:4:14
+        Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:4:14 "malloc"
+        Number a_unary_operator_on_a_pointer_is_a_type_error.c:4:21 "8"
+    Declaration a_unary_operator_on_a_pointer_is_a_type_error.c:5:5 "i" "int"
+    Expression a_unary_operator_on_a_pointer_is_a_type_error.c:6:5
+      Assign a_unary_operator_on_a_pointer_is_a_type_error.c:6:5 "="
+        Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:6:5 "i"
+        Unary a_unary_operator_on_a_pointer_is_a_type_error.c:6:9 "-"
+          Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:6:10 "p"
+    Expression a_unary_operator_on_a_pointer_is_a_type_error.c:7:5
+      Assign a_unary_operator_on_a_pointer_is_a_type_error.c:7:5 "="
+        Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:7:5 "i"
+        Unary a_unary_operator_on_a_pointer_is_a_type_error.c:7:9 "~"
+          Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:7:10 "p"
+    Expression a_unary_operator_on_a_pointer_is_a_type_error.c:8:5
+      Assign a_unary_operator_on_a_pointer_is_a_type_error.c:8:5 "="
+        Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:8:5 "i"
+        Unary a_unary_operator_on_a_pointer_is_a_type_error.c:8:9 "+"
+          Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:8:10 "p"
+    Return a_unary_operator_on_a_pointer_is_a_type_error.c:9:5
+      Identifier a_unary_operator_on_a_pointer_is_a_type_error.c:9:12 "i"

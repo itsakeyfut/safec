@@ -1,0 +1,21 @@
+error[SC0306]: `-` cannot take `int *`
+   ╭─[ a_unary_operator_on_a_pointer_is_a_type_error.c:6:10 ]
+   │
+ 6 │     i = -p;
+   │          ┬  
+   │          ╰── this is `int *`
+───╯
+error[SC0306]: `~` cannot take `int *`
+   ╭─[ a_unary_operator_on_a_pointer_is_a_type_error.c:7:10 ]
+   │
+ 7 │     i = ~p;
+   │          ┬  
+   │          ╰── this is `int *`
+───╯
+error[SC0306]: `+` cannot take `int *`
+   ╭─[ a_unary_operator_on_a_pointer_is_a_type_error.c:8:10 ]
+   │
+ 8 │     i = +p;
+   │          ┬  
+   │          ╰── this is `int *`
+───╯
