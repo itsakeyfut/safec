@@ -2213,6 +2213,15 @@ cases! {
         // holds any site rather than this one; the second is refused.
         a_copy_read_by_value_after_a_call_reached_it_through_another_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_reached_through_a_copy_of_another_allocation_does_not_doubt_this_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A slot in memory holding what the call reached is marked, and a
+        // pointer read out of it is asked where it is handed by address; a
+        // slot nothing reads again costs nothing. Mutation: drop the marking
+        // in `Known::held_out_of_reach`; the first builds. Mutation: drop
+        // `|| stale` in `Known::handed_below`; the first builds. Mutation:
+        // turn the site `Unknown` for a slot instead; the second is refused.
+        // See ADR-0047.
+        a_pointer_copied_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

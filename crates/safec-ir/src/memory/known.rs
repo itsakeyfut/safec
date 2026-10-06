@@ -263,7 +263,10 @@ impl Known {
     /// `use2(&a)` was silent (ADR-0047). A freed one is asked whichever way it
     /// is reached, and a reachable one through this function's own memory is,
     /// since nothing about the call made it so: `*t = a; release(a); use2(t);`
-    /// was silent. **Never a proof**:
+    /// was silent. And a reachable one is asked where the address handed
+    /// passes through a pointer read out of an allocation
+    /// [`Self::held_out_of_reach`] marked: `c = *h; use2(&c);` after a call
+    /// that reached what `*h` holds through another route. **Never a proof**:
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     pub(super) fn handed_below(&self, local: LocalId) -> Vec<Reached> {
@@ -290,13 +293,14 @@ impl Known {
             .flat_map(|target| self.points_to[target].sites())
             .filter(|site| !through_memory.contains(site))
             .collect();
+        let stale = self.stale_through(local, 1);
         let mut reached: Vec<Reached> = self
             .stored_below(local, 1)
             .into_iter()
             .filter(|&site| match self.state[site] {
                 SiteState::Freed { .. } => true,
                 SiteState::Unknown => true,
-                SiteState::Reachable => !through_address.contains(&site),
+                SiteState::Reachable => !through_address.contains(&site) || stale,
                 SiteState::Live(_) => false,
             })
             .map(Reached::Site)
@@ -936,11 +940,25 @@ impl Known {
     /// **Only a holder live after the call**, by `live_after`. A copy nothing
     /// reads again holds the site as well, and counting it refused `b = a;
     /// grow(&b); grow(&b);` and `b = a; grow(&a); use2(&a);`, which C
-    /// defines. See ADR-0047.
+    /// defines.
+    ///
+    /// **A slot in memory holding it is marked rather than counted.** The
+    /// call cannot replace a slot it did not reach either, and a slot has no
+    /// liveness to say whether it is read again, so counting it refused `*h
+    /// = a; grow(&a); use2(&a);` with `*h` never read. Each allocation that
+    /// may contain the site is marked [`Self::stale`], and a pointer later
+    /// read out of it is asked about where it is handed by address, which
+    /// [`Self::handed_below`] does. Not only the allocations the call did not
+    /// reach: a load out of one it reached is doubted already. See ADR-0047.
     pub(super) fn held_out_of_reach(&mut self, live_after: impl Fn(usize) -> bool) {
         for site in 0..self.state.len() {
             if self.state[site] != SiteState::Reachable {
                 continue;
+            }
+            for container in 0..self.inside.len() {
+                if container != site && self.inside[container][site] {
+                    self.stale[container] = true;
+                }
             }
             let out_of_reach = (0..self.points_to.len()).any(|holder| {
                 !self.handed_away[holder]
