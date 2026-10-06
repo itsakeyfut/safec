@@ -2274,6 +2274,11 @@ cases! {
         a_place_and_what_it_points_at_handed_to_one_call_are_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_overwritten_in_memory_does_not_hand_its_old_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_address_a_local_may_hold_on_one_arm_does_not_hand_that_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A load out of memory names one local here, but  may have
+        // written  behind this check's back, so the edge is not all of
+        // it. Mutation: have  ignore
+        // ; this builds. See ADR-0047.
+        a_single_address_read_out_of_memory_another_pointer_may_write_does_not_hand_its_local_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
