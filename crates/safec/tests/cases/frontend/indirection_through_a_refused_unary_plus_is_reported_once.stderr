@@ -1,7 +1,0 @@
-error[SC0306]: `+` cannot take `int *`
-   ╭─[ indirection_through_a_refused_unary_plus_is_reported_once.c:2:14 ]
-   │
- 2 │     return *+p;
-   │              ┬  
-   │              ╰── this is `int *`
-───╯

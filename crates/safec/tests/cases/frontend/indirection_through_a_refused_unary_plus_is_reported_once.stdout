@@ -1,7 +1,0 @@
-Function indirection_through_a_refused_unary_plus_is_reported_once.c:1:1 "f" "int (int *)"
-  Parameter indirection_through_a_refused_unary_plus_is_reported_once.c:1:7 "p" "int *"
-  Compound indirection_through_a_refused_unary_plus_is_reported_once.c:1:15
-    Return indirection_through_a_refused_unary_plus_is_reported_once.c:2:5
-      Unary indirection_through_a_refused_unary_plus_is_reported_once.c:2:12 "*"
-        Unary indirection_through_a_refused_unary_plus_is_reported_once.c:2:13 "+"
-          Identifier indirection_through_a_refused_unary_plus_is_reported_once.c:2:14 "p"

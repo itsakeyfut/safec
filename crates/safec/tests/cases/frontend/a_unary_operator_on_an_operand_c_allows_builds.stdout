@@ -20,22 +20,42 @@ Function a_unary_operator_on_an_operand_c_allows_builds.c:3:1 "f" "int (int, cha
     Expression a_unary_operator_on_an_operand_c_allows_builds.c:8:5
       Assign a_unary_operator_on_an_operand_c_allows_builds.c:8:5 "="
         Identifier a_unary_operator_on_an_operand_c_allows_builds.c:8:5 "i"
-        Unary a_unary_operator_on_an_operand_c_allows_builds.c:8:9 "+"
-          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:8:10 "c"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:8:9 "!"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:8:10 "n"
     Expression a_unary_operator_on_an_operand_c_allows_builds.c:9:5
       Assign a_unary_operator_on_an_operand_c_allows_builds.c:9:5 "="
         Identifier a_unary_operator_on_an_operand_c_allows_builds.c:9:5 "i"
-        Unary a_unary_operator_on_an_operand_c_allows_builds.c:9:9 "!"
-          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:9:10 "p"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:9:9 "+"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:9:10 "c"
     Expression a_unary_operator_on_an_operand_c_allows_builds.c:10:5
       Assign a_unary_operator_on_an_operand_c_allows_builds.c:10:5 "="
         Identifier a_unary_operator_on_an_operand_c_allows_builds.c:10:5 "i"
-        Unary a_unary_operator_on_an_operand_c_allows_builds.c:10:9 "!"
-          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:10:10 "a"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:10:9 "-"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:10:10 "c"
     Expression a_unary_operator_on_an_operand_c_allows_builds.c:11:5
       Assign a_unary_operator_on_an_operand_c_allows_builds.c:11:5 "="
         Identifier a_unary_operator_on_an_operand_c_allows_builds.c:11:5 "i"
-        Unary a_unary_operator_on_an_operand_c_allows_builds.c:11:9 "!"
-          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:11:10 "g"
-    Return a_unary_operator_on_an_operand_c_allows_builds.c:12:5
-      Identifier a_unary_operator_on_an_operand_c_allows_builds.c:12:12 "i"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:11:9 "~"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:11:10 "c"
+    Expression a_unary_operator_on_an_operand_c_allows_builds.c:12:5
+      Assign a_unary_operator_on_an_operand_c_allows_builds.c:12:5 "="
+        Identifier a_unary_operator_on_an_operand_c_allows_builds.c:12:5 "i"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:12:9 "!"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:12:10 "c"
+    Expression a_unary_operator_on_an_operand_c_allows_builds.c:13:5
+      Assign a_unary_operator_on_an_operand_c_allows_builds.c:13:5 "="
+        Identifier a_unary_operator_on_an_operand_c_allows_builds.c:13:5 "i"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:13:9 "!"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:13:10 "p"
+    Expression a_unary_operator_on_an_operand_c_allows_builds.c:14:5
+      Assign a_unary_operator_on_an_operand_c_allows_builds.c:14:5 "="
+        Identifier a_unary_operator_on_an_operand_c_allows_builds.c:14:5 "i"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:14:9 "!"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:14:10 "a"
+    Expression a_unary_operator_on_an_operand_c_allows_builds.c:15:5
+      Assign a_unary_operator_on_an_operand_c_allows_builds.c:15:5 "="
+        Identifier a_unary_operator_on_an_operand_c_allows_builds.c:15:5 "i"
+        Unary a_unary_operator_on_an_operand_c_allows_builds.c:15:9 "!"
+          Identifier a_unary_operator_on_an_operand_c_allows_builds.c:15:10 "g"
+    Return a_unary_operator_on_an_operand_c_allows_builds.c:16:5
+      Identifier a_unary_operator_on_an_operand_c_allows_builds.c:16:12 "i"

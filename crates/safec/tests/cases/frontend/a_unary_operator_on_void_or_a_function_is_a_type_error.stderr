@@ -1,42 +1,70 @@
-error[SC0306]: `-` cannot take `void`
+error[SC0306]: `+` cannot take `void`
    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:10 ]
    │
- 7 │     i = -h();
+ 7 │     i = +h();
+   │          ─┬─  
+   │           ╰─── this is `void`
+───╯
+error[SC0306]: `-` cannot take `void`
+   ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:10 ]
+   │
+ 8 │     i = -h();
    │          ─┬─  
    │           ╰─── this is `void`
 ───╯
 error[SC0306]: `~` cannot take `void`
-   ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:10 ]
+   ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:10 ]
    │
- 8 │     i = ~h();
+ 9 │     i = ~h();
    │          ─┬─  
    │           ╰─── this is `void`
 ───╯
 error[SC0306]: `!` cannot take `void`
-   ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:10 ]
-   │
- 9 │     i = !h();
-   │          ─┬─  
-   │           ╰─── this is `void`
-───╯
-error[SC0306]: `-` cannot take `int[3]`
     ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:10 ]
     │
- 10 │     i = -a;
+ 10 │     i = !h();
+    │          ─┬─  
+    │           ╰─── this is `void`
+────╯
+error[SC0306]: `+` cannot take `int[3]`
+    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:10 ]
+    │
+ 11 │     i = +a;
     │          ┬  
     │          ╰── this is `int[3]`
 ────╯
-error[SC0306]: `-` cannot take `int (int)`
-    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:10 ]
+error[SC0306]: `-` cannot take `int[3]`
+    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:10 ]
     │
- 11 │     i = -g;
+ 12 │     i = -a;
+    │          ┬  
+    │          ╰── this is `int[3]`
+────╯
+error[SC0306]: `~` cannot take `int[3]`
+    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:10 ]
+    │
+ 13 │     i = ~a;
+    │          ┬  
+    │          ╰── this is `int[3]`
+────╯
+error[SC0306]: `+` cannot take `int (int)`
+    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:10 ]
+    │
+ 14 │     i = +g;
+    │          ┬  
+    │          ╰── this is `int (int)`
+────╯
+error[SC0306]: `-` cannot take `int (int)`
+    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:10 ]
+    │
+ 15 │     i = -g;
     │          ┬  
     │          ╰── this is `int (int)`
 ────╯
 error[SC0306]: `~` cannot take `int (int)`
-    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:10 ]
+    ╭─[ a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:10 ]
     │
- 12 │     i = ~g;
+ 16 │     i = ~g;
     │          ┬  
     │          ╰── this is `int (int)`
 ────╯

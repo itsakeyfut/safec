@@ -8,35 +8,56 @@ Function a_unary_operator_on_void_or_a_function_is_a_type_error.c:4:1 "f" "int (
     Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:5
       Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:5 "="
         Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:5 "i"
-        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:9 "-"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:9 "+"
           Call a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:10
             Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:7:10 "h"
     Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:5
       Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:5 "="
         Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:5 "i"
-        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:9 "~"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:9 "-"
           Call a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:10
             Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:8:10 "h"
     Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:5
       Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:5 "="
         Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:5 "i"
-        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:9 "!"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:9 "~"
           Call a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:10
             Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:9:10 "h"
     Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:5
       Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:5 "="
         Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:5 "i"
-        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:9 "-"
-          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:10 "a"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:9 "!"
+          Call a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:10
+            Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:10:10 "h"
     Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:5
       Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:5 "="
         Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:5 "i"
-        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:9 "-"
-          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:10 "g"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:9 "+"
+          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:11:10 "a"
     Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:5
       Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:5 "="
         Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:5 "i"
-        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:9 "~"
-          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:10 "g"
-    Return a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:5
-      Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:12 "i"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:9 "-"
+          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:12:10 "a"
+    Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:5
+      Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:5 "="
+        Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:5 "i"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:9 "~"
+          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:13:10 "a"
+    Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:5
+      Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:5 "="
+        Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:5 "i"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:9 "+"
+          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:14:10 "g"
+    Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:5
+      Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:5 "="
+        Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:5 "i"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:9 "-"
+          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:15:10 "g"
+    Expression a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:5
+      Assign a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:5 "="
+        Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:5 "i"
+        Unary a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:9 "~"
+          Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:16:10 "g"
+    Return a_unary_operator_on_void_or_a_function_is_a_type_error.c:17:5
+      Identifier a_unary_operator_on_void_or_a_function_is_a_type_error.c:17:12 "i"
