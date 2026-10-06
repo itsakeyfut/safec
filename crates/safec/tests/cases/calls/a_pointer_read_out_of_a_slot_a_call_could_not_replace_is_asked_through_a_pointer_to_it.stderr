@@ -1,0 +1,10 @@
+error[SC0407]: this may pass a pointer to where a freed pointer is stored
+    ╭─[ a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_asked_through_a_pointer_to_it.c:19:12 ]
+    │
+ 19 │     return use2(pc);
+    │            ────┬───  
+    │                ╰───── passed here, perhaps holding a freed pointer behind it
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one

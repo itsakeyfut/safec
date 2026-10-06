@@ -2213,6 +2213,44 @@ cases! {
         // holds any site rather than this one; the second is refused.
         a_copy_read_by_value_after_a_call_reached_it_through_another_address_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_reached_through_a_copy_of_another_allocation_does_not_doubt_this_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A slot in memory holding what the call reached is marked, and a
+        // pointer read out of it is asked where it is handed by address; a
+        // slot nothing reads again costs nothing. Mutation: drop the marking
+        // in `Known::held_out_of_reach`; the first builds. Mutation: drop
+        // `|| stale` in `Known::handed_below`; the first builds. Mutation:
+        // turn the site `Unknown` for a slot instead; the second is refused.
+        // See ADR-0047.
+        a_pointer_copied_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a load out of a marked allocation carries goes where the
+        // pointer goes: a copy, a pointer to it, arithmetic, and a store into
+        // another allocation. Mutation: have `Held::joined` drop
+        // `unreplaced_read`; the first builds. Mutation: have
+        // `Known::unreplaced_through` ask the local handed only; the second
+        // builds. Mutation: have `Held::accumulated` drop it; the third
+        // builds. Mutation: drop the mark in the store transfer; the fourth
+        // builds. And the mark makes nothing lost, so a load through such a
+        // pointer is still followed. Mutation: set `lost` where the mark is
+        // read in `read_through`; the read of the freed `x` in the fifth goes
+        // silent. See ADR-0047.
+        a_copy_of_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_asked_through_a_pointer_to_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_built_from_one_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And where paths meet and where the allocation is copied or grown.
+        // Mutation:
+        // have `Held::joined` intersect `unreplaced_read`; the first builds.
+        // Mutation: have the join intersect `Known::unreplaced`; the second
+        // builds. Mutation: drop the mark where `built_from` reads a load;
+        // the third builds. Mutation: drop it in the `memcpy` arm, or where
+        // `realloc` carries a row to the new site; the fourth and fifth build.
+        // See ADR-0047.
+        a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

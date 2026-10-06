@@ -87,6 +87,13 @@ pub(super) struct Known {
     /// Nothing clears it: slots are not told apart, so a store into one may
     /// leave the old pointer in another. See ADR-0045.
     pub(super) stale: Vec<bool>,
+    /// Per site, whether it may contain a slot holding an allocation a call
+    /// this check cannot read reached through another route and could not
+    /// replace there. Set by [`Self::held_out_of_reach`], carried where what
+    /// a load out of it holds is stored or copied, and read through
+    /// [`Held::unreplaced_read`] by [`Self::handed_below`] alone. Nothing
+    /// clears it, since slots are not told apart. See ADR-0047.
+    pub(super) unreplaced: Vec<bool>,
     /// Per site, whether what it contains may include a pointer read out of
     /// memory a pointer parameter points at: one [`Held::from_caller`] marks,
     /// stored here.
@@ -263,7 +270,10 @@ impl Known {
     /// `use2(&a)` was silent (ADR-0047). A freed one is asked whichever way it
     /// is reached, and a reachable one through this function's own memory is,
     /// since nothing about the call made it so: `*t = a; release(a); use2(t);`
-    /// was silent. **Never a proof**:
+    /// was silent. And a reachable one is asked where the address handed
+    /// passes through a pointer read out of an allocation
+    /// [`Self::unreplaced`] marks: `c = *h; use2(&c);` after a call that
+    /// reached what `*h` holds through another route. **Never a proof**:
     /// [`Reached::Partial`] is always beside them, since the callee may only
     /// write there. See ADR-0042.
     pub(super) fn handed_below(&self, local: LocalId) -> Vec<Reached> {
@@ -290,13 +300,14 @@ impl Known {
             .flat_map(|target| self.points_to[target].sites())
             .filter(|site| !through_memory.contains(site))
             .collect();
+        let read_unreplaced = self.unreplaced_through(local, 1);
         let mut reached: Vec<Reached> = self
             .stored_below(local, 1)
             .into_iter()
             .filter(|&site| match self.state[site] {
                 SiteState::Freed { .. } => true,
                 SiteState::Unknown => true,
-                SiteState::Reachable => !through_address.contains(&site),
+                SiteState::Reachable => !through_address.contains(&site) || read_unreplaced,
                 SiteState::Live(_) => false,
             })
             .map(Reached::Site)
@@ -385,6 +396,15 @@ impl Known {
         self.locals_read_through(local, depth)
             .into_iter()
             .any(|target| self.points_to[target].stale_read)
+    }
+
+    /// Whether a local a read through `local` passes through was read out of
+    /// an allocation [`Self::unreplaced`] marks, as [`Self::stale_through`]
+    /// asks of [`Held::stale_read`]. See ADR-0047.
+    pub(super) fn unreplaced_through(&self, local: LocalId, depth: usize) -> bool {
+        self.locals_read_through(local, depth)
+            .into_iter()
+            .any(|target| self.points_to[target].unreplaced_read)
     }
 
     /// Whether a pointer read `depth` dereferences below `local` may be one
@@ -739,6 +759,9 @@ impl Known {
             inside_locals: _,
             realloced,
             stale,
+            // Kept, as `stale` is: the slots of the new allocation are not
+            // told apart from the old one's.
+            unreplaced: _,
             // Kept, as the entry and `stale` are: the slots of the new
             // allocation are not told apart from the old one's. No case
             // tells this from clearing it, measured: every other local
@@ -936,11 +959,28 @@ impl Known {
     /// **Only a holder live after the call**, by `live_after`. A copy nothing
     /// reads again holds the site as well, and counting it refused `b = a;
     /// grow(&b); grow(&b);` and `b = a; grow(&a); use2(&a);`, which C
-    /// defines. See ADR-0047.
+    /// defines.
+    ///
+    /// **And a slot in memory holding it marks the allocation it is in.** The
+    /// call cannot replace a slot it did not reach either, and a slot has no
+    /// liveness to say whether it is read again, so turning the site
+    /// `Unknown` for one refused `*h = a; grow(&a); use2(&a);` with `*h`
+    /// never read. Each allocation that may contain the site is marked
+    /// [`Self::unreplaced`] instead, and a pointer later read out of it is
+    /// asked about where it is handed by address, which
+    /// [`Self::handed_below`] does. Every such allocation, not only those the
+    /// call did not reach: a load out of one it reached is doubted already.
+    /// Only for a site this leaves `Reachable`, since a site `Unknown` or
+    /// freed is asked about whoever holds it. See ADR-0047.
     pub(super) fn held_out_of_reach(&mut self, live_after: impl Fn(usize) -> bool) {
         for site in 0..self.state.len() {
             if self.state[site] != SiteState::Reachable {
                 continue;
+            }
+            for container in 0..self.inside.len() {
+                if self.inside[container][site] {
+                    self.unreplaced[container] = true;
+                }
             }
             let out_of_reach = (0..self.points_to.len()).any(|holder| {
                 !self.handed_away[holder]
