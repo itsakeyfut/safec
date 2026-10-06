@@ -2251,6 +2251,15 @@ cases! {
         arithmetic_on_a_load_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_copied_by_memcpy_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_a_call_could_not_replace_grown_by_realloc_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A place of dereferences handed to a call is asked what it points at
+        // as its load would be, and hands on what its load would carry. The
+        // first was silent. Mutation: have `report::handed` ask only a plain
+        // local one level in; the first builds. Mutation: have
+        // `Known::handed_to_a_call` read a place's own edges rather than
+        // `handed_level`; the second is refused. See ADR-0045.
+        a_freed_pointer_whose_address_is_read_out_of_memory_and_handed_on_is_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_live_pointer_whose_address_is_read_out_of_memory_and_handed_on_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

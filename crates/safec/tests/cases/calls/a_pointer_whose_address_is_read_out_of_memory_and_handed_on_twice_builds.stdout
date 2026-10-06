@@ -1,0 +1,113 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:2:6 "grow" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int ***"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int **"
+  Local "_8" "int **"
+  Local "_9" "void"
+  Local "_10" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:5:14 generated
+    Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:5:14 generated
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:6:9 generated
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:9:16 generated
+    Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:9:16 "malloc" "bb5"
+      Destination "_5"
+      Constant 8
+  Block "bb5"
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:9:12 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:9:16 generated
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:10:9 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:10:9 "bb6" "bb7"
+      Copy "_6"
+  Block "bb6"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:10:9 generated
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:11:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:13:10 written
+      Destination "_7"
+      Address
+        Place "_1"
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:13:5 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:13:5 written
+      Destination "_8"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:13:5 generated
+    ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:14:5 generated
+    Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:14:5 "grow" "bb9"
+      Destination "_9"
+      Copy "_4"
+        Deref
+  Block "bb9"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:14:5 generated
+    ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:15:5 generated
+    Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:15:5 "grow" "bb10"
+      Destination "_10"
+      Copy "_4"
+        Deref
+  Block "bb10"
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:15:5 generated
+    Operation a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:16:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_builds.c:16:12 generated
+    Return

@@ -693,9 +693,7 @@ pub(super) fn handed(
     for place in handed_places(analysis, function, *callee, arguments) {
         let Some(verdict) = verdict(Kind::ArgumentAfterFree, known.handed_reached(place), known)
         else {
-            if place.projection.is_empty() {
-                silent.push(place);
-            }
+            silent.push(place);
             continue;
         };
         say(
@@ -716,15 +714,14 @@ pub(super) fn handed(
 
     // **And what a pointer that said nothing points at, one level in**, keyed
     // as `*place`, so that `give(tab, *tab)` is one report rather than two:
-    // what `tab` hands on one level in is what `*tab` hands on. Not carried
+    // what `tab` hands on one level in is what `*tab` hands on. A place of
+    // dereferences is asked as its load would be, so `use2(*k)` is not
+    // silent where `q = *k; use2(q);` is asked. See ADR-0045. Not carried
     // forwards as the pointer is, because only allocations already freed are
     // asked, and those are reported here. See ADR-0042.
     for place in silent {
-        let Some(verdict) = verdict(
-            Kind::FreedBehindArgument,
-            known.handed_below(place.local),
-            known,
-        ) else {
+        let Some(verdict) = verdict(Kind::FreedBehindArgument, known.handed_below(place), known)
+        else {
             continue;
         };
         say(
@@ -732,7 +729,12 @@ pub(super) fn handed(
             said,
             &Place {
                 local: place.local,
-                projection: vec![Projection::Deref],
+                projection: place
+                    .projection
+                    .iter()
+                    .cloned()
+                    .chain([Projection::Deref])
+                    .collect(),
             },
             Finding {
                 function: analysis.function,
