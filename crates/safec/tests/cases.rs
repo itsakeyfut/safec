@@ -2440,6 +2440,18 @@ cases! {
         // Mutation: point at the argument instead of `parameter.span` in
         // `Checker::call`; the secondary label moves.
         passing_an_int_to_an_unnamed_pointer_parameter_is_a_type_error: ["--emit", "ast"],
+        // A callee of pointer-to-function type is held to its function's
+        // prototype, C17 6.5.2.2 p1. Mutation: stop seeing through the
+        // pointer in `Checker::call`; the first three build. `*g` is typed as
+        // `g`. Mutation: answer `None` for `*` of a function in
+        // `Checker::unary`; the fourth builds. A null pointer constant still
+        // passes through a function pointer. Mutation: have
+        // `Checker::check_argument` pass `false` for it; the fifth is refused.
+        too_many_arguments_through_a_function_pointer_is_a_type_error: ["--emit", "ast"],
+        passing_a_pointer_through_a_function_pointer_is_a_type_error: ["--emit", "ast"],
+        passing_an_int_through_an_address_of_a_function_is_a_type_error: ["--emit", "ast"],
+        passing_an_int_through_a_dereferenced_function_is_a_type_error: ["--emit", "ast"],
+        passing_a_null_pointer_constant_through_a_function_pointer_builds: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.
