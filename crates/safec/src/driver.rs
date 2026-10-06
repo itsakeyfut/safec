@@ -496,7 +496,8 @@ struct Analysed {
     ast: Ast,
     /// Absent where the parse reported something, since a resolution drawn
     /// from a tree the parser gave up on is a claim about a program nobody
-    /// wrote.
+    /// wrote, and where names or types reported something, since every stage
+    /// after them reads the types they gave.
     typed: Option<(Resolution, Types)>,
 }
 
@@ -577,9 +578,9 @@ fn lowered(
         options.target.int(),
         diagnostics,
     )?;
-    // Nothing to lower from a tree whose names and types are not known: the IR
-    // would be built out of what the frontend could not work out, and the
-    // lowering says so about each piece rather than saying it once here.
+    // Nothing to lower from a tree the frontend did not finish with: the
+    // parse gave up on it, or names and types refused it. `analysed` says
+    // which gates, and the IR would be built out of what they refused.
     let (resolution, types) = analysed.typed.as_ref()?;
 
     // **The level asked for, not the level delivered.** Level 5's default is

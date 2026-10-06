@@ -86,9 +86,10 @@ impl Resolution {
     ///
     /// Asked by the lowering, so that what makes a function a hatch is this
     /// stage's verdict rather than an attribute being present. A refused one
-    /// still reaches the lowering, because the lowering runs after a name this
-    /// stage could not resolve, and `--emit safety-ir` and `--emit hatches` are
-    /// still written on the run that refused it. See ADR-0038.
+    /// is an error, and the driver lowers nothing after names and types
+    /// report one, so today no lowering meets it. What asking still does is
+    /// keep a spelling this stage accepts for something else, such as the
+    /// effects #249 adds, from making a hatch. See ADR-0038.
     pub fn is_hatch(&self, attribute: Attribute) -> bool {
         self.hatches.contains(&attribute.span)
     }

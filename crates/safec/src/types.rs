@@ -690,7 +690,8 @@ impl Checker<'_> {
         // lowering was not handed an expression it cannot type, whose
         // `SC0304` called the program this compiler's gap; the driver no
         // longer lowers a tree the type check refused, so that reason has
-        // gone and the type is still kept. The cost is that `p = p * 1` is
+        // gone and the type is still kept; whether to keep it is #367. The
+        // cost is that `p = p * 1` is
         // reported twice, the second time as an `int` given to a pointer,
         // and both reports are about a program that is wrong. `+` and `-`
         // are the exception, because `additive` has no type to give `n - p`

@@ -161,9 +161,11 @@ hatch, and the pointer a call returns being taken as fresh, are
 **Only an attribute `sema::resolve` accepted makes a hatch.** It records the
 ones it accepts and the lowering asks it, rather than marking any function an
 attribute is written before. Found by review: a refused spelling is an error,
-but `--emit safety-ir` and `--emit hatches` are written on the run that
+but `--emit safety-ir` and `--emit hatches` were written on the run that
 refused it, and they showed the refused function as a hatch with its unproven
-conclusions moved out of the report. It also keeps a later spelling that means
+conclusions moved out of the report. Since #354 the driver lowers nothing
+after names and types report an error, so that run no longer exists. It also
+keeps a later spelling that means
 something else, such as the effects #249 adds, from making a hatch by being
 accepted.
 
