@@ -427,9 +427,12 @@ impl Checker<'_> {
             // p4: `*p` is what `p` points at.
             UnOp::Deref => match ast.ty(operand_ty?) {
                 Type::Pointer(pointee) => Some(*pointee),
-                // 6.3.2.1 p4 converts a function designator to a pointer to
-                // the function, and p4 here makes `*` of that the designator
-                // again, so `*g` is `g` and `(*g)(x)` is checked as `g(x)`.
+                // An operand of function type is a function designator.
+                // 6.3.2.1 p4 converts it to a pointer to the function, and
+                // 6.5.3.2 p4 makes `*` of that pointer a designator of the
+                // same function, so `*g` has `g`'s type and `(*g)(x)` is
+                // checked as `g(x)` is. `*fp` reaches the function through
+                // the arm above.
                 Type::Function { .. } => operand_ty,
                 Type::Int | Type::Char | Type::Void | Type::Array { .. } => None,
             },
@@ -1181,6 +1184,8 @@ impl Checker<'_> {
         .with_code(ARGUMENTS)
         .with_label(Label::primary(ast.expr(call).span(), "this call"));
 
+        // Only a callee that is a name has a declaration to point at, so
+        // `(*g)(1, 2)` and `(&g)(1, 2)` are reported without one.
         if let Some(binding) = self.resolution.resolved(callee) {
             diagnostic = diagnostic.with_label(Label::secondary(
                 self.resolution.binding(binding).name,
