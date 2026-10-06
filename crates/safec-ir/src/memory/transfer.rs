@@ -222,6 +222,12 @@ impl Allocations<'_> {
                 held.lost = true;
                 held.stale_read = true;
             }
+            // Read out of an allocation that may hold a slot a call could not
+            // replace, which is asked where it is handed by address and
+            // nowhere else. See ADR-0047.
+            if value.marked_below(source.local, depth, &value.unreplaced) {
+                held.unreplaced_read = true;
+            }
             // Read through a pointer to a local this check lost, carrying
             // whether what it lost may be gone, as the local does. See
             // ADR-0045.
@@ -624,7 +630,10 @@ impl Analysis for Allocations<'_> {
         // fourth square for it. See ADR-0045. Whether code this check cannot
         // read may hold a local's address is one more bit per local that the
         // transfer only sets and a join only clears, so an entry value moves
-        // it once, and the per-local term gains it. See ADR-0047.
+        // it once, and the per-local term gains it. Whether a site may hold a
+        // slot such a call could not replace is one more bit per site, and
+        // whether a local was read out of one one more per local, which a
+        // join only sets. See ADR-0047.
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
@@ -670,7 +679,7 @@ impl Analysis for Allocations<'_> {
         // What a wrong answer costs is what that method promises: too low is a
         // panic naming `Analysis::height`, which is a build that stops with
         // something to read rather than a wrong answer about a program.
-        locals * locals * 4 + locals * (locals + 23) + positions * (2 * locals + 3) + locals
+        locals * locals * 4 + locals * (locals + 25) + positions * (2 * locals + 3) + locals
     }
 
     fn on_entry(&self) -> Self::Value {
@@ -687,6 +696,7 @@ impl Analysis for Allocations<'_> {
             exposed: vec![false; self.locals],
             inside: vec![vec![false; self.locals]; self.locals],
             stale: vec![false; self.locals],
+            unreplaced: vec![false; self.locals],
             inside_locals: vec![vec![false; self.locals]; self.locals],
             realloced: vec![None; self.locals],
             from_caller: vec![false; self.locals],
@@ -738,6 +748,7 @@ impl Analysis for Allocations<'_> {
             exposed,
             inside,
             stale,
+            unreplaced,
             from_caller,
             inside_locals,
             realloced,
@@ -769,6 +780,10 @@ impl Analysis for Allocations<'_> {
         }
         // Marked on one arm is marked where the arms meet. See ADR-0045.
         for (here, there) in stale.iter_mut().zip(&from.stale) {
+            *here = *here || *there;
+        }
+        // And so is this mark, for the same reason. See ADR-0047.
+        for (here, there) in unreplaced.iter_mut().zip(&from.unreplaced) {
             *here = *here || *there;
         }
         // And so is what may hold the caller's. See ADR-0040.
@@ -1097,6 +1112,11 @@ impl Analysis for Allocations<'_> {
                             // gives. See ADR-0045.
                             if written.stale_read {
                                 value.stale[*container] = true;
+                            }
+                            // And this mark, for the same reason. See
+                            // ADR-0047.
+                            if written.unreplaced_read {
+                                value.unreplaced[*container] = true;
                             }
                             // And a pointer read out of caller memory keeps
                             // that fact where it is stored. See ADR-0040.
@@ -1630,6 +1650,10 @@ impl Analysis for Allocations<'_> {
                             // is doubted by its own escape first, measured.
                             let marked = value.stale_below(source.local, from_depth + 1)
                                 || value.lost_through(source.local, from_depth + 1);
+                            // And a slot a call could not replace, copied.
+                            // See ADR-0047.
+                            let unreplaced =
+                                value.marked_below(source.local, from_depth + 1, &value.unreplaced);
                             // And what was read out of caller memory, as a
                             // store of a load of the source would carry it:
                             // `memcpy(box, pp, 8)` is `*box = *pp;`. Found by
@@ -1655,6 +1679,9 @@ impl Analysis for Allocations<'_> {
                                 }
                                 if marked {
                                     value.stale[container] = true;
+                                }
+                                if unreplaced {
+                                    value.unreplaced[container] = true;
                                 }
                                 if caller {
                                     value.from_caller[container] = true;
@@ -1882,6 +1909,9 @@ impl Analysis for Allocations<'_> {
                     // the copy. See ADR-0045.
                     if value.stale[old] {
                         value.stale[site] = true;
+                    }
+                    if value.unreplaced[old] {
+                        value.unreplaced[site] = true;
                     }
                     // And the caller's mark, for the same reason. See
                     // ADR-0040.

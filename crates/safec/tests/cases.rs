@@ -2222,6 +2222,22 @@ cases! {
         // See ADR-0047.
         a_pointer_copied_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a load out of a marked allocation carries goes where the
+        // pointer goes: a copy, a pointer to it, arithmetic, and a store into
+        // another allocation. Mutation: have `Held::joined` drop
+        // `unreplaced_read`; the first builds. Mutation: have
+        // `Known::unreplaced_through` ask the local handed only; the second
+        // builds. Mutation: have `Held::accumulated` drop it; the third
+        // builds. Mutation: drop the mark in the store transfer; the fourth
+        // builds. And the mark makes nothing lost, so a load through such a
+        // pointer is still followed. Mutation: set `lost` where the mark is
+        // read in `read_through`; the read of the freed `x` in the fifth goes
+        // silent. See ADR-0047.
+        a_copy_of_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_asked_through_a_pointer_to_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_built_from_one_read_out_of_a_slot_a_call_could_not_replace_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_a_call_could_not_replace_copied_into_another_allocation_is_asked_by_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_read_through_a_pointer_read_out_of_a_slot_a_call_could_not_replace_is_still_followed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What ADR-0042 accepts as its cost: a callee that only writes there
         // is not told apart from one that reads.
         the_address_of_a_freed_pointer_handed_to_a_call_that_only_writes_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

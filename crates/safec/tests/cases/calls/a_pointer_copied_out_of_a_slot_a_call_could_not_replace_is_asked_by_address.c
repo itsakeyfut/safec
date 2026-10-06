@@ -1,9 +1,6 @@
 void *malloc(int n);
 void release_ref(int **pp);
-void release_buf(char **pp);
-void next_token(char **pp);
 int use2(int **pp);
-void log_line(void);
 
 int f(void) {
     int *a = malloc(4);

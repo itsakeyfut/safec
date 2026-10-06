@@ -103,27 +103,27 @@ Function a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:
       Copy "_8"
   Block "bb9"
     Sequenced a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:15:5 generated
-    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:16:17 written
+    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:17 written
       Destination "_10"
       Address
         Place "_1"
-    Call a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:16:12 "use2" "bb10"
+    Call a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:12 "use2" "bb10"
       Destination "_11"
       Copy "_10"
   Block "bb10"
-    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:16:24 written
+    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:24 written
       Destination "_12"
       Binary "Ne"
         Copy "_4"
         Constant 0
-    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:16:12 written
+    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:12 written
       Destination "_13"
       Binary "Add"
         Copy "_11"
         Copy "_12"
-    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:16:5 written
+    Operation a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:5 written
       Destination "_0"
       Use
         Copy "_13"
-    Sequenced a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:16:12 generated
+    Sequenced a_slot_nothing_reads_again_does_not_doubt_a_pointer_grown_by_address.c:18:12 generated
     Return

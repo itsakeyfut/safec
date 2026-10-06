@@ -475,6 +475,17 @@ pub(super) struct Held {
     /// that list, measured; a store of this one marks it, so a doubted load
     /// copied into another allocation stays doubted. See ADR-0045.
     pub(super) stale_read: bool,
+    /// Whether this was read out of an allocation
+    /// [`Known::unreplaced`](super::known::Known::unreplaced) marks, which may
+    /// hold a slot a call this check cannot read could not replace, or built
+    /// from such a value.
+    ///
+    /// **Not [`Held::stale_read`], which makes a load lost.** A lost local's
+    /// load is followed no further, so marking that way silenced `d = *c;
+    /// return *d;` after `c = *h;`, a read of a proved free. This one is read
+    /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
+    /// See ADR-0047.
+    pub(super) unreplaced_read: bool,
     /// Whether this was read out of memory a pointer parameter points at, so
     /// may be what the caller stored there.
     ///
@@ -515,6 +526,7 @@ impl Held {
             loaded: false,
             foreign: false,
             stale_read: false,
+            unreplaced_read: false,
             from_caller: false,
             returned_by: None,
         }
@@ -569,6 +581,7 @@ impl Held {
             loaded,
             foreign,
             stale_read,
+            unreplaced_read,
             from_caller,
             returned_by,
         } = self;
@@ -579,6 +592,7 @@ impl Held {
         *loaded = false;
         *foreign = false;
         *stale_read = false;
+        *unreplaced_read = false;
         *freed = None;
         writes_to.fill(false);
         // What a local is given ends the claim that this check knew where a
@@ -611,6 +625,7 @@ impl Held {
             loaded,
             foreign,
             stale_read,
+            unreplaced_read,
             from_caller,
             returned_by,
         } = self;
@@ -622,6 +637,7 @@ impl Held {
         *loaded = *loaded || other.loaded;
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
+        *unreplaced_read = *unreplaced_read || other.unreplaced_read;
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -671,6 +687,7 @@ impl Held {
             loaded,
             foreign,
             stale_read,
+            unreplaced_read,
             from_caller,
             returned_by,
         } = self;
@@ -683,6 +700,7 @@ impl Held {
         *loaded = *loaded || other.loaded;
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
+        *unreplaced_read = *unreplaced_read || other.unreplaced_read;
 
         // **Where the result points is the fold's to say, and not this
         // method's**, for the reason the line below gives about the proof:
