@@ -1,0 +1,27 @@
+error[SC0302]: cannot initialize `int` with `void`
+   ╭─[ initializing_with_a_void_value_is_a_type_error.c:5:13 ]
+   │
+ 5 │     int x = h();
+   │         ┬   ─┬─  
+   │         ╰──────── this holds `int`
+   │              │   
+   │              ╰─── this is `void`
+───╯
+error[SC0302]: cannot initialize `char` with `void`
+   ╭─[ initializing_with_a_void_value_is_a_type_error.c:6:14 ]
+   │
+ 6 │     char c = h();
+   │          ┬   ─┬─  
+   │          ╰──────── this holds `char`
+   │               │   
+   │               ╰─── this is `void`
+───╯
+error[SC0302]: cannot initialize `int *` with `void`
+   ╭─[ initializing_with_a_void_value_is_a_type_error.c:7:14 ]
+   │
+ 7 │     int *p = h();
+   │          ┬   ─┬─  
+   │          ╰──────── this holds `int *`
+   │               │   
+   │               ╰─── this is `void`
+───╯

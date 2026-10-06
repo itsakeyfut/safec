@@ -1172,11 +1172,12 @@ impl Checker<'_> {
     /// Whether a value of type `source` may be assigned to a place of type
     /// `target`, C17 6.5.16.1 p1.
     ///
-    /// `None` where this stage does not answer: an array, a function or `void`
-    /// on either side is a different constraint, and 6.5.16 p2's requirement
-    /// that the place be a modifiable lvalue is another. Reporting those is
-    /// not this issue's, and answering `false` for them would be reporting
-    /// them badly.
+    /// `None` where this stage does not answer: a `void` target, or an array
+    /// or a function on either side, is a different constraint, and 6.5.16
+    /// p2's requirement that the place be a modifiable lvalue is another.
+    /// Answering `false` for them would be reporting them badly. A `void`
+    /// source onto an object type is answered, `false`, since a `void`
+    /// expression has no value to be assigned.
     fn assignable(
         &self,
         ast: &Ast,
@@ -1199,8 +1200,14 @@ impl Checker<'_> {
             // pointer from an integer.
             (Type::Pointer(_), Type::Int | Type::Char) => Some(source_is_null),
             (Type::Int | Type::Char, Type::Pointer(_)) => Some(false),
+            // 6.5.16.1 p1 lists what may be assigned to an object, and a
+            // `void` expression has no value to be any of it; 6.8.6.4 p3 and
+            // 6.7.9 p11 hold a returned value and an initializer to the same
+            // list. Answering `None` here let `return h();` from a function
+            // returning `int` build in silence.
+            (Type::Int | Type::Char | Type::Pointer(_), Type::Void) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
-            | (_, Type::Void | Type::Array { .. } | Type::Function { .. }) => None,
+            | (_, Type::Array { .. } | Type::Function { .. }) => None,
         }
     }
 

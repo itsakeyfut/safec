@@ -1,0 +1,7 @@
+Function returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:1:1 "h" "void (void)"
+  Compound returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:1:14
+Function returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:4:1 "f" "int (void)"
+  Compound returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:4:13
+    Return returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:5:5
+      Call returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:5:12
+        Identifier returning_a_void_value_from_a_function_returning_int_is_a_type_error.c:5:12 "h"
