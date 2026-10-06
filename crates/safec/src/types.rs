@@ -1172,11 +1172,12 @@ impl Checker<'_> {
     /// Whether a value of type `source` may be assigned to a place of type
     /// `target`, C17 6.5.16.1 p1.
     ///
-    /// `None` where this stage does not answer: an array, a function or `void`
-    /// on either side is a different constraint, and 6.5.16 p2's requirement
-    /// that the place be a modifiable lvalue is another. Reporting those is
-    /// not this issue's, and answering `false` for them would be reporting
-    /// them badly.
+    /// `None` where this stage does not answer: a `void` target, or an array
+    /// or a function on either side, is a different constraint, and 6.5.16
+    /// p2's requirement that the place be a modifiable lvalue is another.
+    /// Answering `false` for them would be reporting them badly. A `void`
+    /// source onto an object type is answered, `false`, since a `void`
+    /// expression has no value to be assigned.
     fn assignable(
         &self,
         ast: &Ast,
