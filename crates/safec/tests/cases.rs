@@ -1010,6 +1010,12 @@ cases! {
         // `lowering::decided` always build a `Branch`; both are told they may
         // reach the end. Mutation: fold only the constants 0 and 1; the
         // second is.
+        // `return;` where a pointer was promised is refused where it is, by
+        // the type checker, and the nullability check still reads it as the
+        // end of the body, so its `SC0408` follows. Mutation: accept a
+        // `return` without a value in `Checker::receivers_in`; only the
+        // `SC0408` on the name is left.
+        a_valueless_return_in_a_function_that_promised_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_left_only_by_a_return_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_any_constant_but_zero_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same through a `for` and through unary `+`, which are the other
@@ -2388,6 +2394,14 @@ cases! {
         // `Stmt::Declaration`. The `SC0302` goes from both of these and both
         // fail.
         initializing_with_the_wrong_type: ["--emit", "ast"],
+        // C17 6.8.6.4 p1, both halves, the `void` expression included, which
+        // `clang` accepts without `-pedantic-errors`. Mutation: accept a
+        // `return` without a value in `Checker::receivers_in`; the first
+        // builds. Mutation: accept one with a value where the function
+        // returns `void`; the second and third build.
+        a_return_without_a_value_in_a_function_returning_one: ["--emit", "ast"],
+        a_return_with_a_value_in_a_function_returning_void: ["--emit", "ast"],
+        a_return_of_a_void_expression_in_a_function_returning_void: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.

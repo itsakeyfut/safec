@@ -1,0 +1,21 @@
+Target "x86_64-pc-windows-msvc"
+Function a_valueless_return_in_a_function_that_promised_a_pointer.c:1:16 "f"
+  Local "_0" "int *" return _Nonnull
+  Local "_1" "int" parameter
+  Local "_2" "int *" parameter _Nonnull
+  Block "bb0" entry
+    Branch a_valueless_return_in_a_function_that_promised_a_pointer.c:2:9 "bb1" "bb2"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_valueless_return_in_a_function_that_promised_a_pointer.c:2:9 generated
+    Return
+  Block "bb2"
+    Sequenced a_valueless_return_in_a_function_that_promised_a_pointer.c:2:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_valueless_return_in_a_function_that_promised_a_pointer.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+    Sequenced a_valueless_return_in_a_function_that_promised_a_pointer.c:5:12 generated
+    Return

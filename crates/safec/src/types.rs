@@ -76,6 +76,17 @@ const ARGUMENTS: Code = Code::new("SC0303");
 /// code is never reassigned, so the two are kept apart from the start.
 const OPERANDS: Code = Code::new("SC0306");
 
+/// A `return` that does not match whether its function returns a value,
+/// C17 6.8.6.4 p1: one without an expression where the return type is not
+/// `void`, or one with an expression, a `void` one included, where it is.
+///
+/// Not `MISMATCH`, which is a value of the wrong type for a place: this is
+/// whether there is a value at all, as `OPERANDS` is kept apart from it.
+/// `clang` refuses the first two shapes and accepts `return h();` in a
+/// `void` function without `-pedantic-errors`; C makes all three one
+/// constraint, and this reads constraints as C states them.
+const RETURN_SHAPE: Code = Code::new("SC0308");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -148,7 +159,7 @@ pub fn check(
         receivers: HashMap::new(),
     };
 
-    checker.collect_receivers(ast);
+    checker.collect_receivers(ast, diagnostics);
 
     for id in ast.expr_ids().collect::<Vec<_>>() {
         let ty = checker.type_of(ast, id, diagnostics);
@@ -208,13 +219,18 @@ struct Checker<'a> {
     /// over the arena, so without this they would be reported after every
     /// expression rather than among them, and a reader would find them out of
     /// order. One map is enough because no expression is both.
+    ///
+    /// **A `return` whose shape is wrong is reported while this is
+    /// collected**, before every expression's report, since one without a
+    /// value has no expression to be reported beside. See `RETURN_SHAPE`.
     receivers: HashMap<ExprId, Receiving>,
 }
 
 impl Checker<'_> {
     /// Find every `return` with a value and every initializer, and what each
-    /// has to be assignable to.
-    fn collect_receivers(&mut self, ast: &Ast) {
+    /// has to be assignable to, and report every `return` that has a value
+    /// where it may not or lacks one where it must.
+    fn collect_receivers(&mut self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         for item in ast.items() {
             let function = match item {
                 Item::Function(function) => function,
@@ -237,6 +253,7 @@ impl Checker<'_> {
                     ty: *returns,
                     name: function.name,
                 },
+                diagnostics,
             );
         }
     }
@@ -247,29 +264,62 @@ impl Checker<'_> {
     /// walk here is, and exhaustive so that a statement kind that can hold
     /// another has to be answered for rather than silently dropping the
     /// returns and initializers inside it.
-    fn receivers_in(&mut self, ast: &Ast, id: StmtId, returning: Returning) {
+    fn receivers_in(
+        &mut self,
+        ast: &Ast,
+        id: StmtId,
+        returning: Returning,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         match ast.stmt(id) {
-            Stmt::Return { value, .. } => {
-                if let Some(value) = *value {
-                    self.receivers.insert(value, Receiving::Return(returning));
+            Stmt::Return { value, span } => {
+                let void = matches!(ast.ty(returning.ty), Type::Void);
+                match (*value, void) {
+                    (Some(value), false) => {
+                        self.receivers.insert(value, Receiving::Return(returning));
+                    }
+                    (None, true) => {}
+                    (None, false) => {
+                        let spelled = self.spelled(ast, returning.ty);
+                        diagnostics.report(
+                            Diagnostic::error(format!(
+                                "`return` without a value in a function returning `{spelled}`"
+                            ))
+                            .with_code(RETURN_SHAPE)
+                            .with_label(Label::primary(*span, "this returns nothing"))
+                            .with_label(Label::secondary(
+                                returning.name,
+                                format!("declared to return `{spelled}`"),
+                            )),
+                        );
+                    }
+                    (Some(value), true) => diagnostics.report(
+                        Diagnostic::error("`return` with a value in a function returning `void`")
+                            .with_code(RETURN_SHAPE)
+                            .with_label(Label::primary(ast.expr(value).span(), "this is a value"))
+                            .with_label(Label::secondary(
+                                returning.name,
+                                "declared to return `void`",
+                            )),
+                    ),
                 }
             }
             Stmt::Declaration { declarators, .. } => self.initializers(declarators),
             Stmt::Compound { body, .. } => {
                 for &statement in body {
-                    self.receivers_in(ast, statement, returning);
+                    self.receivers_in(ast, statement, returning, diagnostics);
                 }
             }
             Stmt::If {
                 then, otherwise, ..
             } => {
-                self.receivers_in(ast, *then, returning);
+                self.receivers_in(ast, *then, returning, diagnostics);
                 if let Some(otherwise) = *otherwise {
-                    self.receivers_in(ast, otherwise, returning);
+                    self.receivers_in(ast, otherwise, returning, diagnostics);
                 }
             }
             Stmt::While { body, .. } | Stmt::For { body, .. } => {
-                self.receivers_in(ast, *body, returning);
+                self.receivers_in(ast, *body, returning, diagnostics);
             }
             Stmt::Expression { .. } | Stmt::Error { .. } => {}
         }

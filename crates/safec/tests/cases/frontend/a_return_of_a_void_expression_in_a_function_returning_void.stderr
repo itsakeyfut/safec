@@ -1,0 +1,10 @@
+error[SC0308]: `return` with a value in a function returning `void`
+   ╭─[ a_return_of_a_void_expression_in_a_function_returning_void.c:5:12 ]
+   │
+ 4 │ void g(void) {
+   │      ┬  
+   │      ╰── declared to return `void`
+ 5 │     return h();
+   │            ─┬─  
+   │             ╰─── this is a value
+───╯
