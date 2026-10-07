@@ -467,9 +467,11 @@ cases! {
         // program silent about the double free and fails nothing else.
         a_free_in_an_unsequenced_operand_across_a_call_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An `int` holding zero is not a null pointer constant, so this free
-        // is not exempt. Passing an `int` for `free`'s `void *` is itself a
-        // constraint violation, `SC0302` since #356, and the memory check
-        // still runs after a type error, so its `SC0401` is what this holds.
+        // is not exempt, and C says so before any analysis: passing an `int`
+        // for `free`'s `void *` is a constraint violation, `SC0302` since
+        // #356, and the driver runs no check on a tree the type check
+        // reported. Mutation: drop the gate after names and types in
+        // `driver.rs::analysed`; the memory check's `SC0401` returns.
         a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1025,11 +1027,12 @@ cases! {
         a_for_loop_on_a_constant_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_loop_on_a_constant_under_unary_plus_does_not_reach_the_end: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `return;` where a pointer was promised is refused where it is, by
-        // the type checker, and the nullability check still reads it as the
-        // end of the body, so its `SC0408` follows, in words that are not
-        // true of this program: every path ends in a `return`. Mutation:
-        // accept a `return` without a value in `Checker::receivers_in`; only
-        // the `SC0408` on the name is left.
+        // the type checker, and nothing after it runs. Mutation: drop the
+        // gate after names and types in `driver.rs::analysed`; the
+        // nullability check reads the `return;` as the end of the body and
+        // an `SC0408` follows, false of this program. Mutation: accept a
+        // `return` without a value in `Checker::receivers_in`; only that
+        // `SC0408` is left.
         a_return_without_a_value_in_a_function_that_promised_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call to a function C says does not return has no edge out of it,
         // so the end after it is not reached (ADR-0051). Mutation: have the
@@ -1171,10 +1174,12 @@ cases! {
         // finding at a caret in `nullability::findings`' `dedup_by` rather than
         // the worst; this fails, and the proved dereference builds.
         a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
-        // An attribute `sema::resolve` refused is not a hatch, even on the run
-        // that is written anyway. Mutation: have the lowering mark a hatch
-        // wherever an attribute is present; this fails.
-        an_unproven_dereference_behind_a_refused_attribute_is_still_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An attribute `sema::resolve` refused is an error, so the run stops
+        // before the lowering: no hatch is marked and no check runs, and the
+        // dereference behind it is not reported until the attribute is gone.
+        // Mutation: drop the gate after names and types in
+        // `driver.rs::analysed`; the `SC0403` returns.
+        a_refused_attribute_stops_the_run_before_the_checks: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Mutation: have `dump_hatches` list every hatch's conclusions under
         // each; this fails.
         each_hatch_lists_only_what_was_concluded_inside_it: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
@@ -2358,9 +2363,9 @@ cases! {
         a_braced_initializer_is_refused: ["--emit", "ast"],
         // The two codes a constant this compiler cannot read is reported under,
         // and `--emit safety-ir` rather than `--emit ast` because what each one
-        // pins is that there is exactly one report. `types.rs` says it and the
-        // lowering says nothing more, which is only visible on a run that
-        // lowers. A value `int` does not hold is this compiler's gap, and
+        // pins is that there is exactly one report on a run asked to go past
+        // the type check. `types.rs` says it, and the driver lowers nothing
+        // after it. A value `int` does not hold is this compiler's gap, and
         // `clang 20.1.6 -std=c17 -pedantic-errors` compiles this program; a
         // spelling that is no constant at all is the program's, and `clang`
         // refuses it too.
@@ -2478,6 +2483,14 @@ cases! {
         // Mutation: answer `None` without reporting for any other callee in
         // `Checker::call`; this builds.
         calling_something_that_is_not_a_function_is_a_type_error: ["--emit", "ast"],
+        // Nothing after names and types runs on a tree they refused, so each
+        // of these is its type checker's report and nothing else, on a run
+        // asked to go past it. Mutation: drop the gate after names and types
+        // in `driver.rs::analysed`; the first gains the backend's `SC0801`
+        // and the second the lowering's `SC0304`, which calls the program a
+        // gap in this compiler.
+        a_void_function_returning_a_value_stops_before_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_constraint_the_type_checker_reported_stops_before_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Unary `+` and `-` take an arithmetic operand, `~` an integer one
         // and `!` a scalar one, C17 6.5.3.3 p1. Mutation: answer `int` for
         // any typed operand in `Checker::unary` again; this builds.
@@ -2561,19 +2574,17 @@ cases! {
         // Why the rule matters past the message, as for the initializer below:
         // `i = p * 1` writes a multiplication over an `int *` into a local
         // declared `int`, which is the shape `docs/c-family.md`'s fourth
-        // requirement forbids. `--emit safety-ir` so that the run reaches the
-        // lowering, which a type error does not stop.
+        // requirement forbids. `--emit safety-ir` so that a run with the
+        // check mutated away reaches the lowering.
         //
         // Mutation: have `binary` stop calling `binary_operable`. The `.stderr`
-        // goes empty and the `.exit` goes to 0. Mutation: answer `None` rather
-        // than `int` for a refused operation. `SC0304` joins each report,
-        // calling the program a gap in this compiler.
+        // goes empty and the `.exit` goes to 0.
         an_allocation_multiplied_into_an_integer_is_a_type_error: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Why the rule matters past the message. ADR-0030 has the memory check
         // drop the operand of an addition that is declared `int`, so an
         // allocation reaching `i` through this initializer is one that check is
-        // handed and cannot see. `--emit safety-ir` so that the run reaches it,
-        // which a type error does not stop. Under the mutation above the
+        // handed and cannot see. `--emit safety-ir` so that a run with the
+        // check mutated away reaches it. Under the mutation above the
         // `SC0302` goes and so does anything about `p`: what is left is
         // `SC0404` about `free(r)`, measured, where the same program answered
         // `SC0401` about `p` before ADR-0030.

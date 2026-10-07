@@ -1470,6 +1470,54 @@ fn a_lexical_error_stops_that_input_and_no_other() {
     );
 }
 
+/// A type error stops that input after names and types, and no other.
+///
+/// The first file is refused by the type check, so it is not lowered and
+/// no check runs on it. The second is lowered and checked all the same, so
+/// its unproven dereference is reported. A gate on the run rather than on
+/// the input would drop the second file's findings in silence because of a
+/// mistake in the first.
+///
+/// Mutation: gate after names and types on `diagnostics.has_errors()`
+/// rather than on this input's own count. The `SC0403` goes, and this
+/// fails. Mutation: drop that gate. The first file is checked after all,
+/// the nullability check reads its `return;` as the end of the body, an
+/// `SC0408` joins, and this fails from the other side.
+#[test]
+fn a_type_error_stops_that_input_and_no_other() {
+    let refused = TempFile::new(
+        "safec_driver_typed_refused.c",
+        "int * _Nonnull g(int c, int * _Nonnull q) {\n    if (c) {\n        return;\n    }\n    return q;\n}\n",
+    );
+    let checked = TempFile::new(
+        "safec_driver_typed_checked.c",
+        "int f(int *p) {\n    return *p;\n}\n",
+    );
+
+    let mut options = options(vec![
+        refused.path().to_path_buf(),
+        checked.path().to_path_buf(),
+    ]);
+    options.emit = EmitKind::SafetyIr;
+    options.safety = SafetyLevel::Memory;
+
+    let compiled = compile(&options);
+
+    let codes: Vec<_> = compiled
+        .diagnostics
+        .diagnostics()
+        .iter()
+        .filter_map(|diagnostic| diagnostic.code())
+        .map(|code| code.to_string())
+        .collect();
+    assert_eq!(
+        codes,
+        ["SC0308", "SC0403"],
+        "{:?}",
+        compiled.diagnostics.diagnostics()
+    );
+}
+
 #[test]
 fn a_lexical_error_in_one_input_does_not_hide_one_in_another() {
     let first = TempFile::new("safec_driver_lex_a.c", "int a = @;\n");

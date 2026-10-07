@@ -161,9 +161,11 @@ hatch, and the pointer a call returns being taken as fresh, are
 **Only an attribute `sema::resolve` accepted makes a hatch.** It records the
 ones it accepts and the lowering asks it, rather than marking any function an
 attribute is written before. Found by review: a refused spelling is an error,
-but `--emit safety-ir` and `--emit hatches` are written on the run that
+but `--emit safety-ir` and `--emit hatches` were written on the run that
 refused it, and they showed the refused function as a hatch with its unproven
-conclusions moved out of the report. It also keeps a later spelling that means
+conclusions moved out of the report. Since #354 the driver lowers nothing
+after names and types report an error, so that run no longer exists. It also
+keeps a later spelling that means
 something else, such as the effects #249 adds, from making a hatch by being
 accepted.
 
@@ -199,8 +201,10 @@ fails every case above that has a hatch in it and
 `hatch` fails the cases that emit the IR of a hatch, and not printing the
 attribute in the tree fails `a_hatch_is_read_into_the_tree`. The lowering
 marking a hatch wherever an attribute is present, rather than where
-`sema::resolve` accepted one, fails
-`an_unproven_dereference_behind_a_refused_attribute_is_still_reported` alone.
+`sema::resolve` accepted one, fails nothing since #354, and cannot: a refused
+attribute is an error, and the driver lowers nothing after names and types
+report one. That gate is what keeps a refused attribute from being a hatch
+now, and dropping it fails `a_refused_attribute_stops_the_run_before_the_checks`.
 
 **What a call to a hatch leaves behind.** Dropping the loop in
 `memory/transfer.rs`'s `Callee::Opaque` arm that marks every live allocation

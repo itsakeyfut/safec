@@ -473,14 +473,17 @@ by a value that could be either.
 
 ## One problem, one diagnostic
 
-**An input the scan reported anything about is not parsed**, and one the parser
-gave up on has its names and types left alone. So one problem produces one
-diagnostic here where `clang` produces several:
+**An input the scan reported anything about is not parsed**, one the parser
+gave up on has its names and types left alone, and one whose names or types were
+refused is neither lowered nor checked for safety nor handed to a backend. So
+one problem produces one diagnostic here where `clang` produces several, and
+where this compiler's own later stages would add more:
 
 | Written | This compiler | `clang` |
 |---|---|---|
 | `int main(void) { int x = @; return x }` | `error[SC0103]` at the `@` | two syntax errors, and no lexical one |
 | `#define N 4` and a use of `N` | `error[SC0104]` at the directive | compiles it |
+| `void g(void) { return 1; }`, with `--emit llvm-ir` | `error[SC0308]` at the `1`, where the backend's `SC0801` followed it before #354 | one error |
 
 Both were measured against the built compiler and against
 `clang 20.1.6 -std=c17 --target=x86_64-unknown-linux-gnu`. The first row is a
@@ -512,6 +515,16 @@ second diagnostic about the first one's problem, which is the first row above.
 Names and types were already held back for the same reason and by the same
 count, one stage later; what the parser's gate adds is that second diagnostic
 and the tree, which is why the second row prints nothing at all.
+
+**Names and types are the last stage that refuses a program as C**, and every
+stage after them reads the types they gave. A lowering of a tree they refused
+calls what it cannot type a gap in this compiler, a safety check reads a
+`return;` the type check refused as the end of the body, and a backend refuses
+an IR shape that only the refused program could make. Each of those is a second
+diagnostic about the first one's problem, and the third row is one of them. What
+it costs is the same as above, one stage later: a file with an error the type
+check reports, even one that is this compiler's gap such as a constant `int`
+cannot hold, gets no safety findings until that error is gone.
 
 The gate is per input, so `a.c` failing does not stop `b.c` being read.
 `driver.rs::compile` is the one place that decision lives.

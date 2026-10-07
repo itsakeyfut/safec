@@ -442,10 +442,9 @@ impl Checker<'_> {
                 Type::Array { .. } => None,
                 // p2: the operand of `*` shall have pointer type. Reported,
                 // and `None` rather than a type kept the way `binary` keeps
-                // one: there is no type `*x` would have had. So the lowering
-                // still follows this with its `SC0304` and the note that
-                // calls it this compiler's gap, which is a later stage
-                // repeating a type error, #354.
+                // one: there is no type `*x` would have had. Nothing after
+                // the type check reads the tree once it has reported, so no
+                // later stage speaks about the missing type.
                 Type::Int | Type::Char | Type::Void => {
                     let spelled = self.spelled(ast, operand_ty?);
                     diagnostics.report(
@@ -506,8 +505,7 @@ impl Checker<'_> {
                     // No type rather than the `int` `binary` keeps for a
                     // refused operation: `-p` has none C would give it, as
                     // `*x` has none, and an `int` here would have `*+p`
-                    // reported a second time at the `*`. What a later stage
-                    // says after this is #354's.
+                    // reported a second time at the `*`.
                     return None;
                 }
                 Some(self.int)
@@ -688,14 +686,16 @@ impl Checker<'_> {
         }
 
         // **A refused operation keeps the type it would have had**, which is
-        // `compound_assignment`'s answer too. `None` would hand the lowering
-        // an expression it cannot type, and its `SC0304` says the program is
-        // fine and this compiler is not, which is false here. The cost is
-        // that `p = p * 1` is reported twice, the second time as an `int`
-        // given to a pointer, and both reports are about a program that is
-        // wrong. `+` and `-` are the exception, because `additive` has no
-        // type to give `n - p` or `p + q` whether or not it is refused, so
-        // those two do get the `SC0304` and its false note.
+        // `compound_assignment`'s answer too. It was kept so that the
+        // lowering was not handed an expression it cannot type, whose
+        // `SC0304` called the program this compiler's gap; the driver no
+        // longer lowers a tree the type check refused, so that reason has
+        // gone and the type is still kept; whether to keep it is #367. The
+        // cost is that `p = p * 1` is
+        // reported twice, the second time as an `int` given to a pointer,
+        // and both reports are about a program that is wrong. `+` and `-`
+        // are the exception, because `additive` has no type to give `n - p`
+        // or `p + q` whether or not it is refused.
         match op {
             BinOp::Add | BinOp::Sub => {
                 let (left, right) = operands?;
@@ -1188,7 +1188,7 @@ impl Checker<'_> {
     /// designator becoming one by 6.3.2.1 p4, so `fp(x)` and `(&g)(x)` are
     /// held to the same constraint as `g(x)`. Any other callee breaks p1 and
     /// is reported as `OPERANDS`, with no type for the call, because there is
-    /// no return type to give it; the lowering's `SC0304` after it is #354.
+    /// no return type to give it.
     ///
     /// Only where the callee's type includes a prototype, which is what that
     /// paragraph conditions the constraint on. `()` is never one: 6.7.6.3 p14
