@@ -1346,6 +1346,31 @@ int main(void) {{
     }
 }
 
+/// A subscript beside an index nothing typed is still what its pointer
+/// points at, so the check around it goes on.
+///
+/// `p - q` has no type here, for want of a `ptrdiff_t`, and nothing is
+/// reported about it because it is valid C. `p[p - q]` is an `int` whatever
+/// the index is, which is what makes giving it to an `int *` a mismatch.
+///
+/// Mutation: answer no type where either operand is untyped. The
+/// `SC0302` goes and this fails.
+#[test]
+fn a_subscript_beside_an_untyped_index_keeps_its_pointers_type() {
+    let checked = checked(
+        "int main(void) {
+    int *p;
+    int *q;
+    int *r = p[p - q];
+    return 0;
+}
+",
+    );
+
+    assert_eq!(checked.codes(), ["SC0302"]);
+    assert_eq!(checked.spelling("p[p - q]"), "int");
+}
+
 /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at
 /// file scope and in a block, with the words a declaration was written in.
 ///
