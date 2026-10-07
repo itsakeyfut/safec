@@ -710,3 +710,90 @@ fn a_branch_on_a_constant_tests_the_constant() {
         )
     );
 }
+
+/// A function that cannot be written takes nothing beside it with it: the
+/// one after `g` is still defined, and `g` is the only refusal.
+///
+/// Mutation: in `function`, return before writing anything once `refusals`
+/// is not empty. `f` is left out of the module and this fails.
+#[test]
+fn a_refused_function_leaves_the_next_one_written() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("t.c", "g f");
+    let (g, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::Int);
+    let void = unit.push_type(Ty::Void);
+    unit.push_function(Function::declaration(g, int, [void]));
+    let mut f = Function::new(at, void, []);
+    f.push_block(Block {
+        elements: Vec::new(),
+        terminator: Terminator::Return,
+    });
+    unit.push_function(f);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    assert_eq!(
+        refusals,
+        vec![Refusal {
+            why: "@g, which has a parameter that holds nothing".to_owned(),
+            at: Some(g),
+        }]
+    );
+    assert!(out.contains("define void @f()"), "{out}");
+}
+
+/// A call to a function that cannot be written is refused where it is
+/// written, and the caller is left a `declare` rather than a body with a
+/// call in it to a signature nobody wrote.
+///
+/// Mutation: in `call`, answer `Ok(())` rather than `?` when the callee's
+/// signature is refused. The refusal is still recorded, but `f` is defined
+/// with the call left out of it, so this fails.
+#[test]
+fn a_call_to_a_refused_function_is_refused_where_it_is_written() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("t.c", "g f");
+    let (g, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::Int);
+    let void = unit.push_type(Ty::Void);
+    let callee = unit.push_function(Function::declaration(g, int, [void]));
+    let mut f = Function::new(at, void, []);
+    let first = f.reserve_block();
+    let after = f.push_block(Block {
+        elements: Vec::new(),
+        terminator: Terminator::Return,
+    });
+    f.fill_block(
+        first,
+        Block {
+            elements: Vec::new(),
+            terminator: Terminator::Call {
+                callee,
+                arguments: Vec::new(),
+                destination: None,
+                then: Some(after),
+                origin: Origin::Written(at),
+            },
+        },
+    );
+    unit.push_function(f);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    let why = "@g, which has a parameter that holds nothing".to_owned();
+    assert_eq!(
+        refusals,
+        vec![
+            Refusal {
+                why: why.clone(),
+                at: Some(g),
+            },
+            Refusal { why, at: Some(at) },
+        ]
+    );
+    assert!(out.contains("declare void @f()"), "{out}");
+    assert!(!out.contains("call"), "{out}");
+}
