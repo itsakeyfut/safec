@@ -103,6 +103,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Use
         Constant 0
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:14:20 generated
+    StorageDead a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:14:13 generated "_6"
     Return
   Block "bb10"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:13:13 generated
@@ -169,4 +170,5 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
         Copy "_1"
           Deref
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:18:20 generated
+    StorageDead a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:18:13 generated "_6"
     Return

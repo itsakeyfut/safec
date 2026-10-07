@@ -155,6 +155,7 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
       Use
         Constant 0
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:20:20 generated
+    StorageDead a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:20:13 generated "_10"
     Return
   Block "bb14"
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:19:13 generated
@@ -210,6 +211,7 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
         Copy "_1"
           Deref
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:24:20 generated
+    StorageDead a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:24:13 generated "_10"
     Return
   Block "bb20"
     Branch a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:28:13 "bb21" "bb22"

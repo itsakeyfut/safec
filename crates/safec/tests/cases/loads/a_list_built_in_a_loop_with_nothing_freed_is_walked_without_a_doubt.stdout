@@ -87,6 +87,7 @@ Function a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt.c:4
       Use
         Constant 0
     Sequenced a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt.c:10:20 generated
+    StorageDead a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt.c:10:13 generated "_4"
     Return
   Block "bb6"
     Sequenced a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt.c:9:13 generated

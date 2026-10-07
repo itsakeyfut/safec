@@ -112,6 +112,7 @@ Function a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next.c:4:5 "mai
       Use
         Constant 0
     Sequenced a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next.c:14:20 generated
+    StorageDead a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next.c:14:13 generated "_7"
     Return
   Block "bb10"
     Sequenced a_pointer_stored_and_read_in_one_turn_is_doubted_on_the_next.c:13:13 generated

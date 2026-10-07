@@ -104,6 +104,7 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
       Use
         Constant 0
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:14:20 generated
+    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:14:13 generated "_7"
     Return
   Block "bb7"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 generated

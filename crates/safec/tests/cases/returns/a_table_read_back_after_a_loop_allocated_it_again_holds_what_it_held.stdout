@@ -129,6 +129,7 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
       Use
         Constant 0
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:17:20 generated
+    StorageDead a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:17:13 generated "_8"
     Return
   Block "bb14"
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:16:13 generated
@@ -198,4 +199,5 @@ Function a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:
         Copy "_4"
           Deref
     Sequenced a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:21:20 generated
+    StorageDead a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:21:13 generated "_8"
     Return

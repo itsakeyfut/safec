@@ -90,6 +90,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
       Use
         Constant 0
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:11:20 generated
+    StorageDead a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:11:13 generated "_6"
     Return
   Block "bb6"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:10:13 generated
@@ -146,6 +147,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
       Use
         Constant 0
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:16:24 generated
+    StorageDead a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:16:17 generated "_6"
     Return
   Block "bb12"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:15:17 generated
@@ -158,6 +160,7 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
           Deref
             Deref
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:18:20 generated
+    StorageDead a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:18:13 generated "_6"
     Return
   Block "bb14"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 generated

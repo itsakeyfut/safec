@@ -617,6 +617,26 @@ fn a_loop_body_that_declares_something_runs_more_than_once() {
     );
 }
 
+/// A value returned out of a nested scope is read before that scope's
+/// storage ends.
+///
+/// The `return` ends the storage of `x` (C17 6.2.4 p6), and 6.8.6.4 p3
+/// evaluates the expression first, so the run answers what `x` held rather
+/// than stopping on a read of dead storage.
+///
+/// Mutation: in the lowering's `Return` arm, emit the `StorageDead`s before
+/// the write of the value. The read of `x` finds no storage and this fails.
+#[test]
+fn a_value_returned_out_of_a_nested_scope_is_read_before_its_storage_ends() {
+    assert_eq!(
+        ran("int main(void) {
+    { int x; x = 3; return x; }
+}
+"),
+        Ok(Value::Int(3)),
+    );
+}
+
 /// A write through a pointer to dead storage stops the run too.
 ///
 /// C17 6.2.4 p2 makes referring to an object outside its lifetime undefined,

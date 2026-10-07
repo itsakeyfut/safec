@@ -146,6 +146,7 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Use
         Constant 0
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:18:20 generated
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:18:13 generated "_10"
     Return
   Block "bb14"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:17:13 generated
@@ -229,6 +230,9 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
       Use
         Constant 0
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:24 generated
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_17"
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_15"
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:26:17 generated "_10"
     Return
   Block "bb20"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:25:17 generated
@@ -240,6 +244,9 @@ Function a_doubted_load_stored_through_a_local_into_another_container_stays_doub
         Copy "_17"
           Deref
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:20 generated
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_17"
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_15"
+    StorageDead a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:28:13 generated "_10"
     Return
   Block "bb22"
     Sequenced a_doubted_load_stored_through_a_local_into_another_container_stays_doubted.c:31:9 generated

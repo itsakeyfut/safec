@@ -1202,6 +1202,26 @@ impl Lowering<'_> {
                     });
                     builder.sequenced(self.ast.expr(value).span());
                 }
+                // Every scope this leaves ends here, after the value is read
+                // (6.8.6.4 p3) and in the order the `Compound` arm closes one
+                // in, innermost first. After, and not only for C's sake: the
+                // memory check asks about a returned pointer at the write into
+                // the return place, and a local cleared before that write
+                // reaches no allocation, so a freed one returned out of a
+                // nested scope would go unreported. `Generated` for the
+                // `Compound` arm's reason, and spanned by the `return` rather
+                // than by each `}`, because control never reaches those braces
+                // and this statement is why the storage ends. The function's
+                // own body is the first scope and holds nothing, so no depth
+                // test is needed. See ADR-0012.
+                for scope in self.scopes.iter().rev() {
+                    for &local in scope.iter().rev() {
+                        builder.element(Element::StorageDead {
+                            origin: Origin::Generated(span),
+                            local,
+                        });
+                    }
+                }
                 builder.end(Terminator::Return);
             }
             Stmt::Declaration { declarators, .. } => {

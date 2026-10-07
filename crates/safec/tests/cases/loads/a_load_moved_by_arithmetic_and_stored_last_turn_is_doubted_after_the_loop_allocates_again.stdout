@@ -113,6 +113,7 @@ Function a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_lo
       Use
         Constant 0
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:14:20 generated
+    StorageDead a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:14:13 generated "_7"
     Return
   Block "bb10"
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:13:13 generated
@@ -183,6 +184,8 @@ Function a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_lo
       Use
         Constant 0
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:20:24 generated
+    StorageDead a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:20:17 generated "_12"
+    StorageDead a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:20:17 generated "_7"
     Return
   Block "bb16"
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:19:17 generated
@@ -194,6 +197,8 @@ Function a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_lo
         Copy "_12"
           Deref
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:22:20 generated
+    StorageDead a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:22:13 generated "_12"
+    StorageDead a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:22:13 generated "_7"
     Return
   Block "bb18"
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:25:9 generated

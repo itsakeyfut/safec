@@ -1,0 +1,16 @@
+error[SC0406]: this returns a pointer to an allocation that was freed
+   ╭─[ a_pointer_freed_and_returned_out_of_a_nested_scope.c:9:9 ]
+   │
+ 5 │     int *q = malloc(4);
+   │              ────┬────  
+   │                  ╰────── allocated here
+   │ 
+ 8 │         free(p);
+   │         ───┬───  
+   │            ╰───── freed here
+ 9 │         return p;
+   │         ────┬────  
+   │             ╰────── returned here
+───╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer that is still allocated, or do not free this one before returning it

@@ -504,15 +504,11 @@ pub enum Element {
     },
     /// This local's storage is gone from here on.
     StorageDead {
-        /// The scope that is ending, named by its own span.
+        /// What ended the storage, which is where control left the scope.
         ///
-        /// Which starts at the `{`, so this points there rather than at the
-        /// `}` where the storage actually goes. The two coincide for saying
-        /// *which* scope ended and differ for saying *where*, and the first
-        /// diagnostic that has to say where is what should change it: the
-        /// closing brace is not on the tree today, so pointing at it means
-        /// giving `ast::Stmt::Compound` a second span rather than doing
-        /// arithmetic on this one.
+        /// The `}` of a scope control falls off the end of, or the `return`
+        /// that leaves it early. A producer that points at the `}` of a scope
+        /// a jump leaves is pointing at a brace control never reached.
         origin: Origin,
         /// Whose storage.
         local: LocalId,

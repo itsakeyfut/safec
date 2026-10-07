@@ -104,6 +104,7 @@ Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:4
       Use
         Constant 0
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:13:20 generated
+    StorageDead a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:13:13 generated "_6"
     Return
   Block "bb10"
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:12:13 generated
@@ -136,6 +137,7 @@ Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:4
           Deref
             Deref
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:17:20 generated
+    StorageDead a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:17:13 generated "_6"
     Return
   Block "bb13"
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:16:13 generated

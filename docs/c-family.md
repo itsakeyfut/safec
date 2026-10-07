@@ -366,8 +366,10 @@ written into the return place, of the local being written, so **nothing that
 frees may run between the write into the return place and the
 `Terminator::Return` that leaves with it**. The C frontend writes the value,
 marks the end of the `return`'s full expression with an `Element::Sequenced`,
-and ends the block, so nothing frees between the two for any program it
-builds.
+ends the storage of every scope the `return` leaves with `Element::StorageDead`,
+and ends the block, so nothing frees an allocation between the two for any
+program it builds. A local's storage does end there, so a check about that,
+rather than about an allocation, has to ask at the `Terminator::Return`.
 
 **What an omission costs here is a silence.** A frontend that frees after the
 write hands back a freed pointer, and the caller believes a call's result is

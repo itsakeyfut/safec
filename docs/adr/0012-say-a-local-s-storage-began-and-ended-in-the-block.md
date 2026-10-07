@@ -179,13 +179,15 @@ and fails.
   the interpreter cannot act on it: its identity is a frame's generation, so a
   pointer taken in one iteration of a loop still reads in the next. #86 is that
   work, and nothing here forecloses it.
-* Bad, because the lowering emits `StorageDead` at one place only, where a
-  compound statement falls off its end. `break`, `continue` and `goto` leave a
-  scope on a path that has no marker on it, and if every path leaves that way
-  the marker is emitted nowhere. The element shape is what makes the fix
-  possible, and the fix is per-exit-edge emission in the lowering rather than
-  anything here. Today the only non-falling exit is `return`, where the frame
-  goes and nothing can observe the difference.
+* Bad, because the lowering emits `StorageDead` at two places only: where a
+  compound statement falls off its end, and at a `return`, which ends every
+  scope it leaves. `break`, `continue` and `goto` will leave a scope on a path
+  that has no marker on it unless each does the same, and if every path leaves
+  that way the marker is emitted nowhere. The element shape is what makes the
+  fix possible, and the fix is per-exit-edge emission in the lowering rather
+  than anything here; `return` is the first exit that has it, and
+  `a_return_ends_every_scope_it_leaves` in `crates/safec/src/lowering/tests.rs`
+  is what fails if it goes.
 * Good, because `goto` leaving a scope is expressible: the element sits on the
   path control takes, and the CFG already carries that path.
 * Bad, because every walk changes. The lowering, the printer, the interpreter

@@ -71,6 +71,7 @@ Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
       Use
         Constant 0
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:10:20 generated
+    StorageDead a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:10:13 generated "_3"
     Return
   Block "bb6"
     Sequenced a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:9:13 generated

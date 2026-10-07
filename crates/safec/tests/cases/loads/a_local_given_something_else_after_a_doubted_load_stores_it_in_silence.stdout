@@ -198,6 +198,7 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Use
         Constant 0
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:24:20 generated
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:24:13 generated "_15"
     Return
   Block "bb18"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:23:13 generated
@@ -301,6 +302,9 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
       Use
         Constant 0
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:34:24 generated
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:34:17 generated "_24"
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:34:17 generated "_20"
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:34:17 generated "_15"
     Return
   Block "bb24"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:33:17 generated
@@ -312,6 +316,9 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
         Copy "_24"
           Deref
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:36:20 generated
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:36:13 generated "_24"
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:36:13 generated "_20"
+    StorageDead a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:36:13 generated "_15"
     Return
   Block "bb26"
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:39:9 generated
