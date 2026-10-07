@@ -1,0 +1,68 @@
+Declaration a_conditional_whose_arms_c_pairs_builds.c:1:1 "h" "void (void)"
+Function a_conditional_whose_arms_c_pairs_builds.c:3:1 "f" "int (int, int, char, int *, void *)"
+  Parameter a_conditional_whose_arms_c_pairs_builds.c:3:7 "c" "int"
+  Parameter a_conditional_whose_arms_c_pairs_builds.c:3:14 "n" "int"
+  Parameter a_conditional_whose_arms_c_pairs_builds.c:3:21 "ch" "char"
+  Parameter a_conditional_whose_arms_c_pairs_builds.c:3:30 "p" "int *"
+  Parameter a_conditional_whose_arms_c_pairs_builds.c:3:38 "v" "void *"
+  Compound a_conditional_whose_arms_c_pairs_builds.c:3:47
+    Declaration a_conditional_whose_arms_c_pairs_builds.c:4:5 "a" "int[3]"
+    Declaration a_conditional_whose_arms_c_pairs_builds.c:5:5 "x" "int"
+      Conditional a_conditional_whose_arms_c_pairs_builds.c:5:13
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:5:13 "c"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:5:17 "n"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:5:21 "ch"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:6:5
+      Conditional a_conditional_whose_arms_c_pairs_builds.c:6:5
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:6:5 "c"
+        Call a_conditional_whose_arms_c_pairs_builds.c:6:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:6:9 "h"
+        Call a_conditional_whose_arms_c_pairs_builds.c:6:15
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:6:15 "h"
+    Declaration a_conditional_whose_arms_c_pairs_builds.c:7:5 "r" "int *"
+      Conditional a_conditional_whose_arms_c_pairs_builds.c:7:14
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:7:14 "c"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:7:18 "p"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:7:22 "p"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:8:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:8:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:8:5 "r"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:8:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:8:9 "c"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:8:13 "p"
+          Number a_conditional_whose_arms_c_pairs_builds.c:8:17 "0"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:9:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:9:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:9:5 "r"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:9:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:9:9 "c"
+          Number a_conditional_whose_arms_c_pairs_builds.c:9:13 "0"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:9:17 "p"
+    Declaration a_conditional_whose_arms_c_pairs_builds.c:10:5 "w" "void *"
+      Conditional a_conditional_whose_arms_c_pairs_builds.c:10:15
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:10:15 "c"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:10:19 "p"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:10:23 "v"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:11:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:11:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:11:5 "w"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:11:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:11:9 "c"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:11:13 "v"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:11:17 "p"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:12:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:12:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:12:5 "r"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:12:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:12:9 "c"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:12:13 "a"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:12:17 "p"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:13:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:13:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:13:5 "r"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:13:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:13:9 "c"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:13:13 "p"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:13:17 "a"
+    Return a_conditional_whose_arms_c_pairs_builds.c:14:5
+      Identifier a_conditional_whose_arms_c_pairs_builds.c:14:12 "x"

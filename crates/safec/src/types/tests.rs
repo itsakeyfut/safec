@@ -553,26 +553,34 @@ int main(void) { return f(1, 2, 3); }
     );
 }
 
-/// C17 6.5.15's rule for a conditional, as far as this stage answers it.
+/// C17 6.5.15 p5 and p6's type for a conditional whose arms p3 allows.
 ///
-/// Two arms of one type make that type; the rest of p5 needs the usual
-/// arithmetic conversions and is not answered.
+/// Two arithmetic arms are `int`, whatever either is; two `void` arms are
+/// `void`; two pointers to one type are that type; and a pointer beside a
+/// pointer to `void` is the pointer to `void`, on either side. A corpus
+/// case reads one of these through the nullability check, but only this
+/// spells each, so an arm answering the wrong one of two types it was
+/// given fails here.
 ///
-/// Mutation: have the `Expr::Conditional` arm answer `None`. The first two
-/// rows lose their type and this fails. Before it existed the whole arm
-/// could be deleted with the suite green: the three corpus cases that
-/// write `?:` never assign one or return one, so nothing observed its
-/// type.
+/// Mutation: have `Checker::conditional` answer the first arm's type for
+/// two arithmetic arms; the `ch` row is `char` and this fails. Mutation:
+/// answer the pointer for a pointer to `void` on the left; the `v : p` row
+/// fails.
 #[test]
-fn a_conditional_has_a_type_when_both_its_arms_agree() {
+fn a_conditional_has_the_type_c_gives_its_arms() {
     let checked = checked(
-        "int main(void) {
+        "void h(void);
+int main(void) {
     int *p;
     void *v;
+    char ch;
     int x;
     x = 1 ? 2 : 3;
+    x = 1 ? ch : ch;
+    1 ? h() : h();
     p = 1 ? p : p;
     1 ? p : v;
+    1 ? v : p;
     return 0;
 }
 ",
@@ -582,8 +590,11 @@ fn a_conditional_has_a_type_when_both_its_arms_agree() {
 
     for (text, spelling) in [
         ("1 ? 2 : 3", "int"),
+        ("1 ? ch : ch", "int"),
+        ("1 ? h() : h()", "void"),
         ("1 ? p : p", "int *"),
-        ("1 ? p : v", "?"),
+        ("1 ? p : v", "void *"),
+        ("1 ? v : p", "void *"),
     ] {
         assert_eq!(checked.spelling(text), spelling, "{text}");
     }

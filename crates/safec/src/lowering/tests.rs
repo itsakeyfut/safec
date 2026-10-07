@@ -1405,17 +1405,16 @@ fn an_expression_that_names_no_place_is_reported() {
 /// callee that could name a pointer is refused at its declaration, because
 /// the IR has no function type to give it.
 ///
-/// The callee is a conditional whose arms are different functions, which
-/// the type check leaves untyped without a report because it does not yet
-/// check a conditional's arms against each other (#358). A callee that is
-/// not a function at all, `p(1)` with `int p`, was this test's input until
-/// the type check reported it as `SC0306`; #358 will move this one too.
+/// The callee is `p - q`, which the type check leaves untyped without a
+/// report, because C17 6.5.6 p9 makes it a `ptrdiff_t` and this compiler
+/// has no name for one. Two inputs before it, a callee that is not a
+/// function and a conditional over two different functions, are each
+/// reported by the type check now, as `SC0306`.
 ///
 /// Mutation: refuse an untyped expression without reporting. This fails.
 #[test]
 fn a_call_whose_callee_has_no_type_is_reported() {
-    let lowered =
-        lowered("int g(int a);\nint h(int *p);\n\nint f(int c) {\n    return (c ? g : h)(1);\n}\n");
+    let lowered = lowered("int f(int *p, int *q) {\n    return (p - q)(1);\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }

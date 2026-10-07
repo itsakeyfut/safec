@@ -2527,6 +2527,18 @@ cases! {
         a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
         a_scalar_condition_builds: ["--emit", "ast"],
         an_untyped_condition_of_a_conditional_is_reported_once: ["--emit", "ast"],
+        // A conditional's arms are a pair C17 6.5.15 p3 allows, and have the
+        // type p5 and p6 give them. Mutation: answer the first arm's type for
+        // any pair in `Checker::conditional`;
+        // `a_conditional_whose_arms_c_does_not_pair_is_a_type_error` builds.
+        // Mutation: refuse any one pair the table allows;
+        // `a_conditional_whose_arms_c_pairs_builds` is refused. Mutation:
+        // answer no type for a pointer beside a null pointer constant;
+        // `a_conditional_has_the_type_c_gives_it` loses its `SC0403` to the
+        // lowering's `SC0304`.
+        a_conditional_whose_arms_c_does_not_pair_is_a_type_error: ["--emit", "ast"],
+        a_conditional_whose_arms_c_pairs_builds: ["--emit", "ast"],
+        a_conditional_has_the_type_c_gives_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `p - q` is valid C and untyped here, with nothing reported, so the
         // `*` beside it is still `int` and the initializer is still checked.
         // Mutation: answer no type beside an untyped operand; the `SC0302`
