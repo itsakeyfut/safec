@@ -1,0 +1,7 @@
+error[SC0306]: `?:` cannot take `void`
+   ╭─[ a_void_condition_of_a_conditional_is_a_type_error.c:4:12 ]
+   │
+ 4 │     return h() ? 1 : 2;
+   │            ─┬─  
+   │             ╰─── this is `void`
+───╯

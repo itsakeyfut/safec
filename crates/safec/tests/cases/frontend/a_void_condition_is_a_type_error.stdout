@@ -1,0 +1,24 @@
+Function a_void_condition_is_a_type_error.c:1:1 "h" "void (void)"
+  Compound a_void_condition_is_a_type_error.c:1:14
+Function a_void_condition_is_a_type_error.c:4:1 "f" "int (void)"
+  Compound a_void_condition_is_a_type_error.c:4:13
+    If a_void_condition_is_a_type_error.c:5:5
+      Call a_void_condition_is_a_type_error.c:5:9
+        Identifier a_void_condition_is_a_type_error.c:5:9 "h"
+      Compound a_void_condition_is_a_type_error.c:5:14
+        Return a_void_condition_is_a_type_error.c:6:9
+          Number a_void_condition_is_a_type_error.c:6:16 "1"
+    While a_void_condition_is_a_type_error.c:8:5
+      Call a_void_condition_is_a_type_error.c:8:12
+        Identifier a_void_condition_is_a_type_error.c:8:12 "h"
+      Compound a_void_condition_is_a_type_error.c:8:17
+        Return a_void_condition_is_a_type_error.c:9:9
+          Number a_void_condition_is_a_type_error.c:9:16 "2"
+    For a_void_condition_is_a_type_error.c:11:5 condition
+      Call a_void_condition_is_a_type_error.c:11:12
+        Identifier a_void_condition_is_a_type_error.c:11:12 "h"
+      Compound a_void_condition_is_a_type_error.c:11:18
+        Return a_void_condition_is_a_type_error.c:12:9
+          Number a_void_condition_is_a_type_error.c:12:16 "3"
+    Return a_void_condition_is_a_type_error.c:14:5
+      Number a_void_condition_is_a_type_error.c:14:12 "0"

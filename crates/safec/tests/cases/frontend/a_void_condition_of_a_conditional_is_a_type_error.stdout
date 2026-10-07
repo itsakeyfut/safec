@@ -1,0 +1,9 @@
+Declaration a_void_condition_of_a_conditional_is_a_type_error.c:1:1 "h" "void (void)"
+Function a_void_condition_of_a_conditional_is_a_type_error.c:3:1 "f" "int (void)"
+  Compound a_void_condition_of_a_conditional_is_a_type_error.c:3:13
+    Return a_void_condition_of_a_conditional_is_a_type_error.c:4:5
+      Conditional a_void_condition_of_a_conditional_is_a_type_error.c:4:12
+        Call a_void_condition_of_a_conditional_is_a_type_error.c:4:12
+          Identifier a_void_condition_of_a_conditional_is_a_type_error.c:4:12 "h"
+        Number a_void_condition_of_a_conditional_is_a_type_error.c:4:18 "1"
+        Number a_void_condition_of_a_conditional_is_a_type_error.c:4:22 "2"

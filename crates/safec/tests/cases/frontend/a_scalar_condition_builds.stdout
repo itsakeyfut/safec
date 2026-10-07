@@ -1,0 +1,32 @@
+Declaration a_scalar_condition_builds.c:1:1 "g" "int (int)"
+  Parameter a_scalar_condition_builds.c:1:7 "n" "int"
+Function a_scalar_condition_builds.c:3:1 "f" "int (int *, char)"
+  Parameter a_scalar_condition_builds.c:3:7 "p" "int *"
+  Parameter a_scalar_condition_builds.c:3:15 "c" "char"
+  Compound a_scalar_condition_builds.c:3:23
+    Declaration a_scalar_condition_builds.c:4:5 "a" "int[3]"
+    If a_scalar_condition_builds.c:5:5
+      Identifier a_scalar_condition_builds.c:5:9 "p"
+      Compound a_scalar_condition_builds.c:5:12
+        Return a_scalar_condition_builds.c:6:9
+          Number a_scalar_condition_builds.c:6:16 "1"
+    If a_scalar_condition_builds.c:8:5
+      Identifier a_scalar_condition_builds.c:8:9 "a"
+      Compound a_scalar_condition_builds.c:8:12
+        Return a_scalar_condition_builds.c:9:9
+          Number a_scalar_condition_builds.c:9:16 "2"
+    If a_scalar_condition_builds.c:11:5
+      Identifier a_scalar_condition_builds.c:11:9 "g"
+      Compound a_scalar_condition_builds.c:11:12
+        Return a_scalar_condition_builds.c:12:9
+          Number a_scalar_condition_builds.c:12:16 "3"
+    While a_scalar_condition_builds.c:14:5
+      Identifier a_scalar_condition_builds.c:14:12 "c"
+      Compound a_scalar_condition_builds.c:14:15
+        Return a_scalar_condition_builds.c:15:9
+          Number a_scalar_condition_builds.c:15:16 "4"
+    Return a_scalar_condition_builds.c:17:5
+      Conditional a_scalar_condition_builds.c:17:12
+        Identifier a_scalar_condition_builds.c:17:12 "p"
+        Number a_scalar_condition_builds.c:17:16 "5"
+        Number a_scalar_condition_builds.c:17:20 "6"
