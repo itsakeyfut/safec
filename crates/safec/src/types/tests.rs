@@ -1313,23 +1313,26 @@ int main(void) {{
 /// A refused increment or subscript keeps the type it would have had, as
 /// a refused `+=` does, because C gives each from an operand rather than
 /// from the step that was refused: `p++` is `p`'s type and `v[1]` is what
-/// `v` points at. Every subscript row has the pointer as its base,
-/// because `1[v]` and `g[1]` have no type to keep; `Checker::subscript`
-/// says why.
+/// `v` points at, whichever side of the `[]` the pointer is on.
 ///
 /// Mutation: have `increment` answer `None` after its report. The `++`
 /// and `--` rows fail. Mutation: have `subscript` answer `None` after its
-/// report. The `[]` rows fail. Nothing else in the suite noticed either.
+/// report. The `[]` rows fail. Mutation: have `subscript` read the type off
+/// the base only. The `1[v]` and `1[g]` rows fail.
 #[test]
 fn a_refused_increment_or_subscript_keeps_its_type() {
     for (code, written, ty) in [
         ("v++;", "v++", "void *"),
         ("--v;", "--v", "void *"),
         ("v[1];", "v[1]", "void"),
+        ("1[v];", "1[v]", "void"),
         ("u[0];", "u[0]", "int[]"),
+        ("g[1];", "g[1]", "void (void)"),
+        ("1[g];", "1[g]", "void (void)"),
     ] {
         let checked = checked(&format!(
-            "int main(void) {{
+            "void g(void);
+int main(void) {{
     void *v;
     int (*u)[];
     {code}
