@@ -75,10 +75,11 @@ pub struct TypeId(u32);
 /// while the types they derive are different in shape.
 ///
 /// What a type *means* is not here. Whether the length of an array has an
-/// integer type (6.7.6.2 p1), whether a parameter declared as an array is
-/// adjusted to a pointer (6.7.6.3 p7), and whether two declarations of one
-/// name agree (6.7.6.3 p15) are all semantic rules, and this stage records
-/// what was written.
+/// integer type (6.7.6.2 p1) and whether two declarations of one name agree
+/// (6.7.6.3 p15) are semantic rules, and a `Type` is what was written. The
+/// one adjustment this stage makes, a parameter's by 6.7.6.3 p7 and p8, is
+/// made beside the written type rather than in place of it: see
+/// [`Declaration::ty`].
 ///
 /// **Not comparable, on purpose.** Whether two types are the same is 6.7.6.3
 /// p15's question and it is not this one: a `Type` holds where its parameters
@@ -168,7 +169,11 @@ pub struct Declaration {
     /// agree and the lowering's local all read this field.
     pub ty: TypeId,
     /// The type the declarator derived, as written: what `--emit ast` and a
-    /// function type's spelling show, and nothing else reads.
+    /// function type's spelling show. Anything that needs the declarator's own
+    /// expressions reads it too, because an array's length is in this type and
+    /// not in the adjusted pointer: `sema.rs` resolves a parameter's array
+    /// length through it, and the lowering refuses a parameter whose array
+    /// declarator the adjustment would lose.
     pub written: TypeId,
     /// The specifiers through the declarator, and through its initializer
     /// where it has one.
@@ -1036,8 +1041,11 @@ impl Ast {
 /// two dumps can be diffed rather than read against one another. It diverges in
 /// one place, and deliberately: `clang` shows a parameter after the adjustments
 /// C17 6.7.6.3 p7 and p8 make, so it spells `int f(int [10])` as `int (int *)`,
-/// where this spells it `int (int[10])`. Those adjustments are semantic rules,
-/// and this stage records what was written.
+/// where this spells it `int (int[10])`, because it is handed
+/// [`Declaration::written`]: what the source says, which is what an artifact
+/// of the source shows. A diagnostic about one argument spells the parameter's
+/// [`Declaration::ty`] instead, so the two meet as `int *` beside
+/// `int (int[10])`.
 ///
 /// The walk down the spine is a loop and not a recursion, so a type of ten
 /// thousand pointers costs no stack. Only a parameter list recurses, and how

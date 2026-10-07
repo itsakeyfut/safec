@@ -649,6 +649,7 @@ impl Parser<'_> {
                 declaration: Declaration {
                     name: Some(name),
                     ty,
+                    // Not a parameter, so nothing is adjusted.
                     written: ty,
                     // From the specifiers, which all of these share, through
                     // this one's initializer. `Declaration::span` says why they

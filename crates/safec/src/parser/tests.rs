@@ -946,15 +946,23 @@ fn what_was_expected_is_named_in_the_message() {
 /// keeps what was written for whoever prints it.
 ///
 /// C17 6.7.6.3 p7 adjusts an array of `T` to a pointer to `T`, and p8 a
-/// function to a pointer to it. So the function type is the one
-/// `int g(int *, int (*)(void))` declares, by p15.
+/// function to a pointer to it. Only the outermost array goes, so `int
+/// d[2][3]` is `int (*)[3]`, and a parameter with no name is adjusted as one
+/// with a name is. So the function type is the one the second line declares,
+/// by p15.
 ///
-/// Mutation: leave a parameter's `ty` as written. The adjusted spellings
-/// and the compatibility fail. Mutation: compare `written` in
+/// Mutation: leave a parameter's `ty` as written. The adjusted spellings and
+/// the compatibility fail. Mutation: point the adjusted pointer at `int`
+/// whatever the element, or at the innermost element. The `char`, `int *` or
+/// `int[3]` row fails. Mutation: leave an unnamed parameter unadjusted. The
+/// last two rows fail. Mutation: compare `written` in
 /// `Ast::compatible_parameters`. The compatibility fails.
 #[test]
 fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
-    let parsed = parsed("int g(int a[4], int h(void));\nint g(int *a, int (*h)(void));\n");
+    let parsed = parsed(concat!(
+        "int g(int a[4], int h(void), char b[4], int *c[4], int d[2][3], int [4], int (void));\n",
+        "int g(int *a, int (*h)(void), char *b, int **c, int (*d)[3], int *, int (*)(void));\n",
+    ));
     let [first, second] = parsed.ast.items() else {
         panic!("two declarations: {:?}", parsed.ast.items());
     };
@@ -976,8 +984,30 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
     let spelled = |id| crate::ast::spell_type(&parsed.sources, &parsed.ast, id);
     let adjusted: Vec<String> = parameters.iter().map(|p| spelled(p.ty)).collect();
     let written: Vec<String> = parameters.iter().map(|p| spelled(p.written)).collect();
-    assert_eq!(adjusted, ["int *", "int (*)(void)"]);
-    assert_eq!(written, ["int[4]", "int (void)"]);
+    assert_eq!(
+        adjusted,
+        [
+            "int *",
+            "int (*)(void)",
+            "char *",
+            "int **",
+            "int (*)[3]",
+            "int *",
+            "int (*)(void)"
+        ]
+    );
+    assert_eq!(
+        written,
+        [
+            "int[4]",
+            "int (void)",
+            "char[4]",
+            "int *[4]",
+            "int[2][3]",
+            "int[4]",
+            "int (void)"
+        ]
+    );
 
     assert!(parsed.ast.compatible(first, second));
     assert!(!parsed.diagnostics.has_errors());
