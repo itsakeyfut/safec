@@ -21,7 +21,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
   Local "_13" "int **"
   Local "_14" "int **"
   Local "_15" "int *"
-  Local "_16" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:5:16 generated
     Call a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:5:16 "malloc" "bb1"
@@ -161,7 +160,6 @@ Function a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes
     Sequenced a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:24:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:25:5 generated
     Call a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:25:5 "release_all" "bb16"
-      Destination "_16"
   Block "bb16"
     Sequenced a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:25:5 generated
     Operation a_store_through_a_pointer_that_may_be_either_of_two_allocations_exposes_nothing.c:26:5 written

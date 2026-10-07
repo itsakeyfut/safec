@@ -21,9 +21,8 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
   Local "_10" "int **"
   Local "_11" "int **"
   Local "_12" "int **"
-  Local "_13" "void"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_13" "int **"
+  Local "_14" "int"
   Block "bb0" entry
     Operation an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:6:9 written
       Destination "_2"
@@ -135,21 +134,20 @@ Function an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:19:5 generated
     ArgumentsEvaluated an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 generated
     Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 "grow_all" "bb11"
-      Destination "_13"
   Block "bb11"
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:20:5 generated
     Operation an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:17 written
-      Destination "_14"
+      Destination "_13"
       Address
         Place "_5"
     ArgumentsEvaluated an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:12 generated
     Call an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:12 "use2" "bb12"
-      Destination "_15"
-      Copy "_14"
+      Destination "_14"
+      Copy "_13"
   Block "bb12"
     Operation an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced an_address_stored_in_memory_and_overwritten_does_not_hand_its_local_to_a_call.c:21:12 generated
     Return

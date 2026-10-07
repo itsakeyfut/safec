@@ -27,17 +27,15 @@ Function an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_report
   Local "_4" "int *"
   Local "_5" "int *"
   Local "_6" "int **"
-  Local "_7" "void"
-  Local "_8" "void *"
-  Local "_9" "int *"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "void *"
-  Local "_16" "void"
-  Local "_17" "int"
+  Local "_14" "void *"
+  Local "_15" "int"
   Block "bb0" entry
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:13:5 written
       Destination "_4"
@@ -54,30 +52,29 @@ Function an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_report
         Place "_4"
     ArgumentsEvaluated an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:14:5 generated
     Call an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:14:5 "stash" "bb1"
-      Destination "_7"
       Copy "_6"
   Block "bb1"
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:14:5 generated
     Call an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:15:9 "malloc" "bb2"
-      Destination "_8"
+      Destination "_7"
       Constant 4
   Block "bb2"
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:15:5 written
       Destination "_3"
       Use
-        Copy "_8"
+        Copy "_7"
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:15:5 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_3"
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:15:5 generated
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:16:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:16:9 "bb3" "bb4"
-      Copy "_10"
+      Copy "_9"
   Block "bb3"
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:16:9 generated
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:17:9 written
@@ -96,13 +93,13 @@ Function an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_report
       Use
         Constant 1
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:19:5 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_3"
           Deref
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:19:5 generated
     Call an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:7 "release_all" "bb6"
-      Destination "_12"
+      Destination "_11"
   Block "bb6"
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:24 written
       Destination "_1"
@@ -110,25 +107,24 @@ Function an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_report
         Copy "_3"
           Deref
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:24 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_1"
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:7 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
+        Copy "_11"
         Copy "_12"
-        Copy "_13"
     Call an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:35 "memset" "bb7"
-      Destination "_15"
+      Destination "_14"
       Copy "_3"
       Constant 0
       Constant 4
   Block "bb7"
     ArgumentsEvaluated an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:5 generated
     Call an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:5 "g" "bb8"
-      Destination "_16"
+      Copy "_13"
       Copy "_14"
-      Copy "_15"
   Block "bb8"
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:20:5 generated
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:21:5 written
@@ -136,7 +132,7 @@ Function an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_report
       Use
         Constant 0
     Operation an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:21:5 written
-      Destination "_17"
+      Destination "_15"
       Use
         Copy "_2"
     Sequenced an_exposure_by_a_call_whose_next_block_clears_the_reads_is_still_reported.c:21:5 generated

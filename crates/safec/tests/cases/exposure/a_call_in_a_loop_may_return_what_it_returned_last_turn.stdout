@@ -14,23 +14,21 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "int **"
-  Local "_3" "void"
+  Local "_3" "int"
   Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "int"
+  Local "_6" "int *"
   Local "_7" "int *"
-  Local "_8" "int *"
+  Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
+  Local "_11" "int **"
   Local "_12" "int **"
-  Local "_13" "int **"
+  Local "_13" "int ***"
   Local "_14" "int ***"
-  Local "_15" "int ***"
-  Local "_16" "int *"
-  Local "_17" "void"
-  Local "_18" "int"
-  Local "_19" "int"
+  Local "_15" "int *"
+  Local "_16" "int"
+  Local "_17" "int"
   Block "bb0" entry
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 generated
       Destination "_0"
@@ -47,56 +45,55 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
         Place "_1"
     ArgumentsEvaluated a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 generated
     Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 "keep" "bb1"
-      Destination "_3"
       Copy "_2"
   Block "bb1"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:8:5 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:9:9 written
-      Destination "_4"
+      Destination "_3"
       Use
         Constant 0
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:9:13 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:10:9 written
-      Destination "_5"
+      Destination "_4"
       Use
         Constant 0
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:10:15 generated
     Goto "bb2"
   Block "bb2"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 written
-      Destination "_6"
+      Destination "_5"
       Binary "Lt"
-        Copy "_4"
+        Copy "_3"
         Constant 2
     Branch a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 "bb3" "bb4"
-      Copy "_6"
+      Copy "_5"
   Block "bb3"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 generated
-    StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:9 generated "_7"
+    StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:9 generated "_6"
     ArgumentsEvaluated a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:18 generated
     Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:18 "get" "bb5"
-      Destination "_8"
+      Destination "_7"
   Block "bb4"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:11:12 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:23:5 written
       Destination "_0"
       Use
-        Copy "_5"
+        Copy "_4"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:23:12 generated
     Return
   Block "bb5"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:14 written
-      Destination "_7"
+      Destination "_6"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:12:18 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
-        Copy "_7"
+        Copy "_6"
         Constant 0
     Branch a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 "bb6" "bb7"
-      Copy "_9"
+      Copy "_8"
   Block "bb6"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:14:13 written
@@ -104,81 +101,80 @@ Function a_call_in_a_loop_may_return_what_it_returned_last_turn.c:6:5 "main"
       Use
         Constant 0
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:14:20 generated
-    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:14:13 generated "_7"
+    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:14:13 generated "_6"
     Return
   Block "bb7"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:13:13 generated
     Goto "bb8"
   Block "bb8"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:16:15 written
-      Destination "_10"
+      Destination "_9"
       Binary "Add"
-        Copy "_5"
-        Copy "_7"
+        Copy "_4"
+        Copy "_6"
           Deref
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:16:9 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_10"
+        Copy "_9"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:16:9 written
-      Destination "_11"
+      Destination "_10"
       Use
-        Copy "_5"
+        Copy "_4"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:16:9 generated
-    StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:17:9 generated "_12"
+    StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:17:9 generated "_11"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:17:19 written
-      Destination "_13"
+      Destination "_12"
       Address
         Place "_1"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:17:15 written
-      Destination "_12"
+      Destination "_11"
       Use
-        Copy "_13"
+        Copy "_12"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:17:19 generated
-    StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:18:9 generated "_14"
+    StorageLive a_call_in_a_loop_may_return_what_it_returned_last_turn.c:18:9 generated "_13"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:18:22 written
-      Destination "_15"
-      Address
-        Place "_12"
-    Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:18:16 written
       Destination "_14"
+      Address
+        Place "_11"
+    Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:18:16 written
+      Destination "_13"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:18:22 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:19:9 written
-      Destination "_14"
+      Destination "_13"
         Deref
           Deref
       Use
-        Copy "_7"
+        Copy "_6"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:19:9 written
-      Destination "_16"
+      Destination "_15"
       Use
-        Copy "_14"
+        Copy "_13"
           Deref
             Deref
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:19:9 generated
     ArgumentsEvaluated a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 generated
     Call a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 "free" "bb9"
-      Destination "_17"
-      Copy "_7"
+      Copy "_6"
   Block "bb9"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 generated
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:21:13 written
-      Destination "_18"
+      Destination "_16"
       Binary "Add"
-        Copy "_4"
+        Copy "_3"
         Constant 1
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:21:9 written
-      Destination "_4"
+      Destination "_3"
       Use
-        Copy "_18"
+        Copy "_16"
     Operation a_call_in_a_loop_may_return_what_it_returned_last_turn.c:21:9 written
-      Destination "_19"
+      Destination "_17"
       Use
-        Copy "_4"
+        Copy "_3"
     Sequenced a_call_in_a_loop_may_return_what_it_returned_last_turn.c:21:9 generated
-    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:22:5 generated "_14"
-    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:22:5 generated "_12"
-    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:22:5 generated "_7"
+    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:22:5 generated "_13"
+    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:22:5 generated "_11"
+    StorageDead a_call_in_a_loop_may_return_what_it_returned_last_turn.c:22:5 generated "_6"
     Goto "bb2"

@@ -19,9 +19,7 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int"
-  Local "_9" "void"
-  Local "_10" "int"
-  Local "_11" "void"
+  Local "_9" "int"
   Block "bb0" entry
     Operation the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 generated
       Destination "_0"
@@ -100,7 +98,6 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:13:9 generated
     ArgumentsEvaluated the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 generated
     Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 "free" "bb9"
-      Destination "_9"
       Copy "_1"
   Block "bb7"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:12:9 generated
@@ -112,14 +109,13 @@ Function the_old_pointer_used_on_reallocs_failure_branch_builds.c:5:5 "main"
       Use
         Constant 2
     Operation the_old_pointer_used_on_reallocs_failure_branch_builds.c:17:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_5"
           Deref
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:17:5 generated
     ArgumentsEvaluated the_old_pointer_used_on_reallocs_failure_branch_builds.c:18:5 generated
     Call the_old_pointer_used_on_reallocs_failure_branch_builds.c:18:5 "free" "bb10"
-      Destination "_11"
       Copy "_5"
   Block "bb9"
     Sequenced the_old_pointer_used_on_reallocs_failure_branch_builds.c:14:9 generated

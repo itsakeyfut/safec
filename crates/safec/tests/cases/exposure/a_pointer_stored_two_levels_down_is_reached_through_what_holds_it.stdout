@@ -21,7 +21,6 @@ Function a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:5:5
   Local "_9" "void *"
   Local "_10" "int"
   Local "_11" "int *"
-  Local "_12" "void"
   Block "bb0" entry
     Operation a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:5:5 generated
       Destination "_0"
@@ -140,7 +139,6 @@ Function a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:5:5
     Sequenced a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:19:5 generated
     ArgumentsEvaluated a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:20:5 generated
     Call a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:20:5 "drop_all" "bb13"
-      Destination "_12"
       Copy "_1"
   Block "bb13"
     Sequenced a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:20:5 generated

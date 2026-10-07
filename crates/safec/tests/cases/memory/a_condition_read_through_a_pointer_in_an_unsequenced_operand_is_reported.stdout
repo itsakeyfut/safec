@@ -11,8 +11,7 @@ Function a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reporte
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "int"
+  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:4:14 generated
     Call a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:4:14 "malloc" "bb1"
@@ -29,7 +28,6 @@ Function a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reporte
         Deref
   Block "bb2"
     Call a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:5:29 "free" "bb5"
-      Destination "_5"
       Copy "_1"
   Block "bb3"
     Operation a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:5:14 written
@@ -45,14 +43,14 @@ Function a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reporte
     Goto "bb2"
   Block "bb5"
     Operation a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:5:14 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
         Copy "_4"
         Constant 0
     Operation a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:5:9 written
       Destination "_3"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:5:14 generated
     Operation a_condition_read_through_a_pointer_in_an_unsequenced_operand_is_reported.c:6:5 written
       Destination "_0"

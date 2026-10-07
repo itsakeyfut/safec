@@ -19,7 +19,6 @@ Function a_read_three_levels_down_after_a_free_is_reported.c:4:5 "main"
   Local "_10" "int"
   Local "_11" "int *"
   Local "_12" "int **"
-  Local "_13" "void"
   Block "bb0" entry
     Operation a_read_three_levels_down_after_a_free_is_reported.c:4:5 generated
       Destination "_0"
@@ -147,7 +146,6 @@ Function a_read_three_levels_down_after_a_free_is_reported.c:4:5 "main"
     Sequenced a_read_three_levels_down_after_a_free_is_reported.c:19:5 generated
     ArgumentsEvaluated a_read_three_levels_down_after_a_free_is_reported.c:20:5 generated
     Call a_read_three_levels_down_after_a_free_is_reported.c:20:5 "free" "bb13"
-      Destination "_13"
       Copy "_7"
   Block "bb13"
     Sequenced a_read_three_levels_down_after_a_free_is_reported.c:20:5 generated

@@ -12,8 +12,7 @@ Function a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exp
   Local "_2" "int"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "int"
+  Local "_5" "int"
   Block "bb0" entry
     Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:5:9 written
       Destination "_2"
@@ -46,16 +45,15 @@ Function a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exp
         Copy "_3"
         Constant 0
     Call a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:38 "release_all" "bb5"
-      Destination "_5"
   Block "bb5"
     Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
         Copy "_4"
         Constant 0
     Operation a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_pointer_handed_to_a_call_before_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 generated
     Return

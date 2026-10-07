@@ -8,7 +8,6 @@ Function a_call_returns_none_of_this_functions_locals_where_none_escaped.c:4:5 "
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "int *"
-  Local "_3" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_call_returns_none_of_this_functions_locals_where_none_escaped.c:5:14 generated
     Call a_call_returns_none_of_this_functions_locals_where_none_escaped.c:5:14 "make" "bb1"
@@ -21,7 +20,6 @@ Function a_call_returns_none_of_this_functions_locals_where_none_escaped.c:4:5 "
     Sequenced a_call_returns_none_of_this_functions_locals_where_none_escaped.c:5:14 generated
     ArgumentsEvaluated a_call_returns_none_of_this_functions_locals_where_none_escaped.c:6:5 generated
     Call a_call_returns_none_of_this_functions_locals_where_none_escaped.c:6:5 "free" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_call_returns_none_of_this_functions_locals_where_none_escaped.c:6:5 generated

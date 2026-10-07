@@ -25,9 +25,8 @@ Function a_doubted_load_stored_into_another_container_stays_doubted.c:4:5 "main"
   Local "_16" "int *"
   Local "_17" "int"
   Local "_18" "int *"
-  Local "_19" "void"
+  Local "_19" "int"
   Local "_20" "int"
-  Local "_21" "int"
   Block "bb0" entry
     Operation a_doubted_load_stored_into_another_container_stays_doubted.c:4:5 generated
       Destination "_0"
@@ -214,7 +213,6 @@ Function a_doubted_load_stored_into_another_container_stays_doubted.c:4:5 "main"
     Sequenced a_doubted_load_stored_into_another_container_stays_doubted.c:29:9 generated
     ArgumentsEvaluated a_doubted_load_stored_into_another_container_stays_doubted.c:30:9 generated
     Call a_doubted_load_stored_into_another_container_stays_doubted.c:30:9 "free" "bb22"
-      Destination "_19"
       Copy "_10"
   Block "bb19"
     Sequenced a_doubted_load_stored_into_another_container_stays_doubted.c:24:17 generated
@@ -242,16 +240,16 @@ Function a_doubted_load_stored_into_another_container_stays_doubted.c:4:5 "main"
   Block "bb22"
     Sequenced a_doubted_load_stored_into_another_container_stays_doubted.c:30:9 generated
     Operation a_doubted_load_stored_into_another_container_stays_doubted.c:31:13 written
-      Destination "_20"
+      Destination "_19"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_doubted_load_stored_into_another_container_stays_doubted.c:31:9 written
       Destination "_8"
       Use
-        Copy "_20"
+        Copy "_19"
     Operation a_doubted_load_stored_into_another_container_stays_doubted.c:31:9 written
-      Destination "_21"
+      Destination "_20"
       Use
         Copy "_8"
     Sequenced a_doubted_load_stored_into_another_container_stays_doubted.c:31:9 generated

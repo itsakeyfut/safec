@@ -19,8 +19,7 @@ Function a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_jo
   Local "_5" "int"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "void"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:5:5 generated
       Destination "_0"
@@ -64,7 +63,6 @@ Function a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_jo
       Copy "_3"
   Block "bb5"
     Call a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:48 "free" "bb9"
-      Destination "_8"
       Copy "_1"
   Block "bb6"
     Call a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:18 "memset" "bb8"
@@ -91,13 +89,13 @@ Function a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_jo
     Goto "bb5"
   Block "bb9"
     Operation a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:13 written
-      Destination "_9"
+      Destination "_8"
       Binary "Add"
         Copy "_5"
         Constant 0
     Operation a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_handed_to_a_call_inside_one_arm_before_a_free_survives_the_join.c:11:13 generated
     Return

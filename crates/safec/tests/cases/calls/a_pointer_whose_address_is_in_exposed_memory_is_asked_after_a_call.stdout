@@ -21,10 +21,8 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
   Local "_7" "int **"
   Local "_8" "int **"
   Local "_9" "int **"
-  Local "_10" "void"
-  Local "_11" "void"
-  Local "_12" "int **"
-  Local "_13" "int"
+  Local "_10" "int **"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:7:14 "malloc" "bb1"
@@ -106,27 +104,25 @@ Function a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:6:
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:16:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 "stash" "bb9"
-      Destination "_10"
       Copy "_4"
   Block "bb9"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:17:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 "grow_all" "bb10"
-      Destination "_11"
   Block "bb10"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:18:5 generated
     Operation a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:17 written
-      Destination "_12"
+      Destination "_10"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 generated
     Call a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 "use2" "bb11"
-      Destination "_13"
-      Copy "_12"
+      Destination "_11"
+      Copy "_10"
   Block "bb11"
     Operation a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_11"
     Sequenced a_pointer_whose_address_is_in_exposed_memory_is_asked_after_a_call.c:19:12 generated
     Return

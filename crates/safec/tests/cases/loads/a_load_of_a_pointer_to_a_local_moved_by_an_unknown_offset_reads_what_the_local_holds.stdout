@@ -18,10 +18,9 @@ Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_th
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int *"
-  Local "_12" "void"
-  Local "_13" "int *"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_12" "int *"
+  Local "_13" "int **"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:4:10 written
       Destination "_2"
@@ -97,29 +96,28 @@ Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_th
     Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:12:5 generated
     ArgumentsEvaluated a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:5 generated
     Call a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:5 "free" "bb5"
-      Destination "_12"
       Copy "_7"
   Block "bb5"
     Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:5 generated
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:15 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
         Copy "_5"
           Deref
         Copy "_1"
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:10 written
-      Destination "_13"
+      Destination "_12"
       Use
-        Copy "_14"
+        Copy "_13"
           Deref
     Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:15 generated
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:15:9 written
-      Destination "_15"
+      Destination "_14"
       Binary "Eq"
-        Copy "_13"
+        Copy "_12"
         Constant 0
     Branch a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:15:9 "bb6" "bb7"
-      Copy "_15"
+      Copy "_14"
   Block "bb6"
     Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:15:9 generated
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:16:9 written
@@ -135,7 +133,7 @@ Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_th
     Operation a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_12"
           Deref
     Sequenced a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:12 generated
     Return

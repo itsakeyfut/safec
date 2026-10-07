@@ -12,9 +12,7 @@ Function a_copy_grown_twice_by_address_builds.c:4:5 "f"
   Local "_3" "int"
   Local "_4" "int *"
   Local "_5" "int **"
-  Local "_6" "void"
-  Local "_7" "int **"
-  Local "_8" "void"
+  Local "_6" "int **"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_grown_twice_by_address_builds.c:5:14 generated
     Call a_copy_grown_twice_by_address_builds.c:5:14 "malloc" "bb1"
@@ -56,18 +54,16 @@ Function a_copy_grown_twice_by_address_builds.c:4:5 "f"
         Place "_4"
     ArgumentsEvaluated a_copy_grown_twice_by_address_builds.c:10:5 generated
     Call a_copy_grown_twice_by_address_builds.c:10:5 "grow" "bb5"
-      Destination "_6"
       Copy "_5"
   Block "bb5"
     Sequenced a_copy_grown_twice_by_address_builds.c:10:5 generated
     Operation a_copy_grown_twice_by_address_builds.c:11:10 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_4"
     ArgumentsEvaluated a_copy_grown_twice_by_address_builds.c:11:5 generated
     Call a_copy_grown_twice_by_address_builds.c:11:5 "grow" "bb6"
-      Destination "_8"
-      Copy "_7"
+      Copy "_6"
   Block "bb6"
     Sequenced a_copy_grown_twice_by_address_builds.c:11:5 generated
     Operation a_copy_grown_twice_by_address_builds.c:12:5 written

@@ -23,7 +23,6 @@ Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.
   Local "_7" "int"
   Local "_8" "void *"
   Local "_9" "int *"
-  Local "_10" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:7:17 generated
     Call a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:7:17 "malloc" "bb1"
@@ -110,7 +109,6 @@ Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.
   Block "bb11"
     ArgumentsEvaluated a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:20:5 generated
     Call a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:20:5 "forget" "bb13"
-      Destination "_10"
   Block "bb12"
     Sequenced a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:16:9 generated
     Goto "bb11"

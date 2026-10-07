@@ -10,7 +10,6 @@ Function a_return_after_a_free_on_one_arm_only.c:4:6 "maybe"
   Local "_1" "int" parameter
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_return_after_a_free_on_one_arm_only.c:5:14 generated
     Call a_return_after_a_free_on_one_arm_only.c:5:14 "malloc" "bb1"
@@ -28,7 +27,6 @@ Function a_return_after_a_free_on_one_arm_only.c:4:6 "maybe"
     Sequenced a_return_after_a_free_on_one_arm_only.c:6:9 generated
     ArgumentsEvaluated a_return_after_a_free_on_one_arm_only.c:7:9 generated
     Call a_return_after_a_free_on_one_arm_only.c:7:9 "free" "bb5"
-      Destination "_4"
       Copy "_2"
   Block "bb3"
     Sequenced a_return_after_a_free_on_one_arm_only.c:6:9 generated

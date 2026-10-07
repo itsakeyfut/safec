@@ -18,7 +18,6 @@ Function what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 "main"
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "void *"
-  Local "_5" "void"
   Block "bb0" entry
     Operation what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 generated
       Destination "_0"
@@ -63,7 +62,6 @@ Function what_memset_was_handed_is_unproven_after_a_later_call.c:6:5 "main"
     Sequenced what_memset_was_handed_is_unproven_after_a_later_call.c:11:5 generated
     ArgumentsEvaluated what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 generated
     Call what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 "forget" "bb6"
-      Destination "_5"
   Block "bb6"
     Sequenced what_memset_was_handed_is_unproven_after_a_later_call.c:12:5 generated
     Operation what_memset_was_handed_is_unproven_after_a_later_call.c:13:5 written

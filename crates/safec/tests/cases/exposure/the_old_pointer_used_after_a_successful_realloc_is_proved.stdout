@@ -18,7 +18,6 @@ Function the_old_pointer_used_after_a_successful_realloc_is_proved.c:5:5 "main"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "void"
   Block "bb0" entry
     Operation the_old_pointer_used_after_a_successful_realloc_is_proved.c:5:5 generated
       Destination "_0"
@@ -96,7 +95,6 @@ Function the_old_pointer_used_after_a_successful_realloc_is_proved.c:5:5 "main"
     Sequenced the_old_pointer_used_after_a_successful_realloc_is_proved.c:14:5 generated
     ArgumentsEvaluated the_old_pointer_used_after_a_successful_realloc_is_proved.c:15:5 generated
     Call the_old_pointer_used_after_a_successful_realloc_is_proved.c:15:5 "free" "bb9"
-      Destination "_8"
       Copy "_4"
   Block "bb9"
     Sequenced the_old_pointer_used_after_a_successful_realloc_is_proved.c:15:5 generated

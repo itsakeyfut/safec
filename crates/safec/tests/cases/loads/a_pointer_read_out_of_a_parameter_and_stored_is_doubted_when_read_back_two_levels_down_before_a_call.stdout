@@ -21,7 +21,6 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
   Local "_13" "int **"
   Local "_14" "int *"
   Local "_15" "int"
-  Local "_16" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:5:9 written
       Destination "_3"
@@ -175,7 +174,6 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
   Block "bb17"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:26:5 generated
     Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:26:5 "release_all" "bb18"
-      Destination "_16"
   Block "bb18"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:26:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call.c:27:5 written

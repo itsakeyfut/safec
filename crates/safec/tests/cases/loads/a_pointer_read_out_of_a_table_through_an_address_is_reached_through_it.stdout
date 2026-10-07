@@ -18,7 +18,6 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
   Local "_9" "int **"
   Local "_10" "int **"
   Local "_11" "int *"
-  Local "_12" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:4:5 generated
       Destination "_0"
@@ -121,7 +120,6 @@ Function a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.
     Sequenced a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:16:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 generated
     Call a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 "drop_slot" "bb9"
-      Destination "_12"
       Copy "_9"
   Block "bb9"
     Sequenced a_pointer_read_out_of_a_table_through_an_address_is_reached_through_it.c:17:5 generated

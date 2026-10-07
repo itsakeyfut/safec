@@ -22,9 +22,8 @@ Function a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost
   Local "_13" "int *"
   Local "_14" "int"
   Local "_15" "int *"
-  Local "_16" "void"
+  Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "int"
   Block "bb0" entry
     Operation a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:4:5 generated
       Destination "_0"
@@ -158,7 +157,6 @@ Function a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost
     Sequenced a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:22:9 generated
     ArgumentsEvaluated a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:23:9 generated
     Call a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:23:9 "free" "bb14"
-      Destination "_16"
       Copy "_7"
   Block "bb11"
     Sequenced a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:17:17 generated
@@ -186,16 +184,16 @@ Function a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost
   Block "bb14"
     Sequenced a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:23:9 generated
     Operation a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:24:13 written
-      Destination "_17"
+      Destination "_16"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:24:9 written
       Destination "_5"
       Use
-        Copy "_17"
+        Copy "_16"
     Operation a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:24:9 written
-      Destination "_18"
+      Destination "_17"
       Use
         Copy "_5"
     Sequenced a_load_moved_by_arithmetic_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:24:9 generated

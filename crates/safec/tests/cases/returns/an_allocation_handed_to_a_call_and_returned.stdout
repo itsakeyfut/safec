@@ -10,7 +10,6 @@ Function an_allocation_handed_to_a_call_and_returned.c:4:6 "make"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_handed_to_a_call_and_returned.c:5:14 generated
     Call an_allocation_handed_to_a_call_and_returned.c:5:14 "malloc" "bb1"
@@ -43,7 +42,6 @@ Function an_allocation_handed_to_a_call_and_returned.c:4:6 "make"
   Block "bb4"
     ArgumentsEvaluated an_allocation_handed_to_a_call_and_returned.c:9:5 generated
     Call an_allocation_handed_to_a_call_and_returned.c:9:5 "enroll" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced an_allocation_handed_to_a_call_and_returned.c:9:5 generated

@@ -10,7 +10,6 @@ Function a_pointer_read_out_of_a_freed_table_and_returned.c:4:6 "first"
   Local "_1" "int **"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_a_freed_table_and_returned.c:5:17 generated
     Call a_pointer_read_out_of_a_freed_table_and_returned.c:5:17 "malloc" "bb1"
@@ -43,7 +42,6 @@ Function a_pointer_read_out_of_a_freed_table_and_returned.c:4:6 "first"
   Block "bb4"
     ArgumentsEvaluated a_pointer_read_out_of_a_freed_table_and_returned.c:9:5 generated
     Call a_pointer_read_out_of_a_freed_table_and_returned.c:9:5 "free" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_read_out_of_a_freed_table_and_returned.c:9:5 generated

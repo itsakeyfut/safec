@@ -26,9 +26,8 @@ Function a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_s
   Local "_17" "void *"
   Local "_18" "int"
   Local "_19" "int *"
-  Local "_20" "void"
+  Local "_20" "int"
   Local "_21" "int"
-  Local "_22" "int"
   Block "bb0" entry
     Operation a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:4:5 generated
       Destination "_0"
@@ -243,21 +242,20 @@ Function a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_s
     Sequenced a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:29:9 generated
     ArgumentsEvaluated a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:30:9 generated
     Call a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:30:9 "release_in" "bb22"
-      Destination "_20"
       Copy "_16"
   Block "bb22"
     Sequenced a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:30:9 generated
     Operation a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:31:13 written
-      Destination "_21"
+      Destination "_20"
       Binary "Add"
         Copy "_6"
         Constant 1
     Operation a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:31:9 written
       Destination "_6"
       Use
-        Copy "_21"
+        Copy "_20"
     Operation a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:31:9 written
-      Destination "_22"
+      Destination "_21"
       Use
         Copy "_6"
     Sequenced a_pointer_copied_last_turn_that_a_call_may_have_freed_is_doubted_when_stored_and_read_back.c:31:9 generated

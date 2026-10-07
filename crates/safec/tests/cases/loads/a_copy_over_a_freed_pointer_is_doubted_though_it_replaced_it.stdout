@@ -35,9 +35,8 @@ Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:7:5 "mai
   Local "_15" "int *"
   Local "_16" "int *"
   Local "_17" "void *"
-  Local "_18" "void"
-  Local "_19" "int *"
-  Local "_20" "int"
+  Local "_18" "int *"
+  Local "_19" "int"
   Block "bb0" entry
     Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:7:5 generated
       Destination "_0"
@@ -213,23 +212,22 @@ Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:7:5 "mai
     Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:28:5 generated
     ArgumentsEvaluated a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:29:5 generated
     Call a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:29:5 "free" "bb18"
-      Destination "_18"
       Copy "_4"
   Block "bb18"
     Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:29:5 generated
     Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:30:10 written
-      Destination "_19"
+      Destination "_18"
       Use
         Copy "_1"
           Deref
     Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:30:14 generated
     Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 written
-      Destination "_20"
+      Destination "_19"
       Binary "Eq"
-        Copy "_19"
+        Copy "_18"
         Constant 0
     Branch a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 "bb19" "bb20"
-      Copy "_20"
+      Copy "_19"
   Block "bb19"
     Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:31:9 generated
     Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:32:9 written
@@ -245,7 +243,7 @@ Function a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:7:5 "mai
     Operation a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:34:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_18"
           Deref
     Sequenced a_copy_over_a_freed_pointer_is_doubted_though_it_replaced_it.c:34:12 generated
     Return

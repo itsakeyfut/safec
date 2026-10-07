@@ -8,11 +8,9 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:2:
 Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:5:6 "drop_inner" hatch
   Local "_0" "void" return
   Local "_1" "int **" parameter
-  Local "_2" "void"
   Block "bb0" entry
     ArgumentsEvaluated what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:6:5 generated
     Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:6:5 "free" "bb1"
-      Destination "_2"
       Copy "_1"
         Deref
   Block "bb1"
@@ -27,8 +25,7 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     Operation what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:5 generated
       Destination "_0"
@@ -105,12 +102,11 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:18:5 generated
     ArgumentsEvaluated what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 generated
     Call what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 "drop_inner" "bb9"
-      Destination "_8"
       Copy "_1"
   Block "bb9"
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:19:5 generated
     Operation what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:20:9 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_4"
           Deref
@@ -118,6 +114,6 @@ Function what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:9:
     Operation what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:21:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:21:12 generated
     Return

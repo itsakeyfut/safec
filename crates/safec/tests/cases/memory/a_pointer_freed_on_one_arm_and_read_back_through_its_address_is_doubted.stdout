@@ -13,7 +13,6 @@ Function a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:5:14 generated
     Call a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:5:14 "malloc" "bb1"
@@ -59,7 +58,6 @@ Function a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted
     Sequenced a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:10:9 generated
     ArgumentsEvaluated a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:11:9 generated
     Call a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:11:9 "free" "bb8"
-      Destination "_7"
       Copy "_2"
   Block "bb6"
     Sequenced a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:10:9 generated

@@ -24,7 +24,6 @@ Function a_store_two_levels_down_is_recorded_where_it_lands.c:4:5 "main"
   Local "_15" "int *"
   Local "_16" "int **"
   Local "_17" "int *"
-  Local "_18" "void"
   Block "bb0" entry
     Operation a_store_two_levels_down_is_recorded_where_it_lands.c:4:5 generated
       Destination "_0"
@@ -205,7 +204,6 @@ Function a_store_two_levels_down_is_recorded_where_it_lands.c:4:5 "main"
     Sequenced a_store_two_levels_down_is_recorded_where_it_lands.c:25:5 generated
     ArgumentsEvaluated a_store_two_levels_down_is_recorded_where_it_lands.c:26:5 generated
     Call a_store_two_levels_down_is_recorded_where_it_lands.c:26:5 "free" "bb17"
-      Destination "_18"
       Copy "_10"
   Block "bb17"
     Sequenced a_store_two_levels_down_is_recorded_where_it_lands.c:26:5 generated

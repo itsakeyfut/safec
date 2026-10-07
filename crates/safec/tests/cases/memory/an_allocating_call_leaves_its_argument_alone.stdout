@@ -10,8 +10,6 @@ Function an_allocating_call_leaves_its_argument_alone.c:3:5 "f"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "void *"
-  Local "_4" "void"
-  Local "_5" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:4:14 generated
     Call an_allocating_call_leaves_its_argument_alone.c:4:14 "malloc" "bb1"
@@ -31,13 +29,11 @@ Function an_allocating_call_leaves_its_argument_alone.c:3:5 "f"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:5:5 generated
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:6:5 generated
     Call an_allocating_call_leaves_its_argument_alone.c:6:5 "free" "bb3"
-      Destination "_4"
       Copy "_1"
   Block "bb3"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:6:5 generated
     ArgumentsEvaluated an_allocating_call_leaves_its_argument_alone.c:7:5 generated
     Call an_allocating_call_leaves_its_argument_alone.c:7:5 "free" "bb4"
-      Destination "_5"
       Copy "_1"
   Block "bb4"
     Sequenced an_allocating_call_leaves_its_argument_alone.c:7:5 generated

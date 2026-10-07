@@ -10,9 +10,8 @@ Function a_logical_or_sequences_a_free_before_a_use.c:3:5 "f"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
+  Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_logical_or_sequences_a_free_before_a_use.c:4:14 generated
     Call a_logical_or_sequences_a_free_before_a_use.c:4:14 "malloc" "bb1"
@@ -26,22 +25,21 @@ Function a_logical_or_sequences_a_free_before_a_use.c:3:5 "f"
     Sequenced a_logical_or_sequences_a_free_before_a_use.c:4:14 generated
     ArgumentsEvaluated a_logical_or_sequences_a_free_before_a_use.c:5:14 generated
     Call a_logical_or_sequences_a_free_before_a_use.c:5:14 "free" "bb2"
-      Destination "_4"
       Copy "_1"
   Block "bb2"
     Sequenced a_logical_or_sequences_a_free_before_a_use.c:5:14 generated
     Operation a_logical_or_sequences_a_free_before_a_use.c:5:14 written
-      Destination "_5"
+      Destination "_4"
       Binary "Ne"
         Constant 0
         Constant 0
     Branch a_logical_or_sequences_a_free_before_a_use.c:5:14 "bb3" "bb4"
-      Copy "_5"
+      Copy "_4"
   Block "bb3"
     Operation a_logical_or_sequences_a_free_before_a_use.c:5:9 written
       Destination "_3"
       Use
-        Copy "_5"
+        Copy "_4"
     Sequenced a_logical_or_sequences_a_free_before_a_use.c:5:14 generated
     Operation a_logical_or_sequences_a_free_before_a_use.c:6:5 written
       Destination "_0"
@@ -52,14 +50,14 @@ Function a_logical_or_sequences_a_free_before_a_use.c:3:5 "f"
   Block "bb4"
     Sequenced a_logical_or_sequences_a_free_before_a_use.c:5:14 generated
     Operation a_logical_or_sequences_a_free_before_a_use.c:5:30 written
-      Destination "_6"
+      Destination "_5"
       Binary "Eq"
         Copy "_1"
           Deref
         Constant 0
     Operation a_logical_or_sequences_a_free_before_a_use.c:5:14 written
-      Destination "_5"
+      Destination "_4"
       Binary "Ne"
-        Copy "_6"
+        Copy "_5"
         Constant 0
     Goto "bb3"

@@ -25,7 +25,6 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
   Local "_16" "int **"
   Local "_17" "int **"
   Local "_18" "int"
-  Local "_19" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 generated
     Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:5:21 "malloc" "bb1"
@@ -210,7 +209,6 @@ Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4
   Block "bb22"
     ArgumentsEvaluated a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 generated
     Call a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:30:5 "show" "bb23"
-      Destination "_19"
       Copy "_16"
         Deref
   Block "bb23"

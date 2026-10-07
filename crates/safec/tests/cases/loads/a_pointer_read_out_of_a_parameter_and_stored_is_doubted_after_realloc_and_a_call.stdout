@@ -21,9 +21,8 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
   Local "_9" "int **"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "void"
-  Local "_13" "int *"
-  Local "_14" "int"
+  Local "_12" "int *"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:6:9 written
       Destination "_2"
@@ -141,22 +140,21 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
   Block "bb14"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 generated
     Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 "release_all" "bb15"
-      Destination "_12"
   Block "bb15"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:22:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:23:10 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_9"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:23:14 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:24:9 written
-      Destination "_14"
+      Destination "_13"
       Binary "Eq"
-        Copy "_13"
+        Copy "_12"
         Constant 0
     Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:24:9 "bb16" "bb17"
-      Copy "_14"
+      Copy "_13"
   Block "bb16"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:24:9 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:25:9 written
@@ -172,7 +170,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_a
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:27:5 written
       Destination "_0"
       Use
-        Copy "_13"
+        Copy "_12"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call.c:27:12 generated
     Return

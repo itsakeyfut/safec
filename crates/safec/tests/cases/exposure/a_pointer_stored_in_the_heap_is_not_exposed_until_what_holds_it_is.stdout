@@ -16,10 +16,7 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int"
-  Local "_10" "void"
-  Local "_11" "void"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:5 generated
       Destination "_0"
@@ -96,30 +93,27 @@ Function a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:5:
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:14:5 generated
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 generated
     Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 "log_line" "bb9"
-      Destination "_8"
   Block "bb9"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:15:5 generated
     Operation a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:16:9 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_4"
           Deref
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:16:13 generated
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 generated
     Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 "free" "bb10"
-      Destination "_10"
       Copy "_4"
   Block "bb10"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:17:5 generated
     ArgumentsEvaluated a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 generated
     Call a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 "free" "bb11"
-      Destination "_11"
       Copy "_1"
   Block "bb11"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:18:5 generated
     Operation a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:19:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_stored_in_the_heap_is_not_exposed_until_what_holds_it_is.c:19:12 generated
     Return

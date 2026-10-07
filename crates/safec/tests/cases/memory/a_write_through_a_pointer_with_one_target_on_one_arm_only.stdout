@@ -19,8 +19,7 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
   Local "_8" "int **"
   Local "_9" "int **"
   Local "_10" "int *"
-  Local "_11" "void"
-  Local "_12" "int"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_with_one_target_on_one_arm_only.c:5:14 generated
     Call a_write_through_a_pointer_with_one_target_on_one_arm_only.c:5:14 "malloc" "bb1"
@@ -86,7 +85,6 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
     Sequenced a_write_through_a_pointer_with_one_target_on_one_arm_only.c:9:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_with_one_target_on_one_arm_only.c:10:5 generated
     Call a_write_through_a_pointer_with_one_target_on_one_arm_only.c:10:5 "free" "bb7"
-      Destination "_11"
       Copy "_2"
   Block "bb7"
     Sequenced a_write_through_a_pointer_with_one_target_on_one_arm_only.c:10:5 generated
@@ -96,7 +94,7 @@ Function a_write_through_a_pointer_with_one_target_on_one_arm_only.c:4:5 "f"
       Use
         Constant 1
     Operation a_write_through_a_pointer_with_one_target_on_one_arm_only.c:11:5 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
           Deref

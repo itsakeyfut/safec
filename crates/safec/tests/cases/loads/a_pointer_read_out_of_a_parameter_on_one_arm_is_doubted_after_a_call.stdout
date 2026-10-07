@@ -17,7 +17,6 @@ Function a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:
   Local "_7" "int"
   Local "_8" "int *"
   Local "_9" "int"
-  Local "_10" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:6:9 written
       Destination "_2"
@@ -122,7 +121,6 @@ Function a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:
   Block "bb14"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:20:5 generated
     Call a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:20:5 "release_all" "bb15"
-      Destination "_10"
   Block "bb15"
     Sequenced a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:20:5 generated
     Operation a_pointer_read_out_of_a_parameter_on_one_arm_is_doubted_after_a_call.c:21:5 written

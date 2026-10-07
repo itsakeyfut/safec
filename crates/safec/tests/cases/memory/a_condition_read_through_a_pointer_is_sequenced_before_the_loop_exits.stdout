@@ -9,7 +9,6 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c:4:14 generated
     Call a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c:4:14 "malloc" "bb1"
@@ -33,7 +32,6 @@ Function a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c
     Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c:5:12 generated
     ArgumentsEvaluated a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c:6:5 generated
     Call a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c:6:5 "free" "bb5"
-      Destination "_3"
       Copy "_1"
   Block "bb5"
     Sequenced a_condition_read_through_a_pointer_is_sequenced_before_the_loop_exits.c:6:5 generated

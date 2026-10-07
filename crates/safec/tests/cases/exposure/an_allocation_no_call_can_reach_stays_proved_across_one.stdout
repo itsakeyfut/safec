@@ -14,8 +14,6 @@ Function an_allocation_no_call_can_reach_stays_proved_across_one.c:5:5 "main"
   Local "_2" "void *"
   Local "_3" "int *"
   Local "_4" "void *"
-  Local "_5" "void"
-  Local "_6" "void"
   Block "bb0" entry
     Operation an_allocation_no_call_can_reach_stays_proved_across_one.c:5:5 generated
       Destination "_0"
@@ -43,13 +41,11 @@ Function an_allocation_no_call_can_reach_stays_proved_across_one.c:5:5 "main"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:7:14 generated
     ArgumentsEvaluated an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 generated
     Call an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 "show" "bb3"
-      Destination "_5"
       Copy "_1"
   Block "bb3"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:8:5 generated
     ArgumentsEvaluated an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 generated
     Call an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 "free" "bb4"
-      Destination "_6"
       Copy "_3"
   Block "bb4"
     Sequenced an_allocation_no_call_can_reach_stays_proved_across_one.c:9:5 generated

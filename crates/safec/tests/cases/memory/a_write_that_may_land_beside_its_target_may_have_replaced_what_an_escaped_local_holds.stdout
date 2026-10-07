@@ -21,8 +21,7 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
   Local "_12" "int *"
   Local "_13" "void *"
   Local "_14" "int *"
-  Local "_15" "void"
-  Local "_16" "int"
+  Local "_15" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:4:14 generated
     Call a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:4:14 "malloc" "bb1"
@@ -102,7 +101,6 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:14:5 generated
     ArgumentsEvaluated a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:15:5 generated
     Call a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:15:5 "free" "bb6"
-      Destination "_15"
       Copy "_2"
   Block "bb6"
     Sequenced a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:15:5 generated
@@ -112,7 +110,7 @@ Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escap
       Use
         Constant 1
     Operation a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:16:5 written
-      Destination "_16"
+      Destination "_15"
       Use
         Copy "_4"
           Deref

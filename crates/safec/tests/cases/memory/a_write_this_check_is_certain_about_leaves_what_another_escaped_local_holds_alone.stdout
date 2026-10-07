@@ -18,8 +18,6 @@ Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_h
   Local "_9" "int **"
   Local "_10" "int **"
   Local "_11" "int *"
-  Local "_12" "void"
-  Local "_13" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:4:14 generated
     Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:4:14 "malloc" "bb1"
@@ -83,13 +81,11 @@ Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_h
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:9:5 generated
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 generated
     Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 "free" "bb3"
-      Destination "_12"
       Copy "_2"
   Block "bb3"
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 generated
     ArgumentsEvaluated a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 generated
     Call a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 "free" "bb4"
-      Destination "_13"
       Copy "_4"
   Block "bb4"
     Sequenced a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:11:5 generated

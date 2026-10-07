@@ -15,7 +15,6 @@ Function a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:4:5 "main"
   Local "_6" "int"
   Local "_7" "int *"
   Local "_8" "int *"
-  Local "_9" "void"
   Block "bb0" entry
     Operation a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:4:5 generated
       Destination "_0"
@@ -98,7 +97,6 @@ Function a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:4:5 "main"
     Sequenced a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:14:14 generated
     ArgumentsEvaluated a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:15:5 generated
     Call a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:15:5 "free" "bb9"
-      Destination "_9"
       Copy "_8"
   Block "bb9"
     Sequenced a_free_of_a_pointer_read_out_of_memory_stays_a_doubt.c:15:5 generated

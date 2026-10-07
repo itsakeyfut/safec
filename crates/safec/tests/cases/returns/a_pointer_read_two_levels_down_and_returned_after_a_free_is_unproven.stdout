@@ -19,7 +19,6 @@ Function a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:
   Local "_10" "int"
   Local "_11" "int *"
   Local "_12" "int **"
-  Local "_13" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:5:17 generated
     Call a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:5:17 "malloc" "bb1"
@@ -143,7 +142,6 @@ Function a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:
     Sequenced a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:19:5 generated
     ArgumentsEvaluated a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:20:5 generated
     Call a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:20:5 "free" "bb13"
-      Destination "_13"
       Copy "_7"
   Block "bb13"
     Sequenced a_pointer_read_two_levels_down_and_returned_after_a_free_is_unproven.c:20:5 generated

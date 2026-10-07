@@ -14,7 +14,6 @@ Function what_a_call_returned_is_unproven_after_a_later_call.c:6:5 "main"
   Local "_1" "int *"
   Local "_2" "int *"
   Local "_3" "int"
-  Local "_4" "void"
   Block "bb0" entry
     Operation what_a_call_returned_is_unproven_after_a_later_call.c:6:5 generated
       Destination "_0"
@@ -50,7 +49,6 @@ Function what_a_call_returned_is_unproven_after_a_later_call.c:6:5 "main"
   Block "bb4"
     ArgumentsEvaluated what_a_call_returned_is_unproven_after_a_later_call.c:11:5 generated
     Call what_a_call_returned_is_unproven_after_a_later_call.c:11:5 "forget" "bb5"
-      Destination "_4"
   Block "bb5"
     Sequenced what_a_call_returned_is_unproven_after_a_later_call.c:11:5 generated
     Operation what_a_call_returned_is_unproven_after_a_later_call.c:12:5 written

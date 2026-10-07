@@ -21,7 +21,6 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
   Local "_9" "int"
   Local "_10" "int *"
   Local "_11" "int **"
-  Local "_12" "void"
   Block "bb0" entry
     Operation a_pointer_two_tables_deep_is_reached_through_both.c:5:5 generated
       Destination "_0"
@@ -138,7 +137,6 @@ Function a_pointer_two_tables_deep_is_reached_through_both.c:5:5 "main"
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:19:5 generated
     ArgumentsEvaluated a_pointer_two_tables_deep_is_reached_through_both.c:20:5 generated
     Call a_pointer_two_tables_deep_is_reached_through_both.c:20:5 "drop_all" "bb13"
-      Destination "_12"
       Copy "_7"
   Block "bb13"
     Sequenced a_pointer_two_tables_deep_is_reached_through_both.c:20:5 generated

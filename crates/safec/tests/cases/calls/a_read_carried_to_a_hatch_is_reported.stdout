@@ -14,8 +14,7 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "void"
-  Local "_8" "int"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_read_carried_to_a_hatch_is_reported.c:7:5 generated
       Destination "_0"
@@ -71,16 +70,15 @@ Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
       Use
         Copy "_1"
     Call a_read_carried_to_a_hatch_is_reported.c:14:26 "nothing" "bb5"
-      Destination "_7"
   Block "bb5"
     Operation a_read_carried_to_a_hatch_is_reported.c:14:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_6"
         Constant 0
     Operation a_read_carried_to_a_hatch_is_reported.c:14:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_read_carried_to_a_hatch_is_reported.c:14:13 generated
     Return

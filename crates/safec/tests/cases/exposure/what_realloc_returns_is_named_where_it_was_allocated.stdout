@@ -16,8 +16,6 @@ Function what_realloc_returns_is_named_where_it_was_allocated.c:5:5 "main"
   Local "_3" "int"
   Local "_4" "int *"
   Local "_5" "void *"
-  Local "_6" "void"
-  Local "_7" "void"
   Block "bb0" entry
     Operation what_realloc_returns_is_named_where_it_was_allocated.c:5:5 generated
       Destination "_0"
@@ -65,13 +63,11 @@ Function what_realloc_returns_is_named_where_it_was_allocated.c:5:5 "main"
     Sequenced what_realloc_returns_is_named_where_it_was_allocated.c:10:14 generated
     ArgumentsEvaluated what_realloc_returns_is_named_where_it_was_allocated.c:11:5 generated
     Call what_realloc_returns_is_named_where_it_was_allocated.c:11:5 "free" "bb6"
-      Destination "_6"
       Copy "_4"
   Block "bb6"
     Sequenced what_realloc_returns_is_named_where_it_was_allocated.c:11:5 generated
     ArgumentsEvaluated what_realloc_returns_is_named_where_it_was_allocated.c:12:5 generated
     Call what_realloc_returns_is_named_where_it_was_allocated.c:12:5 "free" "bb7"
-      Destination "_7"
       Copy "_4"
   Block "bb7"
     Sequenced what_realloc_returns_is_named_where_it_was_allocated.c:12:5 generated

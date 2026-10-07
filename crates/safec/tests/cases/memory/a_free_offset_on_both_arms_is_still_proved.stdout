@@ -15,7 +15,6 @@ Function a_free_offset_on_both_arms_is_still_proved.c:3:5 "f"
   Local "_6" "int *"
   Local "_7" "int *"
   Local "_8" "int *"
-  Local "_9" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_offset_on_both_arms_is_still_proved.c:4:14 generated
     Call a_free_offset_on_both_arms_is_still_proved.c:4:14 "malloc" "bb1"
@@ -66,7 +65,6 @@ Function a_free_offset_on_both_arms_is_still_proved.c:3:5 "f"
   Block "bb4"
     ArgumentsEvaluated a_free_offset_on_both_arms_is_still_proved.c:11:5 generated
     Call a_free_offset_on_both_arms_is_still_proved.c:11:5 "free" "bb5"
-      Destination "_9"
       Copy "_4"
   Block "bb5"
     Sequenced a_free_offset_on_both_arms_is_still_proved.c:11:5 generated

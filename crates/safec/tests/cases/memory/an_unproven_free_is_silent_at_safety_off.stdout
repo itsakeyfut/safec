@@ -9,8 +9,6 @@ Function an_unproven_free_is_silent_at_safety_off.c:3:5 "f"
   Local "_0" "int" return
   Local "_1" "int" parameter
   Local "_2" "int *" parameter
-  Local "_3" "void"
-  Local "_4" "void"
   Block "bb0" entry
     Branch an_unproven_free_is_silent_at_safety_off.c:4:9 "bb1" "bb2"
       Copy "_1"
@@ -18,7 +16,6 @@ Function an_unproven_free_is_silent_at_safety_off.c:3:5 "f"
     Sequenced an_unproven_free_is_silent_at_safety_off.c:4:9 generated
     ArgumentsEvaluated an_unproven_free_is_silent_at_safety_off.c:4:14 generated
     Call an_unproven_free_is_silent_at_safety_off.c:4:14 "free" "bb4"
-      Destination "_3"
       Copy "_2"
   Block "bb2"
     Sequenced an_unproven_free_is_silent_at_safety_off.c:4:9 generated
@@ -26,7 +23,6 @@ Function an_unproven_free_is_silent_at_safety_off.c:3:5 "f"
   Block "bb3"
     ArgumentsEvaluated an_unproven_free_is_silent_at_safety_off.c:5:5 generated
     Call an_unproven_free_is_silent_at_safety_off.c:5:5 "free" "bb5"
-      Destination "_4"
       Copy "_2"
   Block "bb4"
     Sequenced an_unproven_free_is_silent_at_safety_off.c:4:14 generated

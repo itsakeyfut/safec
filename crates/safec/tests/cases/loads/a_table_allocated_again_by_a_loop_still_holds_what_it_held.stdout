@@ -16,11 +16,10 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "void"
-  Local "_11" "int *"
-  Local "_12" "int **"
+  Local "_10" "int *"
+  Local "_11" "int **"
+  Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 generated
       Destination "_0"
@@ -120,7 +119,6 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:16:13 generated
     ArgumentsEvaluated a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 generated
     Call a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:17:13 "release" "bb15"
-      Destination "_10"
       Copy "_4"
   Block "bb13"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:16:13 generated
@@ -132,7 +130,7 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Use
         Copy "_1"
     Operation a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:20:9 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_6"
           Deref
@@ -142,21 +140,21 @@ Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
       Use
         Copy "_6"
     Operation a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:21:9 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:21:9 generated
     Operation a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:22:13 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:22:9 written
       Destination "_5"
       Use
-        Copy "_13"
+        Copy "_12"
     Operation a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:22:9 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_5"
     Sequenced a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:22:9 generated

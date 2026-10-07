@@ -26,9 +26,8 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_t
   Local "_17" "int *"
   Local "_18" "int"
   Local "_19" "int *"
-  Local "_20" "void"
+  Local "_20" "int"
   Local "_21" "int"
-  Local "_22" "int"
   Block "bb0" entry
     Operation a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:4:5 generated
       Destination "_0"
@@ -203,7 +202,6 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_t
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:26:9 generated
     ArgumentsEvaluated a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:27:9 generated
     Call a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:27:9 "free" "bb18"
-      Destination "_20"
       Copy "_9"
   Block "bb15"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:21:17 generated
@@ -231,16 +229,16 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_t
   Block "bb18"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:27:9 generated
     Operation a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:28:13 written
-      Destination "_21"
+      Destination "_20"
       Binary "Add"
         Copy "_7"
         Constant 1
     Operation a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:28:9 written
       Destination "_7"
       Use
-        Copy "_21"
+        Copy "_20"
     Operation a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:28:9 written
-      Destination "_22"
+      Destination "_21"
       Use
         Copy "_7"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:28:9 generated

@@ -19,11 +19,10 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
   Local "_10" "int"
   Local "_11" "int *"
   Local "_12" "int **"
-  Local "_13" "void"
-  Local "_14" "int **"
-  Local "_15" "int"
-  Local "_16" "int *"
-  Local "_17" "int"
+  Local "_13" "int **"
+  Local "_14" "int"
+  Local "_15" "int *"
+  Local "_16" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 generated
       Destination "_0"
@@ -151,23 +150,22 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:19:5 generated
     ArgumentsEvaluated a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 generated
     Call a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 "free" "bb13"
-      Destination "_13"
       Copy "_7"
   Block "bb13"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:20:5 generated
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:21:11 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_1"
           Deref
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:21:16 generated
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:22:9 written
-      Destination "_15"
+      Destination "_14"
       Binary "Eq"
-        Copy "_14"
+        Copy "_13"
         Constant 0
     Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:22:9 "bb14" "bb15"
-      Copy "_15"
+      Copy "_14"
   Block "bb14"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:22:9 generated
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:23:9 written
@@ -181,18 +179,18 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
     Goto "bb16"
   Block "bb16"
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:25:10 written
-      Destination "_16"
+      Destination "_15"
       Use
-        Copy "_14"
+        Copy "_13"
           Deref
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:25:14 generated
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:26:9 written
-      Destination "_17"
+      Destination "_16"
       Binary "Eq"
-        Copy "_16"
+        Copy "_15"
         Constant 0
     Branch a_use_after_free_through_a_chain_of_two_loads_is_reported.c:26:9 "bb17" "bb18"
-      Copy "_17"
+      Copy "_16"
   Block "bb17"
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:26:9 generated
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:27:9 written
@@ -208,7 +206,7 @@ Function a_use_after_free_through_a_chain_of_two_loads_is_reported.c:4:5 "main"
     Operation a_use_after_free_through_a_chain_of_two_loads_is_reported.c:29:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_15"
           Deref
     Sequenced a_use_after_free_through_a_chain_of_two_loads_is_reported.c:29:12 generated
     Return

@@ -20,8 +20,7 @@ Function a_read_of_either_of_two_allocations_before_a_free_names_neither.c:4:5 "
   Local "_8" "int *"
   Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "void"
-  Local "_12" "int"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_read_of_either_of_two_allocations_before_a_free_names_neither.c:5:14 generated
     Call a_read_of_either_of_two_allocations_before_a_free_names_neither.c:5:14 "malloc" "bb1"
@@ -76,18 +75,17 @@ Function a_read_of_either_of_two_allocations_before_a_free_names_neither.c:4:5 "
         Deref
   Block "bb6"
     Call a_read_of_either_of_two_allocations_before_a_free_names_neither.c:9:22 "free" "bb7"
-      Destination "_11"
       Copy "_6"
   Block "bb7"
     Operation a_read_of_either_of_two_allocations_before_a_free_names_neither.c:9:13 written
-      Destination "_12"
+      Destination "_11"
       Binary "Add"
         Copy "_10"
         Constant 0
     Operation a_read_of_either_of_two_allocations_before_a_free_names_neither.c:9:9 written
       Destination "_9"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_read_of_either_of_two_allocations_before_a_free_names_neither.c:9:13 generated
     Operation a_read_of_either_of_two_allocations_before_a_free_names_neither.c:10:5 written
       Destination "_0"

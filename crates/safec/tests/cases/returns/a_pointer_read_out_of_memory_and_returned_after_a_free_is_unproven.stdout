@@ -14,7 +14,6 @@ Function a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:4:
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:5:17 generated
     Call a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:5:17 "malloc" "bb1"
@@ -87,7 +86,6 @@ Function a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:4:
     Sequenced a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:13:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:14:5 generated
     Call a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:14:5 "free" "bb9"
-      Destination "_8"
       Copy "_4"
   Block "bb9"
     Sequenced a_pointer_read_out_of_memory_and_returned_after_a_free_is_unproven.c:14:5 generated

@@ -22,10 +22,8 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
   Local "_10" "int"
   Local "_11" "int *"
   Local "_12" "int"
-  Local "_13" "void"
+  Local "_13" "int *"
   Local "_14" "int *"
-  Local "_15" "int *"
-  Local "_16" "void"
   Block "bb0" entry
     Operation an_integer_read_out_of_memory_is_not_a_load.c:5:5 generated
       Destination "_0"
@@ -148,25 +146,23 @@ Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:20:13 generated
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:21:5 generated
     Call an_integer_read_out_of_memory_is_not_a_load.c:21:5 "log_int" "bb13"
-      Destination "_13"
       Copy "_12"
   Block "bb13"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:21:5 generated
     Operation an_integer_read_out_of_memory_is_not_a_load.c:22:14 written
-      Destination "_15"
+      Destination "_14"
       Binary "Add"
         Copy "_7"
         Copy "_4"
           Deref
     Operation an_integer_read_out_of_memory_is_not_a_load.c:22:10 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:22:14 generated
     ArgumentsEvaluated an_integer_read_out_of_memory_is_not_a_load.c:23:5 generated
     Call an_integer_read_out_of_memory_is_not_a_load.c:23:5 "show" "bb14"
-      Destination "_16"
-      Copy "_14"
+      Copy "_13"
   Block "bb14"
     Sequenced an_integer_read_out_of_memory_is_not_a_load.c:23:5 generated
     Operation an_integer_read_out_of_memory_is_not_a_load.c:24:5 written

@@ -18,7 +18,6 @@ Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "void"
   Block "bb0" entry
     Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 generated
       Destination "_0"
@@ -81,7 +80,6 @@ Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main
     Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:11:5 generated
     ArgumentsEvaluated what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated
     Call what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:12:5 "free" "bb6"
-      Destination "_8"
       Copy "_1"
   Block "bb6"
     Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:12:5 generated

@@ -15,9 +15,8 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
   Local "_6" "int *"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "void"
+  Local "_9" "int"
   Local "_10" "int"
-  Local "_11" "int"
   Block "bb0" entry
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:5:10 written
       Destination "_3"
@@ -91,21 +90,20 @@ Function a_local_given_something_fresh_forgets_what_it_lost.c:3:5 "f"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:12:9 generated
     ArgumentsEvaluated a_local_given_something_fresh_forgets_what_it_lost.c:13:9 generated
     Call a_local_given_something_fresh_forgets_what_it_lost.c:13:9 "free" "bb8"
-      Destination "_9"
       Copy "_2"
   Block "bb8"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:13:9 generated
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:14:13 written
-      Destination "_10"
+      Destination "_9"
       Binary "Sub"
         Copy "_1"
         Constant 1
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:14:9 written
       Destination "_1"
       Use
-        Copy "_10"
+        Copy "_9"
     Operation a_local_given_something_fresh_forgets_what_it_lost.c:14:9 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_1"
     Sequenced a_local_given_something_fresh_forgets_what_it_lost.c:14:9 generated

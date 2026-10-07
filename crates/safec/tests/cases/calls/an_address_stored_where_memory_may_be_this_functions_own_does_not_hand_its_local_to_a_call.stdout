@@ -25,9 +25,8 @@ Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_
   Local "_13" "int **"
   Local "_14" "int **"
   Local "_15" "int **"
-  Local "_16" "void"
-  Local "_17" "int **"
-  Local "_18" "int"
+  Local "_16" "int **"
+  Local "_17" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:6:16 generated
     Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:6:16 "malloc" "bb1"
@@ -156,22 +155,21 @@ Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_
         Place "_12"
     ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:5 generated
     Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:5 "release_ref" "bb15"
-      Destination "_16"
       Copy "_15"
   Block "bb15"
     Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:23:5 generated
     Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:17 written
-      Destination "_17"
+      Destination "_16"
       Address
         Place "_9"
     ArgumentsEvaluated an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 generated
     Call an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 "use2" "bb16"
-      Destination "_18"
-      Copy "_17"
+      Destination "_17"
+      Copy "_16"
   Block "bb16"
     Operation an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:5 written
       Destination "_0"
       Use
-        Copy "_18"
+        Copy "_17"
     Sequenced an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:24:12 generated
     Return

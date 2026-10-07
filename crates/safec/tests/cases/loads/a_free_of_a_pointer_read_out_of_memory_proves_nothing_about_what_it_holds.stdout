@@ -19,7 +19,6 @@ Function a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_hol
   Local "_10" "int *"
   Local "_11" "int *"
   Local "_12" "int **"
-  Local "_13" "void"
   Block "bb0" entry
     Operation a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:4:5 generated
       Destination "_0"
@@ -134,7 +133,6 @@ Function a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_hol
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:16:14 generated
     ArgumentsEvaluated a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:17:5 generated
     Call a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:17:5 "free" "bb9"
-      Destination "_13"
       Copy "_11"
   Block "bb9"
     Sequenced a_free_of_a_pointer_read_out_of_memory_proves_nothing_about_what_it_holds.c:17:5 generated

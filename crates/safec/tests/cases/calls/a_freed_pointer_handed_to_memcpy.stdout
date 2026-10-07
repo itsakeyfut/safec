@@ -18,9 +18,7 @@ Function a_freed_pointer_handed_to_memcpy.c:5:5 "main"
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "void"
-  Local "_8" "void *"
-  Local "_9" "void"
+  Local "_7" "void *"
   Block "bb0" entry
     Operation a_freed_pointer_handed_to_memcpy.c:5:5 generated
       Destination "_0"
@@ -86,13 +84,12 @@ Function a_freed_pointer_handed_to_memcpy.c:5:5 "main"
   Block "bb8"
     ArgumentsEvaluated a_freed_pointer_handed_to_memcpy.c:14:5 generated
     Call a_freed_pointer_handed_to_memcpy.c:14:5 "free" "bb9"
-      Destination "_7"
       Copy "_1"
   Block "bb9"
     Sequenced a_freed_pointer_handed_to_memcpy.c:14:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_to_memcpy.c:15:5 generated
     Call a_freed_pointer_handed_to_memcpy.c:15:5 "memcpy" "bb10"
-      Destination "_8"
+      Destination "_7"
       Copy "_1"
       Copy "_3"
       Constant 8
@@ -100,7 +97,6 @@ Function a_freed_pointer_handed_to_memcpy.c:5:5 "main"
     Sequenced a_freed_pointer_handed_to_memcpy.c:15:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_to_memcpy.c:16:5 generated
     Call a_freed_pointer_handed_to_memcpy.c:16:5 "free" "bb11"
-      Destination "_9"
       Copy "_3"
   Block "bb11"
     Sequenced a_freed_pointer_handed_to_memcpy.c:16:5 generated

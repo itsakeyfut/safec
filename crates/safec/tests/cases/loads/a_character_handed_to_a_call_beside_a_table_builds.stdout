@@ -23,11 +23,7 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
   Local "_11" "int"
   Local "_12" "char"
   Local "_13" "char"
-  Local "_14" "void"
-  Local "_15" "int"
-  Local "_16" "void"
-  Local "_17" "void"
-  Local "_18" "void"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_character_handed_to_a_call_beside_a_table_builds.c:5:5 generated
       Destination "_0"
@@ -161,12 +157,11 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:21:14 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:22:5 generated
     Call a_character_handed_to_a_call_beside_a_table_builds.c:22:5 "emit" "bb13"
-      Destination "_14"
       Copy "_13"
   Block "bb13"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:22:5 generated
     Operation a_character_handed_to_a_call_beside_a_table_builds.c:23:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_1"
           Deref
@@ -174,25 +169,22 @@ Function a_character_handed_to_a_call_beside_a_table_builds.c:5:5 "main"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:23:13 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:24:5 generated
     Call a_character_handed_to_a_call_beside_a_table_builds.c:24:5 "free" "bb14"
-      Destination "_16"
       Copy "_4"
   Block "bb14"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:24:5 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:25:5 generated
     Call a_character_handed_to_a_call_beside_a_table_builds.c:25:5 "free" "bb15"
-      Destination "_17"
       Copy "_1"
   Block "bb15"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:25:5 generated
     ArgumentsEvaluated a_character_handed_to_a_call_beside_a_table_builds.c:26:5 generated
     Call a_character_handed_to_a_call_beside_a_table_builds.c:26:5 "free" "bb16"
-      Destination "_18"
       Copy "_9"
   Block "bb16"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:26:5 generated
     Operation a_character_handed_to_a_call_beside_a_table_builds.c:27:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced a_character_handed_to_a_call_beside_a_table_builds.c:27:12 generated
     Return

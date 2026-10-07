@@ -13,8 +13,7 @@ Function a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int *"
-  Local "_7" "void"
-  Local "_8" "int"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:4:5 generated
       Destination "_0"
@@ -67,7 +66,6 @@ Function a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it
         Copy "_1"
           Deref
     Call a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:10 "free" "bb5"
-      Destination "_7"
       Copy "_6"
   Block "bb5"
     Operation a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:5 written
@@ -75,7 +73,7 @@ Function a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it
       Use
         Constant 0
     Operation a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:5 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_3"
     Sequenced a_read_in_a_frees_own_argument_below_an_assignment_is_ordered_before_it.c:11:5 generated

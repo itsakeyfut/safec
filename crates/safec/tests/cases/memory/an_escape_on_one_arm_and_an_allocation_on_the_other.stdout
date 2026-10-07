@@ -17,8 +17,6 @@ Function an_escape_on_one_arm_and_an_allocation_on_the_other.c:3:5 "f"
   Local "_8" "int *"
   Local "_9" "void *"
   Local "_10" "int *"
-  Local "_11" "void"
-  Local "_12" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_escape_on_one_arm_and_an_allocation_on_the_other.c:4:14 generated
     Call an_escape_on_one_arm_and_an_allocation_on_the_other.c:4:14 "malloc" "bb1"
@@ -67,7 +65,6 @@ Function an_escape_on_one_arm_and_an_allocation_on_the_other.c:3:5 "f"
   Block "bb4"
     ArgumentsEvaluated an_escape_on_one_arm_and_an_allocation_on_the_other.c:8:5 generated
     Call an_escape_on_one_arm_and_an_allocation_on_the_other.c:8:5 "free" "bb6"
-      Destination "_11"
       Copy "_2"
   Block "bb5"
     Operation an_escape_on_one_arm_and_an_allocation_on_the_other.c:7:41 written
@@ -84,7 +81,6 @@ Function an_escape_on_one_arm_and_an_allocation_on_the_other.c:3:5 "f"
     Sequenced an_escape_on_one_arm_and_an_allocation_on_the_other.c:8:5 generated
     ArgumentsEvaluated an_escape_on_one_arm_and_an_allocation_on_the_other.c:9:5 generated
     Call an_escape_on_one_arm_and_an_allocation_on_the_other.c:9:5 "free" "bb7"
-      Destination "_12"
       Copy "_4"
   Block "bb7"
     Sequenced an_escape_on_one_arm_and_an_allocation_on_the_other.c:9:5 generated

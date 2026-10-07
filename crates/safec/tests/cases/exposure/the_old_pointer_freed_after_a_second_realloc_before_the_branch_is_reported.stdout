@@ -22,8 +22,6 @@ Function the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_repor
   Local "_6" "int *"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "void"
-  Local "_10" "void"
   Block "bb0" entry
     Operation the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:5:5 generated
       Destination "_0"
@@ -91,7 +89,6 @@ Function the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_repor
     Sequenced the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:10:9 generated
     ArgumentsEvaluated the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:10:19 generated
     Call the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:10:19 "free" "bb10"
-      Destination "_9"
       Copy "_1"
   Block "bb8"
     Sequenced the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:10:9 generated
@@ -99,7 +96,6 @@ Function the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_repor
   Block "bb9"
     ArgumentsEvaluated the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:11:5 generated
     Call the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:11:5 "free" "bb11"
-      Destination "_10"
       Copy "_4"
   Block "bb10"
     Sequenced the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported.c:10:19 generated

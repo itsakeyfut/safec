@@ -12,8 +12,6 @@ Function a_branch_that_allocates_either_way.c:3:5 "f"
   Local "_3" "void *"
   Local "_4" "void *"
   Local "_5" "int *"
-  Local "_6" "void"
-  Local "_7" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_branch_that_allocates_either_way.c:4:14 generated
     Call a_branch_that_allocates_either_way.c:4:14 "malloc" "bb1"
@@ -38,7 +36,6 @@ Function a_branch_that_allocates_either_way.c:3:5 "f"
   Block "bb4"
     ArgumentsEvaluated a_branch_that_allocates_either_way.c:6:5 generated
     Call a_branch_that_allocates_either_way.c:6:5 "free" "bb6"
-      Destination "_6"
       Copy "_2"
   Block "bb5"
     Operation a_branch_that_allocates_either_way.c:5:14 written
@@ -55,7 +52,6 @@ Function a_branch_that_allocates_either_way.c:3:5 "f"
     Sequenced a_branch_that_allocates_either_way.c:6:5 generated
     ArgumentsEvaluated a_branch_that_allocates_either_way.c:7:5 generated
     Call a_branch_that_allocates_either_way.c:7:5 "free" "bb7"
-      Destination "_7"
       Copy "_2"
   Block "bb7"
     Sequenced a_branch_that_allocates_either_way.c:7:5 generated

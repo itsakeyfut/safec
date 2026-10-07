@@ -15,8 +15,6 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
   Local "_6" "int *"
   Local "_7" "int *"
   Local "_8" "int *"
-  Local "_9" "void"
-  Local "_10" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:4:14 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:4:14 "malloc" "bb1"
@@ -71,7 +69,6 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
     ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:8:14 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:8:14 "free" "bb9"
-      Destination "_9"
       Copy "_6"
   Block "bb7"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:9 generated
@@ -79,7 +76,6 @@ Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
   Block "bb8"
     ArgumentsEvaluated a_free_of_a_may_set_on_one_arm_only.c:9:5 generated
     Call a_free_of_a_may_set_on_one_arm_only.c:9:5 "free" "bb10"
-      Destination "_10"
       Copy "_6"
   Block "bb9"
     Sequenced a_free_of_a_may_set_on_one_arm_only.c:8:14 generated

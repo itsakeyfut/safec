@@ -16,8 +16,7 @@ Function a_use_of_another_pointer_before_a_free_is_not_reported.c:4:5 "f"
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "void"
-  Local "_8" "int"
+  Local "_7" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_use_of_another_pointer_before_a_free_is_not_reported.c:5:14 generated
     Call a_use_of_another_pointer_before_a_free_is_not_reported.c:5:14 "malloc" "bb1"
@@ -45,18 +44,17 @@ Function a_use_of_another_pointer_before_a_free_is_not_reported.c:4:5 "f"
         Deref
   Block "bb3"
     Call a_use_of_another_pointer_before_a_free_is_not_reported.c:7:22 "free" "bb4"
-      Destination "_7"
       Copy "_1"
   Block "bb4"
     Operation a_use_of_another_pointer_before_a_free_is_not_reported.c:7:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_6"
         Constant 0
     Operation a_use_of_another_pointer_before_a_free_is_not_reported.c:7:9 written
       Destination "_5"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_use_of_another_pointer_before_a_free_is_not_reported.c:7:13 generated
     Operation a_use_of_another_pointer_before_a_free_is_not_reported.c:8:5 written
       Destination "_0"

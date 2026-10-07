@@ -20,8 +20,6 @@ Function what_strcpy_returns_is_the_allocation_it_was_handed.c:5:5 "main"
   Local "_7" "char"
   Local "_8" "char *"
   Local "_9" "char *"
-  Local "_10" "void"
-  Local "_11" "void"
   Block "bb0" entry
     Operation what_strcpy_returns_is_the_allocation_it_was_handed.c:5:5 generated
       Destination "_0"
@@ -109,13 +107,11 @@ Function what_strcpy_returns_is_the_allocation_it_was_handed.c:5:5 "main"
     Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:15:15 generated
     ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:16:5 generated
     Call what_strcpy_returns_is_the_allocation_it_was_handed.c:16:5 "free" "bb10"
-      Destination "_10"
       Copy "_1"
   Block "bb10"
     Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:16:5 generated
     ArgumentsEvaluated what_strcpy_returns_is_the_allocation_it_was_handed.c:17:5 generated
     Call what_strcpy_returns_is_the_allocation_it_was_handed.c:17:5 "free" "bb11"
-      Destination "_11"
       Copy "_8"
   Block "bb11"
     Sequenced what_strcpy_returns_is_the_allocation_it_was_handed.c:17:5 generated

@@ -22,9 +22,8 @@ Function a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_lo
   Local "_13" "int *"
   Local "_14" "int"
   Local "_15" "int *"
-  Local "_16" "void"
+  Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "int"
   Block "bb0" entry
     Operation a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:4:5 generated
       Destination "_0"
@@ -175,7 +174,6 @@ Function a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_lo
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:24:9 generated
     ArgumentsEvaluated a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:25:9 generated
     Call a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:25:9 "free" "bb18"
-      Destination "_16"
       Copy "_7"
   Block "bb15"
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:19:17 generated
@@ -203,16 +201,16 @@ Function a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_lo
   Block "bb18"
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:25:9 generated
     Operation a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:26:13 written
-      Destination "_17"
+      Destination "_16"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:26:9 written
       Destination "_5"
       Use
-        Copy "_17"
+        Copy "_16"
     Operation a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:26:9 written
-      Destination "_18"
+      Destination "_17"
       Use
         Copy "_5"
     Sequenced a_load_moved_by_arithmetic_and_stored_last_turn_is_doubted_after_the_loop_allocates_again.c:26:9 generated

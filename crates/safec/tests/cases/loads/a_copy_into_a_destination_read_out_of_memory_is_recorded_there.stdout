@@ -39,9 +39,8 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
   Local "_19" "int *"
   Local "_20" "int **"
   Local "_21" "void *"
-  Local "_22" "void"
-  Local "_23" "int *"
-  Local "_24" "int"
+  Local "_22" "int *"
+  Local "_23" "int"
   Block "bb0" entry
     Operation a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 generated
       Destination "_0"
@@ -258,23 +257,22 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:33:5 generated
     ArgumentsEvaluated a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 generated
     Call a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 "free" "bb22"
-      Destination "_22"
       Copy "_7"
   Block "bb22"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:34:5 generated
     Operation a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:35:10 written
-      Destination "_23"
+      Destination "_22"
       Use
         Copy "_1"
           Deref
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:35:14 generated
     Operation a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:36:9 written
-      Destination "_24"
+      Destination "_23"
       Binary "Eq"
-        Copy "_23"
+        Copy "_22"
         Constant 0
     Branch a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:36:9 "bb23" "bb24"
-      Copy "_24"
+      Copy "_23"
   Block "bb23"
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:36:9 generated
     Operation a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:37:9 written
@@ -290,7 +288,7 @@ Function a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:7:5 "m
     Operation a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:39:5 written
       Destination "_0"
       Use
-        Copy "_23"
+        Copy "_22"
           Deref
     Sequenced a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:39:12 generated
     Return

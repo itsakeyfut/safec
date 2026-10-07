@@ -9,7 +9,6 @@ Function a_function_that_returns_what_it_freed.c:4:6 "stale"
   Local "_0" "int *" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_function_that_returns_what_it_freed.c:5:14 generated
     Call a_function_that_returns_what_it_freed.c:5:14 "malloc" "bb1"
@@ -23,7 +22,6 @@ Function a_function_that_returns_what_it_freed.c:4:6 "stale"
     Sequenced a_function_that_returns_what_it_freed.c:5:14 generated
     ArgumentsEvaluated a_function_that_returns_what_it_freed.c:6:5 generated
     Call a_function_that_returns_what_it_freed.c:6:5 "free" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_function_that_returns_what_it_freed.c:6:5 generated

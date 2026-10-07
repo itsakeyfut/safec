@@ -19,8 +19,7 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
   Local "_10" "int **"
   Local "_11" "int **"
   Local "_12" "int *"
-  Local "_13" "void"
-  Local "_14" "int"
+  Local "_13" "int"
   Block "bb0" entry
     Operation a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:4:5 generated
       Destination "_0"
@@ -135,17 +134,16 @@ Function a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_l
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:17:5 generated
     ArgumentsEvaluated a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 generated
     Call a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 "free" "bb9"
-      Destination "_13"
       Copy "_1"
   Block "bb9"
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:18:5 generated
     Operation a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:19:9 written
-      Destination "_14"
+      Destination "_13"
       Binary "Eq"
         Copy "_8"
         Constant 0
     Branch a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:19:9 "bb10" "bb11"
-      Copy "_14"
+      Copy "_13"
   Block "bb10"
     Sequenced a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:19:9 generated
     Operation a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:20:9 written

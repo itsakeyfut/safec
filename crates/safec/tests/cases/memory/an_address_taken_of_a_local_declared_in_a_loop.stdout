@@ -10,11 +10,10 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
   Local "_1" "int" parameter
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "void"
+  Local "_4" "int **"
   Local "_5" "int **"
-  Local "_6" "int **"
+  Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
@@ -43,34 +42,33 @@ Function an_address_taken_of_a_local_declared_in_a_loop.c:3:5 "f"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:5:18 generated
     ArgumentsEvaluated an_address_taken_of_a_local_declared_in_a_loop.c:6:9 generated
     Call an_address_taken_of_a_local_declared_in_a_loop.c:6:9 "free" "bb5"
-      Destination "_4"
       Copy "_2"
   Block "bb5"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:6:9 generated
-    StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:7:9 generated "_5"
+    StorageLive an_address_taken_of_a_local_declared_in_a_loop.c:7:9 generated "_4"
     Operation an_address_taken_of_a_local_declared_in_a_loop.c:7:20 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_2"
     Operation an_address_taken_of_a_local_declared_in_a_loop.c:7:15 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:7:20 generated
     Operation an_address_taken_of_a_local_declared_in_a_loop.c:8:13 written
-      Destination "_7"
+      Destination "_6"
       Binary "Sub"
         Copy "_1"
         Constant 1
     Operation an_address_taken_of_a_local_declared_in_a_loop.c:8:9 written
       Destination "_1"
       Use
-        Copy "_7"
+        Copy "_6"
     Operation an_address_taken_of_a_local_declared_in_a_loop.c:8:9 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
     Sequenced an_address_taken_of_a_local_declared_in_a_loop.c:8:9 generated
-    StorageDead an_address_taken_of_a_local_declared_in_a_loop.c:9:5 generated "_5"
+    StorageDead an_address_taken_of_a_local_declared_in_a_loop.c:9:5 generated "_4"
     StorageDead an_address_taken_of_a_local_declared_in_a_loop.c:9:5 generated "_2"
     Goto "bb1"

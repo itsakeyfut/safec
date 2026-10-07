@@ -14,7 +14,6 @@ Function a_free_of_either_of_two_allocations_then_returned.c:4:6 "either"
   Local "_5" "void *"
   Local "_6" "int *"
   Local "_7" "int *"
-  Local "_8" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_either_of_two_allocations_then_returned.c:5:14 generated
     Call a_free_of_either_of_two_allocations_then_returned.c:5:14 "malloc" "bb1"
@@ -61,7 +60,6 @@ Function a_free_of_either_of_two_allocations_then_returned.c:4:6 "either"
   Block "bb5"
     ArgumentsEvaluated a_free_of_either_of_two_allocations_then_returned.c:11:5 generated
     Call a_free_of_either_of_two_allocations_then_returned.c:11:5 "free" "bb6"
-      Destination "_8"
       Copy "_6"
   Block "bb6"
     Sequenced a_free_of_either_of_two_allocations_then_returned.c:11:5 generated

@@ -12,9 +12,8 @@ Function a_conditional_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
   Local "_3" "int *"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "void"
+  Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 generated
     Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 "malloc" "bb1"
@@ -27,21 +26,20 @@ Function a_conditional_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
         Copy "_4"
     Sequenced a_conditional_inside_an_unsequenced_operand_orders_nothing.c:4:14 generated
     Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:19 "free" "bb2"
-      Destination "_6"
       Copy "_3"
   Block "bb2"
     Branch a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:19 "bb4" "bb5"
       Copy "_2"
   Block "bb3"
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:13 written
-      Destination "_8"
+      Destination "_7"
       Binary "Add"
         Copy "_1"
-        Copy "_7"
+        Copy "_6"
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:9 written
       Destination "_5"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:13 generated
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:6:5 written
       Destination "_0"
@@ -51,14 +49,14 @@ Function a_conditional_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
     Return
   Block "bb4"
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:19 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_3"
           Deref
     Goto "bb3"
   Block "bb5"
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:19 written
-      Destination "_7"
+      Destination "_6"
       Use
         Constant 0
     Goto "bb3"

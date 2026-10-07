@@ -19,7 +19,6 @@ Function what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_b
   Local "_6" "void *"
   Local "_7" "int *"
   Local "_8" "int"
-  Local "_9" "void"
   Block "bb0" entry
     Operation what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:6:9 written
       Destination "_2"
@@ -104,7 +103,6 @@ Function what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_b
   Block "bb11"
     ArgumentsEvaluated what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:18:5 generated
     Call what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:18:5 "release_all" "bb12"
-      Destination "_9"
   Block "bb12"
     Sequenced what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:18:5 generated
     Operation what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call.c:19:5 written

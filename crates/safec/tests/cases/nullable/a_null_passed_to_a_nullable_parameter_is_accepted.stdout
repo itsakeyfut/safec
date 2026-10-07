@@ -4,7 +4,6 @@ Function a_null_passed_to_a_nullable_parameter_is_accepted.c:1:6 "g" declared
   Local "_1" "int *" parameter
 Function a_null_passed_to_a_nullable_parameter_is_accepted.c:3:5 "main"
   Local "_0" "int" return
-  Local "_1" "void"
   Block "bb0" entry
     Operation a_null_passed_to_a_nullable_parameter_is_accepted.c:3:5 generated
       Destination "_0"
@@ -12,7 +11,6 @@ Function a_null_passed_to_a_nullable_parameter_is_accepted.c:3:5 "main"
         Constant 0
     ArgumentsEvaluated a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 generated
     Call a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 "g" "bb1"
-      Destination "_1"
       Constant 0
   Block "bb1"
     Sequenced a_null_passed_to_a_nullable_parameter_is_accepted.c:4:5 generated

@@ -36,9 +36,8 @@ Function a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:7:5 "ma
   Local "_16" "int *"
   Local "_17" "int **"
   Local "_18" "void *"
-  Local "_19" "void"
-  Local "_20" "int *"
-  Local "_21" "int"
+  Local "_19" "int *"
+  Local "_20" "int"
   Block "bb0" entry
     Operation a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:7:5 generated
       Destination "_0"
@@ -218,23 +217,22 @@ Function a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:7:5 "ma
     Sequenced a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:28:5 generated
     ArgumentsEvaluated a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:29:5 generated
     Call a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:29:5 "free" "bb18"
-      Destination "_19"
       Copy "_7"
   Block "bb18"
     Sequenced a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:29:5 generated
     Operation a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:30:10 written
-      Destination "_20"
+      Destination "_19"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:30:14 generated
     Operation a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:31:9 written
-      Destination "_21"
+      Destination "_20"
       Binary "Eq"
-        Copy "_20"
+        Copy "_19"
         Constant 0
     Branch a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:31:9 "bb19" "bb20"
-      Copy "_21"
+      Copy "_20"
   Block "bb19"
     Sequenced a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:31:9 generated
     Operation a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:32:9 written
@@ -250,7 +248,7 @@ Function a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:7:5 "ma
     Operation a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:34:5 written
       Destination "_0"
       Use
-        Copy "_20"
+        Copy "_19"
           Deref
     Sequenced a_pointer_copied_by_memcpy_from_a_locals_address_is_read_back.c:34:12 generated
     Return

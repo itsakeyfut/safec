@@ -10,8 +10,7 @@ Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:3:5 "
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     ArgumentsEvaluated the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 generated
     Call the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 "malloc" "bb1"
@@ -24,11 +23,10 @@ Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:3:5 "
         Copy "_2"
     Sequenced the_same_program_with_the_operands_swapped_is_not_proved_either.c:4:14 generated
     Call the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:14 "free" "bb2"
-      Destination "_4"
       Copy "_1"
   Block "bb2"
     Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:14 written
-      Destination "_5"
+      Destination "_4"
       Binary "Add"
         Constant 0
         Copy "_1"
@@ -36,7 +34,7 @@ Function the_same_program_with_the_operands_swapped_is_not_proved_either.c:3:5 "
     Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:9 written
       Destination "_3"
       Use
-        Copy "_5"
+        Copy "_4"
     Sequenced the_same_program_with_the_operands_swapped_is_not_proved_either.c:5:14 generated
     Operation the_same_program_with_the_operands_swapped_is_not_proved_either.c:6:5 written
       Destination "_0"

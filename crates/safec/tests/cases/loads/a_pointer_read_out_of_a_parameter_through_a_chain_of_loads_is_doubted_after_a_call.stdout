@@ -9,7 +9,6 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
   Local "_4" "int"
   Local "_5" "int *"
   Local "_6" "int"
-  Local "_7" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 written
       Destination "_2"
@@ -82,7 +81,6 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
   Block "bb9"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 generated
     Call a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 "release_all" "bb10"
-      Destination "_7"
   Block "bb10"
     Sequenced a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:8:5 generated
     Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:9:5 written

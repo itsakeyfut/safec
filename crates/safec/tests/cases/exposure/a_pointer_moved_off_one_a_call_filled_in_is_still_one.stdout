@@ -22,13 +22,11 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int ***"
-  Local "_14" "void"
+  Local "_14" "int **"
   Local "_15" "int **"
   Local "_16" "int **"
-  Local "_17" "int **"
-  Local "_18" "int"
-  Local "_19" "int *"
-  Local "_20" "void"
+  Local "_17" "int"
+  Local "_18" "int *"
   Block "bb0" entry
     Call a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:10:9 "malloc" "bb1"
       Destination "_6"
@@ -111,7 +109,6 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
         Place "_3"
     ArgumentsEvaluated a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:19:5 generated
     Call a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:19:5 "get" "bb9"
-      Destination "_14"
       Copy "_13"
   Block "bb9"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:19:5 generated
@@ -124,7 +121,7 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
       Use
         Copy "_2"
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:21:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_4"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:21:9 generated
@@ -132,28 +129,28 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
   Block "bb11"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:20:9 generated
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:23:13 written
-      Destination "_16"
+      Destination "_15"
       Binary "Add"
         Copy "_3"
         Constant 1
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:23:9 written
       Destination "_4"
       Use
-        Copy "_16"
+        Copy "_15"
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:23:9 written
-      Destination "_17"
+      Destination "_16"
       Use
         Copy "_4"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:23:9 generated
     Goto "bb12"
   Block "bb12"
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:25:9 written
-      Destination "_18"
+      Destination "_17"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:25:9 "bb13" "bb14"
-      Copy "_18"
+      Copy "_17"
   Block "bb13"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:25:9 generated
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:26:9 written
@@ -172,14 +169,13 @@ Function a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:5:5 "f"
       Use
         Copy "_5"
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:28:5 written
-      Destination "_19"
+      Destination "_18"
       Use
         Copy "_4"
           Deref
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:28:5 generated
     ArgumentsEvaluated a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:29:5 generated
     Call a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:29:5 "release_all" "bb16"
-      Destination "_20"
   Block "bb16"
     Sequenced a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:29:5 generated
     Operation a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:30:5 written

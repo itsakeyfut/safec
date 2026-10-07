@@ -19,7 +19,6 @@ Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:5:5
   Local "_6" "int *"
   Local "_7" "int *"
   Local "_8" "void *"
-  Local "_9" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 generated
     Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 "malloc" "bb1"
@@ -66,7 +65,6 @@ Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:5:5
     Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 generated
     ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 generated
     Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 "free" "bb6"
-      Destination "_9"
       Copy "_7"
   Block "bb6"
     Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 generated

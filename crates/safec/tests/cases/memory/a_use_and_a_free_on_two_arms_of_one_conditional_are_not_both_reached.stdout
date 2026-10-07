@@ -12,8 +12,7 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "void"
-  Local "_7" "int"
+  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:4:14 generated
     Call a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:4:14 "malloc" "bb1"
@@ -29,14 +28,14 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
       Copy "_1"
   Block "bb2"
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:9 written
       Destination "_4"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 generated
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:6:5 written
       Destination "_0"
@@ -53,7 +52,6 @@ Function a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:
     Goto "bb2"
   Block "bb4"
     Call a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:24 "free" "bb5"
-      Destination "_6"
       Copy "_2"
   Block "bb5"
     Operation a_use_and_a_free_on_two_arms_of_one_conditional_are_not_both_reached.c:5:14 written

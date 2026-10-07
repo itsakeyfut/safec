@@ -19,7 +19,6 @@ Function what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:5
   Local "_6" "int"
   Local "_7" "int *"
   Local "_8" "void *"
-  Local "_9" "void"
   Block "bb0" entry
     Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:5:5 generated
       Destination "_0"
@@ -105,7 +104,6 @@ Function what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:5
     Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:15:5 generated
     ArgumentsEvaluated what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:16:5 generated
     Call what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:16:5 "log_line" "bb10"
-      Destination "_9"
   Block "bb10"
     Sequenced what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:16:5 generated
     Operation what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:17:5 written

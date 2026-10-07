@@ -19,9 +19,8 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int *"
-  Local "_13" "void"
+  Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
   Block "bb0" entry
     Operation a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:4:5 generated
       Destination "_0"
@@ -138,7 +137,6 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:20:9 generated
     ArgumentsEvaluated a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 generated
     Call a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 "free" "bb14"
-      Destination "_13"
       Copy "_6"
   Block "bb11"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:15:17 generated
@@ -165,16 +163,16 @@ Function a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_
   Block "bb14"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:21:9 generated
     Operation a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:22:13 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:22:9 written
       Destination "_4"
       Use
-        Copy "_14"
+        Copy "_13"
     Operation a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:22:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_4"
     Sequenced a_read_two_levels_down_through_a_pointer_to_a_local_this_check_lost_is_doubted.c:22:9 generated

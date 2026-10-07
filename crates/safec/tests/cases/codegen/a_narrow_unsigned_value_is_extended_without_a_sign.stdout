@@ -10,8 +10,8 @@ entry:
   %_1 = alloca i8
   %_2 = alloca i32
   %_3 = alloca ptr
-  %_5 = alloca i8
-  %_6 = alloca i32
+  %_4 = alloca i8
+  %_5 = alloca i32
   store i8 %arg0, ptr %_1
   store i32 %arg1, ptr %_2
   store ptr %arg2, ptr %_3
@@ -25,16 +25,16 @@ bb0:
 bb1:
   %t1 = load i8, ptr %_1
   %t2 = call zeroext i8 @twice(i8 zeroext %t1)
-  store i8 %t2, ptr %_5
+  store i8 %t2, ptr %_4
   br label %bb2
 
 bb2:
-  %t3 = load i8, ptr %_5
+  %t3 = load i8, ptr %_4
   %t4 = zext i8 %t3 to i32
   %t5 = load i32, ptr %_2
   %t6 = add nsw i32 %t4, %t5
-  store i32 %t6, ptr %_6
-  %t7 = load i32, ptr %_6
+  store i32 %t6, ptr %_5
+  %t7 = load i32, ptr %_5
   %t8 = trunc i32 %t7 to i8
   store i8 %t8, ptr %_0
   %t9 = load i8, ptr %_0

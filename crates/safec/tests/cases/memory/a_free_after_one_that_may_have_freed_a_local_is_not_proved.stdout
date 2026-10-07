@@ -14,8 +14,6 @@ Function a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:4:5 "g"
   Local "_5" "int *"
   Local "_6" "int *"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:6:14 generated
     Call a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:6:14 "malloc" "bb1"
@@ -56,13 +54,11 @@ Function a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:4:5 "g"
   Block "bb4"
     ArgumentsEvaluated a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:11:5 generated
     Call a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:11:5 "free" "bb5"
-      Destination "_8"
       Copy "_5"
   Block "bb5"
     Sequenced a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:11:5 generated
     ArgumentsEvaluated a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:12:5 generated
     Call a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:12:5 "free" "bb6"
-      Destination "_9"
       Copy "_3"
   Block "bb6"
     Sequenced a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:12:5 generated

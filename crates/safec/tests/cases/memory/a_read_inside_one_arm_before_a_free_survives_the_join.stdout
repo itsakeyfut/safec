@@ -12,8 +12,7 @@ Function a_read_inside_one_arm_before_a_free_survives_the_join.c:3:5 "f"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "void"
-  Local "_7" "int"
+  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_read_inside_one_arm_before_a_free_survives_the_join.c:4:14 generated
     Call a_read_inside_one_arm_before_a_free_survives_the_join.c:4:14 "malloc" "bb1"
@@ -29,7 +28,6 @@ Function a_read_inside_one_arm_before_a_free_survives_the_join.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Call a_read_inside_one_arm_before_a_free_survives_the_join.c:5:29 "free" "bb5"
-      Destination "_6"
       Copy "_2"
   Block "bb3"
     Operation a_read_inside_one_arm_before_a_free_survives_the_join.c:5:14 written
@@ -46,14 +44,14 @@ Function a_read_inside_one_arm_before_a_free_survives_the_join.c:3:5 "f"
     Goto "bb2"
   Block "bb5"
     Operation a_read_inside_one_arm_before_a_free_survives_the_join.c:5:14 written
-      Destination "_7"
+      Destination "_6"
       Binary "Add"
         Copy "_5"
         Constant 0
     Operation a_read_inside_one_arm_before_a_free_survives_the_join.c:5:9 written
       Destination "_4"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_read_inside_one_arm_before_a_free_survives_the_join.c:5:14 generated
     Operation a_read_inside_one_arm_before_a_free_survives_the_join.c:6:5 written
       Destination "_0"

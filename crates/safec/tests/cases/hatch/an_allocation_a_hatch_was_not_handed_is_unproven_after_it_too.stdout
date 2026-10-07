@@ -13,8 +13,6 @@ Function an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:8:5 "ma
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
-  Local "_4" "void"
   Block "bb0" entry
     Operation an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:8:5 generated
       Destination "_0"
@@ -32,12 +30,10 @@ Function an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:8:5 "ma
     Sequenced an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:9:14 generated
     ArgumentsEvaluated an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 generated
     Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 "nothing" "bb2"
-      Destination "_3"
   Block "bb2"
     Sequenced an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:10:5 generated
     ArgumentsEvaluated an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 generated
     Call an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 "free" "bb3"
-      Destination "_4"
       Copy "_1"
   Block "bb3"
     Sequenced an_allocation_a_hatch_was_not_handed_is_unproven_after_it_too.c:11:5 generated

@@ -23,7 +23,6 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
   Local "_15" "int **"
   Local "_16" "int"
   Local "_17" "int *"
-  Local "_18" "void"
   Block "bb0" entry
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:8:9 written
       Destination "_6"
@@ -179,7 +178,6 @@ Function a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:4
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:28:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 generated
     Call a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 "release_all" "bb18"
-      Destination "_18"
   Block "bb18"
     Sequenced a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:29:5 generated
     Operation a_store_through_a_pointer_that_may_be_a_load_exposes_what_it_stores.c:30:5 written

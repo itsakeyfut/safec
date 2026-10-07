@@ -10,7 +10,6 @@ Function a_call_may_return_what_a_parameter_holds.c:4:5 "f"
   Local "_2" "int *"
   Local "_3" "int *"
   Local "_4" "int"
-  Local "_5" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_call_may_return_what_a_parameter_holds.c:5:14 generated
     Call a_call_may_return_what_a_parameter_holds.c:5:14 "lookup" "bb1"
@@ -42,7 +41,6 @@ Function a_call_may_return_what_a_parameter_holds.c:4:5 "f"
   Block "bb4"
     ArgumentsEvaluated a_call_may_return_what_a_parameter_holds.c:9:5 generated
     Call a_call_may_return_what_a_parameter_holds.c:9:5 "free" "bb5"
-      Destination "_5"
       Copy "_1"
   Block "bb5"
     Sequenced a_call_may_return_what_a_parameter_holds.c:9:5 generated

@@ -12,8 +12,6 @@ Function a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:3:5 "f
   Local "_3" "int **"
   Local "_4" "void *"
   Local "_5" "int *"
-  Local "_6" "void"
-  Local "_7" "void"
   Block "bb0" entry
     Operation a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:4:10 written
       Destination "_1"
@@ -46,13 +44,11 @@ Function a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:3:5 "f
     Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:6:5 generated
     ArgumentsEvaluated a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:7:5 generated
     Call a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:7:5 "free" "bb2"
-      Destination "_6"
       Copy "_1"
   Block "bb2"
     Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:7:5 generated
     ArgumentsEvaluated a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 generated
     Call a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 "free" "bb3"
-      Destination "_7"
       Copy "_1"
   Block "bb3"
     Sequenced a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 generated

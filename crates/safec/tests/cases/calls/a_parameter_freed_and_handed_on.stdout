@@ -8,18 +8,14 @@ Function a_parameter_freed_and_handed_on.c:2:6 "run" declared
 Function a_parameter_freed_and_handed_on.c:4:6 "finish"
   Local "_0" "void" return
   Local "_1" "int *" parameter
-  Local "_2" "void"
-  Local "_3" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_freed_and_handed_on.c:5:5 generated
     Call a_parameter_freed_and_handed_on.c:5:5 "free" "bb1"
-      Destination "_2"
       Copy "_1"
   Block "bb1"
     Sequenced a_parameter_freed_and_handed_on.c:5:5 generated
     ArgumentsEvaluated a_parameter_freed_and_handed_on.c:6:5 generated
     Call a_parameter_freed_and_handed_on.c:6:5 "run" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_parameter_freed_and_handed_on.c:6:5 generated

@@ -16,7 +16,6 @@ Function an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:3:5 "f"
   Local "_7" "void *"
   Local "_8" "int *"
   Local "_9" "int *"
-  Local "_10" "void"
   Block "bb0" entry
     Branch an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:9 "bb1" "bb2"
       Copy "_1"
@@ -44,7 +43,6 @@ Function an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:3:5 "f"
   Block "bb3"
     ArgumentsEvaluated an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:8:5 generated
     Call an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:8:5 "free" "bb5"
-      Destination "_10"
       Copy "_3"
   Block "bb4"
     Operation an_escape_on_one_arm_and_a_shared_allocation_on_the_other.c:7:32 written

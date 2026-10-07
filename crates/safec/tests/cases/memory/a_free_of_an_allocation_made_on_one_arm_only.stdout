@@ -11,7 +11,6 @@ Function a_free_of_an_allocation_made_on_one_arm_only.c:3:5 "f"
   Local "_2" "int *"
   Local "_3" "void *"
   Local "_4" "int *"
-  Local "_5" "void"
   Block "bb0" entry
     Operation a_free_of_an_allocation_made_on_one_arm_only.c:4:10 written
       Destination "_2"
@@ -31,7 +30,6 @@ Function a_free_of_an_allocation_made_on_one_arm_only.c:3:5 "f"
   Block "bb3"
     ArgumentsEvaluated a_free_of_an_allocation_made_on_one_arm_only.c:8:5 generated
     Call a_free_of_an_allocation_made_on_one_arm_only.c:8:5 "free" "bb5"
-      Destination "_5"
       Copy "_2"
   Block "bb4"
     Operation a_free_of_an_allocation_made_on_one_arm_only.c:6:9 written

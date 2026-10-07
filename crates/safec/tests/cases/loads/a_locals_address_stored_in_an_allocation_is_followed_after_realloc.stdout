@@ -26,7 +26,6 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
   Local "_13" "void *"
   Local "_14" "int"
   Local "_15" "int *"
-  Local "_16" "void"
   Block "bb0" entry
     Operation a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:5 generated
       Destination "_0"
@@ -171,7 +170,6 @@ Function a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:5:
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:22:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 generated
     Call a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 "free" "bb13"
-      Destination "_16"
       Copy "_1"
   Block "bb13"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_after_realloc.c:23:5 generated

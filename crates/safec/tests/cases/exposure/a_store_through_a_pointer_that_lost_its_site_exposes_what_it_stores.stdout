@@ -28,7 +28,6 @@ Function a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:4
   Local "_20" "int"
   Local "_21" "int"
   Local "_22" "int *"
-  Local "_23" "void"
   Block "bb0" entry
     Call a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:9:9 "malloc" "bb1"
       Destination "_6"
@@ -161,7 +160,6 @@ Function a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:4
     Sequenced a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:28:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:29:5 generated
     Call a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:29:5 "release_all" "bb16"
-      Destination "_23"
   Block "bb12"
     Operation a_store_through_a_pointer_that_lost_its_site_exposes_what_it_stores.c:22:9 written
       Destination "_2"

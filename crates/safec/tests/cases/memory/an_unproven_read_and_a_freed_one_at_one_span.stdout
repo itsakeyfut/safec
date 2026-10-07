@@ -12,9 +12,7 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
-  Local "_4" "int"
-  Local "_5" "void"
+  Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_unproven_read_and_a_freed_one_at_one_span.c:5:14 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:5:14 "malloc" "bb1"
@@ -28,31 +26,29 @@ Function an_unproven_read_and_a_freed_one_at_one_span.c:4:5 "f"
     Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:5:14 generated
     ArgumentsEvaluated an_unproven_read_and_a_freed_one_at_one_span.c:6:5 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:6:5 "helper" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:6:5 generated
     Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:9 written
-      Destination "_4"
+      Destination "_3"
       Binary "Ne"
         Copy "_1"
           Deref
         Constant 0
     Branch an_unproven_read_and_a_freed_one_at_one_span.c:7:9 "bb3" "bb4"
-      Copy "_4"
+      Copy "_3"
   Block "bb3"
     Branch an_unproven_read_and_a_freed_one_at_one_span.c:7:9 "bb6" "bb7"
-      Copy "_4"
+      Copy "_3"
   Block "bb4"
     Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:9 generated
     ArgumentsEvaluated an_unproven_read_and_a_freed_one_at_one_span.c:7:16 generated
     Call an_unproven_read_and_a_freed_one_at_one_span.c:7:16 "free" "bb5"
-      Destination "_5"
       Copy "_1"
   Block "bb5"
     Sequenced an_unproven_read_and_a_freed_one_at_one_span.c:7:16 generated
     Operation an_unproven_read_and_a_freed_one_at_one_span.c:7:9 written
-      Destination "_4"
+      Destination "_3"
       Binary "Ne"
         Copy "_1"
           Deref

@@ -18,7 +18,6 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
   Local "_9" "int"
   Local "_10" "int *"
   Local "_11" "int *"
-  Local "_12" "void"
   Block "bb0" entry
     Operation a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 generated
       Destination "_0"
@@ -136,7 +135,6 @@ Function a_pointer_copied_from_one_table_to_another_is_inside_both.c:4:5 "main"
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:18:5 generated
     ArgumentsEvaluated a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 generated
     Call a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 "drop_inner" "bb13"
-      Destination "_12"
       Copy "_4"
   Block "bb13"
     Sequenced a_pointer_copied_from_one_table_to_another_is_inside_both.c:19:5 generated

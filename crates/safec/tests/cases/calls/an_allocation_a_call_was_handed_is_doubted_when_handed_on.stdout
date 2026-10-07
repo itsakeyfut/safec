@@ -13,8 +13,7 @@ Function an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:5:5 "main"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     Operation an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:5:5 generated
       Destination "_0"
@@ -51,18 +50,17 @@ Function an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:5:5 "main"
   Block "bb4"
     ArgumentsEvaluated an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 generated
     Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 "init" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:10:5 generated
     ArgumentsEvaluated an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:12 generated
     Call an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:12 "use" "bb6"
-      Destination "_5"
+      Destination "_4"
       Copy "_1"
   Block "bb6"
     Operation an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:5 written
       Destination "_0"
       Use
-        Copy "_5"
+        Copy "_4"
     Sequenced an_allocation_a_call_was_handed_is_doubted_when_handed_on.c:11:12 generated
     Return

@@ -19,8 +19,6 @@ Function a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:5:5 "main
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "void"
-  Local "_10" "void"
   Block "bb0" entry
     Operation a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:5:5 generated
       Destination "_0"
@@ -108,13 +106,11 @@ Function a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:5:5 "main
     Sequenced a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:15:5 generated
     ArgumentsEvaluated a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:16:5 generated
     Call a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:16:5 "free" "bb9"
-      Destination "_9"
       Copy "_4"
   Block "bb9"
     Sequenced a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:16:5 generated
     ArgumentsEvaluated a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:17:5 generated
     Call a_table_and_what_it_holds_handed_to_one_call_are_both_asked.c:17:5 "give" "bb10"
-      Destination "_10"
       Copy "_1"
       Copy "_1"
         Deref

@@ -25,13 +25,11 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
   Local "_11" "void *"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "void"
-  Local "_15" "int *"
-  Local "_16" "int **"
+  Local "_14" "int *"
+  Local "_15" "int **"
+  Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "void"
-  Local "_19" "int"
-  Local "_20" "int"
+  Local "_18" "int"
   Block "bb0" entry
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 generated
       Destination "_0"
@@ -172,7 +170,6 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:22:13 generated
     ArgumentsEvaluated a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:23:13 generated
     Call a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:23:13 "release" "bb19"
-      Destination "_14"
       Copy "_5"
   Block "bb17"
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:22:13 generated
@@ -184,7 +181,7 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
       Use
         Copy "_1"
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:26:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_10"
           Deref
@@ -195,14 +192,14 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
       Use
         Copy "_10"
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:27:9 written
-      Destination "_16"
+      Destination "_15"
       Use
         Copy "_5"
           Deref
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:27:9 generated
     ArgumentsEvaluated a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:28:13 generated
     Call a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:28:13 "cond" "bb20"
-      Destination "_17"
+      Destination "_16"
   Block "bb19"
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:23:13 generated
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:24:13 written
@@ -215,28 +212,27 @@ Function a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:6:5 "
     Return
   Block "bb20"
     Branch a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:28:13 "bb21" "bb22"
-      Copy "_17"
+      Copy "_16"
   Block "bb21"
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:28:13 generated
     ArgumentsEvaluated a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:29:13 generated
     Call a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:29:13 "free" "bb24"
-      Destination "_18"
       Copy "_10"
   Block "bb22"
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:28:13 generated
     Goto "bb23"
   Block "bb23"
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:31:13 written
-      Destination "_19"
+      Destination "_17"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:31:9 written
       Destination "_8"
       Use
-        Copy "_19"
+        Copy "_17"
     Operation a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:31:9 written
-      Destination "_20"
+      Destination "_18"
       Use
         Copy "_8"
     Sequenced a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:31:9 generated

@@ -10,7 +10,6 @@ Function a_discarded_dereference_in_a_comma_after_a_free.c:3:5 "f"
   Local "_1" "int" parameter
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_discarded_dereference_in_a_comma_after_a_free.c:4:14 generated
     Call a_discarded_dereference_in_a_comma_after_a_free.c:4:14 "malloc" "bb1"
@@ -24,7 +23,6 @@ Function a_discarded_dereference_in_a_comma_after_a_free.c:3:5 "f"
     Sequenced a_discarded_dereference_in_a_comma_after_a_free.c:4:14 generated
     ArgumentsEvaluated a_discarded_dereference_in_a_comma_after_a_free.c:5:5 generated
     Call a_discarded_dereference_in_a_comma_after_a_free.c:5:5 "free" "bb2"
-      Destination "_4"
       Copy "_2"
   Block "bb2"
     Sequenced a_discarded_dereference_in_a_comma_after_a_free.c:5:5 generated

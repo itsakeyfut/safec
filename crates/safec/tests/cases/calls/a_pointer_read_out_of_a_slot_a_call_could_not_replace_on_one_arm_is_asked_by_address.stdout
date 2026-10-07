@@ -20,11 +20,10 @@ Function a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_ask
   Local "_8" "int *"
   Local "_9" "int *"
   Local "_10" "int **"
-  Local "_11" "void"
+  Local "_11" "int *"
   Local "_12" "int *"
-  Local "_13" "int *"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_13" "int **"
+  Local "_14" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:6:14 generated
     Call a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:6:14 "malloc" "bb1"
@@ -106,12 +105,11 @@ Function a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_ask
         Place "_9"
     ArgumentsEvaluated a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:16:5 generated
     Call a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:16:5 "release_ref" "bb9"
-      Destination "_11"
       Copy "_10"
   Block "bb9"
     Sequenced a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:16:5 generated
     Operation a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:17:10 written
-      Destination "_12"
+      Destination "_11"
       Use
         Constant 0
     Sequenced a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:17:14 generated
@@ -120,14 +118,14 @@ Function a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_ask
   Block "bb10"
     Sequenced a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:18:9 generated
     Operation a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:19:9 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_5"
           Deref
     Operation a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:19:9 written
-      Destination "_13"
+      Destination "_12"
       Use
-        Copy "_12"
+        Copy "_11"
     Sequenced a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:19:9 generated
     Goto "bb12"
   Block "bb11"
@@ -135,17 +133,17 @@ Function a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_ask
     Goto "bb12"
   Block "bb12"
     Operation a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:21:17 written
-      Destination "_14"
+      Destination "_13"
       Address
-        Place "_12"
+        Place "_11"
     ArgumentsEvaluated a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:21:12 generated
     Call a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:21:12 "use2" "bb13"
-      Destination "_15"
-      Copy "_14"
+      Destination "_14"
+      Copy "_13"
   Block "bb13"
     Operation a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:21:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_14"
     Sequenced a_pointer_read_out_of_a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address.c:21:12 generated
     Return

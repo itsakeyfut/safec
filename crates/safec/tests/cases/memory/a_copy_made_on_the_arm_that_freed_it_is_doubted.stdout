@@ -17,11 +17,10 @@ Function a_copy_made_on_the_arm_that_freed_it_is_doubted.c:4:5 "f"
   Local "_8" "int"
   Local "_9" "int *"
   Local "_10" "int *"
-  Local "_11" "void"
+  Local "_11" "int *"
   Local "_12" "int *"
   Local "_13" "int *"
-  Local "_14" "int *"
-  Local "_15" "int"
+  Local "_14" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_copy_made_on_the_arm_that_freed_it_is_doubted.c:5:15 generated
     Call a_copy_made_on_the_arm_that_freed_it_is_doubted.c:5:15 "malloc" "bb1"
@@ -112,7 +111,6 @@ Function a_copy_made_on_the_arm_that_freed_it_is_doubted.c:4:5 "f"
     Sequenced a_copy_made_on_the_arm_that_freed_it_is_doubted.c:16:9 generated
     ArgumentsEvaluated a_copy_made_on_the_arm_that_freed_it_is_doubted.c:17:9 generated
     Call a_copy_made_on_the_arm_that_freed_it_is_doubted.c:17:9 "free" "bb12"
-      Destination "_11"
       Copy "_6"
   Block "bb10"
     Sequenced a_copy_made_on_the_arm_that_freed_it_is_doubted.c:15:9 generated
@@ -122,7 +120,7 @@ Function a_copy_made_on_the_arm_that_freed_it_is_doubted.c:4:5 "f"
       Use
         Copy "_6"
     Operation a_copy_made_on_the_arm_that_freed_it_is_doubted.c:20:9 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_2"
           Deref
@@ -132,19 +130,19 @@ Function a_copy_made_on_the_arm_that_freed_it_is_doubted.c:4:5 "f"
       Use
         Constant 0
     Operation a_copy_made_on_the_arm_that_freed_it_is_doubted.c:21:9 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_6"
     Sequenced a_copy_made_on_the_arm_that_freed_it_is_doubted.c:21:9 generated
     Goto "bb11"
   Block "bb11"
     Operation a_copy_made_on_the_arm_that_freed_it_is_doubted.c:23:9 written
-      Destination "_15"
+      Destination "_14"
       Binary "Ne"
         Copy "_9"
         Constant 0
     Branch a_copy_made_on_the_arm_that_freed_it_is_doubted.c:23:9 "bb13" "bb14"
-      Copy "_15"
+      Copy "_14"
   Block "bb12"
     Sequenced a_copy_made_on_the_arm_that_freed_it_is_doubted.c:17:9 generated
     Operation a_copy_made_on_the_arm_that_freed_it_is_doubted.c:18:9 written
@@ -152,7 +150,7 @@ Function a_copy_made_on_the_arm_that_freed_it_is_doubted.c:4:5 "f"
       Use
         Constant 0
     Operation a_copy_made_on_the_arm_that_freed_it_is_doubted.c:18:9 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_6"
     Sequenced a_copy_made_on_the_arm_that_freed_it_is_doubted.c:18:9 generated

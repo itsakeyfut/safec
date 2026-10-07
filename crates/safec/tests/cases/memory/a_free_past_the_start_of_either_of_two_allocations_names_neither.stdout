@@ -16,7 +16,6 @@ Function a_free_past_the_start_of_either_of_two_allocations_names_neither.c:3:5 
   Local "_7" "int *"
   Local "_8" "int *"
   Local "_9" "int *"
-  Local "_10" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_past_the_start_of_either_of_two_allocations_names_neither.c:4:14 generated
     Call a_free_past_the_start_of_either_of_two_allocations_names_neither.c:4:14 "malloc" "bb1"
@@ -72,7 +71,6 @@ Function a_free_past_the_start_of_either_of_two_allocations_names_neither.c:3:5 
         Constant 1
     ArgumentsEvaluated a_free_past_the_start_of_either_of_two_allocations_names_neither.c:12:5 generated
     Call a_free_past_the_start_of_either_of_two_allocations_names_neither.c:12:5 "free" "bb6"
-      Destination "_10"
       Copy "_9"
   Block "bb6"
     Sequenced a_free_past_the_start_of_either_of_two_allocations_names_neither.c:12:5 generated

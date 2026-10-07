@@ -5,7 +5,6 @@ Function an_allocation_a_parameter_holds_is_unproven_after_any_call.c:3:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" parameter
   Local "_2" "int"
-  Local "_3" "void"
   Block "bb0" entry
     Operation an_allocation_a_parameter_holds_is_unproven_after_any_call.c:4:9 written
       Destination "_2"
@@ -28,7 +27,6 @@ Function an_allocation_a_parameter_holds_is_unproven_after_any_call.c:3:5 "f"
   Block "bb3"
     ArgumentsEvaluated an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 generated
     Call an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 "release_all" "bb4"
-      Destination "_3"
   Block "bb4"
     Sequenced an_allocation_a_parameter_holds_is_unproven_after_any_call.c:7:5 generated
     Operation an_allocation_a_parameter_holds_is_unproven_after_any_call.c:8:5 written

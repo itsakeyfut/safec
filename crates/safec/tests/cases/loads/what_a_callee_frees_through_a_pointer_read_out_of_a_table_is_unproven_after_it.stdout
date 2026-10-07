@@ -14,7 +14,6 @@ Function what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_a
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
   Block "bb0" entry
     Operation what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_after_it.c:4:5 generated
       Destination "_0"
@@ -91,7 +90,6 @@ Function what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_a
     Sequenced what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_after_it.c:13:5 generated
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_after_it.c:14:5 generated
     Call what_a_callee_frees_through_a_pointer_read_out_of_a_table_is_unproven_after_it.c:14:5 "release" "bb9"
-      Destination "_8"
       Copy "_1"
         Deref
   Block "bb9"

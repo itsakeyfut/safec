@@ -16,7 +16,6 @@ Function a_local_given_something_else_after_a_load_is_no_longer_one.c:4:5 "main"
   Local "_7" "int *"
   Local "_8" "int *"
   Local "_9" "int *"
-  Local "_10" "void"
   Block "bb0" entry
     Operation a_local_given_something_else_after_a_load_is_no_longer_one.c:4:5 generated
       Destination "_0"
@@ -108,7 +107,6 @@ Function a_local_given_something_else_after_a_load_is_no_longer_one.c:4:5 "main"
     Sequenced a_local_given_something_else_after_a_load_is_no_longer_one.c:15:5 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_load_is_no_longer_one.c:16:5 generated
     Call a_local_given_something_else_after_a_load_is_no_longer_one.c:16:5 "show" "bb9"
-      Destination "_10"
       Copy "_8"
   Block "bb9"
     Sequenced a_local_given_something_else_after_a_load_is_no_longer_one.c:16:5 generated

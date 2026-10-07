@@ -14,9 +14,8 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "void"
-  Local "_10" "int *"
-  Local "_11" "int"
+  Local "_9" "int *"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:5:9 written
       Destination "_2"
@@ -104,22 +103,21 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:16:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:17:5 generated
     Call a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:17:5 "release_all" "bb11"
-      Destination "_9"
   Block "bb11"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:17:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:18:10 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_5"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:18:14 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:19:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
-        Copy "_10"
+        Copy "_9"
         Constant 0
     Branch a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:19:9 "bb12" "bb13"
-      Copy "_11"
+      Copy "_10"
   Block "bb12"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:19:9 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:20:9 written
@@ -135,7 +133,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_
     Operation a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:22:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call.c:22:12 generated
     Return

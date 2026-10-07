@@ -30,8 +30,6 @@ Function a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:7
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int *"
-  Local "_13" "void"
-  Local "_14" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:7:5 generated
       Destination "_0"
@@ -159,13 +157,11 @@ Function a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:7
     Sequenced a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:22:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:23:5 generated
     Call a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:23:5 "free" "bb13"
-      Destination "_13"
       Copy "_4"
   Block "bb13"
     Sequenced a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:23:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:24:5 generated
     Call a_pointer_read_out_of_memory_and_handed_on_after_a_free_is_unproven.c:24:5 "release" "bb14"
-      Destination "_14"
       Copy "_1"
         Deref
   Block "bb14"

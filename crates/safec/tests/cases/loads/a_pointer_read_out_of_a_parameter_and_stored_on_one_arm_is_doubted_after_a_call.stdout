@@ -16,9 +16,8 @@ Function a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_afte
   Local "_8" "int"
   Local "_9" "int *"
   Local "_10" "int *"
-  Local "_11" "void"
-  Local "_12" "int *"
-  Local "_13" "int"
+  Local "_11" "int *"
+  Local "_12" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:5:9 written
       Destination "_3"
@@ -126,22 +125,21 @@ Function a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_afte
   Block "bb13"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:20:5 generated
     Call a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:20:5 "release_all" "bb14"
-      Destination "_11"
   Block "bb14"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:20:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:21:10 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_6"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:21:14 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:22:9 written
-      Destination "_13"
+      Destination "_12"
       Binary "Eq"
-        Copy "_12"
+        Copy "_11"
         Constant 0
     Branch a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:22:9 "bb15" "bb16"
-      Copy "_13"
+      Copy "_12"
   Block "bb15"
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:22:9 generated
     Operation a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:23:9 written
@@ -157,7 +155,7 @@ Function a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_afte
     Operation a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:25:5 written
       Destination "_0"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call.c:25:12 generated
     Return

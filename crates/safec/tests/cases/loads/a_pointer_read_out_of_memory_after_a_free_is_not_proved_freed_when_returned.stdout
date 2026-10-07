@@ -14,8 +14,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int *"
+  Local "_8" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:5:17 generated
     Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:5:17 "malloc" "bb1"
@@ -88,12 +87,11 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:13:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 generated
     Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 "free" "bb9"
-      Destination "_8"
       Copy "_4"
   Block "bb9"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:14:5 generated
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:15:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_1"
           Deref
@@ -101,6 +99,6 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_retu
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:16:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_returned.c:16:12 generated
     Return

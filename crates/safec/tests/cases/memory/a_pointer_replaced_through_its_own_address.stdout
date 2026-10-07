@@ -11,10 +11,8 @@ Function a_pointer_replaced_through_its_own_address.c:3:5 "f"
   Local "_2" "void *"
   Local "_3" "int **"
   Local "_4" "int **"
-  Local "_5" "void"
-  Local "_6" "void *"
-  Local "_7" "int *"
-  Local "_8" "void"
+  Local "_5" "void *"
+  Local "_6" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:4:14 generated
     Call a_pointer_replaced_through_its_own_address.c:4:14 "malloc" "bb1"
@@ -37,28 +35,26 @@ Function a_pointer_replaced_through_its_own_address.c:3:5 "f"
     Sequenced a_pointer_replaced_through_its_own_address.c:5:16 generated
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:6:5 generated
     Call a_pointer_replaced_through_its_own_address.c:6:5 "free" "bb2"
-      Destination "_5"
       Copy "_1"
   Block "bb2"
     Sequenced a_pointer_replaced_through_its_own_address.c:6:5 generated
     Call a_pointer_replaced_through_its_own_address.c:7:11 "malloc" "bb3"
-      Destination "_6"
+      Destination "_5"
       Constant 8
   Block "bb3"
     Operation a_pointer_replaced_through_its_own_address.c:7:5 written
       Destination "_3"
         Deref
       Use
-        Copy "_6"
+        Copy "_5"
     Operation a_pointer_replaced_through_its_own_address.c:7:5 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_3"
           Deref
     Sequenced a_pointer_replaced_through_its_own_address.c:7:5 generated
     ArgumentsEvaluated a_pointer_replaced_through_its_own_address.c:8:5 generated
     Call a_pointer_replaced_through_its_own_address.c:8:5 "free" "bb4"
-      Destination "_8"
       Copy "_1"
   Block "bb4"
     Sequenced a_pointer_replaced_through_its_own_address.c:8:5 generated
