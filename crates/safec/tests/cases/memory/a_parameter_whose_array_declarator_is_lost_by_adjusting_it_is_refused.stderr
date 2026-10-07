@@ -1,0 +1,24 @@
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused.c:3:29 ]
+   │
+ 3 │ int f(int * _Nonnull p, int a[(free(p), 1)]) {
+   │                             ┬  
+   │                             ╰── declared here
+───╯
+  = note: this is a gap in this compiler rather than a fault in the program
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused.c:7:12 ]
+   │
+ 7 │ int g(void a[]);
+   │            ┬  
+   │            ╰── declared here
+───╯
+  = note: this is a gap in this compiler rather than a fault in the program
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused.c:8:11 ]
+   │
+ 8 │ int h(int a[0]);
+   │           ┬  
+   │           ╰── declared here
+───╯
+  = note: this is a gap in this compiler rather than a fault in the program

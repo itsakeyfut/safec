@@ -1,0 +1,20 @@
+Target "x86_64-pc-windows-msvc"
+Function a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:3:5 "g"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Block "bb0" entry
+    ArgumentsEvaluated a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 generated
+    Call a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Sequenced a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:4:5 generated
+    Operation a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:5:5 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:5:12 generated
+    Return

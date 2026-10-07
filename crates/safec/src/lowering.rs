@@ -808,6 +808,17 @@ impl Lowering<'_> {
         if let Parameters::Prototype(parameters) = parameters {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
+                if !self.adjusted_without_loss(parameter.written) {
+                    diagnostics.report(
+                        Diagnostic::error("cannot compile a parameter declared as this array yet")
+                            .with_code(LOWERING)
+                            .with_label(Label::primary(at, "declared here"))
+                            .with_note(
+                                "this is a gap in this compiler rather than a fault in the program",
+                            ),
+                    );
+                    return None;
+                }
                 lowered.push(Parameter {
                     ty: self.ty(at, parameter.ty, diagnostics)?,
                     nonnull: match parameter.nullability {
@@ -836,6 +847,38 @@ impl Lowering<'_> {
     /// operator in it, which 6.6 p3 forbids and which lowers to a constant
     /// anyway. Every expression kind written out, so that one added later is
     /// answered for here rather than folded or not by default.
+    /// Whether a parameter written as `written` loses nothing by being the
+    /// pointer C17 6.7.6.3 p7 adjusts it to.
+    ///
+    /// The parser adjusts every array parameter, and `Declaration::ty` is
+    /// what this stage lowers. What the adjustment throws away is the
+    /// array's own declarator: its length, which 6.9.1 p10 evaluates on entry
+    /// to the function where it is not a constant, so `int a[(free(p), 1)]`
+    /// frees `p` and `int a[*p = 1]` writes through it; and the constraints
+    /// 6.7.6.2 p1 puts on it, a complete object element and a positive
+    /// constant length, which nothing here checks yet. So only `T[]` and
+    /// `T[N]` with `N` a positive number, of an element that is neither
+    /// `void` nor a function, are lowered, and anything else is refused as
+    /// it was before parameters were adjusted, rather than lowered with its
+    /// length's effects gone. Checking those constraints in `types.rs` and
+    /// evaluating a length on entry is #382.
+    fn adjusted_without_loss(&self, written: TypeId) -> bool {
+        let mut current = written;
+        let mut array = false;
+        while let Type::Array { element, length } = self.ast.ty(current) {
+            array = true;
+            if let Some(length) = *length {
+                let positive = self.constant_expression(length)
+                    && self.types.value(length).is_some_and(|value| value > 0);
+                if !positive {
+                    return false;
+                }
+            }
+            current = *element;
+        }
+        !array || !matches!(self.ast.ty(current), Type::Void | Type::Function { .. })
+    }
+
     fn constant_expression(&self, expr: ExprId) -> bool {
         match self.ast.expr(expr) {
             Expr::Number { span: _ } => true,

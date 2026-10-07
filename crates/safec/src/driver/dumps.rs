@@ -208,7 +208,7 @@ fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, o
     if let Some(name) = declaration.name {
         write!(out, " {:?}", quoted(sources, name)).expect("writing to a string cannot fail");
     }
-    write!(out, " {:?}", spell_type(sources, ast, declaration.ty))
+    write!(out, " {:?}", spell_type(sources, ast, declaration.written))
         .expect("writing to a string cannot fail");
     if let Some(written) = declaration.nullability {
         write!(out, " {}", written.specifier.spelling()).expect("writing to a string cannot fail");
