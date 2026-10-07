@@ -262,6 +262,13 @@ fails the four cases its Confirmation names, measured after this change, so the
 exposed mark did not make them vacuous, which a new fact read at the point of
 report can do to the guards of the rules beneath it.
 
+**A local's address, since #373.** The result may also be any escaped
+local's address, which a free reads through `Held::may_be_a_locals_address`.
+Giving the result no `writes_to` edge fails
+`a_call_handed_a_locals_address_may_return_it`, and giving it an edge to every
+local rather than the escaped ones fails
+`a_call_with_no_local_escaped_returns_none`.
+
 **What nothing holds.** Clearing what a reborn site holds was listed here;
 ADR-0040 stopped clearing it, and its Confirmation names what holds that now.
 `realloc` being asked about its first argument only in its
@@ -283,6 +290,9 @@ transfer, which no C program can show since its size holds no allocation; and `A
   size included (#253).
 * Bad, because a pointer read out of memory, and a parameter's allocation, are
   not exposed, so a use after free through either still builds (#254).
+* Bad, because the result may also be any local whose address escaped, since
+  #373, so `node = make(&cfg); free(node);` is doubted as `make(b)` already
+  was. A call returning `&x` was a free of a local that said nothing.
 * What would reverse this: summaries of functions this translation unit
   defines, which would let a call's result be what its body returns rather than
   anything exposed.
