@@ -115,7 +115,7 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Six more are where the type checker declines what `clang` accepts.
+Nine more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
@@ -125,6 +125,9 @@ Six more are where the type checker declines what `clang` accepts.
 | `int *p = c;` with `char *c` | `error[SC0302]` | warns | `error: incompatible pointer types initializing 'int *' with an expression of type 'char *'` |
 | `p = c;` with `int *p` and `char *c` | `error[SC0302]` | warns | `error: incompatible pointer types assigning to 'int *' from 'char *'` |
 | `g(c)` with `int g(int *p)` and `char *c` | `error[SC0302]` | warns | `error: incompatible pointer types passing 'char *' to parameter of type 'int *'` |
+| `c ? h() : 1;` as a statement, `h` returning `void` | `error[SC0306]` | accepts | `error: C99 forbids conditional expressions with only one void side` |
+| `c ? p : q` with `int *p` and `char *q` | `error[SC0306]` | warns | `error: pointer type mismatch ('int *' and 'char *')` |
+| `c ? p : 1;` as a statement, with `int *p` | `error[SC0306]` | warns | `error: pointer/integer type mismatch in conditional expression ('int *' and 'int')` |
 
 **The first two are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
@@ -152,6 +155,14 @@ and nothing else; 6.7.9 p11 holds an initializer to it and 6.5.2.2 p2 an
 argument. `clang` 20 warns with `-Wincompatible-pointer-types` unless asked to
 be pedantic. All three spellings ask `types.rs::assignable`, so they answer
 alike.
+
+**So are the conditionals.** C17 6.5.15 p3 lists the pairs a conditional's
+second and third operands may be, both arithmetic, both `void`, pointers to
+compatible types, a pointer and a pointer to `void`, a pointer and a null pointer
+constant, and none of the three rows is one. It is a constraint whether or not
+the value is used, so `c ? h() : 1;` is refused as a statement too, which `clang`
+accepts and says nothing about. `types.rs::Checker::conditional`
+is where the pairs are asked.
 
 ### What an integer constant is worth, and what type it is not
 
