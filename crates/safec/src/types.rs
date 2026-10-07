@@ -441,10 +441,9 @@ impl Checker<'_> {
                 // the program's.
                 Type::Array { .. } => None,
                 // p2: the operand of `*` shall have pointer type. Reported,
-                // and `None` rather than a type kept the way `binary` keeps
-                // one: there is no type `*x` would have had. Nothing after
-                // the type check reads the tree once it has reported, so no
-                // later stage speaks about the missing type.
+                // and `None`: there is no type `*x` would have had. Nothing
+                // after the type check reads the tree once it has reported,
+                // so no later stage speaks about the missing type.
                 Type::Int | Type::Char | Type::Void => {
                     let spelled = self.spelled(ast, operand_ty?);
                     diagnostics.report(
@@ -502,10 +501,10 @@ impl Checker<'_> {
                                 format!("this is `{spelled}`"),
                             )),
                     );
-                    // No type rather than the `int` `binary` keeps for a
-                    // refused operation: `-p` has none C would give it, as
-                    // `*x` has none, and an `int` here would have `*+p`
-                    // reported a second time at the `*`.
+                    // No type, as for a refused binary operation: `-p` has
+                    // none C would give it, as `*x` has none, and an `int`
+                    // here would have `*+p` reported a second time at the
+                    // `*`.
                     return None;
                 }
                 Some(self.int)
@@ -518,8 +517,8 @@ impl Checker<'_> {
     /// the paragraph of the form that was written.
     ///
     /// The type is the operand's, so `p++` on a pointer is a pointer and not
-    /// an `int`. It is answered whether or not the increment is refused, for
-    /// the reason [`Checker::binary`] gives.
+    /// an `int`. It is answered whether or not the increment is refused,
+    /// because C gives it from the operand rather than from the step.
     ///
     /// p2 of either clause sends an increment to 6.5.6 and 6.5.16.2 for its
     /// constraints, because `++E` is `E += 1`, so a pointer `v += 1` refuses
@@ -564,12 +563,11 @@ impl Checker<'_> {
     ///
     /// The type is what the base points at or holds, because p2 makes `a[i]`
     /// mean `*(a + i)`. It is answered whether or not the subscript is
-    /// refused, for the reason [`Checker::binary`] gives, but only where the
-    /// base is the pointer or the array: `1[v]` and `g[1]` have no type
-    /// whether refused or not, because the base is an integer or a function,
-    /// and the lowering adds its `SC0304` to their report. Typing them means
-    /// reading the pointer off either operand, which the lowering does not
-    /// do either, and is not this change.
+    /// refused, because C gives it from the base rather than from the step,
+    /// but only where the base is the pointer or the array: `1[v]` and
+    /// `g[1]` have no type whether refused or not, because the base is an
+    /// integer or a function. Typing them means reading the pointer off
+    /// either operand, which the lowering does not do either.
     ///
     /// p1 wants one operand a pointer to a complete object type and the other
     /// an integer. Only the first half is checked, and only where the second
@@ -654,14 +652,18 @@ impl Checker<'_> {
     /// C17 6.5.5 to 6.5.14: the type of a binary operation, and whether its
     /// operands are ones its operator takes.
     ///
-    /// An operand this stage could not type is checked against nothing, and
-    /// every operator but `+` and `-` is still `int` beside it. `None` there
-    /// hands the lowering an expression it cannot type, and its `SC0304`
-    /// joins `SC0305` in `a_suffixed_constant_has_no_type_here`, whose point is
-    /// that there is one report; that case fails if this answers `None`. The
-    /// cost is kept from before: `p = nowhere * 1` is reported as an
-    /// undeclared name and then as an `int` given to a pointer, an `int` this
-    /// stage made up.
+    /// No type for an operation it refuses, which this reports: that is the
+    /// answer `*`, a call and the unary operators give, and an `int` there
+    /// had `p = p * 1` reported a second time, as an `int` given to a pointer
+    /// the program never had.
+    ///
+    /// Beside an operand this stage could not type, every operator but `+`
+    /// and `-` is still `int`, because an operand can be untyped with
+    /// nothing reported: `p - q` is valid C, and this compiler has no type
+    /// for its `ptrdiff_t`. No type there would skip the check around it, so
+    /// `int *r = (p - q) * 2;` would lose its `SC0302`. The cost is that
+    /// `p = nowhere * 1` is reported as an undeclared name and then as an
+    /// `int` given to a pointer.
     fn binary(
         &mut self,
         ast: &mut Ast,
@@ -675,32 +677,20 @@ impl Checker<'_> {
             _ => None,
         };
 
-        if let Some((left, right)) = operands {
-            let nulls = (
-                self.is_null_pointer_constant(lhs),
-                self.is_null_pointer_constant(rhs),
-            );
-            if let Some(Err(refused)) = self.binary_operable(ast, op, left, right, nulls) {
-                self.report_operands(ast, op, refused, (lhs, left), (rhs, right), diagnostics);
-            }
+        let Some((left, right)) = operands else {
+            return (!matches!(op, BinOp::Add | BinOp::Sub)).then_some(self.int);
+        };
+        let nulls = (
+            self.is_null_pointer_constant(lhs),
+            self.is_null_pointer_constant(rhs),
+        );
+        if let Some(Err(refused)) = self.binary_operable(ast, op, left, right, nulls) {
+            self.report_operands(ast, op, refused, (lhs, left), (rhs, right), diagnostics);
+            return None;
         }
 
-        // **A refused operation keeps the type it would have had**, which is
-        // `compound_assignment`'s answer too. It was kept so that the
-        // lowering was not handed an expression it cannot type, whose
-        // `SC0304` called the program this compiler's gap; the driver no
-        // longer lowers a tree the type check refused, so that reason has
-        // gone and the type is still kept; whether to keep it is #367. The
-        // cost is that `p = p * 1` is
-        // reported twice, the second time as an `int` given to a pointer,
-        // and both reports are about a program that is wrong. `+` and `-`
-        // are the exception, because `additive` has no type to give `n - p`
-        // or `p + q` whether or not it is refused.
         match op {
-            BinOp::Add | BinOp::Sub => {
-                let (left, right) = operands?;
-                self.additive(ast, op, left, right)
-            }
+            BinOp::Add | BinOp::Sub => self.additive(ast, op, left, right),
             // Everything else this compiler reads is arithmetic on operands
             // the integer promotions make `int`, or a comparison, which
             // 6.5.8 p6 and 6.5.9 p3 make `int`, or `&&` and `||`, which
@@ -741,14 +731,15 @@ impl Checker<'_> {
 
         match pointers {
             // p9 makes a pointer minus a pointer `ptrdiff_t`, which this
-            // compiler has no name for, and p2 forbids adding two pointers at
-            // all. Neither has a type to give.
+            // compiler has no name for. Two pointers added, which p2 forbids,
+            // are refused by `binary_operable` before they reach here, and
+            // the arm answers the same for them.
             (true, true) => None,
             // p2 and p3 both allow the pointer on the left.
             (true, false) => Some(lhs),
-            // p3 allows it only there: `i - p` is a constraint violation, and
-            // typing it as a pointer made this compiler report the assignment
-            // around it instead.
+            // p3 allows it only there: `i - p` is a constraint violation,
+            // refused by `binary_operable` before it reaches here, and no type
+            // if it did.
             (false, true) if op == BinOp::Sub => None,
             // p2 lets an addition be written the other way round.
             (false, true) => Some(rhs),

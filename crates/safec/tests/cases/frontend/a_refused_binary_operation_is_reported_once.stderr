@@ -1,0 +1,63 @@
+error[SC0306]: `*` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:2:9 ]
+   │
+ 2 │     p = p * 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `/` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:3:9 ]
+   │
+ 3 │     p = p / 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `%` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:4:9 ]
+   │
+ 4 │     p = p % 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `<<` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:5:9 ]
+   │
+ 5 │     p = p << 1;
+   │         ┬    ┬  
+   │         ╰─────── this is `int *`
+   │              │  
+   │              ╰── this is `int`
+───╯
+error[SC0306]: `<` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:6:13 ]
+   │
+ 6 │     p = p < 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
+error[SC0306]: `==` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:7:14 ]
+   │
+ 7 │     p = p == 1;
+   │         ┬    ┬  
+   │         ╰─────── this is `int *`
+   │              │  
+   │              ╰── this is `int`
+───╯
+error[SC0306]: `|` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:8:9 ]
+   │
+ 8 │     p = p | 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯

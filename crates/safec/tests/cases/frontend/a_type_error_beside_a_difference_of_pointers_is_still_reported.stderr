@@ -1,0 +1,9 @@
+error[SC0302]: cannot initialize `int *` with `int`
+   ╭─[ a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:15 ]
+   │
+ 2 │     int *r = (p - q) * 2;
+   │          ┬    ─────┬────  
+   │          ╰──────────────── this holds `int *`
+   │                    │      
+   │                    ╰────── this is `int`
+───╯
