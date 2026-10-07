@@ -13,7 +13,6 @@ Function a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:4:5 
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "void"
   Block "bb0" entry
     Operation a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:5:9 written
       Destination "_2"
@@ -76,7 +75,6 @@ Function a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:4:5 
     Sequenced a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:12:5 generated
     ArgumentsEvaluated a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 generated
     Call a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 "free" "bb8"
-      Destination "_7"
       Copy "_3"
   Block "bb8"
     Sequenced a_free_of_this_functions_own_allocation_leaves_a_parameter_alone.c:13:5 generated

@@ -17,7 +17,6 @@ Function what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_aft
   Local "_5" "int **"
   Local "_6" "int **"
   Local "_7" "int *"
-  Local "_8" "void"
   Block "bb0" entry
     Operation what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:5:5 generated
       Destination "_0"
@@ -74,7 +73,6 @@ Function what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_aft
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:12:5 generated
     ArgumentsEvaluated what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 generated
     Call what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 "drop_inner" "bb5"
-      Destination "_8"
       Copy "_5"
   Block "bb5"
     Sequenced what_a_callee_frees_through_a_pointer_stored_in_a_local_is_unproven_after_it.c:13:5 generated

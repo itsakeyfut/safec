@@ -16,10 +16,6 @@ Function a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:5:5
   Local "_2" "void *"
   Local "_3" "int *"
   Local "_4" "int **"
-  Local "_5" "void"
-  Local "_6" "void"
-  Local "_7" "void"
-  Local "_8" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:6:14 generated
     Call a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:6:14 "malloc" "bb1"
@@ -42,24 +38,20 @@ Function a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:5:5
         Place "_1"
     ArgumentsEvaluated a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:8:5 generated
     Call a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:8:5 "stash" "bb2"
-      Destination "_5"
       Copy "_4"
   Block "bb2"
     Sequenced a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:8:5 generated
     ArgumentsEvaluated a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:9:5 generated
     Call a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:9:5 "other" "bb3"
-      Destination "_6"
   Block "bb3"
     Sequenced a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:9:5 generated
     ArgumentsEvaluated a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:10:5 generated
     Call a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:10:5 "free" "bb4"
-      Destination "_7"
       Copy "_1"
   Block "bb4"
     Sequenced a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:10:5 generated
     ArgumentsEvaluated a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:11:5 generated
     Call a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:11:5 "free" "bb5"
-      Destination "_8"
       Copy "_3"
   Block "bb5"
     Sequenced a_double_free_through_a_sharer_after_an_opaque_call_is_not_proved.c:11:5 generated

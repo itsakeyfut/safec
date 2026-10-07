@@ -19,8 +19,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
   Local "_10" "int **"
   Local "_11" "int **"
   Local "_12" "int *"
-  Local "_13" "void"
-  Local "_14" "int"
+  Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 generated
     Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:4:14 "malloc" "bb1"
@@ -91,7 +90,6 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:10:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 generated
     Call a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 "free" "bb6"
-      Destination "_13"
       Copy "_4"
   Block "bb6"
     Sequenced a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:11:5 generated
@@ -101,7 +99,7 @@ Function a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.
       Use
         Constant 1
     Operation a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there.c:12:5 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_2"
           Deref

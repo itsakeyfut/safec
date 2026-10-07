@@ -24,11 +24,10 @@ Function a_load_moved_by_a_subscript_after_a_free_is_unproven.c:4:5 "main"
   Local "_15" "int *"
   Local "_16" "int **"
   Local "_17" "int"
-  Local "_18" "void"
-  Local "_19" "int *"
-  Local "_20" "int ***"
-  Local "_21" "int **"
-  Local "_22" "int"
+  Local "_18" "int *"
+  Local "_19" "int ***"
+  Local "_20" "int **"
+  Local "_21" "int"
   Block "bb0" entry
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:4:5 generated
       Destination "_0"
@@ -201,34 +200,33 @@ Function a_load_moved_by_a_subscript_after_a_free_is_unproven.c:4:5 "main"
     Sequenced a_load_moved_by_a_subscript_after_a_free_is_unproven.c:25:13 generated
     ArgumentsEvaluated a_load_moved_by_a_subscript_after_a_free_is_unproven.c:26:5 generated
     Call a_load_moved_by_a_subscript_after_a_free_is_unproven.c:26:5 "free" "bb17"
-      Destination "_18"
       Copy "_7"
   Block "bb17"
     Sequenced a_load_moved_by_a_subscript_after_a_free_is_unproven.c:26:5 generated
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:14 written
-      Destination "_20"
+      Destination "_19"
       Binary "Add"
         Copy "_1"
         Copy "_17"
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:14 written
-      Destination "_21"
+      Destination "_20"
       Binary "Add"
-        Copy "_20"
+        Copy "_19"
           Deref
         Copy "_17"
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:10 written
-      Destination "_19"
+      Destination "_18"
       Use
-        Copy "_21"
+        Copy "_20"
           Deref
     Sequenced a_load_moved_by_a_subscript_after_a_free_is_unproven.c:27:14 generated
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:28:9 written
-      Destination "_22"
+      Destination "_21"
       Binary "Eq"
-        Copy "_19"
+        Copy "_18"
         Constant 0
     Branch a_load_moved_by_a_subscript_after_a_free_is_unproven.c:28:9 "bb18" "bb19"
-      Copy "_22"
+      Copy "_21"
   Block "bb18"
     Sequenced a_load_moved_by_a_subscript_after_a_free_is_unproven.c:28:9 generated
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:29:9 written
@@ -244,7 +242,7 @@ Function a_load_moved_by_a_subscript_after_a_free_is_unproven.c:4:5 "main"
     Operation a_load_moved_by_a_subscript_after_a_free_is_unproven.c:31:5 written
       Destination "_0"
       Use
-        Copy "_19"
+        Copy "_18"
           Deref
     Sequenced a_load_moved_by_a_subscript_after_a_free_is_unproven.c:31:12 generated
     Return

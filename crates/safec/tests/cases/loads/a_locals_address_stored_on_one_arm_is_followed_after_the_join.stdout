@@ -20,7 +20,6 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
   Local "_11" "int **"
   Local "_12" "int **"
   Local "_13" "int *"
-  Local "_14" "void"
   Block "bb0" entry
     Operation a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 generated
       Destination "_0"
@@ -144,7 +143,6 @@ Function a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:4:5 "ma
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:19:5 generated
     ArgumentsEvaluated a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:20:5 generated
     Call a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:20:5 "free" "bb12"
-      Destination "_14"
       Copy "_2"
   Block "bb12"
     Sequenced a_locals_address_stored_on_one_arm_is_followed_after_the_join.c:20:5 generated

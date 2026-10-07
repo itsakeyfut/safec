@@ -23,8 +23,7 @@ Function a_nested_call_is_still_carried_to_a_free_beside_it.c:6:5 "main"
   Local "_7" "char"
   Local "_8" "char *"
   Local "_9" "int"
-  Local "_10" "void"
-  Local "_11" "int"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_nested_call_is_still_carried_to_a_free_beside_it.c:6:5 generated
       Destination "_0"
@@ -109,17 +108,16 @@ Function a_nested_call_is_still_carried_to_a_free_beside_it.c:6:5 "main"
       Copy "_8"
   Block "bb10"
     Call a_nested_call_is_still_carried_to_a_free_beside_it.c:16:36 "free" "bb11"
-      Destination "_10"
       Copy "_1"
   Block "bb11"
     Operation a_nested_call_is_still_carried_to_a_free_beside_it.c:16:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_9"
         Constant 0
     Operation a_nested_call_is_still_carried_to_a_free_beside_it.c:16:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_nested_call_is_still_carried_to_a_free_beside_it.c:16:12 generated
     Return

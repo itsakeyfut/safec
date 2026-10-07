@@ -22,12 +22,10 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int ***"
-  Local "_14" "void"
+  Local "_14" "int **"
   Local "_15" "int **"
-  Local "_16" "int **"
-  Local "_17" "int"
-  Local "_18" "int *"
-  Local "_19" "void"
+  Local "_16" "int"
+  Local "_17" "int *"
   Block "bb0" entry
     Call a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:10:9 "malloc" "bb1"
       Destination "_6"
@@ -110,7 +108,6 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
         Place "_3"
     ArgumentsEvaluated a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:19:5 generated
     Call a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:19:5 "get" "bb9"
-      Destination "_14"
       Copy "_13"
   Block "bb9"
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:19:5 generated
@@ -123,7 +120,7 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
       Use
         Copy "_3"
     Operation a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:21:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_4"
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:21:9 generated
@@ -135,19 +132,19 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
       Use
         Copy "_2"
     Operation a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:23:9 written
-      Destination "_16"
+      Destination "_15"
       Use
         Copy "_4"
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:23:9 generated
     Goto "bb12"
   Block "bb12"
     Operation a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:25:9 written
-      Destination "_17"
+      Destination "_16"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:25:9 "bb13" "bb14"
-      Copy "_17"
+      Copy "_16"
   Block "bb13"
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:25:9 generated
     Operation a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:26:9 written
@@ -166,14 +163,13 @@ Function a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_wha
       Use
         Copy "_5"
     Operation a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:28:5 written
-      Destination "_18"
+      Destination "_17"
       Use
         Copy "_4"
           Deref
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:28:5 generated
     ArgumentsEvaluated a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:29:5 generated
     Call a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:29:5 "release_all" "bb16"
-      Destination "_19"
   Block "bb16"
     Sequenced a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:29:5 generated
     Operation a_store_through_a_pointer_a_call_filled_in_on_the_first_arm_exposes_what_it_stores.c:30:5 written

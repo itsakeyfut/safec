@@ -13,10 +13,9 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "int *"
-  Local "_6" "int **"
-  Local "_7" "int"
+  Local "_4" "int *"
+  Local "_5" "int **"
+  Local "_6" "int"
   Block "bb0" entry
     Operation the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:5 generated
       Destination "_0"
@@ -53,7 +52,6 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
   Block "bb4"
     ArgumentsEvaluated the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 generated
     Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 "free" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:10:5 generated
@@ -62,22 +60,22 @@ Function the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:5:
       Use
         Constant 0
     Operation the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:11:5 written
-      Destination "_5"
+      Destination "_4"
       Use
         Copy "_1"
     Sequenced the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:11:5 generated
     Operation the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:17 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_1"
     ArgumentsEvaluated the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:12 generated
     Call the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:12 "use2" "bb6"
-      Destination "_7"
-      Copy "_6"
+      Destination "_6"
+      Copy "_5"
   Block "bb6"
     Operation the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:5 written
       Destination "_0"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence.c:12:12 generated
     Return

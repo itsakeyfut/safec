@@ -17,11 +17,8 @@ Function a_call_may_return_what_an_earlier_call_was_handed.c:7:5 "main"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
+  Local "_4" "int *"
   Local "_5" "int *"
-  Local "_6" "int *"
-  Local "_7" "void"
-  Local "_8" "void"
   Block "bb0" entry
     Operation a_call_may_return_what_an_earlier_call_was_handed.c:7:5 generated
       Destination "_0"
@@ -58,28 +55,25 @@ Function a_call_may_return_what_an_earlier_call_was_handed.c:7:5 "main"
   Block "bb4"
     ArgumentsEvaluated a_call_may_return_what_an_earlier_call_was_handed.c:12:5 generated
     Call a_call_may_return_what_an_earlier_call_was_handed.c:12:5 "stash" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced a_call_may_return_what_an_earlier_call_was_handed.c:12:5 generated
     ArgumentsEvaluated a_call_may_return_what_an_earlier_call_was_handed.c:13:14 generated
     Call a_call_may_return_what_an_earlier_call_was_handed.c:13:14 "fetch" "bb6"
-      Destination "_6"
+      Destination "_5"
   Block "bb6"
     Operation a_call_may_return_what_an_earlier_call_was_handed.c:13:10 written
-      Destination "_5"
+      Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_call_may_return_what_an_earlier_call_was_handed.c:13:14 generated
     ArgumentsEvaluated a_call_may_return_what_an_earlier_call_was_handed.c:14:5 generated
     Call a_call_may_return_what_an_earlier_call_was_handed.c:14:5 "drop_stashed" "bb7"
-      Destination "_7"
   Block "bb7"
     Sequenced a_call_may_return_what_an_earlier_call_was_handed.c:14:5 generated
     ArgumentsEvaluated a_call_may_return_what_an_earlier_call_was_handed.c:15:5 generated
     Call a_call_may_return_what_an_earlier_call_was_handed.c:15:5 "free" "bb8"
-      Destination "_8"
-      Copy "_5"
+      Copy "_4"
   Block "bb8"
     Sequenced a_call_may_return_what_an_earlier_call_was_handed.c:15:5 generated
     Operation a_call_may_return_what_an_earlier_call_was_handed.c:16:5 written

@@ -18,8 +18,7 @@ Function a_freed_pointer_handed_after_other_arguments_is_asked.c:5:5 "main"
   Local "_4" "void *"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "void"
-  Local "_8" "int"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_freed_pointer_handed_after_other_arguments_is_asked.c:5:5 generated
       Destination "_0"
@@ -85,13 +84,12 @@ Function a_freed_pointer_handed_after_other_arguments_is_asked.c:5:5 "main"
   Block "bb8"
     ArgumentsEvaluated a_freed_pointer_handed_after_other_arguments_is_asked.c:14:5 generated
     Call a_freed_pointer_handed_after_other_arguments_is_asked.c:14:5 "free" "bb9"
-      Destination "_7"
       Copy "_3"
   Block "bb9"
     Sequenced a_freed_pointer_handed_after_other_arguments_is_asked.c:14:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_after_other_arguments_is_asked.c:15:12 generated
     Call a_freed_pointer_handed_after_other_arguments_is_asked.c:15:12 "mix" "bb10"
-      Destination "_8"
+      Destination "_7"
       Constant 1
       Copy "_1"
       Copy "_3"
@@ -99,6 +97,6 @@ Function a_freed_pointer_handed_after_other_arguments_is_asked.c:5:5 "main"
     Operation a_freed_pointer_handed_after_other_arguments_is_asked.c:15:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_freed_pointer_handed_after_other_arguments_is_asked.c:15:12 generated
     Return

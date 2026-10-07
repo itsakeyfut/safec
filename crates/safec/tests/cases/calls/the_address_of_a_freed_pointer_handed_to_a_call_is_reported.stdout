@@ -73,9 +73,8 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 "mai
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "int **"
-  Local "_6" "int"
+  Local "_4" "int **"
+  Local "_5" "int"
   Block "bb0" entry
     Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 generated
       Destination "_0"
@@ -112,22 +111,21 @@ Function the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 "mai
   Block "bb4"
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 generated
     Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 "free" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:21:5 generated
     Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:17 written
-      Destination "_5"
+      Destination "_4"
       Address
         Place "_1"
     ArgumentsEvaluated the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:12 generated
     Call the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:12 "use2" "bb6"
-      Destination "_6"
-      Copy "_5"
+      Destination "_5"
+      Copy "_4"
   Block "bb6"
     Operation the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced the_address_of_a_freed_pointer_handed_to_a_call_is_reported.c:22:12 generated
     Return

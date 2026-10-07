@@ -18,9 +18,8 @@ Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:4
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int *"
-  Local "_12" "void"
+  Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
   Block "bb0" entry
     Operation a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:4:5 generated
       Destination "_0"
@@ -156,21 +155,20 @@ Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:4
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:19:9 generated
     ArgumentsEvaluated a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:20:9 generated
     Call a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:20:9 "free" "bb15"
-      Destination "_12"
       Copy "_6"
   Block "bb15"
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:20:9 generated
     Operation a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:21:13 written
-      Destination "_13"
+      Destination "_12"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:21:9 written
       Destination "_4"
       Use
-        Copy "_13"
+        Copy "_12"
     Operation a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:21:9 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_4"
     Sequenced a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:21:9 generated

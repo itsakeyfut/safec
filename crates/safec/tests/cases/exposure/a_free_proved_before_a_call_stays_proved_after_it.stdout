@@ -17,9 +17,6 @@ Function a_free_proved_before_a_call_stays_proved_after_it.c:6:5 "main"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "void *"
-  Local "_4" "void"
-  Local "_5" "void"
-  Local "_6" "void"
   Block "bb0" entry
     Operation a_free_proved_before_a_call_stays_proved_after_it.c:6:5 generated
       Destination "_0"
@@ -45,18 +42,15 @@ Function a_free_proved_before_a_call_stays_proved_after_it.c:6:5 "main"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:8:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:9:5 generated
     Call a_free_proved_before_a_call_stays_proved_after_it.c:9:5 "free" "bb3"
-      Destination "_4"
       Copy "_1"
   Block "bb3"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:9:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:10:5 generated
     Call a_free_proved_before_a_call_stays_proved_after_it.c:10:5 "forget" "bb4"
-      Destination "_5"
   Block "bb4"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:10:5 generated
     ArgumentsEvaluated a_free_proved_before_a_call_stays_proved_after_it.c:11:5 generated
     Call a_free_proved_before_a_call_stays_proved_after_it.c:11:5 "free" "bb5"
-      Destination "_6"
       Copy "_1"
   Block "bb5"
     Sequenced a_free_proved_before_a_call_stays_proved_after_it.c:11:5 generated

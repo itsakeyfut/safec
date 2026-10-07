@@ -116,7 +116,6 @@ Function a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent.c:19
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "void"
   Block "bb0" entry
     Operation a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent.c:19:5 generated
       Destination "_0"
@@ -204,7 +203,6 @@ Function a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent.c:19
     Sequenced a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent.c:29:5 generated
     ArgumentsEvaluated a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent.c:30:5 generated
     Call a_live_pointer_read_out_of_memory_handed_on_and_returned_is_silent.c:30:5 "release" "bb9"
-      Destination "_9"
       Copy "_1"
         Deref
   Block "bb9"

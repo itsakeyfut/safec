@@ -41,21 +41,20 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
   Local "_6" "int"
   Local "_7" "int *"
   Local "_8" "int **"
-  Local "_9" "void"
-  Local "_10" "void *"
-  Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "void *"
-  Local "_14" "int *"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "void *"
+  Local "_13" "int *"
+  Local "_14" "int"
   Local "_15" "int"
   Local "_16" "int"
   Local "_17" "int"
   Local "_18" "int"
-  Local "_19" "int"
+  Local "_19" "int *"
   Local "_20" "int *"
-  Local "_21" "int *"
+  Local "_21" "int"
   Local "_22" "int"
-  Local "_23" "int"
   Block "bb0" entry
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:16:5 written
       Destination "_4"
@@ -72,30 +71,29 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
         Place "_4"
     ArgumentsEvaluated a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:17:5 generated
     Call a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:17:5 "watch" "bb1"
-      Destination "_9"
       Copy "_8"
   Block "bb1"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:17:5 generated
     Call a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:18:9 "malloc" "bb2"
-      Destination "_10"
+      Destination "_9"
       Constant 4
   Block "bb2"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:18:5 written
       Destination "_2"
       Use
-        Copy "_10"
+        Copy "_9"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:18:5 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_2"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:18:5 generated
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:19:9 written
-      Destination "_12"
+      Destination "_11"
       Binary "Eq"
         Copy "_2"
         Constant 0
     Branch a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:19:9 "bb3" "bb4"
-      Copy "_12"
+      Copy "_11"
   Block "bb3"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:19:9 generated
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:20:9 written
@@ -109,25 +107,25 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
     Goto "bb5"
   Block "bb5"
     Call a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:22:9 "malloc" "bb6"
-      Destination "_13"
+      Destination "_12"
       Constant 4
   Block "bb6"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:22:5 written
       Destination "_3"
       Use
-        Copy "_13"
+        Copy "_12"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:22:5 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_3"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:22:5 generated
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:23:9 written
-      Destination "_15"
+      Destination "_14"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:23:9 "bb7" "bb8"
-      Copy "_15"
+      Copy "_14"
   Block "bb7"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:23:9 generated
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:24:9 written
@@ -146,7 +144,7 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
       Use
         Constant 1
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:26:5 written
-      Destination "_16"
+      Destination "_15"
       Use
         Copy "_2"
           Deref
@@ -157,7 +155,7 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
       Use
         Constant 2
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:27:5 written
-      Destination "_17"
+      Destination "_16"
       Use
         Copy "_3"
           Deref
@@ -168,36 +166,36 @@ Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f
         Copy "_2"
           Deref
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:10 written
-      Destination "_18"
+      Destination "_17"
       Use
         Copy "_5"
     Call a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:36 "now" "bb10"
-      Destination "_19"
+      Destination "_18"
   Block "bb10"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:32 written
-      Destination "_20"
+      Destination "_19"
       Binary "Add"
         Copy "_2"
-        Copy "_19"
+        Copy "_18"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:23 written
       Destination "_4"
       Use
-        Copy "_20"
+        Copy "_19"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:23 written
-      Destination "_21"
+      Destination "_20"
       Use
         Copy "_4"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:10 written
-      Destination "_22"
+      Destination "_21"
       Binary "Add"
-        Copy "_18"
+        Copy "_17"
         Constant 0
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:5 written
       Destination "_6"
       Use
-        Copy "_22"
+        Copy "_21"
     Operation a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:5 written
-      Destination "_23"
+      Destination "_22"
       Use
         Copy "_6"
     Sequenced a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:28:5 generated

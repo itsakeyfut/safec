@@ -17,10 +17,8 @@ Function a_write_through_a_pointer_whose_own_address_escaped.c:4:5 "f"
   Local "_5" "int **"
   Local "_6" "int **"
   Local "_7" "int ***"
-  Local "_8" "void"
-  Local "_9" "int *"
-  Local "_10" "void"
-  Local "_11" "int"
+  Local "_8" "int *"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_whose_own_address_escaped.c:5:14 generated
     Call a_write_through_a_pointer_whose_own_address_escaped.c:5:14 "malloc" "bb1"
@@ -57,7 +55,6 @@ Function a_write_through_a_pointer_whose_own_address_escaped.c:4:5 "f"
         Place "_5"
     ArgumentsEvaluated a_write_through_a_pointer_whose_own_address_escaped.c:8:5 generated
     Call a_write_through_a_pointer_whose_own_address_escaped.c:8:5 "opaque" "bb3"
-      Destination "_8"
       Copy "_7"
   Block "bb3"
     Sequenced a_write_through_a_pointer_whose_own_address_escaped.c:8:5 generated
@@ -67,14 +64,13 @@ Function a_write_through_a_pointer_whose_own_address_escaped.c:4:5 "f"
       Use
         Copy "_3"
     Operation a_write_through_a_pointer_whose_own_address_escaped.c:9:5 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_5"
           Deref
     Sequenced a_write_through_a_pointer_whose_own_address_escaped.c:9:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_whose_own_address_escaped.c:10:5 generated
     Call a_write_through_a_pointer_whose_own_address_escaped.c:10:5 "free" "bb4"
-      Destination "_10"
       Copy "_1"
   Block "bb4"
     Sequenced a_write_through_a_pointer_whose_own_address_escaped.c:10:5 generated
@@ -84,7 +80,7 @@ Function a_write_through_a_pointer_whose_own_address_escaped.c:4:5 "f"
       Use
         Constant 1
     Operation a_write_through_a_pointer_whose_own_address_escaped.c:11:5 written
-      Destination "_11"
+      Destination "_9"
       Use
         Copy "_3"
           Deref

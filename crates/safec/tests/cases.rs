@@ -222,6 +222,15 @@ cases! {
         // than a suspicion.
         a_comma_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read through a `void *` is `void` and is still a read: the
+        // lowering discards it where it stands, as a comma's left operand or
+        // on the arm of a `void` `?:` that reads it, rather than dropping it
+        // for its type. Mutation: have `discard`, `second` and `merge` ask
+        // `is_void` rather than `pushes`; the first two go silent, and the
+        // third is reported on both arms at the whole conditional.
+        a_void_read_as_a_commas_left_operand_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_read_on_an_arm_of_a_void_conditional_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_read_on_one_arm_is_read_on_that_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_or_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -873,9 +882,10 @@ cases! {
         a_proved_null_dereference_after_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call reading through a pointer it then assigns to. What this pins
         // is the answer rather than the rule behind it: a call's result lands
-        // in a fresh temporary here and is copied out in an element of its own,
-        // so the order the arguments and the destination are applied in cannot
-        // be seen from any C this frontend lowers.
+        // in a fresh temporary here, where the callee returns something, and is
+        // copied out in an element of its own, so the order the arguments and
+        // the destination are applied in cannot be seen from any C this
+        // frontend lowers.
         // `a_call_that_reads_a_pointer_and_writes_it_keeps_neither` in
         // `crates/safec-ir/tests/nulls.rs` is what holds that.
         a_call_whose_destination_it_dereferences: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1252,8 +1262,13 @@ cases! {
         a_write_through_what_a_call_returned_may_land_in_an_escaped_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local an earlier call was handed, not this one. Its free was
         // `SC0404` beside `SC0401` before, and is `SC0401` alone, for the
-        // reason the loop case above gives. Mutation: give the edge only
-        // where this call was handed something; the `SC0404` comes back.
+        // reason the loop case above gives. It is worded as the free of a
+        // pointer this check stopped following rather than as a double free,
+        // because `stash` returns `void` and so makes no site of its own for
+        // `get` to return. Mutation: give the edge only
+        // where this call was handed something; this goes silent, because
+        // `stash` returns `void` and so leaves no result of its own for
+        // `get` to hand back.
         a_call_may_return_a_locals_address_an_earlier_call_kept: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost, recorded rather than discovered: a constructor handed a
         // local's address and returning fresh memory is a correct program,
@@ -2574,6 +2589,12 @@ cases! {
         // panics.
         a_void_condition_is_a_type_error: ["--emit", "ast"],
         a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
+        // C17 6.5.2.1 p1 wants an integer beside the pointer, and a `void`
+        // operand is refused whichever side it is on, which keeps a `void`
+        // value away from the lowering. Mutation: drop the `Void` arm in
+        // `Checker::subscript`; this builds, and a run past `--emit ast`
+        // panics in the lowering.
+        a_void_subscript_operand_is_a_type_error: ["--emit", "ast"],
         a_scalar_condition_builds: ["--emit", "ast"],
         an_untyped_condition_of_a_conditional_is_reported_once: ["--emit", "ast"],
         // A conditional's arms are a pair C17 6.5.15 p3 allows, and have the
@@ -2778,6 +2799,17 @@ cases! {
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void` value is nothing: a call to a `void` function has no
+        // `Destination`, a `void` `?:` has no answer and its arms write
+        // none, a comma discards no left operand that is `void`, and neither
+        // does a `for`'s first or third clause. No
+        // `void` local appears but the return place of a declared `void`
+        // function. Mutation: make the temporary for a `void` call again, or
+        // give a `void` `?:` its answer back; this moves. Mutation: pop a
+        // comma's left operand whether or not it is `void`, or lower a
+        // `for`'s first or third clause with `value`; this panics on the
+        // empty stack.
+        a_call_that_returns_nothing_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same two operators, at the one type whose operation does not
         // happen at `int`. C17 6.5.6 p8 makes `p + 1` a pointer, and ADR-0030
         // has the memory check read a local's declared type to tell the pointer

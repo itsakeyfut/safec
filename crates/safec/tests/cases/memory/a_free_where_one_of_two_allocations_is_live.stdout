@@ -13,9 +13,7 @@ Function a_free_where_one_of_two_allocations_is_live.c:3:5 "f"
   Local "_4" "int *"
   Local "_5" "void *"
   Local "_6" "int *"
-  Local "_7" "void"
-  Local "_8" "int *"
-  Local "_9" "void"
+  Local "_7" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_free_where_one_of_two_allocations_is_live.c:4:14 generated
     Call a_free_where_one_of_two_allocations_is_live.c:4:14 "malloc" "bb1"
@@ -44,7 +42,6 @@ Function a_free_where_one_of_two_allocations_is_live.c:3:5 "f"
     Sequenced a_free_where_one_of_two_allocations_is_live.c:6:14 generated
     ArgumentsEvaluated a_free_where_one_of_two_allocations_is_live.c:7:5 generated
     Call a_free_where_one_of_two_allocations_is_live.c:7:5 "free" "bb3"
-      Destination "_7"
       Copy "_2"
   Block "bb3"
     Sequenced a_free_where_one_of_two_allocations_is_live.c:7:5 generated
@@ -57,7 +54,7 @@ Function a_free_where_one_of_two_allocations_is_live.c:3:5 "f"
       Use
         Copy "_4"
     Operation a_free_where_one_of_two_allocations_is_live.c:8:14 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_6"
     Sequenced a_free_where_one_of_two_allocations_is_live.c:8:14 generated
@@ -68,7 +65,6 @@ Function a_free_where_one_of_two_allocations_is_live.c:3:5 "f"
   Block "bb6"
     ArgumentsEvaluated a_free_where_one_of_two_allocations_is_live.c:9:5 generated
     Call a_free_where_one_of_two_allocations_is_live.c:9:5 "free" "bb7"
-      Destination "_9"
       Copy "_6"
   Block "bb7"
     Sequenced a_free_where_one_of_two_allocations_is_live.c:9:5 generated

@@ -14,8 +14,7 @@ Function a_freed_pointer_handed_and_read_through_at_one_call.c:5:5 "main"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "int"
+  Local "_4" "int"
   Block "bb0" entry
     Operation a_freed_pointer_handed_and_read_through_at_one_call.c:5:5 generated
       Destination "_0"
@@ -52,13 +51,12 @@ Function a_freed_pointer_handed_and_read_through_at_one_call.c:5:5 "main"
   Block "bb4"
     ArgumentsEvaluated a_freed_pointer_handed_and_read_through_at_one_call.c:10:5 generated
     Call a_freed_pointer_handed_and_read_through_at_one_call.c:10:5 "free" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced a_freed_pointer_handed_and_read_through_at_one_call.c:10:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_and_read_through_at_one_call.c:11:12 generated
     Call a_freed_pointer_handed_and_read_through_at_one_call.c:11:12 "both" "bb6"
-      Destination "_5"
+      Destination "_4"
       Copy "_1"
       Copy "_1"
         Deref
@@ -66,6 +64,6 @@ Function a_freed_pointer_handed_and_read_through_at_one_call.c:5:5 "main"
     Operation a_freed_pointer_handed_and_read_through_at_one_call.c:11:5 written
       Destination "_0"
       Use
-        Copy "_5"
+        Copy "_4"
     Sequenced a_freed_pointer_handed_and_read_through_at_one_call.c:11:12 generated
     Return

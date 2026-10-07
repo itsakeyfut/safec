@@ -386,9 +386,8 @@ fn two_pointers_can_be_compared() {
 /// A call whose result nothing wanted writes nowhere, and a call to a
 /// function that returns nothing has no result to write.
 ///
-/// Both shapes reach the same place: the IR allows `destination: None`,
-/// and the lowering instead builds a local of the callee's return type,
-/// which is `void` when the callee returns nothing.
+/// `destination: None` is what the lowering writes for a call to a function
+/// that returns nothing; the test below has the other shape the IR allows.
 ///
 /// Mutation: give the `call void` a result name. LLVM refuses a value of
 /// type `void`, and this fails on the text first.
@@ -434,6 +433,60 @@ fn a_call_that_returns_nothing_stores_nothing() {
     assert_eq!(refusals, Vec::new());
     assert!(out.contains("  call void @v()\n"), "{out}");
     assert!(!out.contains("= call"), "{out}");
+}
+
+/// A call to a function that returns nothing may still name a `void` local
+/// to write into, which the IR allows and another frontend may build, and
+/// it stores nothing there either.
+///
+/// Mutation: give the `call void` a result name and deliver it. LLVM refuses
+/// a value of type `void`, and this fails on the text first, for the shape
+/// the C frontend no longer builds.
+#[test]
+fn a_call_that_returns_nothing_into_a_local_stores_nothing() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("t.c", "v f");
+    let (v, at) = (Span::new(file, 0, 1), Span::new(file, 2, 3));
+
+    let mut unit = TranslationUnit::new(target("x86_64-pc-windows-msvc"));
+    let int = unit.push_type(Ty::Int);
+    let void = unit.push_type(Ty::Void);
+    let callee = unit.push_function(Function::declaration(v, void, []));
+
+    let mut f = Function::new(at, int, []);
+    let nothing = f.push_local(void);
+    let first = f.reserve_block();
+    let after = f.push_block(Block {
+        elements: Vec::new(),
+        terminator: Terminator::Return,
+    });
+    f.fill_block(
+        first,
+        Block {
+            elements: Vec::new(),
+            terminator: Terminator::Call {
+                callee,
+                arguments: Vec::new(),
+                destination: Some(Place::local(nothing)),
+                then: Some(after),
+                origin: Origin::Written(at),
+            },
+        },
+    );
+    unit.push_function(f);
+
+    let (out, refusals) = module(&sources, &unit);
+
+    assert_eq!(refusals, Vec::new());
+    assert!(
+        out.contains(
+            "  call void @v()
+"
+        ),
+        "{out}"
+    );
+    assert!(!out.contains("= call"), "{out}");
+    assert!(!out.contains("store"), "{out}");
 }
 
 /// A parameter that holds nothing cannot be written at all, so the function

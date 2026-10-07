@@ -19,7 +19,6 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
   Local "_10" "int **"
   Local "_11" "int *"
   Local "_12" "int **"
-  Local "_13" "void"
   Block "bb0" entry
     Operation a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 generated
       Destination "_0"
@@ -142,7 +141,6 @@ Function a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:4:5 "
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:19:15 generated
     ArgumentsEvaluated a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 generated
     Call a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 "drop_inner" "bb13"
-      Destination "_13"
       Copy "_12"
   Block "bb13"
     Sequenced a_table_read_out_of_a_holder_into_a_local_is_reached_through_it.c:20:5 generated

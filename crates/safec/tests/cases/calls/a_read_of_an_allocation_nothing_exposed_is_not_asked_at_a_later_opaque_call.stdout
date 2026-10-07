@@ -16,10 +16,8 @@ Function a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_
   Local "_5" "int"
   Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "void"
+  Local "_8" "int"
   Local "_9" "int"
-  Local "_10" "int"
-  Local "_11" "void"
   Block "bb0" entry
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:5:5 generated
       Destination "_0"
@@ -75,25 +73,23 @@ Function a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_
       Use
         Copy "_1"
     Call a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:23 "release_all" "bb5"
-      Destination "_8"
   Block "bb5"
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:10 written
-      Destination "_9"
+      Destination "_8"
       Binary "Add"
         Copy "_7"
         Constant 0
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:5 written
       Destination "_2"
       Use
-        Copy "_9"
+        Copy "_8"
     Operation a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_2"
     Sequenced a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:13:5 generated
     ArgumentsEvaluated a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:14:5 generated
     Call a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:14:5 "free" "bb6"
-      Destination "_11"
       Copy "_3"
   Block "bb6"
     Sequenced a_read_of_an_allocation_nothing_exposed_is_not_asked_at_a_later_opaque_call.c:14:5 generated

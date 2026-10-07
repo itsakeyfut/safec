@@ -7,8 +7,7 @@ Function a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reporte
   Local "_2" "int"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "int"
+  Local "_5" "int"
   Block "bb0" entry
     Operation a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:5:9 written
       Destination "_3"
@@ -39,16 +38,15 @@ Function a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reporte
       Use
         Copy "_2"
     Call a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:26 "release_all" "bb4"
-      Destination "_5"
   Block "bb4"
     Operation a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
         Copy "_4"
         Constant 0
     Operation a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 generated
     Return

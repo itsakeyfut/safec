@@ -28,13 +28,7 @@ Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 "main"
   Local "_16" "char *"
   Local "_17" "char *"
   Local "_18" "int"
-  Local "_19" "void"
-  Local "_20" "void"
-  Local "_21" "int"
-  Local "_22" "void"
-  Local "_23" "void"
-  Local "_24" "void"
-  Local "_25" "void"
+  Local "_19" "int"
   Block "bb0" entry
     Operation a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 generated
       Destination "_0"
@@ -217,7 +211,6 @@ Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 "main"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:27:9 generated
     ArgumentsEvaluated a_byte_handed_straight_to_a_call_beside_a_table_builds.c:28:9 generated
     Call a_byte_handed_straight_to_a_call_beside_a_table_builds.c:28:9 "emit" "bb20"
-      Destination "_19"
       Copy "_17"
         Deref
   Block "bb18"
@@ -226,7 +219,6 @@ Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 "main"
   Block "bb19"
     ArgumentsEvaluated a_byte_handed_straight_to_a_call_beside_a_table_builds.c:30:5 generated
     Call a_byte_handed_straight_to_a_call_beside_a_table_builds.c:30:5 "emit" "bb21"
-      Destination "_20"
       Copy "_12"
         Deref
   Block "bb20"
@@ -235,7 +227,7 @@ Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 "main"
   Block "bb21"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:30:5 generated
     Operation a_byte_handed_straight_to_a_call_beside_a_table_builds.c:31:9 written
-      Destination "_21"
+      Destination "_19"
       Use
         Copy "_1"
           Deref
@@ -243,31 +235,27 @@ Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 "main"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:31:13 generated
     ArgumentsEvaluated a_byte_handed_straight_to_a_call_beside_a_table_builds.c:32:5 generated
     Call a_byte_handed_straight_to_a_call_beside_a_table_builds.c:32:5 "free" "bb22"
-      Destination "_22"
       Copy "_12"
   Block "bb22"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:32:5 generated
     ArgumentsEvaluated a_byte_handed_straight_to_a_call_beside_a_table_builds.c:33:5 generated
     Call a_byte_handed_straight_to_a_call_beside_a_table_builds.c:33:5 "free" "bb23"
-      Destination "_23"
       Copy "_9"
   Block "bb23"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:33:5 generated
     ArgumentsEvaluated a_byte_handed_straight_to_a_call_beside_a_table_builds.c:34:5 generated
     Call a_byte_handed_straight_to_a_call_beside_a_table_builds.c:34:5 "free" "bb24"
-      Destination "_24"
       Copy "_4"
   Block "bb24"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:34:5 generated
     ArgumentsEvaluated a_byte_handed_straight_to_a_call_beside_a_table_builds.c:35:5 generated
     Call a_byte_handed_straight_to_a_call_beside_a_table_builds.c:35:5 "free" "bb25"
-      Destination "_25"
       Copy "_1"
   Block "bb25"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:35:5 generated
     Operation a_byte_handed_straight_to_a_call_beside_a_table_builds.c:36:5 written
       Destination "_0"
       Use
-        Copy "_21"
+        Copy "_19"
     Sequenced a_byte_handed_straight_to_a_call_beside_a_table_builds.c:36:12 generated
     Return

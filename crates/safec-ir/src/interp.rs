@@ -361,9 +361,10 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 };
 
                 if let Some(destination) = frames[below].destination.clone() {
-                    // A `void` function answers nothing, and the lowering gives
-                    // its call a destination all the same, so the answer is
-                    // only owed where the callee had one to give.
+                    // A `void` function answers nothing. The C frontend gives its
+                    // call no destination, but the IR lets one name a `void`
+                    // local, so the answer is only owed where the callee had
+                    // one to give.
                     let returns = unit.function(returning.function);
                     let returns_something =
                         unit.ty(returns.local(returns.return_place())) != Ty::Void;
@@ -1033,18 +1034,16 @@ mod tests {
         assert!(trap.why.contains("8 bits unsigned"), "{trap:?}");
     }
 
-    /// A call that writes nowhere runs for what it does.
-    ///
-    /// The lowering gives every call a destination, so this shape only reaches
-    /// the interpreter from a hand-built unit today. It is what `free(p);` will
-    /// be, and `ir::Terminator::Call`'s doc comment says so.
-    ///
-    /// Mutation: demand a destination. The run stops on a call that asked for
-    /// nothing and this fails.
-    #[test]
-    fn a_call_that_writes_nowhere_runs() {
+    /// A caller that calls a `void` function and then returns 7, with the
+    /// call writing into a `void` local where `into_a_local` and nowhere
+    /// otherwise.
+    fn a_void_call(into_a_local: bool) -> Result<Value, Trap> {
         let mut sources = SourceMap::new();
-        let file = sources.add_virtual("t.c", "void nothing(void);\n");
+        let file = sources.add_virtual(
+            "t.c",
+            "void nothing(void);
+",
+        );
         let at = Span::new(file, 5, 12);
 
         let mut unit = TranslationUnit::new(a_target());
@@ -1059,6 +1058,7 @@ mod tests {
         let callee = unit.push_function(callee);
 
         let mut caller = Function::new(at, int, []);
+        let destination = into_a_local.then(|| Place::local(caller.push_local(void)));
         let entry = caller.reserve_block();
         let after = caller.push_block(Block {
             elements: vec![Element::Assign(Operation {
@@ -1075,7 +1075,7 @@ mod tests {
                 terminator: Terminator::Call {
                     callee,
                     arguments: Vec::new(),
-                    destination: None,
+                    destination,
                     then: Some(after),
                     origin: Origin::Written(at),
                 },
@@ -1083,7 +1083,33 @@ mod tests {
         );
         let id = unit.push_function(caller);
 
-        assert_eq!(run(&unit, id, &[]), Ok(Value::Int(7)));
+        run(&unit, id, &[])
+    }
+
+    /// A call that writes nowhere runs for what it does.
+    ///
+    /// It is what the lowering builds for every call to a `void` function,
+    /// `free(p);` among them, and `ir::Terminator::Call`'s doc comment says
+    /// why.
+    ///
+    /// Mutation: demand a destination. The run stops on a call that asked for
+    /// nothing and this fails.
+    #[test]
+    fn a_call_that_writes_nowhere_runs() {
+        assert_eq!(a_void_call(false), Ok(Value::Int(7)));
+    }
+
+    /// A call to a `void` function that names a `void` local is not owed an
+    /// answer either.
+    ///
+    /// The C frontend no longer builds this, and the IR still lets a call to a
+    /// `void` function name somewhere to write, so another frontend may.
+    ///
+    /// Mutation: demand an answer whatever the callee returns. The run stops
+    /// on a function that has none to give and this fails.
+    #[test]
+    fn a_call_to_a_void_function_that_names_a_local_is_not_owed_an_answer() {
+        assert_eq!(a_void_call(true), Ok(Value::Int(7)));
     }
 
     /// A callee that comes back to a call the IR says does not return stops

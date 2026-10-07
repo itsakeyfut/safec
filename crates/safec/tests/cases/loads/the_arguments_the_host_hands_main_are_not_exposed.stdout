@@ -7,9 +7,8 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
   Local "_2" "char **" parameter
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "char *"
-  Local "_7" "int"
+  Local "_5" "char *"
+  Local "_6" "int"
   Block "bb0" entry
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:2:5 generated
       Destination "_0"
@@ -55,22 +54,21 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
   Block "bb6"
     ArgumentsEvaluated the_arguments_the_host_hands_main_are_not_exposed.c:9:5 generated
     Call the_arguments_the_host_hands_main_are_not_exposed.c:9:5 "log_line" "bb7"
-      Destination "_5"
   Block "bb7"
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:9:5 generated
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:10:11 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
           Deref
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:10:18 generated
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:11:9 written
-      Destination "_7"
+      Destination "_6"
       Binary "Eq"
-        Copy "_6"
+        Copy "_5"
         Constant 0
     Branch the_arguments_the_host_hands_main_are_not_exposed.c:11:9 "bb8" "bb9"
-      Copy "_7"
+      Copy "_6"
   Block "bb8"
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:11:9 generated
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:12:9 written
@@ -86,7 +84,7 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:14:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
           Deref
     Sequenced the_arguments_the_host_hands_main_are_not_exposed.c:14:12 generated
     Return

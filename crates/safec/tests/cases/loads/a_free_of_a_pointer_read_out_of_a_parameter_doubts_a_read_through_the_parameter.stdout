@@ -8,7 +8,6 @@ Function a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_p
   Local "_2" "int"
   Local "_3" "int *"
   Local "_4" "int"
-  Local "_5" "void"
   Block "bb0" entry
     Operation a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter.c:4:9 written
       Destination "_2"
@@ -56,7 +55,6 @@ Function a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_p
   Block "bb6"
     ArgumentsEvaluated a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter.c:11:5 generated
     Call a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter.c:11:5 "free" "bb7"
-      Destination "_5"
       Copy "_3"
   Block "bb7"
     Sequenced a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter.c:11:5 generated

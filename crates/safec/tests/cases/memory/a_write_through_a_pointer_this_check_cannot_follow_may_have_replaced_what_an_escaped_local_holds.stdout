@@ -17,8 +17,7 @@ Function a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_wh
   Local "_8" "void *"
   Local "_9" "int **"
   Local "_10" "int *"
-  Local "_11" "void"
-  Local "_12" "int"
+  Local "_11" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:4:14 generated
     Call a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:4:14 "malloc" "bb1"
@@ -79,7 +78,6 @@ Function a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_wh
     Sequenced a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:9:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:10:5 generated
     Call a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:10:5 "free" "bb3"
-      Destination "_11"
       Copy "_2"
   Block "bb3"
     Sequenced a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:10:5 generated
@@ -89,7 +87,7 @@ Function a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_wh
       Use
         Constant 1
     Operation a_write_through_a_pointer_this_check_cannot_follow_may_have_replaced_what_an_escaped_local_holds.c:11:5 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
           Deref

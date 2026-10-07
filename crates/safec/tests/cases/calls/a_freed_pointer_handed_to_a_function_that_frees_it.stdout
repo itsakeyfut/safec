@@ -8,11 +8,9 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:2:6 "free" declare
 Function a_freed_pointer_handed_to_a_function_that_frees_it.c:4:6 "drop"
   Local "_0" "void" return
   Local "_1" "int *" parameter
-  Local "_2" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 generated
     Call a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 "free" "bb1"
-      Destination "_2"
       Copy "_1"
   Block "bb1"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 generated
@@ -22,8 +20,6 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 "main"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "void"
   Block "bb0" entry
     Operation a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 generated
       Destination "_0"
@@ -60,13 +56,11 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 "main"
   Block "bb4"
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 generated
     Call a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 "free" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:13:5 generated
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 generated
     Call a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 "drop" "bb6"
-      Destination "_5"
       Copy "_1"
   Block "bb6"
     Sequenced a_freed_pointer_handed_to_a_function_that_frees_it.c:14:5 generated

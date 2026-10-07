@@ -14,8 +14,6 @@ Function a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_
   Local "_5" "int **"
   Local "_6" "int **"
   Local "_7" "int"
-  Local "_8" "void"
-  Local "_9" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:4:14 generated
     Call a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:4:14 "malloc" "bb1"
@@ -60,13 +58,11 @@ Function a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_
     Sequenced a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:7:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:8:5 generated
     Call a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:8:5 "free" "bb2"
-      Destination "_8"
       Copy "_2"
   Block "bb2"
     Sequenced a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:8:5 generated
     ArgumentsEvaluated a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:9:5 generated
     Call a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:9:5 "free" "bb3"
-      Destination "_9"
       Copy "_4"
   Block "bb3"
     Sequenced a_write_through_a_pointer_to_an_int_leaves_what_an_escaped_local_holds_alone.c:9:5 generated

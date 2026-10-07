@@ -47,8 +47,7 @@ Function a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c
   Local "_7" "int"
   Local "_8" "int *"
   Local "_9" "int"
-  Local "_10" "void"
-  Local "_11" "int"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:11:5 generated
       Destination "_0"
@@ -140,17 +139,16 @@ Function a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c
         Deref
   Block "bb9"
     Call a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:26 "free" "bb10"
-      Destination "_10"
       Copy "_4"
   Block "bb10"
     Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:12 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_9"
         Constant 0
     Operation a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free.c:22:12 generated
     Return

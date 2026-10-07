@@ -13,7 +13,6 @@ Function an_allocation_given_to_an_escaped_local_after_the_escape.c:3:5 "f"
   Local "_4" "int *"
   Local "_5" "void *"
   Local "_6" "int *"
-  Local "_7" "void"
   Block "bb0" entry
     Operation an_allocation_given_to_an_escaped_local_after_the_escape.c:5:16 written
       Destination "_3"
@@ -45,7 +44,6 @@ Function an_allocation_given_to_an_escaped_local_after_the_escape.c:3:5 "f"
     Sequenced an_allocation_given_to_an_escaped_local_after_the_escape.c:7:5 generated
     ArgumentsEvaluated an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 generated
     Call an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 "free" "bb2"
-      Destination "_7"
       Copy "_4"
   Block "bb2"
     Sequenced an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 generated

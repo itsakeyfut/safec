@@ -16,7 +16,6 @@ Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_t
   Local "_7" "int *"
   Local "_8" "int *"
   Local "_9" "int **"
-  Local "_10" "void"
   Block "bb0" entry
     Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:4:5 generated
       Destination "_0"
@@ -103,7 +102,6 @@ Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_t
         Place "_8"
     ArgumentsEvaluated a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:5 generated
     Call a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:5 "keep" "bb9"
-      Destination "_10"
       Copy "_9"
   Block "bb9"
     Sequenced a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:15:5 generated

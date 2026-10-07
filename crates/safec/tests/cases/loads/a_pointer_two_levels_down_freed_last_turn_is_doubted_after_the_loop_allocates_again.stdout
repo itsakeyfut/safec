@@ -24,9 +24,8 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
   Local "_15" "int"
   Local "_16" "int *"
   Local "_17" "int **"
-  Local "_18" "void"
+  Local "_18" "int"
   Local "_19" "int"
-  Local "_20" "int"
   Block "bb0" entry
     Operation a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:4:5 generated
       Destination "_0"
@@ -211,7 +210,6 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:28:9 generated
     ArgumentsEvaluated a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:29:9 generated
     Call a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:29:9 "free" "bb22"
-      Destination "_18"
       Copy "_9"
   Block "bb19"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:22:17 generated
@@ -241,16 +239,16 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
   Block "bb22"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:29:9 generated
     Operation a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:30:13 written
-      Destination "_19"
+      Destination "_18"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:30:9 written
       Destination "_4"
       Use
-        Copy "_19"
+        Copy "_18"
     Operation a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:30:9 written
-      Destination "_20"
+      Destination "_19"
       Use
         Copy "_4"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:30:9 generated

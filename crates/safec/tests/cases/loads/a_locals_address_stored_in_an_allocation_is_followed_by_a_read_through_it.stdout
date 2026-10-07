@@ -19,7 +19,6 @@ Function a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_
   Local "_10" "int **"
   Local "_11" "int **"
   Local "_12" "int *"
-  Local "_13" "void"
   Block "bb0" entry
     Operation a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it.c:4:5 generated
       Destination "_0"
@@ -134,7 +133,6 @@ Function a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it.c:17:5 generated
     ArgumentsEvaluated a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it.c:18:5 generated
     Call a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it.c:18:5 "free" "bb9"
-      Destination "_13"
       Copy "_1"
   Block "bb9"
     Sequenced a_locals_address_stored_in_an_allocation_is_followed_by_a_read_through_it.c:18:5 generated

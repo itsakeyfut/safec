@@ -30,9 +30,8 @@ Function a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_i
   Local "_19" "int *"
   Local "_20" "int"
   Local "_21" "int *"
-  Local "_22" "void"
+  Local "_22" "int"
   Local "_23" "int"
-  Local "_24" "int"
   Block "bb0" entry
     Operation a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:5:5 generated
       Destination "_0"
@@ -228,7 +227,6 @@ Function a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_i
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:31:9 generated
     ArgumentsEvaluated a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:32:9 generated
     Call a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:32:9 "free" "bb22"
-      Destination "_22"
       Copy "_13"
   Block "bb19"
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:26:17 generated
@@ -256,16 +254,16 @@ Function a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_i
   Block "bb22"
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:32:9 generated
     Operation a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:33:13 written
-      Destination "_23"
+      Destination "_22"
       Binary "Add"
         Copy "_11"
         Constant 1
     Operation a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:33:9 written
       Destination "_11"
       Use
-        Copy "_23"
+        Copy "_22"
     Operation a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:33:9 written
-      Destination "_24"
+      Destination "_23"
       Use
         Copy "_11"
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:33:9 generated

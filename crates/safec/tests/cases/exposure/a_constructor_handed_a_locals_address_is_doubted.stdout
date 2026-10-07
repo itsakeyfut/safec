@@ -11,7 +11,6 @@ Function a_constructor_handed_a_locals_address_is_doubted.c:4:5 "g"
   Local "_2" "int *"
   Local "_3" "int *"
   Local "_4" "int *"
-  Local "_5" "void"
   Block "bb0" entry
     Operation a_constructor_handed_a_locals_address_is_doubted.c:5:9 written
       Destination "_1"
@@ -34,7 +33,6 @@ Function a_constructor_handed_a_locals_address_is_doubted.c:4:5 "g"
     Sequenced a_constructor_handed_a_locals_address_is_doubted.c:6:17 generated
     ArgumentsEvaluated a_constructor_handed_a_locals_address_is_doubted.c:7:5 generated
     Call a_constructor_handed_a_locals_address_is_doubted.c:7:5 "free" "bb2"
-      Destination "_5"
       Copy "_2"
   Block "bb2"
     Sequenced a_constructor_handed_a_locals_address_is_doubted.c:7:5 generated

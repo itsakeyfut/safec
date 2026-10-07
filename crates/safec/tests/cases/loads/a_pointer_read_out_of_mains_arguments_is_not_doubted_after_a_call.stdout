@@ -9,7 +9,6 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5
   Local "_4" "int"
   Local "_5" "int *"
   Local "_6" "int"
-  Local "_7" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5 generated
       Destination "_0"
@@ -80,7 +79,6 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5
   Block "bb9"
     ArgumentsEvaluated a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 generated
     Call a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 "release_all" "bb10"
-      Destination "_7"
   Block "bb10"
     Sequenced a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:14:5 generated
     Operation a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:15:5 written

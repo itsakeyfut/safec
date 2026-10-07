@@ -17,9 +17,7 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_hand
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int *"
-  Local "_10" "void"
+  Local "_8" "int *"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:5:5 generated
       Destination "_0"
@@ -96,20 +94,18 @@ Function a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_hand
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:14:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:15:5 generated
     Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:15:5 "free" "bb9"
-      Destination "_8"
       Copy "_4"
   Block "bb9"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:15:5 generated
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:16:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_1"
           Deref
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:16:14 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:17:5 generated
     Call a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:17:5 "h" "bb10"
-      Destination "_10"
-      Copy "_9"
+      Copy "_8"
   Block "bb10"
     Sequenced a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:17:5 generated
     Operation a_pointer_read_out_of_memory_after_a_free_is_not_proved_freed_when_handed_on.c:18:5 written

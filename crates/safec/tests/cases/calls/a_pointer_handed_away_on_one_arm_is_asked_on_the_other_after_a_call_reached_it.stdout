@@ -19,11 +19,9 @@ Function a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_rea
   Local "_4" "int"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "void"
-  Local "_8" "int *"
-  Local "_9" "int **"
-  Local "_10" "void"
-  Local "_11" "int"
+  Local "_7" "int *"
+  Local "_8" "int **"
+  Local "_9" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:7:14 generated
     Call a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:7:14 "malloc" "bb1"
@@ -69,25 +67,23 @@ Function a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_rea
     Sequenced a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:12:9 generated
     ArgumentsEvaluated a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:13:9 generated
     Call a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:13:9 "stash" "bb8"
-      Destination "_7"
       Copy "_5"
   Block "bb6"
     Sequenced a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:12:9 generated
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:15:10 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_2"
     Sequenced a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:15:14 generated
     Operation a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:16:17 written
-      Destination "_9"
+      Destination "_8"
       Address
-        Place "_8"
+        Place "_7"
     ArgumentsEvaluated a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:16:5 generated
     Call a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:16:5 "release_ref" "bb9"
-      Destination "_10"
-      Copy "_9"
+      Copy "_8"
   Block "bb8"
     Sequenced a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:13:9 generated
     Goto "bb7"
@@ -95,12 +91,12 @@ Function a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_rea
     Sequenced a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:16:5 generated
     ArgumentsEvaluated a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:17:12 generated
     Call a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:17:12 "use2" "bb10"
-      Destination "_11"
+      Destination "_9"
       Copy "_5"
   Block "bb10"
     Operation a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:17:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_9"
     Sequenced a_pointer_handed_away_on_one_arm_is_asked_on_the_other_after_a_call_reached_it.c:17:12 generated
     Return

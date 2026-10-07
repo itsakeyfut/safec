@@ -14,9 +14,8 @@ Function a_pointer_handed_by_address_around_another_call_builds.c:5:5 "main"
   Local "_3" "int"
   Local "_4" "int **"
   Local "_5" "int"
-  Local "_6" "void"
-  Local "_7" "int **"
-  Local "_8" "int"
+  Local "_6" "int **"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_pointer_handed_by_address_around_another_call_builds.c:5:5 generated
       Destination "_0"
@@ -63,21 +62,20 @@ Function a_pointer_handed_by_address_around_another_call_builds.c:5:5 "main"
     Sequenced a_pointer_handed_by_address_around_another_call_builds.c:10:5 generated
     ArgumentsEvaluated a_pointer_handed_by_address_around_another_call_builds.c:11:5 generated
     Call a_pointer_handed_by_address_around_another_call_builds.c:11:5 "log_it" "bb6"
-      Destination "_6"
   Block "bb6"
     Sequenced a_pointer_handed_by_address_around_another_call_builds.c:11:5 generated
     Operation a_pointer_handed_by_address_around_another_call_builds.c:12:17 written
-      Destination "_7"
+      Destination "_6"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_handed_by_address_around_another_call_builds.c:12:12 generated
     Call a_pointer_handed_by_address_around_another_call_builds.c:12:12 "use2" "bb7"
-      Destination "_8"
-      Copy "_7"
+      Destination "_7"
+      Copy "_6"
   Block "bb7"
     Operation a_pointer_handed_by_address_around_another_call_builds.c:12:5 written
       Destination "_0"
       Use
-        Copy "_8"
+        Copy "_7"
     Sequenced a_pointer_handed_by_address_around_another_call_builds.c:12:12 generated
     Return

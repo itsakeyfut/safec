@@ -4,7 +4,6 @@ Function a_function_that_ends_in_abort_does_not_reach_the_end.c:1:6 "abort" decl
 Function a_function_that_ends_in_abort_does_not_reach_the_end.c:3:16 "f"
   Local "_0" "int *" return _Nonnull
   Local "_1" "int *" parameter
-  Local "_2" "void"
   Block "bb0" entry
     Branch a_function_that_ends_in_abort_does_not_reach_the_end.c:4:9 "bb1" "bb2"
       Copy "_1"
@@ -22,7 +21,6 @@ Function a_function_that_ends_in_abort_does_not_reach_the_end.c:3:16 "f"
   Block "bb3"
     ArgumentsEvaluated a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 generated
     Call a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 "abort" noreturn
-      Destination "_2"
   Block "bb4"
     Sequenced a_function_that_ends_in_abort_does_not_reach_the_end.c:7:5 generated
     Return

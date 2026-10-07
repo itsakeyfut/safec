@@ -6,7 +6,6 @@ Function a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:2:5 "f"
   Local "_0" "int" return
   Local "_1" "int"
   Local "_2" "int *"
-  Local "_3" "void"
   Block "bb0" entry
     Operation a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:3:9 written
       Destination "_1"
@@ -19,7 +18,6 @@ Function a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:2:5 "f"
         Place "_1"
     ArgumentsEvaluated a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 generated
     Call a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 "g" "bb1"
-      Destination "_3"
       Copy "_2"
   Block "bb1"
     Sequenced a_nonnull_parameter_of_a_declaration_reaches_the_ir.c:4:5 generated

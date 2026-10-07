@@ -19,9 +19,7 @@ Function a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:
   Local "_6" "int *"
   Local "_7" "void *"
   Local "_8" "int"
-  Local "_9" "void"
-  Local "_10" "int"
-  Local "_11" "void"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:5:5 generated
       Destination "_0"
@@ -89,7 +87,6 @@ Function a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:
     Sequenced a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:12:9 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:13:9 generated
     Call a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:13:9 "free" "bb9"
-      Destination "_9"
       Copy "_2"
   Block "bb7"
     Sequenced a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:12:9 generated
@@ -101,14 +98,13 @@ Function a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:
       Use
         Constant 2
     Operation a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:16:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_6"
           Deref
     Sequenced a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:16:5 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:17:5 generated
     Call a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:17:5 "free" "bb10"
-      Destination "_11"
       Copy "_6"
   Block "bb9"
     Sequenced a_free_on_reallocs_failure_branch_with_a_variable_size_is_not_proved.c:13:9 generated

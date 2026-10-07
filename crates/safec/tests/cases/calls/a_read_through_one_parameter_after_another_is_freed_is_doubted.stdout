@@ -7,7 +7,6 @@ Function a_read_through_one_parameter_after_another_is_freed_is_doubted.c:3:5 "f
   Local "_1" "int *" parameter
   Local "_2" "int *" parameter
   Local "_3" "int"
-  Local "_4" "void"
   Block "bb0" entry
     Operation a_read_through_one_parameter_after_another_is_freed_is_doubted.c:4:9 written
       Destination "_3"
@@ -30,7 +29,6 @@ Function a_read_through_one_parameter_after_another_is_freed_is_doubted.c:3:5 "f
   Block "bb3"
     ArgumentsEvaluated a_read_through_one_parameter_after_another_is_freed_is_doubted.c:7:5 generated
     Call a_read_through_one_parameter_after_another_is_freed_is_doubted.c:7:5 "free" "bb4"
-      Destination "_4"
       Copy "_2"
   Block "bb4"
     Sequenced a_read_through_one_parameter_after_another_is_freed_is_doubted.c:7:5 generated

@@ -42,11 +42,6 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
   Local "_14" "char *"
   Local "_15" "void *"
   Local "_16" "char *"
-  Local "_17" "void"
-  Local "_18" "void"
-  Local "_19" "void"
-  Local "_20" "void"
-  Local "_21" "void"
   Block "bb0" entry
     Operation what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 generated
       Destination "_0"
@@ -157,31 +152,26 @@ Function what_the_other_library_copies_return_is_what_they_were_handed.c:8:5 "ma
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:17:15 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:18:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:18:5 "free" "bb13"
-      Destination "_17"
       Copy "_5"
   Block "bb13"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:18:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:19:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:19:5 "free" "bb14"
-      Destination "_18"
       Copy "_8"
   Block "bb14"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:19:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:20:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:20:5 "free" "bb15"
-      Destination "_19"
       Copy "_11"
   Block "bb15"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:20:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:21:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:21:5 "free" "bb16"
-      Destination "_20"
       Copy "_14"
   Block "bb16"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:21:5 generated
     ArgumentsEvaluated what_the_other_library_copies_return_is_what_they_were_handed.c:22:5 generated
     Call what_the_other_library_copies_return_is_what_they_were_handed.c:22:5 "free" "bb17"
-      Destination "_21"
       Copy "_1"
   Block "bb17"
     Sequenced what_the_other_library_copies_return_is_what_they_were_handed.c:22:5 generated

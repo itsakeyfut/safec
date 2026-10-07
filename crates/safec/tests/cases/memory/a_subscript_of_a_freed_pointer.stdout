@@ -10,9 +10,8 @@ Function a_subscript_of_a_freed_pointer.c:3:5 "f"
   Local "_1" "int" parameter
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "void"
-  Local "_5" "int *"
-  Local "_6" "int"
+  Local "_4" "int *"
+  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_subscript_of_a_freed_pointer.c:4:14 generated
     Call a_subscript_of_a_freed_pointer.c:4:14 "malloc" "bb1"
@@ -26,24 +25,23 @@ Function a_subscript_of_a_freed_pointer.c:3:5 "f"
     Sequenced a_subscript_of_a_freed_pointer.c:4:14 generated
     ArgumentsEvaluated a_subscript_of_a_freed_pointer.c:5:5 generated
     Call a_subscript_of_a_freed_pointer.c:5:5 "free" "bb2"
-      Destination "_4"
       Copy "_2"
   Block "bb2"
     Sequenced a_subscript_of_a_freed_pointer.c:5:5 generated
     Operation a_subscript_of_a_freed_pointer.c:6:5 written
-      Destination "_5"
+      Destination "_4"
       Binary "Add"
         Copy "_2"
         Copy "_1"
     Operation a_subscript_of_a_freed_pointer.c:6:5 written
-      Destination "_5"
+      Destination "_4"
         Deref
       Use
         Constant 42
     Operation a_subscript_of_a_freed_pointer.c:6:5 written
-      Destination "_6"
+      Destination "_5"
       Use
-        Copy "_5"
+        Copy "_4"
           Deref
     Sequenced a_subscript_of_a_freed_pointer.c:6:5 generated
     Operation a_subscript_of_a_freed_pointer.c:7:5 written

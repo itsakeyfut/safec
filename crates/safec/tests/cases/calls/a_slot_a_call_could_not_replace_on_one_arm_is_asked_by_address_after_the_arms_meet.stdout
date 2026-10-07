@@ -20,10 +20,9 @@ Function a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_th
   Local "_8" "int *"
   Local "_9" "int *"
   Local "_10" "int **"
-  Local "_11" "void"
-  Local "_12" "int *"
-  Local "_13" "int **"
-  Local "_14" "int"
+  Local "_11" "int *"
+  Local "_12" "int **"
+  Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:6:14 generated
     Call a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:6:14 "malloc" "bb1"
@@ -110,26 +109,25 @@ Function a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_th
         Place "_9"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:9 generated
     Call a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:9 "release_ref" "bb12"
-      Destination "_11"
       Copy "_10"
   Block "bb10"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:15:9 generated
     Goto "bb11"
   Block "bb11"
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:19:10 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_5"
           Deref
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:19:14 generated
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:17 written
-      Destination "_13"
+      Destination "_12"
       Address
-        Place "_12"
+        Place "_11"
     ArgumentsEvaluated a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:12 generated
     Call a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:12 "use2" "bb13"
-      Destination "_14"
-      Copy "_13"
+      Destination "_13"
+      Copy "_12"
   Block "bb12"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:17:9 generated
     StorageDead a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:18:5 generated "_9"
@@ -138,6 +136,6 @@ Function a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_th
     Operation a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_13"
     Sequenced a_slot_a_call_could_not_replace_on_one_arm_is_asked_by_address_after_the_arms_meet.c:20:12 generated
     Return

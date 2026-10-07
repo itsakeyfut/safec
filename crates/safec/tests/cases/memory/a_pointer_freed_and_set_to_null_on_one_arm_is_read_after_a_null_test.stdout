@@ -11,9 +11,8 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
   Local "_2" "int *"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "int *"
-  Local "_7" "int"
+  Local "_5" "int *"
+  Local "_6" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:5:14 generated
     Call a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:5:14 "malloc" "bb1"
@@ -50,19 +49,18 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:9:9 generated
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 generated
     Call a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 "free" "bb8"
-      Destination "_5"
       Copy "_2"
   Block "bb6"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:9:9 generated
     Goto "bb7"
   Block "bb7"
     Operation a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:13:9 written
-      Destination "_7"
+      Destination "_6"
       Binary "Ne"
         Copy "_2"
         Constant 0
     Branch a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:13:9 "bb9" "bb10"
-      Copy "_7"
+      Copy "_6"
   Block "bb8"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:10:9 generated
     Operation a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:11:9 written
@@ -70,7 +68,7 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:
       Use
         Constant 0
     Operation a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:11:9 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_2"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:11:9 generated

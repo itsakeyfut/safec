@@ -14,7 +14,6 @@ Function a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:4:5 "f
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "int *"
-  Local "_5" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:5:14 generated
     Call a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:5:14 "malloc" "bb1"
@@ -38,7 +37,6 @@ Function a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:4:5 "f
         Copy "_3"
     ArgumentsEvaluated a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:6:5 generated
     Call a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:6:5 "free" "bb3"
-      Destination "_5"
       Copy "_4"
   Block "bb3"
     Sequenced a_read_in_a_frees_argument_through_a_call_is_ordered_before_it.c:6:5 generated

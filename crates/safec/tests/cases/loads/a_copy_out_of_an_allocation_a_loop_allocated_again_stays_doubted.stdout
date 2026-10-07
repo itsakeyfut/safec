@@ -30,9 +30,8 @@ Function a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 
   Local "_16" "int *"
   Local "_17" "int"
   Local "_18" "int *"
-  Local "_19" "void"
+  Local "_19" "int"
   Local "_20" "int"
-  Local "_21" "int"
   Block "bb0" entry
     Operation a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 generated
       Destination "_0"
@@ -199,7 +198,6 @@ Function a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:30:9 generated
     ArgumentsEvaluated a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:31:9 generated
     Call a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:31:9 "free" "bb23"
-      Destination "_19"
       Copy "_10"
   Block "bb19"
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:23:13 generated
@@ -243,16 +241,16 @@ Function a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 
   Block "bb23"
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:31:9 generated
     Operation a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:32:13 written
-      Destination "_20"
+      Destination "_19"
       Binary "Add"
         Copy "_8"
         Constant 1
     Operation a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:32:9 written
       Destination "_8"
       Use
-        Copy "_20"
+        Copy "_19"
     Operation a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:32:9 written
-      Destination "_21"
+      Destination "_20"
       Use
         Copy "_8"
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:32:9 generated

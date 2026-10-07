@@ -17,9 +17,7 @@ Function a_free_on_reallocs_failure_branch_builds.c:5:5 "main"
   Local "_4" "int *"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "void"
-  Local "_8" "int"
-  Local "_9" "void"
+  Local "_7" "int"
   Block "bb0" entry
     Operation a_free_on_reallocs_failure_branch_builds.c:5:5 generated
       Destination "_0"
@@ -76,7 +74,6 @@ Function a_free_on_reallocs_failure_branch_builds.c:5:5 "main"
     Sequenced a_free_on_reallocs_failure_branch_builds.c:11:9 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_builds.c:12:9 generated
     Call a_free_on_reallocs_failure_branch_builds.c:12:9 "free" "bb9"
-      Destination "_7"
       Copy "_1"
   Block "bb7"
     Sequenced a_free_on_reallocs_failure_branch_builds.c:11:9 generated
@@ -88,14 +85,13 @@ Function a_free_on_reallocs_failure_branch_builds.c:5:5 "main"
       Use
         Constant 1
     Operation a_free_on_reallocs_failure_branch_builds.c:15:5 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_4"
           Deref
     Sequenced a_free_on_reallocs_failure_branch_builds.c:15:5 generated
     ArgumentsEvaluated a_free_on_reallocs_failure_branch_builds.c:16:5 generated
     Call a_free_on_reallocs_failure_branch_builds.c:16:5 "free" "bb10"
-      Destination "_9"
       Copy "_4"
   Block "bb9"
     Sequenced a_free_on_reallocs_failure_branch_builds.c:12:9 generated

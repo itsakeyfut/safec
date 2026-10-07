@@ -9,8 +9,7 @@ Function a_value_used_after_it_was_freed.c:3:5 "f"
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
-  Local "_4" "int"
+  Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_value_used_after_it_was_freed.c:4:14 generated
     Call a_value_used_after_it_was_freed.c:4:14 "malloc" "bb1"
@@ -24,7 +23,6 @@ Function a_value_used_after_it_was_freed.c:3:5 "f"
     Sequenced a_value_used_after_it_was_freed.c:4:14 generated
     ArgumentsEvaluated a_value_used_after_it_was_freed.c:5:5 generated
     Call a_value_used_after_it_was_freed.c:5:5 "free" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_value_used_after_it_was_freed.c:5:5 generated
@@ -34,7 +32,7 @@ Function a_value_used_after_it_was_freed.c:3:5 "f"
       Use
         Constant 42
     Operation a_value_used_after_it_was_freed.c:6:5 written
-      Destination "_4"
+      Destination "_3"
       Use
         Copy "_1"
           Deref

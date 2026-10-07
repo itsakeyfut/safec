@@ -16,9 +16,8 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "int **"
-  Local "_7" "int"
+  Local "_5" "int **"
+  Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 generated
       Destination "_0"
@@ -63,20 +62,19 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 generated
     ArgumentsEvaluated a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:12:9 generated
     Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:12:9 "free" "bb9"
-      Destination "_5"
       Copy "_1"
   Block "bb7"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:11:9 generated
     Goto "bb8"
   Block "bb8"
     Operation a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:17 written
-      Destination "_6"
+      Destination "_5"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:12 generated
     Call a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:12 "use2" "bb10"
-      Destination "_7"
-      Copy "_6"
+      Destination "_6"
+      Copy "_5"
   Block "bb9"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:12:9 generated
     Goto "bb8"
@@ -84,6 +82,6 @@ Function a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:6:5 "main"
     Operation a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:5 written
       Destination "_0"
       Use
-        Copy "_7"
+        Copy "_6"
     Sequenced a_pointer_freed_on_one_path_and_handed_by_address_is_asked.c:14:12 generated
     Return

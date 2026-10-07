@@ -18,7 +18,6 @@ Function a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:5:5 "f"
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:6:17 generated
     Call a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:6:17 "malloc" "bb1"
@@ -100,7 +99,6 @@ Function a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:5:5 "f"
   Block "bb11"
     ArgumentsEvaluated a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:17:5 generated
     Call a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:17:5 "drop_inner" "bb12"
-      Destination "_9"
       Copy "_2"
   Block "bb12"
     Sequenced a_pointer_stored_on_one_arm_is_reached_through_what_holds_it.c:17:5 generated

@@ -31,14 +31,14 @@ entry:
   %_4 = alloca i32
   %_5 = alloca ptr
   %_6 = alloca ptr
-  %_8 = alloca i8
+  %_7 = alloca i8
+  %_8 = alloca i32
   %_9 = alloca i32
-  %_10 = alloca i32
-  %_11 = alloca i8
+  %_10 = alloca i8
+  %_11 = alloca i32
   %_12 = alloca i32
-  %_13 = alloca i32
-  %_14 = alloca i8
-  %_15 = alloca i32
+  %_13 = alloca i8
+  %_14 = alloca i32
   br label %bb0
 
 bb0:
@@ -58,12 +58,12 @@ bb0:
 bb1:
   store i8 2, ptr %_3
   %t4 = load i8, ptr %_3
-  store i8 %t4, ptr %_8
+  store i8 %t4, ptr %_7
   %t5 = load i32, ptr %_1
   %t6 = icmp sgt i32 %t5, 40
   %t7 = zext i1 %t6 to i32
-  store i32 %t7, ptr %_9
-  %t8 = load i32, ptr %_9
+  store i32 %t7, ptr %_8
+  %t8 = load i32, ptr %_8
   %t9 = icmp ne i32 %t8, 0
   br i1 %t9, label %bb2, label %bb3
 
@@ -71,12 +71,12 @@ bb2:
   %t10 = load i8, ptr %_3
   %t11 = sext i8 %t10 to i32
   %t12 = add nsw i32 %t11, 1
-  store i32 %t12, ptr %_10
-  %t13 = load i32, ptr %_10
+  store i32 %t12, ptr %_9
+  %t13 = load i32, ptr %_9
   %t14 = trunc i32 %t13 to i8
   store i8 %t14, ptr %_3
   %t15 = load i8, ptr %_3
-  store i8 %t15, ptr %_11
+  store i8 %t15, ptr %_10
   br label %bb4
 
 bb3:
@@ -90,8 +90,8 @@ bb5:
   %t17 = sext i8 %t16 to i32
   %t18 = icmp slt i32 %t17, 5
   %t19 = zext i1 %t18 to i32
-  store i32 %t19, ptr %_12
-  %t20 = load i32, ptr %_12
+  store i32 %t19, ptr %_11
+  %t20 = load i32, ptr %_11
   %t21 = icmp ne i32 %t20, 0
   br i1 %t21, label %bb6, label %bb7
 
@@ -99,12 +99,12 @@ bb6:
   %t22 = load i8, ptr %_3
   %t23 = sext i8 %t22 to i32
   %t24 = add nsw i32 %t23, 1
-  store i32 %t24, ptr %_13
-  %t25 = load i32, ptr %_13
+  store i32 %t24, ptr %_12
+  %t25 = load i32, ptr %_12
   %t26 = trunc i32 %t25 to i8
   store i8 %t26, ptr %_3
   %t27 = load i8, ptr %_3
-  store i8 %t27, ptr %_14
+  store i8 %t27, ptr %_13
   br label %bb5
 
 bb7:
@@ -113,8 +113,8 @@ bb7:
   %t30 = load i8, ptr %_3
   %t31 = sext i8 %t30 to i32
   %t32 = add nsw i32 %t29, %t31
-  store i32 %t32, ptr %_15
-  %t33 = load i32, ptr %_15
+  store i32 %t32, ptr %_14
+  %t33 = load i32, ptr %_14
   store i32 %t33, ptr %_0
   %t34 = load i32, ptr %_0
   ret i32 %t34

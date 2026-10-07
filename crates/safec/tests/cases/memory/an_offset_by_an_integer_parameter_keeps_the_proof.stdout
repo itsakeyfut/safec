@@ -13,10 +13,8 @@ Function an_offset_by_an_integer_parameter_keeps_the_proof.c:3:5 "f"
   Local "_4" "void *"
   Local "_5" "void *"
   Local "_6" "int *"
-  Local "_7" "void"
+  Local "_7" "int *"
   Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_offset_by_an_integer_parameter_keeps_the_proof.c:4:14 generated
     Call an_offset_by_an_integer_parameter_keeps_the_proof.c:4:14 "malloc" "bb1"
@@ -41,7 +39,6 @@ Function an_offset_by_an_integer_parameter_keeps_the_proof.c:3:5 "f"
   Block "bb4"
     ArgumentsEvaluated an_offset_by_an_integer_parameter_keeps_the_proof.c:6:5 generated
     Call an_offset_by_an_integer_parameter_keeps_the_proof.c:6:5 "free" "bb6"
-      Destination "_7"
       Copy "_3"
   Block "bb5"
     Operation an_offset_by_an_integer_parameter_keeps_the_proof.c:5:14 written
@@ -57,19 +54,18 @@ Function an_offset_by_an_integer_parameter_keeps_the_proof.c:3:5 "f"
   Block "bb6"
     Sequenced an_offset_by_an_integer_parameter_keeps_the_proof.c:6:5 generated
     Operation an_offset_by_an_integer_parameter_keeps_the_proof.c:7:14 written
-      Destination "_9"
+      Destination "_8"
       Binary "Add"
         Copy "_3"
         Copy "_2"
     Operation an_offset_by_an_integer_parameter_keeps_the_proof.c:7:10 written
-      Destination "_8"
+      Destination "_7"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced an_offset_by_an_integer_parameter_keeps_the_proof.c:7:14 generated
     ArgumentsEvaluated an_offset_by_an_integer_parameter_keeps_the_proof.c:8:5 generated
     Call an_offset_by_an_integer_parameter_keeps_the_proof.c:8:5 "free" "bb7"
-      Destination "_10"
-      Copy "_8"
+      Copy "_7"
   Block "bb7"
     Sequenced an_offset_by_an_integer_parameter_keeps_the_proof.c:8:5 generated
     Operation an_offset_by_an_integer_parameter_keeps_the_proof.c:9:5 written

@@ -9,7 +9,6 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:4:6 "maybe"
   Local "_0" "int *" return
   Local "_1" "int *" parameter
   Local "_2" "int" parameter
-  Local "_3" "void"
   Block "bb0" entry
     Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 "bb1" "bb2"
       Copy "_2"
@@ -17,7 +16,6 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:4:6 "maybe"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 generated
     ArgumentsEvaluated a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:6:9 generated
     Call a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:6:9 "free" "bb4"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 generated

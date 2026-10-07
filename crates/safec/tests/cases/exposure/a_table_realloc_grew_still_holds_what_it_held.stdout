@@ -24,7 +24,6 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
   Local "_8" "int **"
   Local "_9" "void *"
   Local "_10" "int"
-  Local "_11" "void"
   Block "bb0" entry
     Operation a_table_realloc_grew_still_holds_what_it_held.c:6:5 generated
       Destination "_0"
@@ -131,7 +130,6 @@ Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
   Block "bb12"
     ArgumentsEvaluated a_table_realloc_grew_still_holds_what_it_held.c:20:5 generated
     Call a_table_realloc_grew_still_holds_what_it_held.c:20:5 "drop_inner" "bb13"
-      Destination "_11"
       Copy "_8"
   Block "bb13"
     Sequenced a_table_realloc_grew_still_holds_what_it_held.c:20:5 generated

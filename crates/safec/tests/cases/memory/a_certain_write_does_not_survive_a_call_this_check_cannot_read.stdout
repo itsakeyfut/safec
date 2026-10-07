@@ -17,9 +17,7 @@ Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f
   Local "_5" "int **"
   Local "_6" "int **"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "void"
-  Local "_10" "int"
+  Local "_8" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 generated
     Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:5:14 "malloc" "bb1"
@@ -63,13 +61,11 @@ Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f
     Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:8:5 generated
     ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 generated
     Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 "opaque" "bb3"
-      Destination "_8"
       Copy "_5"
   Block "bb3"
     Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:9:5 generated
     ArgumentsEvaluated a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 generated
     Call a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 "free" "bb4"
-      Destination "_9"
       Copy "_1"
   Block "bb4"
     Sequenced a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:10:5 generated
@@ -79,7 +75,7 @@ Function a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:4:5 "f
       Use
         Constant 1
     Operation a_certain_write_does_not_survive_a_call_this_check_cannot_read.c:11:5 written
-      Destination "_10"
+      Destination "_8"
       Use
         Copy "_3"
           Deref

@@ -35,9 +35,8 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
   Local "_24" "int *"
   Local "_25" "int"
   Local "_26" "int *"
-  Local "_27" "void"
+  Local "_27" "int"
   Local "_28" "int"
-  Local "_29" "int"
   Block "bb0" entry
     Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:5:5 generated
       Destination "_0"
@@ -252,7 +251,6 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:40:9 generated
     ArgumentsEvaluated a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:41:9 generated
     Call a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:41:9 "free" "bb30"
-      Destination "_27"
       Copy "_15"
   Block "bb23"
     Branch a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:30:17 "bb24" "bb25"
@@ -327,16 +325,16 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
   Block "bb30"
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:41:9 generated
     Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:42:13 written
-      Destination "_28"
+      Destination "_27"
       Binary "Add"
         Copy "_13"
         Constant 1
     Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:42:9 written
       Destination "_13"
       Use
-        Copy "_28"
+        Copy "_27"
     Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:42:9 written
-      Destination "_29"
+      Destination "_28"
       Use
         Copy "_13"
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:42:9 generated

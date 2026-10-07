@@ -24,7 +24,6 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
   Local "_14" "int"
   Local "_15" "int"
   Local "_16" "int *"
-  Local "_17" "void"
   Block "bb0" entry
     Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:6:9 written
       Destination "_2"
@@ -194,7 +193,6 @@ Function a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:26:5 generated
     ArgumentsEvaluated a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 generated
     Call a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 "release_all" "bb20"
-      Destination "_17"
   Block "bb20"
     Sequenced a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:27:5 generated
     Operation a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed.c:28:5 written

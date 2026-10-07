@@ -17,9 +17,7 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
   Local "_3" "int"
   Local "_4" "int *"
   Local "_5" "int **"
-  Local "_6" "void"
-  Local "_7" "int *"
-  Local "_8" "void"
+  Local "_6" "int *"
   Block "bb0" entry
     Operation a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:6:5 generated
       Destination "_0"
@@ -65,7 +63,6 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
         Place "_4"
     ArgumentsEvaluated a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 generated
     Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 "keep" "bb5"
-      Destination "_6"
       Copy "_5"
   Block "bb5"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:12:5 generated
@@ -74,13 +71,12 @@ Function a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_aft
       Use
         Copy "_1"
     Operation a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:13:5 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_4"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:13:5 generated
     ArgumentsEvaluated a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 generated
     Call a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 "forget" "bb6"
-      Destination "_8"
   Block "bb6"
     Sequenced a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:14:5 generated
     Operation a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call.c:15:5 written

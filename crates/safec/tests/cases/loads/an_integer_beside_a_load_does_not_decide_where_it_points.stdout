@@ -24,10 +24,9 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
   Local "_12" "int *"
   Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "void"
+  Local "_15" "int *"
   Local "_16" "int *"
-  Local "_17" "int *"
-  Local "_18" "int"
+  Local "_17" "int"
   Block "bb0" entry
     Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 generated
       Destination "_0"
@@ -165,28 +164,27 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:21:13 generated
     ArgumentsEvaluated an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 generated
     Call an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 "free" "bb14"
-      Destination "_15"
       Copy "_7"
   Block "bb14"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 generated
     Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:23:14 written
-      Destination "_17"
+      Destination "_16"
       Binary "Add"
         Copy "_1"
           Deref
         Copy "_13"
     Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:23:10 written
-      Destination "_16"
+      Destination "_15"
       Use
-        Copy "_17"
+        Copy "_16"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:23:14 generated
     Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 written
-      Destination "_18"
+      Destination "_17"
       Binary "Eq"
-        Copy "_16"
+        Copy "_15"
         Constant 0
     Branch an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 "bb15" "bb16"
-      Copy "_18"
+      Copy "_17"
   Block "bb15"
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:24:9 generated
     Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:25:9 written
@@ -202,7 +200,7 @@ Function an_integer_beside_a_load_does_not_decide_where_it_points.c:5:5 "main"
     Operation an_integer_beside_a_load_does_not_decide_where_it_points.c:27:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_15"
           Deref
     Sequenced an_integer_beside_a_load_does_not_decide_where_it_points.c:27:12 generated
     Return

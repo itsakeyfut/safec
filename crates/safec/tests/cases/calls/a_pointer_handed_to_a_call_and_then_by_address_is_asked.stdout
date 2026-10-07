@@ -13,9 +13,8 @@ Function a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:5:5 "main"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
-  Local "_5" "int **"
-  Local "_6" "int"
+  Local "_4" "int **"
+  Local "_5" "int"
   Block "bb0" entry
     Operation a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:5:5 generated
       Destination "_0"
@@ -52,22 +51,21 @@ Function a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:5:5 "main"
   Block "bb4"
     ArgumentsEvaluated a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:10:5 generated
     Call a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:10:5 "release" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Sequenced a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:10:5 generated
     Operation a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:11:17 written
-      Destination "_5"
+      Destination "_4"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:11:12 generated
     Call a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:11:12 "use2" "bb6"
-      Destination "_6"
-      Copy "_5"
+      Destination "_5"
+      Copy "_4"
   Block "bb6"
     Operation a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:11:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:11:12 generated
     Return

@@ -22,9 +22,8 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int *"
-  Local "_13" "void"
+  Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
   Block "bb0" entry
     Operation a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:5:5 generated
       Destination "_0"
@@ -139,7 +138,6 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:18:9 generated
     ArgumentsEvaluated a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 generated
     Call a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 "free" "bb12"
-      Destination "_13"
       Copy "_6"
   Block "bb11"
     Operation a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:16:13 written
@@ -152,16 +150,16 @@ Function a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:
   Block "bb12"
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 generated
     Operation a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:20:13 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
         Copy "_4"
         Constant 1
     Operation a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:20:9 written
       Destination "_4"
       Use
-        Copy "_14"
+        Copy "_13"
     Operation a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:20:9 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_4"
     Sequenced a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:20:9 generated

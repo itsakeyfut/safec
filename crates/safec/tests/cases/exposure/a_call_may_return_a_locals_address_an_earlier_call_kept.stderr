@@ -1,10 +1,10 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this frees a pointer this check stopped following
    ╭─[ a_call_may_return_a_locals_address_an_earlier_call_kept.c:9:5 ]
    │
  9 │     free(r);
    │     ───┬───  
-   │        ╰───── may free it again here
+   │        ╰───── this check cannot say what this points at
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

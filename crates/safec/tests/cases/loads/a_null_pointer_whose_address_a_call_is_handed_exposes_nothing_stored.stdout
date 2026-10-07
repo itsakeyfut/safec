@@ -16,7 +16,6 @@ Function a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored.c:
   Local "_7" "int *"
   Local "_8" "int *"
   Local "_9" "int **"
-  Local "_10" "void"
   Block "bb0" entry
     Operation a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored.c:4:5 generated
       Destination "_0"
@@ -102,7 +101,6 @@ Function a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored.c:
         Place "_8"
     ArgumentsEvaluated a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored.c:15:5 generated
     Call a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored.c:15:5 "escape" "bb9"
-      Destination "_10"
       Copy "_9"
   Block "bb9"
     Sequenced a_null_pointer_whose_address_a_call_is_handed_exposes_nothing_stored.c:15:5 generated

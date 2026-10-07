@@ -15,8 +15,7 @@ Function a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c
   Local "_6" "int"
   Local "_7" "int *"
   Local "_8" "int *"
-  Local "_9" "void"
-  Local "_10" "int"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:4:5 generated
       Destination "_0"
@@ -99,17 +98,16 @@ Function a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c
     Sequenced a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:14:14 generated
     ArgumentsEvaluated a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:15:5 generated
     Call a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:15:5 "release" "bb9"
-      Destination "_9"
       Copy "_1"
   Block "bb9"
     Sequenced a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:15:5 generated
     Operation a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:16:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_8"
         Constant 0
     Branch a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:16:9 "bb10" "bb11"
-      Copy "_10"
+      Copy "_9"
   Block "bb10"
     Sequenced a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:16:9 generated
     Operation a_pointer_read_out_of_memory_is_unproven_after_a_call_that_reaches_it.c:17:9 written

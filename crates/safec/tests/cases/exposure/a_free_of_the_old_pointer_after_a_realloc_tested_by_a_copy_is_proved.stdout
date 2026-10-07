@@ -16,8 +16,6 @@ Function a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:
   Local "_3" "int"
   Local "_4" "int *"
   Local "_5" "void *"
-  Local "_6" "void"
-  Local "_7" "void"
   Block "bb0" entry
     Operation a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:5:5 generated
       Destination "_0"
@@ -69,7 +67,6 @@ Function a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:
     Sequenced a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:11:9 generated
     ArgumentsEvaluated a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:12:9 generated
     Call a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:12:9 "free" "bb9"
-      Destination "_6"
       Copy "_1"
   Block "bb7"
     Sequenced a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:11:9 generated
@@ -85,7 +82,6 @@ Function a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:
     Sequenced a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:12:9 generated
     ArgumentsEvaluated a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:13:9 generated
     Call a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:13:9 "free" "bb10"
-      Destination "_7"
       Copy "_4"
   Block "bb10"
     Sequenced a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:13:9 generated

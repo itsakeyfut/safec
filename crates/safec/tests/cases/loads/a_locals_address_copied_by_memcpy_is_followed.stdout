@@ -28,7 +28,6 @@ Function a_locals_address_copied_by_memcpy_is_followed.c:5:5 "main"
   Local "_14" "int **"
   Local "_15" "void *"
   Local "_16" "int *"
-  Local "_17" "void"
   Block "bb0" entry
     Operation a_locals_address_copied_by_memcpy_is_followed.c:5:5 generated
       Destination "_0"
@@ -180,7 +179,6 @@ Function a_locals_address_copied_by_memcpy_is_followed.c:5:5 "main"
     Sequenced a_locals_address_copied_by_memcpy_is_followed.c:23:5 generated
     ArgumentsEvaluated a_locals_address_copied_by_memcpy_is_followed.c:24:5 generated
     Call a_locals_address_copied_by_memcpy_is_followed.c:24:5 "free" "bb14"
-      Destination "_17"
       Copy "_1"
   Block "bb14"
     Sequenced a_locals_address_copied_by_memcpy_is_followed.c:24:5 generated

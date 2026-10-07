@@ -11,7 +11,6 @@ Function a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:3:5 "f"
   Local "_2" "int *"
   Local "_3" "void *"
   Local "_4" "int *"
-  Local "_5" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:4:14 generated
     Call a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:4:14 "malloc" "bb1"
@@ -30,7 +29,6 @@ Function a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:3:5 "f"
         Copy "_1"
     ArgumentsEvaluated a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:5:5 generated
     Call a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:5:5 "free" "bb2"
-      Destination "_5"
       Copy "_4"
   Block "bb2"
     Sequenced a_free_of_a_pointer_offset_by_an_integer_is_not_proved.c:5:5 generated

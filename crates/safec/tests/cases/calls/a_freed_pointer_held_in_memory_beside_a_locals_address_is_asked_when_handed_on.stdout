@@ -30,9 +30,7 @@ Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_ha
   Local "_15" "int **"
   Local "_16" "int **"
   Local "_17" "int *"
-  Local "_18" "void"
-  Local "_19" "int **"
-  Local "_20" "void"
+  Local "_18" "int **"
   Block "bb0" entry
     Operation a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:6:5 generated
       Destination "_0"
@@ -196,20 +194,18 @@ Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_ha
     Sequenced a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:25:5 generated
     ArgumentsEvaluated a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:26:5 generated
     Call a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:26:5 "release" "bb13"
-      Destination "_18"
       Copy "_1"
   Block "bb13"
     Sequenced a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:26:5 generated
     Operation a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:27:11 written
-      Destination "_19"
+      Destination "_18"
       Use
         Copy "_12"
           Deref
     Sequenced a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:27:15 generated
     ArgumentsEvaluated a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:28:5 generated
     Call a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:28:5 "look" "bb14"
-      Destination "_20"
-      Copy "_19"
+      Copy "_18"
   Block "bb14"
     Sequenced a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:28:5 generated
     Operation a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:29:5 written

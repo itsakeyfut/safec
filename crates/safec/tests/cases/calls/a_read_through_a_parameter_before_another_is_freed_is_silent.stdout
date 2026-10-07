@@ -9,7 +9,6 @@ Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:3:5 "con
   Local "_3" "int"
   Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "void"
   Block "bb0" entry
     Operation a_read_through_a_parameter_before_another_is_freed_is_silent.c:4:9 written
       Destination "_3"
@@ -57,7 +56,6 @@ Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:3:5 "con
     Sequenced a_read_through_a_parameter_before_another_is_freed_is_silent.c:10:13 generated
     ArgumentsEvaluated a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 generated
     Call a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 "free" "bb7"
-      Destination "_6"
       Copy "_1"
   Block "bb7"
     Sequenced a_read_through_a_parameter_before_another_is_freed_is_silent.c:11:5 generated

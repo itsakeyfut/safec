@@ -10,8 +10,6 @@ Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_dou
   Local "_2" "int"
   Local "_3" "int *"
   Local "_4" "int *"
-  Local "_5" "void"
-  Local "_6" "void"
   Block "bb0" entry
     Operation a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:5:9 written
       Destination "_2"
@@ -49,12 +47,10 @@ Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_dou
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:9:5 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 generated
     Call a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 "release_all" "bb4"
-      Destination "_5"
   Block "bb4"
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:10:5 generated
     ArgumentsEvaluated a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 generated
     Call a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 "use" "bb5"
-      Destination "_6"
       Copy "_3"
   Block "bb5"
     Sequenced a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:11:5 generated

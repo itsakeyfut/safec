@@ -22,9 +22,8 @@ Function a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:4:5 "ma
   Local "_13" "int *"
   Local "_14" "int"
   Local "_15" "int *"
-  Local "_16" "void"
+  Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "int"
   Block "bb0" entry
     Operation a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:4:5 generated
       Destination "_0"
@@ -179,7 +178,6 @@ Function a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:4:5 "ma
     Sequenced a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:25:9 generated
     ArgumentsEvaluated a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:26:9 generated
     Call a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:26:9 "free" "bb18"
-      Destination "_16"
       Copy "_7"
   Block "bb15"
     Sequenced a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:20:17 generated
@@ -207,16 +205,16 @@ Function a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:4:5 "ma
   Block "bb18"
     Sequenced a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:26:9 generated
     Operation a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:27:13 written
-      Destination "_17"
+      Destination "_16"
       Binary "Add"
         Copy "_5"
         Constant 1
     Operation a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:27:9 written
       Destination "_5"
       Use
-        Copy "_17"
+        Copy "_16"
     Operation a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:27:9 written
-      Destination "_18"
+      Destination "_17"
       Use
         Copy "_5"
     Sequenced a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:27:9 generated

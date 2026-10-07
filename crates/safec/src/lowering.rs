@@ -318,8 +318,10 @@ struct Lowering<'a> {
 
 /// A branch a value is waiting on.
 struct Pending {
-    /// Where every arm writes its answer.
-    answer: LocalId,
+    /// Where every arm writes its answer, or nothing for a `?:` whose type is
+    /// `void`, whose arms have no value to write. A `&&` or `||` always has
+    /// one.
+    answer: Option<LocalId>,
     /// Where the arms come back together.
     join: BlockId,
     /// Which block the `else` of a `?:` starts at.
@@ -1299,10 +1301,8 @@ impl Lowering<'_> {
             }
             Stmt::Expression { value, .. } => {
                 if let Some(value) = *value {
-                    let evaluated = self.value(builder, value, diagnostics)?;
-                    let at = self.ast.expr(value).span();
-                    builder.discarded(evaluated, at);
-                    builder.sequenced(at);
+                    self.effect(builder, value, diagnostics)?;
+                    builder.sequenced(self.ast.expr(value).span());
                 }
             }
             Stmt::If {
@@ -1388,10 +1388,8 @@ impl Lowering<'_> {
             } => {
                 let (initialiser, condition, step, body) = (*initialiser, *condition, *step, *body);
                 if let Some(initialiser) = initialiser {
-                    let evaluated = self.value(builder, initialiser, diagnostics)?;
-                    let at = self.ast.expr(initialiser).span();
-                    builder.discarded(evaluated, at);
-                    builder.sequenced(at);
+                    self.effect(builder, initialiser, diagnostics)?;
+                    builder.sequenced(self.ast.expr(initialiser).span());
                 }
 
                 let header = builder.function.reserve_block();
@@ -1426,10 +1424,8 @@ impl Lowering<'_> {
                 self.stmt(builder, body, diagnostics)?;
                 if builder.reachable() {
                     if let Some(step) = step {
-                        let evaluated = self.value(builder, step, diagnostics)?;
-                        let at = self.ast.expr(step).span();
-                        builder.discarded(evaluated, at);
-                        builder.sequenced(at);
+                        self.effect(builder, step, diagnostics)?;
+                        builder.sequenced(self.ast.expr(step).span());
                     }
                 }
                 if builder.reachable() {
@@ -1448,18 +1444,59 @@ impl Lowering<'_> {
         Some(())
     }
 
-    /// The value of an expression, with an explicit stack rather than a
-    /// recursion.
+    /// The value of a full expression that has one.
     ///
-    /// See [`Task`] for why. Values and places come back on two stacks, and a
-    /// node pops exactly what it reads, so the stacks are empty of its operands
-    /// by the time it pushes its own.
+    /// Every caller reads what this answers, and C17 6.3.2.2 p1 forbids using
+    /// the "(nonexistent) value of a void expression", which `types.rs`
+    /// refuses and the driver does not lower past. So a `void` root here is a
+    /// gap in that gate, and the `expect` is what names it.
     fn value(
         &mut self,
         builder: &mut Builder,
         root: ExprId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Operand> {
+        Some(
+            self.walk(builder, root, diagnostics)?
+                .expect("a value for the root, which is not `void`"),
+        )
+    }
+
+    /// A full expression evaluated for its effects, whose value is discarded.
+    ///
+    /// An expression statement and a `for`'s first and third clauses. A value
+    /// it has is handed to [`Builder::discarded`]; a `void` one has none.
+    fn effect(
+        &mut self,
+        builder: &mut Builder,
+        root: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        if let Some(value) = self.walk(builder, root, diagnostics)? {
+            builder.discarded(value, self.ast.expr(root).span());
+        }
+        Some(())
+    }
+
+    /// The value of an expression, with an explicit stack rather than a
+    /// recursion: `None` where it could not be lowered, and `Some(None)` where
+    /// it is `void` and so has no value to answer.
+    ///
+    /// See [`Task`] for why. Values and places come back on two stacks, and a
+    /// node pops exactly what it reads, so the stacks are empty of its operands
+    /// by the time it pushes its own. A call to a `void` function and a `void`
+    /// `?:` push nothing, and the three places either can reach, an expression
+    /// statement, a comma's left operand and a `?:`'s arms, ask
+    /// [`Lowering::pushes`] rather than the type: `*p` of a `void *` is
+    /// `void` too, and pushes the place it reads. A consumer that pops where
+    /// nothing was pushed panics naming the stack it expected, and a value
+    /// nobody popped panics here, rather than a read going missing.
+    fn walk(
+        &mut self,
+        builder: &mut Builder,
+        root: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Option<Operand>> {
         // Set here rather than restored, so that an expression abandoned
         // half-way by a type error cannot leave the next one reading a flag
         // the walk that set it never finished with. Every caller of this is a
@@ -1499,7 +1536,41 @@ impl Lowering<'_> {
             }
         }
 
-        Some(values.pop().expect("a value for the root"))
+        let value = values.pop();
+        assert!(
+            values.is_empty(),
+            "every value an expression pushed was read: {values:?}"
+        );
+        Some(value)
+    }
+
+    /// Whether lowering `id` leaves a value on the walk's stack.
+    ///
+    /// A call to a `void` function and a `void` `?:` leave none, and a comma
+    /// leaves what its right operand leaves. Everything else leaves one,
+    /// `void` included: `*p` of a `void *` is a read of a place, and a
+    /// consumer that dropped it for its type would drop the read, which is
+    /// what the memory and nullability checks ask about.
+    fn pushes(&self, mut id: ExprId) -> bool {
+        // A loop rather than a recursion, because a comma's right operand
+        // can be a comma as deep as the parser lets parentheses go.
+        loop {
+            match self.ast.expr(id) {
+                Expr::Call { .. } | Expr::Conditional { .. } => return !self.is_void(id),
+                Expr::Comma { rhs, .. } => id = *rhs,
+                _ => return true,
+            }
+        }
+    }
+
+    /// Whether `id` has type `void`, and so no value: C17 6.3.2.2 p1.
+    ///
+    /// An expression nothing typed answers `false`, and is refused where its
+    /// type is asked for rather than here.
+    fn is_void(&self, id: ExprId) -> bool {
+        self.types
+            .of(id)
+            .is_some_and(|ty| matches!(self.ast.ty(ty), Type::Void))
     }
 
     /// Step below a node C leaves unsequenced, if this is one.
@@ -2000,7 +2071,15 @@ impl Lowering<'_> {
                 let at = values.len() - count;
                 let arguments: Vec<Operand> = values.split_off(at);
                 let called = self.callee(callee, diagnostics)?;
-                let into = self.temporary(builder, id, diagnostics)?;
+                // A call to a function returning `void` writes nowhere, which
+                // is what `Terminator::Call::destination`'s `None` is for:
+                // a local made to hold nothing would be a write the source
+                // never asked for. It pushes no value either; see `walk`.
+                let into = if self.is_void(id) {
+                    None
+                } else {
+                    Some(self.temporary(builder, id, diagnostics)?)
+                };
                 let then = builder.function.reserve_block();
 
                 // A call ends a block: control leaves the function here, and
@@ -2019,12 +2098,14 @@ impl Lowering<'_> {
                 builder.end(Terminator::Call {
                     callee: called,
                     arguments,
-                    destination: Some(Place::local(into)),
+                    destination: into.map(Place::local),
                     then: returns.then_some(then),
                     origin: Origin::Written(span),
                 });
                 builder.switch(then);
-                values.push(Operand::Copy(Place::local(into)));
+                if let Some(into) = into {
+                    values.push(Operand::Copy(Place::local(into)));
+                }
             }
             // A conditional is answered by `merge` and never asks to finish,
             // an `Error` is refused before it can, and a comma is answered by
@@ -2157,12 +2238,18 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         let condition = values.pop().expect("a condition");
-        let answer = self.temporary(builder, id, diagnostics)?;
+        // Only a `?:` can be `void`: a `&&` or `||` is an `int`.
+        let answer = if self.is_void(id) {
+            None
+        } else {
+            Some(self.temporary(builder, id, diagnostics)?)
+        };
         let join = builder.function.reserve_block();
 
         match self.ast.expr(id) {
             Expr::Binary { op, lhs, rhs, span } => {
                 let (op, lhs, rhs, span) = (*op, *lhs, *rhs, *span);
+                let answer = answer.expect("a `&&` or `||` is an `int`");
                 // The left operand decides the answer unless the right is
                 // reached, so it is written before the branch and overwritten
                 // after. What is written is whether it is non-zero and not
@@ -2204,7 +2291,7 @@ impl Lowering<'_> {
                 self.pending.insert(
                     id,
                     Pending {
-                        answer,
+                        answer: Some(answer),
                         join,
                         otherwise: None,
                     },
@@ -2285,10 +2372,13 @@ impl Lowering<'_> {
             // `Expr::Conditional` sets the same precedent one task over.
             return;
         };
-        let lhs = *lhs;
-        let value = values.pop().expect("a left operand");
-        let lhs = self.ast.expr(lhs).span();
-        builder.discarded(value, lhs);
+        let lhs_id = *lhs;
+        let lhs = self.ast.expr(lhs_id).span();
+        // A left operand that pushed no value has none to discard.
+        if self.pushes(lhs_id) {
+            let value = values.pop().expect("a left operand");
+            builder.discarded(value, lhs);
+        }
 
         // C17 6.5.17 p2. This is a task between the operands rather than
         // something the comma builds when it finishes, because an element
@@ -2308,23 +2398,36 @@ impl Lowering<'_> {
     ) {
         let Expr::Conditional {
             condition,
+            then,
             otherwise,
             span,
-            ..
         } = self.ast.expr(id)
         else {
             return;
         };
-        let (condition, otherwise, span) = (*condition, *otherwise, *span);
+        let (condition, then, otherwise, span) = (*condition, *then, *otherwise, *span);
         let pending = &self.pending[&id];
         let (answer, join, start) = (pending.answer, pending.join, pending.otherwise);
 
-        let value = values.pop().expect("the first arm");
-        builder.push(Operation {
-            place: Place::local(answer),
-            value: Rvalue::Use(value),
-            origin: Origin::Written(span),
-        });
+        // A `void` `?:` has no answer to write. An arm that still pushed a
+        // value, `*p` of a `void *`, is read on its own path and discarded
+        // there, as an expression statement would.
+        match answer {
+            Some(answer) => {
+                let value = values.pop().expect("the first arm");
+                builder.push(Operation {
+                    place: Place::local(answer),
+                    value: Rvalue::Use(value),
+                    origin: Origin::Written(span),
+                });
+            }
+            None => {
+                if self.pushes(then) {
+                    let value = values.pop().expect("the first arm");
+                    builder.discarded(value, self.ast.expr(then).span());
+                }
+            }
+        }
         builder.end(Terminator::Goto(join));
         builder.switch(start.expect("a `?:` reserves its second arm"));
         // The other half of 6.5.15 p4, for the arm taken when the condition
@@ -2342,6 +2445,21 @@ impl Lowering<'_> {
         let span = self.ast.expr(id).span();
         let Pending { answer, join, .. } = self.pending.remove(&id).expect("a branch to merge");
 
+        // A `void` `?:` has no value, so the conditional pushes none, and an
+        // arm that pushed one is discarded on its own path as `second` does.
+        // See `walk`.
+        let Some(answer) = answer else {
+            if let Expr::Conditional { otherwise, .. } = self.ast.expr(id) {
+                let otherwise = *otherwise;
+                if self.pushes(otherwise) {
+                    let value = values.pop().expect("the last arm");
+                    builder.discarded(value, self.ast.expr(otherwise).span());
+                }
+            }
+            builder.end(Terminator::Goto(join));
+            builder.switch(join);
+            return;
+        };
         let value = values.pop().expect("the last arm");
         // A `&&` or `||` answers 1 or 0 and a `?:` answers what its arm is
         // worth. C17 6.5.13 p3 and 6.5.14 p3 say the first, and 6.5.15 p4 the

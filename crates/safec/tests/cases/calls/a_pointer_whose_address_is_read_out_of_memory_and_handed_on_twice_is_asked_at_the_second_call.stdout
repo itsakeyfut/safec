@@ -15,8 +15,6 @@ Function a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_as
   Local "_6" "int"
   Local "_7" "int **"
   Local "_8" "int **"
-  Local "_9" "void"
-  Local "_10" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:5:14 generated
     Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:5:14 "malloc" "bb1"
@@ -93,14 +91,12 @@ Function a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_as
     Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:13:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:14:5 generated
     Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:14:5 "grow" "bb9"
-      Destination "_9"
       Copy "_4"
         Deref
   Block "bb9"
     Sequenced a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:14:5 generated
     ArgumentsEvaluated a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:15:5 generated
     Call a_pointer_whose_address_is_read_out_of_memory_and_handed_on_twice_is_asked_at_the_second_call.c:15:5 "grow" "bb10"
-      Destination "_10"
       Copy "_4"
         Deref
   Block "bb10"

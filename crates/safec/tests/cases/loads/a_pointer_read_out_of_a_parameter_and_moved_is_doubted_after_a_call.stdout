@@ -9,7 +9,6 @@ Function a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:3
   Local "_4" "int *"
   Local "_5" "int *"
   Local "_6" "int"
-  Local "_7" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:4:9 written
       Destination "_3"
@@ -62,7 +61,6 @@ Function a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:3
   Block "bb6"
     ArgumentsEvaluated a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 generated
     Call a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 "release_all" "bb7"
-      Destination "_7"
   Block "bb7"
     Sequenced a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:11:5 generated
     Operation a_pointer_read_out_of_a_parameter_and_moved_is_doubted_after_a_call.c:12:5 written

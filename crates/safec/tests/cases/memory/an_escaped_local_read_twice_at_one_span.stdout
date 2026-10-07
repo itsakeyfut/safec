@@ -12,7 +12,6 @@ Function an_escaped_local_read_twice_at_one_span.c:3:5 "f"
   Local "_3" "int **"
   Local "_4" "int **"
   Local "_5" "int"
-  Local "_6" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_escaped_local_read_twice_at_one_span.c:4:14 generated
     Call an_escaped_local_read_twice_at_one_span.c:4:14 "malloc" "bb1"
@@ -48,7 +47,6 @@ Function an_escaped_local_read_twice_at_one_span.c:3:5 "f"
     Sequenced an_escaped_local_read_twice_at_one_span.c:6:9 generated
     ArgumentsEvaluated an_escaped_local_read_twice_at_one_span.c:6:16 generated
     Call an_escaped_local_read_twice_at_one_span.c:6:16 "free" "bb4"
-      Destination "_6"
       Copy "_1"
   Block "bb4"
     Sequenced an_escaped_local_read_twice_at_one_span.c:6:16 generated

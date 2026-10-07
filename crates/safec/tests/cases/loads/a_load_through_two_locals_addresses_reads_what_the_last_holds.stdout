@@ -17,11 +17,10 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
   Local "_8" "int"
   Local "_9" "int"
   Local "_10" "int *"
-  Local "_11" "void"
-  Local "_12" "int **"
-  Local "_13" "int"
-  Local "_14" "int *"
-  Local "_15" "int"
+  Local "_11" "int **"
+  Local "_12" "int"
+  Local "_13" "int *"
+  Local "_14" "int"
   Block "bb0" entry
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 generated
       Destination "_0"
@@ -101,23 +100,22 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:13:5 generated
     ArgumentsEvaluated a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 generated
     Call a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 "free" "bb5"
-      Destination "_11"
       Copy "_6"
   Block "bb5"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 generated
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:15:11 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
           Deref
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:15:15 generated
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:16:9 written
-      Destination "_13"
+      Destination "_12"
       Binary "Eq"
-        Copy "_12"
+        Copy "_11"
         Constant 0
     Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:16:9 "bb6" "bb7"
-      Copy "_13"
+      Copy "_12"
   Block "bb6"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:16:9 generated
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:17:9 written
@@ -131,18 +129,18 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
     Goto "bb8"
   Block "bb8"
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:19:10 written
-      Destination "_14"
+      Destination "_13"
       Use
-        Copy "_12"
+        Copy "_11"
           Deref
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:19:14 generated
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:20:9 written
-      Destination "_15"
+      Destination "_14"
       Binary "Eq"
-        Copy "_14"
+        Copy "_13"
         Constant 0
     Branch a_load_through_two_locals_addresses_reads_what_the_last_holds.c:20:9 "bb9" "bb10"
-      Copy "_15"
+      Copy "_14"
   Block "bb9"
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:20:9 generated
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:21:9 written
@@ -158,7 +156,7 @@ Function a_load_through_two_locals_addresses_reads_what_the_last_holds.c:4:5 "ma
     Operation a_load_through_two_locals_addresses_reads_what_the_last_holds.c:23:5 written
       Destination "_0"
       Use
-        Copy "_14"
+        Copy "_13"
           Deref
     Sequenced a_load_through_two_locals_addresses_reads_what_the_last_holds.c:23:12 generated
     Return

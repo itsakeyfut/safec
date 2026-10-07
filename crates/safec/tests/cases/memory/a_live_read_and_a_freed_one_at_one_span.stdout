@@ -10,7 +10,6 @@ Function a_live_read_and_a_freed_one_at_one_span.c:3:5 "f"
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_live_read_and_a_freed_one_at_one_span.c:4:14 generated
     Call a_live_read_and_a_freed_one_at_one_span.c:4:14 "malloc" "bb1"
@@ -37,7 +36,6 @@ Function a_live_read_and_a_freed_one_at_one_span.c:3:5 "f"
     Sequenced a_live_read_and_a_freed_one_at_one_span.c:5:9 generated
     ArgumentsEvaluated a_live_read_and_a_freed_one_at_one_span.c:5:16 generated
     Call a_live_read_and_a_freed_one_at_one_span.c:5:16 "free" "bb4"
-      Destination "_4"
       Copy "_1"
   Block "bb4"
     Sequenced a_live_read_and_a_freed_one_at_one_span.c:5:16 generated

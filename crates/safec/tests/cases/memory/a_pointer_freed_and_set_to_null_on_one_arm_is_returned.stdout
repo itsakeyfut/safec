@@ -10,8 +10,7 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:4:6 "f"
   Local "_1" "int" parameter
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "void"
-  Local "_5" "int *"
+  Local "_4" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:5:14 generated
     Call a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:5:14 "malloc" "bb1"
@@ -29,7 +28,6 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:4:6 "f"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:6:9 generated
     ArgumentsEvaluated a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:7:9 generated
     Call a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:7:9 "free" "bb5"
-      Destination "_4"
       Copy "_2"
   Block "bb3"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:6:9 generated
@@ -48,7 +46,7 @@ Function a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:4:6 "f"
       Use
         Constant 0
     Operation a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:8:9 written
-      Destination "_5"
+      Destination "_4"
       Use
         Copy "_2"
     Sequenced a_pointer_freed_and_set_to_null_on_one_arm_is_returned.c:8:9 generated

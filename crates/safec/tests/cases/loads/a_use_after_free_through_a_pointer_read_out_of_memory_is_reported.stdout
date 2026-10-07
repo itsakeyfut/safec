@@ -14,9 +14,8 @@ Function a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:4:5
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int *"
-  Local "_10" "int"
+  Local "_8" "int *"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:4:5 generated
       Destination "_0"
@@ -93,23 +92,22 @@ Function a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:4:5
     Sequenced a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:13:5 generated
     ArgumentsEvaluated a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:14:5 generated
     Call a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:14:5 "free" "bb9"
-      Destination "_8"
       Copy "_4"
   Block "bb9"
     Sequenced a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:14:5 generated
     Operation a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:15:10 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_1"
           Deref
     Sequenced a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:15:14 generated
     Operation a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:16:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
-        Copy "_9"
+        Copy "_8"
         Constant 0
     Branch a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:16:9 "bb10" "bb11"
-      Copy "_10"
+      Copy "_9"
   Block "bb10"
     Sequenced a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:16:9 generated
     Operation a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:17:9 written
@@ -125,7 +123,7 @@ Function a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:4:5
     Operation a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:19:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
           Deref
     Sequenced a_use_after_free_through_a_pointer_read_out_of_memory_is_reported.c:19:12 generated
     Return

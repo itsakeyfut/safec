@@ -17,9 +17,8 @@ Function a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:5:
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int **"
-  Local "_10" "int"
+  Local "_8" "int **"
+  Local "_9" "int"
   Block "bb0" entry
     Operation a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:5:5 generated
       Destination "_0"
@@ -96,23 +95,22 @@ Function a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:5:
     Sequenced a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:14:5 generated
     ArgumentsEvaluated a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:15:5 generated
     Call a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:15:5 "release" "bb9"
-      Destination "_8"
       Copy "_4"
         Deref
   Block "bb9"
     Sequenced a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:15:5 generated
     Operation a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:16:17 written
-      Destination "_9"
+      Destination "_8"
       Address
         Place "_1"
     ArgumentsEvaluated a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:16:12 generated
     Call a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:16:12 "use2" "bb10"
-      Destination "_10"
-      Copy "_9"
+      Destination "_9"
+      Copy "_8"
   Block "bb10"
     Operation a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:16:5 written
       Destination "_0"
       Use
-        Copy "_10"
+        Copy "_9"
     Sequenced a_pointer_a_call_was_handed_read_out_of_memory_is_asked_by_address.c:16:12 generated
     Return

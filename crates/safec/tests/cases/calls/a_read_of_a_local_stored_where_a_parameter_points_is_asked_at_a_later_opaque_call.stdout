@@ -15,8 +15,7 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
   Local "_7" "int"
   Local "_8" "int *"
   Local "_9" "int"
-  Local "_10" "void"
-  Local "_11" "int"
+  Local "_10" "int"
   Block "bb0" entry
     Operation a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:7:9 written
       Destination "_4"
@@ -90,16 +89,15 @@ Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_o
       Use
         Copy "_2"
     Call a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:26 "release_all" "bb8"
-      Destination "_10"
   Block "bb8"
     Operation a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:13 written
-      Destination "_11"
+      Destination "_10"
       Binary "Add"
         Copy "_9"
         Constant 0
     Operation a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:5 written
       Destination "_0"
       Use
-        Copy "_11"
+        Copy "_10"
     Sequenced a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:15:13 generated
     Return

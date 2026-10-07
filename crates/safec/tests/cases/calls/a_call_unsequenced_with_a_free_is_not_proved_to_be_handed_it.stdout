@@ -13,9 +13,8 @@ Function a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:5:5 "mai
   Local "_1" "int *"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "void"
+  Local "_4" "int"
   Local "_5" "int"
-  Local "_6" "int"
   Block "bb0" entry
     Operation a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:5:5 generated
       Destination "_0"
@@ -51,21 +50,20 @@ Function a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:5:5 "mai
     Goto "bb4"
   Block "bb4"
     Call a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:13 "free" "bb5"
-      Destination "_4"
       Copy "_1"
   Block "bb5"
     Call a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:27 "use" "bb6"
-      Destination "_5"
+      Destination "_4"
       Copy "_1"
   Block "bb6"
     Operation a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:13 written
-      Destination "_6"
+      Destination "_5"
       Binary "Add"
         Constant 0
-        Copy "_5"
+        Copy "_4"
     Operation a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:5 written
       Destination "_0"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced a_call_unsequenced_with_a_free_is_not_proved_to_be_handed_it.c:10:13 generated
     Return

@@ -1531,9 +1531,10 @@ impl Analysis for Allocations<'_> {
                 // **What it does skip is the destination.** The fall-through
                 // path clears the local `free` is written into and this does
                 // not, which the `reached.len() > 1` branch below does too.
-                // That local is `void` and holds none of this, which is #135;
-                // measured, putting the clear back inside this branch leaves
-                // the whole workspace green.
+                // The C frontend gives `free` none, and one another frontend
+                // gives it is `void` and holds none of this; measured, putting
+                // the clear back inside this branch leaves the whole workspace
+                // green.
                 if Self::holds_something_unnameable(arguments, value) {
                     for site in reached {
                         // **A free cannot un-free an allocation.** A site an
@@ -1839,8 +1840,9 @@ impl Analysis for Allocations<'_> {
         }
 
         match kind {
-            // `free` returns nothing. The local the lowering writes it into is
-            // `void` and holds none of this, which is #135.
+            // `free` returns nothing, and the C frontend gives it no
+            // destination. A frontend that gives it one gives it a `void`
+            // local, which holds none of this.
             Callee::Frees => {
                 value.clear(place.local);
                 return;
@@ -1987,7 +1989,8 @@ impl Analysis for Allocations<'_> {
         }
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
-        // call into a fresh temporary and copies it out, so the copy above is
+        // call that returns something into a fresh temporary and copies it
+        // out, and one that returns `void` nowhere, so the copy above is
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
         value.unproved(site);

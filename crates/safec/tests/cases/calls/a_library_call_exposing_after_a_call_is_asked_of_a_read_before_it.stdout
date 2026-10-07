@@ -20,18 +20,17 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
   Local "_4" "int *"
   Local "_5" "int *"
   Local "_6" "int **"
-  Local "_7" "void"
-  Local "_8" "void *"
-  Local "_9" "int *"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "void *"
+  Local "_14" "void *"
+  Local "_15" "int"
   Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "int"
   Block "bb0" entry
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:10:5 written
       Destination "_4"
@@ -48,30 +47,29 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
         Place "_4"
     ArgumentsEvaluated a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 "stash" "bb1"
-      Destination "_7"
       Copy "_6"
   Block "bb1"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:11:5 generated
     Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:9 "malloc" "bb2"
-      Destination "_8"
+      Destination "_7"
       Constant 4
   Block "bb2"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:5 written
       Destination "_3"
       Use
-        Copy "_8"
+        Copy "_7"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:5 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_3"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:12:5 generated
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:13:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:13:9 "bb3" "bb4"
-      Copy "_10"
+      Copy "_9"
   Block "bb3"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:13:9 generated
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:14:9 written
@@ -90,13 +88,13 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
       Use
         Constant 1
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:16:5 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_3"
           Deref
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:16:5 generated
     Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:9 "release_all" "bb6"
-      Destination "_12"
+      Destination "_11"
   Block "bb6"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:26 written
       Destination "_1"
@@ -104,36 +102,36 @@ Function a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:5:5
         Copy "_3"
           Deref
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:26 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_1"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:9 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
+        Copy "_11"
         Copy "_12"
-        Copy "_13"
     Call a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:39 "memset" "bb7"
-      Destination "_15"
+      Destination "_14"
       Copy "_3"
       Constant 0
       Constant 4
   Block "bb7"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:39 written
-      Destination "_16"
+      Destination "_15"
       Binary "Ne"
-        Copy "_15"
+        Copy "_14"
         Constant 0
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:9 written
-      Destination "_17"
+      Destination "_16"
       Binary "Add"
-        Copy "_14"
-        Copy "_16"
+        Copy "_13"
+        Copy "_15"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:5 written
       Destination "_2"
       Use
-        Copy "_17"
+        Copy "_16"
     Operation a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:5 written
-      Destination "_18"
+      Destination "_17"
       Use
         Copy "_2"
     Sequenced a_library_call_exposing_after_a_call_is_asked_of_a_read_before_it.c:17:5 generated

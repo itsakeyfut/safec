@@ -9,9 +9,8 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
+  Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated one_pointer_used_after_a_free_on_two_lines.c:4:14 generated
     Call one_pointer_used_after_a_free_on_two_lines.c:4:14 "malloc" "bb1"
@@ -25,7 +24,6 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
     Sequenced one_pointer_used_after_a_free_on_two_lines.c:4:14 generated
     ArgumentsEvaluated one_pointer_used_after_a_free_on_two_lines.c:5:5 generated
     Call one_pointer_used_after_a_free_on_two_lines.c:5:5 "free" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced one_pointer_used_after_a_free_on_two_lines.c:5:5 generated
@@ -35,7 +33,7 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
       Use
         Constant 1
     Operation one_pointer_used_after_a_free_on_two_lines.c:6:5 written
-      Destination "_4"
+      Destination "_3"
       Use
         Copy "_1"
           Deref
@@ -46,7 +44,7 @@ Function one_pointer_used_after_a_free_on_two_lines.c:3:5 "f"
       Use
         Constant 2
     Operation one_pointer_used_after_a_free_on_two_lines.c:7:5 written
-      Destination "_5"
+      Destination "_4"
       Use
         Copy "_1"
           Deref

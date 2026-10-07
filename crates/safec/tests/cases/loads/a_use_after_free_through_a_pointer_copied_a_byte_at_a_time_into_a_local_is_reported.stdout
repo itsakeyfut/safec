@@ -31,7 +31,6 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
   Local "_22" "char *"
   Local "_23" "int"
   Local "_24" "int"
-  Local "_25" "void"
   Block "bb0" entry
     Operation a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:4:5 generated
       Destination "_0"
@@ -162,7 +161,6 @@ Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:20:12 generated
     ArgumentsEvaluated a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 generated
     Call a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 "release" "bb18"
-      Destination "_25"
       Copy "_4"
   Block "bb12"
     Sequenced a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:21:13 generated

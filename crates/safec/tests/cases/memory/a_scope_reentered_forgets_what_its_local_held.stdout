@@ -12,9 +12,8 @@ Function a_scope_reentered_forgets_what_its_local_held.c:3:5 "f"
   Local "_3" "int"
   Local "_4" "void *"
   Local "_5" "int *"
-  Local "_6" "void"
+  Local "_6" "int"
   Local "_7" "int"
-  Local "_8" "int"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
@@ -57,21 +56,20 @@ Function a_scope_reentered_forgets_what_its_local_held.c:3:5 "f"
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:7:9 generated
     ArgumentsEvaluated a_scope_reentered_forgets_what_its_local_held.c:8:9 generated
     Call a_scope_reentered_forgets_what_its_local_held.c:8:9 "free" "bb5"
-      Destination "_6"
       Copy "_2"
   Block "bb5"
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:8:9 generated
     Operation a_scope_reentered_forgets_what_its_local_held.c:9:13 written
-      Destination "_7"
+      Destination "_6"
       Binary "Sub"
         Copy "_1"
         Constant 1
     Operation a_scope_reentered_forgets_what_its_local_held.c:9:9 written
       Destination "_1"
       Use
-        Copy "_7"
+        Copy "_6"
     Operation a_scope_reentered_forgets_what_its_local_held.c:9:9 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_1"
     Sequenced a_scope_reentered_forgets_what_its_local_held.c:9:9 generated

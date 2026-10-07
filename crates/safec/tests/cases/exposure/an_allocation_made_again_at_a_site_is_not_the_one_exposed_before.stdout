@@ -18,11 +18,9 @@ Function an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:6:5 
   Local "_2" "int"
   Local "_3" "int *"
   Local "_4" "void *"
-  Local "_5" "void"
-  Local "_6" "void *"
-  Local "_7" "void"
-  Local "_8" "int"
-  Local "_9" "int"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
   Block "bb0" entry
     Operation an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:6:5 generated
       Destination "_0"
@@ -65,12 +63,11 @@ Function an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:6:5 
     Sequenced an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:9:18 generated
     ArgumentsEvaluated an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:10:9 generated
     Call an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:10:9 "forget" "bb5"
-      Destination "_5"
   Block "bb5"
     Sequenced an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:10:9 generated
     ArgumentsEvaluated an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:11:9 generated
     Call an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:11:9 "memset" "bb6"
-      Destination "_6"
+      Destination "_5"
       Copy "_3"
       Constant 0
       Constant 4
@@ -78,21 +75,20 @@ Function an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:6:5 
     Sequenced an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:11:9 generated
     ArgumentsEvaluated an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:12:9 generated
     Call an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:12:9 "free" "bb7"
-      Destination "_7"
       Copy "_3"
   Block "bb7"
     Sequenced an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:12:9 generated
     Operation an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:13:13 written
-      Destination "_8"
+      Destination "_6"
       Binary "Add"
         Copy "_1"
         Constant 1
     Operation an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:13:9 written
       Destination "_1"
       Use
-        Copy "_8"
+        Copy "_6"
     Operation an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:13:9 written
-      Destination "_9"
+      Destination "_7"
       Use
         Copy "_1"
     Sequenced an_allocation_made_again_at_a_site_is_not_the_one_exposed_before.c:13:9 generated

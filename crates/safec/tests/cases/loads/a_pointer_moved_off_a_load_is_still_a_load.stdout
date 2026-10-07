@@ -18,7 +18,6 @@ Function a_pointer_moved_off_a_load_is_still_a_load.c:4:5 "main"
   Local "_9" "int *"
   Local "_10" "int *"
   Local "_11" "int *"
-  Local "_12" "void"
   Block "bb0" entry
     Operation a_pointer_moved_off_a_load_is_still_a_load.c:4:5 generated
       Destination "_0"
@@ -116,7 +115,6 @@ Function a_pointer_moved_off_a_load_is_still_a_load.c:4:5 "main"
     Sequenced a_pointer_moved_off_a_load_is_still_a_load.c:15:14 generated
     ArgumentsEvaluated a_pointer_moved_off_a_load_is_still_a_load.c:16:5 generated
     Call a_pointer_moved_off_a_load_is_still_a_load.c:16:5 "show" "bb9"
-      Destination "_12"
       Copy "_10"
   Block "bb9"
     Sequenced a_pointer_moved_off_a_load_is_still_a_load.c:16:5 generated

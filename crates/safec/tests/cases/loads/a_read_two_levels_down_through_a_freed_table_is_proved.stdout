@@ -15,7 +15,6 @@ Function a_read_two_levels_down_through_a_freed_table_is_proved.c:4:5 "main"
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "void"
   Block "bb0" entry
     Operation a_read_two_levels_down_through_a_freed_table_is_proved.c:4:5 generated
       Destination "_0"
@@ -103,7 +102,6 @@ Function a_read_two_levels_down_through_a_freed_table_is_proved.c:4:5 "main"
     Sequenced a_read_two_levels_down_through_a_freed_table_is_proved.c:14:5 generated
     ArgumentsEvaluated a_read_two_levels_down_through_a_freed_table_is_proved.c:15:5 generated
     Call a_read_two_levels_down_through_a_freed_table_is_proved.c:15:5 "free" "bb9"
-      Destination "_9"
       Copy "_1"
   Block "bb9"
     Sequenced a_read_two_levels_down_through_a_freed_table_is_proved.c:15:5 generated

@@ -16,8 +16,6 @@ Function an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:6:5 "
   Local "_2" "int *"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "void"
-  Local "_6" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:7:14 generated
     Call an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:7:14 "malloc" "bb1"
@@ -54,7 +52,6 @@ Function an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:6:5 "
     Sequenced an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:11:9 generated
     ArgumentsEvaluated an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:12:9 generated
     Call an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:12:9 "show" "bb8"
-      Destination "_5"
       Copy "_2"
   Block "bb6"
     Sequenced an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:11:9 generated
@@ -62,7 +59,6 @@ Function an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:6:5 "
   Block "bb7"
     ArgumentsEvaluated an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:14:5 generated
     Call an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:14:5 "forget" "bb9"
-      Destination "_6"
   Block "bb8"
     Sequenced an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call.c:12:9 generated
     Goto "bb7"

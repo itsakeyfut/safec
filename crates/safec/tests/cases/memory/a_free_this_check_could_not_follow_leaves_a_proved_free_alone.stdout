@@ -14,10 +14,7 @@ Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:4:5 "f"
   Local "_2" "void *"
   Local "_3" "int *"
   Local "_4" "int **"
-  Local "_5" "void"
-  Local "_6" "void"
-  Local "_7" "void"
-  Local "_8" "int"
+  Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:5:14 generated
     Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:5:14 "malloc" "bb1"
@@ -40,19 +37,16 @@ Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:4:5 "f"
         Place "_1"
     ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:5 generated
     Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:5 "stash" "bb2"
-      Destination "_5"
       Copy "_4"
   Block "bb2"
     Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:7:5 generated
     ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:8:5 generated
     Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:8:5 "free" "bb3"
-      Destination "_6"
       Copy "_3"
   Block "bb3"
     Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:8:5 generated
     ArgumentsEvaluated a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:9:5 generated
     Call a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:9:5 "free" "bb4"
-      Destination "_7"
       Copy "_1"
   Block "bb4"
     Sequenced a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:9:5 generated
@@ -62,7 +56,7 @@ Function a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:4:5 "f"
       Use
         Constant 1
     Operation a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:10:5 written
-      Destination "_8"
+      Destination "_5"
       Use
         Copy "_3"
           Deref

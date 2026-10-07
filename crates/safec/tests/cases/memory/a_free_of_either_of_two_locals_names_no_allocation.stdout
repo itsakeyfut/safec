@@ -15,8 +15,6 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
   Local "_6" "int *"
   Local "_7" "int *"
   Local "_8" "int *"
-  Local "_9" "void"
-  Local "_10" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_free_of_either_of_two_locals_names_no_allocation.c:4:14 generated
     Call a_free_of_either_of_two_locals_names_no_allocation.c:4:14 "malloc" "bb1"
@@ -67,13 +65,11 @@ Function a_free_of_either_of_two_locals_names_no_allocation.c:3:5 "f"
   Block "bb5"
     ArgumentsEvaluated a_free_of_either_of_two_locals_names_no_allocation.c:8:5 generated
     Call a_free_of_either_of_two_locals_names_no_allocation.c:8:5 "free" "bb6"
-      Destination "_9"
       Copy "_6"
   Block "bb6"
     Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:8:5 generated
     ArgumentsEvaluated a_free_of_either_of_two_locals_names_no_allocation.c:9:5 generated
     Call a_free_of_either_of_two_locals_names_no_allocation.c:9:5 "free" "bb7"
-      Destination "_10"
       Copy "_6"
   Block "bb7"
     Sequenced a_free_of_either_of_two_locals_names_no_allocation.c:9:5 generated

@@ -25,8 +25,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
   Local "_16" "char"
   Local "_17" "int"
   Local "_18" "int"
-  Local "_19" "void"
-  Local "_20" "int"
+  Local "_19" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 generated
     Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:4:14 "malloc" "bb1"
@@ -138,7 +137,6 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:12:12 generated
     ArgumentsEvaluated a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 generated
     Call a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 "free" "bb6"
-      Destination "_19"
       Copy "_1"
   Block "bb6"
     Sequenced a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:16:5 generated
@@ -148,7 +146,7 @@ Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_
       Use
         Constant 1
     Operation a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:17:5 written
-      Destination "_20"
+      Destination "_19"
       Use
         Copy "_3"
           Deref

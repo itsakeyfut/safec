@@ -17,11 +17,8 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
   Local "_4" "int"
   Local "_5" "int *"
   Local "_6" "void *"
-  Local "_7" "void"
-  Local "_8" "int *"
-  Local "_9" "int"
-  Local "_10" "void"
-  Local "_11" "void"
+  Local "_7" "int *"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:4:5 generated
       Destination "_0"
@@ -73,19 +70,18 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:8:9 generated
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 generated
     Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 "free" "bb9"
-      Destination "_7"
       Copy "_5"
   Block "bb7"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:8:9 generated
     Goto "bb8"
   Block "bb8"
     Operation a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 written
-      Destination "_9"
+      Destination "_8"
       Binary "Eq"
         Copy "_5"
         Constant 0
     Branch a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 "bb10" "bb11"
-      Copy "_9"
+      Copy "_8"
   Block "bb9"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:9:9 generated
     Operation a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:10:9 written
@@ -93,7 +89,7 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
       Use
         Constant 0
     Operation a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:10:9 written
-      Destination "_8"
+      Destination "_7"
       Use
         Copy "_5"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:10:9 generated
@@ -102,7 +98,6 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 generated
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 generated
     Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 "free" "bb13"
-      Destination "_10"
       Copy "_2"
   Block "bb11"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:12:9 generated
@@ -110,7 +105,6 @@ Function a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c
   Block "bb12"
     ArgumentsEvaluated a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:16:5 generated
     Call a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:16:5 "free" "bb14"
-      Destination "_11"
       Copy "_5"
   Block "bb13"
     Sequenced a_free_on_a_branch_on_reallocs_result_nulled_on_one_arm_is_not_proved.c:13:9 generated

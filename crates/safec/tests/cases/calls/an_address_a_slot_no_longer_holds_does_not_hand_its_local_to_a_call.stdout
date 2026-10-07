@@ -22,12 +22,10 @@ Function an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:6
   Local "_7" "int **"
   Local "_8" "int **"
   Local "_9" "int **"
-  Local "_10" "void"
-  Local "_11" "int *"
+  Local "_10" "int *"
+  Local "_11" "int **"
   Local "_12" "int **"
-  Local "_13" "void"
-  Local "_14" "int **"
-  Local "_15" "int"
+  Local "_13" "int"
   Block "bb0" entry
     ArgumentsEvaluated an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:7:14 generated
     Call an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:7:14 "malloc" "bb1"
@@ -115,37 +113,35 @@ Function an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:6
     Sequenced an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:16:5 generated
     ArgumentsEvaluated an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:17:5 generated
     Call an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:17:5 "stash" "bb9"
-      Destination "_10"
       Copy "_4"
   Block "bb9"
     Sequenced an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:17:5 generated
     Operation an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:18:10 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_1"
     Sequenced an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:18:14 generated
     Operation an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:19:17 written
-      Destination "_12"
+      Destination "_11"
       Address
-        Place "_11"
+        Place "_10"
     ArgumentsEvaluated an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:19:5 generated
     Call an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:19:5 "release_ref" "bb10"
-      Destination "_13"
-      Copy "_12"
+      Copy "_11"
   Block "bb10"
     Sequenced an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:19:5 generated
     Operation an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:17 written
-      Destination "_14"
+      Destination "_12"
       Address
         Place "_1"
     ArgumentsEvaluated an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:12 generated
     Call an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:12 "use2" "bb11"
-      Destination "_15"
-      Copy "_14"
+      Destination "_13"
+      Copy "_12"
   Block "bb11"
     Operation an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:5 written
       Destination "_0"
       Use
-        Copy "_15"
+        Copy "_13"
     Sequenced an_address_a_slot_no_longer_holds_does_not_hand_its_local_to_a_call.c:20:12 generated
     Return

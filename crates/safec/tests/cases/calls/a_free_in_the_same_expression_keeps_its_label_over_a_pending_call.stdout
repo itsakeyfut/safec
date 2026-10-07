@@ -27,19 +27,17 @@ Function a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:8:5
   Local "_4" "int *"
   Local "_5" "int *"
   Local "_6" "int **"
-  Local "_7" "void"
-  Local "_8" "void *"
-  Local "_9" "int *"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int"
-  Local "_14" "int"
-  Local "_15" "int *"
+  Local "_14" "int *"
+  Local "_15" "int"
   Local "_16" "int"
-  Local "_17" "void"
-  Local "_18" "int"
-  Local "_19" "int"
+  Local "_17" "int"
   Block "bb0" entry
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:13:5 written
       Destination "_4"
@@ -56,30 +54,29 @@ Function a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:8:5
         Place "_4"
     ArgumentsEvaluated a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:14:5 generated
     Call a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:14:5 "stash" "bb1"
-      Destination "_7"
       Copy "_6"
   Block "bb1"
     Sequenced a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:14:5 generated
     Call a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:15:9 "malloc" "bb2"
-      Destination "_8"
+      Destination "_7"
       Constant 4
   Block "bb2"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:15:5 written
       Destination "_3"
       Use
-        Copy "_8"
+        Copy "_7"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:15:5 written
-      Destination "_9"
+      Destination "_8"
       Use
         Copy "_3"
     Sequenced a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:15:5 generated
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:16:9 written
-      Destination "_10"
+      Destination "_9"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:16:9 "bb3" "bb4"
-      Copy "_10"
+      Copy "_9"
   Block "bb3"
     Sequenced a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:16:9 generated
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:17:9 written
@@ -98,13 +95,13 @@ Function a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:8:5
       Use
         Constant 1
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:19:5 written
-      Destination "_11"
+      Destination "_10"
       Use
         Copy "_3"
           Deref
     Sequenced a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:19:5 generated
     Call a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:9 "release_all" "bb6"
-      Destination "_12"
+      Destination "_11"
   Block "bb6"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:26 written
       Destination "_1"
@@ -112,42 +109,41 @@ Function a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:8:5
         Copy "_3"
           Deref
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:26 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_1"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:9 written
-      Destination "_14"
+      Destination "_13"
       Binary "Add"
+        Copy "_11"
         Copy "_12"
-        Copy "_13"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:39 written
       Destination "_4"
       Use
         Copy "_3"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:39 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_4"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:9 written
-      Destination "_16"
+      Destination "_15"
       Binary "Add"
-        Copy "_14"
+        Copy "_13"
         Constant 0
     Call a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:57 "free" "bb7"
-      Destination "_17"
       Copy "_3"
   Block "bb7"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:9 written
-      Destination "_18"
+      Destination "_16"
       Binary "Add"
-        Copy "_16"
+        Copy "_15"
         Constant 0
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:5 written
       Destination "_2"
       Use
-        Copy "_18"
+        Copy "_16"
     Operation a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:5 written
-      Destination "_19"
+      Destination "_17"
       Use
         Copy "_2"
     Sequenced a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:5 generated

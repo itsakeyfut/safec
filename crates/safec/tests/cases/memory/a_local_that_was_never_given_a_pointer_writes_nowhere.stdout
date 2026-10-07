@@ -12,7 +12,6 @@ Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:3:5 "f"
   Local "_3" "void *"
   Local "_4" "int *"
   Local "_5" "int *"
-  Local "_6" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_local_that_was_never_given_a_pointer_writes_nowhere.c:4:14 generated
     Call a_local_that_was_never_given_a_pointer_writes_nowhere.c:4:14 "malloc" "bb1"
@@ -37,7 +36,6 @@ Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:3:5 "f"
     Sequenced a_local_that_was_never_given_a_pointer_writes_nowhere.c:6:5 generated
     ArgumentsEvaluated a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 generated
     Call a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 "free" "bb2"
-      Destination "_6"
       Copy "_4"
   Block "bb2"
     Sequenced a_local_that_was_never_given_a_pointer_writes_nowhere.c:7:5 generated

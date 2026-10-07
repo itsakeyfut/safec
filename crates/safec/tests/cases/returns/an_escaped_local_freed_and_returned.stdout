@@ -11,7 +11,6 @@ Function an_escaped_local_freed_and_returned.c:4:6 "escaped"
   Local "_2" "void *"
   Local "_3" "int **"
   Local "_4" "int **"
-  Local "_5" "void"
   Block "bb0" entry
     ArgumentsEvaluated an_escaped_local_freed_and_returned.c:5:14 generated
     Call an_escaped_local_freed_and_returned.c:5:14 "malloc" "bb1"
@@ -34,7 +33,6 @@ Function an_escaped_local_freed_and_returned.c:4:6 "escaped"
     Sequenced an_escaped_local_freed_and_returned.c:6:16 generated
     ArgumentsEvaluated an_escaped_local_freed_and_returned.c:7:5 generated
     Call an_escaped_local_freed_and_returned.c:7:5 "free" "bb2"
-      Destination "_5"
       Copy "_1"
   Block "bb2"
     Sequenced an_escaped_local_freed_and_returned.c:7:5 generated

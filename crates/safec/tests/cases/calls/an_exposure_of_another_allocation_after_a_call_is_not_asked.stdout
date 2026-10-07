@@ -24,21 +24,20 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
   Local "_5" "int *"
   Local "_6" "int *"
   Local "_7" "int **"
-  Local "_8" "void"
-  Local "_9" "void *"
-  Local "_10" "int *"
-  Local "_11" "int"
-  Local "_12" "void *"
-  Local "_13" "int *"
+  Local "_8" "void *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "void *"
+  Local "_12" "int *"
+  Local "_13" "int"
   Local "_14" "int"
   Local "_15" "int"
   Local "_16" "int"
   Local "_17" "int"
-  Local "_18" "int"
-  Local "_19" "void *"
+  Local "_18" "void *"
+  Local "_19" "int"
   Local "_20" "int"
   Local "_21" "int"
-  Local "_22" "int"
   Block "bb0" entry
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:12:5 written
       Destination "_5"
@@ -55,30 +54,29 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
         Place "_5"
     ArgumentsEvaluated an_exposure_of_another_allocation_after_a_call_is_not_asked.c:13:5 generated
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:13:5 "stash" "bb1"
-      Destination "_8"
       Copy "_7"
   Block "bb1"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:13:5 generated
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:14:9 "malloc" "bb2"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb2"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:14:5 written
       Destination "_3"
       Use
-        Copy "_9"
+        Copy "_8"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:14:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:14:5 generated
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:15:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch an_exposure_of_another_allocation_after_a_call_is_not_asked.c:15:9 "bb3" "bb4"
-      Copy "_11"
+      Copy "_10"
   Block "bb3"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:15:9 generated
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:16:9 written
@@ -92,25 +90,25 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
     Goto "bb5"
   Block "bb5"
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:18:9 "malloc" "bb6"
-      Destination "_12"
+      Destination "_11"
       Constant 4
   Block "bb6"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:18:5 written
       Destination "_4"
       Use
-        Copy "_12"
+        Copy "_11"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:18:5 written
-      Destination "_13"
+      Destination "_12"
       Use
         Copy "_4"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:18:5 generated
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:19:9 written
-      Destination "_14"
+      Destination "_13"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch an_exposure_of_another_allocation_after_a_call_is_not_asked.c:19:9 "bb7" "bb8"
-      Copy "_14"
+      Copy "_13"
   Block "bb7"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:19:9 generated
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:20:9 written
@@ -129,13 +127,13 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
       Use
         Constant 1
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:22:5 written
-      Destination "_15"
+      Destination "_14"
       Use
         Copy "_3"
           Deref
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:22:5 generated
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:9 "release_all" "bb10"
-      Destination "_16"
+      Destination "_15"
   Block "bb10"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:26 written
       Destination "_1"
@@ -143,36 +141,36 @@ Function an_exposure_of_another_allocation_after_a_call_is_not_asked.c:6:5 "f"
         Copy "_3"
           Deref
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:26 written
-      Destination "_17"
+      Destination "_16"
       Use
         Copy "_1"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:9 written
-      Destination "_18"
+      Destination "_17"
       Binary "Add"
+        Copy "_15"
         Copy "_16"
-        Copy "_17"
     Call an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:39 "memset" "bb11"
-      Destination "_19"
+      Destination "_18"
       Copy "_4"
       Constant 0
       Constant 4
   Block "bb11"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:39 written
-      Destination "_20"
+      Destination "_19"
       Binary "Ne"
-        Copy "_19"
+        Copy "_18"
         Constant 0
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:9 written
-      Destination "_21"
+      Destination "_20"
       Binary "Add"
-        Copy "_18"
-        Copy "_20"
+        Copy "_17"
+        Copy "_19"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:5 written
       Destination "_2"
       Use
-        Copy "_21"
+        Copy "_20"
     Operation an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:5 written
-      Destination "_22"
+      Destination "_21"
       Use
         Copy "_2"
     Sequenced an_exposure_of_another_allocation_after_a_call_is_not_asked.c:23:5 generated

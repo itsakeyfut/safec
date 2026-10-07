@@ -16,15 +16,13 @@ Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5
   Local "_5" "int *"
   Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "void"
-  Local "_9" "void *"
-  Local "_10" "int *"
-  Local "_11" "int"
-  Local "_12" "void"
-  Local "_13" "int *"
+  Local "_8" "void *"
+  Local "_9" "int *"
+  Local "_10" "int"
+  Local "_11" "int *"
+  Local "_12" "int"
+  Local "_13" "int"
   Local "_14" "int"
-  Local "_15" "int"
-  Local "_16" "int"
   Block "bb0" entry
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:10:5 written
       Destination "_1"
@@ -50,30 +48,29 @@ Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5
     Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:11:5 generated
     ArgumentsEvaluated a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 generated
     Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 "keep" "bb1"
-      Destination "_8"
       Copy "_2"
   Block "bb1"
     Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:12:5 generated
     Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:9 "malloc" "bb2"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb2"
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:5 written
       Destination "_3"
       Use
-        Copy "_9"
+        Copy "_8"
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_3"
     Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:13:5 generated
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
         Copy "_3"
         Constant 0
     Branch a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 "bb3" "bb4"
-      Copy "_11"
+      Copy "_10"
   Block "bb3"
     Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:14:9 generated
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:15:9 written
@@ -87,7 +84,6 @@ Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5
     Goto "bb5"
   Block "bb5"
     Call a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 "release_all" "bb6"
-      Destination "_12"
   Block "bb6"
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:34 written
       Destination "_2"
@@ -95,12 +91,12 @@ Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5
       Use
         Copy "_3"
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:34 written
-      Destination "_13"
+      Destination "_11"
       Use
         Copy "_2"
           Deref
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 written
-      Destination "_14"
+      Destination "_12"
       Binary "Add"
         Constant 0
         Constant 0
@@ -110,17 +106,17 @@ Function a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:5
         Copy "_3"
           Deref
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:49 written
-      Destination "_15"
+      Destination "_13"
       Use
         Copy "_4"
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 written
-      Destination "_16"
+      Destination "_14"
       Binary "Add"
-        Copy "_14"
-        Copy "_15"
+        Copy "_12"
+        Copy "_13"
     Operation a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:5 written
       Destination "_0"
       Use
-        Copy "_16"
+        Copy "_14"
     Sequenced a_read_met_after_a_call_and_a_write_into_an_escaped_target_is_asked.c:17:13 generated
     Return

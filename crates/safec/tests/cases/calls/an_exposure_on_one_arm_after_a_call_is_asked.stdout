@@ -21,18 +21,17 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
   Local "_5" "int *"
   Local "_6" "int *"
   Local "_7" "int **"
-  Local "_8" "void"
-  Local "_9" "void *"
-  Local "_10" "int *"
+  Local "_8" "void *"
+  Local "_9" "int *"
+  Local "_10" "int"
   Local "_11" "int"
   Local "_12" "int"
   Local "_13" "int"
   Local "_14" "int"
   Local "_15" "int"
-  Local "_16" "int"
-  Local "_17" "int *"
+  Local "_16" "int *"
+  Local "_17" "int"
   Local "_18" "int"
-  Local "_19" "int"
   Block "bb0" entry
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:11:5 written
       Destination "_5"
@@ -49,30 +48,29 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
         Place "_5"
     ArgumentsEvaluated an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 generated
     Call an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 "stash" "bb1"
-      Destination "_8"
       Copy "_7"
   Block "bb1"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:12:5 generated
     Call an_exposure_on_one_arm_after_a_call_is_asked.c:13:9 "malloc" "bb2"
-      Destination "_9"
+      Destination "_8"
       Constant 4
   Block "bb2"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:13:5 written
       Destination "_4"
       Use
-        Copy "_9"
+        Copy "_8"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:13:5 written
-      Destination "_10"
+      Destination "_9"
       Use
         Copy "_4"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:13:5 generated
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:14:9 written
-      Destination "_11"
+      Destination "_10"
       Binary "Eq"
         Copy "_4"
         Constant 0
     Branch an_exposure_on_one_arm_after_a_call_is_asked.c:14:9 "bb3" "bb4"
-      Copy "_11"
+      Copy "_10"
   Block "bb3"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:14:9 generated
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:15:9 written
@@ -91,13 +89,13 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
       Use
         Constant 1
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:17:5 written
-      Destination "_12"
+      Destination "_11"
       Use
         Copy "_4"
           Deref
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:17:5 generated
     Call an_exposure_on_one_arm_after_a_call_is_asked.c:18:9 "release_all" "bb6"
-      Destination "_13"
+      Destination "_12"
   Block "bb6"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:26 written
       Destination "_2"
@@ -105,28 +103,28 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
         Copy "_4"
           Deref
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:26 written
-      Destination "_14"
+      Destination "_13"
       Use
         Copy "_2"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:9 written
-      Destination "_15"
+      Destination "_14"
       Binary "Add"
+        Copy "_12"
         Copy "_13"
-        Copy "_14"
     Branch an_exposure_on_one_arm_after_a_call_is_asked.c:18:39 "bb8" "bb9"
       Copy "_1"
   Block "bb7"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:9 written
-      Destination "_18"
+      Destination "_17"
       Binary "Add"
+        Copy "_14"
         Copy "_15"
-        Copy "_16"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:5 written
       Destination "_3"
       Use
-        Copy "_18"
+        Copy "_17"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:5 written
-      Destination "_19"
+      Destination "_18"
       Use
         Copy "_3"
     Sequenced an_exposure_on_one_arm_after_a_call_is_asked.c:18:5 generated
@@ -142,17 +140,17 @@ Function an_exposure_on_one_arm_after_a_call_is_asked.c:6:5 "f"
       Use
         Copy "_4"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:44 written
-      Destination "_17"
+      Destination "_16"
       Use
         Copy "_5"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:39 written
-      Destination "_16"
+      Destination "_15"
       Use
         Constant 0
     Goto "bb7"
   Block "bb9"
     Operation an_exposure_on_one_arm_after_a_call_is_asked.c:18:39 written
-      Destination "_16"
+      Destination "_15"
       Use
         Constant 0
     Goto "bb7"

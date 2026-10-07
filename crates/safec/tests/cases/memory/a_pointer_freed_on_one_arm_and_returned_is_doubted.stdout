@@ -10,7 +10,6 @@ Function a_pointer_freed_on_one_arm_and_returned_is_doubted.c:4:6 "f"
   Local "_1" "int" parameter
   Local "_2" "int *"
   Local "_3" "void *"
-  Local "_4" "void"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_freed_on_one_arm_and_returned_is_doubted.c:5:14 generated
     Call a_pointer_freed_on_one_arm_and_returned_is_doubted.c:5:14 "malloc" "bb1"
@@ -28,7 +27,6 @@ Function a_pointer_freed_on_one_arm_and_returned_is_doubted.c:4:6 "f"
     Sequenced a_pointer_freed_on_one_arm_and_returned_is_doubted.c:6:9 generated
     ArgumentsEvaluated a_pointer_freed_on_one_arm_and_returned_is_doubted.c:7:9 generated
     Call a_pointer_freed_on_one_arm_and_returned_is_doubted.c:7:9 "free" "bb5"
-      Destination "_4"
       Copy "_2"
   Block "bb3"
     Sequenced a_pointer_freed_on_one_arm_and_returned_is_doubted.c:6:9 generated

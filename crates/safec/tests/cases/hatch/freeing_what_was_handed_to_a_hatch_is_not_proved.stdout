@@ -14,8 +14,6 @@ Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 "main"
   Local "_0" "int" return
   Local "_1" "int *"
   Local "_2" "void *"
-  Local "_3" "void"
-  Local "_4" "void"
   Block "bb0" entry
     Operation freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 generated
       Destination "_0"
@@ -33,13 +31,11 @@ Function freeing_what_was_handed_to_a_hatch_is_not_proved.c:8:5 "main"
     Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:9:14 generated
     ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 generated
     Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 "keep" "bb2"
-      Destination "_3"
       Copy "_1"
   Block "bb2"
     Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:10:5 generated
     ArgumentsEvaluated freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 generated
     Call freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 "free" "bb3"
-      Destination "_4"
       Copy "_1"
   Block "bb3"
     Sequenced freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 generated

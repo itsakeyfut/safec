@@ -17,8 +17,7 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "void"
-  Local "_9" "int"
+  Local "_8" "int"
   Block "bb0" entry
     Operation a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 generated
       Destination "_0"
@@ -95,18 +94,17 @@ Function a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:5:5 "mai
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:14:5 generated
     ArgumentsEvaluated a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 generated
     Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 "free" "bb9"
-      Destination "_8"
       Copy "_4"
   Block "bb9"
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:15:5 generated
     ArgumentsEvaluated a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 generated
     Call a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 "use2" "bb10"
-      Destination "_9"
+      Destination "_8"
       Copy "_1"
   Block "bb10"
     Operation a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:5 written
       Destination "_0"
       Use
-        Copy "_9"
+        Copy "_8"
     Sequenced a_table_holding_a_freed_pointer_handed_to_a_call_is_reported.c:16:12 generated
     Return

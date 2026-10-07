@@ -11,8 +11,7 @@ Function a_freed_pointer_copied_but_not_returned.c:4:6 "keep"
   Local "_2" "void *"
   Local "_3" "int *"
   Local "_4" "void *"
-  Local "_5" "void"
-  Local "_6" "int *"
+  Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_copied_but_not_returned.c:5:14 generated
     Call a_freed_pointer_copied_but_not_returned.c:5:14 "malloc" "bb1"
@@ -36,12 +35,11 @@ Function a_freed_pointer_copied_but_not_returned.c:4:6 "keep"
     Sequenced a_freed_pointer_copied_but_not_returned.c:6:18 generated
     ArgumentsEvaluated a_freed_pointer_copied_but_not_returned.c:7:5 generated
     Call a_freed_pointer_copied_but_not_returned.c:7:5 "free" "bb3"
-      Destination "_5"
       Copy "_1"
   Block "bb3"
     Sequenced a_freed_pointer_copied_but_not_returned.c:7:5 generated
     Operation a_freed_pointer_copied_but_not_returned.c:8:10 written
-      Destination "_6"
+      Destination "_5"
       Use
         Copy "_1"
     Sequenced a_freed_pointer_copied_but_not_returned.c:8:14 generated

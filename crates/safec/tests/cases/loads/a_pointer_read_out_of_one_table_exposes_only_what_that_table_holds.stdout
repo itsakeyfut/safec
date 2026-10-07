@@ -21,7 +21,6 @@ Function a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds.c:4:
   Local "_12" "int"
   Local "_13" "int *"
   Local "_14" "int *"
-  Local "_15" "void"
   Block "bb0" entry
     Operation a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds.c:4:5 generated
       Destination "_0"
@@ -167,7 +166,6 @@ Function a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds.c:4:
     Sequenced a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds.c:22:5 generated
     ArgumentsEvaluated a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds.c:23:5 generated
     Call a_pointer_read_out_of_one_table_exposes_only_what_that_table_holds.c:23:5 "show" "bb17"
-      Destination "_15"
       Copy "_4"
         Deref
   Block "bb17"
