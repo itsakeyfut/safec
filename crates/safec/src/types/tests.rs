@@ -1350,25 +1350,48 @@ int main(void) {{
 /// points at, so the check around it goes on.
 ///
 /// `p - q` has no type here, for want of a `ptrdiff_t`, and nothing is
-/// reported about it because it is valid C. `p[p - q]` is an `int` whatever
-/// the index is, which is what makes giving it to an `int *` a mismatch.
+/// reported about it because it is valid C. `p[p - q]` and `(p - q)[p]` are
+/// an `int` whatever the other operand is, which is what makes giving either
+/// to an `int *` a mismatch.
 ///
-/// Mutation: answer no type where either operand is untyped. The
-/// `SC0302` goes and this fails.
+/// Mutation: answer no type where either operand is untyped. Both `SC0302`s
+/// go and this fails. Mutation: answer no type where the base is untyped.
+/// The second goes and this fails.
 #[test]
-fn a_subscript_beside_an_untyped_index_keeps_its_pointers_type() {
+fn a_subscript_beside_an_untyped_operand_keeps_its_pointers_type() {
     let checked = checked(
         "int main(void) {
     int *p;
     int *q;
     int *r = p[p - q];
+    int *s = (p - q)[p];
     return 0;
 }
 ",
     );
 
-    assert_eq!(checked.codes(), ["SC0302"]);
+    assert_eq!(checked.codes(), ["SC0302", "SC0302"]);
     assert_eq!(checked.spelling("p[p - q]"), "int");
+}
+
+/// A subscript refused for its pairing has no type, so the check around it
+/// says nothing about a value the program never had.
+///
+/// Mutation: keep reading the pointer's type after a refused pairing. `p[q]`
+/// is an `int`, `int *r = p[q];` gains an `SC0302`, and this fails.
+#[test]
+fn a_subscript_refused_for_its_pairing_has_no_type() {
+    let checked = checked(
+        "int main(void) {
+    int *p;
+    int *q;
+    int *r = p[q];
+    return 0;
+}
+",
+    );
+
+    assert_eq!(checked.codes(), ["SC0306"]);
 }
 
 /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at
