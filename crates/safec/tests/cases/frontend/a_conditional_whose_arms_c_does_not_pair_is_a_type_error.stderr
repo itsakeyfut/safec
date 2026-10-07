@@ -1,0 +1,36 @@
+error[SC0306]: `?:` cannot take `void` and `int`
+   ╭─[ a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:9 ]
+   │
+ 5 │     c ? h() : 1;
+   │         ─┬─   ┬  
+   │          ╰─────── this is `void`
+   │               │  
+   │               ╰── this is `int`
+───╯
+error[SC0306]: `?:` cannot take `void` and `int`
+   ╭─[ a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:13 ]
+   │
+ 6 │     x = c ? h() : 1;
+   │             ─┬─   ┬  
+   │              ╰─────── this is `void`
+   │                   │  
+   │                   ╰── this is `int`
+───╯
+error[SC0306]: `?:` cannot take `int *` and `char *`
+   ╭─[ a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:18 ]
+   │
+ 7 │     int *r = c ? p : q;
+   │                  ┬   ┬  
+   │                  ╰────── this is `int *`
+   │                      │  
+   │                      ╰── this is `char *`
+───╯
+error[SC0306]: `?:` cannot take `int *` and `int`
+   ╭─[ a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:9 ]
+   │
+ 8 │     c ? p : 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
