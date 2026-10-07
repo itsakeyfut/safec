@@ -2514,7 +2514,9 @@ cases! {
         // A condition is a scalar, C17 6.8.4.1 p1, 6.8.5 p2 and 6.5.15 p2.
         // Mutation: have `check_received` accept any statement's condition;
         // the first builds. Mutation: skip the check in `type_of`'s
-        // `Conditional` arm; the second builds. Mutation: refuse a pointer,
+        // `Conditional` arm; the second builds. Mutation: let a refused
+        // conditional keep its arms' type; the second gains an `SC0302` on
+        // the pointer it initializes. Mutation: refuse a pointer,
         // an array or a function as a condition; the third is refused.
         a_void_condition_is_a_type_error: ["--emit", "ast"],
         a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
