@@ -1,0 +1,21 @@
+Declaration a_void_subscript_operand_is_a_type_error.c:1:1 "g" "void (void)"
+Function a_void_subscript_operand_is_a_type_error.c:3:1 "f" "int (int *, int)"
+  Parameter a_void_subscript_operand_is_a_type_error.c:3:7 "a" "int *"
+  Parameter a_void_subscript_operand_is_a_type_error.c:3:15 "i" "int"
+  Compound a_void_subscript_operand_is_a_type_error.c:3:22
+    Expression a_void_subscript_operand_is_a_type_error.c:4:5
+      Assign a_void_subscript_operand_is_a_type_error.c:4:5 "="
+        Subscript a_void_subscript_operand_is_a_type_error.c:4:5
+          Identifier a_void_subscript_operand_is_a_type_error.c:4:5 "a"
+          Call a_void_subscript_operand_is_a_type_error.c:4:7
+            Identifier a_void_subscript_operand_is_a_type_error.c:4:7 "g"
+        Number a_void_subscript_operand_is_a_type_error.c:4:14 "1"
+    Expression a_void_subscript_operand_is_a_type_error.c:5:5
+      Assign a_void_subscript_operand_is_a_type_error.c:5:5 "="
+        Identifier a_void_subscript_operand_is_a_type_error.c:5:5 "i"
+        Subscript a_void_subscript_operand_is_a_type_error.c:5:9
+          Call a_void_subscript_operand_is_a_type_error.c:5:9
+            Identifier a_void_subscript_operand_is_a_type_error.c:5:9 "g"
+          Identifier a_void_subscript_operand_is_a_type_error.c:5:13 "a"
+    Return a_void_subscript_operand_is_a_type_error.c:6:5
+      Identifier a_void_subscript_operand_is_a_type_error.c:6:12 "i"

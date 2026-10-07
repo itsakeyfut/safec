@@ -2576,6 +2576,12 @@ cases! {
         // panics.
         a_void_condition_is_a_type_error: ["--emit", "ast"],
         a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
+        // C17 6.5.2.1 p1 wants an integer beside the pointer, and a `void`
+        // operand is refused whichever side it is on, which keeps a `void`
+        // value away from the lowering. Mutation: drop the `Void` arm in
+        // `Checker::subscript`; this builds, and a run past `--emit ast`
+        // panics in the lowering.
+        a_void_subscript_operand_is_a_type_error: ["--emit", "ast"],
         a_scalar_condition_builds: ["--emit", "ast"],
         an_untyped_condition_of_a_conditional_is_reported_once: ["--emit", "ast"],
         // A conditional's arms are a pair C17 6.5.15 p3 allows, and have the

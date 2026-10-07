@@ -1,0 +1,20 @@
+error[SC0306]: `[]` cannot take `int *` and `void`
+   ╭─[ a_void_subscript_operand_is_a_type_error.c:4:7 ]
+   │
+ 4 │     a[g()] = 1;
+   │     ┬ ─┬─  
+   │     ╰────── this is `int *`
+   │        │   
+   │        ╰─── this is `void`
+───╯
+  = note: one operand of `[]` is a pointer and the other an integer (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `void` and `int *`
+   ╭─[ a_void_subscript_operand_is_a_type_error.c:5:9 ]
+   │
+ 5 │     i = g()[a];
+   │         ─┬─ ┬  
+   │          ╰───── this is `void`
+   │             │  
+   │             ╰── this is `int *`
+───╯
+  = note: one operand of `[]` is a pointer and the other an integer (C17 6.5.2.1 p1)

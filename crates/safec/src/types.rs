@@ -625,6 +625,11 @@ impl Checker<'_> {
     ) -> Option<TypeId> {
         if let (Some(left), Some(right)) = (self.types[base.index()], self.types[index.index()]) {
             let (left, right) = (self.decayed(ast, left), self.decayed(ast, right));
+            // C17 6.5.2.1 p1: one operand a pointer to a complete object type
+            // and the other an integer. A `void` operand is refused and
+            // answers no type, so it never reaches the lowering, which gives
+            // a `void` value nowhere to live. The other pairings p1 refuses,
+            // an integer base among them, are #245's.
             let refused = match (OperandClass::of(ast, left), OperandClass::of(ast, right)) {
                 (Some(OperandClass::Pointer(pointee)), Some(OperandClass::Arithmetic)) => {
                     pointee_steppable(ast, pointee, true).err()
@@ -632,10 +637,16 @@ impl Checker<'_> {
                 (Some(OperandClass::Arithmetic), Some(OperandClass::Pointer(pointee))) => {
                     pointee_steppable(ast, pointee, false).err()
                 }
+                (Some(OperandClass::Void), _) | (_, Some(OperandClass::Void)) => {
+                    Some(Refused::Pairing)
+                }
                 _ => None,
             };
-            if let Some(Refused::Pointee { on_left, why }) = refused {
-                self.report_subscript(ast, (base, left), (index, right), on_left, why, diagnostics);
+            if let Some(refused) = refused {
+                self.report_subscript(ast, (base, left), (index, right), refused, diagnostics);
+                if matches!(refused, Refused::Pairing) {
+                    return None;
+                }
             }
         }
 
@@ -646,9 +657,9 @@ impl Checker<'_> {
         }
     }
 
-    /// Report a subscript whose pointer [`unsteppable`] refused. Each operand
-    /// is its expression and its type after [`Checker::decayed`], and
-    /// `on_left` says whether the pointer is the base.
+    /// Report a subscript whose pointer [`unsteppable`] refused, or one of
+    /// whose operands is `void`. Each operand is its expression and its type
+    /// after [`Checker::decayed`].
     ///
     /// The shape of [`Checker::report_operands`]: both types in the order they
     /// were written, and the primary label on the pointer whichever side it
@@ -659,12 +670,18 @@ impl Checker<'_> {
         ast: &Ast,
         (base, left): (ExprId, TypeId),
         (index, right): (ExprId, TypeId),
-        on_left: bool,
-        why: &'static str,
+        refused: Refused,
         diagnostics: &mut DiagnosticSink,
     ) {
         let left_spelled = self.spelled(ast, left);
         let right_spelled = self.spelled(ast, right);
+        // The pointer where it is refused for what it points to. Where the
+        // pairing is refused, the operand beside a pointer is what does not
+        // fit, as in `p[g()]`; with no pointer at all, the base.
+        let on_left = match refused {
+            Refused::Pointee { on_left, .. } => on_left,
+            Refused::Pairing => !matches!(ast.ty(left), Type::Pointer(_)),
+        };
         let (primary, secondary) = if on_left {
             ((base, &left_spelled), (index, &right_spelled))
         } else {
@@ -684,7 +701,13 @@ impl Checker<'_> {
                 ast.expr(secondary.0).span(),
                 format!("this is `{}`", secondary.1),
             ))
-            .with_note(stepping_note(why, "C17 6.5.2.1 p1")),
+            .with_note(match refused {
+                Refused::Pointee { why, .. } => stepping_note(why, "C17 6.5.2.1 p1"),
+                Refused::Pairing => {
+                    "one operand of `[]` is a pointer and the other an integer (C17 6.5.2.1 p1)"
+                        .to_owned()
+                }
+            }),
         );
     }
 
