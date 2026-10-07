@@ -1313,23 +1313,26 @@ int main(void) {{
 /// A refused increment or subscript keeps the type it would have had, as
 /// a refused `+=` does, because C gives each from an operand rather than
 /// from the step that was refused: `p++` is `p`'s type and `v[1]` is what
-/// `v` points at. Every subscript row has the pointer as its base,
-/// because `1[v]` and `g[1]` have no type to keep; `Checker::subscript`
-/// says why.
+/// `v` points at, whichever side of the `[]` the pointer is on.
 ///
 /// Mutation: have `increment` answer `None` after its report. The `++`
 /// and `--` rows fail. Mutation: have `subscript` answer `None` after its
-/// report. The `[]` rows fail. Nothing else in the suite noticed either.
+/// report. The `[]` rows fail. Mutation: have `subscript` read the type off
+/// the base only. The `1[v]` and `1[g]` rows fail.
 #[test]
 fn a_refused_increment_or_subscript_keeps_its_type() {
     for (code, written, ty) in [
         ("v++;", "v++", "void *"),
         ("--v;", "--v", "void *"),
         ("v[1];", "v[1]", "void"),
+        ("1[v];", "1[v]", "void"),
         ("u[0];", "u[0]", "int[]"),
+        ("g[1];", "g[1]", "void (void)"),
+        ("1[g];", "1[g]", "void (void)"),
     ] {
         let checked = checked(&format!(
-            "int main(void) {{
+            "void g(void);
+int main(void) {{
     void *v;
     int (*u)[];
     {code}
@@ -1341,6 +1344,54 @@ fn a_refused_increment_or_subscript_keeps_its_type() {
         assert_eq!(checked.codes(), ["SC0306"], "{code}");
         assert_eq!(checked.spelling(written), ty, "{code}");
     }
+}
+
+/// A subscript beside an index nothing typed is still what its pointer
+/// points at, so the check around it goes on.
+///
+/// `p - q` has no type here, for want of a `ptrdiff_t`, and nothing is
+/// reported about it because it is valid C. `p[p - q]` and `(p - q)[p]` are
+/// an `int` whatever the other operand is, which is what makes giving either
+/// to an `int *` a mismatch.
+///
+/// Mutation: answer no type where either operand is untyped. Both `SC0302`s
+/// go and this fails. Mutation: answer no type where the base is untyped.
+/// The second goes and this fails.
+#[test]
+fn a_subscript_beside_an_untyped_operand_keeps_its_pointers_type() {
+    let checked = checked(
+        "int main(void) {
+    int *p;
+    int *q;
+    int *r = p[p - q];
+    int *s = (p - q)[p];
+    return 0;
+}
+",
+    );
+
+    assert_eq!(checked.codes(), ["SC0302", "SC0302"]);
+    assert_eq!(checked.spelling("p[p - q]"), "int");
+}
+
+/// A subscript refused for its pairing has no type, so the check around it
+/// says nothing about a value the program never had.
+///
+/// Mutation: keep reading the pointer's type after a refused pairing. `p[q]`
+/// is an `int`, `int *r = p[q];` gains an `SC0302`, and this fails.
+#[test]
+fn a_subscript_refused_for_its_pairing_has_no_type() {
+    let checked = checked(
+        "int main(void) {
+    int *p;
+    int *q;
+    int *r = p[q];
+    return 0;
+}
+",
+    );
+
+    assert_eq!(checked.codes(), ["SC0306"]);
 }
 
 /// An initializer is held to the rule for a plain `=`, C17 6.7.9 p11, at

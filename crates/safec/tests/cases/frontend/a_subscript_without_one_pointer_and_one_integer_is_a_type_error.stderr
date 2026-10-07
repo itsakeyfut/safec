@@ -1,0 +1,30 @@
+error[SC0306]: `[]` cannot take `int` and `int`
+   ╭─[ a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:2:5 ]
+   │
+ 2 │     x[0];
+   │     ┬ ┬  
+   │     ╰──── this is `int`
+   │       │  
+   │       ╰── this is `int`
+───╯
+  = note: one operand of `[]` is a pointer and the other an integer (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `int *` and `int *`
+   ╭─[ a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:3:7 ]
+   │
+ 3 │     p[q];
+   │     ┬ ┬  
+   │     ╰──── this is `int *`
+   │       │  
+   │       ╰── this is `int *`
+───╯
+  = note: one operand of `[]` is a pointer and the other an integer (C17 6.5.2.1 p1)
+error[SC0306]: `[]` cannot take `int` and `int`
+   ╭─[ a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:4:5 ]
+   │
+ 4 │     1[2];
+   │     ┬ ┬  
+   │     ╰──── this is `int`
+   │       │  
+   │       ╰── this is `int`
+───╯
+  = note: one operand of `[]` is a pointer and the other an integer (C17 6.5.2.1 p1)

@@ -17,5 +17,12 @@ Function a_void_subscript_operand_is_a_type_error.c:3:1 "f" "int (int *, int)"
           Call a_void_subscript_operand_is_a_type_error.c:5:9
             Identifier a_void_subscript_operand_is_a_type_error.c:5:9 "g"
           Identifier a_void_subscript_operand_is_a_type_error.c:5:13 "a"
-    Return a_void_subscript_operand_is_a_type_error.c:6:5
-      Identifier a_void_subscript_operand_is_a_type_error.c:6:12 "i"
+    Expression a_void_subscript_operand_is_a_type_error.c:6:5
+      Assign a_void_subscript_operand_is_a_type_error.c:6:5 "="
+        Identifier a_void_subscript_operand_is_a_type_error.c:6:5 "i"
+        Subscript a_void_subscript_operand_is_a_type_error.c:6:9
+          Number a_void_subscript_operand_is_a_type_error.c:6:9 "1"
+          Call a_void_subscript_operand_is_a_type_error.c:6:11
+            Identifier a_void_subscript_operand_is_a_type_error.c:6:11 "g"
+    Return a_void_subscript_operand_is_a_type_error.c:7:5
+      Identifier a_void_subscript_operand_is_a_type_error.c:7:12 "i"

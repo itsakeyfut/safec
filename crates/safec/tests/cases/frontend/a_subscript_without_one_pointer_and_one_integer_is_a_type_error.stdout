@@ -1,0 +1,19 @@
+Function a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:1:1 "f" "int (int, int *, int *)"
+  Parameter a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:1:7 "x" "int"
+  Parameter a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:1:14 "p" "int *"
+  Parameter a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:1:22 "q" "int *"
+  Compound a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:1:30
+    Expression a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:2:5
+      Subscript a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:2:5
+        Identifier a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:2:5 "x"
+        Number a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:2:7 "0"
+    Expression a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:3:5
+      Subscript a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:3:5
+        Identifier a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:3:5 "p"
+        Identifier a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:3:7 "q"
+    Expression a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:4:5
+      Subscript a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:4:5
+        Number a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:4:5 "1"
+        Number a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:4:7 "2"
+    Return a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:5:5
+      Number a_subscript_without_one_pointer_and_one_integer_is_a_type_error.c:5:12 "0"
