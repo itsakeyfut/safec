@@ -43,6 +43,33 @@ pub struct Refusal {
     pub at: Option<Span>,
 }
 
+/// That a refusal was recorded, which is the only way a step of writing may
+/// give up.
+///
+/// A function here that could not write what it was asked answers
+/// `Err(Refused)`, and its caller writes a `declare` in place of the
+/// definition. A `declare` with no recorded refusal behind it is a run that
+/// exits 0 having dropped a function's body, so the field is private to this
+/// module and [`record`](refused::record) is the one thing that makes one:
+/// `Refused(())` anywhere else in this file is `error[E0423]`. Making the field
+/// `pub(super)` compiles, and is the change that would bring that silence
+/// back.
+mod refused {
+    pub(super) struct Refused(());
+
+    /// Keep `refusal`, and answer the proof that it was kept.
+    pub(super) fn record(into: &mut Vec<super::Refusal>, refusal: super::Refusal) -> Refused {
+        into.push(refusal);
+        Refused(())
+    }
+}
+
+use refused::Refused;
+
+/// What a step of writing answers: what it wrote, or that it refused and said
+/// why.
+type Refuses<T> = Result<T, Refused>;
+
 /// The line every module begins with, and which may appear only once in one.
 ///
 /// Separate from [`functions`] because an artifact holds **one** module however
@@ -118,16 +145,18 @@ struct Emitter<'a> {
 }
 
 impl Emitter<'_> {
-    /// Record what could not be written, and answer nothing.
+    /// Record what could not be written, and answer that it was refused.
     ///
     /// Generic in the answer so that a caller can `return self.refuse(...)`
     /// out of whatever it was computing.
-    fn refuse<T>(&mut self, why: impl Into<String>) -> Option<T> {
-        self.refusals.push(Refusal {
-            why: why.into(),
-            at: self.at,
-        });
-        None
+    fn refuse<T>(&mut self, why: impl Into<String>) -> Refuses<T> {
+        Err(refused::record(
+            &mut self.refusals,
+            Refusal {
+                why: why.into(),
+                at: self.at,
+            },
+        ))
     }
 
     /// A name no other value in this function has.
@@ -217,7 +246,7 @@ impl Emitter<'_> {
     /// an address. A `Deref` is one `load` of a pointer. Reading a place,
     /// writing one and taking its address all want this and then differ by a
     /// single instruction.
-    fn address(&mut self, function: &Function, place: &Place, out: &mut String) -> Option<String> {
+    fn address(&mut self, function: &Function, place: &Place, out: &mut String) -> Refuses<String> {
         let mut address = format!("%_{}", place.local.index());
         let mut ty = function.local(place.local);
 
@@ -246,7 +275,7 @@ impl Emitter<'_> {
             }
         }
 
-        Some(address)
+        Ok(address)
     }
 
     /// The value held in a place, and the type it has.
@@ -255,7 +284,7 @@ impl Emitter<'_> {
         function: &Function,
         place: &Place,
         out: &mut String,
-    ) -> Option<(String, TyId)> {
+    ) -> Refuses<(String, TyId)> {
         let Some(ty) = self.unit.place_ty(function, place) else {
             return self.refuse("a place whose projections do not fit its type");
         };
@@ -268,7 +297,7 @@ impl Emitter<'_> {
         let loaded = self.temp();
         writeln!(out, "  {loaded} = load {spelled}, ptr {address}")
             .expect("writing to a string cannot fail");
-        Some((loaded, ty))
+        Ok((loaded, ty))
     }
 
     /// The same value, as the type `to` names.
@@ -280,10 +309,16 @@ impl Emitter<'_> {
     /// Two types LLVM spells the same need no instruction at all, which covers
     /// a pointer to one type becoming a pointer to another, and two integer
     /// types of one width.
-    fn convert(&mut self, value: String, from: TyId, to: TyId, out: &mut String) -> Option<String> {
+    fn convert(
+        &mut self,
+        value: String,
+        from: TyId,
+        to: TyId,
+        out: &mut String,
+    ) -> Refuses<String> {
         let (source, wanted) = (self.spell(from), self.spell(to));
         if source == wanted {
-            return Some(value);
+            return Ok(value);
         }
 
         let (Some(narrow), Some(wide)) = (self.unit.integer(from), self.unit.integer(to)) else {
@@ -301,7 +336,7 @@ impl Emitter<'_> {
             "  {result} = {instruction} {source} {value} to {wanted}"
         )
         .expect("writing to a string cannot fail");
-        Some(result)
+        Ok(result)
     }
 
     /// One operand, as the type `want` names.
@@ -311,7 +346,7 @@ impl Emitter<'_> {
         operand: &Operand,
         want: TyId,
         out: &mut String,
-    ) -> Option<String> {
+    ) -> Refuses<String> {
         match operand {
             Operand::Constant(value) => self.constant(*value, want),
             Operand::Copy(place) => {
@@ -322,16 +357,16 @@ impl Emitter<'_> {
     }
 
     /// A constant, as the type `want` names.
-    fn constant(&mut self, value: i128, want: TyId) -> Option<String> {
+    fn constant(&mut self, value: i128, want: TyId) -> Refuses<String> {
         if let Some(int) = self.unit.integer(want) {
-            return Some(int.convert(value).to_string());
+            return Ok(int.convert(value).to_string());
         }
         // C17 6.3.2.3 p3 makes an integer constant expression with the value 0
         // a null pointer constant, and makes nothing else one. A number that is
         // not zero reaches a pointer only through a cast, which this frontend
         // cannot write and a hand-built unit would have to mean something by.
         if matches!(self.unit.ty(want), Ty::Pointer(_)) && value == 0 {
-            return Some("null".to_owned());
+            return Ok("null".to_owned());
         }
         let wanted = self.spell(want);
         self.refuse(format!("the constant {value} where a `{wanted}` is wanted"))
@@ -342,7 +377,7 @@ impl Emitter<'_> {
     /// C17 6.5.8 p6 and 6.5.9 p3 make the result of a relational or an
     /// equality operator an `int`, which is what the lowering gives the
     /// destination. So the bit is widened rather than stored as one.
-    fn widen(&mut self, comparison: String, to: TyId, out: &mut String) -> Option<String> {
+    fn widen(&mut self, comparison: String, to: TyId, out: &mut String) -> Refuses<String> {
         let wanted = self.spell(to);
         if self.unit.integer(to).is_none() {
             return self.refuse(format!("a comparison written into a `{wanted}`"));
@@ -351,13 +386,13 @@ impl Emitter<'_> {
         let bit = self.temp();
         writeln!(out, "  {bit} = {comparison}").expect("writing to a string cannot fail");
         if wanted == "i1" {
-            return Some(bit);
+            return Ok(bit);
         }
 
         let widened = self.temp();
         writeln!(out, "  {widened} = zext i1 {bit} to {wanted}")
             .expect("writing to a string cannot fail");
-        Some(widened)
+        Ok(widened)
     }
 
     /// Whether this operand is a pointer, and the type it has if it is.
@@ -377,7 +412,7 @@ impl Emitter<'_> {
         operand: &Operand,
         to: TyId,
         out: &mut String,
-    ) -> Option<String> {
+    ) -> Refuses<String> {
         // `!p` is the one unary operator a pointer has. C17 6.5.3.3 p5 makes
         // `!E` mean `(0 == E)`, which needs no width. The interpreter answers
         // 0 for it because nothing in its model is a null pointer; that is a
@@ -407,14 +442,14 @@ impl Emitter<'_> {
                 let result = self.temp();
                 writeln!(out, "  {result} = sub{flag} {wanted} 0, {value}")
                     .expect("writing to a string cannot fail");
-                Some(result)
+                Ok(result)
             }
             // Nor a `not`: flipping every bit is an `xor` with all ones.
             UnOp::BitNot => {
                 let result = self.temp();
                 writeln!(out, "  {result} = xor {wanted} {value}, -1")
                     .expect("writing to a string cannot fail");
-                Some(result)
+                Ok(result)
             }
         }
     }
@@ -434,7 +469,7 @@ impl Emitter<'_> {
         rhs: &Operand,
         to: TyId,
         out: &mut String,
-    ) -> Option<String> {
+    ) -> Refuses<String> {
         // Whether two pointers name one object is defined and needs no width.
         // Everything else about a pointer counts elements, and `ir::Ty` holds
         // no width to count them with. The interpreter draws the line in the
@@ -506,13 +541,13 @@ impl Emitter<'_> {
                 let result = self.temp();
                 writeln!(out, "  {result} = {instruction} {wanted} {left}, {right}")
                     .expect("writing to a string cannot fail");
-                Some(result)
+                Ok(result)
             }
         }
     }
 
     /// One element of a block.
-    fn element(&mut self, function: &Function, element: &Element, out: &mut String) -> Option<()> {
+    fn element(&mut self, function: &Function, element: &Element, out: &mut String) -> Refuses<()> {
         // Written out rather than `..`, so that a field added to a storage
         // marker is `error[E0027]` here rather than something this silently
         // stops answering for.
@@ -536,7 +571,7 @@ impl Emitter<'_> {
             Element::Evaluate {
                 place: _,
                 origin: _,
-            } => Some(()),
+            } => Ok(()),
             // Nothing is written, and nothing has to be. A sequence point is a
             // constraint on the orders an implementation may choose, and this
             // backend hands LLVM the one order the element list already spells
@@ -544,9 +579,7 @@ impl Emitter<'_> {
             // rearrangements C permits, which is slower code for no defined
             // program's benefit. Both markers, because both are a constraint
             // on an order and neither asks for anything to be emitted.
-            Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {
-                Some(())
-            }
+            Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => Ok(()),
             // Nothing is written. LLVM has `llvm.lifetime.start` and `.end` for
             // exactly this, and they buy an optimiser something this backend
             // has no optimiser to give it to, while costing two intrinsic calls
@@ -561,7 +594,7 @@ impl Emitter<'_> {
             | Element::StorageDead {
                 origin: _,
                 local: _,
-            } => Some(()),
+            } => Ok(()),
         }
     }
 
@@ -571,7 +604,7 @@ impl Emitter<'_> {
         function: &Function,
         operation: &Operation,
         out: &mut String,
-    ) -> Option<()> {
+    ) -> Refuses<()> {
         let Some(to) = self.unit.place_ty(function, &operation.place) else {
             return self.refuse("a place whose projections do not fit its type");
         };
@@ -596,7 +629,7 @@ impl Emitter<'_> {
         let spelled = self.spell(to);
         writeln!(out, "  store {spelled} {value}, ptr {address}")
             .expect("writing to a string cannot fail");
-        Some(())
+        Ok(())
     }
 
     /// How a block ends, and where control goes from it.
@@ -605,7 +638,7 @@ impl Emitter<'_> {
         function: &Function,
         terminator: &Terminator,
         out: &mut String,
-    ) -> Option<()> {
+    ) -> Refuses<()> {
         // A call is the only terminator whose span a refusal here spends, so
         // everything else refuses with nowhere to point rather than with the
         // last operation's place, which would put a caret on innocent code.
@@ -616,7 +649,7 @@ impl Emitter<'_> {
             Terminator::Goto(to) => {
                 writeln!(out, "  br label %bb{}", to.index())
                     .expect("writing to a string cannot fail");
-                Some(())
+                Ok(())
             }
             Terminator::Branch {
                 condition,
@@ -640,7 +673,7 @@ impl Emitter<'_> {
                     otherwise.index()
                 )
                 .expect("writing to a string cannot fail");
-                Some(())
+                Ok(())
             }
             Terminator::Call {
                 callee,
@@ -664,12 +697,12 @@ impl Emitter<'_> {
                 let ty = function.local(function.return_place());
                 if matches!(self.unit.ty(ty), Ty::Void) {
                     writeln!(out, "  ret void").expect("writing to a string cannot fail");
-                    return Some(());
+                    return Ok(());
                 }
                 let (value, _) = self.read(function, &place, out)?;
                 let spelled = self.spell(ty);
                 writeln!(out, "  ret {spelled} {value}").expect("writing to a string cannot fail");
-                Some(())
+                Ok(())
             }
             // Nothing builds one. ADR-0010 put it in the IR so that every walk
             // has to answer for it before the thing that produces one exists,
@@ -695,15 +728,15 @@ impl Emitter<'_> {
         function: &Function,
         operand: &Operand,
         out: &mut String,
-    ) -> Option<(String, String)> {
+    ) -> Refuses<(String, String)> {
         match operand {
             Operand::Constant(value) => {
                 let int = self.unit.target().int();
-                Some((int.convert(*value).to_string(), format!("i{}", int.bits())))
+                Ok((int.convert(*value).to_string(), format!("i{}", int.bits())))
             }
             Operand::Copy(place) => {
                 let (value, ty) = self.read(function, place, out)?;
-                Some((value, self.spell(ty)))
+                Ok((value, self.spell(ty)))
             }
         }
     }
@@ -718,7 +751,7 @@ impl Emitter<'_> {
         destination: Option<&Place>,
         then: Option<BlockId>,
         out: &mut String,
-    ) -> Option<()> {
+    ) -> Refuses<()> {
         let unit = self.unit;
         let called = unit.function(callee);
 
@@ -770,7 +803,7 @@ impl Emitter<'_> {
             None => writeln!(out, "  unreachable"),
         }
         .expect("writing to a string cannot fail");
-        Some(())
+        Ok(())
     }
 
     /// Put a call's result where the call said, if it said anywhere.
@@ -786,15 +819,15 @@ impl Emitter<'_> {
         returns: TyId,
         destination: Option<&Place>,
         out: &mut String,
-    ) -> Option<()> {
+    ) -> Refuses<()> {
         let Some(place) = destination else {
-            return Some(());
+            return Ok(());
         };
         let Some(to) = self.unit.place_ty(function, place) else {
             return self.refuse("a place whose projections do not fit its type");
         };
         if matches!(self.unit.ty(to), Ty::Void) {
-            return Some(());
+            return Ok(());
         }
 
         let value = self.convert(result, returns, to, out)?;
@@ -802,7 +835,7 @@ impl Emitter<'_> {
         let spelled = self.spell(to);
         writeln!(out, "  store {spelled} {value}, ptr {address}")
             .expect("writing to a string cannot fail");
-        Some(())
+        Ok(())
     }
 
     /// What a function's type looks like to LLVM, and the name it goes by.
@@ -812,7 +845,7 @@ impl Emitter<'_> {
     /// a `declare` cannot carry one either. So this is the one refusal that
     /// leaves nothing at all behind rather than a declaration, and a call to
     /// such a function is refused in turn, because there is nothing to call.
-    fn signature(&mut self, function: &Function) -> Option<(String, String, Vec<String>)> {
+    fn signature(&mut self, function: &Function) -> Refuses<(String, String, Vec<String>)> {
         let name = self.name(function);
         let returns = self.result(function.local(function.return_place()));
         let mut parameters = Vec::new();
@@ -825,7 +858,7 @@ impl Emitter<'_> {
             parameters.push(self.parameter(ty));
         }
 
-        Some((name, returns, parameters))
+        Ok((name, returns, parameters))
     }
 
     /// One function, appended to the module.
@@ -836,7 +869,7 @@ impl Emitter<'_> {
         // The name is where a refusal about the whole function points, since
         // it is the only span a `Function` carries.
         self.at = Some(function.name);
-        let Some((name, returns, parameters)) = self.signature(function) else {
+        let Ok((name, returns, parameters)) = self.signature(function) else {
             return;
         };
 
@@ -855,8 +888,11 @@ impl Emitter<'_> {
         // a declaration, which says the definition is somewhere else. That is
         // not true, and it is what keeps the module readable to LLVM: the exit
         // code says the run failed, and a link is where the symbol surfaces.
+        // The exit code says so because the only way into the `Err` arm is a
+        // refusal that was recorded, which `Refused` makes the compiler's to
+        // hold rather than a convention's.
         match self.body(function) {
-            Some(body) => {
+            Ok(body) => {
                 let named: Vec<String> = parameters
                     .iter()
                     .enumerate()
@@ -867,12 +903,12 @@ impl Emitter<'_> {
                 out.push_str(&body);
                 out.push_str("}\n");
             }
-            None => out.push_str(&declared),
+            Err(_) => out.push_str(&declared),
         }
     }
 
     /// Everything between a definition's braces.
-    fn body(&mut self, function: &Function) -> Option<String> {
+    fn body(&mut self, function: &Function) -> Refuses<String> {
         let mut body = String::new();
 
         // Every local gets storage, in a block that does nothing else. A
@@ -915,7 +951,7 @@ impl Emitter<'_> {
             self.terminator(function, &block.terminator, &mut body)?;
         }
 
-        Some(body)
+        Ok(body)
     }
 }
 
