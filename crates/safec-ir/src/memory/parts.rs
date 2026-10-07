@@ -510,6 +510,20 @@ pub(super) struct Held {
 }
 
 impl Held {
+    /// Whether this local may hold a local's address, on some path.
+    ///
+    /// [`Held::writes_to`] is read for it, because a write through this local
+    /// lands in a local exactly when it points at one, and the join keeps
+    /// the edge where it keeps the sites the other path brought. A call
+    /// handed such a pointer may be handed something that is no allocation
+    /// at all, which a free or a `realloc` of it leaves undefined (C17
+    /// 7.22.3.3 p2 and 7.22.3.5 p3), so neither may be read as freeing only
+    /// the sites. See `Allocations::touching` and
+    /// `Allocations::holds_something_unnameable`, which ask it.
+    pub(super) fn may_be_a_locals_address(&self) -> bool {
+        self.writes_to.iter().any(|&edge| edge)
+    }
+
     /// A local holding nothing, in a function with this many sites.
     pub(super) fn none(sites: usize) -> Self {
         Held {
