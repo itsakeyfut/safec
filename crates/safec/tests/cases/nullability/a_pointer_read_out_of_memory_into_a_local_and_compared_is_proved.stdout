@@ -41,6 +41,7 @@ Function a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved.c:1:5 
         Copy "_2"
           Deref
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved.c:5:20 generated
+    StorageDead a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved.c:5:13 generated "_2"
     Return
   Block "bb5"
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_compared_is_proved.c:4:13 generated

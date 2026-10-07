@@ -111,6 +111,7 @@ Function a_pointer_kept_alive_last_turn_is_read_in_silence_after_the_loop_alloca
       Use
         Constant 0
     Sequenced a_pointer_kept_alive_last_turn_is_read_in_silence_after_the_loop_allocates_again.c:14:20 generated
+    StorageDead a_pointer_kept_alive_last_turn_is_read_in_silence_after_the_loop_allocates_again.c:14:13 generated "_7"
     Return
   Block "bb10"
     Sequenced a_pointer_kept_alive_last_turn_is_read_in_silence_after_the_loop_allocates_again.c:13:13 generated

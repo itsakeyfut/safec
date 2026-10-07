@@ -109,6 +109,7 @@ Function a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocate
       Use
         Constant 0
     Sequenced a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:14:20 generated
+    StorageDead a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:14:13 generated "_6"
     Return
   Block "bb10"
     Sequenced a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:13:13 generated
@@ -173,6 +174,8 @@ Function a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocate
       Use
         Constant 0
     Sequenced a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:20:24 generated
+    StorageDead a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:20:17 generated "_11"
+    StorageDead a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:20:17 generated "_6"
     Return
   Block "bb16"
     Sequenced a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:19:17 generated
@@ -184,6 +187,8 @@ Function a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocate
         Copy "_11"
           Deref
     Sequenced a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:22:20 generated
+    StorageDead a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:22:13 generated "_11"
+    StorageDead a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:22:13 generated "_6"
     Return
   Block "bb18"
     Branch a_pointer_freed_on_one_arm_last_turn_is_doubted_after_the_loop_allocates_again.c:25:13 "bb19" "bb20"

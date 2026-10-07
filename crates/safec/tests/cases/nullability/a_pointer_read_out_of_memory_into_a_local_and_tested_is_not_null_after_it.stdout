@@ -35,6 +35,7 @@ Function a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_
         Copy "_2"
           Deref
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:5:20 generated
+    StorageDead a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:5:13 generated "_2"
     Return
   Block "bb5"
     Sequenced a_pointer_read_out_of_memory_into_a_local_and_tested_is_not_null_after_it.c:4:13 generated

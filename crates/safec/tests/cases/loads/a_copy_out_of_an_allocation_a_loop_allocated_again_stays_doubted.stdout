@@ -150,6 +150,7 @@ Function a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 
       Use
         Constant 0
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:19:20 generated
+    StorageDead a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:19:13 generated "_10"
     Return
   Block "bb14"
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:18:13 generated
@@ -223,6 +224,8 @@ Function a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 
       Use
         Constant 0
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:26:24 generated
+    StorageDead a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:26:17 generated "_16"
+    StorageDead a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:26:17 generated "_10"
     Return
   Block "bb21"
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:25:17 generated
@@ -234,6 +237,8 @@ Function a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:5:5 
         Copy "_16"
           Deref
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:28:20 generated
+    StorageDead a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:28:13 generated "_16"
+    StorageDead a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:28:13 generated "_10"
     Return
   Block "bb23"
     Sequenced a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted.c:31:9 generated

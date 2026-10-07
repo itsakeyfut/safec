@@ -161,6 +161,7 @@ Function a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_i
       Use
         Constant 0
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:20:20 generated
+    StorageDead a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:20:13 generated "_13"
     Return
   Block "bb14"
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:19:13 generated
@@ -236,6 +237,8 @@ Function a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_i
       Use
         Constant 0
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:27:24 generated
+    StorageDead a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:27:17 generated "_19"
+    StorageDead a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:27:17 generated "_13"
     Return
   Block "bb20"
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:26:17 generated
@@ -247,6 +250,8 @@ Function a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_i
         Copy "_19"
           Deref
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:29:20 generated
+    StorageDead a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:29:13 generated "_19"
+    StorageDead a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:29:13 generated "_13"
     Return
   Block "bb22"
     Sequenced a_pointer_lost_to_a_free_read_through_one_of_two_addresses_and_stored_is_doubted_when_read_back.c:32:9 generated

@@ -200,6 +200,7 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
       Use
         Constant 0
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:25:20 generated
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:25:13 generated "_15"
     Return
   Block "bb18"
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:24:13 generated
@@ -305,6 +306,9 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
       Use
         Constant 0
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:36:24 generated
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:36:17 generated "_24"
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:36:17 generated "_20"
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:36:17 generated "_15"
     Return
   Block "bb28"
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:35:17 generated
@@ -316,6 +320,9 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
         Copy "_24"
           Deref
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:38:20 generated
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:38:13 generated "_24"
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:38:13 generated "_20"
+    StorageDead a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:38:13 generated "_15"
     Return
   Block "bb30"
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:41:9 generated

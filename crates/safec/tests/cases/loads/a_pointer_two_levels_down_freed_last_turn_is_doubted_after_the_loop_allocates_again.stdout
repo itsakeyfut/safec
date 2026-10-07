@@ -110,6 +110,7 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
       Use
         Constant 0
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:13:20 generated
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:13:13 generated "_6"
     Return
   Block "bb10"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:12:13 generated
@@ -140,6 +141,8 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
       Use
         Constant 0
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:17:20 generated
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:17:13 generated "_9"
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:17:13 generated "_6"
     Return
   Block "bb14"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:16:13 generated
@@ -217,6 +220,9 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
       Use
         Constant 0
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:23:24 generated
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:23:17 generated "_14"
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:23:17 generated "_9"
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:23:17 generated "_6"
     Return
   Block "bb20"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:22:17 generated
@@ -228,6 +234,9 @@ Function a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_all
         Copy "_14"
           Deref
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:25:20 generated
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:25:13 generated "_14"
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:25:13 generated "_9"
+    StorageDead a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:25:13 generated "_6"
     Return
   Block "bb22"
     Sequenced a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:29:9 generated

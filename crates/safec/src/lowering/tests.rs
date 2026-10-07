@@ -267,23 +267,72 @@ fn a_local_the_function_declares_has_no_marker() {
     assert_eq!(markers(function(&lowered, "f")), []);
 }
 
-/// A scope that a `return` leaves ends no storage.
+/// A `return` ends the storage of every scope it leaves, innermost first,
+/// after the returned value is read and spanned by the `return`.
 ///
-/// The frame is going, so there is nothing for a marker to say, and an
-/// element written after a block has ended would be written into the next
-/// block instead.
+/// C17 6.2.4 p6 ends a block's objects when "execution of that block ends
+/// in any way", and a `return` ends every block around it. Two scopes deep,
+/// so the order across scopes is pinned as well as the order within one.
 ///
-/// Mutation: emit the `StorageDead` loop whether or not `builder.reachable`
-/// says the end is reachable. A `StorageDead` appears and this fails.
+/// Mutation: delete the `StorageDead` loop in the `Return` arm. Only the
+/// three `StorageLive`s are left and this fails. Mutation: walk the scopes
+/// outermost first. `a` and `b` close before `c` and this fails. Mutation:
+/// mark them `Written`, or span them by the keyword `return` alone. Either
+/// way this fails. Moving the loop above the write of the value is what
+/// `a_value_returned_out_of_a_nested_scope_is_read_before_its_storage_ends`
+/// in `tests/interp.rs` is for, and this fails too.
 #[test]
-fn a_scope_a_return_leaves_ends_no_storage() {
-    let lowered = lowered("int f(int n) { if (n) { int x; x = 1; return x; } return 0; }\n");
+fn a_return_ends_every_scope_it_leaves() {
+    let lowered = lowered(
+        "int f(int n) { if (n) { int a; int b; { int c; c = 1; return c; } } return 0; }
+",
+    );
+    let f = function(&lowered, "f");
 
-    let marked = markers(function(&lowered, "f"));
-    let [(opens, _)] = marked[..] else {
-        panic!("the scope opens and nothing closes it: {marked:?}");
+    let marked = markers(f);
+    let kinds: Vec<&str> = marked.iter().map(|&(kind, _)| kind).collect();
+    assert_eq!(
+        kinds,
+        [
+            "StorageLive",
+            "StorageLive",
+            "StorageLive",
+            "StorageDead",
+            "StorageDead",
+            "StorageDead"
+        ],
+        "{marked:?}"
+    );
+    let (a, b, c) = (marked[0].1, marked[1].1, marked[2].1);
+    let closed: Vec<usize> = marked[3..].iter().map(|&(_, local)| local).collect();
+    assert_eq!(closed, [c, b, a]);
+
+    // Where they sit: at the end of the block the `return` ends, after the
+    // write of the value it returns.
+    let block = f
+        .blocks()
+        .find(|block| {
+            block
+                .elements
+                .iter()
+                .any(|element| matches!(element, Element::StorageDead { .. }))
+        })
+        .expect("a block that ends storage");
+    assert!(matches!(block.terminator, Terminator::Return));
+    let [
+        ..,
+        Element::Assign(returned),
+        Element::Sequenced { .. },
+        Element::StorageDead { .. },
+        Element::StorageDead { .. },
+        Element::StorageDead { origin, .. },
+    ] = &block.elements[..]
+    else {
+        panic!("the value, then the three ends: {:?}", block.elements);
     };
-    assert_eq!(opens, "StorageLive");
+    assert_eq!(returned.place, Place::local(f.return_place()));
+    assert!(matches!(origin, Origin::Generated(_)));
+    assert_eq!(lowered.sources.snippet(origin.span()), "return c;");
 }
 
 /// A local in a loop body gets its storage back on each iteration.

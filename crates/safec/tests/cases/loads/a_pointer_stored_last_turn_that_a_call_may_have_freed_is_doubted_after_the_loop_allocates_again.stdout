@@ -121,6 +121,7 @@ Function a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_
       Use
         Constant 0
     Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:14:20 generated
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:14:13 generated "_7"
     Return
   Block "bb10"
     Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:13:13 generated
@@ -177,6 +178,8 @@ Function a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_
         Copy "_11"
           Deref
     Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:19:24 generated
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:19:17 generated "_11"
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:19:17 generated "_7"
     Return
   Block "bb16"
     Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:18:17 generated
@@ -204,6 +207,8 @@ Function a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_
       Use
         Constant 0
     Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:25:20 generated
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:25:13 generated "_14"
+    StorageDead a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:25:13 generated "_7"
     Return
   Block "bb20"
     Sequenced a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:24:13 generated

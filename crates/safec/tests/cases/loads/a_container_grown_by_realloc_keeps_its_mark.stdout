@@ -119,6 +119,7 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Use
         Constant 0
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:15:20 generated
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:15:13 generated "_7"
     Return
   Block "bb10"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:14:13 generated
@@ -189,6 +190,8 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Use
         Constant 0
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:21:24 generated
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:21:17 generated "_12"
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:21:17 generated "_7"
     Return
   Block "bb17"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:20:17 generated
@@ -215,6 +218,9 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
       Use
         Constant 0
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:25:24 generated
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:25:17 generated "_15"
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:25:17 generated "_12"
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:25:17 generated "_7"
     Return
   Block "bb20"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:24:17 generated
@@ -226,6 +232,9 @@ Function a_container_grown_by_realloc_keeps_its_mark.c:5:5 "main"
         Copy "_15"
           Deref
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:27:20 generated
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:27:13 generated "_15"
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:27:13 generated "_12"
+    StorageDead a_container_grown_by_realloc_keeps_its_mark.c:27:13 generated "_7"
     Return
   Block "bb22"
     Sequenced a_container_grown_by_realloc_keeps_its_mark.c:30:9 generated

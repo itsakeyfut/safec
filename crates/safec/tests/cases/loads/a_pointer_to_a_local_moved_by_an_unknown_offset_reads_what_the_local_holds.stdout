@@ -125,6 +125,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Use
         Constant 0
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:15:20 generated
+    StorageDead a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:15:13 generated "_9"
     Return
   Block "bb10"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:14:13 generated
@@ -198,6 +199,8 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
       Use
         Constant 0
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:21:24 generated
+    StorageDead a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:21:17 generated "_14"
+    StorageDead a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:21:17 generated "_9"
     Return
   Block "bb16"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:20:17 generated
@@ -209,6 +212,8 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_ho
         Copy "_14"
           Deref
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:23:20 generated
+    StorageDead a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:23:13 generated "_14"
+    StorageDead a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:23:13 generated "_9"
     Return
   Block "bb18"
     Sequenced a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:26:9 generated
