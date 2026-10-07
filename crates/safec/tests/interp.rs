@@ -290,11 +290,11 @@ fn a_pointer_holds_where_it_pointed() {
 
 /// A function that returns nothing is called for what it does.
 ///
-/// The lowering gives every call a destination, so a `void` callee never
-/// writes one and a run that demanded an answer refused `free(p);` before
-/// Phase 5 could ask for it.
+/// The lowering gives a call to a `void` function nowhere to write, so the
+/// run carries on past it with nothing owed.
 ///
-/// Mutation: demand an answer whatever the callee returns. This fails.
+/// Mutation: demand a destination. The run stops at `set(&x)` and this
+/// fails.
 #[test]
 fn a_call_to_a_void_function_is_not_owed_an_answer() {
     let answer = ran(

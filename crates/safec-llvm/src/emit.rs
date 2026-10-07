@@ -813,10 +813,10 @@ impl Emitter<'_> {
 
     /// Put a call's result where the call said, if it said anywhere.
     ///
-    /// Two shapes reach here and both mean discard it. `Call::destination` is
-    /// `None` where the IR says nothing wanted the value, and the lowering
-    /// instead builds a local of the callee's return type, which is `void`
-    /// when the callee returns nothing.
+    /// Nothing is stored where `Call::destination` is `None`, which is what the
+    /// C frontend writes for a callee that returns nothing, or where the place
+    /// holds nothing, which the IR allows. A callee that returns nothing never
+    /// reaches here: its `call void` has no result to deliver.
     fn deliver(
         &mut self,
         function: &Function,
