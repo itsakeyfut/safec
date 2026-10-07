@@ -1,0 +1,16 @@
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_void_read_as_a_commas_left_operand_after_a_free.c:10:6 ]
+    │
+  5 │     void *p = malloc(4);
+    │               ────┬────  
+    │                   ╰────── allocated here
+    │ 
+  9 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     (*p, c);
+    │      ─┬  
+    │       ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

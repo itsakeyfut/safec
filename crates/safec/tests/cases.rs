@@ -222,6 +222,15 @@ cases! {
         // than a suspicion.
         a_comma_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A read through a `void *` is `void` and is still a read: the
+        // lowering discards it where it stands, as a comma's left operand or
+        // on the arm of a `void` `?:` that reads it, rather than dropping it
+        // for its type. Mutation: have `discard`, `second` and `merge` ask
+        // `is_void` rather than `pushes`; the first two go silent, and the
+        // third is reported on both arms at the whole conditional.
+        a_void_read_as_a_commas_left_operand_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_read_on_an_arm_of_a_void_conditional_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_void_read_on_one_arm_is_read_on_that_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_or_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_sequences_a_free_before_a_use: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_value_read_after_it_was_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

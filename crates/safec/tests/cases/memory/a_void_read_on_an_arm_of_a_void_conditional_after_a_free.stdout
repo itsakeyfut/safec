@@ -1,0 +1,105 @@
+Target "x86_64-pc-windows-msvc"
+Function a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "void *"
+  Local "_3" "void *"
+  Local "_4" "void *"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:5:15 generated
+    Call a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:5:15 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:5:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:5:15 generated
+    ArgumentsEvaluated a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:6:15 generated
+    Call a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:6:15 "malloc" "bb2"
+      Destination "_5"
+      Constant 4
+  Block "bb2"
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:6:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:6:15 generated
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:7:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_2"
+    Branch a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:7:9 "bb3" "bb4"
+      Copy "_6"
+  Block "bb3"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:7:9 generated
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:8:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:7:9 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:10:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_4"
+    Branch a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:10:9 "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:10:9 generated
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:11:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:13:5 generated
+    Call a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:13:5 "free" "bb9"
+      Copy "_2"
+  Block "bb9"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:13:5 generated
+    Branch a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:14:5 "bb11" "bb12"
+      Copy "_1"
+  Block "bb10"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:14:5 generated
+    ArgumentsEvaluated a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:15:5 generated
+    Call a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:15:5 "free" "bb13"
+      Copy "_4"
+  Block "bb11"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:14:5 generated
+    Evaluate a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:14:9 written
+      Place "_2"
+        Deref
+    Goto "bb10"
+  Block "bb12"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:14:5 generated
+    Evaluate a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:14:14 written
+      Place "_4"
+        Deref
+    Goto "bb10"
+  Block "bb13"
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:15:5 generated
+    Operation a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:16:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:16:12 generated
+    Return
