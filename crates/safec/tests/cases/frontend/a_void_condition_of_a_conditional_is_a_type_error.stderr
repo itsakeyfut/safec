@@ -1,0 +1,14 @@
+error[SC0306]: `?:` cannot take `void`
+   ╭─[ a_void_condition_of_a_conditional_is_a_type_error.c:4:14 ]
+   │
+ 4 │     int *q = h() ? 1 : 2;
+   │              ─┬─  
+   │               ╰─── this is `void`
+───╯
+error[SC0306]: `?:` cannot take `void`
+   ╭─[ a_void_condition_of_a_conditional_is_a_type_error.c:5:12 ]
+   │
+ 5 │     return h() ? 1 : 2;
+   │            ─┬─  
+   │             ╰─── this is `void`
+───╯

@@ -72,7 +72,9 @@ const ARGUMENTS: Code = Code::new("SC0303");
 /// binary operator, 6.5.16.2 p1 and p2 for a compound assignment, 6.5.2.4 p2
 /// and 6.5.3.1 p2 for an increment or a decrement, 6.5.2.1 p1 for a
 /// subscript, 6.5.3.2 p2 for `*`, 6.5.3.3 p1 for unary `+`, `-`, `~` and `!`,
-/// and 6.5.2.2 p1 for a callee, the operand of a call's `()`.
+/// 6.5.2.2 p1 for a callee, the operand of a call's `()`, and 6.5.15 p2,
+/// 6.8.4.1 p1 and 6.8.5 p2 for the condition of `?:`, `if`, `while` and
+/// `for`.
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
 /// is refused because `*=` does not take a pointer, whatever `p` holds. A
@@ -186,12 +188,14 @@ struct Returning {
     name: Span,
 }
 
-/// What a value has to be assignable to, and what a report about it says.
+/// What a value found by walking the statements has to satisfy, and what a
+/// report about it says.
 ///
-/// Two variants of one thing rather than two maps, because C17 makes them
-/// one rule (see `MISMATCH`) and because one walk finds both: a second walk
-/// would be a second recursion over every statement, and an arm dropped from
-/// either would be a silence that the other's test could not see.
+/// Mostly what it has to be assignable to: a `return` and an initializer are
+/// one rule in C17 (see `MISMATCH`). A statement's condition is another rule,
+/// that it be a scalar, and is here because the same walk finds it: a second
+/// walk would be a second recursion over every statement, and an arm dropped
+/// from either would be a silence that the other's test could not see.
 #[derive(Clone, Copy)]
 enum Receiving {
     /// C17 6.8.6.4 p3.
@@ -205,6 +209,14 @@ enum Receiving {
         ty: TypeId,
         /// The span of the declarator's name, which is the place.
         name: Span,
+    },
+    /// The condition of `if`, C17 6.8.4.1 p1, or of `while` or `for`, 6.8.5
+    /// p2, which has to be a scalar. Not a place a value is assigned to,
+    /// and collected by the same walk because that walk is the one that
+    /// visits every statement.
+    Condition {
+        /// The statement's keyword, which is what the report names.
+        keyword: &'static str,
     },
 }
 
@@ -316,14 +328,32 @@ impl Checker<'_> {
                 }
             }
             Stmt::If {
-                then, otherwise, ..
+                condition,
+                then,
+                otherwise,
+                ..
             } => {
+                self.receivers
+                    .insert(*condition, Receiving::Condition { keyword: "if" });
                 self.receivers_in(ast, *then, returning, diagnostics);
                 if let Some(otherwise) = *otherwise {
                     self.receivers_in(ast, otherwise, returning, diagnostics);
                 }
             }
-            Stmt::While { body, .. } | Stmt::For { body, .. } => {
+            Stmt::While {
+                condition, body, ..
+            } => {
+                self.receivers
+                    .insert(*condition, Receiving::Condition { keyword: "while" });
+                self.receivers_in(ast, *body, returning, diagnostics);
+            }
+            Stmt::For {
+                condition, body, ..
+            } => {
+                if let Some(condition) = *condition {
+                    self.receivers
+                        .insert(condition, Receiving::Condition { keyword: "for" });
+                }
                 self.receivers_in(ast, *body, returning, diagnostics);
             }
             Stmt::Expression { .. } | Stmt::Error { .. } => {}
@@ -402,8 +432,22 @@ impl Checker<'_> {
             // pointer cases. What is answered here is the half that needs
             // neither: two arms of one type make that type.
             Expr::Conditional {
-                then, otherwise, ..
+                condition,
+                then,
+                otherwise,
+                ..
             } => {
+                // 6.5.15 p2. Checked here rather than collected by the
+                // statement walk, because a refused conditional has to have
+                // no type, as a refused binary operation has none, and only
+                // this arm can withhold it: kept, `int *q = h() ? 1 : 2;`
+                // would be reported a second time. An untyped condition was
+                // reported by whatever left it untyped.
+                if let Some(asked) = self.types[condition.index()] {
+                    if self.refuse_a_void_condition(ast, "?:", condition, asked, diagnostics) {
+                        return None;
+                    }
+                }
                 let then = self.types[then.index()]?;
                 let otherwise = self.types[otherwise.index()]?;
                 ast.compatible(then, otherwise).then_some(then)
@@ -1105,8 +1149,40 @@ impl Checker<'_> {
         }
     }
 
-    /// C17 6.8.6.4 p3 and 6.7.9 p11, each of which is 6.5.16.1 p1 with
-    /// another place: the return type, or the declarator being initialized.
+    /// A condition that is not a scalar, refused under `OPERANDS` in the
+    /// words `!` and `&&` use, and whether it was. `word` is what read it:
+    /// `if`, `while`, `for` or `?:`.
+    ///
+    /// Only `void` is refused, which is right only because every other type
+    /// this compiler has is a scalar or becomes one: an array or a function
+    /// is a pointer by 6.3.2.1 p3 and p4 before C reads it as a condition.
+    /// Nothing here converts it; it is not `void`, so it passes. A structure
+    /// type, when one lands, is not a scalar and has to be refused here
+    /// too.
+    fn refuse_a_void_condition(
+        &self,
+        ast: &Ast,
+        word: &str,
+        condition: ExprId,
+        ty: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        if !matches!(ast.ty(ty), Type::Void) {
+            return false;
+        }
+        diagnostics.report(
+            Diagnostic::error(format!("`{word}` cannot take `void`"))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(ast.expr(condition).span(), "this is `void`")),
+        );
+        true
+    }
+
+    /// What each value the statement walk found has to satisfy, once it is
+    /// typed. For a `return` and an initializer that is C17 6.8.6.4 p3 and
+    /// 6.7.9 p11, each 6.5.16.1 p1 with another place: the return type, or
+    /// the declarator being initialized. For a statement's condition it is
+    /// [`Checker::refuse_a_void_condition`].
     fn check_received(&mut self, ast: &Ast, value: ExprId, diagnostics: &mut DiagnosticSink) {
         let Some(receiving) = self.receivers.get(&value).copied() else {
             return;
@@ -1132,6 +1208,10 @@ impl Checker<'_> {
         let target = match receiving {
             Receiving::Return(returning) | Receiving::ReturnFromVoid(returning) => returning.ty,
             Receiving::Initializer { ty, .. } => ty,
+            Receiving::Condition { keyword } => {
+                self.refuse_a_void_condition(ast, keyword, value, source, diagnostics);
+                return;
+            }
         };
 
         if self.assignable(ast, target, source, self.is_null_pointer_constant(value)) != Some(false)
@@ -1157,6 +1237,8 @@ impl Checker<'_> {
                 name,
                 format!("this holds `{target_spelled}`"),
             ),
+            // Answered where the target was asked for, above.
+            Receiving::Condition { .. } => return,
         };
 
         diagnostics.report(

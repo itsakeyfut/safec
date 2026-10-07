@@ -1,0 +1,21 @@
+error[SC0306]: `if` cannot take `void`
+   ╭─[ a_void_condition_is_a_type_error.c:5:9 ]
+   │
+ 5 │     if (h()) {
+   │         ─┬─  
+   │          ╰─── this is `void`
+───╯
+error[SC0306]: `while` cannot take `void`
+   ╭─[ a_void_condition_is_a_type_error.c:8:12 ]
+   │
+ 8 │     while (h()) {
+   │            ─┬─  
+   │             ╰─── this is `void`
+───╯
+error[SC0306]: `for` cannot take `void`
+    ╭─[ a_void_condition_is_a_type_error.c:11:12 ]
+    │
+ 11 │     for (; h();) {
+    │            ─┬─  
+    │             ╰─── this is `void`
+────╯

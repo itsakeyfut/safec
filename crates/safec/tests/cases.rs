@@ -2511,6 +2511,22 @@ cases! {
         // it is not reported again. Mutation: answer `int` after the refusal
         // in `Checker::binary`; this gains an `SC0302`.
         a_refused_binary_operation_is_reported_once: ["--emit", "ast"],
+        // A condition is a scalar, C17 6.8.4.1 p1, 6.8.5 p2 and 6.5.15 p2.
+        // Mutation: have `check_received` accept any statement's condition;
+        // `a_void_condition_is_a_type_error` builds. Mutation: skip the check
+        // in `type_of`'s `Conditional` arm;
+        // `a_void_condition_of_a_conditional_is_a_type_error` builds.
+        // Mutation: let a refused conditional keep its arms' type; that case
+        // gains an `SC0302` on the pointer it initializes. Mutation: refuse
+        // any scalar type at any of the four places;
+        // `a_scalar_condition_builds` is refused. Mutation: unwrap the
+        // conditional's condition type rather than passing over an untyped
+        // one; `an_untyped_condition_of_a_conditional_is_reported_once`
+        // panics.
+        a_void_condition_is_a_type_error: ["--emit", "ast"],
+        a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
+        a_scalar_condition_builds: ["--emit", "ast"],
+        an_untyped_condition_of_a_conditional_is_reported_once: ["--emit", "ast"],
         // `p - q` is valid C and untyped here, with nothing reported, so the
         // `*` beside it is still `int` and the initializer is still checked.
         // Mutation: answer no type beside an untyped operand; the `SC0302`
