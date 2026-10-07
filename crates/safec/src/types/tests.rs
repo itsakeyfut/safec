@@ -1300,9 +1300,9 @@ int main(void) {{
 }
 
 /// A refused increment or subscript keeps the type it would have had, as
-/// a refused `+=` does, so that the lowering is not handed an expression
-/// with no type and does not add an `SC0304` calling a wrong program this
-/// compiler's gap. Every subscript row has the pointer as its base,
+/// a refused `+=` does, because C gives each from an operand rather than
+/// from the step that was refused: `p++` is `p`'s type and `v[1]` is what
+/// `v` points at. Every subscript row has the pointer as its base,
 /// because `1[v]` and `g[1]` have no type to keep; `Checker::subscript`
 /// says why.
 ///
