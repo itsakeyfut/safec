@@ -2507,6 +2507,13 @@ cases! {
         // reported again. Mutation: answer `int` after the refusal, for any
         // one operator; a second report appears at that `*`.
         indirection_through_a_refused_unary_operator_is_reported_once: ["--emit", "ast"],
+        // A refused binary operation has no type, and neither has one beside
+        // an operand nothing typed, so the assignment around each is not
+        // reported again. Mutation: answer `int` after the refusal in
+        // `Checker::binary`; the first gains an `SC0302`. Mutation: answer
+        // `int` beside an untyped operand; the second gains one.
+        a_refused_binary_operation_is_reported_once: ["--emit", "ast"],
+        an_untyped_operand_of_a_binary_operator_is_reported_once: ["--emit", "ast"],
         // C17 6.5.16.2's two constraints, which are not the rule for a plain
         // `=`: `p += 1` is allowed and holds
         // `a_compound_assignment_on_a_pointer_ computes_into_a_pointer` silent.

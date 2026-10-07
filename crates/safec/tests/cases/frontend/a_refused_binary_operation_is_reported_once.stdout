@@ -1,0 +1,11 @@
+Function a_refused_binary_operation_is_reported_once.c:1:1 "f" "int (int *)"
+  Parameter a_refused_binary_operation_is_reported_once.c:1:7 "p" "int *"
+  Compound a_refused_binary_operation_is_reported_once.c:1:15
+    Expression a_refused_binary_operation_is_reported_once.c:2:5
+      Assign a_refused_binary_operation_is_reported_once.c:2:5 "="
+        Identifier a_refused_binary_operation_is_reported_once.c:2:5 "p"
+        Binary a_refused_binary_operation_is_reported_once.c:2:9 "*"
+          Identifier a_refused_binary_operation_is_reported_once.c:2:9 "p"
+          Number a_refused_binary_operation_is_reported_once.c:2:13 "1"
+    Return a_refused_binary_operation_is_reported_once.c:3:5
+      Number a_refused_binary_operation_is_reported_once.c:3:12 "0"

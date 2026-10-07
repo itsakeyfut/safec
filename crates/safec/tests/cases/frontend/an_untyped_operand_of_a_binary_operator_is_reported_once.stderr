@@ -1,0 +1,7 @@
+error[SC0301]: use of undeclared identifier `nowhere`
+   ╭─[ an_untyped_operand_of_a_binary_operator_is_reported_once.c:2:9 ]
+   │
+ 2 │     p = nowhere * 1;
+   │         ───┬───  
+   │            ╰───── no declaration for this name is in scope
+───╯

@@ -1,0 +1,9 @@
+error[SC0306]: `*` cannot take `int *` and `int`
+   ╭─[ a_refused_binary_operation_is_reported_once.c:2:9 ]
+   │
+ 2 │     p = p * 1;
+   │         ┬   ┬  
+   │         ╰────── this is `int *`
+   │             │  
+   │             ╰── this is `int`
+───╯
