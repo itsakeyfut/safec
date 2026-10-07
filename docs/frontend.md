@@ -149,20 +149,21 @@ its type; `clang` 20 accepts it unless asked to be pedantic, and refuses
 as written, with the other half of the paragraph, `return;` where a value is
 owed.
 
-**The last three are one constraint.** C17 6.5.16.1 p1 lets a pointer be
+**The fourth to the sixth are one constraint.** C17 6.5.16.1 p1 lets a pointer be
 assigned a pointer to a compatible type, or be assigned to or from a `void *`,
 and nothing else; 6.7.9 p11 holds an initializer to it and 6.5.2.2 p2 an
 argument. `clang` 20 warns with `-Wincompatible-pointer-types` unless asked to
 be pedantic. All three spellings ask `types.rs::assignable`, so they answer
 alike.
 
-**So are the conditionals.** C17 6.5.15 p3 lists the pairs a conditional's
-second and third operands may be, both arithmetic, both `void`, pointers to
-compatible types, a pointer and a pointer to `void`, a pointer and a null pointer
-constant, and none of the three rows is one. It is a constraint whether or not
-the value is used, so `c ? h() : 1;` is refused as a statement too, which `clang`
-accepts and says nothing about. `types.rs::Checker::conditional`
-is where the pairs are asked.
+**So are the last three, the conditionals.** C17 6.5.15 p3 lists the pairs a
+conditional's second and third operands may be: both arithmetic, both `void`,
+pointers to compatible types, a pointer to an object type and a pointer to
+`void`, or a pointer and a null pointer constant. `void` beside `int`, an `int *`
+beside a `char *` and a pointer beside `1` are none of them. It is a constraint
+whether or not the value is used, so `c ? h() : 1;` is refused as a statement
+too, which `clang` accepts and says nothing about.
+`types.rs::Checker::conditional` is where the pairs are asked.
 
 ### What an integer constant is worth, and what type it is not
 
@@ -251,6 +252,7 @@ an identifier, and a character constant is refused as `expected an expression`.
 | `int *p = -0;` | `error[SC0302]` | accepts | accepts |
 | `p = 1 - 1;` with `int *p` | `error[SC0302]` | accepts | accepts |
 | `g(1 - 1)` with `int g(int *p)` | `error[SC0302]` | accepts | accepts |
+| `c ? p : 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
 | `p == 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
 | `p == -0` with `int *p` | `error[SC0306]` | accepts | accepts |
 
@@ -263,7 +265,9 @@ why the false report costs less. C17 6.7.9 p11 gives an initializer the
 constraints of simple assignment and 6.5.2.2 p2 gives an argument them too, so
 the three spellings answer alike, and C17
 6.5.9 p2 lets a pointer be compared with a null pointer constant and no other
-integer, so a comparison answers alike too. The rows stop being refused the day
+integer, so a comparison answers alike too, and 6.5.15 p3 lets a conditional pair
+a pointer with a null pointer constant and no other integer, so a conditional
+does. The rows stop being refused the day
 a constant expression can be evaluated.
 
 ### Where a nullability specifier is read
