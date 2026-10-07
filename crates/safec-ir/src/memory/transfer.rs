@@ -1963,10 +1963,12 @@ impl Analysis for Allocations<'_> {
                 for other in exposed {
                     value.points_to[site].hold(other, Offset::Unknown);
                 }
-                // **And any local whose address it may reach**, for the same
-                // reason: `id(&x)` may return `&x`, and a free of that frees
-                // no allocation. `writes_to` is how a free learns it, through
-                // `Held::may_be_a_locals_address`. See ADR-0039.
+                // **And any escaped local's address**, for the same reason
+                // and with the same reach: `id(&x)` may return `&x`, and
+                // `stash(&x); fetch()` may too. `writes_to` is how a free
+                // learns it, through `Held::may_be_a_locals_address`, and how
+                // a write through the result is followed into the locals it
+                // may land in. See ADR-0039.
                 for local in (0..value.escaped.len()).filter(|&local| value.escaped[local]) {
                     value.points_to[site].writes_to[local] = true;
                 }
