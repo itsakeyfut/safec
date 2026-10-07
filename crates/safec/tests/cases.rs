@@ -1230,18 +1230,31 @@ cases! {
         a_call_handed_an_address_may_return_what_is_behind_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_may_return_what_an_earlier_call_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Its free of `t` was also `SC0404` until `slot`'s escaped address
-        // was among what `get` may return: `interior` believes no offset
-        // about a free that hands something unnameable, so the same free is
-        // reported as the double free alone.
+        // was among what `get` may return: `Held::may_be_a_locals_address`
+        // makes `touching` hand a `Reached::Lost`, and `interior` believes no
+        // offset beside one, so the same free is reported as the double free
+        // alone.
         a_call_in_a_loop_may_return_what_it_returned_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And any escaped local's address, which a free of it would free
         // though it is no allocation. Mutation: give an opaque call's result
         // no `writes_to` edge in `Allocations::terminator`'s opaque arm;
         // `a_call_handed_a_locals_address_may_return_it` exits 0. Mutation:
         // give it an edge to every local, escaped or not;
-        // `a_call_with_no_local_escaped_returns_none` is refused.
+        // `a_call_returns_none_of_this_functions_locals_where_none_escaped`
+        // is refused. It shows only that: a local of another frame, or a
+        // string, is still believed an allocation, #375.
         a_call_handed_a_locals_address_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_call_with_no_local_escaped_returns_none: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_returns_none_of_this_functions_locals_where_none_escaped: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The edge is also what a write through the result follows. Mutation:
+        // give it an edge to the first escaped local only; the `*r = p` that
+        // may land in `y` is lost, and the read of `y` after `free(p)` is no
+        // longer a use after free.
+        a_write_through_what_a_call_returned_may_land_in_an_escaped_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local an earlier call was handed, not this one. Its free was
+        // `SC0404` beside `SC0401` before, and is `SC0401` alone, for the
+        // reason the loop case above gives. Mutation: give the edge only
+        // where this call was handed something; the `SC0404` comes back.
+        a_call_may_return_a_locals_address_an_earlier_call_kept: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost, recorded rather than discovered: a constructor handed a
         // local's address and returning fresh memory is a correct program,
         // and its free is doubted, as one handed an allocation already was.
