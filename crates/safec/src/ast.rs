@@ -543,7 +543,7 @@ pub enum Stmt {
     /// `While` and `For`.
     If {
         /// What is asked. 6.8.4.1 p1 makes it a constraint that this has scalar
-        /// type, which is a constraint and so a later phase's.
+        /// type, which `types.rs` checks.
         condition: ExprId,
         /// What runs when it holds.
         then: StmtId,
