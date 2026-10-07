@@ -897,12 +897,17 @@ impl Checker<'_> {
     ///
     /// Two arithmetic arms are `int`, the usual arithmetic conversions of
     /// every pair this compiler has. Two `void` arms are `void`. Two pointers
-    /// to compatible types are that type, the composite of two types this
-    /// compiler can only write identically. A pointer beside a pointer to
-    /// `void` is the pointer to `void`, and beside a null pointer constant is
-    /// itself. Any other pair is refused as `OPERANDS`, in `binary`'s words,
-    /// and has no type, as a refused binary operation has none. An arm with
-    /// no type was reported by whatever left it untyped.
+    /// to compatible types are the first arm's type: p6 asks for their
+    /// composite, which is the same type only where the two are written
+    /// alike, and `int ()` beside `int (int)` or `int (*)[]` beside
+    /// `int (*)[3]` gets whichever came first. A pointer to an object type
+    /// beside a pointer to `void` is the pointer to `void`, and a pointer
+    /// beside a null pointer constant is itself. Any other pair is refused as
+    /// `OPERANDS`, in `binary`'s words, and has no type, as a refused binary
+    /// operation has none, a pointer to a function beside a pointer to `void`
+    /// among them. An arm with no type makes no type in silence: either
+    /// something reported it, or it is `p - q`, which this compiler has no
+    /// type for.
     ///
     /// Refused whether or not the value is used: `c ? h() : 1;` breaks p3 as
     /// a statement too, which `clang` accepts unless asked to be pedantic.
@@ -924,11 +929,15 @@ impl Checker<'_> {
             (Type::Int | Type::Char, Type::Int | Type::Char) => Some(self.int),
             (Type::Void, Type::Void) => Some(left),
             (Type::Pointer(left_pointee), Type::Pointer(right_pointee)) => {
-                // Compatible, or the left is the pointer to `void` the pair
-                // becomes; either way the left is the answer.
-                if ast.compatible(left, right) || matches!(ast.ty(*left_pointee), Type::Void) {
+                // p3 pairs a pointer to `void` only with a pointer to an
+                // object type, which a function is not.
+                let left_void = matches!(ast.ty(*left_pointee), Type::Void);
+                let right_void = matches!(ast.ty(*right_pointee), Type::Void);
+                let left_function = matches!(ast.ty(*left_pointee), Type::Function { .. });
+                let right_function = matches!(ast.ty(*right_pointee), Type::Function { .. });
+                if ast.compatible(left, right) || (left_void && !right_function) {
                     Some(left)
-                } else if matches!(ast.ty(*right_pointee), Type::Void) {
+                } else if right_void && !left_function {
                     Some(right)
                 } else {
                     None
@@ -1038,7 +1047,8 @@ impl Checker<'_> {
     /// about ordinary C. The pointer it makes is a type nobody wrote, so it is
     /// pushed.
     ///
-    /// Only [`Checker::binary`] and [`Checker::subscript`] ask. `assignable`
+    /// Only [`Checker::binary`], [`Checker::subscript`] and
+    /// [`Checker::conditional`] ask. `assignable`
     /// deliberately does not:
     /// an array source there is silence today, and converting it would add a
     /// check this issue was not asked for rather than remove a false one.
