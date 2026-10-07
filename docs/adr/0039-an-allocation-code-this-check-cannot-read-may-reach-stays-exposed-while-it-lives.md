@@ -80,7 +80,8 @@ What an allocation may contain keeps its own row through a rebirth of its site, 
 `memcpy` and `memmove` copy an object, so what each allocation their destination holds may contain gains what the source contains, read as a load reads it, and the mark ADR-0045 gives an allocation that may hold something gone goes with it (#283). The string functions stop at a null byte and copy no pointer whole, and stay in the family that only exposes.
 
 **What a call returns.** A fresh allocation, or any exposed one, at an offset
-nobody said; and it is exposed itself, since the callee had it. That catches a
+nobody said, or since #373 the address of any local of this function whose
+address escaped; and it is exposed itself, since the callee had it. That catches a
 pointer handed to one call and returned by another, which is ordinary registry
 code. It costs `show(p); q = make(); *q`: `q` may be `p`, and is unproven; and
 `q = make(); log_line(); *q`, since `log_line` may free what `make` kept; and a
@@ -119,7 +120,11 @@ which C17 7.24.2 to 7.24.6 say of each; what they are handed is exposed, because
 they copy bytes and a pointer is bytes. Measured, this is what builds
 `memset(malloc(4), 0, 4)` and its siblings, which `main` refused already.
 
-**What is believed, and written down.** A callee that returns an allocation it
+**What is believed, and written down.** A result is one of those and nothing
+else: a local of another frame the callee kept, a string literal, or an object
+with static storage duration is believed to be an allocation, so a free of it
+says nothing ([#375](https://github.com/itsakeyfut/safec/issues/375)); doubting
+every result instead would report every `n = make(); free(n);`. A callee that returns an allocation it
 made and freed itself is a fresh allocation to this rule, and silent: #252.
 [ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 now reports it at the callee's `return`, and the caller still believes it.
@@ -262,6 +267,17 @@ fails the four cases its Confirmation names, measured after this change, so the
 exposed mark did not make them vacuous, which a new fact read at the point of
 report can do to the guards of the rules beneath it.
 
+**A local's address, since #373.** The result may also be any escaped
+local's address, which a free reads through `Held::may_be_a_locals_address`.
+Giving the result no `writes_to` edge fails
+`a_call_handed_a_locals_address_may_return_it`, and giving it an edge to every
+local rather than the escaped ones fails
+`a_call_returns_none_of_this_functions_locals_where_none_escaped`. The edge is
+also what a write through the result follows, so `pick(&x, &y)`'s result
+written through and `y` read after a free is a use after free:
+`a_write_through_what_a_call_returned_may_land_in_an_escaped_local` holds that
+the edge reaches every escaped local and not one.
+
 **What nothing holds.** Clearing what a reborn site holds was listed here;
 ADR-0040 stopped clearing it, and its Confirmation names what holds that now.
 `realloc` being asked about its first argument only in its
@@ -283,6 +299,10 @@ transfer, which no C program can show since its size holds no allocation; and `A
   size included (#253).
 * Bad, because a pointer read out of memory, and a parameter's allocation, are
   not exposed, so a use after free through either still builds (#254).
+* Bad, because the result may also be any local whose address escaped, since
+  #373, so `node = make(&cfg); free(node);` is doubted, as a constructor handed
+  an allocation, `make(b)` with `b` from `malloc`, already was. Before it,
+  `int *r = id(&x); free(r);` built with nothing reported.
 * What would reverse this: summaries of functions this translation unit
   defines, which would let a call's result be what its body returns rather than
   anything exposed.

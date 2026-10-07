@@ -1,0 +1,10 @@
+error[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_call_handed_a_locals_address_may_return_it.c:7:5 ]
+   │
+ 7 │     free(r);
+   │     ───┬───  
+   │        ╰───── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

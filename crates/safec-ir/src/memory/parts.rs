@@ -402,6 +402,10 @@ pub(super) struct Held {
     /// it: `pp = 0;` ends what a write through `pp` can reach, while the fact
     /// that `p`'s address escaped outlives anything done to `pp`. That is
     /// ADR-0018's rule for what this struct holds.
+    ///
+    /// Two things set it: taking an address, `pp = &p;`, and a call this check
+    /// cannot read, whose result may be any local whose address escaped. See
+    /// ADR-0039.
     pub(super) writes_to: Vec<bool>,
     /// Whether a write through this local may land somewhere [`writes_to`]
     /// does not name.
