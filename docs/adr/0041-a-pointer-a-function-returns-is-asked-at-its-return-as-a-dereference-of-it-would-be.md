@@ -219,7 +219,8 @@ Consequences.
 * #252, and #250 where it was split off.
 * `crates/safec/src/lowering.rs`, whose `Stmt::Return` arm writes the return
   place, marks the end of the `return`'s full expression with an
-  `Element::Sequenced`, and ends the block with `Terminator::Return`. Nothing
-  that frees runs between the write and the return, which is what makes asking
-  at the write the same as asking at the return for C. `docs/c-family.md` is
+  `Element::Sequenced`, ends the storage of every scope it leaves (#114), and
+  ends the block with `Terminator::Return`. Nothing that frees an allocation
+  runs between the write and the return, which is what makes asking at the
+  write the same as asking at the return for C. `docs/c-family.md` is
   where that becomes a requirement on another frontend.

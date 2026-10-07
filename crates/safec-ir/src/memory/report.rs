@@ -576,9 +576,12 @@ pub(super) fn used(
 /// as it is there: asking the return place at [`Terminator::Return`] instead
 /// proved a return that a dereference of the same local only doubts, because
 /// the return place never escapes. For C the two points are one, since the
-/// lowering puts nothing that frees between the write and the return, only the
-/// sequence point that ends the `return`'s full expression;
-/// `docs/c-family.md` says what that asks of another frontend.
+/// lowering puts nothing that frees between the write and the return: the
+/// sequence point that ends the `return`'s full expression, and the
+/// `StorageDead` of every scope the `return` leaves, which ends a local's
+/// storage and frees no allocation. A check about a local's own storage is
+/// the one for which the two points differ, and has to ask at the return;
+/// `docs/c-family.md` says what this asks of another frontend.
 ///
 /// **Only where the function returns a pointer.** Every call's result is a
 /// site and exposed, a later call this check cannot read unproves it, and an
