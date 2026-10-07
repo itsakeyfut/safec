@@ -432,7 +432,16 @@ impl Allocations<'_> {
             // sites it holds, so a free of it stays the doubt it was rather
             // than a free of those sites alone: answering them without this
             // made `free(q)` of a load say less. See ADR-0045.
-            if reached.len() == before || known.points_to[place.local.index()].loaded {
+            //
+            // **Nor is a pointer that may be a local's address.** On the path
+            // that gave it `&x` it frees no allocation at all, which C17
+            // 7.22.3.3 p2 leaves undefined. The join keeps the sites the other
+            // path brought and drops that one, so `if (c) r = &x; free(r);`
+            // was read as a free of the allocation and said nothing;
+            // `writes_to` is the fact the join keeps, and this is where a free
+            // reads it. See ADR-0019.
+            let held = &known.points_to[place.local.index()];
+            if reached.len() == before || held.loaded || held.writes_to.iter().any(|&edge| edge) {
                 reached.push(Reached::Lost);
             }
         }
@@ -472,10 +481,14 @@ impl Allocations<'_> {
             // and there is no row here to ask.
             // A load holds what was stored where it was read from, which may
             // not be all it holds, so a free of it does not say which went
-            // either. See ADR-0045.
+            // either. See ADR-0045. And a pointer that may be a local's
+            // address may have freed none of its sites, for the reason
+            // `touching` gives: written here too, or a later free of one of
+            // those sites is proved a double free on the path that freed `x`.
             Operand::Copy(place) => {
                 let held = &known.points_to[place.local.index()];
-                place.projection.is_empty() && (held.lost || held.loaded)
+                place.projection.is_empty()
+                    && (held.lost || held.loaded || held.writes_to.iter().any(|&edge| edge))
             }
         })
     }
