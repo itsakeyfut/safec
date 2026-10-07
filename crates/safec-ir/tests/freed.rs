@@ -142,8 +142,7 @@ fn a_unit(names: &Names, parameters: usize) -> (TranslationUnit, Function, Types
 /// `free(local);`, ending the block.
 ///
 /// `destination: None`, which is what the IR means by a call that returns
-/// nothing. The frontend writes `Some` into a `void` temporary instead, which
-/// is #135, and the corpus cases are what read that shape.
+/// nothing, and what the frontend writes for `free(p);`.
 fn free(callees: &Callees, local: LocalId, at: Span, then: BlockId) -> Block {
     Block {
         elements: vec![],
@@ -2340,10 +2339,10 @@ fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
 /// A read of what a site used to name is not a read of what it names now.
 ///
 /// **No C program reaches this and a frontend can build it.** A site is the
-/// local a call writes into, and the lowering gives every call a fresh
-/// temporary, so two allocations in one full expression are two sites; here
-/// they are one, which is what makes the read above the second call name a
-/// site the second call has taken over. Left standing, the free below would be
+/// local a call writes into, and the lowering gives every call that returns
+/// something a fresh temporary, so two allocations in one full expression are
+/// two sites; here they are one, which is what makes the read above the second
+/// call name a site the second call has taken over. Left standing, the free below would be
 /// reported against a read of an allocation it has nothing to do with, and the
 /// caret would sit on a line that read something else.
 ///

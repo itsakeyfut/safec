@@ -126,6 +126,11 @@ with static storage duration is believed to be an allocation, so a free of it
 says nothing ([#375](https://github.com/itsakeyfut/safec/issues/375)); doubting
 every result instead would report every `n = make(); free(n);`. A callee that returns an allocation it
 made and freed itself is a fresh allocation to this rule, and silent: #252.
+Nothing stands for memory only a callee holds, either, so `release();
+r = acquire(); free(r);` is silent where `release` freed what `acquire`
+returns ([#379](https://github.com/itsakeyfut/safec/issues/379)). It was
+doubted before #135 only because a `void` call's result local was a site, which
+made the answer turn on the earlier call's return type.
 [ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
 now reports it at the callee's `return`, and the caller still believes it.
 `realloc`'s failure branch, `if (q == 0) free(p);`, builds where the size is a
@@ -294,7 +299,8 @@ transfer, which no C program can show since its size holds no allocation; and `A
 * Bad, because the memory check costs about half again in memory and time,
   until #173.
 * Bad, because a callee returning what it freed itself is believed (#252,
-  reported at the callee's `return` since ADR-0041), and
+  reported at the callee's `return` since ADR-0041), so is a call returning
+  what an earlier call freed (#379), and
   `realloc`'s failure branch is refused where the size may be zero, a variable
   size included (#253).
 * Bad, because a pointer read out of memory, and a parameter's allocation, are

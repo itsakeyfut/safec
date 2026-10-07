@@ -882,9 +882,10 @@ cases! {
         a_proved_null_dereference_after_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call reading through a pointer it then assigns to. What this pins
         // is the answer rather than the rule behind it: a call's result lands
-        // in a fresh temporary here and is copied out in an element of its own,
-        // so the order the arguments and the destination are applied in cannot
-        // be seen from any C this frontend lowers.
+        // in a fresh temporary here, where the callee returns something, and is
+        // copied out in an element of its own, so the order the arguments and
+        // the destination are applied in cannot be seen from any C this
+        // frontend lowers.
         // `a_call_that_reads_a_pointer_and_writes_it_keeps_neither` in
         // `crates/safec-ir/tests/nulls.rs` is what holds that.
         a_call_whose_destination_it_dereferences: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1261,7 +1262,10 @@ cases! {
         a_write_through_what_a_call_returned_may_land_in_an_escaped_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local an earlier call was handed, not this one. Its free was
         // `SC0404` beside `SC0401` before, and is `SC0401` alone, for the
-        // reason the loop case above gives. Mutation: give the edge only
+        // reason the loop case above gives. It is worded as the free of a
+        // pointer this check stopped following rather than as a double free,
+        // because `stash` returns `void` and so makes no site of its own for
+        // `get` to return. Mutation: give the edge only
         // where this call was handed something; this goes silent, because
         // `stash` returns `void` and so leaves no result of its own for
         // `get` to hand back.
