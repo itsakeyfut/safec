@@ -941,3 +941,44 @@ fn what_was_expected_is_named_in_the_message() {
         assert_eq!(reported[0].message(), expected, "{text:?}");
     }
 }
+
+/// A parameter declared as an array or a function is a pointer to C, and
+/// keeps what was written for whoever prints it.
+///
+/// C17 6.7.6.3 p7 adjusts an array of `T` to a pointer to `T`, and p8 a
+/// function to a pointer to it. So the function type is the one
+/// `int g(int *, int (*)(void))` declares, by p15.
+///
+/// Mutation: leave a parameter's `ty` as written. The adjusted spellings
+/// and the compatibility fail. Mutation: compare `written` in
+/// `Ast::compatible_parameters`. The compatibility fails.
+#[test]
+fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
+    let parsed = parsed("int g(int a[4], int h(void));\nint g(int *a, int (*h)(void));\n");
+    let [first, second] = parsed.ast.items() else {
+        panic!("two declarations: {:?}", parsed.ast.items());
+    };
+    let ty = |item: &Item| {
+        let Item::Declaration { declarators, .. } = item else {
+            panic!("a declaration: {item:?}");
+        };
+        declarators[0].declaration.ty
+    };
+    let (first, second) = (ty(first), ty(second));
+
+    let Type::Function {
+        parameters: Parameters::Prototype(parameters),
+        ..
+    } = parsed.ast.ty(first)
+    else {
+        panic!("a prototype");
+    };
+    let spelled = |id| crate::ast::spell_type(&parsed.sources, &parsed.ast, id);
+    let adjusted: Vec<String> = parameters.iter().map(|p| spelled(p.ty)).collect();
+    let written: Vec<String> = parameters.iter().map(|p| spelled(p.written)).collect();
+    assert_eq!(adjusted, ["int *", "int (*)(void)"]);
+    assert_eq!(written, ["int[4]", "int (void)"]);
+
+    assert!(parsed.ast.compatible(first, second));
+    assert!(!parsed.diagnostics.has_errors());
+}

@@ -1,0 +1,15 @@
+Declaration an_argument_is_checked_against_an_adjusted_parameter.c:1:1 "g" "int (int[4])"
+  Parameter an_argument_is_checked_against_an_adjusted_parameter.c:1:7 "a" "int[4]"
+Declaration an_argument_is_checked_against_an_adjusted_parameter.c:2:1 "k" "int (int (void))"
+  Parameter an_argument_is_checked_against_an_adjusted_parameter.c:2:7 "h" "int (void)"
+Function an_argument_is_checked_against_an_adjusted_parameter.c:4:1 "f" "int (int)"
+  Parameter an_argument_is_checked_against_an_adjusted_parameter.c:4:7 "x" "int"
+  Compound an_argument_is_checked_against_an_adjusted_parameter.c:4:14
+    Expression an_argument_is_checked_against_an_adjusted_parameter.c:5:5
+      Call an_argument_is_checked_against_an_adjusted_parameter.c:5:5
+        Identifier an_argument_is_checked_against_an_adjusted_parameter.c:5:5 "g"
+        Identifier an_argument_is_checked_against_an_adjusted_parameter.c:5:7 "x"
+    Return an_argument_is_checked_against_an_adjusted_parameter.c:6:5
+      Call an_argument_is_checked_against_an_adjusted_parameter.c:6:12
+        Identifier an_argument_is_checked_against_an_adjusted_parameter.c:6:12 "k"
+        Number an_argument_is_checked_against_an_adjusted_parameter.c:6:14 "1"

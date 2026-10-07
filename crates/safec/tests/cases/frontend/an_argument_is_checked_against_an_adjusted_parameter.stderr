@@ -1,0 +1,22 @@
+error[SC0302]: cannot pass `int` to a parameter of type `int *`
+   ╭─[ an_argument_is_checked_against_an_adjusted_parameter.c:5:7 ]
+   │
+ 1 │ int g(int a[4]);
+   │           ┬  
+   │           ╰── declared `int *` here
+   │ 
+ 5 │     g(x);
+   │       ┬  
+   │       ╰── this is `int`
+───╯
+error[SC0302]: cannot pass `int` to a parameter of type `int (*)(void)`
+   ╭─[ an_argument_is_checked_against_an_adjusted_parameter.c:6:14 ]
+   │
+ 2 │ int k(int h(void));
+   │           ┬  
+   │           ╰── declared `int (*)(void)` here
+   │ 
+ 6 │     return k(1);
+   │              ┬  
+   │              ╰── this is `int`
+───╯

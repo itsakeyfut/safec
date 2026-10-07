@@ -215,6 +215,11 @@ cases! {
         a_comma_inside_a_call_argument_orders_nothing_outside_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_logical_and_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_conditional_inside_an_unsequenced_operand_orders_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A parameter written as an array is the pointer C17 6.7.6.3 p7 makes
+        // it, so its function lowers and a read after its free is one.
+        // Mutation: leave a parameter's type as written; the function is
+        // `SC0304`, a type the IR cannot hold, and the read goes unasked.
+        a_parameter_declared_as_an_array_is_followed_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The four constructs that do order their operands, one case each,
         // because C17 Annex C names four and a list implemented three-quarters
         // of the way leaves a reader asking which quarter. 6.5.17 p2, 6.5.13
@@ -2447,6 +2452,11 @@ cases! {
         // array or a function parameter is a pointer by C17 6.7.6.3 p7 and p8
         // and the IR holds that.
         a_function_the_ir_cannot_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An argument is checked against the parameter as C adjusts it: an
+        // `int` given to `int a[4]` is given to an `int *`, and to `int
+        // h(void)` an `int (*)(void)`. Mutation: leave a parameter's type as
+        // written; both calls build.
+        an_argument_is_checked_against_an_adjusted_parameter: ["--emit", "ast"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],
         a_file_scope_declaration_carries_its_initializer: ["--emit", "ast"],
