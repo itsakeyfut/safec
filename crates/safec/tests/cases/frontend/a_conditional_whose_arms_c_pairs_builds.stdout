@@ -45,10 +45,17 @@ Function a_conditional_whose_arms_c_pairs_builds.c:3:1 "f" "int (int, int, char,
         Identifier a_conditional_whose_arms_c_pairs_builds.c:10:23 "v"
     Expression a_conditional_whose_arms_c_pairs_builds.c:11:5
       Assign a_conditional_whose_arms_c_pairs_builds.c:11:5 "="
-        Identifier a_conditional_whose_arms_c_pairs_builds.c:11:5 "r"
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:11:5 "w"
         Conditional a_conditional_whose_arms_c_pairs_builds.c:11:9
           Identifier a_conditional_whose_arms_c_pairs_builds.c:11:9 "c"
-          Identifier a_conditional_whose_arms_c_pairs_builds.c:11:13 "a"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:11:13 "v"
           Identifier a_conditional_whose_arms_c_pairs_builds.c:11:17 "p"
-    Return a_conditional_whose_arms_c_pairs_builds.c:12:5
-      Identifier a_conditional_whose_arms_c_pairs_builds.c:12:12 "x"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:12:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:12:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:12:5 "r"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:12:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:12:9 "c"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:12:13 "a"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:12:17 "p"
+    Return a_conditional_whose_arms_c_pairs_builds.c:13:5
+      Identifier a_conditional_whose_arms_c_pairs_builds.c:13:12 "x"

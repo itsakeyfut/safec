@@ -8,6 +8,7 @@ int f(int c, int n, char ch, int *p, void *v) {
     r = c ? p : 0;
     r = c ? 0 : p;
     void *w = c ? p : v;
+    w = c ? v : p;
     r = c ? a : p;
     return x;
 }
