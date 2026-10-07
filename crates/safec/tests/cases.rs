@@ -2590,10 +2590,11 @@ cases! {
         a_void_condition_is_a_type_error: ["--emit", "ast"],
         a_void_condition_of_a_conditional_is_a_type_error: ["--emit", "ast"],
         // C17 6.5.2.1 p1 wants an integer beside the pointer, and a `void`
-        // operand is refused whichever side it is on, which keeps a `void`
-        // value away from the lowering. Mutation: drop the `Void` arm in
-        // `Checker::subscript`; this builds, and a run past `--emit ast`
-        // panics in the lowering.
+        // operand is refused whichever side it is on, with the caret on the
+        // `void` one. Mutation: answer `None` for a pairing without a report;
+        // this builds, and a run past `--emit ast` panics in the lowering.
+        // Mutation: label the base wherever neither operand is a pointer; the
+        // caret of `1[g()]` moves to the `1`.
         a_void_subscript_operand_is_a_type_error: ["--emit", "ast"],
         // And every other pairing that is not one pointer and one integer:
         // an integer base, two pointers, no pointer at all. Each was untyped
@@ -2817,8 +2818,9 @@ cases! {
         // empty stack.
         a_call_that_returns_nothing_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.5.2.1 p2 makes `E1[E2]` mean `*((E1)+(E2))`, so `1[p]` is
-        // `p[1]`, and both lower to `p + 1` and a `Deref`, and are doubted
-        // alike, since what `p + 1` holds is not `p`. Mutation: read the
+        // `p[1]`, and both lower to `p + 1` and a `Deref`. Both are doubted
+        // alike, because the nullability check answers `Unknown` for the
+        // result of any arithmetic, `_Nonnull` operand or not. Mutation: read the
         // subscript's type off the base only; `1[p]` is `SC0304`. Mutation:
         // take the base as the pointer in the lowering; the constant `1` is
         // refused as pointing at nothing.

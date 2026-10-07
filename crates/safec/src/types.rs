@@ -611,7 +611,11 @@ impl Checker<'_> {
     /// an integer. A pointer beside an integer is asked [`unsteppable`], the
     /// function `v + 1` asks, whichever side it was written on. Any other
     /// pairing, `x[0]`, `p[q]` or a `void` operand, is refused and answers no
-    /// type. The operands are decayed first, because 6.3.2.1 converts an
+    /// type. All of that is asked only where both operands are typed: `x[p -
+    /// q]` is an integer subscripted by a pointer difference this compiler
+    /// has no type for, and goes unreported here and untyped into the
+    /// lowering, for want of a `ptrdiff_t` rather than of a rule. The
+    /// operands are decayed first, because 6.3.2.1 converts an
     /// array or a function before `[]` sees it, and a function `g` is refused
     /// in `g[1]` only as the pointer it becomes.
     fn subscript(
@@ -626,9 +630,8 @@ impl Checker<'_> {
             // C17 6.5.2.1 p1: one operand a pointer to a complete object type
             // and the other an integer. Anything else is refused and answers
             // no type, which keeps `x[0]` from reaching the lowering untyped
-            // and being called a gap in this compiler, and keeps a `void`
-            // operand from a lowering that gives a `void` value nowhere to
-            // live.
+            // and being called a gap in this compiler, and keeps `int *r =
+            // p[q];` from a second report about an `int` nobody wrote.
             let refused = match (OperandClass::of(ast, left), OperandClass::of(ast, right)) {
                 (Some(OperandClass::Pointer(pointee)), Some(OperandClass::Arithmetic)) => {
                     pointee_steppable(ast, pointee, true).err()
@@ -663,14 +666,16 @@ impl Checker<'_> {
         })
     }
 
-    /// Report a subscript whose pointer [`unsteppable`] refused, or one of
-    /// whose operands is `void`. Each operand is its expression and its type
-    /// after [`Checker::decayed`].
+    /// Report a subscript whose pointer [`unsteppable`] refused, or whose
+    /// operands are not one pointer and one integer. Each operand is its
+    /// expression and its type after [`Checker::decayed`].
     ///
     /// The shape of [`Checker::report_operands`]: both types in the order they
-    /// were written, and the primary label on the pointer whichever side it
-    /// is on, because a pointer refused for what it points to is wrong alone.
-    /// Labelling the base instead would point at an innocent `1` in `1[v]`.
+    /// were written, and the primary label on what is wrong. A pointer
+    /// refused for what it points to is wrong alone, whichever side it is on;
+    /// labelling the base instead would point at an innocent `1` in `1[v]`.
+    /// Where the pairing is refused, the operand that cannot stand beside the
+    /// other is.
     fn report_subscript(
         &self,
         ast: &Ast,
@@ -683,11 +688,17 @@ impl Checker<'_> {
         let right_spelled = self.spelled(ast, right);
         // The pointer where it is refused for what it points to. Where the
         // pairing is refused, the operand beside a pointer is what does not
-        // fit, as in `p[g()]` and the `q` of `p[q]`; with no pointer at all,
-        // as in `x[0]`, the base.
+        // fit, as in `p[g()]` and the `q` of `p[q]`; with no pointer, a `void`
+        // operand, as the `g()` of `1[g()]`; with neither, as in `x[0]`, the
+        // base.
         let on_left = match refused {
             Refused::Pointee { on_left, .. } => on_left,
-            Refused::Pairing => !matches!(ast.ty(left), Type::Pointer(_)),
+            Refused::Pairing => match (ast.ty(left), ast.ty(right)) {
+                (Type::Pointer(_), _) => false,
+                (_, Type::Pointer(_)) => true,
+                (_, Type::Void) => false,
+                _ => true,
+            },
         };
         let (primary, secondary) = if on_left {
             ((base, &left_spelled), (index, &right_spelled))

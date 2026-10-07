@@ -449,7 +449,9 @@ fn the_deepest_nest_of_statements_does_not_end_the_process() {
 /// target here is MSVC, and a result against `clang` means nothing until the
 /// target is named. So does this compiler: `i[i]` subscripts an integer with an
 /// integer, which C17 6.5.2.1 p1 refuses, so the run is one `SC0306` and exit
-/// 1, with the whole artifact printed, rather than exit 101 and nothing.
+/// 1, with the whole artifact printed, rather than exit 101 and nothing. One,
+/// because a refused subscript has no type and the pairing is asked only of
+/// typed operands, so each `[i]` around the first is passed over in silence.
 ///
 /// Mutation: pass `depth * 2` as the format width again. The run exits 101 and
 /// this fails by name. `a_long_flat_expression_does_not_end_the_process` below
