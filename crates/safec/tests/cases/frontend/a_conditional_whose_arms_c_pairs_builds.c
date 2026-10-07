@@ -10,5 +10,6 @@ int f(int c, int n, char ch, int *p, void *v) {
     void *w = c ? p : v;
     w = c ? v : p;
     r = c ? a : p;
+    r = c ? p : a;
     return x;
 }

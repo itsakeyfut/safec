@@ -1,33 +1,79 @@
 Declaration a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:1:1 "h" "void (void)"
-Function a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:3:1 "f" "int (int, int *, char *)"
-  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:3:7 "c" "int"
-  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:3:14 "p" "int *"
-  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:3:22 "q" "char *"
-  Compound a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:3:31
-    Declaration a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:5 "x" "int"
-    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:5
-      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:5
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:5 "c"
-        Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:9
-          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:9 "h"
-        Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:15 "1"
+Declaration a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:2:1 "g" "int (int)"
+  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:2:7 "a" "int"
+Function a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:1 "f" "int (int, int *, char *, char, void *)"
+  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:7 "c" "int"
+  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:14 "p" "int *"
+  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:22 "q" "char *"
+  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:31 "ch" "char"
+  Parameter a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:40 "v" "void *"
+  Compound a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:4:49
+    Declaration a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:5:5 "x" "int"
     Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:5
-      Assign a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:5 "="
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:5 "x"
-        Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:9
-          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:9 "c"
-          Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:13
-            Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:13 "h"
-          Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:19 "1"
-    Declaration a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:5 "r" "int *"
-      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:14
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:14 "c"
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:18 "p"
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:22 "q"
-    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:5
-      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:5
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:5 "c"
-        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:9 "p"
-        Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:13 "1"
-    Return a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:5
-      Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:12 "x"
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:5 "c"
+        Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:9
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:9 "h"
+        Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:6:15 "1"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:5
+      Assign a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:5 "="
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:5 "x"
+        Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:9
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:9 "c"
+          Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:13
+            Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:13 "h"
+          Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:7:19 "1"
+    Declaration a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:5 "r" "int *"
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:14
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:14 "c"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:18 "p"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:8:22 "q"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:5
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:5 "c"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:9 "p"
+        Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:9:13 "1"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:10:5
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:10:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:10:5 "c"
+        Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:10:9 "1"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:10:13 "p"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:11:5
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:11:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:11:5 "c"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:11:9 "p"
+        Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:11:13
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:11:13 "h"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:12:5
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:12:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:12:5 "c"
+        Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:12:9
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:12:9 "h"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:12:15 "p"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:13:5
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:13:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:13:5 "c"
+        Number a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:13:9 "1"
+        Call a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:13:13
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:13:13 "h"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:14:5
+      Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:14:5
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:14:5 "c"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:14:9 "p"
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:14:13 "ch"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:5
+      Assign a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:5 "="
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:5 "v"
+        Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:9
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:9 "c"
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:13 "g"
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:15:17 "v"
+    Expression a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:5
+      Assign a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:5 "="
+        Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:5 "v"
+        Conditional a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:9
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:9 "c"
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:13 "v"
+          Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:16:17 "g"
+    Return a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:17:5
+      Identifier a_conditional_whose_arms_c_does_not_pair_is_a_type_error.c:17:12 "x"

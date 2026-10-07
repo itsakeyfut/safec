@@ -57,5 +57,12 @@ Function a_conditional_whose_arms_c_pairs_builds.c:3:1 "f" "int (int, int, char,
           Identifier a_conditional_whose_arms_c_pairs_builds.c:12:9 "c"
           Identifier a_conditional_whose_arms_c_pairs_builds.c:12:13 "a"
           Identifier a_conditional_whose_arms_c_pairs_builds.c:12:17 "p"
-    Return a_conditional_whose_arms_c_pairs_builds.c:13:5
-      Identifier a_conditional_whose_arms_c_pairs_builds.c:13:12 "x"
+    Expression a_conditional_whose_arms_c_pairs_builds.c:13:5
+      Assign a_conditional_whose_arms_c_pairs_builds.c:13:5 "="
+        Identifier a_conditional_whose_arms_c_pairs_builds.c:13:5 "r"
+        Conditional a_conditional_whose_arms_c_pairs_builds.c:13:9
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:13:9 "c"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:13:13 "p"
+          Identifier a_conditional_whose_arms_c_pairs_builds.c:13:17 "a"
+    Return a_conditional_whose_arms_c_pairs_builds.c:14:5
+      Identifier a_conditional_whose_arms_c_pairs_builds.c:14:12 "x"
