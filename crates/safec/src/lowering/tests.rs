@@ -788,16 +788,16 @@ fn a_declared_function_can_be_called() {
 /// An expression the frontend could not type is reported, and its function
 /// keeps no body.
 ///
-/// `x[0]` where `x` is an `int` is the case that reaches here: `types.rs`
-/// answers `None` for it and reports nothing, so nothing before this stage
-/// says the program has a hole in it.
+/// `p - q` on two pointers is the case that reaches here: `types.rs` has no
+/// `ptrdiff_t` to give it and reports nothing, because the program is valid,
+/// so nothing before this stage says the run has a hole in it.
 ///
 /// Mutation: lower an untyped expression as `Ty::Int`. No code is reported
 /// and this fails. Mutation: report and lower the rest of the function
 /// anyway. `is_defined` starts answering true and this fails.
 #[test]
 fn an_expression_with_no_type_is_reported_and_lowers_nothing() {
-    let lowered = lowered("int f(void) {\n    int x;\n    return x[0];\n}\n");
+    let lowered = lowered("int f(int *p, int *q) {\n    return p - q;\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }

@@ -2143,15 +2143,26 @@ impl Lowering<'_> {
             // `Projection::Index` is what an array wants and nothing builds one
             // yet, because an array is a type this stage refuses. Whoever gives
             // the IR arrays decides whether a subscript on one is an `Index`.
-            Expr::Subscript { base, span, .. } => {
-                let (base, span) = (*base, *span);
+            Expr::Subscript { base, index, span } => {
+                let (base, index, span) = (*base, *index, *span);
                 let offset = values.pop().expect("an index");
                 let pointer = values.pop().expect("a base");
-                // Of the base's type rather than the subscript's: what is
-                // worked out here is the address, and the subscript is what
-                // that address reaches. Asked once, because asking twice
-                // reports twice when there is no type to give.
-                let addressed = self.ty_of(base, diagnostics)?;
+                // C17 6.5.2.1 p2 makes `E1[E2]` mean `*((E1)+(E2))`, so the
+                // pointer may be either operand: `1[p]` is `p[1]`, and is
+                // built as it is. Only the roles swap; both operands were
+                // evaluated above, base first, as they are for `p[1]`.
+                // `types.rs` has refused every pairing that is not a pointer
+                // and an integer, so the index is the pointer wherever the
+                // base is not. Of the pointer's type rather than the
+                // subscript's: what is worked out here is the address, and the
+                // subscript is what that address reaches.
+                let base_ty = self.ty_of(base, diagnostics)?;
+                let (base, pointer, offset, addressed) =
+                    if matches!(self.unit.ty(base_ty), Ty::Pointer(_)) {
+                        (base, pointer, offset, base_ty)
+                    } else {
+                        (index, offset, pointer, self.ty_of(index, diagnostics)?)
+                    };
 
                 // `E[0]` is `*E`, so it is built as `*E` is: one C expression
                 // is one shape in the IR, which the sentence above this arm has
