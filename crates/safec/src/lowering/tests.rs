@@ -335,6 +335,27 @@ fn a_return_ends_every_scope_it_leaves() {
     assert_eq!(lowered.sources.snippet(origin.span()), "return c;");
 }
 
+/// A `return` with no value ends the scopes it leaves too.
+///
+/// The value is the half of the `Return` arm that is optional, and the
+/// ends are not part of it.
+///
+/// Mutation: run the `StorageDead` loop only where the `return` has a
+/// value. The `StorageLive` is left unmatched and this fails.
+#[test]
+fn a_return_with_no_value_ends_the_scope_it_leaves() {
+    let lowered = lowered(
+        "void f(int n) { if (n) { int x; x = 1; return; } }
+",
+    );
+
+    let marked = markers(function(&lowered, "f"));
+    let [("StorageLive", live), ("StorageDead", dead)] = marked[..] else {
+        panic!("one pair, and nothing else: {marked:?}");
+    };
+    assert_eq!(live, dead);
+}
+
 /// A local in a loop body gets its storage back on each iteration.
 ///
 /// C17 6.2.4 p6: an automatic object's lifetime "extends from entry into
