@@ -379,6 +379,10 @@ impl Allocations<'_> {
 
     /// What the arguments of a call reach, in the order they were written.
     ///
+    /// A local that reaches no site, is a load, or may be a local's address
+    /// reaches [`Reached::Lost`] as well as whatever sites it has: what it
+    /// hands the call is not, or not only, an allocation this check names.
+    ///
     /// Shared with [`findings`](super::findings), so that the walk which reports and the walk which
     /// computes cannot disagree about what a call touches.
     ///
@@ -432,7 +436,15 @@ impl Allocations<'_> {
             // sites it holds, so a free of it stays the doubt it was rather
             // than a free of those sites alone: answering them without this
             // made `free(q)` of a load say less. See ADR-0045.
-            if reached.len() == before || known.points_to[place.local.index()].loaded {
+            //
+            // **Nor is a pointer that may be a local's address.** On the path
+            // that took `&x` a free of it, or a `realloc`, releases no
+            // allocation at all. The join keeps the sites the other path
+            // brought and drops that one, so `if (c) r = &x; free(r);` was
+            // read as a free of the allocation and said nothing. See
+            // `Held::may_be_a_locals_address`.
+            let held = &known.points_to[place.local.index()];
+            if reached.len() == before || held.loaded || held.may_be_a_locals_address() {
                 reached.push(Reached::Lost);
             }
         }
@@ -473,9 +485,15 @@ impl Allocations<'_> {
             // A load holds what was stored where it was read from, which may
             // not be all it holds, so a free of it does not say which went
             // either. See ADR-0045.
+            //
+            // A pointer that may be a local's address may have freed none of
+            // its sites, for the reason `touching` gives. Asked here too, or
+            // a later free of one of those sites is proved a double free on
+            // the path that took `&x`, where nothing freed it.
             Operand::Copy(place) => {
                 let held = &known.points_to[place.local.index()];
-                place.projection.is_empty() && (held.lost || held.loaded)
+                place.projection.is_empty()
+                    && (held.lost || held.loaded || held.may_be_a_locals_address())
             }
         })
     }

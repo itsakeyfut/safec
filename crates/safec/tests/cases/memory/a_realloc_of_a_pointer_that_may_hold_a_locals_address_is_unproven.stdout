@@ -1,0 +1,78 @@
+Target "x86_64-pc-windows-msvc"
+Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:2:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:5:5 "g"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int *"
+  Local "_6" "int *"
+  Local "_7" "int *"
+  Local "_8" "void *"
+  Local "_9" "void"
+  Block "bb0" entry
+    ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 generated
+    Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 "malloc" "bb1"
+      Destination "_4"
+      Constant 4
+  Block "bb1"
+    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:7:14 generated
+    Branch a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:8:9 "bb2" "bb3"
+      Copy "_1"
+  Block "bb2"
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:8:9 generated
+    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:9:13 written
+      Destination "_5"
+      Address
+        Place "_2"
+    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:9:9 written
+      Destination "_3"
+      Use
+        Copy "_5"
+    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:9:9 written
+      Destination "_6"
+      Use
+        Copy "_3"
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:9:9 generated
+    Goto "bb4"
+  Block "bb3"
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:8:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 generated
+    Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 "realloc" "bb5"
+      Destination "_8"
+      Copy "_3"
+      Constant 8
+  Block "bb5"
+    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 generated
+    ArgumentsEvaluated a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 generated
+    Call a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 "free" "bb6"
+      Destination "_9"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:12:5 generated
+    Operation a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:13:12 generated
+    Return
