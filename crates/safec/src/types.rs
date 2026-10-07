@@ -652,12 +652,18 @@ impl Checker<'_> {
     /// C17 6.5.5 to 6.5.14: the type of a binary operation, and whether its
     /// operands are ones its operator takes.
     ///
-    /// No type where C gives none: beside an operand this stage could not
-    /// type, which something earlier reported, and for an operation it
-    /// refuses, which this reports. That is the answer `*`, a call and the
-    /// unary operators give, and it reports each mistake once: an `int` here
-    /// had `p = p * 1` and `p = nowhere * 1` reported a second time, as an
-    /// `int` given to a pointer that the program never had.
+    /// No type for an operation it refuses, which this reports: that is the
+    /// answer `*`, a call and the unary operators give, and an `int` there
+    /// had `p = p * 1` reported a second time, as an `int` given to a pointer
+    /// the program never had.
+    ///
+    /// Beside an operand this stage could not type, every operator but `+`
+    /// and `-` is still `int`, because an operand can be untyped with
+    /// nothing reported: `p - q` is valid C, and this compiler has no type
+    /// for its `ptrdiff_t`. No type there would skip the check around it, so
+    /// `int *r = (p - q) * 2;` would lose its `SC0302`. The cost is that
+    /// `p = nowhere * 1` is reported as an undeclared name and then as an
+    /// `int` given to a pointer.
     fn binary(
         &mut self,
         ast: &mut Ast,
@@ -671,7 +677,9 @@ impl Checker<'_> {
             _ => None,
         };
 
-        let (left, right) = operands?;
+        let Some((left, right)) = operands else {
+            return (!matches!(op, BinOp::Add | BinOp::Sub)).then_some(self.int);
+        };
         let nulls = (
             self.is_null_pointer_constant(lhs),
             self.is_null_pointer_constant(rhs),
@@ -723,14 +731,15 @@ impl Checker<'_> {
 
         match pointers {
             // p9 makes a pointer minus a pointer `ptrdiff_t`, which this
-            // compiler has no name for, and p2 forbids adding two pointers at
-            // all. Neither has a type to give.
+            // compiler has no name for. Two pointers added, which p2 forbids,
+            // are refused by `binary_operable` before they reach here, and
+            // the arm answers the same for them.
             (true, true) => None,
             // p2 and p3 both allow the pointer on the left.
             (true, false) => Some(lhs),
-            // p3 allows it only there: `i - p` is a constraint violation, and
-            // typing it as a pointer made this compiler report the assignment
-            // around it instead.
+            // p3 allows it only there: `i - p` is a constraint violation,
+            // refused by `binary_operable` before it reaches here, and no type
+            // if it did.
             (false, true) if op == BinOp::Sub => None,
             // p2 lets an addition be written the other way round.
             (false, true) => Some(rhs),

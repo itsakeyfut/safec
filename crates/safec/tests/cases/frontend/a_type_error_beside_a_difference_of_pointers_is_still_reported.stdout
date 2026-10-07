@@ -1,0 +1,12 @@
+Function a_type_error_beside_a_difference_of_pointers_is_still_reported.c:1:1 "f" "int (int *, int *)"
+  Parameter a_type_error_beside_a_difference_of_pointers_is_still_reported.c:1:7 "p" "int *"
+  Parameter a_type_error_beside_a_difference_of_pointers_is_still_reported.c:1:15 "q" "int *"
+  Compound a_type_error_beside_a_difference_of_pointers_is_still_reported.c:1:23
+    Declaration a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:5 "r" "int *"
+      Binary a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:15 "*"
+        Binary a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:15 "-"
+          Identifier a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:15 "p"
+          Identifier a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:19 "q"
+        Number a_type_error_beside_a_difference_of_pointers_is_still_reported.c:2:24 "2"
+    Return a_type_error_beside_a_difference_of_pointers_is_still_reported.c:3:5
+      Number a_type_error_beside_a_difference_of_pointers_is_still_reported.c:3:12 "0"
