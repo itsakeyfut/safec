@@ -72,9 +72,9 @@ const ARGUMENTS: Code = Code::new("SC0303");
 /// binary operator, 6.5.16.2 p1 and p2 for a compound assignment, 6.5.2.4 p2
 /// and 6.5.3.1 p2 for an increment or a decrement, 6.5.2.1 p1 for a
 /// subscript, 6.5.3.2 p2 for `*`, 6.5.3.3 p1 for unary `+`, `-`, `~` and `!`,
-/// 6.5.2.2 p1 for a callee, the operand of a call's `()`, and 6.5.15 p2,
+/// 6.5.2.2 p1 for a callee, the operand of a call's `()`, 6.5.15 p2,
 /// 6.8.4.1 p1 and 6.8.5 p2 for the condition of `?:`, `if`, `while` and
-/// `for`.
+/// `for`, and 6.5.15 p3 for the pair of a conditional's arms.
 ///
 /// Not `MISMATCH`, which is a value of the wrong type for a place: `p *= 2`
 /// is refused because `*=` does not take a pointer, whatever `p` holds. A
@@ -428,9 +428,6 @@ impl Checker<'_> {
             Expr::Call {
                 callee, arguments, ..
             } => self.call(ast, id, callee, &arguments, diagnostics),
-            // 6.5.15's rule is the usual arithmetic conversions and a page of
-            // pointer cases. What is answered here is the half that needs
-            // neither: two arms of one type make that type.
             Expr::Conditional {
                 condition,
                 then,
@@ -448,9 +445,7 @@ impl Checker<'_> {
                         return None;
                     }
                 }
-                let then = self.types[then.index()]?;
-                let otherwise = self.types[otherwise.index()]?;
-                ast.compatible(then, otherwise).then_some(then)
+                self.conditional(ast, then, otherwise, diagnostics)
             }
             Expr::Error { .. } => None,
         }
@@ -894,6 +889,80 @@ impl Checker<'_> {
                 !matches!(left, OperandClass::Void) && !matches!(right, OperandClass::Void),
             )),
         }
+    }
+
+    /// C17 6.5.15 p3 to p6: whether a conditional's arms are a pair C allows,
+    /// and the type it gives them, after [`Checker::decayed`] as `binary`
+    /// reads its operands.
+    ///
+    /// Two arithmetic arms are `int`, the usual arithmetic conversions of
+    /// every pair this compiler has. Two `void` arms are `void`. Two pointers
+    /// to compatible types are that type, the composite of two types this
+    /// compiler can only write identically. A pointer beside a pointer to
+    /// `void` is the pointer to `void`, and beside a null pointer constant is
+    /// itself. Any other pair is refused as `OPERANDS`, in `binary`'s words,
+    /// and has no type, as a refused binary operation has none. An arm with
+    /// no type was reported by whatever left it untyped.
+    ///
+    /// Refused whether or not the value is used: `c ? h() : 1;` breaks p3 as
+    /// a statement too, which `clang` accepts unless asked to be pedantic.
+    fn conditional(
+        &mut self,
+        ast: &mut Ast,
+        then: ExprId,
+        otherwise: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let left = self.decayed(ast, self.types[then.index()]?);
+        let right = self.decayed(ast, self.types[otherwise.index()]?);
+        let nulls = (
+            self.is_null_pointer_constant(then),
+            self.is_null_pointer_constant(otherwise),
+        );
+
+        let paired = match (ast.ty(left), ast.ty(right)) {
+            (Type::Int | Type::Char, Type::Int | Type::Char) => Some(self.int),
+            (Type::Void, Type::Void) => Some(left),
+            (Type::Pointer(left_pointee), Type::Pointer(right_pointee)) => {
+                // Compatible, or the left is the pointer to `void` the pair
+                // becomes; either way the left is the answer.
+                if ast.compatible(left, right) || matches!(ast.ty(*left_pointee), Type::Void) {
+                    Some(left)
+                } else if matches!(ast.ty(*right_pointee), Type::Void) {
+                    Some(right)
+                } else {
+                    None
+                }
+            }
+            (Type::Pointer(_), Type::Int | Type::Char) => nulls.1.then_some(left),
+            (Type::Int | Type::Char, Type::Pointer(_)) => nulls.0.then_some(right),
+            // `decayed` answers neither an array nor a function; each would
+            // be the pointer it decays to if it did.
+            (Type::Int | Type::Char | Type::Pointer(_), Type::Void)
+            | (Type::Void, Type::Int | Type::Char | Type::Pointer(_))
+            | (Type::Array { .. } | Type::Function { .. }, _)
+            | (_, Type::Array { .. } | Type::Function { .. }) => None,
+        };
+
+        if paired.is_none() {
+            let left_spelled = self.spelled(ast, left);
+            let right_spelled = self.spelled(ast, right);
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`?:` cannot take `{left_spelled}` and `{right_spelled}`"
+                ))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(
+                    ast.expr(then).span(),
+                    format!("this is `{left_spelled}`"),
+                ))
+                .with_label(Label::secondary(
+                    ast.expr(otherwise).span(),
+                    format!("this is `{right_spelled}`"),
+                )),
+            );
+        }
+        paired
     }
 
     /// Report a binary operator given operands [`Checker::binary_operable`]

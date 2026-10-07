@@ -553,10 +553,10 @@ int main(void) { return f(1, 2, 3); }
     );
 }
 
-/// C17 6.5.15's rule for a conditional, as far as this stage answers it.
+/// C17 6.5.15 p5 and p6's type for a conditional whose arms p3 allows.
 ///
-/// Two arms of one type make that type; the rest of p5 needs the usual
-/// arithmetic conversions and is not answered.
+/// Two arithmetic arms are `int`, two pointers to one type are that type,
+/// and a pointer beside a pointer to `void` is the pointer to `void`.
 ///
 /// Mutation: have the `Expr::Conditional` arm answer `None`. The first two
 /// rows lose their type and this fails. Before it existed the whole arm
@@ -583,7 +583,7 @@ fn a_conditional_has_a_type_when_both_its_arms_agree() {
     for (text, spelling) in [
         ("1 ? 2 : 3", "int"),
         ("1 ? p : p", "int *"),
-        ("1 ? p : v", "?"),
+        ("1 ? p : v", "void *"),
     ] {
         assert_eq!(checked.spelling(text), spelling, "{text}");
     }
