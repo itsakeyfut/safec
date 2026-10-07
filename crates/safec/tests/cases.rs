@@ -1253,7 +1253,9 @@ cases! {
         // A local an earlier call was handed, not this one. Its free was
         // `SC0404` beside `SC0401` before, and is `SC0401` alone, for the
         // reason the loop case above gives. Mutation: give the edge only
-        // where this call was handed something; the `SC0404` comes back.
+        // where this call was handed something; this goes silent, because
+        // `stash` returns `void` and so leaves no result of its own for
+        // `get` to hand back.
         a_call_may_return_a_locals_address_an_earlier_call_kept: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The cost, recorded rather than discovered: a constructor handed a
         // local's address and returning fresh memory is a correct program,

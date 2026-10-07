@@ -1987,7 +1987,8 @@ impl Analysis for Allocations<'_> {
         }
         // After the state, because this is what takes it away again. No C
         // reaches here with an escaped destination: the lowering writes every
-        // call into a fresh temporary and copies it out, so the copy above is
+        // call that returns something into a fresh temporary and copies it
+        // out, and one that returns `void` nowhere, so the copy above is
         // what a C program goes through. Another frontend need not, and
         // `a_call_into_a_local_whose_address_escaped` builds the shape by hand.
         value.unproved(site);

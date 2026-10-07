@@ -2210,10 +2210,11 @@ fn a_free_sequenced_on_one_arm_only_is_not_a_proof() {
 /// **The one place an escape is applied that no C program reaches.** Taking a
 /// local's address makes whatever it is given afterwards unproven, and a local
 /// is given something in three places: a copy, pointer arithmetic, and a
-/// call's destination. The frontend writes every call into a fresh temporary
-/// and copies it out, so a C program always arrives through the copy; the IR
-/// says a call may write anywhere, and `docs/c-family.md` asks that another
-/// frontend be able to build this without the C one present.
+/// call's destination. The frontend writes every call that returns something
+/// into a fresh temporary and copies it out, so a C program always arrives
+/// through the copy; the IR says a call may write anywhere, and
+/// `docs/c-family.md` asks that another frontend be able to build this without
+/// the C one present.
 ///
 /// The free is what makes the omission visible: a free of an unknown site is
 /// reported, and a free of a live one is not, so dropping the rule turns this
@@ -2275,9 +2276,10 @@ fn a_call_into_a_local_whose_address_escaped() {
 ///
 /// **The neighbouring shape, and the frontend builds this one no more than it
 /// builds the one above.** A call's destination is a `Place`, so the IR lets
-/// it carry a projection; the lowering writes every call into a fresh
-/// temporary and copies it out, so `*pp = malloc(4);` arrives as a call into a
-/// local and a separate assignment through the pointer. What the guard says is
+/// it carry a projection; the lowering writes every call that returns
+/// something into a fresh temporary and copies it out, so `*pp = malloc(4);`
+/// arrives as a call into a local and a separate assignment through the
+/// pointer. What the guard says is
 /// that the local a projection starts from is not what the call wrote to, and
 /// handing it the allocation would name the pointer as the thing that was
 /// allocated.
