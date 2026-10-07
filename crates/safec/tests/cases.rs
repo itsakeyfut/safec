@@ -2778,6 +2778,15 @@ cases! {
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `void` value is nothing: a call to a `void` function has no
+        // `Destination`, a `void` `?:` has no answer and its arms write
+        // none, and a comma discards no left operand that is `void`. No
+        // `void` local appears but the return place of a declared `void`
+        // function. Mutation: make the temporary for a `void` call again, or
+        // give a `void` `?:` its answer back; this moves. Mutation: pop a
+        // comma's left operand whether or not it is `void`; this panics on
+        // the empty stack.
+        a_call_that_returns_nothing_writes_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The same two operators, at the one type whose operation does not
         // happen at `int`. C17 6.5.6 p8 makes `p + 1` a pointer, and ADR-0030
         // has the memory check read a local's declared type to tell the pointer

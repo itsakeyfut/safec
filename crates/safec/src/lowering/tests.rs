@@ -520,6 +520,68 @@ fn the_mvp_lowers() {
     assert_eq!(after.terminator, Terminator::Return);
 }
 
+/// The locals of `f` whose type is `void`.
+fn void_locals(lowered: &Lowered, f: &Function) -> Vec<LocalId> {
+    f.locals()
+        .filter(|&local| matches!(lowered.unit.ty(f.local(local)), Ty::Void))
+        .collect()
+}
+
+/// A call to a function returning `void` writes nowhere.
+///
+/// `Terminator::Call::destination` is an `Option` so that `free(p);` need
+/// not be given a local to throw its result into, which an analysis would
+/// read as an initialisation the source never asked for.
+///
+/// Mutation: make the temporary for a `void` call again. The destination is
+/// `Some` and a `void` local appears, and this fails.
+#[test]
+fn a_call_to_a_function_returning_void_writes_nowhere() {
+    let lowered = lowered(
+        "void g(void);
+int f(void) { g(); return 0; }
+",
+    );
+    let f = function(&lowered, "f");
+
+    let calls: Vec<_> = f
+        .blocks()
+        .filter_map(|block| match &block.terminator {
+            Terminator::Call { destination, .. } => Some(destination),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(calls, [&None]);
+    assert_eq!(void_locals(&lowered, f), []);
+}
+
+/// A `?:` whose type is `void` has no answer, and neither arm writes one.
+///
+/// C17 6.5.15 p3 allows both arms to be `void`, and 6.3.2.2 p1 gives a
+/// `void` expression no value, so there is nothing for an arm to write.
+///
+/// Mutation: give a `void` `?:` its answer local back. A `void` local
+/// appears and this fails; if the arms write it, an operation appears too.
+#[test]
+fn a_conditional_of_type_void_writes_no_answer() {
+    let lowered = lowered(
+        "void g(void);
+void h(void);
+int f(int c) { c ? g() : h(); return 0; }
+",
+    );
+    let f = function(&lowered, "f");
+
+    assert_eq!(void_locals(&lowered, f), []);
+    // The only write is `return 0;`.
+    let written: Vec<_> = f
+        .blocks()
+        .flat_map(assigns)
+        .map(|operation| operation.place.clone())
+        .collect();
+    assert_eq!(written, [Place::local(f.return_place())]);
+}
+
 /// A `while` is blocks and edges, and the body comes back to the condition.
 ///
 /// Mutation: end the body with `Goto` the block after the loop rather than
