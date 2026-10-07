@@ -860,7 +860,8 @@ impl Lowering<'_> {
     /// `T[N]` with `N` a positive number, of an element that is neither
     /// `void` nor a function, are lowered, and anything else is refused as
     /// it was before parameters were adjusted, rather than lowered with its
-    /// length's effects gone.
+    /// length's effects gone. Checking those constraints in `types.rs` and
+    /// evaluating a length on entry is #382.
     fn adjusted_without_loss(&self, written: TypeId) -> bool {
         let mut current = written;
         let mut array = false;
