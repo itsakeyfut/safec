@@ -5,28 +5,90 @@ Function a_scalar_condition_builds.c:3:1 "f" "int (int *, char)"
   Parameter a_scalar_condition_builds.c:3:15 "c" "char"
   Compound a_scalar_condition_builds.c:3:23
     Declaration a_scalar_condition_builds.c:4:5 "a" "int[3]"
-    If a_scalar_condition_builds.c:5:5
-      Identifier a_scalar_condition_builds.c:5:9 "p"
-      Compound a_scalar_condition_builds.c:5:12
-        Return a_scalar_condition_builds.c:6:9
-          Number a_scalar_condition_builds.c:6:16 "1"
-    If a_scalar_condition_builds.c:8:5
-      Identifier a_scalar_condition_builds.c:8:9 "a"
-      Compound a_scalar_condition_builds.c:8:12
-        Return a_scalar_condition_builds.c:9:9
-          Number a_scalar_condition_builds.c:9:16 "2"
-    If a_scalar_condition_builds.c:11:5
-      Identifier a_scalar_condition_builds.c:11:9 "g"
-      Compound a_scalar_condition_builds.c:11:12
-        Return a_scalar_condition_builds.c:12:9
-          Number a_scalar_condition_builds.c:12:16 "3"
-    While a_scalar_condition_builds.c:14:5
-      Identifier a_scalar_condition_builds.c:14:12 "c"
-      Compound a_scalar_condition_builds.c:14:15
-        Return a_scalar_condition_builds.c:15:9
-          Number a_scalar_condition_builds.c:15:16 "4"
-    Return a_scalar_condition_builds.c:17:5
-      Conditional a_scalar_condition_builds.c:17:12
-        Identifier a_scalar_condition_builds.c:17:12 "p"
-        Number a_scalar_condition_builds.c:17:16 "5"
-        Number a_scalar_condition_builds.c:17:20 "6"
+    Declaration a_scalar_condition_builds.c:5:5 "i" "int"
+    If a_scalar_condition_builds.c:6:5
+      Identifier a_scalar_condition_builds.c:6:9 "p"
+      Compound a_scalar_condition_builds.c:6:12
+        Return a_scalar_condition_builds.c:7:9
+          Number a_scalar_condition_builds.c:7:16 "1"
+    If a_scalar_condition_builds.c:9:5
+      Identifier a_scalar_condition_builds.c:9:9 "a"
+      Compound a_scalar_condition_builds.c:9:12
+        Return a_scalar_condition_builds.c:10:9
+          Number a_scalar_condition_builds.c:10:16 "2"
+    If a_scalar_condition_builds.c:12:5
+      Identifier a_scalar_condition_builds.c:12:9 "g"
+      Compound a_scalar_condition_builds.c:12:12
+        Return a_scalar_condition_builds.c:13:9
+          Number a_scalar_condition_builds.c:13:16 "3"
+    If a_scalar_condition_builds.c:15:5
+      Identifier a_scalar_condition_builds.c:15:9 "c"
+      Compound a_scalar_condition_builds.c:15:12
+        Return a_scalar_condition_builds.c:16:9
+          Number a_scalar_condition_builds.c:16:16 "4"
+    While a_scalar_condition_builds.c:18:5
+      Identifier a_scalar_condition_builds.c:18:12 "p"
+      Compound a_scalar_condition_builds.c:18:15
+        Return a_scalar_condition_builds.c:19:9
+          Number a_scalar_condition_builds.c:19:16 "5"
+    While a_scalar_condition_builds.c:21:5
+      Identifier a_scalar_condition_builds.c:21:12 "a"
+      Compound a_scalar_condition_builds.c:21:15
+        Return a_scalar_condition_builds.c:22:9
+          Number a_scalar_condition_builds.c:22:16 "6"
+    While a_scalar_condition_builds.c:24:5
+      Identifier a_scalar_condition_builds.c:24:12 "g"
+      Compound a_scalar_condition_builds.c:24:15
+        Return a_scalar_condition_builds.c:25:9
+          Number a_scalar_condition_builds.c:25:16 "7"
+    While a_scalar_condition_builds.c:27:5
+      Identifier a_scalar_condition_builds.c:27:12 "c"
+      Compound a_scalar_condition_builds.c:27:15
+        Return a_scalar_condition_builds.c:28:9
+          Number a_scalar_condition_builds.c:28:16 "8"
+    For a_scalar_condition_builds.c:30:5 condition
+      Identifier a_scalar_condition_builds.c:30:12 "p"
+      Compound a_scalar_condition_builds.c:30:16
+        Return a_scalar_condition_builds.c:31:9
+          Number a_scalar_condition_builds.c:31:16 "9"
+    For a_scalar_condition_builds.c:33:5 condition
+      Identifier a_scalar_condition_builds.c:33:12 "a"
+      Compound a_scalar_condition_builds.c:33:16
+        Return a_scalar_condition_builds.c:34:9
+          Number a_scalar_condition_builds.c:34:16 "10"
+    For a_scalar_condition_builds.c:36:5 condition
+      Identifier a_scalar_condition_builds.c:36:12 "g"
+      Compound a_scalar_condition_builds.c:36:16
+        Return a_scalar_condition_builds.c:37:9
+          Number a_scalar_condition_builds.c:37:16 "11"
+    For a_scalar_condition_builds.c:39:5 condition
+      Identifier a_scalar_condition_builds.c:39:12 "c"
+      Compound a_scalar_condition_builds.c:39:16
+        Return a_scalar_condition_builds.c:40:9
+          Number a_scalar_condition_builds.c:40:16 "12"
+    Expression a_scalar_condition_builds.c:42:5
+      Assign a_scalar_condition_builds.c:42:5 "="
+        Identifier a_scalar_condition_builds.c:42:5 "i"
+        Conditional a_scalar_condition_builds.c:42:9
+          Identifier a_scalar_condition_builds.c:42:9 "p"
+          Number a_scalar_condition_builds.c:42:13 "13"
+          Number a_scalar_condition_builds.c:42:18 "14"
+    Expression a_scalar_condition_builds.c:43:5
+      Assign a_scalar_condition_builds.c:43:5 "="
+        Identifier a_scalar_condition_builds.c:43:5 "i"
+        Conditional a_scalar_condition_builds.c:43:9
+          Identifier a_scalar_condition_builds.c:43:9 "a"
+          Number a_scalar_condition_builds.c:43:13 "15"
+          Number a_scalar_condition_builds.c:43:18 "16"
+    Expression a_scalar_condition_builds.c:44:5
+      Assign a_scalar_condition_builds.c:44:5 "="
+        Identifier a_scalar_condition_builds.c:44:5 "i"
+        Conditional a_scalar_condition_builds.c:44:9
+          Identifier a_scalar_condition_builds.c:44:9 "g"
+          Number a_scalar_condition_builds.c:44:13 "17"
+          Number a_scalar_condition_builds.c:44:18 "18"
+    Return a_scalar_condition_builds.c:45:5
+      Conditional a_scalar_condition_builds.c:45:12
+        Identifier a_scalar_condition_builds.c:45:12 "c"
+        Identifier a_scalar_condition_builds.c:45:16 "i"
+        Number a_scalar_condition_builds.c:45:20 "19"

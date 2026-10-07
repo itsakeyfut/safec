@@ -1,0 +1,9 @@
+error[SC0306]: `+` cannot take `void` and `int`
+   ╭─[ an_untyped_condition_of_a_conditional_is_reported_once.c:4:14 ]
+   │
+ 4 │     int i = (h() + 1) ? 1 : 2;
+   │              ─┬─   ┬  
+   │               ╰─────── this is `void`
+   │                    │  
+   │                    ╰── this is `int`
+───╯

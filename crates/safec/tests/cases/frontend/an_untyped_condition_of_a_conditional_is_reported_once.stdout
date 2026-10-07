@@ -1,0 +1,13 @@
+Declaration an_untyped_condition_of_a_conditional_is_reported_once.c:1:1 "h" "void (void)"
+Function an_untyped_condition_of_a_conditional_is_reported_once.c:3:1 "f" "int (void)"
+  Compound an_untyped_condition_of_a_conditional_is_reported_once.c:3:13
+    Declaration an_untyped_condition_of_a_conditional_is_reported_once.c:4:5 "i" "int"
+      Conditional an_untyped_condition_of_a_conditional_is_reported_once.c:4:14
+        Binary an_untyped_condition_of_a_conditional_is_reported_once.c:4:14 "+"
+          Call an_untyped_condition_of_a_conditional_is_reported_once.c:4:14
+            Identifier an_untyped_condition_of_a_conditional_is_reported_once.c:4:14 "h"
+          Number an_untyped_condition_of_a_conditional_is_reported_once.c:4:20 "1"
+        Number an_untyped_condition_of_a_conditional_is_reported_once.c:4:25 "1"
+        Number an_untyped_condition_of_a_conditional_is_reported_once.c:4:29 "2"
+    Return an_untyped_condition_of_a_conditional_is_reported_once.c:5:5
+      Identifier an_untyped_condition_of_a_conditional_is_reported_once.c:5:12 "i"
