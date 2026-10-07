@@ -220,6 +220,13 @@ cases! {
         // Mutation: leave a parameter's type as written; the function is
         // `SC0304`, a type the IR cannot hold, and the read goes unasked.
         a_parameter_declared_as_an_array_is_followed_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // But not one whose array declarator the adjustment would lose: a
+        // length C17 6.9.1 p10 evaluates on entry, here a free that makes
+        // the read of `*p` a use after free, and an element or a length
+        // 6.7.6.2 p1 forbids. Each is refused as before parameters were
+        // adjusted. Mutation: lower every adjusted parameter; `f` exits 0
+        // with its free gone, and `g` and `h` build.
+        a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The four constructs that do order their operands, one case each,
         // because C17 Annex C names four and a list implemented three-quarters
         // of the way leaves a reader asking which quarter. 6.5.17 p2, 6.5.13

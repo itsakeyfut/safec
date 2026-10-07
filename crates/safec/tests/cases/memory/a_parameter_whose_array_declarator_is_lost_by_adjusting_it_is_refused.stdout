@@ -1,0 +1,4 @@
+Target "x86_64-pc-windows-msvc"
+Function a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
