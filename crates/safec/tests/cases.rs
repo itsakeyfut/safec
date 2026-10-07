@@ -1242,6 +1242,12 @@ cases! {
         // `a_call_with_no_local_escaped_returns_none` is refused.
         a_call_handed_a_locals_address_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_with_no_local_escaped_returns_none: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The cost, recorded rather than discovered: a constructor handed a
+        // local's address and returning fresh memory is a correct program,
+        // and its free is doubted, as one handed an allocation already was.
+        // Same mutation as `a_call_handed_a_locals_address_may_return_it`;
+        // this builds.
+        a_constructor_handed_a_locals_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_on_one_arm_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_proved_before_a_call_stays_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
