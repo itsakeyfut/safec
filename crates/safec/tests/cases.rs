@@ -1857,6 +1857,11 @@ cases! {
         a_return_after_a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parameter_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_escaped_local_freed_and_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Out of a nested scope, whose storage the `return` ends after the
+        // write into the return place. Mutation: in the lowering's `Return`
+        // arm, emit the `StorageDead`s before that write; `p` is cleared
+        // before `returned` asks about it and this goes silent.
+        a_pointer_freed_and_returned_out_of_a_nested_scope: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A free of a two-member set, returned. Mutation: drop
         // `Reached::SetFreed` from what `returned` asks; this goes silent.
         a_free_of_either_of_two_allocations_then_returned: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
