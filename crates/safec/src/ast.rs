@@ -157,8 +157,19 @@ pub enum Parameters {
 pub struct Declaration {
     /// The span of the name, or `None` for an abstract declarator.
     pub name: Option<Span>,
-    /// The type the declarator derived.
+    /// The type C17 gives the name, which every reader of the declaration
+    /// asks about.
+    ///
+    /// The same as [`Declaration::written`] except for a parameter, which
+    /// 6.7.6.3 p7 adjusts from an array of `T` to a pointer to `T` and p8
+    /// from a function to a pointer to it. Adjusting here rather than where
+    /// each reader asks is what makes a reader that forgets impossible: the
+    /// name's type in the body, a call's arguments, whether two declarations
+    /// agree and the lowering's local all read this field.
     pub ty: TypeId,
+    /// The type the declarator derived, as written: what `--emit ast` and a
+    /// function type's spelling show, and nothing else reads.
+    pub written: TypeId,
     /// The specifiers through the declarator, and through its initializer
     /// where it has one.
     ///
@@ -1119,7 +1130,7 @@ fn spell_parameters(sources: &SourceMap, ast: &Ast, parameters: &Parameters) -> 
 
     parameters
         .iter()
-        .map(|parameter| spell_type(sources, ast, parameter.ty))
+        .map(|parameter| spell_type(sources, ast, parameter.written))
         .collect::<Vec<_>>()
         .join(", ")
 }

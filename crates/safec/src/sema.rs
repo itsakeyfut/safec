@@ -299,8 +299,11 @@ impl Resolver<'_> {
             }
         }
 
+        // As written, because an array's length is in the type the
+        // declarator derived and the adjusted pointer has none: `int a[n]`
+        // is `int *` to every other reader, and `n` still has to resolve.
         for parameter in parameters {
-            self.walk_type(parameter.ty, diagnostics);
+            self.walk_type(parameter.written, diagnostics);
         }
     }
 

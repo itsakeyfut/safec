@@ -51,6 +51,7 @@ fn two_types_are_compatible_when_c_says_they_are() {
     let unnamed = |ty| Declaration {
         name: None,
         ty,
+        written: ty,
         span: Span::new(file, 0, 1),
         nullability: None,
     };
@@ -211,6 +212,7 @@ fn every_type_is_spelled_the_way_c_declares_it() {
     let unnamed = |ty| Declaration {
         name: None,
         ty,
+        written: ty,
         span: Span::new(file, 0, 2),
         nullability: None,
     };

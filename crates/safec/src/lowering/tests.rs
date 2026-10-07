@@ -1561,7 +1561,7 @@ fn a_call_whose_callee_has_no_type_is_reported() {
 /// fails.
 #[test]
 fn a_call_to_a_refused_function_is_not_reported_twice() {
-    let lowered = lowered("int g(int a[3]);\n\nint f(void) {\n    return g(0);\n}\n");
+    let lowered = lowered("int g(int (*a)[3]);\n\nint f(void) {\n    return g(0);\n}\n");
     assert_eq!(codes(&lowered), ["SC0304"]);
 }
 

@@ -2443,6 +2443,9 @@ cases! {
         a_comma_in_a_controlling_expression: ["--emit", "ast"],
         a_dangling_else: ["--emit", "ast"],
         a_definition_that_is_not_a_function: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A parameter the IR cannot hold. A pointer to an array, because an
+        // array or a function parameter is a pointer by C17 6.7.6.3 p7 and p8
+        // and the IR holds that.
         a_function_the_ir_cannot_hold: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],

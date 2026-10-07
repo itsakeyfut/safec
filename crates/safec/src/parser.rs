@@ -649,6 +649,7 @@ impl Parser<'_> {
                 declaration: Declaration {
                     name: Some(name),
                     ty,
+                    written: ty,
                     // From the specifiers, which all of these share, through
                     // this one's initializer. `Declaration::span` says why they
                     // all begin at the same byte and what tells them apart.
@@ -1025,12 +1026,24 @@ impl Parser<'_> {
                 Some(Derivation::Pointer { nullability }) => *nullability,
                 _ => None,
             };
-            let (ty, _) = self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
+            let (written, _) =
+                self.apply(start, base, derivations, Declares::Parameter, diagnostics)?;
+            // C17 6.7.6.3 p7 and p8: an array of `T` is a pointer to `T`, and
+            // a function a pointer to it. `Declaration::ty` says why here.
+            let ty = match self.ast.ty(written) {
+                Type::Array { element, .. } => {
+                    let element = *element;
+                    self.ast.push_type(Type::Pointer(element))
+                }
+                Type::Function { .. } => self.ast.push_type(Type::Pointer(written)),
+                Type::Int | Type::Char | Type::Void | Type::Pointer(_) => written,
+            };
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
             parameters.push(Declaration {
                 name,
                 ty,
+                written,
                 span,
                 nullability,
             });
