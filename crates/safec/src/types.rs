@@ -188,12 +188,14 @@ struct Returning {
     name: Span,
 }
 
-/// What a value has to be assignable to, and what a report about it says.
+/// What a value found by walking the statements has to satisfy, and what a
+/// report about it says.
 ///
-/// Two variants of one thing rather than two maps, because C17 makes them
-/// one rule (see `MISMATCH`) and because one walk finds both: a second walk
-/// would be a second recursion over every statement, and an arm dropped from
-/// either would be a silence that the other's test could not see.
+/// Mostly what it has to be assignable to: a `return` and an initializer are
+/// one rule in C17 (see `MISMATCH`). A statement's condition is another rule,
+/// that it be a scalar, and is here because the same walk finds it: a second
+/// walk would be a second recursion over every statement, and an arm dropped
+/// from either would be a silence that the other's test could not see.
 #[derive(Clone, Copy)]
 enum Receiving {
     /// C17 6.8.6.4 p3.
@@ -435,8 +437,12 @@ impl Checker<'_> {
                 otherwise,
                 ..
             } => {
-                // 6.5.15 p2. Refused, it has no type, as a refused binary
-                // operation has none.
+                // 6.5.15 p2. Checked here rather than collected by the
+                // statement walk, because a refused conditional has to have
+                // no type, as a refused binary operation has none, and only
+                // this arm can withhold it: kept, `int *q = h() ? 1 : 2;`
+                // would be reported a second time. An untyped condition was
+                // reported by whatever left it untyped.
                 if let Some(asked) = self.types[condition.index()] {
                     if self.refuse_a_void_condition(ast, "?:", condition, asked, diagnostics) {
                         return None;
@@ -1147,9 +1153,12 @@ impl Checker<'_> {
     /// words `!` and `&&` use, and whether it was. `word` is what read it:
     /// `if`, `while`, `for` or `?:`.
     ///
-    /// Only `void` is refused. Every other type this compiler has is a
-    /// scalar or becomes one: an array or a function is a pointer by 6.3.2.1
-    /// p3 and p4 before anything reads it as a condition.
+    /// Only `void` is refused, which is right only because every other type
+    /// this compiler has is a scalar or becomes one: an array or a function
+    /// is a pointer by 6.3.2.1 p3 and p4 before C reads it as a condition.
+    /// Nothing here converts it; it is not `void`, so it passes. A structure
+    /// type, when one lands, is not a scalar and has to be refused here
+    /// too.
     fn refuse_a_void_condition(
         &self,
         ast: &Ast,
@@ -1169,10 +1178,11 @@ impl Checker<'_> {
         true
     }
 
-    /// C17 6.8.6.4 p3 and 6.7.9 p11, each of which is 6.5.16.1 p1 with
-    /// another place: the return type, or the declarator being initialized.
-    /// And a statement's condition, which is no place but is found by the
-    /// same walk.
+    /// What each value the statement walk found has to satisfy, once it is
+    /// typed. For a `return` and an initializer that is C17 6.8.6.4 p3 and
+    /// 6.7.9 p11, each 6.5.16.1 p1 with another place: the return type, or
+    /// the declarator being initialized. For a statement's condition it is
+    /// [`Checker::refuse_a_void_condition`].
     fn check_received(&mut self, ast: &Ast, value: ExprId, diagnostics: &mut DiagnosticSink) {
         let Some(receiving) = self.receivers.get(&value).copied() else {
             return;
