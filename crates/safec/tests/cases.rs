@@ -473,6 +473,17 @@ cases! {
         // reported. Mutation: drop the gate after names and types in
         // `driver.rs::analysed`; the memory check's `SC0401` returns.
         a_free_of_an_int_that_holds_zero_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer that may be a local's address frees no allocation on that
+        // path, C17 7.22.3.3 p2, and the join kept only the other path's
+        // sites. Mutation: drop the `writes_to` clause from
+        // `Allocations::touching`; `a_free_of_a_pointer_that_may_hold_a_locals_address_is_unproven`
+        // and `a_free_of_a_conditional_over_a_locals_address_is_unproven` exit
+        // 0. Mutation: drop it from `Allocations::holds_something_unnameable`;
+        // the second free in `a_free_after_one_that_may_have_freed_a_local_is_not_proved`
+        // is proved a double free the path that freed `x` does not commit.
+        a_free_of_a_pointer_that_may_hold_a_locals_address_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_a_conditional_over_a_locals_address_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_after_one_that_may_have_freed_a_local_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_read_out_of_a_pointer_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_proved_null_before_its_address_escaped_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_that_stopped_being_null_before_the_free_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
