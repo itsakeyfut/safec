@@ -1229,7 +1229,19 @@ cases! {
         a_call_may_return_what_it_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_handed_an_address_may_return_what_is_behind_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_may_return_what_an_earlier_call_was_handed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Its free of `t` was also `SC0404` until `slot`'s escaped address
+        // was among what `get` may return: `interior` believes no offset
+        // about a free that hands something unnameable, so the same free is
+        // reported as the double free alone.
         a_call_in_a_loop_may_return_what_it_returned_last_turn: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And any escaped local's address, which a free of it would free
+        // though it is no allocation. Mutation: give an opaque call's result
+        // no `writes_to` edge in `Allocations::terminator`'s opaque arm;
+        // `a_call_handed_a_locals_address_may_return_it` exits 0. Mutation:
+        // give it an edge to every local, escaped or not;
+        // `a_call_with_no_local_escaped_returns_none` is refused.
+        a_call_handed_a_locals_address_may_return_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_call_with_no_local_escaped_returns_none: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_exposed_on_one_arm_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_on_one_arm_is_reached_through_what_holds_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_proved_before_a_call_stays_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
