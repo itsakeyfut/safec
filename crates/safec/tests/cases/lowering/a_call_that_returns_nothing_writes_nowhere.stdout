@@ -10,6 +10,7 @@ Function a_call_that_returns_nothing_writes_nowhere.c:5:5 "f"
   Local "_0" "int" return
   Local "_1" "int *" parameter
   Local "_2" "int" parameter
+  Local "_3" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:6:5 generated
     Call a_call_that_returns_nothing_writes_nowhere.c:6:5 "free" "bb1"
@@ -37,9 +38,35 @@ Function a_call_that_returns_nothing_writes_nowhere.c:5:5 "f"
   Block "bb7"
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:8:6 generated
     Sequenced a_call_that_returns_nothing_writes_nowhere.c:8:6 generated
-    Operation a_call_that_returns_nothing_writes_nowhere.c:9:5 written
+    ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:9:10 generated
+    Call a_call_that_returns_nothing_writes_nowhere.c:9:10 "g" "bb8"
+  Block "bb8"
+    Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:10 generated
+    Goto "bb9"
+  Block "bb9"
+    Branch a_call_that_returns_nothing_writes_nowhere.c:9:15 "bb10" "bb11"
+      Copy "_2"
+  Block "bb10"
+    Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:15 generated
+    Operation a_call_that_returns_nothing_writes_nowhere.c:10:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Operation a_call_that_returns_nothing_writes_nowhere.c:10:9 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Sequenced a_call_that_returns_nothing_writes_nowhere.c:10:9 generated
+    ArgumentsEvaluated a_call_that_returns_nothing_writes_nowhere.c:9:18 generated
+    Call a_call_that_returns_nothing_writes_nowhere.c:9:18 "g" "bb12"
+  Block "bb11"
+    Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:15 generated
+    Operation a_call_that_returns_nothing_writes_nowhere.c:12:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:12 generated
+    Sequenced a_call_that_returns_nothing_writes_nowhere.c:12:12 generated
     Return
+  Block "bb12"
+    Sequenced a_call_that_returns_nothing_writes_nowhere.c:9:18 generated
+    Goto "bb9"
