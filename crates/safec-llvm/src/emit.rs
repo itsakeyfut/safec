@@ -50,16 +50,21 @@ pub struct Refusal {
 /// `Err(Refused)`, and its caller writes a `declare` in place of the
 /// definition. A `declare` with no recorded refusal behind it is a run that
 /// exits 0 having dropped a function's body, so the field is private to this
-/// module and [`record`](refused::record) is the one thing that makes one:
-/// `Refused(())` anywhere else in this file is `error[E0423]`. Making the field
-/// `pub(super)` compiles, and is the change that would bring that silence
-/// back.
+/// module and [`record`](refused::record) is the one thing that makes one.
+/// Writing `Refused(())` outside it does not compile: `error[E0423]` once
+/// imported, `error[E0603]` through its path. Making the field `pub(super)`
+/// compiles, and is the change that would bring that silence back.
+///
+/// `record` takes the [`Emitter`] rather than a list, so that what it pushes
+/// to is the list [`functions`] hands back: given any `Vec`, a fresh one would
+/// make a `Refused` that nobody ever reads.
 mod refused {
     pub(super) struct Refused(());
 
-    /// Keep `refusal`, and answer the proof that it was kept.
-    pub(super) fn record(into: &mut Vec<super::Refusal>, refusal: super::Refusal) -> Refused {
-        into.push(refusal);
+    /// Keep `refusal` in what `emitter` hands back, and answer the proof that
+    /// it was kept.
+    pub(super) fn record(emitter: &mut super::Emitter<'_>, refusal: super::Refusal) -> Refused {
+        emitter.refusals.push(refusal);
         Refused(())
     }
 }
@@ -151,7 +156,7 @@ impl Emitter<'_> {
     /// out of whatever it was computing.
     fn refuse<T>(&mut self, why: impl Into<String>) -> Refuses<T> {
         Err(refused::record(
-            &mut self.refusals,
+            self,
             Refusal {
                 why: why.into(),
                 at: self.at,
@@ -888,9 +893,8 @@ impl Emitter<'_> {
         // a declaration, which says the definition is somewhere else. That is
         // not true, and it is what keeps the module readable to LLVM: the exit
         // code says the run failed, and a link is where the symbol surfaces.
-        // The exit code says so because the only way into the `Err` arm is a
-        // refusal that was recorded, which `Refused` makes the compiler's to
-        // hold rather than a convention's.
+        // That the `Err` arm comes with a recorded refusal is `Refused`'s to
+        // hold.
         match self.body(function) {
             Ok(body) => {
                 let named: Vec<String> = parameters
