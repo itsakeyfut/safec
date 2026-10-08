@@ -1430,6 +1430,76 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
     assert_eq!(found[0].freed, Some(names.at[1]), "and keeps its spans");
     assert_eq!(found[0].made, Some(names.at[0]));
 }
+
+/// Two proofs at one caret name the earlier free, not the one the walk met
+/// first.
+///
+/// The rule `a_join_names_the_earlier_free` holds at a join, held where two
+/// reports meet at one caret instead. Each read follows a free of its own
+/// allocation: `held` is given a second one between them, because a free of a
+/// site already freed keeps the first free rather than writing its own, so one
+/// site could never make the two proofs name different frees. **The later span
+/// is on the free the walk reaches first**, which is what separates "the earlier free" from "the report that
+/// arrived first": every C program in the corpus that reaches this pair has the
+/// two agree, and without this order the test would pass under both.
+///
+/// Mutation: have `supersedes` answer `false` for `(Some(_), Some(_))`,
+/// keeping the standing report. `freed` is `at[5]` and this fails on it.
+///
+/// Mutation: keep the later of the two, `earlier(standing, new) == standing`.
+/// The same.
+#[test]
+fn two_proofs_at_one_caret_name_the_earlier_free() {
+    let (sources, names) = sources();
+    let (unit, mut function, types, callees) = a_unit(&names, 0);
+    let held = function.push_local(types.ptr);
+    let value = function.push_local(types.int);
+
+    let allocate = function.reserve_block();
+    let release_late = function.reserve_block();
+    let first_read = function.reserve_block();
+    let reallocate = function.reserve_block();
+    let release_early = function.reserve_block();
+    let second_read = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(allocate, malloc(&callees, held, names.at[0], release_late));
+    function.fill_block(
+        release_late,
+        after_the_statement(names.at[0], free(&callees, held, names.at[5], first_read)),
+    );
+    function.fill_block(
+        first_read,
+        after_the_statement(names.at[5], read(value, held, names.at[3], reallocate)),
+    );
+    function.fill_block(
+        reallocate,
+        after_the_statement(
+            names.at[3],
+            malloc(&callees, held, names.at[2], release_early),
+        ),
+    );
+    function.fill_block(
+        release_early,
+        after_the_statement(names.at[2], free(&callees, held, names.at[1], second_read)),
+    );
+    // The same span as the first read, which is what makes the two one report.
+    function.fill_block(
+        second_read,
+        after_the_statement(names.at[1], read(value, held, names.at[3], exit)),
+    );
+    function.fill_block(exit, after_the_statement(names.at[3], returns()));
+
+    let found = concluded(unit, &sources, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].kind, Kind::UseAfterFree);
+    assert_eq!(found[0].conclusion, Conclusion::Unsafe);
+    assert_eq!(found[0].at, names.at[3], "one caret, not two");
+    assert_eq!(found[0].freed, Some(names.at[1]), "the earlier of the two");
+    assert_eq!(found[0].made, Some(names.at[2]), "and its own allocation");
+}
+
 /// `to = from + by;`, in a block that falls through to `then`.
 ///
 /// The addition in a local of its own, which is the shape the C frontend
