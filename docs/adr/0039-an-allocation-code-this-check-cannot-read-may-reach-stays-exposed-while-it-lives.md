@@ -225,6 +225,10 @@ what it is handed fails
 escaped local holds fails
 `a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it`
 alone; not returning the first argument fails the `memset` and `strcpy` cases.
+Not landing a copy into a local's address in that local fails
+`a_pointer_copied_by_memcpy_into_a_local_is_asked_after_its_allocation_is_freed`
+and its siblings in `calls/`; landing a typed load of the source instead
+fails the two whose source is a `void *` (#395).
 Not reading `realloc` by name fails its cases; proving its argument freed
 rather than unproven fails
 `a_free_on_reallocs_failure_branch_builds`, which gains an `SC0401` claiming

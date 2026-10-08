@@ -752,8 +752,9 @@ impl Held {
         // method's**, for the reason the line below gives about the proof:
         // what decides it is which operand was the pointer and what the other
         // one was, and this sees neither. [`built_from`] assigns over it. The
-        // one other caller is a write through a pointer, whose target has
-        // escaped and so is never asked. See ADR-0036.
+        // other callers write into a local through a pointer or copy into
+        // its address with `memcpy`, and either target has escaped and so is
+        // never asked. See ADR-0036.
         *offset = Offset::Unknown;
 
         // **A second operand takes the proof with it.** What

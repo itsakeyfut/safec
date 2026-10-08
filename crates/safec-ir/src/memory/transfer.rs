@@ -1728,14 +1728,15 @@ impl Analysis for Allocations<'_> {
                             };
                             // **Into a local's address, the copy lands in the
                             // local**: `memcpy(&s, &r, n)` stores into `s`
-                            // what a load of `r` holds, every mark with it,
-                            // where only allocations were written and `s` was
-                            // left holding nothing. C17 7.24.2.1 p2 copies the
-                            // bytes. By union, as a store through more than
-                            // one dereference gives its targets, since `n` may
-                            // copy part of a pointer and a replacement would
-                            // prove things about a value nobody wrote (#395).
-                            // See ADR-0039 and ADR-0040.
+                            // what `r` holds, every mark with it, since C17
+                            // 7.24.2.1 p2 copies the bytes. The locals are the
+                            // ones the destination's address edges name, or,
+                            // for a place of dereferences, the locals the
+                            // level above may be, as for a store's deep
+                            // targets. By union, as those are given, since `n`
+                            // may copy part of a pointer and a replacement
+                            // would prove things about a value nobody wrote
+                            // (#395). See ADR-0039 and ADR-0040.
                             let targets: Vec<usize> = if into_depth == 0 {
                                 value.written_through(dest.local)
                             } else {
