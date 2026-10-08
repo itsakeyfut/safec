@@ -913,6 +913,13 @@ impl Ast {
         (0..self.exprs.len() as u32).map(ExprId)
     }
 
+    /// Every statement id, in the order the nodes were pushed, for the same
+    /// reason as [`Ast::expr_ids`]: a pass about every declaration in a body
+    /// names them through their statements.
+    pub fn stmt_ids(&self) -> impl Iterator<Item = StmtId> + use<> {
+        (0..self.stmts.len() as u32).map(StmtId)
+    }
+
     /// Whether `left` and `right` are compatible types, C17 6.2.7 p1.
     ///
     /// Compatible and not identical, which is the relation C actually asks

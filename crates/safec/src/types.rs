@@ -93,6 +93,20 @@ const OPERANDS: Code = Code::new("SC0306");
 /// C forbids it, and it is refused here as `docs/frontend.md` lists.
 const RETURN_SHAPE: Code = Code::new("SC0308");
 
+/// A declarator that derives a type C forbids, C17 6.7.6.2 p1 so far: an
+/// array whose element is not a complete object type, or whose length is
+/// not an integer, or is an integer literal that is not greater than zero.
+///
+/// A literal, not every constant: this stage knows the value of a literal
+/// and nothing else, so `[-1]` and `[1 - 1]` are not asked (#384). A zero
+/// length is refused though `clang` takes it as an extension, which
+/// `docs/frontend.md` records.
+///
+/// Not `OPERANDS`, which is an operator's: a declarator is not an operator,
+/// and a code is never reassigned. 6.7.6.3 p1, a function returning an array
+/// or a function, is the same kind of fault and would go here.
+const DECLARATOR: Code = Code::new("SC0309");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -173,6 +187,10 @@ pub fn check(
         checker.check_received(ast, id, diagnostics);
     }
 
+    // After every expression is typed, because a length's type and value are
+    // what two of the three questions ask.
+    checker.check_declarators(ast, diagnostics);
+
     Types {
         of: checker.types,
         value: checker.values,
@@ -249,6 +267,152 @@ struct Checker<'a> {
 }
 
 impl Checker<'_> {
+    /// Hold every declarator to C17 6.7.6.2 p1, and report the outermost array
+    /// in each that breaks it under [`DECLARATOR`].
+    ///
+    /// Every declaration in the unit, at file scope, in a block, and as a
+    /// parameter of any function type written anywhere, so `int (*fp)(void
+    /// a[])` is reached. Each is asked of its [`Declaration::written`] type,
+    /// because a parameter's `ty` is the adjusted pointer and has lost the
+    /// array (C17 6.7.6.3 p7). One report per declaration, the outermost
+    /// array first, so `int z[0][0]` is one fault and not two.
+    ///
+    /// [`Declaration::written`]: crate::ast::Declaration::written
+    fn check_declarators(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        // What was declared, where to point, and the type as written.
+        let mut declared: Vec<(Span, TypeId)> = Vec::new();
+        let push = |declarators: &[InitDeclarator], declared: &mut Vec<(Span, TypeId)>| {
+            for declarator in declarators {
+                let declaration = &declarator.declaration;
+                declared.push((
+                    declaration.name.unwrap_or(declaration.span),
+                    declaration.written,
+                ));
+            }
+        };
+        for item in ast.items() {
+            match item {
+                Item::Function(function) => declared.push((function.name, function.ty)),
+                Item::Declaration { declarators, .. } => push(declarators, &mut declared),
+                Item::Error { .. } => {}
+            }
+        }
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+                push(declarators, &mut declared);
+            }
+        }
+
+        // Grows as it is read: every function type met on the way down hands
+        // its parameters on as declarations of their own.
+        let mut next = 0;
+        while let Some(&(at, written)) = declared.get(next) {
+            next += 1;
+            let mut reported = false;
+            let mut current = written;
+            loop {
+                match ast.ty(current) {
+                    Type::Array { element, length } => {
+                        let (element, length) = (*element, *length);
+                        if !reported {
+                            reported = self.report_array(ast, at, element, length, diagnostics);
+                        }
+                        current = element;
+                    }
+                    Type::Pointer(pointee) => current = *pointee,
+                    Type::Function {
+                        returns,
+                        parameters,
+                        ..
+                    } => {
+                        if let Parameters::Prototype(parameters) = parameters {
+                            for parameter in parameters {
+                                declared.push((
+                                    parameter.name.unwrap_or(parameter.span),
+                                    parameter.written,
+                                ));
+                            }
+                        }
+                        current = *returns;
+                    }
+                    Type::Int | Type::Char | Type::Void => break,
+                }
+            }
+        }
+    }
+
+    /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
+    /// and say whether it was one.
+    fn report_array(
+        &self,
+        ast: &Ast,
+        at: Span,
+        element: TypeId,
+        length: Option<ExprId>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        // "The element type shall not be an incomplete or function type."
+        // `void` and an array of unknown length are the incomplete types this
+        // compiler has.
+        let incomplete = match ast.ty(element) {
+            Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
+            Type::Int
+            | Type::Char
+            | Type::Pointer(_)
+            | Type::Array {
+                length: Some(_), ..
+            } => false,
+        };
+        if incomplete {
+            let spelled = self.spelled(ast, element);
+            diagnostics.report(
+                Diagnostic::error(format!("an array cannot have `{spelled}` as its element"))
+                    .with_code(DECLARATOR)
+                    .with_label(Label::primary(at, "declared here"))
+                    .with_note(
+                        "the element of an array is a complete object type (C17 6.7.6.2 p1)",
+                    ),
+            );
+            return true;
+        }
+
+        let Some(length) = length else {
+            return false;
+        };
+        // "the expression shall have an integer type", and an untyped one,
+        // `p - q`, is asked nothing, as `subscript` asks nothing of it.
+        let ty = self.types[length.index()];
+        if let Some(ty) = ty.filter(|&ty| !matches!(ast.ty(ty), Type::Int | Type::Char)) {
+            let spelled = self.spelled(ast, ty);
+            diagnostics.report(
+                Diagnostic::error(format!("the length of an array cannot be `{spelled}`"))
+                    .with_code(DECLARATOR)
+                    .with_label(Label::primary(
+                        ast.expr(length).span(),
+                        format!("this is `{spelled}`"),
+                    ))
+                    .with_note("the length of an array is an integer (C17 6.7.6.2 p1)"),
+            );
+            return true;
+        }
+        // "If the expression is a constant expression, it shall have a value
+        // greater than zero." Of a literal only, the one constant whose value
+        // this stage holds; see `DECLARATOR`.
+        if let Some(value) = self.values[length.index()].filter(|&value| value <= 0) {
+            diagnostics.report(
+                Diagnostic::error("the length of an array is greater than zero")
+                    .with_code(DECLARATOR)
+                    .with_label(Label::primary(
+                        ast.expr(length).span(),
+                        format!("this is {value}"),
+                    ))
+                    .with_note("a constant length is greater than zero (C17 6.7.6.2 p1)"),
+            );
+            return true;
+        }
+        false
+    }
+
     /// Find every `return` with a value and every initializer, and what each
     /// has to be assignable to, and report every `return` that has a value
     /// where it may not or lacks one where it must.

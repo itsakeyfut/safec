@@ -1551,6 +1551,34 @@ fn a_call_whose_callee_has_no_type_is_reported() {
     assert!(!function(&lowered, "f").is_defined());
 }
 
+/// A parameter whose array the adjustment would lose is refused here even
+/// where the type check let it through.
+///
+/// The driver does not lower a tree the type check reported about, so the
+/// element and the literal length `types.rs` refuses under C17 6.7.6.2 p1
+/// never reach this stage in a run. This is the lowering's own defence for
+/// them, asked with that gate open.
+///
+/// Mutation: in `adjusted_without_loss`, stop asking the element, or stop
+/// asking whether a literal length is positive. That function lowers, the
+/// `SC0304` goes and this fails.
+#[test]
+fn a_parameter_whose_array_the_adjustment_would_lose_is_refused() {
+    for text in [
+        "int f(void a[]) {
+    return 0;
+}
+",
+        "int f(int a[0]) {
+    return 0;
+}
+",
+    ] {
+        let lowered = lowered_after_a_report(text);
+        assert!(codes(&lowered).contains(&"SC0304".to_owned()), "{text}");
+    }
+}
+
 /// A call to a function whose signature was refused says nothing more.
 ///
 /// The declaration is where the problem is and where it is reported; a
