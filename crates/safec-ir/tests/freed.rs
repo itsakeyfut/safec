@@ -1439,9 +1439,10 @@ fn a_suspicion_does_not_displace_the_proof_at_one_caret() {
 /// allocation: `held` is given a second one between them, because a free of a
 /// site already freed keeps the first free rather than writing its own, so one
 /// site could never make the two proofs name different frees. **The later span
-/// is on the free the walk reaches first**, which is what separates "the earlier free" from "the report that
-/// arrived first": every C program in the corpus that reaches this pair has the
-/// two agree, and without this order the test would pass under both.
+/// is on the free the walk reaches first**, which is what separates "the
+/// earlier free" from "the report that arrived first": keeping the standing
+/// report fails this test and no corpus case, so nothing else tells the two
+/// apart, and without this order the test would pass under both.
 ///
 /// Mutation: have `supersedes` answer `false` for `(Some(_), Some(_))`,
 /// keeping the standing report. `freed` is `at[5]` and this fails on it.
