@@ -130,13 +130,16 @@ impl Types {
         self.of[id.index()]
     }
 
-    /// What the integer constant `id` is worth, or `None` where it is not a
-    /// constant or is one this stage could not read.
+    /// What the integer constant expression `id` is worth, or `None` where it
+    /// is not one, is a literal this stage could not read, or is one whose
+    /// operation C leaves without a defined result.
     ///
-    /// The two cases are one answer on purpose: a caller has nothing to do
-    /// differently, because a constant this stage could not read was reported
-    /// where it was read, and an expression that is not a constant has no
-    /// value to ask for. Both are "do not build an operand out of this".
+    /// The cases are one answer on purpose: a caller has nothing to do
+    /// differently. A literal that could not be read was reported where it
+    /// was read; an expression that is not a constant has no value to ask
+    /// for; and one that overflows or divides by zero is, for every caller
+    /// today, an expression that is not a constant (#386). All are "do not
+    /// build an operand out of this", which `Checker::evaluate` says more of.
     ///
     /// # Panics
     ///
@@ -1765,10 +1768,15 @@ impl Checker<'_> {
     /// no value where C gives the operation no defined result: a result
     /// outside `int` (6.6 p4 for a constant, 6.5 p5 at run time), a division
     /// or remainder by zero (6.5.5 p5), a shift by a negative amount or by the
-    /// width or more, a left shift of a negative value or out of range, and a
-    /// right shift of a negative value, whose result 6.5.7 p5 leaves to the
-    /// implementation. Such an expression is then what every non-literal was
-    /// before #384, and nothing is said about it here.
+    /// width or more, and a left shift of a negative value or out of range.
+    /// Such an expression has no value and nothing is said about it here, so
+    /// an array length or a null pointer constant that overflows is not
+    /// refused for it (#386).
+    ///
+    /// A right shift of a negative value is implementation-defined (6.5.7
+    /// p5), not undefined, and this implementation has chosen: the backend
+    /// writes `ashr` and the interpreter shifts arithmetically, so `-8 >> 1`
+    /// is `-4` here as it is when the program runs.
     fn evaluate(&self, ast: &Ast, id: ExprId) -> Option<i128> {
         let value = |id: ExprId| self.values[id.index()];
         let int = self.int_range;
@@ -1796,6 +1804,9 @@ impl Checker<'_> {
                 match op {
                     BinOp::Mul => fits(lhs * rhs),
                     BinOp::Div => (rhs != 0).then(|| lhs / rhs).and_then(fits),
+                    // 6.5.5 p6 defines `a % b` only where `a / b` is
+                    // representable, so `INT_MIN % -1` has no value though
+                    // its remainder, zero, would fit.
                     BinOp::Rem => (rhs != 0)
                         .then(|| lhs % rhs)
                         .and_then(|r| fits(lhs / rhs).map(|_| r)),
@@ -1804,7 +1815,8 @@ impl Checker<'_> {
                     BinOp::Shl => ((0..width).contains(&rhs) && lhs >= 0)
                         .then(|| lhs << rhs)
                         .and_then(fits),
-                    BinOp::Shr => ((0..width).contains(&rhs) && lhs >= 0).then(|| lhs >> rhs),
+                    // Arithmetic, as the backend's `ashr` is; see above.
+                    BinOp::Shr => (0..width).contains(&rhs).then(|| lhs >> rhs),
                     BinOp::Lt => truth(lhs < rhs),
                     BinOp::Gt => truth(lhs > rhs),
                     BinOp::Le => truth(lhs <= rhs),
