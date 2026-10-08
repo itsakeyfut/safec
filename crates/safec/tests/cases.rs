@@ -2273,8 +2273,17 @@ cases! {
         // `a` escaped, so `handed` doubts it at the call and `used_before`
         // doubts it again from the free, at the same caret. Mutation: push in
         // `handed` rather than going through `say`; two `SC0407` about `a` at
-        // one caret.
+        // one caret. The second names the free and is the one that stands.
+        // Mutation: have `supersedes` answer `false` for `(None, Some(_))`;
+        // the report loses `freed here` and the p10 note.
         an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `g(*p)` is doubted twice at one caret, by the call `h` this check
+        // cannot read and by the free, and only the second names a free. Both
+        // orders are written, because which doubt arrives first is which
+        // operand comes first. Mutation: have `supersedes` answer `false` for
+        // `(None, Some(_))`; `call_first` loses `freed here` and the p10 note
+        // on `g(*p)` and `h(p)`, and `free_first` does not move.
+        a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two reports about one full expression, and each is its own order: `g`
         // may free `a` before the free, which is the forward `SC0401`, and the
         // free may run before `g` reads `a`, which is the carried `SC0407`. The

@@ -14,7 +14,7 @@ use crate::source::Span;
 
 use super::built::named;
 use super::known::Known;
-use super::parts::{Callee, Freeing, Offset, Reached, Read, SiteState, same};
+use super::parts::{Callee, Freeing, Offset, Reached, Read, SiteState, earlier, same};
 use super::transfer::Allocations;
 use super::{Finding, Kind, LostReason, Unproven};
 
@@ -846,8 +846,8 @@ pub(super) fn handed_places<'a>(
 /// because taking a local's address is what makes its sites unknown, and the
 /// second read is proved. Keeping the first threw the proof away and exited 0,
 /// which is the silence the paragraph above describes arriving through the
-/// other door. [`supersedes`] is the rule, and says why only this direction
-/// replaces anything.
+/// other door. [`supersedes`] is the rule, and says which half survives a
+/// pair that agrees, too.
 ///
 /// The index `said` carries, not the position within `said`: `findings` holds
 /// what every caret in this function has said, so anything reported between the
@@ -871,7 +871,7 @@ pub(super) fn say(
     };
 
     let index = said[standing].2;
-    if supersedes(findings[index].conclusion, finding.conclusion) {
+    if supersedes(&findings[index], &finding) {
         findings[index] = finding;
     }
 }
@@ -1192,10 +1192,27 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 
 /// Whether a report at a caret replaces the one already standing there.
 ///
-/// **A proof replaces a suspicion, and nothing else replaces anything.** Where
-/// two proofs meet at one caret the first stands: both are true of the same
-/// place and there is nothing to choose between them. [`used`] is where a pair
-/// at one caret comes from and why one is collapsed at all.
+/// **The one that tells the reader more stands.** [`used`] is where a pair at
+/// one caret comes from and why one is collapsed at all; this is which half
+/// survives, in four rules, each taking over only where the one before has
+/// nothing to say.
+///
+/// 1. A proof replaces a suspicion, and a suspicion never replaces a proof,
+///    because a proof is the one thing a reader must not be denied.
+/// 2. Between two with the same conclusion, one naming a free replaces one
+///    naming none. Neither is truer than the other, and one gives the reader a
+///    free to look at and, for [`Unproven::Unsequenced`], the clause that says
+///    why it is open: `g(*p) + h(p) + (free(p), 0)` kept the suspicion of the
+///    call it cannot read and lost both, where `g(*p) + (free(p), 0) + h(p)`
+///    kept them, so what the reader got turned on which operand was written
+///    first.
+/// 3. Where both name one, the earlier free, by the same [`earlier`] that
+///    [`SiteState::joined`] applies and for its reason: which free is named
+///    should not turn on which block the walk reached first, and "first" here
+///    meant first in `Cfg::order`, not the first free.
+/// 4. Otherwise the standing report stays, a tie included. Nothing here ranks
+///    two reasons that name no free against each other: a `Lost` and a
+///    `Disagreement` at one caret was looked for and not reached.
 ///
 /// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
 /// derive `Ord` and should not: its three variants are three answers rather
@@ -1203,8 +1220,8 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 /// cannot arise say so rather than falling through, because a fallthrough in
 /// this check was once reached by "proved" and by "gave up" at once and
 /// reported the second as the first.
-fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
-    match (standing, new) {
+fn supersedes(standing: &Finding, new: &Finding) -> bool {
+    match (standing.conclusion, new.conclusion) {
         // First, because a wildcard below would absorb them. [`verdict`]
         // answers `None` where there is nothing to report, so no `Finding`
         // carries `Safe` and no verdict reaching here concludes one; written
@@ -1213,6 +1230,13 @@ fn supersedes(standing: Conclusion, new: Conclusion) -> bool {
         (Conclusion::Safe, _) => unreachable!("a finding standing at a caret concluded Safe"),
         (_, Conclusion::Safe) => unreachable!("a verdict about a dereference concluded Safe"),
         (Conclusion::Unknown, Conclusion::Unsafe) => true,
-        (Conclusion::Unknown, Conclusion::Unknown) | (Conclusion::Unsafe, _) => false,
+        (Conclusion::Unsafe, Conclusion::Unknown) => false,
+        (Conclusion::Unsafe, Conclusion::Unsafe) | (Conclusion::Unknown, Conclusion::Unknown) => {
+            match (standing.freed, new.freed) {
+                (None, Some(_)) => true,
+                (Some(standing), Some(new)) => earlier(standing, new) != standing,
+                (Some(_), None) | (None, None) => false,
+            }
+        }
     }
 }
