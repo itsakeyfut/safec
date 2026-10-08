@@ -1544,7 +1544,9 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
 /// value for a result outside `int`, a division or remainder by zero, a shift
 /// by a negative amount or by the width, a left shift of a negative value, a
 /// right shift of one (6.5.7 p5 leaves it to the implementation), anything
-/// with a variable in it, and a comma (6.6 p3).
+/// with a variable in it, even in an arm not taken or an operand `&&` or `||`
+/// would not evaluate, since 6.6 p6 asks it of every operand, and a comma
+/// (6.6 p3).
 ///
 /// Mutation: break any one operator, or let any one undefined case through.
 /// Its row fails.
@@ -1589,6 +1591,9 @@ fn a_constant_expression_has_the_value_c_gives_it() {
         ("-8 >> 1", None),
         ("x + 1", None),
         ("x ? 2 : 3", None),
+        ("1 ? 2 : x", None),
+        ("0 && x", None),
+        ("1 || x", None),
     ] {
         let checked = checked(&format!(
             "int main(void) {{\n    int x;\n    int r;\n    r = {written};\n    r = (x, 1);\n    return 0;\n}}\n"
