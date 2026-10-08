@@ -399,6 +399,13 @@ cases! {
         // in the `Callee::Opaque` arm, write `SiteState::Unknown` over what an
         // argument names outright; this and the case above become "may".
         a_free_proved_before_a_call_it_is_handed_to_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A live allocation a call is handed may be freed by it, even where
+        // every holder was handed to the same call by address, which exempts
+        // it from what a call does to a holder out of its reach. What the
+        // call is handed is the one place that says so. Mutation: in the
+        // `Callee::Opaque` arm, start what the call may have freed empty
+        // rather than from what it is handed; the doubt at `use2(&a)` goes.
+        an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_through_a_pointer_the_check_does_not_follow: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two programs with one `free` each, and the boundary between two
         // reasons a report can be unproven. In the first nothing established a
@@ -1275,6 +1282,13 @@ cases! {
         // `SiteState::Unknown` over what an argument names outright; the use
         // becomes a doubt too, and this builds with nothing reported (#262).
         a_free_proved_before_a_call_handed_what_may_be_it_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same one level down: the call is handed memory that holds the
+        // freed pointer, and keeps the proof as it does for what it is handed
+        // by name. Mutation: in the `Callee::Opaque` arm, write
+        // `SiteState::Unknown` over a site the closure of what the call is
+        // handed reaches but was not handed directly; this builds with
+        // nothing reported.
+        a_free_proved_before_a_call_handed_what_holds_it_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `&&` writes both operands at one caret. Mutation: keep the first
         // finding at a caret in `nullability::findings`' `dedup_by` rather than
         // the worst; this fails, and the proved dereference builds.

@@ -1726,8 +1726,7 @@ impl Analysis for Allocations<'_> {
                 // Writing `Unknown` over what an argument named turned a
                 // proved use after free into a doubt, which a hatch only lists:
                 // `free(p); g(r); return *p;` built in a hatch where `r` may
-                // be `p` (#262), and so did the same through a load before
-                // ADR-0045.
+                // be `p` (#262).
                 let mut handed_memory: Vec<usize> = sites().collect();
                 for argument in handed {
                     handed_memory.extend(self.read_out(function, argument, value));

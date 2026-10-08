@@ -65,8 +65,9 @@ where the caller's next use is a dereference or a free. A caller that hands the
 result on as an argument asks nothing, because a bare read is not asked, and
 the function it hands it to believes its parameter live: a parameter freed on
 one arm and returned was silent in every function, and so was
-`free(p); log_ptr(p); return p;`, where the call turns the proved free into a
-doubt. Review demonstrated both, and restoring the narrowing silenced them
+`free(p); log_ptr(p); return p;`, where the call then turned the proved free
+into a doubt, which it no longer does
+([#262](https://github.com/itsakeyfut/safec/issues/262)). Review demonstrated both, and restoring the narrowing silenced them
 again until
 [ADR-0042](./0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
 asked what a call is handed, which reports each at the caller's call.
