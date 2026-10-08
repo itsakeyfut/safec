@@ -2537,6 +2537,30 @@ cases! {
         a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_a_call_returned_and_read_through_an_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_a_parameter_and_read_through_an_address_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer read through what may be either an opaque result or this
+        // function's own allocation, moved by arithmetic after the load, and
+        // copied out by `memcpy` before it is read: each a way of reaching
+        // `Allocations::reads_caller_memory` the plain load does not take.
+        // Found by review. Mutation: ask that an opaque result be every site
+        // read through rather than any; the first builds. Mutation: skip the
+        // opaque-result clause where an assignment builds a value from
+        // operands; the second builds. Mutation: skip it where `memcpy`
+        // reads its source; the third builds.
+        a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_moved_off_one_read_out_of_what_a_call_returned_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A free through what a call returned frees memory the callee handed
+        // over, as a free through a parameter frees the caller's, so a pointer
+        // read out of it before the free is doubted after. Mutation: skip the
+        // opaque-result clause in `Allocations::frees_callers`; the use is no
+        // longer reported, and only the free is.
+        a_free_through_what_a_call_returned_doubts_a_pointer_read_out_of_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What `malloc` returns is this function's, not handed over, so a
+        // pointer read out of it is not doubted at a later call; the
+        // `SC0403`s are the nullability check's. Mutation: count
+        // `Callee::Allocates` as handed over in
+        // `Allocations::opaque_results_of`; a use is reported.
+        a_pointer_read_out_of_this_function_s_own_table_is_not_handed_over: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // With no later call nothing is asked, so the output-parameter idiom
         // ADR-0017 declines to report stays unreported; its `SC0403` is the
         // nullability check's, which never trusts an escaped local. Mutation:
