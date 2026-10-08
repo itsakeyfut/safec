@@ -1,0 +1,10 @@
+error[SC0402]: this uses a pointer this check stopped following
+    ╭─[ a_pointer_copied_by_memcpy_out_of_a_void_pointer_parameter_is_doubted_after_a_call.c:14:5 ]
+    │
+ 14 │     return *s;
+    │     ─────┬────  
+    │          ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

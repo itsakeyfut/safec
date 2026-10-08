@@ -77,7 +77,7 @@ nothing else.
 
 What an allocation may contain keeps its own row through a rebirth of its site, since the old allocation is still out there, and its entry in other allocations' rows is kept too, for what a call reaches through them. When the allocation it named is gone that entry names the new one, and ADR-0045 says how a load out of such a row is answered.
 
-`memcpy` and `memmove` copy an object, so what each allocation their destination holds may contain gains what the source contains, read as a load reads it, and the mark ADR-0045 gives an allocation that may hold something gone goes with it (#283). The string functions stop at a null byte and copy no pointer whole, and stay in the family that only exposes.
+`memcpy` and `memmove` copy an object, so what each allocation their destination holds may contain gains what the source contains, read as a load reads it, and the mark ADR-0045 gives an allocation that may hold something gone goes with it (#283). Where the destination is a local's address, the copy lands in that local, which is given by union what a load of the source holds, every mark included: it was given nothing, so `memcpy(&s, &r, 8); free(r); return *s;` said nothing at `*s` where `*ps = r;` reported it ([#395](https://github.com/itsakeyfut/safec/issues/395)). The string functions stop at a null byte and copy no pointer whole, and stay in the family that only exposes.
 
 **What a call returns.** A fresh allocation, or any exposed one, at an offset
 nobody said, or since #373 the address of any local of this function whose
@@ -225,6 +225,10 @@ what it is handed fails
 escaped local holds fails
 `a_local_memcpy_is_handed_the_address_of_may_hold_something_else_after_it`
 alone; not returning the first argument fails the `memset` and `strcpy` cases.
+Not landing a copy into a local's address in that local fails
+`a_pointer_copied_by_memcpy_into_a_local_is_asked_after_its_allocation_is_freed`
+and its siblings in `calls/`; landing a typed load of the source instead
+fails the two whose source is a `void *` (#395).
 Not reading `realloc` by name fails its cases; proving its argument freed
 rather than unproven fails
 `a_free_on_reallocs_failure_branch_builds`, which gains an `SC0401` claiming

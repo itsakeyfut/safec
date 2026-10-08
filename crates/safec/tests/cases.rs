@@ -2555,6 +2555,51 @@ cases! {
         // opaque-result clause in `Allocations::frees_callers`; the use is no
         // longer reported, and only the free is.
         a_free_through_what_a_call_returned_doubts_a_pointer_read_out_of_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `memcpy` into a local's address is a store into that local, and
+        // lands there what a load of its source holds, every mark included:
+        // the handed-over mark of a callee's or a caller's memory, and the
+        // allocation itself, which was lost, so `*s` after `free(r)` said
+        // nothing (#395). In the two whose allocation is freed, the `SC0401`
+        // at the one `free(r)` and the `SC0403` at the use are older than
+        // this: `&r` handed to `memcpy` is a call reaching `r`, and the
+        // nullability check never trusts an escaped local; the `SC0402` at
+        // `*s` is what each pins. Mutation: drop the union into the target
+        // locals in the `Callee::Copies` arm; all four but the silent one
+        // stop reporting the use. Mutation: take the targets only for a
+        // destination of no dereference;
+        // `..._through_a_pointer_to_a_local_...` stops reporting it. The
+        // silent case is a limit, not a miss: what a callee handed over is
+        // asked about only at a later call that may free it (ADR-0040).
+        // Mutation: make what the copy lands lost at once; it reports.
+        a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_into_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same copies with the source declared `void *`, which is how
+        // `memcpy` is usually called: the copy is of bytes, so what lands does
+        // not ask the source's type, and asking a load for it carried nothing
+        // from one. Found by review. Mutation: build what lands from a typed
+        // load of the source, `Allocations::read_through`; both build.
+        a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_out_of_a_void_pointer_parameter_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other shapes a copy into a local takes, each a use `*s` or
+        // `*slot` the copy has to land for: a source that is itself a place
+        // of dereferences, `memcpy(&s, *ppr, 8)`; a destination two
+        // dereferences down, `memcpy(**ppps, &r, 8)`; a local's address
+        // copied and then stored through, which lands as an address edge
+        // rather than a site; and `memmove`, which shares the arm. Found by
+        // review. Each mutation below stops the named case reporting its
+        // use. Read the source at its own local, dropping its dereferences:
+        // `..._out_of_a_place_of_dereferences_...`. Read the destination's
+        // level at most one dereference down: `..._through_two_pointers_...`.
+        // Drop the address edges from what lands:
+        // `a_local_s_address_copied_by_memcpy_...`. Read `memmove` as an
+        // opaque call: `..._by_memmove_...`.
+        a_pointer_copied_by_memcpy_out_of_a_place_of_dereferences_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_copied_by_memcpy_carries_a_store_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count

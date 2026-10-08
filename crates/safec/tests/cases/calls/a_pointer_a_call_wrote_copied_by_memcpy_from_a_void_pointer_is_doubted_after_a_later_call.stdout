@@ -1,0 +1,98 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "int" parameter
+Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:2:6 "release" declared
+  Local "_0" "void" return
+Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:3:6 "acquire" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "void *"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Block "bb0" entry
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:5:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:5:14 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:13 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 generated
+    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 "acquire" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:6:5 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:7:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:7:14 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:8:17 written
+      Destination "_5"
+      Address
+        Place "_1"
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:8:11 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:8:17 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:12 written
+      Destination "_6"
+      Address
+        Place "_3"
+    ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:5 generated
+    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:5 "memcpy" "bb2"
+      Destination "_7"
+      Copy "_6"
+      Copy "_4"
+      Constant 8
+  Block "bb2"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:9:5 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:10:10 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:10:14 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 written
+      Destination "_9"
+      Binary "Eq"
+        Copy "_8"
+        Constant 0
+    Branch a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 "bb3" "bb4"
+      Copy "_9"
+  Block "bb3"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:12:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:12:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:11:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 generated
+    Call a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 "release" "bb6"
+  Block "bb6"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:14:5 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:15:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+          Deref
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call.c:15:12 generated
+    Return

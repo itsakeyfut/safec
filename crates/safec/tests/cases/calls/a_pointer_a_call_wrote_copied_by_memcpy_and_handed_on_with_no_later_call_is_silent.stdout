@@ -1,0 +1,88 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:1:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "int" parameter
+Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:2:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:3:5 "use" declared
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+Function a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "int **"
+  Local "_5" "int **"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:5:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:5:14 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:9 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 generated
+    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 "get" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:6:5 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:7:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:7:14 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:12 written
+      Destination "_4"
+      Address
+        Place "_3"
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:16 written
+      Destination "_5"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:5 generated
+    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:5 "memcpy" "bb2"
+      Destination "_6"
+      Copy "_4"
+      Copy "_5"
+      Constant 8
+  Block "bb2"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:8:5 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 written
+      Destination "_7"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 "bb3" "bb4"
+      Copy "_7"
+  Block "bb3"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 generated
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:10:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:10:16 generated
+    Return
+  Block "bb4"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:9:9 generated
+    Goto "bb5"
+  Block "bb5"
+    ArgumentsEvaluated a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 generated
+    Call a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 "use" "bb6"
+      Destination "_8"
+      Copy "_3"
+  Block "bb6"
+    Operation a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent.c:12:12 generated
+    Return

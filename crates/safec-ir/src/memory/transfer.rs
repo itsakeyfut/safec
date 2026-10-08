@@ -1726,6 +1726,51 @@ impl Analysis for Allocations<'_> {
                                     .into_iter()
                                     .collect()
                             };
+                            // **Into a local's address, the copy lands in the
+                            // local**: `memcpy(&s, &r, n)` stores into `s`
+                            // what `r` holds, every mark with it, since C17
+                            // 7.24.2.1 p2 copies the bytes. The locals are the
+                            // ones the destination's address edges name, or,
+                            // for a place of dereferences, the locals the
+                            // level above may be, as for a store's deep
+                            // targets. By union, as those are given, since `n`
+                            // may copy part of a pointer and a replacement
+                            // would prove things about a value nobody wrote
+                            // (#395). See ADR-0039 and ADR-0040.
+                            let targets: Vec<usize> = if into_depth == 0 {
+                                value.written_through(dest.local)
+                            } else {
+                                value
+                                    .levels_below(dest.local, into_depth)
+                                    .1
+                                    .into_iter()
+                                    .collect()
+                            };
+                            // What lands is what the allocation path above
+                            // writes, read the same way: the sites and
+                            // addresses one level below the source and the
+                            // marks on them, whatever type the source was
+                            // declared with. `memcpy` copies bytes, and the
+                            // usual source is a `void *`, through which a load
+                            // has no pointer type to be one; asking a load for
+                            // it carried nothing from one. Found by review.
+                            if !targets.is_empty() {
+                                let mut held = Held::none(value.points_to.len());
+                                for &site in &copied {
+                                    held.hold(site, Offset::Unknown);
+                                }
+                                for &target in &copied_locals {
+                                    held.writes_to[target] = true;
+                                }
+                                held.loaded = true;
+                                held.lost = marked;
+                                held.stale_read = marked;
+                                held.unreplaced_read = unreplaced;
+                                held.from_caller = caller;
+                                for target in targets {
+                                    value.points_to[target].accumulated(&held);
+                                }
+                            }
                             for container in into {
                                 for &site in &copied {
                                     value.inside[container][site] = true;

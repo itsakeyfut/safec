@@ -141,7 +141,8 @@ same as for a parameter, a handed-over pointer read after any such call, and
 it is the cost the return-value spelling, `r = acquire(); release(); *r`,
 already paid. The mark is read along a local's address edges too, so `pr =
 &r; s = *pr;` carries what `s = r;` does, for a parameter's memory as for a
-callee's. A copy by `memcpy` into a local's address does not carry it yet.
+callee's, and a copy by `memcpy` into a local's address carries it into the
+local ([#395](https://github.com/itsakeyfut/safec/issues/395)).
 
 **A free of what the caller owns, as a call this check cannot read.** A
 caller may hand one allocation twice, so `free(b); return *a;` over two
