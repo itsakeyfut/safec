@@ -1285,3 +1285,76 @@ fn a_copy_is_followed_no_further_than_the_write_it_copied() {
         "{found:?}"
     );
 }
+
+/// Storage beginning for the local being followed ends the walk, because
+/// what that local held above it was a different object's.
+///
+/// `q = r; StorageLive(q); c = q; if (c) { *r = 1; }`, with `r` a parameter.
+/// `c` holds whatever the new `q` held, which `q = r` did not write, so the
+/// arm knows nothing about `r` and the write through it is reported.
+///
+/// **This compiler's own frontend cannot produce it**: it gives each scope's
+/// variable a local of its own, so no local's storage begins again between
+/// an assignment and the copy that reads it.
+///
+/// Mutation: have `nullability::copied_from` record a storage boundary of the
+/// local it is following and carry on, as it does for any other local. It
+/// reaches `q = r`, refines `r` on the taken arm, and this fails with no
+/// finding where it expects one.
+#[test]
+fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let r = function.parameters().next().expect("a first parameter");
+    let q = function.push_local(pointer);
+    let c = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(q),
+                    value: Rvalue::Use(Operand::Copy(Place::local(r))),
+                    origin: Origin::Written(names.at[0]),
+                }),
+                Element::StorageLive {
+                    local: q,
+                    origin: Origin::Generated(names.at[1]),
+                },
+                Element::Assign(Operation {
+                    place: Place::local(c),
+                    value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                    origin: Origin::Written(names.at[2]),
+                }),
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(c)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(r, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[3]);
+}

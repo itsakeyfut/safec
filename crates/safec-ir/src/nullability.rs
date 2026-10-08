@@ -561,8 +561,15 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
             }
             | Element::Sequenced { origin: _ }
             | Element::ArgumentsEvaluated { origin: _ } => continue,
+            // Storage beginning or ending is a write like any other, and for
+            // the local being followed it is the last one: what that local
+            // held before is a different object's, so nothing above it is
+            // followed.
             Element::StorageLive { local, origin: _ }
             | Element::StorageDead { origin: _, local } => {
+                if *local == following {
+                    return sources;
+                }
                 changed[local.index()] = true;
                 continue;
             }
