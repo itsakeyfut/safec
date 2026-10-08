@@ -446,18 +446,22 @@ reason is told what is true of it:
 
 - `ReadOutOfMemory`, `free(*pp)` or a pointer a load gave: this check follows
   the local an allocation was made into, not what memory holds.
-- `NeverFollowed`, a pointer set where this check cannot see, such as by a
-  call through its address: it never saw it point at an allocation.
-- `MayBeALocal`, what may be a local's address on some path: freed, that is
-  what C forbids (C17 7.22.3.3 p2), and the remedy says to free only what an
-  allocation function returned; handed to any other call, it is nothing
-  wrong.
-- `Other`, every cause the lattice keeps in one bit, and more than one reason
-  at once: `nothing here says the program is wrong: this check could no
-  longer say which allocation this pointer holds`, true of all of them.
+- `NoSiteKnown`, a local reaching no allocation this check knows of: never
+  given a pointer, given a constant, or written where this check cannot see.
+  The words say only that it knows of none, since the producer does not say
+  which.
+- `MayBeALocal`, what this check could not rule out being a local's address,
+  which a free must never be handed (C17 7.22.3.3 p2). Could not rule out,
+  and no more: a call this check cannot read is believed able to return an
+  escaped local's address, so `read_int(&n); p = make(); free(p);` gets it
+  too, and the remedy says so rather than that the path is there.
+- `Other`, every cause the lattice keeps in one bit, and two reasons at once
+  that do not include `MayBeALocal`: `nothing here says the program is wrong:
+  this check could no longer say which allocation this pointer holds`, true
+  of all of them.
 
-All but the freed `MayBeALocal` tell a reader the one thing that matters
-there, which is not to go hunting for a defect.
+Only a free reaches a reason other than `Other` today: the producer that
+tells them apart answers frees alone.
 
 `Unproven::Disagreement` has two causes of its own, paths that disagree about a
 free and a call this check cannot read, and a `Finding` does not separate those

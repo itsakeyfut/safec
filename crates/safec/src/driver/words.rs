@@ -98,31 +98,32 @@ const LOST_REMEDY: &str = "nothing here says the program is wrong: this check co
 ///
 /// **The message is the kind's and these are the reason's**, so a reason
 /// added later is `E0004` here and nowhere in the table above it. Each says
-/// what is true of its producer and no more. `MayBeALocal` alone names what
-/// C forbids, a free of a local's address (C17 7.22.3.3 p2), and only where
-/// the pointer is freed: handed to any other call, a local's address is
-/// nothing wrong. See #213.
-fn lost_words(reason: LostReason, freed: bool) -> (&'static str, &'static str) {
+/// what is true of its producer and no more: none names a cause the
+/// producer did not establish, and `MayBeALocal`, which may be a defect C
+/// forbids, says it could not be ruled out rather than that it is there.
+///
+/// **Only a free reaches a reason other than `Other`.** The one producer
+/// that tells reasons apart, `Allocations::touching`, answers a free or a
+/// `realloc`; a use, a return and an argument are asked through producers
+/// that always say `Other`. So these words are written for a free, and a
+/// producer added for another kind has to come back here. See #213.
+fn lost_words(reason: LostReason) -> (&'static str, &'static str) {
     match reason {
         LostReason::ReadOutOfMemory => (
             "this was read out of memory, which this check does not follow",
             "nothing here says the program is wrong: this check follows the local an \
              allocation was made into, not what memory holds",
         ),
-        LostReason::NeverFollowed => (
-            "this check never saw this point at an allocation",
-            "nothing here says the program is wrong: this pointer was set where this \
-             check cannot see, such as by a call through its address",
-        ),
-        LostReason::MayBeALocal if freed => (
-            "this may be the address of a local",
-            "free only what an allocation function returned: on some path this \
-             holds a local's address",
+        LostReason::NoSiteKnown => (
+            "this check knows of no allocation this points at",
+            "nothing here says the program is wrong: this check knows of no \
+             allocation this pointer holds here",
         ),
         LostReason::MayBeALocal => (
             "this may be the address of a local",
-            "nothing here says the program is wrong: on some path this holds a \
-             local's address, which this check does not follow as an allocation",
+            "this check could not rule out that this holds a local's address, \
+             which free must never be handed; if it is always what an allocation \
+             function returned, nothing here says the program is wrong",
         ),
         LostReason::Other => ("this check cannot say what this points at", LOST_REMEDY),
     }
@@ -220,7 +221,7 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "remove one of the two frees, or take this one off the path that reaches the first",
         ),
         (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
-            let (label, remedy) = lost_words(reason, true);
+            let (label, remedy) = lost_words(reason);
             (
                 DOUBLE_FREE,
                 "this frees a pointer this check stopped following",
@@ -264,7 +265,7 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "move the free after this use, or do not free here",
         ),
         (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
-            let (label, remedy) = lost_words(reason, false);
+            let (label, remedy) = lost_words(reason);
             (
                 USE_AFTER_FREE,
                 "this uses a pointer this check stopped following",
@@ -295,7 +296,7 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "return a pointer that is still allocated, or do not free this one before returning it",
         ),
         (Kind::ReturnAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
-            let (label, remedy) = lost_words(reason, false);
+            let (label, remedy) = lost_words(reason);
             (
                 RETURN_AFTER_FREE,
                 "this returns a pointer this check stopped following",
@@ -325,7 +326,7 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "pass a pointer that is still allocated, or do not free this one before passing it",
         ),
         (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
-            let (label, remedy) = lost_words(reason, false);
+            let (label, remedy) = lost_words(reason);
             (
                 ARGUMENT_AFTER_FREE,
                 "this passes a pointer this check stopped following",

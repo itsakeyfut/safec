@@ -191,8 +191,8 @@ impl Known {
         //
         // One `push` rather than two conditions, because two would answer
         // `Lost` twice for a local that is both. That is inert, since
-        // [`verdict`] reads `Lost` as a flag, and a reader should not have to
-        // work that out.
+        // [`verdict`] joins the reasons and two `Other`s are `Other`, and a
+        // reader should not have to work that out.
         // **It replaces the members rather than joining them.** What is known
         // is about the set, and its members were each left `SiteState::Unknown`
         // by the free that could not say which one it took. Answering both

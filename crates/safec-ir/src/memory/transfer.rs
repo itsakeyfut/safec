@@ -499,10 +499,10 @@ impl Allocations<'_> {
             // `Held::may_be_a_locals_address`.
             let held = &known.points_to[place.local.index()];
             // Which of the three it is, as far as this can tell: one alone
-            // names its reason, and more than one is `Other`, since naming
-            // either would be wrong about the other (#213).
+            // names its reason, and more than one is `Other` unless one is
+            // `MayBeALocal`, which `LostReason::joined` keeps (#213).
             let reasons = [
-                (reached.len() == before, LostReason::NeverFollowed),
+                (reached.len() == before, LostReason::NoSiteKnown),
                 (held.loaded, LostReason::ReadOutOfMemory),
                 (held.may_be_a_locals_address(), LostReason::MayBeALocal),
             ];
