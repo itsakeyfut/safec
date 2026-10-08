@@ -380,9 +380,10 @@ impl Nullability<'_> {
 ///   the walk below is for this shape alone. A comparison's result is an
 ///   `int`, which is how the two are told apart.
 ///
-/// Either way the answer is the one local the branch read. For `if ((q =
-/// p))` that is a temporary copied from `q`, and carrying the refinement
-/// back to `q` and `p` is [`copied_from`]'s, called from
+/// Either way the answer is one local: the one the branch read in the first
+/// shape and the one the comparison read in the second. For `if ((q = p))`
+/// and `if ((q = p) != 0)` that is a temporary copied from `q`, and carrying
+/// the refinement back to `q` and `p` is [`copied_from`]'s, called from
 /// [`Analysis::edge`] alone, so what the memory check reads here is the same
 /// with it or without it.
 ///
@@ -541,9 +542,12 @@ pub(crate) fn tested_against_null(
 /// a projection names none, so the walk stops there with what it has. A
 /// copy below such a store is still followed, because nothing the store
 /// can reach changes which value the copy took. The walk stays in the
-/// branch's block. An assignment used as a condition is one full
-/// expression, which the lowering keeps in one block until a call ends
-/// it, and the copy the branch reads comes after that call returns.
+/// branch's block, and reaching the block's start loses a refinement
+/// rather than making a wrong one. A call or a `?:` in the condition ends
+/// a block, and the assignment and the copy of it still land after it,
+/// beside the branch: `while ((q = next(q)))` and `if ((q = c ? p : r))`
+/// both refine `q`. An `&&` or `||` branches on the `int` it computed, which
+/// is not a copy of anything, so `if (x && (q = p))` refines nothing here.
 fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<LocalId> {
     let mut changed = vec![false; function.locals().len()];
     let mut following = local;
