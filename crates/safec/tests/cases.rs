@@ -2492,6 +2492,17 @@ cases! {
         // one. `ok` is the control. Mutation: give only a literal a value;
         // the three declarations build and every line of `f` is refused.
         a_constant_expression_is_a_constant: ["--emit", "ast"],
+        // At file scope an array's length is a constant with a value, C17
+        // 6.7.6.2 p2: one that overflows or divides by zero has no defined
+        // value (6.6 p4), and so has one built on it, and one that names a
+        // variable is not a constant, through a pointer as well. A block's
+        // `w[k]` and a prototype's `x[m]` are variable-length arrays C
+        // allows, and with `ok` are the controls. Mutation: stop asking a
+        // file-scope length without a value; the six reports go. Mutation:
+        // ask it at block scope or of a parameter; a control reports.
+        // Mutation: word every one alike, or stop marking an expression built
+        // on an undefined one; a wording moves.
+        an_array_length_at_file_scope_has_a_value: ["--emit", "ast"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],
         a_file_scope_declaration_carries_its_initializer: ["--emit", "ast"],

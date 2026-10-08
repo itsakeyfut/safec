@@ -1,0 +1,17 @@
+Declaration an_array_length_at_file_scope_has_a_value.c:1:1 "a" "int[2147483647 * 2]"
+Declaration an_array_length_at_file_scope_has_a_value.c:2:1 "b" "int[1 << 31]"
+Declaration an_array_length_at_file_scope_has_a_value.c:3:1 "c" "int[1 / 0]"
+Declaration an_array_length_at_file_scope_has_a_value.c:4:1 "h" "int[1 << 31) + 1]"
+Declaration an_array_length_at_file_scope_has_a_value.c:5:1 "n" "int"
+Declaration an_array_length_at_file_scope_has_a_value.c:6:1 "d" "int[n]"
+Declaration an_array_length_at_file_scope_has_a_value.c:7:1 "e" "int (*)[n]"
+Declaration an_array_length_at_file_scope_has_a_value.c:9:1 "ok" "int[2 * 3]"
+Declaration an_array_length_at_file_scope_has_a_value.c:10:1 "g" "int (int, int[m])"
+  Parameter an_array_length_at_file_scope_has_a_value.c:10:7 "m" "int"
+  Parameter an_array_length_at_file_scope_has_a_value.c:10:14 "x" "int[m]"
+Function an_array_length_at_file_scope_has_a_value.c:12:1 "f" "int (int)"
+  Parameter an_array_length_at_file_scope_has_a_value.c:12:7 "k" "int"
+  Compound an_array_length_at_file_scope_has_a_value.c:12:14
+    Declaration an_array_length_at_file_scope_has_a_value.c:13:5 "w" "int[k]"
+    Return an_array_length_at_file_scope_has_a_value.c:14:5
+      Number an_array_length_at_file_scope_has_a_value.c:14:12 "0"
