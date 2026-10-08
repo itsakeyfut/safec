@@ -377,3 +377,22 @@ its prototype, and a caller in another translation unit is not checked against
 a `_Nonnull` either. That is the cost of having somewhere to put what cannot be
 proved, and what bounds it is that each hatch is written at a named place, in a
 list a command can print.
+
+**A function this check cannot read is the other boundary.** A call to one
+whose body is not in the translation unit is believed to return a fresh
+allocation, or one code this check cannot read could already reach, and never
+one that the call itself, or another call this check cannot read, freed
+([ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)).
+Where the callee's body is compiled here, what it returns is asked at its
+`return`
+([ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)),
+so a callee that hands back what it freed itself is reported there. Where it
+is not, or where what it hands back was freed by another function, a wrong
+belief is not detected, as a wrong hatch promise is not: `release(); r =
+acquire(); free(r);` builds where `release` freed what `acquire` hands out
+([#379](https://github.com/itsakeyfut/safec/issues/379)). No reading of the
+caller's own code closes that, since nothing in it tells the defined executions
+from the undefined ones
+([#393](https://github.com/itsakeyfut/safec/issues/393)); what would is a
+declaration that says whether a result hands ownership over, the `owner` sketch
+under *Annotations* above.

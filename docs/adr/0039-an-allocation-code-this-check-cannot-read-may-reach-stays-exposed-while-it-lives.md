@@ -128,7 +128,8 @@ every result instead would report every `n = make(); free(n);`. A callee that re
 made and freed itself is a fresh allocation to this rule, and silent: #252.
 Nothing stands for memory only a callee holds, either, so `release();
 r = acquire(); free(r);` is silent where `release` freed what `acquire`
-returns ([#379](https://github.com/itsakeyfut/safec/issues/379)). It was
+returns ([#379](https://github.com/itsakeyfut/safec/issues/379)), which
+`docs/safety-model.md` states as a condition of the guarantee. It was
 doubted before #135 only because a `void` call's result local was a site, which
 made the answer turn on the earlier call's return type.
 [ADR-0041](./0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)
