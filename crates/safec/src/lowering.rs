@@ -872,24 +872,14 @@ impl Lowering<'_> {
         !array || !matches!(self.ast.ty(current), Type::Void | Type::Function { .. })
     }
 
-    /// Whether an expression is one of the constant expressions [`decided`]
-    /// folds: an integer constant, or one under unary `+`.
+    /// Whether an expression is an integer constant expression, which is
+    /// whether `types.rs` gave it a value (C17 6.6 p6).
     ///
-    /// Not every constant expression (C17 6.6), only those this frontend can
-    /// already lower to an `Operand::Constant`, and never one with a comma
-    /// operator in it, which 6.6 p3 forbids and which lowers to a constant
-    /// anyway. Every expression kind written out, so that one added later is
-    /// answered for here rather than folded or not by default.
+    /// Never one with a comma operator in it, which 6.6 p3 forbids and which
+    /// lowers to a constant anyway: `(x, 1)` has no value there, so
+    /// [`decided`] leaves `while ((x, 1)) {}` a `Branch`.
     fn constant_expression(&self, expr: ExprId) -> bool {
-        match self.ast.expr(expr) {
-            Expr::Number { span: _ } => true,
-            Expr::Unary {
-                op: AstUnOp::Plus,
-                operand,
-                span: _,
-            } => self.constant_expression(*operand),
-            _ => false,
-        }
+        self.types.value(expr).is_some()
     }
 
     /// Lower every function that has a body.
@@ -1160,8 +1150,8 @@ impl Lowering<'_> {
 
         // Which operand is the pointer is read off which side holds the
         // literal, and that is sound only because an `Operand::Constant` is
-        // always an `int`: `Expr::Number` is the one thing that builds one and
-        // `types.rs` gives it `int`. A cast or a string literal would break
+        // always an `int`: a constant expression is the one thing that builds
+        // one, and `types.rs` gives a value only to an expression of `int`. A cast or a string literal would break
         // that, and `((int *)0)[n]` would fold to `n`, which is a wrong
         // **value** rather than a wrong report. Neither is implemented; when
         // one is, this decides by the operand's type instead.
@@ -1655,6 +1645,20 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         self.typed(id, diagnostics)?;
+
+        // A constant expression is the constant it evaluates to, C17 6.6 p2,
+        // and `types.rs` has that value only where every operand is a
+        // constant too. Not the folding of `E + 0` over a non-constant that
+        // ADR-0021 declines: nothing here is read or written at run time.
+        // Before the descent, so none of its operands is lowered.
+        let folded = match self.ast.expr(id) {
+            Expr::Number { .. } => None,
+            _ => self.types.value(id),
+        };
+        if let Some(value) = folded {
+            values.push(Operand::Constant(value));
+            return Some(());
+        }
 
         // Before [`Lowering::descend`], which is what takes the flag away for
         // this node's own operands. What the call arm below asks is whether

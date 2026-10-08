@@ -142,12 +142,12 @@ not against what shipped before it, which is the next section.
   that the frontend refuses most of the other spellings: a hexadecimal or long
   constant, a character constant and a cast are each `SC0304` or `SC0201`
   today, and an array type is refused outright, so what is left is `-0`,
-  `n - n` and `0 * k`. **The boundary is the operand and not the value**, and
-  crossing it needs a constant evaluator, which the frontend does not have:
-  `types.rs` and `ast.rs` each say in as many words that they do not evaluate a
-  constant expression. So the trigger for reopening this is not a second
-  complaint about a spelling, it is Phase 9's `#if`, which brings the evaluator
-  in for its own reasons.
+  `n - n` and `0 * k`. **The boundary is the operand and not the value.** Since
+  #384 the type checker evaluates a constant expression and the lowering lowers
+  one to its constant, so `-0` and `(1 - 1)` arrive as the literal does and
+  are folded; that is a constant expression meaning what C says, not the fold of
+  a non-constant this record declined. `n - n` and `0 * k` are not constant
+  expressions and keep their silence.
 * Bad, because a check now rests on a normalisation rather than on something it
   verified. `docs/c-family.md` carries what that costs and who has to keep it.
 * Bad, because the lowering normalises more than it did. It already dropped

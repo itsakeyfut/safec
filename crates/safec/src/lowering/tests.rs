@@ -1579,6 +1579,56 @@ fn a_parameter_whose_array_the_adjustment_would_lose_is_refused() {
     }
 }
 
+/// A constant expression lowers to the constant it is, and nothing that is not
+/// one does.
+///
+/// C17 6.6 p2 lets a constant expression be evaluated during translation,
+/// and `types.rs` gives one a value only where every operand is a constant,
+/// so `p = 1 - 1` is the null pointer `p = 0` is, and `if (1 == 1)` is the
+/// `Goto` that `decided` makes of `if (1)`. `(x, 1)` is not a constant
+/// expression by 6.6 p3 and stays a `Branch`.
+///
+/// Mutation: lower a constant expression's operands rather than its value.
+/// A `Binary` appears and the `if` is a `Branch`, and this fails. Mutation:
+/// give a comma a value. The `while` is a `Goto`, and this fails.
+#[test]
+fn a_constant_expression_lowers_to_its_constant() {
+    let lowered = lowered(concat!(
+        "int f(int *p, int x) {\n",
+        "    p = 1 - 1;\n",
+        "    if (1 == 1) {\n",
+        "        x = 2;\n",
+        "    }\n",
+        "    while ((x, 1)) {\n",
+        "        x = 3;\n",
+        "    }\n",
+        "    return 0;\n",
+        "}\n",
+    ));
+    let f = function(&lowered, "f");
+    let p = f.parameters().next().expect("`p`");
+
+    let operations: Vec<&Operation> = f.blocks().flat_map(assigns).collect();
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation.place == Place::local(p)
+                && operation.value == Rvalue::Use(Operand::Constant(0))),
+        "{operations:?}"
+    );
+    assert!(
+        !operations
+            .iter()
+            .any(|operation| matches!(operation.value, Rvalue::Binary { .. })),
+        "{operations:?}"
+    );
+    let branches = f
+        .blocks()
+        .filter(|block| matches!(block.terminator, Terminator::Branch { .. }))
+        .count();
+    assert_eq!(branches, 1, "only the `while` asks at run time");
+}
+
 /// A call to a function whose signature was refused says nothing more.
 ///
 /// The declaration is where the problem is and where it is reported; a

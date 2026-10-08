@@ -17,7 +17,6 @@ Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int"
-  Local "_7" "int"
   Block "bb0" entry
     Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 generated
       Destination "_0"
@@ -53,19 +52,15 @@ Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main
     Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:7:9 generated
     Goto "bb4"
   Block "bb4"
-    Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:17 written
-      Destination "_5"
-      Unary "Neg"
-        Constant 1
     ArgumentsEvaluated what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:13 generated
     Call what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:13 "abs" "bb5"
-      Destination "_6"
-      Copy "_5"
+      Destination "_5"
+      Constant -1
   Block "bb5"
     Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:9 written
       Destination "_4"
       Use
-        Copy "_6"
+        Copy "_5"
     Sequenced what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:10:13 generated
     Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:11:5 written
       Destination "_1"
@@ -73,7 +68,7 @@ Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main
       Use
         Copy "_4"
     Operation what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:11:5 written
-      Destination "_7"
+      Destination "_6"
       Use
         Copy "_1"
           Deref
