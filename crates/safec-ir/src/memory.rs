@@ -191,10 +191,21 @@ pub enum LostReason {
 }
 
 impl LostReason {
-    /// One reason for two: itself where they agree, [`Self::Other`] where
+    /// One reason for two: itself where they agree, and [`Self::Other`] where
     /// they do not, since naming either would be wrong about the other.
+    ///
+    /// **Except [`Self::MayBeALocal`], which survives any meeting.** It is the
+    /// one reason that names what C forbids rather than what this check could
+    /// not follow, and the path that holds a local's address is still a path
+    /// whatever else the pointer may be on another: folded into `Other`, `r =
+    /// &x; if (c) r = *t; free(r);` was told nothing says the program is wrong.
+    /// Found while implementing #213.
     pub(crate) fn joined(self, other: Self) -> Self {
-        if self == other { self } else { Self::Other }
+        match (self, other) {
+            (Self::MayBeALocal, _) | (_, Self::MayBeALocal) => Self::MayBeALocal,
+            _ if self == other => self,
+            _ => Self::Other,
+        }
     }
 }
 
