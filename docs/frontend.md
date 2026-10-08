@@ -265,10 +265,12 @@ an identifier, and a character constant is refused as `expected an expression`.
 | `p == -0` with `int *p` | accepts | accepts | accepts |
 | `p = i - i;` with `int *p, i` | `error[SC0302]` | `error: incompatible integer to pointer conversion assigning to 'int *' from 'int'` | the same |
 
-**Every zero C calls one is one here.** C17 6.3.2.3 p3 makes any integer
-constant expression with the value 0 a null pointer constant, and
-`types.rs::Checker::evaluate` gives every integer constant expression of 6.6 p6
-its value, so `1 - 1` and `-0` are recognised as `0` is. `i - i` is zero at run
+**Every zero C calls one is one here, short of an overflow.** C17 6.3.2.3 p3
+makes any integer constant expression with the value 0 a null pointer
+constant, and `types.rs::Checker::evaluate` gives every integer constant
+expression of 6.6 p6 its value, so `1 - 1` and `-0` are recognised as `0` is.
+One whose evaluation overflows on the way, `(2147483647 + 1) * 0`, gets no
+value and is refused as an integer, which is #386. `i - i` is zero at run
 time and is not a constant expression, so it is an integer given to a pointer.
 C17 6.7.9 p11 gives an initializer the constraints of simple assignment and
 6.5.2.2 p2 gives an argument them too, so the three spellings answer alike, and
