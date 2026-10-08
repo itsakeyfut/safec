@@ -1129,7 +1129,8 @@ pub(super) fn used_before(
 /// runs is C's to leave open. It is asked where a marker is about to clear
 /// what is pending, and at a return, rather than after every transfer: a free
 /// later in the same expression reports through `used_before` first, with
-/// `freed here`, and [`say`] keeps the first report at a caret. See ADR-0042.
+/// `freed here`, and [`say`] keeps it over this one, which names no free.
+/// See ADR-0042.
 pub(super) fn after_a_call(
     findings: &mut Vec<Finding>,
     said: &mut Vec<(Span, Place, usize)>,
@@ -1194,27 +1195,43 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 ///
 /// **The one that tells the reader more stands.** [`used`] is where a pair at
 /// one caret comes from and why one is collapsed at all; this is which half
-/// survives, in four rules, each taking over only where the one before has
+/// survives, in five rules, each taking over only where the one before has
 /// nothing to say.
 ///
 /// 1. A proof replaces a suspicion, and a suspicion never replaces a proof,
 ///    because a proof is the one thing a reader must not be denied.
-/// 2. Between two with the same conclusion, one naming a free replaces one
-///    naming none. Neither is truer than the other, and one gives the reader a
-///    free to look at and, for [`Unproven::Unsequenced`], the clause that says
-///    why it is open: `g(*p) + h(p) + (free(p), 0)` kept the suspicion of the
-///    call it cannot read and lost both, where `g(*p) + (free(p), 0) + h(p)`
-///    kept them, so what the reader got turned on which operand was written
-///    first.
-/// 3. Where both name one, the earlier free, by the same [`earlier`] that
-///    [`SiteState::joined`] applies and for its reason: which free is named
-///    should not turn on which block the walk reached first, and "first" here
-///    meant first in `Cfg::order`, not the first free.
-/// 4. Otherwise the standing report stays, a tie included. Nothing here ranks
+/// 2. Two of different [`Kind`]s leave the standing one. They ask different
+///    questions, often about different allocations: in
+///    `release(*tab) + (free(q), 0)`, the read of `*tab` is doubted because
+///    `tab` may have been freed, and what it hands on is doubted because `q`
+///    may have been. The first is nearer the root, which is ADR-0045's order,
+///    and what a free names says nothing about which question comes first.
+/// 3. Between two suspicions of one kind, one naming a free replaces one
+///    naming none. Two proofs always name one. One gives the reader a free to look at and, for
+///    [`Unproven::Unsequenced`], the clause that says why it is open:
+///    `g(*p) + h(p) + (free(p), 0)` kept the doubt of the call it cannot read
+///    and lost both, where `g(*p) + (free(p), 0) + h(p)` kept them, so what the
+///    reader got turned on which operand was written first. **What it costs**:
+///    the doubt it replaces may have a cause the free's order does not touch,
+///    such as an escaped address, and that cause is what the reader meets
+///    next, at the same caret, once they have separated the free. One report
+///    per caret hides one reason whichever is kept.
+/// 4. Where both name one, two proofs name the earlier free, by the same
+///    [`earlier`] that [`SiteState::joined`] applies and for its reason: which
+///    free is named should not turn on which block the walk reached first.
+///    Two suspicions keep the standing one, because a suspicion that names a
+///    free comes from a read carried to that free, and the walk carries it to
+///    the frees of one expression in the order they run. In
+///    `g(*p) + (free((0, free(q), p)), 0)` the inner free runs first and is
+///    written later, so the earlier span would name the free the next report
+///    on that line calls freed again.
+/// 5. Otherwise the standing report stays, a tie included. Nothing here ranks
 ///    two reasons that name no free against each other: a `Lost` and a
 ///    `Disagreement` at one caret was looked for and not reached. Replacing
-///    there instead moves `a_place_and_what_it_points_at_handed_to_one_call_are_one_report`
-///    and two other corpus cases about a call handed a table.
+///    there instead moves
+///    `a_place_and_what_it_points_at_handed_to_one_call_are_one_report`,
+///    `a_table_and_what_it_holds_handed_to_one_call_are_both_asked` and
+///    `a_doubted_read_of_a_table_is_kept_over_what_it_returns`.
 ///
 /// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
 /// derive `Ord` and should not: its three variants are three answers rather
@@ -1233,12 +1250,17 @@ fn supersedes(standing: &Finding, new: &Finding) -> bool {
         (_, Conclusion::Safe) => unreachable!("a verdict about a dereference concluded Safe"),
         (Conclusion::Unknown, Conclusion::Unsafe) => true,
         (Conclusion::Unsafe, Conclusion::Unknown) => false,
-        (Conclusion::Unsafe, Conclusion::Unsafe) | (Conclusion::Unknown, Conclusion::Unknown) => {
-            match (standing.freed, new.freed) {
-                (None, Some(_)) => true,
-                (Some(standing), Some(new)) => earlier(standing, new) != standing,
-                (Some(_), None) | (None, None) => false,
-            }
-        }
+        _ if standing.kind != new.kind => false,
+        // A proof reaching here is one [`verdict`] made, and it names its
+        // free: the interior-free proof, which names none, is pushed rather
+        // than said.
+        (Conclusion::Unsafe, Conclusion::Unsafe) => match (standing.freed, new.freed) {
+            (Some(standing), Some(new)) => earlier(standing, new) != standing,
+            (None, _) | (_, None) => unreachable!("a proof standing at a caret named no free"),
+        },
+        (Conclusion::Unknown, Conclusion::Unknown) => match (standing.freed, new.freed) {
+            (None, Some(_)) => true,
+            (Some(_), Some(_)) | (Some(_), None) | (None, None) => false,
+        },
     }
 }
