@@ -1,0 +1,30 @@
+error[SC0402]: this may use a value after it was freed
+    ╭─[ a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:21:5 ]
+    │
+ 21 │     return *slot;
+    │     ──────┬──────  
+    │           ╰──────── used here, perhaps after the free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:16:5 ]
+    │
+ 16 │     *s = r;
+    │     ───┬──  
+    │        ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_local_s_address_copied_by_memcpy_carries_a_store_through_it.c:21:5 ]
+    │
+ 21 │     return *slot;
+    │     ──────┬──────  
+    │           ╰──────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

@@ -2577,6 +2577,21 @@ cases! {
         // load of the source, `Allocations::read_through`; both build.
         a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_out_of_a_void_pointer_parameter_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other shapes a copy into a local takes, each a use `*s` or
+        // `*slot` the copy has to land for: a source that is itself a place
+        // of dereferences, `memcpy(&s, *ppr, 8)`; a destination two
+        // dereferences down, `memcpy(**ppps, &r, 8)`; a local's address
+        // copied and then stored through, which lands as an address edge
+        // rather than a site; and `memmove`, which shares the arm. Found by
+        // review. Mutation: read the source at its own local, dropping its
+        // dereferences; the first stops reporting the use. Mutation: read
+        // the destination's level at most one dereference down; the second
+        // does. Mutation: drop the address edges from what lands; the third
+        // does. Mutation: read `memmove` as an opaque call; the fourth does.
+        a_pointer_copied_by_memcpy_out_of_a_place_of_dereferences_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_through_two_pointers_to_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_copied_by_memcpy_carries_a_store_through_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memmove_into_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count
