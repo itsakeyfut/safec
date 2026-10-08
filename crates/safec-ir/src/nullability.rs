@@ -380,6 +380,12 @@ impl Nullability<'_> {
 ///   the walk below is for this shape alone. A comparison's result is an
 ///   `int`, which is how the two are told apart.
 ///
+/// Either way the answer is the one local the branch read. For `if ((q =
+/// p))` that is a temporary copied from `q`, and carrying the refinement
+/// back to `q` and `p` is [`copied_from`]'s, called from
+/// [`Analysis::edge`] alone, so what the memory check reads here is the same
+/// with it or without it.
+///
 /// **A local something below the comparison may have changed is not
 /// refined.** The walk records every local it steps over a write to, and
 /// refuses the refinement if the comparison turns out to be about one of
@@ -516,6 +522,82 @@ pub(crate) fn tested_against_null(
     // not, so no report moves. It is the answer that is right about the
     // branch rather than one a test can tell apart.
     None
+}
+
+/// The locals a branch's tested local was copied from, nearest first, where
+/// each still holds what was copied out of it when the branch reads.
+///
+/// `if ((q = p))` is the shape. C17 6.5.16 p3 gives an assignment
+/// expression the value of its left operand after the assignment, so the
+/// lowering writes `q`, copies it into a temporary, and branches on the
+/// temporary, which is the local [`tested_against_null`] answers. Nothing
+/// reads that temporary again, so a refinement kept on it alone is lost,
+/// while `q` and `p` held the same value when the branch ran and are what
+/// the arm reads. A chain, `if ((r = q = p))`, is followed copy by copy.
+///
+/// **Only a copy whose source nothing below it may have changed is
+/// followed**, by the rule `tested_against_null` keeps and with the same
+/// record: a direct store names the local it changed, and a store through
+/// a projection names none, so the walk stops there with what it has. A
+/// copy below such a store is still followed, because nothing the store
+/// can reach changes which value the copy took. The walk stays in the
+/// branch's block. An assignment used as a condition is one full
+/// expression, which the lowering keeps in one block until a call ends
+/// it, and the copy the branch reads comes after that call returns.
+fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<LocalId> {
+    let mut changed = vec![false; function.locals().len()];
+    let mut following = local;
+    let mut sources = Vec::new();
+
+    for element in function.block(block).elements.iter().rev() {
+        // Every variant and field written out, for the reason
+        // `tested_against_null`'s walk gives, and each answered as it is
+        // there.
+        let operation = match element {
+            Element::Assign(operation) => operation,
+            Element::Evaluate {
+                place: _,
+                origin: _,
+            }
+            | Element::Sequenced { origin: _ }
+            | Element::ArgumentsEvaluated { origin: _ } => continue,
+            Element::StorageLive { local, origin: _ }
+            | Element::StorageDead { origin: _, local } => {
+                changed[local.index()] = true;
+                continue;
+            }
+        };
+
+        if !operation.place.projection.is_empty() {
+            return sources;
+        }
+        if operation.place.local != following {
+            changed[operation.place.local.index()] = true;
+            continue;
+        }
+
+        // The last write to the local being followed. A copy is the one
+        // shape that leaves two locals holding one value; anything else
+        // computed it, and there is nothing further to follow.
+        match &operation.value {
+            Rvalue::Use(Operand::Copy(source))
+                if source.projection.is_empty() && !changed[source.local.index()] =>
+            {
+                sources.push(source.local);
+                following = source.local;
+            }
+            Rvalue::Use(_)
+            | Rvalue::Address(_)
+            | Rvalue::Unary { op: _, operand: _ }
+            | Rvalue::Binary {
+                op: _,
+                lhs: _,
+                rhs: _,
+            } => return sources,
+        }
+    }
+
+    sources
 }
 
 /// The local an equality against a null pointer constant names, and what
@@ -791,11 +873,21 @@ impl Analysis for Nullability<'_> {
 
         // `Terminator::successors` pushes `then` and then `otherwise`, so a
         // branch has exactly those two edges and index 1 is the other arm.
-        value[local.index()] = if index == 0 {
+        let learned = if index == 0 {
             on_then
         } else {
             on_then.inverted()
         };
+
+        value[local.index()] = learned;
+
+        // Every local the tested one was copied from and still equals, each
+        // under the rule above: one this check has settled is left alone.
+        for source in copied_from(function, block, local) {
+            if value[source.index()] == Nullness::Unknown {
+                value[source.index()] = learned;
+            }
+        }
     }
 }
 
