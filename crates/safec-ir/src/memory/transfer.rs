@@ -48,7 +48,10 @@ pub(super) struct Allocations<'a> {
     /// `main` itself hands it arguments this does not see. See ADR-0040.
     pub(super) exposed_parameters: Vec<LocalId>,
     /// Per local, whether a call this check cannot read writes its result
-    /// into it: [`Self::opaque_results`] answers it, once per function.
+    /// into it: [`Self::opaque_results_of`] answers it, once per function.
+    /// Indexed by site as well, since a site is named by the local the call
+    /// that made it wrote into. Not by position: a local written by such a
+    /// call anywhere is marked everywhere, which can only add a doubt.
     ///
     /// What such a result points at is memory the callee handed over, as
     /// what a parameter points at is memory the caller did, so a pointer read
@@ -250,7 +253,10 @@ impl Allocations<'_> {
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
-    /// pointer parameter points at: whether `local` holds the site of one, or
+    /// caller or a callee handed over: memory a pointer parameter points at,
+    /// or what a call this check cannot read returned, which is the same
+    /// fact for the other side of a call (#394). For a parameter: whether
+    /// `local` holds the site of one, or
     /// was itself read out of such memory, or the load reads through an
     /// allocation one was stored in, at any level. The second is the same read
     /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and

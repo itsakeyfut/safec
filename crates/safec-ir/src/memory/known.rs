@@ -96,9 +96,8 @@ pub(super) struct Known {
     /// [`Held::unreplaced_read`] by [`Self::handed_below`] alone. Nothing
     /// clears it, since slots are not told apart. See ADR-0047.
     pub(super) unreplaced: Vec<bool>,
-    /// Per site, whether what it contains may include a pointer read out of
-    /// memory a pointer parameter points at: one [`Held::from_caller`] marks,
-    /// stored here.
+    /// Per site, whether what it contains may include a pointer a caller or
+    /// a callee handed over: one [`Held::from_caller`] marks, stored here.
     ///
     /// **The mark lived on locals only**, so a store recorded the sites such
     /// a pointer holds, which are none, and `*box = q; release_all(); r =
@@ -1242,6 +1241,11 @@ impl Known {
     /// There is nothing to lose by leaving it, because a local holding no site
     /// shares none with anybody, and a `free` of it is reported by
     /// [`Allocations::touching`](super::transfer::Allocations::touching)'s own rule whatever this says.
+    ///
+    /// **Left alone here, not for good.** A call this check cannot read
+    /// marks what it wrote as handed over, [`Held::from_caller`], and the
+    /// next such call makes it lost by that route, so the idiom is quiet
+    /// only until a later call that may free what it was handed (#394).
     pub(super) fn replaced(&mut self, may_hold: impl Fn(usize) -> bool) {
         for local in 0..self.escaped.len() {
             if may_hold(local)

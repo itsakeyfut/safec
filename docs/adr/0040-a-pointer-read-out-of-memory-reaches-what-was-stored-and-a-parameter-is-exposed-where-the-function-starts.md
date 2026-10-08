@@ -132,13 +132,16 @@ exactly as a caller's is: a load out of what an opaque call's result points at,
 parameter does, and so does every escaped local after such a call writes through
 the addresses it may reach, `acquire(&r);`. Neither is asked anything until a
 later such call, so `get(&p); *p = 1;`, the output-parameter idiom ADR-0017
-declines to report, is not; after one, `release(); return *q;` and
+declines to report, is not, until a later such call; after one,
+`get(&p); log_line(); *p = 1;` is doubted, and `release(); return *q;` and
 `release(); return *r;` are doubted where they were believed, each a use after
 free under AddressSanitizer against a callee that frees what it handed out
 ([#394](https://github.com/itsakeyfut/safec/issues/394)). The cost is the
 same as for a parameter, a handed-over pointer read after any such call, and
 it is the cost the return-value spelling, `r = acquire(); release(); *r`,
-already paid.
+already paid. The mark is read along a local's address edges too, so `pr =
+&r; s = *pr;` carries what `s = r;` does, for a parameter's memory as for a
+callee's. A copy by `memcpy` into a local's address does not carry it yet.
 
 **A free of what the caller owns, as a call this check cannot read.** A
 caller may hand one allocation twice, so `free(b); return *a;` over two
