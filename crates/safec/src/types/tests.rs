@@ -1534,3 +1534,66 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
         );
     }
 }
+
+/// Every operator an integer constant expression may hold gives its C value,
+/// and an operation C leaves without one gives none.
+///
+/// C17 6.6 p6, at `int`: division truncates toward zero (6.5.5 p6), the
+/// relational, equality and logical operators give 1 or 0 (6.5.8 p6, 6.5.9
+/// p3, 6.5.13 p3, 6.5.14 p3), and `?:` is the arm its condition picks. No
+/// value for a result outside `int`, a division or remainder by zero, a shift
+/// by a negative amount or by the width, a left shift of a negative value, a
+/// right shift of one (6.5.7 p5 leaves it to the implementation), anything
+/// with a variable in it, and a comma (6.6 p3).
+///
+/// Mutation: break any one operator, or let any one undefined case through.
+/// Its row fails.
+#[test]
+fn a_constant_expression_has_the_value_c_gives_it() {
+    for (written, value) in [
+        ("1 + 2", Some(3)),
+        ("7 - 9", Some(-2)),
+        ("3 * 4", Some(12)),
+        ("7 / 2", Some(3)),
+        ("-7 / 2", Some(-3)),
+        ("7 % 3", Some(1)),
+        ("-7 % 3", Some(-1)),
+        ("1 << 3", Some(8)),
+        ("16 >> 2", Some(4)),
+        ("1 < 2", Some(1)),
+        ("2 > 3", Some(0)),
+        ("1 <= 1", Some(1)),
+        ("1 >= 2", Some(0)),
+        ("1 == 1", Some(1)),
+        ("1 != 1", Some(0)),
+        ("6 & 3", Some(2)),
+        ("6 ^ 3", Some(5)),
+        ("6 | 3", Some(7)),
+        ("1 && 0", Some(0)),
+        ("0 || 2", Some(1)),
+        ("-5", Some(-5)),
+        ("+5", Some(5)),
+        ("~0", Some(-1)),
+        ("!3", Some(0)),
+        ("1 ? 2 : 3", Some(2)),
+        ("0 ? 2 : 3", Some(3)),
+        ("2147483647 + 1", None),
+        ("-2147483647 - 2", None),
+        ("2147483647 * 2", None),
+        ("1 / 0", None),
+        ("1 % 0", None),
+        ("1 << -1", None),
+        ("1 << 32", None),
+        ("-1 << 1", None),
+        ("1 << 31", None),
+        ("-8 >> 1", None),
+        ("x + 1", None),
+        ("x ? 2 : 3", None),
+    ] {
+        let checked = checked(&format!(
+            "int main(void) {{\n    int x;\n    int r;\n    r = {written};\n    r = (x, 1);\n    return 0;\n}}\n"
+        ));
+        assert_eq!(checked.value_of(written), value, "{written}");
+        assert_eq!(checked.value_of("x, 1"), None, "a comma is never constant");
+    }
+}

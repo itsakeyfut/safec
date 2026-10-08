@@ -170,8 +170,8 @@ too, which `clang` accepts and says nothing about.
 expression is a constant expression, it shall have a value greater than zero."
 `clang` takes `[0]` as an extension unless asked to be pedantic, and this
 compiler takes no constraint-violating extension, as with `void *` above.
-`types.rs::Checker::report_array` asks it of a literal length only, so `[1 - 1]`
-is not refused yet (#384).
+`types.rs::Checker::report_array` asks it of any length whose constant value
+the type checker knows, so `[1 - 1]` and `[-1]` are refused too.
 
 ### What an integer constant is worth, and what type it is not
 
@@ -256,27 +256,24 @@ an identifier, and a character constant is refused as `expected an expression`.
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int *p = 0;` | accepts | accepts | accepts |
-| `int *p = 1 - 1;` | `error[SC0302]` | accepts | accepts |
-| `int *p = -0;` | `error[SC0302]` | accepts | accepts |
-| `p = 1 - 1;` with `int *p` | `error[SC0302]` | accepts | accepts |
-| `g(1 - 1)` with `int g(int *p)` | `error[SC0302]` | accepts | accepts |
-| `c ? p : 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
-| `p == 1 - 1` with `int *p` | `error[SC0306]` | accepts | accepts |
-| `p == -0` with `int *p` | `error[SC0306]` | accepts | accepts |
+| `int *p = 1 - 1;` | accepts | accepts | accepts |
+| `int *p = -0;` | accepts | accepts | accepts |
+| `p = 1 - 1;` with `int *p` | accepts | accepts | accepts |
+| `g(1 - 1)` with `int g(int *p)` | accepts | accepts | accepts |
+| `c ? p : 1 - 1` with `int *p` | accepts | accepts | accepts |
+| `p == 1 - 1` with `int *p` | accepts | accepts | accepts |
+| `p == -0` with `int *p` | accepts | accepts | accepts |
+| `p = i - i;` with `int *p, i` | `error[SC0302]` | `error: incompatible integer to pointer conversion assigning to 'int *' from 'int'` | the same |
 
-**These are refused on purpose.** C17 6.3.2.3 p3 makes any integer
-constant expression with the value 0 a null pointer constant, and nothing here
-evaluates a constant expression, so only a literal zero is recognised as one.
-The alternative was not reporting an integer given to a pointer at all, which
-is the mistake the check exists for; `types.rs::is_null_pointer_constant` says
-why the false report costs less. C17 6.7.9 p11 gives an initializer the
-constraints of simple assignment and 6.5.2.2 p2 gives an argument them too, so
-the three spellings answer alike, and C17
-6.5.9 p2 lets a pointer be compared with a null pointer constant and no other
-integer, so a comparison answers alike too, and 6.5.15 p3 lets a conditional pair
-a pointer with a null pointer constant and no other integer, so a conditional
-does. The rows stop being refused the day
-a constant expression can be evaluated.
+**Every zero C calls one is one here.** C17 6.3.2.3 p3 makes any integer
+constant expression with the value 0 a null pointer constant, and
+`types.rs::Checker::evaluate` gives every integer constant expression of 6.6 p6
+its value, so `1 - 1` and `-0` are recognised as `0` is. `i - i` is zero at run
+time and is not a constant expression, so it is an integer given to a pointer.
+C17 6.7.9 p11 gives an initializer the constraints of simple assignment and
+6.5.2.2 p2 gives an argument them too, so the three spellings answer alike, and
+6.5.9 p2 and 6.5.15 p3 let a comparison and a conditional pair a pointer with a
+null pointer constant and no other integer, so those answer alike too.
 
 ### Where a nullability specifier is read
 

@@ -1,0 +1,24 @@
+error[SC0309]: the length of an array is greater than zero
+   ╭─[ a_constant_expression_is_a_constant.c:1:8 ]
+   │
+ 1 │ int a1[-1];
+   │        ─┬  
+   │         ╰── this is -1
+───╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+   ╭─[ a_constant_expression_is_a_constant.c:2:8 ]
+   │
+ 2 │ int a2[1 - 1];
+   │        ──┬──  
+   │          ╰──── this is 0
+───╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+   ╭─[ a_constant_expression_is_a_constant.c:3:10 ]
+   │
+ 3 │ int (*q)[-1];
+   │          ─┬  
+   │           ╰── this is -1
+───╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
