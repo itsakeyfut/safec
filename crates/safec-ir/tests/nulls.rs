@@ -20,7 +20,7 @@
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
     BinOp, Block, BlockId, Element, Function, LocalId, Operand, Operation, Origin, Place,
-    Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId,
+    Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::nullability;
 use safec_ir::source::{SourceMap, Span};
@@ -1200,19 +1200,24 @@ fn a_storage_boundary_between_a_copy_and_its_branch_refines_only_the_copy() {
 /// A copy is followed only to the last write of what it copied, and a
 /// write that is not a copy ends the walk there.
 ///
-/// `q = r; q = *s; c = q; if (c) { *r = 1; }`, with `r` and `s` parameters.
-/// `c` holds what `q` read out of memory, which says nothing about `r`, so
-/// the write through `r` on the taken arm is reported, as is the read
-/// through `s` above it.
+/// `q = r; q = <computed>; c = q; if (c) { *r = 1; }`, with `r` and `s`
+/// parameters, for each way `q` can be written without copying a local: a
+/// read out of memory, a constant other than zero, a unary and a binary
+/// operation. `c` holds that value, which says nothing about `r`, so the
+/// write through `r` on the taken arm is reported each time, along with the
+/// read through `s` where there is one. The address of an object is left
+/// out: it proves `q` not null, the branch learns nothing new, and nothing
+/// is refined whichever way the walk goes.
 ///
 /// **This compiler's own frontend cannot produce it**: the copy an
 /// assignment used as a condition makes is the last thing above its branch,
-/// and the walk only reaches past that copy to the assignment it copies.
+/// and the walk only reaches past that copy to the assignment it copies,
+/// which writes its value through a temporary of its own.
 ///
-/// Mutation: have `nullability::copied_from` walk on past a last write that
-/// is not a copy, as it does past a write to another local. It reaches `q =
-/// r`, refines `r` on the taken arm, and this fails with one finding where
-/// it expects two.
+/// Mutation: have `nullability::copied_from` walk on past any one of these
+/// last writes, as it does past a write to another local. It reaches `q =
+/// r`, refines `r` on the taken arm, and the write through `r` is not
+/// reported for that row.
 #[test]
 fn a_copy_is_followed_no_further_than_the_write_it_copied() {
     let (_sources, names) = sources();
@@ -1223,67 +1228,83 @@ fn a_copy_is_followed_no_further_than_the_write_it_copied() {
     let int = unit.push_type(Ty::Int);
     let pointer = unit.push_type(Ty::Pointer(int));
     let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
-    let mut function = Function::new(names.function, int, vec![pointer, pointer_to_pointer]);
 
-    let r = function.parameters().next().expect("a first parameter");
-    let s = function.parameters().nth(1).expect("a second parameter");
-    let q = function.push_local(pointer);
-    let c = function.push_local(pointer);
-
-    let entry = function.reserve_block();
-    let taken = function.reserve_block();
-    let untaken = function.reserve_block();
-    let after = function.reserve_block();
-
-    function.fill_block(
-        entry,
-        Block {
-            elements: vec![
-                Element::Assign(Operation {
-                    place: Place::local(q),
-                    value: Rvalue::Use(Operand::Copy(Place::local(r))),
-                    origin: Origin::Written(names.at[0]),
-                }),
-                Element::Assign(Operation {
-                    place: Place::local(q),
-                    value: Rvalue::Use(Operand::Copy(Place {
-                        local: s,
-                        projection: vec![Projection::Deref],
-                    })),
-                    origin: Origin::Written(names.at[1]),
-                }),
-                Element::Assign(Operation {
-                    place: Place::local(c),
-                    value: Rvalue::Use(Operand::Copy(Place::local(q))),
-                    origin: Origin::Written(names.at[2]),
-                }),
-            ],
-            terminator: Terminator::Branch {
-                condition: Operand::Copy(Place::local(c)),
-                then: taken,
-                otherwise: untaken,
-                origin: Origin::Written(names.at[2]),
-            },
-        },
-    );
-    function.fill_block(taken, goto(after, vec![write_through(r, names.at[3])]));
-    function.fill_block(untaken, goto(after, vec![]));
-    function.fill_block(after, returns());
-
-    let found = concluded(unit, function);
-
-    let at: Vec<_> = found
-        .iter()
-        .map(|finding| (finding.at, finding.conclusion))
-        .collect();
-    assert_eq!(
-        at,
+    let computed = |s: LocalId| {
         [
-            (names.at[1], Conclusion::Unknown),
-            (names.at[3], Conclusion::Unknown),
-        ],
-        "{found:?}"
-    );
+            Rvalue::Use(Operand::Copy(Place {
+                local: s,
+                projection: vec![Projection::Deref],
+            })),
+            Rvalue::Use(Operand::Constant(8)),
+            Rvalue::Unary {
+                op: UnOp::Neg,
+                operand: Operand::Constant(8),
+            },
+            Rvalue::Binary {
+                op: BinOp::Add,
+                lhs: Operand::Constant(8),
+                rhs: Operand::Constant(0),
+            },
+        ]
+    };
+
+    for row in 0..4 {
+        let mut unit = unit.clone();
+        let mut function = Function::new(names.function, int, vec![pointer, pointer_to_pointer]);
+
+        let r = function.parameters().next().expect("a first parameter");
+        let s = function.parameters().nth(1).expect("a second parameter");
+        let q = function.push_local(pointer);
+        let c = function.push_local(pointer);
+        let value = computed(s)[row].clone();
+
+        let entry = function.reserve_block();
+        let taken = function.reserve_block();
+        let untaken = function.reserve_block();
+        let after = function.reserve_block();
+
+        function.fill_block(
+            entry,
+            Block {
+                elements: vec![
+                    Element::Assign(Operation {
+                        place: Place::local(q),
+                        value: Rvalue::Use(Operand::Copy(Place::local(r))),
+                        origin: Origin::Written(names.at[0]),
+                    }),
+                    Element::Assign(Operation {
+                        place: Place::local(q),
+                        value,
+                        origin: Origin::Written(names.at[1]),
+                    }),
+                    Element::Assign(Operation {
+                        place: Place::local(c),
+                        value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                        origin: Origin::Written(names.at[2]),
+                    }),
+                ],
+                terminator: Terminator::Branch {
+                    condition: Operand::Copy(Place::local(c)),
+                    then: taken,
+                    otherwise: untaken,
+                    origin: Origin::Written(names.at[2]),
+                },
+            },
+        );
+        function.fill_block(taken, goto(after, vec![write_through(r, names.at[3])]));
+        function.fill_block(untaken, goto(after, vec![]));
+        function.fill_block(after, returns());
+
+        unit.push_function(function);
+        let found = nullability::findings(&unit);
+
+        let last = found.last().map(|finding| (finding.at, finding.conclusion));
+        assert_eq!(
+            last,
+            Some((names.at[3], Conclusion::Unknown)),
+            "row {row}: {found:?}"
+        );
+    }
 }
 
 /// Storage beginning for the local being followed ends the walk, because

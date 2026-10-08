@@ -889,6 +889,23 @@ cases! {
         // cannot read, and are not this case's subject: what it holds is that
         // nothing says `*q` may be null.
         a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other arm of each: where the branch learned the pointer is null,
+        // so is every local it was copied from, and a read through `p` there
+        // is proved a null dereference. The double free is the same fact as
+        // the memory check reads it, where a pointer proved null is a `free`
+        // it exempts. Mutation: have `Analysis::edge` give the sources the
+        // `then` arm's answer on both arms; the read through `p` in the first
+        // case and the double free go quiet, and `*q` under `== 0` is reported
+        // as a null dereference. Mutation: refine the sources on the taken arm
+        // only; the first case's read is reported as unproven rather than
+        // proved, and `*q` under `== 0` is doubted.
+        a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A comma puts a sequence point between the assignment and the copy
+        // the branch reads, and the walk steps over it. Mutation: have
+        // `nullability::copied_from` stop at a marker; `*p` is reported.
+        a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*s = 1` is a store through a pointer in the same block, above the
         // copies, so it cannot have changed the value they took. Mutation:
         // have `nullability::copied_from` answer nothing at such a store
