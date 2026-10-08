@@ -2519,6 +2519,23 @@ cases! {
         // including those through the address; the second reports.
         the_address_of_a_freed_pointer_set_to_null_is_handed_on_in_silence: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_address_of_a_live_pointer_handed_to_a_call_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a call this check cannot read handed over, through an
+        // out-parameter or as memory its result points at, is memory the
+        // callee may free at the next such call, as a parameter's is. Each is
+        // a use after free under AddressSanitizer against a callee that frees
+        // what it handed out (#394). Mutation: drop the marking after
+        // `Known::replaced` in the `Callee::Opaque` arm; the first builds.
+        // Mutation: drop the opaque-result clause from
+        // `Allocations::reads_caller_memory`; the second builds.
+        a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // With no later call nothing is asked, so the output-parameter idiom
+        // ADR-0017 declines to report stays unreported; its `SC0403` is the
+        // nullability check's, which never trusts an escaped local. Mutation:
+        // make what was handed over lost at once rather than at the next
+        // call, through either route; the control for that route fails.
+        a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {
