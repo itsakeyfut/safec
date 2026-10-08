@@ -872,6 +872,15 @@ cases! {
         // refused, along with every plain `if (p)` case, since nothing after
         // it answers a pointer.
         a_pointer_copied_into_a_local_and_tested_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A branch on a pointer this check has already settled refines
+        // nothing, in both directions: a null pointer stays null on the arm
+        // that tested it not null, and an address stays not null on the arm
+        // that tested it null. Neither arm is reached. Mutation: delete the
+        // settled-local guard in `Analysis::edge`; the first goes quiet about
+        // a write through a null pointer, and the second reports one at a
+        // write through `&x`.
+        a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_address_compared_with_zero_is_not_null_on_the_arm_nothing_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An assignment used as a condition, `if ((q = p))`, branches on a
         // temporary copied from `q`, so the refinement has to be carried back
         // through the copy to `q`, and through `q = p` to `p`, which is what
@@ -1419,6 +1428,13 @@ cases! {
         the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `if (*q)` tests what `realloc` returned points at, not whether it
+        // returned null, so neither arm says what became of `p`, and the free
+        // of it after a call that succeeded is still asked about. Mutation:
+        // delete the early return for a dereferenced condition in
+        // `nullability::tested_against_null`; the arm where `*q` is zero is
+        // read as the call failing, and the `SC0401` at `free(p)` goes.
+        a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `realloc` of a pointer read out of memory remembers nothing:
         // what it was handed is not the local the place starts at. Mutation:
         // let a place with a projection through; three false proofs about

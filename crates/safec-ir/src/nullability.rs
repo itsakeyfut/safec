@@ -415,6 +415,14 @@ pub(crate) fn tested_against_null(
     // `if (*p)` tests what `p` points at, which says nothing about `p` on
     // either arm. That the dereference happened is recorded by
     // `Analysis::terminator`, which is a different fact.
+    //
+    // **This check never sees the difference**: that record has settled `p`
+    // not null before `Analysis::edge` asks, and a settled local is left
+    // alone. The reader that does is the memory check, which reads a branch
+    // on what a `realloc` returned with nothing settled in front of it, and
+    // would take the arm where `*q` is zero for the call failing.
+    // `a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call`
+    // loses its double free without this line.
     if !condition.projection.is_empty() {
         return None;
     }
@@ -877,7 +885,12 @@ impl Analysis for Nullability<'_> {
         // non-null there would make this check quiet about a dereference it had
         // proved. What it does instead is report code no execution reaches:
         // a false report the reader can see, where going quiet would be saying
-        // safe wrongly.
+        // safe wrongly. It holds the other direction too: `int *p = &x; if (p
+        // == 0) { *p = 1; }` would be refined null on an arm nothing reaches
+        // and reported. The two corpus cases
+        // `a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null`
+        // and `an_address_compared_with_zero_is_not_null_on_the_arm_nothing_reaches`
+        // hold one direction each.
         if value[local.index()] != Nullness::Unknown {
             return;
         }

@@ -1,0 +1,94 @@
+Target "x86_64-pc-windows-msvc"
+Function a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:2:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "int" parameter
+Function a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:3:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:4:5 "main"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "void *"
+  Block "bb0" entry
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:4:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    ArgumentsEvaluated a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:5:14 generated
+    Call a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:5:14 generated
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:6:9 generated
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:6:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:6:24 generated
+    Return
+  Block "bb3"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:7:14 generated
+    Call a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:7:14 "realloc" "bb5"
+      Destination "_5"
+      Copy "_1"
+      Constant 8
+  Block "bb5"
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:7:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:7:14 generated
+    Branch a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:9 "bb6" "bb7"
+      Copy "_4"
+        Deref
+  Block "bb6"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:9 generated
+    ArgumentsEvaluated a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:15 generated
+    Call a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:15 "free" "bb9"
+      Copy "_4"
+  Block "bb7"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:9 generated
+    Goto "bb8"
+  Block "bb8"
+    ArgumentsEvaluated a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:9:5 generated
+    Call a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:9:5 "free" "bb10"
+      Copy "_1"
+  Block "bb9"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:15 generated
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:24 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:8:31 generated
+    Return
+  Block "bb10"
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:9:5 generated
+    Operation a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:10:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:10:12 generated
+    Return
