@@ -2724,8 +2724,8 @@ cases! {
         // A length is spelled as the tokens between its brackets, so one that
         // starts or ends with a parenthesised operand keeps both parentheses,
         // and whitespace inside the brackets is not part of it. Mutation:
-        // spell the length expression's span again; `h` and `g` lose their
-        // `(` and keep their `)`. Mutation: take the span from the `[` to the
+        // spell the length expression's span again; `h` keeps a `)` with no
+        // `(`, `f` a `(` with no `)`, and `g` loses both. Mutation: take the span from the `[` to the
         // `]`; every spelling doubles its brackets. Mutation: end the span at
         // the length expression's end; `g` and `f`, whose lengths end with a
         // parenthesis, lose it.
