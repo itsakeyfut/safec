@@ -2726,7 +2726,9 @@ cases! {
         // and whitespace inside the brackets is not part of it. Mutation:
         // spell the length expression's span again; `h` and `g` lose their
         // `(` and keep their `)`. Mutation: take the span from the `[` to the
-        // `]`; every spelling doubles its brackets.
+        // `]`; every spelling doubles its brackets. Mutation: end the span at
+        // the length expression's end; `g` and `f`, whose lengths end with a
+        // parenthesis, lose it.
         an_array_length_is_spelled_as_written: ["--emit", "ast"],
         an_initializer_can_name_what_it_initializes: ["--emit", "ast"],
         an_initializer_stops_at_the_comma: ["--emit", "ast"],
