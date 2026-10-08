@@ -1,3 +1,10 @@
+error[SC0301]: use of undeclared identifier `nowhere`
+    ╭─[ an_array_length_at_file_scope_has_a_value.c:11:8 ]
+    │
+ 11 │ int q1[nowhere];
+    │        ───┬───  
+    │           ╰───── no declaration for this name is in scope
+────╯
 error[SC0309]: the length of an array has no defined value
    ╭─[ an_array_length_at_file_scope_has_a_value.c:1:7 ]
    │
@@ -23,26 +30,82 @@ error[SC0309]: the length of an array has no defined value
 ───╯
   = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
 error[SC0309]: the length of an array has no defined value
-   ╭─[ an_array_length_at_file_scope_has_a_value.c:4:8 ]
+   ╭─[ an_array_length_at_file_scope_has_a_value.c:4:7 ]
    │
- 4 │ int h[(1 << 31) + 1];
-   │        ──────┬─────  
-   │              ╰─────── this overflows `int` or divides by zero
+ 4 │ int h[2147483647 * 2 + 1];
+   │       ─────────┬────────  
+   │                ╰────────── this overflows `int` or divides by zero
+───╯
+  = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
+error[SC0309]: the length of an array has no defined value
+   ╭─[ an_array_length_at_file_scope_has_a_value.c:5:7 ]
+   │
+ 5 │ int u[-(1 << 31)];
+   │       ─────┬────  
+   │            ╰────── this overflows `int` or divides by zero
+───╯
+  = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
+error[SC0309]: the length of an array has no defined value
+   ╭─[ an_array_length_at_file_scope_has_a_value.c:6:8 ]
+   │
+ 6 │ int u2[+(1 / 0)];
+   │        ────┬───  
+   │            ╰───── this overflows `int` or divides by zero
+───╯
+  = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
+error[SC0309]: the length of an array has no defined value
+   ╭─[ an_array_length_at_file_scope_has_a_value.c:7:8 ]
+   │
+ 7 │ int u3[~(1 / 0)];
+   │        ────┬───  
+   │            ╰───── this overflows `int` or divides by zero
+───╯
+  = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
+error[SC0309]: the length of an array has no defined value
+   ╭─[ an_array_length_at_file_scope_has_a_value.c:8:8 ]
+   │
+ 8 │ int u4[!(1 / 0)];
+   │        ────┬───  
+   │            ╰───── this overflows `int` or divides by zero
+───╯
+  = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
+error[SC0309]: the length of an array has no defined value
+   ╭─[ an_array_length_at_file_scope_has_a_value.c:9:7 ]
+   │
+ 9 │ int t[1 ? 1 / 0 : 2];
+   │       ──────┬──────  
+   │             ╰──────── this overflows `int` or divides by zero
 ───╯
   = note: a constant expression evaluates to a value its type can hold (C17 6.6 p4)
 error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
-   ╭─[ an_array_length_at_file_scope_has_a_value.c:6:7 ]
-   │
- 6 │ int d[n];
-   │       ┬  
-   │       ╰── this is not a constant
-───╯
+    ╭─[ an_array_length_at_file_scope_has_a_value.c:12:7 ]
+    │
+ 12 │ int d[n];
+    │       ┬  
+    │       ╰── this is not a constant
+────╯
   = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
 error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
-   ╭─[ an_array_length_at_file_scope_has_a_value.c:7:10 ]
-   │
- 7 │ int (*e)[n];
-   │          ┬  
-   │          ╰── this is not a constant
-───╯
+    ╭─[ an_array_length_at_file_scope_has_a_value.c:13:10 ]
+    │
+ 13 │ int (*e)[n];
+    │          ┬  
+    │          ╰── this is not a constant
+────╯
+  = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
+error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
+    ╭─[ an_array_length_at_file_scope_has_a_value.c:14:9 ]
+    │
+ 14 │ int m2[(1 << 31) + n];
+    │         ──────┬─────  
+    │               ╰─────── this is not a constant
+────╯
+  = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
+error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
+    ╭─[ an_array_length_at_file_scope_has_a_value.c:15:17 ]
+    │
+ 15 │ int (*fr(void))[n] {
+    │                 ┬  
+    │                 ╰── this is not a constant
+────╯
   = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)

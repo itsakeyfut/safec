@@ -306,9 +306,11 @@ impl Checker<'_> {
     fn check_declarators(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         // What was declared, where to point, the type as written, and whether
         // it is at file scope, where C17 6.7.6.2 p2 wants every array length
-        // a constant: an object there has static storage duration. A
-        // function's own type is not an object's, and a parameter, reached
-        // through any function type, has prototype or block scope.
+        // a constant: only an identifier with block or prototype scope may
+        // have a variably modified type, so an object there and a function's
+        // own type, `int (*f(void))[n]`, may not, whether declared or
+        // defined. A parameter, reached through any function type, has
+        // prototype or block scope.
         let mut declared: Vec<(Span, TypeId, bool)> = Vec::new();
         let push = |declarators: &[InitDeclarator],
                     at_file_scope: bool,
@@ -324,7 +326,7 @@ impl Checker<'_> {
         };
         for item in ast.items() {
             match item {
-                Item::Function(function) => declared.push((function.name, function.ty, false)),
+                Item::Function(function) => declared.push((function.name, function.ty, true)),
                 Item::Declaration { declarators, .. } => push(declarators, true, &mut declared),
                 Item::Error { .. } => {}
             }
@@ -453,7 +455,9 @@ impl Checker<'_> {
             return true;
         }
         // At file scope a length has to be a constant with a value. Untyped,
-        // it was asked nothing above and is asked nothing here.
+        // it was asked nothing above and is asked nothing here: an undeclared
+        // name has been reported already, and `p - q`, the one untyped length
+        // a valid program can write, goes unasked for want of a `ptrdiff_t`.
         if at_file_scope && ty.is_some() && self.values[length.index()].is_none() {
             let at = ast.expr(length).span();
             diagnostics.report(if self.undefined[length.index()] {
