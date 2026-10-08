@@ -415,6 +415,14 @@ pub(crate) fn tested_against_null(
     // `if (*p)` tests what `p` points at, which says nothing about `p` on
     // either arm. That the dereference happened is recorded by
     // `Analysis::terminator`, which is a different fact.
+    //
+    // **This check never sees the difference**: that record has settled `p`
+    // not null before `Analysis::edge` asks, and a settled local is left
+    // alone. The reader that does is the memory check, which reads a branch
+    // on what a `realloc` returned with nothing settled in front of it, and
+    // would take the arm where `*q` is zero for the call failing.
+    // `a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call`
+    // loses its double free without this line.
     if !condition.projection.is_empty() {
         return None;
     }

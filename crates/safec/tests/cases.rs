@@ -1419,6 +1419,13 @@ cases! {
         the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `if (*q)` tests what `realloc` returned points at, not whether it
+        // returned null, so neither arm says what became of `p`, and the free
+        // of it after a call that succeeded is still asked about. Mutation:
+        // delete the early return for a dereferenced condition in
+        // `nullability::tested_against_null`; the arm where `*q` is zero is
+        // read as the call failing, and the `SC0401` at `free(p)` goes.
+        a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `realloc` of a pointer read out of memory remembers nothing:
         // what it was handed is not the local the place starts at. Mutation:
         // let a place with a projection through; three false proofs about
