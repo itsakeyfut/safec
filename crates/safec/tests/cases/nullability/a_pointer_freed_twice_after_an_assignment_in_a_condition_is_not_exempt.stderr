@@ -1,0 +1,16 @@
+error[SC0401]: this frees a value that was freed already
+    ╭─[ a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt.c:10:5 ]
+    │
+  4 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed again here
+────╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first

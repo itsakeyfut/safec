@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:4:9 ]
+   │
+ 4 │         return *p;
+   │         ─────┬────  
+   │              ╰────── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here

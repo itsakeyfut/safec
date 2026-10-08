@@ -1,0 +1,72 @@
+Target "x86_64-pc-windows-msvc"
+Function a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int"
+  Local "_3" "int *"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int"
+  Block "bb0" entry
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:2:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:2:13 generated
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:3:14 written
+      Destination "_4"
+      Address
+        Place "_2"
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:3:10 written
+      Destination "_3"
+      Use
+        Copy "_4"
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:3:14 generated
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 written
+      Destination "_6"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 generated
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:18 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:18 written
+      Destination "_7"
+      Use
+        Copy "_5"
+    Branch a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 "bb1" "bb2"
+      Copy "_7"
+  Block "bb1"
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 generated
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:6:16 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_5"
+          Deref
+        Copy "_1"
+          Deref
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:6:9 written
+      Destination "_0"
+      Use
+        Copy "_8"
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:6:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:8:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:8:12 generated
+    Return

@@ -872,6 +872,52 @@ cases! {
         // refused, along with every plain `if (p)` case, since nothing after
         // it answers a pointer.
         a_pointer_copied_into_a_local_and_tested_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // An assignment used as a condition, `if ((q = p))`, branches on a
+        // temporary copied from `q`, so the refinement has to be carried back
+        // through the copy to `q`, and through `q = p` to `p`, which is what
+        // each of these reads through. The comparison, the chain and the loop
+        // whose call ends a block above the copy are the other three shapes
+        // the lowering gives it (#336). Mutation: have
+        // `nullability::copied_from` answer nothing; each of the four reports
+        // `SC0403`, and so does the store case after them. Mutation: have it
+        // stop after the first copy; the first three report it at `*p`, and
+        // so does the store case.
+        a_pointer_assigned_in_a_condition_is_not_null_on_the_taken_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_in_a_comparison_against_zero_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_chain_of_assignments_in_a_condition_refines_every_pointer_in_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The memory check's two reports here are about `next`, a call it
+        // cannot read, and are not this case's subject: what it holds is that
+        // nothing says `*q` may be null.
+        a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other arm of each: where the branch learned the pointer is null,
+        // so is every local it was copied from, and a read through `p` there
+        // is proved a null dereference. The double free is the same fact as
+        // the memory check reads it, where a pointer proved null is a `free`
+        // it exempts. Mutation: have `Analysis::edge` give the sources the
+        // `then` arm's answer on both arms; the read through `p` in the first
+        // case and the double free go quiet, and `*q` under `== 0` is reported
+        // as a null dereference. Mutation: refine the sources on the taken arm
+        // only; the first case's read is reported as unproven rather than
+        // proved, and `*q` under `== 0` is doubted.
+        a_pointer_assigned_in_a_condition_is_null_on_the_arm_not_taken: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_freed_twice_after_an_assignment_in_a_condition_is_not_exempt: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A comma puts a sequence point between the assignment and the copy
+        // the branch reads, and the walk steps over it. Mutation: have
+        // `nullability::copied_from` stop at a marker; `*p` is reported.
+        a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*s = 1` is a store through a pointer in the same block, above the
+        // copies, so it cannot have changed the value they took. Mutation:
+        // have `nullability::copied_from` answer nothing at such a store
+        // rather than what it found below it; this reports `SC0403` at the
+        // `return`.
+        a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p` proves `p` not null before the branch on `q`, a copy of it, so
+        // the arm on which `q` is null is one no execution reaches, and what
+        // `p` was proved stays. Only the read in the condition is doubted.
+        // Mutation: have `Analysis::edge` refine a source this check has
+        // settled; `return *p` is reported as a null dereference.
+        a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*p && **q` writes both operands at one caret, a plain doubt about
         // `p` first and one through memory about `q` second, and the reader is
         // told one thing. It has to settle both, so the remedy for a pointer

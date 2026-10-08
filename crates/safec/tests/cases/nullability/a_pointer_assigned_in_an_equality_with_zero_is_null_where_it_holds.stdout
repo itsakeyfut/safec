@@ -1,0 +1,43 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:1:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter
+  Local "_2" "int *"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 "bb1" "bb2"
+      Copy "_4"
+  Block "bb1"
+    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 generated
+    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:4:9 written
+      Destination "_0"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:4:16 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:3:10 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:6:12 generated
+    Return

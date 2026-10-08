@@ -1,0 +1,10 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved.c:3:10 ]
+   │
+ 3 │     if ((q = p, *p, q)) {
+   │          ────┬────  
+   │              ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
