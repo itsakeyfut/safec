@@ -1130,3 +1130,158 @@ fn a_store_through_a_pointer_between_a_copy_and_its_branch_refines_only_the_copy
         "{found:?}"
     );
 }
+
+/// Storage beginning between a copy and its branch carries nothing back to
+/// the copy's source.
+///
+/// `c = q; StorageLive(q); if (c) { *q = 1; }`, with `q` a parameter. The
+/// branch tests what `q` held before its storage began again, and the `q`
+/// the arm writes through is a different object the arm knows nothing about,
+/// so the write is reported.
+///
+/// **This compiler's own frontend cannot produce it**: the copy an
+/// assignment used as a condition makes is the last thing above its branch.
+///
+/// Mutation: have `nullability::copied_from` step over a storage boundary
+/// without recording the local it names. `q` is refined on the taken arm,
+/// and this fails with no finding where it expects one.
+#[test]
+fn a_storage_boundary_between_a_copy_and_its_branch_refines_only_the_copy() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, vec![pointer]);
+
+    let q = function.parameters().next().expect("a first parameter");
+    let c = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(c),
+                    value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                    origin: Origin::Written(names.at[0]),
+                }),
+                Element::StorageLive {
+                    local: q,
+                    origin: Origin::Generated(names.at[1]),
+                },
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(c)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(q, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[3]);
+}
+
+/// A copy is followed only to the last write of what it copied, and a
+/// write that is not a copy ends the walk there.
+///
+/// `q = r; q = *s; c = q; if (c) { *r = 1; }`, with `r` and `s` parameters.
+/// `c` holds what `q` read out of memory, which says nothing about `r`, so
+/// the write through `r` on the taken arm is reported, as is the read
+/// through `s` above it.
+///
+/// **This compiler's own frontend cannot produce it**: the copy an
+/// assignment used as a condition makes is the last thing above its branch,
+/// and the walk only reaches past that copy to the assignment it copies.
+///
+/// Mutation: have `nullability::copied_from` walk on past a last write that
+/// is not a copy, as it does past a write to another local. It reaches `q =
+/// r`, refines `r` on the taken arm, and this fails with one finding where
+/// it expects two.
+#[test]
+fn a_copy_is_followed_no_further_than_the_write_it_copied() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
+    let mut function = Function::new(names.function, int, vec![pointer, pointer_to_pointer]);
+
+    let r = function.parameters().next().expect("a first parameter");
+    let s = function.parameters().nth(1).expect("a second parameter");
+    let q = function.push_local(pointer);
+    let c = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    let taken = function.reserve_block();
+    let untaken = function.reserve_block();
+    let after = function.reserve_block();
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(q),
+                    value: Rvalue::Use(Operand::Copy(Place::local(r))),
+                    origin: Origin::Written(names.at[0]),
+                }),
+                Element::Assign(Operation {
+                    place: Place::local(q),
+                    value: Rvalue::Use(Operand::Copy(Place {
+                        local: s,
+                        projection: vec![Projection::Deref],
+                    })),
+                    origin: Origin::Written(names.at[1]),
+                }),
+                Element::Assign(Operation {
+                    place: Place::local(c),
+                    value: Rvalue::Use(Operand::Copy(Place::local(q))),
+                    origin: Origin::Written(names.at[2]),
+                }),
+            ],
+            terminator: Terminator::Branch {
+                condition: Operand::Copy(Place::local(c)),
+                then: taken,
+                otherwise: untaken,
+                origin: Origin::Written(names.at[2]),
+            },
+        },
+    );
+    function.fill_block(taken, goto(after, vec![write_through(r, names.at[3])]));
+    function.fill_block(untaken, goto(after, vec![]));
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    let at: Vec<_> = found
+        .iter()
+        .map(|finding| (finding.at, finding.conclusion))
+        .collect();
+    assert_eq!(
+        at,
+        [
+            (names.at[1], Conclusion::Unknown),
+            (names.at[3], Conclusion::Unknown),
+        ],
+        "{found:?}"
+    );
+}
