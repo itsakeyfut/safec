@@ -1,0 +1,80 @@
+error[SC0309]: an array cannot have `int[]` as its element
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:10:5 ]
+    │
+ 10 │ int x[2][];
+    │     ┬  
+    │     ╰── declared here
+────╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:11:7 ]
+    │
+ 11 │ int z[0][0];
+    │       ┬  
+    │       ╰── this is 0
+────╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: an array cannot have `int (void)` as its element
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:12:7 ]
+    │
+ 12 │ int (*fp)[3](void);
+    │       ─┬  
+    │        ╰── declared here
+────╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:19:11 ]
+    │
+ 19 │     int w[0];
+    │           ┬  
+    │           ╰── this is 0
+────╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: an array cannot have `int[]` as its element
+   ╭─[ an_array_declarator_is_held_to_its_constraints.c:1:13 ]
+   │
+ 1 │ int f(int (*q)[2][], void (*r)[2]) {
+   │             ┬  
+   │             ╰── declared here
+───╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
+error[SC0309]: an array cannot have `void` as its element
+   ╭─[ an_array_declarator_is_held_to_its_constraints.c:1:29 ]
+   │
+ 1 │ int f(int (*q)[2][], void (*r)[2]) {
+   │                             ┬  
+   │                             ╰── declared here
+───╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
+error[SC0309]: an array cannot have `void` as its element
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:13:12 ]
+    │
+ 13 │ int g(void a[]);
+    │            ┬  
+    │            ╰── declared here
+────╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:14:13 ]
+    │
+ 14 │ int h(int a[0]);
+    │             ┬  
+    │             ╰── this is 0
+────╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array cannot be `int *`
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:15:21 ]
+    │
+ 15 │ int k(int *p, int a[p]);
+    │                     ┬  
+    │                     ╰── this is `int *`
+────╯
+  = note: the length of an array is an integer (C17 6.7.6.2 p1)
+error[SC0309]: an array cannot have `void` as its element
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:16:18 ]
+    │
+ 16 │ int (*nest)(void a[]);
+    │                  ┬  
+    │                  ╰── declared here
+────╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)

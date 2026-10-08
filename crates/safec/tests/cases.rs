@@ -220,12 +220,10 @@ cases! {
         // Mutation: leave a parameter's type as written; the function is
         // `SC0304`, a type the IR cannot hold, and the read goes unasked.
         a_parameter_declared_as_an_array_is_followed_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // But not one whose array declarator the adjustment would lose: a
-        // length C17 6.9.1 p10 evaluates on entry, here a free that makes
-        // the read of `*p` a use after free, and an element or a length
-        // 6.7.6.2 p1 forbids. Each is refused as before parameters were
-        // adjusted. Mutation: lower every adjusted parameter; `f` exits 0
-        // with its free gone, and `g` and `h` build.
+        // But not one whose length C17 6.9.1 p10 evaluates on entry, here a
+        // free that makes the read of `*p` a use after free: refused as before
+        // parameters were adjusted, until #382 evaluates it. Mutation: lower
+        // every adjusted parameter; this exits 0 with its free gone.
         a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The four constructs that do order their operands, one case each,
         // because C17 Annex C names four and a list implemented three-quarters
@@ -2464,6 +2462,19 @@ cases! {
         // h(void)` an `int (*)(void)`. Mutation: leave a parameter's type as
         // written; both calls build.
         an_argument_is_checked_against_an_adjusted_parameter: ["--emit", "ast"],
+        // C17 6.7.6.2 p1, once per declaration and wherever it is written: an
+        // element that is not a complete object type, a length that is not an
+        // integer, a constant length that is not greater than zero, at file
+        // scope, in a block, in a parameter list and in one inside a pointer.
+        // The last four declarations are the controls. Mutation: stop refusing
+        // an element of unknown length, a `void` one, or a function one; the
+        // `q` and `x`, the `r`, `g` and `nest`, or the `fp` report goes.
+        // Mutation: stop asking a length's type, or its value; the `k`, or the
+        // `z`, `h` and `w`, report goes. Mutation: refuse every element; the
+        // controls report. Mutation: skip parameter lists; the parameter
+        // reports go. Mutation: report every array of a declaration; `z` is
+        // two.
+        an_array_declarator_is_held_to_its_constraints: ["--emit", "ast"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],
         a_file_scope_declaration_carries_its_initializer: ["--emit", "ast"],

@@ -1,0 +1,47 @@
+Function an_array_declarator_is_held_to_its_constraints.c:1:1 "f" "int (int (*)[2][], void (*)[2])"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:1:7 "q" "int (*)[2][]"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:1:22 "r" "void (*)[2]"
+  Compound an_array_declarator_is_held_to_its_constraints.c:1:36
+    Expression an_array_declarator_is_held_to_its_constraints.c:2:5
+      Unary an_array_declarator_is_held_to_its_constraints.c:2:5 postfix "++"
+        Identifier an_array_declarator_is_held_to_its_constraints.c:2:5 "q"
+    Expression an_array_declarator_is_held_to_its_constraints.c:3:5
+      Subscript an_array_declarator_is_held_to_its_constraints.c:3:5
+        Identifier an_array_declarator_is_held_to_its_constraints.c:3:5 "q"
+        Number an_array_declarator_is_held_to_its_constraints.c:3:7 "0"
+    Expression an_array_declarator_is_held_to_its_constraints.c:4:5
+      Binary an_array_declarator_is_held_to_its_constraints.c:4:5 "+"
+        Identifier an_array_declarator_is_held_to_its_constraints.c:4:5 "q"
+        Number an_array_declarator_is_held_to_its_constraints.c:4:9 "1"
+    Expression an_array_declarator_is_held_to_its_constraints.c:5:5
+      Unary an_array_declarator_is_held_to_its_constraints.c:5:5 postfix "++"
+        Identifier an_array_declarator_is_held_to_its_constraints.c:5:5 "r"
+    Expression an_array_declarator_is_held_to_its_constraints.c:6:5
+      Subscript an_array_declarator_is_held_to_its_constraints.c:6:5
+        Identifier an_array_declarator_is_held_to_its_constraints.c:6:5 "r"
+        Number an_array_declarator_is_held_to_its_constraints.c:6:7 "0"
+    Return an_array_declarator_is_held_to_its_constraints.c:7:5
+      Number an_array_declarator_is_held_to_its_constraints.c:7:12 "0"
+Declaration an_array_declarator_is_held_to_its_constraints.c:10:1 "x" "int[2][]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:11:1 "z" "int[0][0]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:12:1 "fp" "int (*)[3](void)"
+Declaration an_array_declarator_is_held_to_its_constraints.c:13:1 "g" "int (void[])"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:13:7 "a" "void[]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:14:1 "h" "int (int[0])"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:14:7 "a" "int[0]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:15:1 "k" "int (int *, int[p])"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:15:7 "p" "int *"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:15:15 "a" "int[p]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:16:1 "nest" "int (*)(void[])"
+Function an_array_declarator_is_held_to_its_constraints.c:18:1 "m" "int (void)"
+  Compound an_array_declarator_is_held_to_its_constraints.c:18:13
+    Declaration an_array_declarator_is_held_to_its_constraints.c:19:5 "w" "int[0]"
+    Return an_array_declarator_is_held_to_its_constraints.c:20:5
+      Number an_array_declarator_is_held_to_its_constraints.c:20:12 "0"
+Declaration an_array_declarator_is_held_to_its_constraints.c:23:1 "ok" "int (*)[2][3]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:24:1 "gg" "void (*)(void)"
+Declaration an_array_declarator_is_held_to_its_constraints.c:25:1 "u" "int (int[])"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:25:7 "a" "int[]"
+Declaration an_array_declarator_is_held_to_its_constraints.c:26:1 "v" "int (int, int[n])"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:26:7 "n" "int"
+  Parameter an_array_declarator_is_held_to_its_constraints.c:26:14 "a" "int[n]"
