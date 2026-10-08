@@ -2555,6 +2555,21 @@ cases! {
         // opaque-result clause in `Allocations::frees_callers`; the use is no
         // longer reported, and only the free is.
         a_free_through_what_a_call_returned_doubts_a_pointer_read_out_of_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A `memcpy` into a local's address is a store into that local, and
+        // lands there what a load of its source holds, every mark included:
+        // the handed-over mark of a callee's or a caller's memory, and the
+        // allocation itself, which was lost, so `*s` after `free(r)` said
+        // nothing (#395). Mutation: drop the union into the target locals in
+        // the `Callee::Copies` arm; the first four stop reporting the use.
+        // Mutation: take the targets only for a destination of no
+        // dereference; the fourth does. The last is silent: what was copied
+        // is handed on with no call after it that may free it. Mutation: make
+        // what the copy lands lost at once; it reports.
+        a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_into_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count

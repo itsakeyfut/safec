@@ -1726,6 +1726,33 @@ impl Analysis for Allocations<'_> {
                                     .into_iter()
                                     .collect()
                             };
+                            // **Into a local's address, the copy lands in the
+                            // local**: `memcpy(&s, &r, n)` stores into `s`
+                            // what a load of `r` holds, every mark with it,
+                            // where only allocations were written and `s` was
+                            // left holding nothing. C17 7.24.2.1 p2 copies the
+                            // bytes. By union, as a store through more than
+                            // one dereference gives its targets, since `n` may
+                            // copy part of a pointer and a replacement would
+                            // prove things about a value nobody wrote (#395).
+                            // See ADR-0039 and ADR-0040.
+                            let targets: Vec<usize> = if into_depth == 0 {
+                                value.written_through(dest.local)
+                            } else {
+                                value
+                                    .levels_below(dest.local, into_depth)
+                                    .1
+                                    .into_iter()
+                                    .collect()
+                            };
+                            if !targets.is_empty() {
+                                let mut loaded = source.clone();
+                                loaded.projection.push(Projection::Deref);
+                                let held = self.read_through(function, &loaded, value);
+                                for target in targets {
+                                    value.points_to[target].accumulated(&held);
+                                }
+                            }
                             for container in into {
                                 for &site in &copied {
                                     value.inside[container][site] = true;

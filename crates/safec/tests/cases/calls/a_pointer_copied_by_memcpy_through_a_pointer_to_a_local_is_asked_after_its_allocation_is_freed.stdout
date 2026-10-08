@@ -1,0 +1,102 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter
+  Local "_2" "void *" parameter
+  Local "_3" "int" parameter
+Function a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *"
+  Local "_5" "int **"
+  Local "_6" "int **"
+  Local "_7" "int ***"
+  Local "_8" "int ***"
+  Local "_9" "int **"
+  Local "_10" "void *"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:5:14 generated
+    Call a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:5:14 generated
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 written
+      Destination "_3"
+      Binary "Eq"
+        Copy "_1"
+        Constant 0
+    Branch a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 generated
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:9:10 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:9:14 generated
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:10:16 written
+      Destination "_6"
+      Address
+        Place "_4"
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:10:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:10:16 generated
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:11:18 written
+      Destination "_8"
+      Address
+        Place "_5"
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:11:12 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:11:18 generated
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:12:18 written
+      Destination "_9"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:12:5 generated
+    Call a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:12:5 "memcpy" "bb5"
+      Destination "_10"
+      Copy "_7"
+        Deref
+      Copy "_9"
+      Constant 8
+  Block "bb5"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:12:5 generated
+    ArgumentsEvaluated a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 generated
+    Call a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 "free" "bb6"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:13:5 generated
+    Operation a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:14:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed.c:14:12 generated
+    Return
