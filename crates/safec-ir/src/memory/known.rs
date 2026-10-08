@@ -412,6 +412,20 @@ impl Known {
             .any(|target| self.points_to[target].stale_read)
     }
 
+    /// Whether a local a read `depth` dereferences below `local` passes
+    /// through holds memory a caller or a callee handed over,
+    /// [`Held::from_caller`], so that `pr = &r; s = *pr;` carries what `s =
+    /// r;` would. Read along the walk [`Self::lost_through`] takes, for its
+    /// reason: the mark is on the local, and the sites alone would read as
+    /// this function's own. Without it the read through the address was
+    /// believed after a later call that may free what `r` holds, for a
+    /// parameter's memory as for a callee's (#394). See ADR-0040.
+    pub(super) fn caller_through(&self, local: LocalId, depth: usize) -> bool {
+        self.locals_read_through(local, depth)
+            .into_iter()
+            .any(|target| self.points_to[target].from_caller)
+    }
+
     /// What a pointer handed to a call holds: the allocations it may point
     /// at and the locals whose address it may be. For a plain local, what it
     /// holds and its address edges; for a place of dereferences, the level a

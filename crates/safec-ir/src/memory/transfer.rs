@@ -266,6 +266,7 @@ impl Allocations<'_> {
         // dereference in its place, an element, still reads through.
         held.from_caller
             || value.marked_below(local, depth.max(1), &value.from_caller)
+            || value.caller_through(local, depth)
             || self
                 .exposed_parameters
                 .iter()

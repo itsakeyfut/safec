@@ -2529,6 +2529,14 @@ cases! {
         // `Allocations::reads_caller_memory`; the second builds.
         a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same pointers read back through the address of the local that
+        // holds them, `pr = &r; s = *pr;`, which carried nothing the local was
+        // marked with, and the parameter's own route had the same gap. Found
+        // by review. Mutation: drop `Known::caller_through` from
+        // `Allocations::reads_caller_memory`; all three build.
+        a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_what_a_call_returned_and_read_through_an_address_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_parameter_and_read_through_an_address_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // With no later call nothing is asked, so the output-parameter idiom
         // ADR-0017 declines to report stays unreported; its `SC0403` is the
         // nullability check's, which never trusts an escaped local. Mutation:
