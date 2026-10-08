@@ -1,10 +1,10 @@
 error[SC0401]: this frees a pointer this check stopped following
-   ╭─[ a_constructor_handed_a_locals_address_is_doubted.c:7:5 ]
-   │
- 7 │     free(node);
-   │     ─────┬────  
-   │          ╰────── this may be the address of a local
-───╯
+    ╭─[ a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be.c:14:5 ]
+    │
+ 14 │     free(r);
+    │     ───┬───  
+    │        ╰───── this may be the address of a local
+────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check could not rule out that this holds a local's address, which free must never be handed; if it is always what an allocation function returned, nothing here says the program is wrong

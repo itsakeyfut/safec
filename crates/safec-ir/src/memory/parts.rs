@@ -11,6 +11,8 @@ use std::collections::BTreeSet;
 use crate::ir::Place;
 use crate::source::Span;
 
+use super::LostReason;
+
 /// What this check can read in a callee's name.
 ///
 /// By name because nothing else is available: no annotation says what a
@@ -320,8 +322,8 @@ pub(super) enum Reached {
     /// second: a call this check cannot read may write through an address that
     /// escaped, and what it leaves behind has no site either. ADR-0031 gave it
     /// a third, which is that same write performed here rather than by a
-    /// callee.
-    Lost,
+    /// callee. Each producer says why, as far as it can tell.
+    Lost(LostReason),
     /// The sites beside this may not be all the value can hold.
     ///
     /// **Not a doubt on its own, which is what keeps it apart from

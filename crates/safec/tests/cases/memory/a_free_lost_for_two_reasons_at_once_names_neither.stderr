@@ -1,0 +1,10 @@
+error[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_free_lost_for_two_reasons_at_once_names_neither.c:16:5 ]
+    │
+ 16 │     free(r);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

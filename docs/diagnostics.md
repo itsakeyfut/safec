@@ -440,13 +440,28 @@ the output and in a corpus expectation rather than silent.
 row established rather than against what its words suggest, and two rows here
 are worth reading for what they do not say.
 
-`Unproven::Lost` names no cause. That variant has five producers and a
-`Finding` does not say which answered, so `nothing here says the program is
-wrong: this check could no longer say which allocation this pointer holds` is
-what is true of all five. It tells a reader the one thing that matters there,
-which is not to go hunting for a defect.
-[#213](https://github.com/itsakeyfut/safec/issues/213) carries the reason and
-replaces it with five.
+`Unproven::Lost` says why the pointer was lost, as far as the producer can
+tell ([#213](https://github.com/itsakeyfut/safec/issues/213)), and each
+reason is told what is true of it:
+
+- `ReadOutOfMemory`, `free(*pp)` or a pointer a load gave: this check follows
+  the local an allocation was made into, not what memory holds.
+- `NoSiteKnown`, a local reaching no allocation this check knows of: never
+  given a pointer, given a constant, or written where this check cannot see.
+  The words say only that it knows of none, since the producer does not say
+  which.
+- `MayBeALocal`, what this check could not rule out being a local's address,
+  which a free must never be handed (C17 7.22.3.3 p2). Could not rule out,
+  and no more: a call this check cannot read is believed able to return an
+  escaped local's address, so `read_int(&n); p = make(); free(p);` gets it
+  too, and the remedy says so rather than that the path is there.
+- `Other`, every cause the lattice keeps in one bit, and two reasons at once
+  that do not include `MayBeALocal`: `nothing here says the program is wrong:
+  this check could no longer say which allocation this pointer holds`, true
+  of all of them.
+
+Only a free reaches a reason other than `Other` today: the producer that
+tells them apart answers frees alone.
 
 `Unproven::Disagreement` has two causes of its own, paths that disagree about a
 free and a call this check cannot read, and a `Finding` does not separate those

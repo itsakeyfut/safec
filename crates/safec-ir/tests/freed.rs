@@ -17,7 +17,7 @@ use safec_ir::ir::{
     BinOp, Block, BlockId, Element, FuncId, Function, LocalId, Operand, Operation, Origin, Place,
     Projection, Rvalue, Terminator, TranslationUnit, Ty, TyId,
 };
-use safec_ir::memory::{self, Kind, Unproven};
+use safec_ir::memory::{self, Kind, LostReason, Unproven};
 use safec_ir::source::{SourceMap, Span};
 use safec_ir::target::Target;
 
@@ -2333,7 +2333,10 @@ fn a_call_written_through_a_pointer_gives_the_pointer_nothing() {
     let found = concluded(unit, &sources, function);
 
     assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].unproven, Some(Unproven::Lost));
+    assert_eq!(
+        found[0].unproven,
+        Some(Unproven::Lost(LostReason::NoSiteKnown))
+    );
 }
 
 /// A read of what a site used to name is not a read of what it names now.
@@ -2793,7 +2796,10 @@ fn a_local_given_a_constant_forgets_the_site_it_held() {
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
-    assert_eq!(found[0].unproven, Some(Unproven::Lost));
+    assert_eq!(
+        found[0].unproven,
+        Some(Unproven::Lost(LostReason::NoSiteKnown))
+    );
     assert_eq!(found[0].freed, None, "nothing here established a free");
 }
 
@@ -2843,7 +2849,10 @@ fn a_local_given_a_constant_forgets_the_set_it_freed() {
 
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
-    assert_eq!(found[0].unproven, Some(Unproven::Lost));
+    assert_eq!(
+        found[0].unproven,
+        Some(Unproven::Lost(LostReason::NoSiteKnown))
+    );
 }
 
 /// A free between the write into the return place and the return is not asked

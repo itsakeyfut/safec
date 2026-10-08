@@ -271,6 +271,6 @@ pub(super) fn replaced_by(
 pub(super) fn named(reached: &[Reached]) -> impl Iterator<Item = usize> + '_ {
     reached.iter().filter_map(|reached| match reached {
         Reached::Site(site) => Some(*site),
-        Reached::SetFreed(_) | Reached::Lost | Reached::Partial => None,
+        Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial => None,
     })
 }

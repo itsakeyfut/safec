@@ -514,6 +514,19 @@ cases! {
         // `a_free_after_one_that_may_have_freed_a_local_is_not_proved` is
         // proved a double free the path that took `&x` does not commit.
         a_free_of_a_pointer_that_may_hold_a_locals_address_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Why a pointer was lost, where two reasons meet at one free: a local's
+        // address on one path and what memory held on the other says the
+        // first, since that path frees what C forbids whatever the other
+        // holds; a pointer never followed meeting one read out of memory says
+        // neither (#213). Mutation: fold `MayBeALocal` into `Other` with the
+        // rest in `LostReason::joined`; the first says nothing is wrong.
+        // Mutation: keep the later reason rather than `Other` where two
+        // disagree; the second names it. Keeping the earlier one instead
+        // leaves the second as it is, since its earlier reason is `Other`,
+        // and is held by
+        // `a_free_of_a_pointer_read_out_of_a_parameter_doubts_a_read_through_the_parameter`.
+        a_free_that_may_be_of_a_local_says_so_whatever_else_it_may_be: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_lost_for_two_reasons_at_once_names_neither: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_of_a_conditional_over_a_locals_address_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_after_one_that_may_have_freed_a_local_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

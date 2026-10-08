@@ -159,6 +159,61 @@ pub struct Finding {
     pub unproven: Option<Unproven>,
 }
 
+/// Why this check stopped following a pointer, as far as the producer of
+/// [`Unproven::Lost`] can tell, so that a reader is told what to do about
+/// it rather than only that something was lost.
+///
+/// **As far as the producer can tell, and no further.** The one bit a
+/// local carries for having lost what it held, `Held::lost`, is set by
+/// several causes the lattice does not keep apart, so a pointer lost that
+/// way is [`Self::Other`]. Telling them apart would be a set in the
+/// lattice, with its own join and height (#213).
+///
+/// **No span.** None of these producers has one in the lattice, and a
+/// variant with a field it could not fill would be a claim nothing
+/// established, so the type has nowhere to put one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LostReason {
+    /// Read out of memory: an argument read through a projection,
+    /// `free(*pp)`, or a pointer a load gave. This check follows locals,
+    /// not what memory holds.
+    ReadOutOfMemory,
+    /// A local reaching no site: this check knows of no allocation it
+    /// holds here. That is all the producer establishes, so the words say
+    /// that and no cause: the local may never have been given a pointer,
+    /// may have been given a constant after holding an allocation, or may
+    /// have been written where this check cannot see.
+    NoSiteKnown,
+    /// What this check could not rule out being a local's address, which
+    /// `free` must never be handed (C17 7.22.3.3 p2). Could not rule out
+    /// and nothing more: a call this check cannot read is believed able to
+    /// return any escaped local's address, so `read_int(&n); p = make();
+    /// free(p);` gives it too, and the words say only that.
+    MayBeALocal,
+    /// Any other cause, `Held::lost` among them, or two reasons at once
+    /// that do not include [`Self::MayBeALocal`], which survives any meeting.
+    Other,
+}
+
+impl LostReason {
+    /// One reason for two: itself where they agree, and [`Self::Other`] where
+    /// they do not, since naming either would be wrong about the other.
+    ///
+    /// **Except [`Self::MayBeALocal`], which survives any meeting.** It is the
+    /// one reason whose doubt, where it is real, is what C forbids rather than
+    /// what this check could not follow, and a path that may hold a local's
+    /// address is still a path whatever the pointer may be on another: folded
+    /// into `Other`, `r = &x; if (c) r = *t; free(r);` was told nothing says
+    /// the program is wrong. Found while implementing #213.
+    pub(crate) fn joined(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::MayBeALocal, _) | (_, Self::MayBeALocal) => Self::MayBeALocal,
+            _ if self == other => self,
+            _ => Self::Other,
+        }
+    }
+}
+
 /// Why a finding could not be proven.
 ///
 /// **Four reasons and not two, because one of them is about this check and
@@ -192,7 +247,11 @@ pub enum Unproven {
     /// Those are private, so they are named here rather than linked: a link
     /// out of a public item to one of them is
     /// `rustdoc::private_intra_doc_links`, which this crate denies.
-    Lost,
+    ///
+    /// Each producer says why as far as it can tell, [`LostReason`]: those
+    /// on `Known` always say `Other`, and `Allocations::touching`'s are the
+    /// reasons it tells apart.
+    Lost(LostReason),
     /// C has not said which order runs. See ADR-0022.
     Unsequenced,
     /// A pointer this check followed was moved by something it cannot
