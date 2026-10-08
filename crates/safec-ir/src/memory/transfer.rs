@@ -498,16 +498,6 @@ impl Allocations<'_> {
         })
     }
 
-    /// The sites `arguments` name through a local that is not a load: what a
-    /// call is certainly handed, rather than what it may be.
-    fn named_outright(arguments: &[Operand], known: &Known) -> Vec<usize> {
-        let outright = arguments.iter().filter(|argument| match argument {
-            Operand::Copy(place) => !known.points_to[place.local.index()].loaded,
-            Operand::Constant(_) => true,
-        });
-        named(&Self::touching(outright, known)).collect()
-    }
-
     /// **A branch on what a `realloc` returned says what became of what it was
     /// handed.** On the arm where the pointer is null the call failed and the
     /// old allocations are live again; on the other it succeeded and they were
@@ -1716,17 +1706,6 @@ impl Analysis for Allocations<'_> {
                 // **What the caller stored is out of sight from here on**, as
                 // it is after a free of the caller's pointer. See ADR-0040.
                 value.callers_memory_may_be_freed();
-                // **A load's sites are a lower bound, and a proof is not taken
-                // away on one.** A freed allocation a load may hold is not one
-                // this call is known to have been handed, so blanking it would
-                // turn a proved use after free into a doubt, which a hatch only
-                // lists: that is how `free(p); q = *tab; g(q); return *p;` in
-                // a hatch built. What an argument names outright is blanked as
-                // before. See ADR-0045.
-                let outright = Self::named_outright(handed, value);
-                for site in outright {
-                    value.state[site] = SiteState::Unknown;
-                }
                 // **What it holds it may have freed**: what it is handed, by
                 // name or as a load, the allocations the memory it was handed
                 // holds however deep, and what an argument read out of memory
@@ -1735,13 +1714,19 @@ impl Analysis for Allocations<'_> {
                 // reaches through one is answered by `held_out_of_reach`,
                 // below. `q = *t; release(q);` and `*d = a; release_in(d);` may
                 // each free `a`'s allocation, and neither can replace `a`, so
-                // a later call by address asks about it. A proved free stays
-                // proved here; only what is named outright lost it above. Not
-                // `reach`, which adds every escaped local's sites to every
-                // call, so `grow(&a)` would reach `a` there and the in-out
-                // idiom would be doubted at the next call by address; what
-                // only an address or an earlier exposure reaches stays
-                // `Reachable`, below. See ADR-0047.
+                // a later call by address asks about it. Not `reach`, which
+                // adds every escaped local's sites to every call, so
+                // `grow(&a)` would reach `a` there and the in-out idiom would
+                // be doubted at the next call by address; what only an address
+                // or an earlier exposure reaches stays `Reachable`, below. See
+                // ADR-0047.
+                //
+                // **A proved free stays proved**, whatever the call was
+                // handed, because no call un-frees an allocation (ADR-0017).
+                // Writing `Unknown` over what an argument named turned a
+                // proved use after free into a doubt, which a hatch only lists:
+                // `free(p); g(r); return *p;` built in a hatch where `r` may
+                // be `p` (#262).
                 let mut handed_memory: Vec<usize> = sites().collect();
                 for argument in handed {
                     handed_memory.extend(self.read_out(function, argument, value));
