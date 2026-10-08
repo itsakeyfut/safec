@@ -394,6 +394,11 @@ cases! {
         an_allocation_replaced_before_it_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_on_one_arm_only: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_this_check_cannot_read_between_two_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A call this check cannot read does not un-free what it is handed,
+        // so the use after it is the proof it was before the call. Mutation:
+        // in the `Callee::Opaque` arm, write `SiteState::Unknown` over what an
+        // argument names outright; this and the case above become "may".
+        a_free_proved_before_a_call_it_is_handed_to_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_free_through_a_pointer_the_check_does_not_follow: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two programs with one `free` each, and the boundary between two
         // reasons a report can be unproven. In the first nothing established a
@@ -1264,6 +1269,12 @@ cases! {
         // Mutation: make that loop mark every site rather than the live ones;
         // this fails, a proved double free becoming unproven.
         a_free_proved_before_a_call_to_a_hatch_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Inside a hatch, a call handed what may be a freed allocation is a
+        // doubt, which is listed, so a proved use after the call is the only
+        // report left. Mutation: in the `Callee::Opaque` arm, write
+        // `SiteState::Unknown` over what an argument names outright; the use
+        // becomes a doubt too, and this builds with nothing reported (#262).
+        a_free_proved_before_a_call_handed_what_may_be_it_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `&&` writes both operands at one caret. Mutation: keep the first
         // finding at a caret in `nullability::findings`' `dedup_by` rather than
         // the worst; this fails, and the proved dereference builds.

@@ -1,0 +1,33 @@
+error[SC0407]: this passes a pointer to an allocation that was freed
+    ╭─[ a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:10:5 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     log_ptr(p);
+    │     ─────┬────  
+    │          ╰────── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_free_proved_before_a_call_it_is_handed_to_stays_proved.c:11:5 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 11 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
