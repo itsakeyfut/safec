@@ -2570,6 +2570,13 @@ cases! {
         a_pointer_copied_by_memcpy_into_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_by_memcpy_through_a_pointer_to_a_local_is_asked_after_its_allocation_is_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_wrote_copied_by_memcpy_and_handed_on_with_no_later_call_is_silent: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The same copies with the source declared `void *`, which is how
+        // `memcpy` is usually called: the copy is of bytes, so what lands does
+        // not ask the source's type, and asking a load for it carried nothing
+        // from one. Found by review. Mutation: build what lands from a typed
+        // load of the source, `Allocations::read_through`; both build.
+        a_pointer_a_call_wrote_copied_by_memcpy_from_a_void_pointer_is_doubted_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_by_memcpy_out_of_a_void_pointer_parameter_is_doubted_after_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // What `malloc` returns is this function's, not handed over, so a
         // pointer read out of it is not doubted at a later call; the
         // `SC0403`s are the nullability check's. Mutation: count

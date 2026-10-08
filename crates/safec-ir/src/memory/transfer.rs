@@ -1745,10 +1745,27 @@ impl Analysis for Allocations<'_> {
                                     .into_iter()
                                     .collect()
                             };
+                            // What lands is what the allocation path above
+                            // writes, read the same way: the sites and
+                            // addresses one level below the source and the
+                            // marks on them, whatever type the source was
+                            // declared with. `memcpy` copies bytes, and the
+                            // usual source is a `void *`, through which a load
+                            // has no pointer type to be one; asking a load for
+                            // it carried nothing from one. Found by review.
                             if !targets.is_empty() {
-                                let mut loaded = source.clone();
-                                loaded.projection.push(Projection::Deref);
-                                let held = self.read_through(function, &loaded, value);
+                                let mut held = Held::none(value.points_to.len());
+                                for &site in &copied {
+                                    held.hold(site, Offset::Unknown);
+                                }
+                                for &target in &copied_locals {
+                                    held.writes_to[target] = true;
+                                }
+                                held.loaded = true;
+                                held.lost = marked;
+                                held.stale_read = marked;
+                                held.unreplaced_read = unreplaced;
+                                held.from_caller = caller;
                                 for target in targets {
                                     value.points_to[target].accumulated(&held);
                                 }
