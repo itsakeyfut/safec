@@ -1212,7 +1212,9 @@ pub(super) fn inside(inner: Span, outer: Span) -> bool {
 ///    meant first in `Cfg::order`, not the first free.
 /// 4. Otherwise the standing report stays, a tie included. Nothing here ranks
 ///    two reasons that name no free against each other: a `Lost` and a
-///    `Disagreement` at one caret was looked for and not reached.
+///    `Disagreement` at one caret was looked for and not reached. Replacing
+///    there instead moves `a_place_and_what_it_points_at_handed_to_one_call_are_one_report`
+///    and two other corpus cases about a call handed a table.
 ///
 /// **Answered per pair rather than by an ordering.** [`Conclusion`] does not
 /// derive `Ord` and should not: its three variants are three answers rather

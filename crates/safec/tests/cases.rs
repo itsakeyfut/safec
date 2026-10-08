@@ -2282,7 +2282,10 @@ cases! {
         // orders are written, because which doubt arrives first is which
         // operand comes first. Mutation: have `supersedes` answer `false` for
         // `(None, Some(_))`; `call_first` loses `freed here` and the p10 note
-        // on `g(*p)` and `h(p)`, and `free_first` does not move.
+        // on `g(*p)` and `h(p)`, and `free_first` does not move. Mutation:
+        // answer `true` for `(Some(_), None)`; `free_first` loses them on
+        // `g(*p)` instead. Mutation: keep the first of two suspicions
+        // whatever they carry; `call_first` loses them.
         a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two reports about one full expression, and each is its own order: `g`
         // may free `a` before the free, which is the forward `SC0401`, and the
