@@ -230,7 +230,12 @@ enum Derivation {
         nullability: Option<Nullability>,
     },
     /// C17 6.7.6.2.
-    Array(Option<ExprId>),
+    Array {
+        /// How many, or `None` for `[]`.
+        length: Option<ExprId>,
+        /// The tokens between the brackets, for `Type::Array::written`.
+        written: Option<Span>,
+    },
     /// C17 6.7.6.3.
     Function(Parameters),
 }
@@ -974,14 +979,16 @@ impl Parser<'_> {
                 // 6.7.6 spells what goes here `assignment-expression` and not
                 // `expression`, so a comma ends the subscript rather than being
                 // an operator inside it.
-                let length = if self.check(TokenKind::Punct(Punct::RightBracket)) {
-                    None
+                let (length, written) = if self.check(TokenKind::Punct(Punct::RightBracket)) {
+                    (None, None)
                 } else {
-                    Some(self.assignment(diagnostics))
+                    let start = self.peek().span;
+                    let length = self.assignment(diagnostics);
+                    (Some(length), Some(start.to(self.previous().span)))
                 };
 
                 self.expect(TokenKind::Punct(Punct::RightBracket), "`]`", diagnostics)?;
-                suffixes.push(Derivation::Array(length));
+                suffixes.push(Derivation::Array { length, written });
             } else if self.check(TokenKind::Punct(Punct::LeftParen)) {
                 self.spend();
                 self.advance();
@@ -1125,9 +1132,10 @@ impl Parser<'_> {
         for derivation in derivations {
             ty = self.ast.push_type(match derivation {
                 Derivation::Pointer { nullability: _ } => Type::Pointer(ty),
-                Derivation::Array(length) => Type::Array {
+                Derivation::Array { length, written } => Type::Array {
                     element: ty,
                     length,
+                    written,
                 },
                 Derivation::Function(parameters) => Type::Function {
                     returns: ty,
@@ -1205,7 +1213,7 @@ impl Parser<'_> {
                         .map(|written| (written, label))
                 }
                 Derivation::Pointer { nullability: None }
-                | Derivation::Array(_)
+                | Derivation::Array { .. }
                 | Derivation::Function(_) => None,
             };
 

@@ -346,7 +346,11 @@ impl Checker<'_> {
             let mut current = written;
             loop {
                 match ast.ty(current) {
-                    Type::Array { element, length } => {
+                    Type::Array {
+                        element,
+                        length,
+                        written: _,
+                    } => {
                         let (element, length) = (*element, *length);
                         if !reported {
                             reported = self.report_array(

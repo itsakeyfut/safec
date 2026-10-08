@@ -108,6 +108,11 @@ pub enum Type {
         /// and that its value be greater than zero if it is a constant
         /// expression at all; both are constraints and are checked later.
         length: Option<ExprId>,
+        /// The source between the brackets, `None` for `[]`, kept so that the
+        /// type can be spelled the way it was written. The length's own span
+        /// does not do: parentheses make no node (`Parser::primary` says why),
+        /// so `[(1 + 2) * 3]` has a length whose span starts after the `(`.
+        written: Option<Span>,
     },
     /// C17 6.7.6.3 p5 derives "function returning T" from `D ( ... )`.
     Function {
@@ -1078,7 +1083,11 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
                 id = *pointee;
                 continue;
             }
-            Type::Array { element, length } => {
+            Type::Array {
+                element,
+                length,
+                written: _,
+            } => {
                 // The length is the source's own bytes and is not evaluated, so
                 // `int a[1 + 2]` spells `int[1 + 2]` where `clang`, which does
                 // evaluate it, spells `int[3]`. What 6.7.6.2 p1 asks of it is a
