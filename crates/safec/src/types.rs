@@ -95,7 +95,12 @@ const RETURN_SHAPE: Code = Code::new("SC0308");
 
 /// A declarator that derives a type C forbids, C17 6.7.6.2 p1 so far: an
 /// array whose element is not a complete object type, or whose length is
-/// not an integer, or is a constant that is not greater than zero.
+/// not an integer, or is an integer literal that is not greater than zero.
+///
+/// A literal, not every constant: this stage knows the value of a literal
+/// and nothing else, so `[-1]` and `[1 - 1]` are not asked (#384). A zero
+/// length is refused though `clang` takes it as an extension, which
+/// `docs/frontend.md` records.
 ///
 /// Not `OPERANDS`, which is an operator's: a declarator is not an operator,
 /// and a code is never reassigned. 6.7.6.3 p1, a function returning an array
@@ -262,11 +267,8 @@ struct Checker<'a> {
 }
 
 impl Checker<'_> {
-    /// Find every `return` with a value and every initializer, and what each
-    /// has to be assignable to, and report every `return` that has a value
-    /// where it may not or lacks one where it must.
-    /// Hold every declarator to C17 6.7.6.2 p1, and report the first array in
-    /// each that breaks it under [`DECLARATOR`].
+    /// Hold every declarator to C17 6.7.6.2 p1, and report the outermost array
+    /// in each that breaks it under [`DECLARATOR`].
     ///
     /// Every declaration in the unit, at file scope, in a block, and as a
     /// parameter of any function type written anywhere, so `int (*fp)(void
@@ -394,7 +396,8 @@ impl Checker<'_> {
             return true;
         }
         // "If the expression is a constant expression, it shall have a value
-        // greater than zero."
+        // greater than zero." Of a literal only, the one constant whose value
+        // this stage holds; see `DECLARATOR`.
         if let Some(value) = self.values[length.index()].filter(|&value| value <= 0) {
             diagnostics.report(
                 Diagnostic::error("the length of an array is greater than zero")
@@ -410,6 +413,9 @@ impl Checker<'_> {
         false
     }
 
+    /// Find every `return` with a value and every initializer, and what each
+    /// has to be assignable to, and report every `return` that has a value
+    /// where it may not or lacks one where it must.
     fn collect_receivers(&mut self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         for item in ast.items() {
             let function = match item {

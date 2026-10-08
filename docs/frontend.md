@@ -115,7 +115,7 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Nine more are where the type checker declines what `clang` accepts.
+Ten more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
@@ -128,6 +128,7 @@ Nine more are where the type checker declines what `clang` accepts.
 | `c ? h() : 1;` as a statement, `h` returning `void` | `error[SC0306]` | accepts | `error: C99 forbids conditional expressions with only one void side` |
 | `c ? p : q` with `int *p` and `char *q` | `error[SC0306]` | warns | `error: pointer type mismatch ('int *' and 'char *')` |
 | `c ? p : 1;` as a statement, with `int *p` | `error[SC0306]` | warns | `error: pointer/integer type mismatch in conditional expression ('int *' and 'int')` |
+| `int z[0];` | `error[SC0309]` | accepts | `error: zero size arrays are an extension` |
 
 **The first two are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
@@ -164,6 +165,13 @@ beside a `char *` and a pointer beside `1` are none of them. It is a constraint
 whether or not the value is used, so `c ? h() : 1;` is refused as a statement
 too, which `clang` accepts and says nothing about.
 `types.rs::Checker::conditional` is where the pairs are asked.
+
+**And the last, a zero-length array, is one too.** C17 6.7.6.2 p1: "If the
+expression is a constant expression, it shall have a value greater than zero."
+`clang` takes `[0]` as an extension unless asked to be pedantic, and this
+compiler takes no constraint-violating extension, as with `void *` above.
+`types.rs::Checker::report_array` asks it of a literal length only, so `[1 - 1]`
+is not refused yet (#384).
 
 ### What an integer constant is worth, and what type it is not
 

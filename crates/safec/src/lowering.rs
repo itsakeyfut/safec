@@ -839,14 +839,6 @@ impl Lowering<'_> {
         Some((returns, lowered))
     }
 
-    /// Whether an expression is one of the constant expressions [`decided`]
-    /// folds: an integer constant, or one under unary `+`.
-    ///
-    /// Not every constant expression (C17 6.6), only those this frontend can
-    /// already lower to an `Operand::Constant`, and never one with a comma
-    /// operator in it, which 6.6 p3 forbids and which lowers to a constant
-    /// anyway. Every expression kind written out, so that one added later is
-    /// answered for here rather than folded or not by default.
     /// Whether a parameter written as `written` loses nothing by being the
     /// pointer C17 6.7.6.3 p7 adjusts it to.
     ///
@@ -858,10 +850,11 @@ impl Lowering<'_> {
     /// `T[N]` with `N` a positive number, of an element that is neither
     /// `void` nor a function, are lowered, and anything else is refused as
     /// it was before parameters were adjusted, rather than lowered with its
-    /// length's effects gone. The element and a constant length are
+    /// length's effects gone. The element and a literal length are
     /// `types.rs`'s to refuse first, under C17 6.7.6.2 p1, and this is a
-    /// defence for them; a length that is not a constant is what reaches
-    /// here, and evaluating it on entry is #382.
+    /// defence for them; a length that is not a literal is what reaches
+    /// here, `[-1]` among them until #384, and evaluating one that is not a
+    /// constant on entry is #382.
     fn adjusted_without_loss(&self, written: TypeId) -> bool {
         let mut current = written;
         let mut array = false;
@@ -879,6 +872,14 @@ impl Lowering<'_> {
         !array || !matches!(self.ast.ty(current), Type::Void | Type::Function { .. })
     }
 
+    /// Whether an expression is one of the constant expressions [`decided`]
+    /// folds: an integer constant, or one under unary `+`.
+    ///
+    /// Not every constant expression (C17 6.6), only those this frontend can
+    /// already lower to an `Operand::Constant`, and never one with a comma
+    /// operator in it, which 6.6 p3 forbids and which lowers to a constant
+    /// anyway. Every expression kind written out, so that one added later is
+    /// answered for here rather than folded or not by default.
     fn constant_expression(&self, expr: ExprId) -> bool {
         match self.ast.expr(expr) {
             Expr::Number { span: _ } => true,
