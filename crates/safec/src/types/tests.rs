@@ -1548,7 +1548,9 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
 /// a shift by a negative amount or by the width, a left shift of a negative
 /// value, anything with a variable in it, even in an arm not taken or an
 /// operand `&&` or `||` would not evaluate, since 6.6 p6 asks it of every
-/// operand, and a comma, even of two constants (6.6 p3).
+/// operand, and a comma, even of two constants (6.6 p3). An operand that is
+/// not evaluated need not have a value, only be a constant: `1 || 1 / 0` is
+/// 1, and `1 && 1 / 0`, which evaluates the division, has none.
 ///
 /// Each comparison has a row on each side of its boundary, and each logical
 /// operator one with a non-zero operand other than 1, so a comparison that
@@ -1617,6 +1619,12 @@ fn a_constant_expression_has_the_value_c_gives_it() {
         ("1 ? 2 : x", None),
         ("0 && x", None),
         ("1 || x", None),
+        ("1 || 1 / 0", Some(1)),
+        ("0 && 1 / 0", Some(0)),
+        ("1 ? 2 : 1 / 0", Some(2)),
+        ("0 ? 1 / 0 : 3", Some(3)),
+        ("1 && 1 / 0", None),
+        ("0 ? 2 : 1 / 0", None),
         ("(1, 2)", None),
     ] {
         let checked = checked(&format!(

@@ -144,8 +144,8 @@ impl Types {
     /// for; and one that overflows or divides by zero is, to every caller but
     /// one, an expression that is not a constant. All are "do not build an
     /// operand out of this", which `Checker::evaluate` says more of. The one
-    /// caller that tells them apart is an array length at file scope, which
-    /// reads `Checker::undefined` to say which it was.
+    /// that tells them apart is the type checker's own report on an array
+    /// length at file scope, which this table does not carry.
     ///
     /// # Panics
     ///
@@ -263,11 +263,12 @@ struct Checker<'a> {
     /// What each integer constant is worth, filled by the same walk that
     /// fills `types` and empty everywhere else.
     values: Vec<Option<i128>>,
-    /// Whether each expression is a constant expression in shape, every
-    /// operand a constant, that [`Checker::evaluate`] refused a value because
-    /// its operation overflows or has no defined result. What tells
-    /// `int a[1 << 31];` (C17 6.6 p4) from `int a[n];` (6.7.6.2 p2) when a
-    /// length at file scope has no value.
+    /// Whether each expression is a constant expression in shape whose
+    /// evaluation overflows or has no defined result, so that
+    /// [`Checker::evaluate`] gave it no value. Set by `check` beside the
+    /// value, from [`Checker::constant_shaped`]. What tells `int a[1 << 31];`
+    /// (C17 6.6 p4) from `int a[n];` (6.7.6.2 p2) when a length at file scope
+    /// has no value.
     undefined: Vec<bool>,
     int: TypeId,
     /// The range of `int` on the target this run is for.
@@ -480,7 +481,9 @@ impl Checker<'_> {
     /// Whether `id` is a constant expression in shape: an operator
     /// [`Checker::evaluate`] reads, over operands that each have a value or
     /// are themselves constant in shape and undefined. So `1 << 31` and
-    /// `(1 << 31) + 1` are, and `n + 1` and a call are not.
+    /// `(1 << 31) + 1` are, and `n + 1` and a call are not. Asked only of an
+    /// expression `evaluate` gave no value, where it says why: `1 + 2` is
+    /// constant in shape too, and has its value.
     fn constant_shaped(&self, ast: &Ast, id: ExprId) -> bool {
         let known = |id: ExprId| self.values[id.index()].is_some() || self.undefined[id.index()];
         match *ast.expr(id) {
@@ -1851,9 +1854,11 @@ impl Checker<'_> {
     /// outside `int` (6.6 p4 for a constant, 6.5 p5 at run time), a division
     /// or remainder by zero (6.5.5 p5), a shift by a negative amount or by the
     /// width or more, and a left shift of a negative value or out of range.
-    /// Such an expression has no value and nothing is said about it here; it
-    /// is marked in `Checker::undefined`, which is what reports an array
-    /// length at file scope that overflows. A null pointer constant that
+    /// Such an expression has no value and nothing is said about it here;
+    /// `check` marks it in `Checker::undefined`, which is what reports an
+    /// array length at file scope that overflows. An operand C does not
+    /// evaluate, the right of a deciding `&&` or `||` and the arm a `?:` does
+    /// not take, is not asked for a value at all, only to be a constant. A null pointer constant that
     /// overflows is an integer given to a pointer.
     ///
     /// A right shift of a negative value is implementation-defined (6.5.7
@@ -1862,6 +1867,10 @@ impl Checker<'_> {
     /// is `-4` here as it is when the program runs.
     fn evaluate(&self, ast: &Ast, id: ExprId) -> Option<i128> {
         let value = |id: ExprId| self.values[id.index()];
+        // A constant expression in shape, with a value or without one. What
+        // an operand C does not evaluate has to be (6.6 p3, p6), since it is
+        // never asked for a value.
+        let known = |id: ExprId| self.values[id.index()].is_some() || self.undefined[id.index()];
         let int = self.int_range;
         let fits = |result: i128| int.holds(result).then_some(result);
         match *ast.expr(id) {
@@ -1881,7 +1890,19 @@ impl Checker<'_> {
                 }
             }
             Expr::Binary { op, lhs, rhs, .. } => {
-                let (lhs, rhs) = (value(lhs)?, value(rhs)?);
+                let left = value(lhs)?;
+                // 6.5.13 p4 and 6.5.14 p4: where the left operand decides,
+                // the right is not evaluated, so `1 || 1 / 0` is 1. It still
+                // has to be a constant in shape, so `1 || x` has no value.
+                let decided = match op {
+                    BinOp::LogAnd => (left == 0).then_some(0),
+                    BinOp::LogOr => (left != 0).then_some(1),
+                    _ => None,
+                };
+                if let Some(answer) = decided {
+                    return known(rhs).then_some(answer);
+                }
+                let (lhs, rhs) = (left, value(rhs)?);
                 let truth = |holds: bool| Some(i128::from(holds));
                 let width = i128::from(int.bits());
                 match op {
@@ -1913,17 +1934,25 @@ impl Checker<'_> {
                     BinOp::LogOr => truth(lhs != 0 || rhs != 0),
                 }
             }
-            // 6.6 p6 asks that every operand be a constant, the arm not
-            // taken included.
+            // 6.5.15 p4 evaluates one arm, so only that one is asked for a
+            // value: `1 ? 2 : 1 / 0` is 2. The other is not evaluated and
+            // need only be a constant in shape (6.6 p6), so `1 ? 2 : x` has
+            // no value.
             Expr::Conditional {
                 condition,
                 then,
                 otherwise,
                 ..
             } => {
-                let (condition, then, otherwise) =
-                    (value(condition)?, value(then)?, value(otherwise)?);
-                Some(if condition != 0 { then } else { otherwise })
+                let (taken, skipped) = if value(condition)? != 0 {
+                    (then, otherwise)
+                } else {
+                    (otherwise, then)
+                };
+                if !known(skipped) {
+                    return None;
+                }
+                value(taken)
             }
             Expr::Number { .. }
             | Expr::Identifier { .. }

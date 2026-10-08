@@ -13,3 +13,5 @@ int f(int k) {
     int w[k];
     return 0;
 }
+int v1[1 || 1 / 0];
+int v2[0 ? 1 / 0 : 2];
