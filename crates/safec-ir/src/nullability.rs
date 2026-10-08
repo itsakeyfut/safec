@@ -885,7 +885,12 @@ impl Analysis for Nullability<'_> {
         // non-null there would make this check quiet about a dereference it had
         // proved. What it does instead is report code no execution reaches:
         // a false report the reader can see, where going quiet would be saying
-        // safe wrongly.
+        // safe wrongly. It holds the other direction too: `int *p = &x; if (p
+        // == 0) { *p = 1; }` would be refined null on an arm nothing reaches
+        // and reported. The two corpus cases
+        // `a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null`
+        // and `an_address_compared_with_zero_is_not_null_on_the_arm_nothing_reaches`
+        // hold one direction each.
         if value[local.index()] != Nullness::Unknown {
             return;
         }

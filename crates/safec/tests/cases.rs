@@ -872,6 +872,15 @@ cases! {
         // refused, along with every plain `if (p)` case, since nothing after
         // it answers a pointer.
         a_pointer_copied_into_a_local_and_tested_is_not_null_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A branch on a pointer this check has already settled refines
+        // nothing, in both directions: a null pointer stays null on the arm
+        // that tested it not null, and an address stays not null on the arm
+        // that tested it null. Neither arm is reached. Mutation: delete the
+        // settled-local guard in `Analysis::edge`; the first goes quiet about
+        // a write through a null pointer, and the second reports one at a
+        // write through `&x`.
+        a_null_pointer_tested_and_read_through_on_the_arm_nothing_reaches_is_proved_null: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_address_compared_with_zero_is_not_null_on_the_arm_nothing_reaches: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // An assignment used as a condition, `if ((q = p))`, branches on a
         // temporary copied from `q`, so the refinement has to be carried back
         // through the copy to `q`, and through `q = p` to `p`, which is what
