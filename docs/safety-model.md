@@ -381,7 +381,7 @@ list a command can print.
 **A function this check cannot read is the other boundary.** A call to one
 whose body is not in the translation unit is believed to return a fresh
 allocation, or one code this check cannot read could already reach, and never
-one that it or another such call freed
+one that the call itself, or another call this check cannot read, freed
 ([ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)).
 Where the callee's body is compiled here, what it returns is asked at its
 `return`
