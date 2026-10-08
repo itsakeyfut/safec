@@ -493,6 +493,10 @@ pub(super) struct Held {
     /// Whether this was read out of memory a pointer parameter points at, so
     /// may be what the caller stored there.
     ///
+    /// Or handed over by a callee: read out of what a call this check cannot
+    /// read returned, or written by one through an escaped local's address.
+    /// Memory a callee hands back it may still hold, as a caller may (#394).
+    ///
     /// **Made [`Held::lost`] at a call this check cannot read.** What the
     /// caller stored behind `pp` is recorded nowhere, so a load of it holds no
     /// site and nothing a call does could reach it: `q = *pp; release_all();

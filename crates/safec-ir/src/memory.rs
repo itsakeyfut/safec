@@ -219,7 +219,7 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
             continue;
         }
 
-        let analysis = Allocations {
+        let mut analysis = Allocations {
             sources,
             unit,
             function: func,
@@ -236,7 +236,9 @@ pub fn findings(sources: &SourceMap, unit: &TranslationUnit) -> Vec<Finding> {
                 })
                 .collect(),
             live_in: transfer::live_in(function),
+            opaque_results: Vec::new(),
         };
+        analysis.opaque_results = analysis.opaque_results_of(function);
         let cfg = Cfg::of(function);
         let solution = solve(&analysis, function, &cfg);
         // The other check's answer, asked at each block's terminator, which is

@@ -1,0 +1,62 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:1:6 "release" declared
+  Local "_0" "void" return
+Function a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:2:6 "acquire" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter
+Function a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "int **"
+  Local "_3" "int *"
+  Local "_4" "int"
+  Block "bb0" entry
+    Operation a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:4:10 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:4:14 generated
+    Operation a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:5:13 written
+      Destination "_2"
+      Address
+        Place "_1"
+    ArgumentsEvaluated a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:5:5 generated
+    Call a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:5:5 "acquire" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:5:5 generated
+    Operation a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:6:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:6:14 generated
+    Operation a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:7:9 written
+      Destination "_4"
+      Binary "Eq"
+        Copy "_3"
+        Constant 0
+    Branch a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:7:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:7:9 generated
+    Operation a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:8:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:8:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:10:5 generated
+    Call a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:10:5 "release" "bb5"
+  Block "bb5"
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:10:5 generated
+    Operation a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:11:5 written
+      Destination "_0"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_pointer_a_call_wrote_through_an_address_is_doubted_after_a_later_call.c:11:12 generated
+    Return

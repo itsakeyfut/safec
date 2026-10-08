@@ -47,6 +47,16 @@ pub(super) struct Allocations<'a> {
     /// refused `log_line(); char *name = argv[0];`. A program that calls
     /// `main` itself hands it arguments this does not see. See ADR-0040.
     pub(super) exposed_parameters: Vec<LocalId>,
+    /// Per local, whether a call this check cannot read writes its result
+    /// into it: [`Self::opaque_results_of`] answers it, once per function.
+    /// Indexed by site as well, since a site is named by the local the call
+    /// that made it wrote into. Not by position: a local written by such a
+    /// call anywhere is marked everywhere, which can only add a doubt.
+    ///
+    /// What such a result points at is memory the callee handed over, as
+    /// what a parameter points at is memory the caller did, so a pointer read
+    /// out of it is one a later such call may free. See ADR-0040.
+    pub(super) opaque_results: Vec<bool>,
     /// Per block, the locals read from its entry before they are written:
     /// what [`live_in`] answers, once per function. See ADR-0048.
     pub(super) live_in: Vec<Vec<bool>>,
@@ -243,7 +253,10 @@ impl Allocations<'_> {
     }
 
     /// Whether a load `depth` dereferences through `local` reads memory a
-    /// pointer parameter points at: whether `local` holds the site of one, or
+    /// caller or a callee handed over: memory a pointer parameter points at,
+    /// or what a call this check cannot read returned, which is the same
+    /// fact for the other side of a call (#394). For a parameter: whether
+    /// `local` holds the site of one, or
     /// was itself read out of such memory, or the load reads through an
     /// allocation one was stored in, at any level. The second is the same read
     /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
@@ -259,10 +272,14 @@ impl Allocations<'_> {
         // dereference in its place, an element, still reads through.
         held.from_caller
             || value.marked_below(local, depth.max(1), &value.from_caller)
+            || value.caller_through(local, depth)
             || self
                 .exposed_parameters
                 .iter()
                 .any(|parameter| held.sites[parameter.index()])
+            // Or what a call this check cannot read handed back: memory its
+            // callee may still hold, and free at the next such call (#394).
+            || held.sites().any(|site| self.opaque_results[site])
     }
 
     /// Whether a free or `realloc` handed these arguments may free what the
@@ -375,6 +392,41 @@ impl Allocations<'_> {
     /// listed rather than reported. See ADR-0038.
     pub(super) fn frees_anything(&self, callee: FuncId) -> bool {
         self.unit.function(callee).hatch()
+    }
+
+    /// Which locals a call this check cannot read writes its result into,
+    /// for [`Self::opaque_results`].
+    ///
+    /// Asked of [`Self::callee`], so that which calls are read by name is
+    /// said in one place. A destination with a projection is not a site, as
+    /// the call transfer says, so it marks nothing.
+    pub(super) fn opaque_results_of(&self, function: &Function) -> Vec<bool> {
+        let mut marks = vec![false; function.locals().len()];
+        for block in function.blocks() {
+            if let Terminator::Call {
+                callee,
+                arguments: _,
+                destination: Some(place),
+                then: _,
+                origin: _,
+            } = &block.terminator
+            {
+                // Every kind written out, so that one added later is asked
+                // whether what it returns was handed over.
+                let handed_over = match self.callee(*callee) {
+                    Callee::Opaque => true,
+                    Callee::Frees
+                    | Callee::Allocates
+                    | Callee::Reallocates
+                    | Callee::ReturnsFirst
+                    | Callee::Copies => false,
+                };
+                if handed_over && place.projection.is_empty() {
+                    marks[place.local.index()] = true;
+                }
+            }
+        }
+        marks
     }
 
     /// What the arguments of a call reach, in the order they were written.
@@ -1800,6 +1852,18 @@ impl Analysis for Allocations<'_> {
                 // one would need an annotation saying what a callee writes,
                 // and `_Nonnull` is not one.
                 value.replaced(|_| true);
+                // **What it wrote there it handed over**, as a callee's
+                // result or what a parameter points at is, so the next call
+                // this check cannot read may free it: `acquire(&r);
+                // release(); return *r;` was believed (#394). Nothing is
+                // said until such a call, so `get(&p); *p = 1;`, the
+                // output-parameter idiom ADR-0017 declines to report, is
+                // not. See ADR-0040.
+                for (held, &escaped) in value.points_to.iter_mut().zip(&value.escaped) {
+                    if escaped {
+                        held.from_caller = true;
+                    }
+                }
 
                 // **And what it cannot replace keeps what it may have freed.**
                 // The other half of the line above: a local whose address the

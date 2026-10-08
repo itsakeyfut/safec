@@ -96,9 +96,8 @@ pub(super) struct Known {
     /// [`Held::unreplaced_read`] by [`Self::handed_below`] alone. Nothing
     /// clears it, since slots are not told apart. See ADR-0047.
     pub(super) unreplaced: Vec<bool>,
-    /// Per site, whether what it contains may include a pointer read out of
-    /// memory a pointer parameter points at: one [`Held::from_caller`] marks,
-    /// stored here.
+    /// Per site, whether what it contains may include a pointer a caller or
+    /// a callee handed over: one [`Held::from_caller`] marks, stored here.
     ///
     /// **The mark lived on locals only**, so a store recorded the sites such
     /// a pointer holds, which are none, and `*box = q; release_all(); r =
@@ -410,6 +409,20 @@ impl Known {
         self.locals_read_through(local, depth)
             .into_iter()
             .any(|target| self.points_to[target].stale_read)
+    }
+
+    /// Whether a local a read `depth` dereferences below `local` passes
+    /// through holds memory a caller or a callee handed over,
+    /// [`Held::from_caller`], so that `pr = &r; s = *pr;` carries what `s =
+    /// r;` would. Read along the walk [`Self::lost_through`] takes, for its
+    /// reason: the mark is on the local, and the sites alone would read as
+    /// this function's own. Without it the read through the address was
+    /// believed after a later call that may free what `r` holds, for a
+    /// parameter's memory as for a callee's (#394). See ADR-0040.
+    pub(super) fn caller_through(&self, local: LocalId, depth: usize) -> bool {
+        self.locals_read_through(local, depth)
+            .into_iter()
+            .any(|target| self.points_to[target].from_caller)
     }
 
     /// What a pointer handed to a call holds: the allocations it may point
@@ -1228,6 +1241,11 @@ impl Known {
     /// There is nothing to lose by leaving it, because a local holding no site
     /// shares none with anybody, and a `free` of it is reported by
     /// [`Allocations::touching`](super::transfer::Allocations::touching)'s own rule whatever this says.
+    ///
+    /// **Left alone here, not for good.** A call this check cannot read
+    /// marks what it wrote as handed over, [`Held::from_caller`], and the
+    /// next such call makes it lost by that route, so the idiom is quiet
+    /// only until a later call that may free what it was handed (#394).
     pub(super) fn replaced(&mut self, may_hold: impl Fn(usize) -> bool) {
         for local in 0..self.escaped.len() {
             if may_hold(local)
