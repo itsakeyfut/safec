@@ -1085,15 +1085,17 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             }
             Type::Array {
                 element,
-                length,
-                written: _,
+                length: _,
+                written,
             } => {
                 // The length is the source's own bytes and is not evaluated, so
                 // `int a[1 + 2]` spells `int[1 + 2]` where `clang`, which does
                 // evaluate it, spells `int[3]`. What 6.7.6.2 p1 asks of it is a
-                // constraint, and constraints are checked later.
-                let length = match length {
-                    Some(length) => sources.snippet(ast.expr(*length).span()),
+                // constraint, and constraints are checked later. The bytes are
+                // what was written between the brackets, not the length's span,
+                // which would drop a leading `(` and keep its `)`.
+                let length = match written {
+                    Some(written) => sources.snippet(*written),
                     None => "",
                 };
                 inner = format!("{inner}[{length}]");
