@@ -383,6 +383,10 @@ whose body is not in the translation unit is believed to return a fresh
 allocation, or one code this check cannot read could already reach, and never
 one that the call itself, or another call this check cannot read, freed
 ([ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)).
+So a result that is no allocation at all, a string literal, an object with
+static storage duration or a local of another frame the callee was handed, is
+believed to be one, and freeing it is not detected either
+([#375](https://github.com/itsakeyfut/safec/issues/375)).
 Where the callee's body is compiled here, what it returns is asked at its
 `return`
 ([ADR-0041](adr/0041-a-pointer-a-function-returns-is-asked-at-its-return-as-a-dereference-of-it-would-be.md)),
