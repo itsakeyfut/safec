@@ -3,18 +3,18 @@ error[SC0401]: this frees a pointer this check stopped following
    │
  8 │     free(c ? &x : v);
    │     ────────┬───────  
-   │             ╰───────── this check cannot say what this points at
+   │             ╰───────── this may be the address of a local
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+  = help: free only what an allocation function returned: on some path this holds a local's address
 error[SC0401]: this frees a pointer this check stopped following
    ╭─[ a_free_of_a_conditional_over_a_locals_address_is_unproven.c:9:5 ]
    │
  9 │     free(c ? &x : p);
    │     ────────┬───────  
-   │             ╰───────── this check cannot say what this points at
+   │             ╰───────── this may be the address of a local
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+  = help: free only what an allocation function returned: on some path this holds a local's address

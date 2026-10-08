@@ -11,7 +11,7 @@ use crate::ir::{LocalId, Operand, Place};
 use crate::source::Span;
 
 use super::parts::{Held, PendingRead, Reached, Read, ReadKey, Realloced, SiteState, read_key};
-use super::{derefs, inside, named};
+use super::{LostReason, derefs, inside, named};
 
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Known {
@@ -216,7 +216,7 @@ impl Known {
         if self.points_to[local.index()].lost
             || (self.escaped[local.index()] && !reached.is_empty())
         {
-            reached.push(Reached::Lost);
+            reached.push(Reached::Lost(LostReason::Other));
         }
         // **A load's sites are what was stored where it was read from**, which
         // may not be all it holds: the report may doubt from them and never
@@ -353,12 +353,12 @@ impl Known {
         // A level read through a marked allocation may be one this check
         // stopped following. See ADR-0045.
         if self.stale_below(local, depth) {
-            reached.push(Reached::Lost);
+            reached.push(Reached::Lost(LostReason::Other));
         }
         // And below a pointer to a local this check lost, at any level, which
         // is `**t2` and `*t2` handed on, as a load of `*t2` is. See ADR-0045.
         if self.lost_through(local, depth) {
-            reached.push(Reached::Lost);
+            reached.push(Reached::Lost(LostReason::Other));
         }
         reached
     }

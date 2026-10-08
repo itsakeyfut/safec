@@ -3,8 +3,8 @@ error[SC0401]: this frees a pointer this check stopped following
    │
  9 │     free(r);
    │     ───┬───  
-   │        ╰───── this check cannot say what this points at
+   │        ╰───── this may be the address of a local
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+  = help: free only what an allocation function returned: on some path this holds a local's address

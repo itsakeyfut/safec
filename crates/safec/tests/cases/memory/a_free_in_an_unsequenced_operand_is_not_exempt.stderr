@@ -3,8 +3,8 @@ error[SC0401]: this frees a pointer this check stopped following
    │
  6 │     int x = (p = 0, 1) + (free(p), 0);
    │                           ───┬───  
-   │                              ╰───── this check cannot say what this points at
+   │                              ╰───── this check never saw this point at an allocation
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
-  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+  = help: nothing here says the program is wrong: this pointer was set where this check cannot see, such as by a call through its address

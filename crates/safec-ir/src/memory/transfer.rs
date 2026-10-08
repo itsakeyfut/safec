@@ -16,7 +16,9 @@ use super::known::Known;
 use super::parts::{
     Callee, Freeing, Held, Offset, PendingRead, Reached, Read, Realloced, SiteState,
 };
-use super::{dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places};
+use super::{
+    LostReason, dereferenced_in_element, dereferenced_in_terminator, derefs, handed_places,
+};
 
 /// The analysis: where an allocation is, and whether it has been freed.
 pub(super) struct Allocations<'a> {
@@ -478,7 +480,7 @@ impl Allocations<'_> {
             if !place.projection.is_empty() {
                 // `free(*pp)` frees whatever `pp` points at, and this check
                 // follows locals rather than what they point at.
-                reached.push(Reached::Lost);
+                reached.push(Reached::Lost(LostReason::ReadOutOfMemory));
                 continue;
             }
 
@@ -496,8 +498,21 @@ impl Allocations<'_> {
             // read as a free of the allocation and said nothing. See
             // `Held::may_be_a_locals_address`.
             let held = &known.points_to[place.local.index()];
-            if reached.len() == before || held.loaded || held.may_be_a_locals_address() {
-                reached.push(Reached::Lost);
+            // Which of the three it is, as far as this can tell: one alone
+            // names its reason, and more than one is `Other`, since naming
+            // either would be wrong about the other (#213).
+            let reasons = [
+                (reached.len() == before, LostReason::NeverFollowed),
+                (held.loaded, LostReason::ReadOutOfMemory),
+                (held.may_be_a_locals_address(), LostReason::MayBeALocal),
+            ];
+            if let Some(reason) = reasons
+                .iter()
+                .filter(|(applies, _)| *applies)
+                .map(|&(_, reason)| reason)
+                .reduce(LostReason::joined)
+            {
+                reached.push(Reached::Lost(reason));
             }
         }
 

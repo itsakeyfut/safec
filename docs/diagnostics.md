@@ -440,13 +440,24 @@ the output and in a corpus expectation rather than silent.
 row established rather than against what its words suggest, and two rows here
 are worth reading for what they do not say.
 
-`Unproven::Lost` names no cause. That variant has five producers and a
-`Finding` does not say which answered, so `nothing here says the program is
-wrong: this check could no longer say which allocation this pointer holds` is
-what is true of all five. It tells a reader the one thing that matters there,
-which is not to go hunting for a defect.
-[#213](https://github.com/itsakeyfut/safec/issues/213) carries the reason and
-replaces it with five.
+`Unproven::Lost` says why the pointer was lost, as far as the producer can
+tell ([#213](https://github.com/itsakeyfut/safec/issues/213)), and each
+reason is told what is true of it:
+
+- `ReadOutOfMemory`, `free(*pp)` or a pointer a load gave: this check follows
+  the local an allocation was made into, not what memory holds.
+- `NeverFollowed`, a pointer set where this check cannot see, such as by a
+  call through its address: it never saw it point at an allocation.
+- `MayBeALocal`, what may be a local's address on some path: freed, that is
+  what C forbids (C17 7.22.3.3 p2), and the remedy says to free only what an
+  allocation function returned; handed to any other call, it is nothing
+  wrong.
+- `Other`, every cause the lattice keeps in one bit, and more than one reason
+  at once: `nothing here says the program is wrong: this check could no
+  longer say which allocation this pointer holds`, true of all of them.
+
+All but the freed `MayBeALocal` tell a reader the one thing that matters
+there, which is not to go hunting for a defect.
 
 `Unproven::Disagreement` has two causes of its own, paths that disagree about a
 free and a call this check cannot read, and a `Finding` does not separate those

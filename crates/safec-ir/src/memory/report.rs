@@ -16,7 +16,7 @@ use super::built::named;
 use super::known::Known;
 use super::parts::{Callee, Freeing, Offset, Reached, Read, SiteState, same};
 use super::transfer::Allocations;
-use super::{Finding, Kind, Unproven};
+use super::{Finding, Kind, LostReason, Unproven};
 
 /// What a set of sites says about whatever touched them.
 ///
@@ -88,8 +88,10 @@ fn verdict(
     // disagree about was freed on one of them, and a site an opaque call was
     // handed may have been freed by it; a pointer this check lost says nothing
     // about any free anywhere. Counting both as one flag is what put
-    // `may free it again here` on a program with one free in it.
-    let mut lost = false;
+    // `may free it again here` on a program with one free in it. Why it was
+    // lost travels with it, one reason for all of them, and `Other` where two
+    // disagree. See #213.
+    let mut lost: Option<LostReason> = None;
     let mut partial = false;
     // Whether more than one free was folded in. The span below is the earliest
     // of them and the flag beside it is the conjunction, so where they differ
@@ -118,8 +120,8 @@ fn verdict(
             // lost the pointer, and answering nothing about it is the failure
             // `docs/safety-model.md` is written to prevent rather than the one
             // it tolerates.
-            Reached::Lost => {
-                lost = true;
+            Reached::Lost(reason) => {
+                lost = Some(lost.map_or(reason, |already| already.joined(reason)));
                 continue;
             }
             Reached::Partial => {
@@ -159,7 +161,7 @@ fn verdict(
     // running them together is a known mistake: one test meaning "proved" and
     // "gave up" at once reports the second as the first.
     // A set that may be missing members proves nothing. See ADR-0045.
-    let settled = !live && !unknown && !lost && !partial;
+    let settled = !live && !unknown && lost.is_none() && !partial;
 
     // **A double free does not turn on which ran first.** Two frees of one
     // allocation are a double free in either order, so there is nothing for a
@@ -226,11 +228,11 @@ fn verdict(
         // otherwise, which is what `!unknown` is doing: a site the paths
         // disagree about, and a site an opaque call was handed, are each a
         // free worth suspecting, and the arm below is right about them.
-        None if lost && !unknown => Some(Verdict {
+        None if lost.is_some() && !unknown => Some(Verdict {
             conclusion: Conclusion::Unknown,
             freed: None,
             made: None,
-            unproven: Some(Unproven::Lost),
+            unproven: lost.map(Unproven::Lost),
         }),
         None if unknown => Some(Verdict {
             conclusion: Conclusion::Unknown,
@@ -374,7 +376,7 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
             // `SetFreed` is answered twice: `Known::reached_by` clears the
             // sites whenever it answers it, so the rule below this loop says
             // the same. The doc comment above says what holds the pair.
-            Reached::SetFreed(_) | Reached::Lost | Reached::Partial => return None,
+            Reached::SetFreed(_) | Reached::Lost(_) | Reached::Partial => return None,
         }
     }
 

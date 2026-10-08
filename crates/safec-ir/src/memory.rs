@@ -159,6 +159,45 @@ pub struct Finding {
     pub unproven: Option<Unproven>,
 }
 
+/// Why this check stopped following a pointer, as far as the producer of
+/// [`Unproven::Lost`] can tell, so that a reader is told what to do about
+/// it rather than only that something was lost.
+///
+/// **As far as the producer can tell, and no further.** The one bit a
+/// local carries for having lost what it held, `Held::lost`, is set by
+/// several causes the lattice does not keep apart, so a pointer lost that
+/// way is [`Self::Other`]. Telling them apart would be a set in the
+/// lattice, with its own join and height (#213).
+///
+/// **No span.** None of these producers has one in the lattice, and a
+/// variant with a field it could not fill would be a claim nothing
+/// established, so the type has nowhere to put one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LostReason {
+    /// Read out of memory: an argument written through a projection,
+    /// `free(*pp)`, or a pointer a load gave. This check follows locals,
+    /// not what memory holds.
+    ReadOutOfMemory,
+    /// A pointer this check never followed to any allocation: a local
+    /// reaching no site, set where this check cannot see, such as by a
+    /// call through its address.
+    NeverFollowed,
+    /// What may be a local's address on some path, which `free` must never
+    /// be handed (C17 7.22.3.3 p2).
+    MayBeALocal,
+    /// Any other cause, `Held::lost` among them, or more than one reason
+    /// at once.
+    Other,
+}
+
+impl LostReason {
+    /// One reason for two: itself where they agree, [`Self::Other`] where
+    /// they do not, since naming either would be wrong about the other.
+    pub(crate) fn joined(self, other: Self) -> Self {
+        if self == other { self } else { Self::Other }
+    }
+}
+
 /// Why a finding could not be proven.
 ///
 /// **Four reasons and not two, because one of them is about this check and
@@ -192,7 +231,7 @@ pub enum Unproven {
     /// Those are private, so they are named here rather than linked: a link
     /// out of a public item to one of them is
     /// `rustdoc::private_intra_doc_links`, which this crate denies.
-    Lost,
+    Lost(LostReason),
     /// C has not said which order runs. See ADR-0022.
     Unsequenced,
     /// A pointer this check followed was moved by something it cannot

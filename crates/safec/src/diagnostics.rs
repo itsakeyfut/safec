@@ -274,7 +274,7 @@ impl Remedy {
     /// Usually an imperative naming a change to the program. Not always: where
     /// a check gave up rather than found something, what it says instead is
     /// what it failed to establish, because an instruction there would claim
-    /// something about a program nothing was worked out about. `LOST_REMEDY` in
+    /// something about a program nothing was worked out about. `lost_words` in
     /// `driver/words.rs` is that case and is the reason this sentence does not
     /// say "in the imperative", which it used to and which was already false of
     /// a string in the tree.

@@ -9,7 +9,7 @@ use crate::diagnostics::{Code, Diagnostic, Label, Remedy};
 use crate::safety::SafetyLevel;
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::Promise;
-use safec_ir::memory::{self, Kind, Unproven};
+use safec_ir::memory::{self, Kind, LostReason, Unproven};
 use safec_ir::nullability::{self, Asked};
 use safec_ir::source::Span;
 
@@ -80,21 +80,53 @@ const RETURN_AFTER_FREE: Code = Code::new("SC0406");
 /// believes its parameter is live and cannot see why it is not. See ADR-0042.
 const ARGUMENT_AFTER_FREE: Code = Code::new("SC0407");
 
-/// What to change where this check stopped following a pointer.
+/// What to change where this check stopped following a pointer and cannot
+/// say why: `LostReason::Other`.
 ///
-/// **It names no cause, and that is the whole of its design.**
-/// `Unproven::Lost` has five producers, which its own doc comment lists, and a
-/// `memory::Finding` does not say which of them answered. A remedy naming one
-/// would be right for some and false for the others: a conservative
-/// over-approximation given a confident word. So this says only what is true
-/// of all five, and tells the reader the one thing that matters here, which is
-/// not to go hunting for a defect.
-///
-/// Shared by the three codes that can lose a pointer, because the fact is the
-/// same fact. #213 carries the reason into the `Finding` and replaces this
-/// with five.
+/// **It names no cause, and that is the whole of its design.** `Other`
+/// covers every cause the lattice keeps in one bit, and more than one reason
+/// at once, so a remedy naming one would be right for some and false for the
+/// others: a conservative over-approximation given a confident word. So this
+/// says only what is true of all of them, and tells the reader the one thing
+/// that matters here, which is not to go hunting for a defect. The reasons a
+/// producer can tell apart get their own words in [`lost_words`] (#213).
 const LOST_REMEDY: &str = "nothing here says the program is wrong: this check could no longer \
                            say which allocation this pointer holds";
+
+/// The label and the remedy for a pointer this check stopped following,
+/// by why, as far as the producer could tell.
+///
+/// **The message is the kind's and these are the reason's**, so a reason
+/// added later is `E0004` here and nowhere in the table above it. Each says
+/// what is true of its producer and no more. `MayBeALocal` alone names what
+/// C forbids, a free of a local's address (C17 7.22.3.3 p2), and only where
+/// the pointer is freed: handed to any other call, a local's address is
+/// nothing wrong. See #213.
+fn lost_words(reason: LostReason, freed: bool) -> (&'static str, &'static str) {
+    match reason {
+        LostReason::ReadOutOfMemory => (
+            "this was read out of memory, which this check does not follow",
+            "nothing here says the program is wrong: this check follows the local an \
+             allocation was made into, not what memory holds",
+        ),
+        LostReason::NeverFollowed => (
+            "this check never saw this point at an allocation",
+            "nothing here says the program is wrong: this pointer was set where this \
+             check cannot see, such as by a call through its address",
+        ),
+        LostReason::MayBeALocal if freed => (
+            "this may be the address of a local",
+            "free only what an allocation function returned: on some path this \
+             holds a local's address",
+        ),
+        LostReason::MayBeALocal => (
+            "this may be the address of a local",
+            "nothing here says the program is wrong: on some path this holds a \
+             local's address, which this check does not follow as an allocation",
+        ),
+        LostReason::Other => ("this check cannot say what this points at", LOST_REMEDY),
+    }
+}
 
 /// What to change where C has not ordered the free against the use.
 ///
@@ -166,11 +198,11 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
     // write an arm and does not make the arm right.
     // **A remedy is a claim like a label is**, so each of
     // these is written against what its row established and not against what
-    // its words suggest. Two rows are worth saying out loud. `Lost` names no
-    // cause because `Unproven::Lost` has five producers and a `Finding` does
-    // not say which answered, so anything more specific would be right for some
-    // of them and false for the rest; #213 carries the reason and replaces it
-    // with five. `Disagreement` has two causes of its own, paths that disagree
+    // its words suggest. Two rows are worth saying out loud. `Lost` carries
+    // why, as far as its producer can tell, and `lost_words` gives each reason
+    // what is true of it; `Other` keeps the remedy that names no cause, for
+    // the causes one bit holds together (#213). `Disagreement` has two causes
+    // of its own, paths that disagree
     // and a call this check cannot read, so its remedy names what would let
     // this check conclude rather than which of the two happened.
     //
@@ -187,12 +219,15 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "freed again here",
             "remove one of the two frees, or take this one off the path that reaches the first",
         ),
-        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
-            DOUBLE_FREE,
-            "this frees a pointer this check stopped following",
-            "this check cannot say what this points at",
-            LOST_REMEDY,
-        ),
+        (Kind::DoubleFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
+            let (label, remedy) = lost_words(reason, true);
+            (
+                DOUBLE_FREE,
+                "this frees a pointer this check stopped following",
+                label,
+                remedy,
+            )
+        }
         // **`Unsequenced` is split out below and not here**, which is the one
         // place the two kinds are shaped differently. No corpus case reaches a
         // double free that is unproven for that reason, and two written to try
@@ -228,12 +263,15 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "used here",
             "move the free after this use, or do not free here",
         ),
-        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
-            USE_AFTER_FREE,
-            "this uses a pointer this check stopped following",
-            "this check cannot say what this points at",
-            LOST_REMEDY,
-        ),
+        (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
+            let (label, remedy) = lost_words(reason, false);
+            (
+                USE_AFTER_FREE,
+                "this uses a pointer this check stopped following",
+                label,
+                remedy,
+            )
+        }
         (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
             USE_AFTER_FREE,
             "this may use a value after it was freed",
@@ -256,12 +294,15 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "returned here",
             "return a pointer that is still allocated, or do not free this one before returning it",
         ),
-        (Kind::ReturnAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
-            RETURN_AFTER_FREE,
-            "this returns a pointer this check stopped following",
-            "this check cannot say what this points at",
-            LOST_REMEDY,
-        ),
+        (Kind::ReturnAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
+            let (label, remedy) = lost_words(reason, false);
+            (
+                RETURN_AFTER_FREE,
+                "this returns a pointer this check stopped following",
+                label,
+                remedy,
+            )
+        }
         // `Unsequenced` cannot arrive, because `memory::report::verdict`
         // answers that a `return` is ordered after every free in its
         // expression, and `Offset` cannot because only
@@ -283,12 +324,15 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             "passed here",
             "pass a pointer that is still allocated, or do not free this one before passing it",
         ),
-        (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Lost)) => (
-            ARGUMENT_AFTER_FREE,
-            "this passes a pointer this check stopped following",
-            "this check cannot say what this points at",
-            LOST_REMEDY,
-        ),
+        (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Lost(reason))) => {
+            let (label, remedy) = lost_words(reason, false);
+            (
+                ARGUMENT_AFTER_FREE,
+                "this passes a pointer this check stopped following",
+                label,
+                remedy,
+            )
+        }
         (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
             ARGUMENT_AFTER_FREE,
             "this may pass a pointer to an allocation that was freed",
@@ -322,7 +366,10 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             Kind::FreedBehindArgument,
             Conclusion::Unsafe | Conclusion::Unknown,
             Some(
-                Unproven::Disagreement | Unproven::Lost | Unproven::Unsequenced | Unproven::Offset,
+                Unproven::Disagreement
+                | Unproven::Lost(_)
+                | Unproven::Unsequenced
+                | Unproven::Offset,
             )
             | None,
         ) => (
@@ -352,7 +399,10 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             Kind::InteriorFree,
             Conclusion::Unknown,
             Some(
-                Unproven::Offset | Unproven::Lost | Unproven::Disagreement | Unproven::Unsequenced,
+                Unproven::Offset
+                | Unproven::Lost(_)
+                | Unproven::Disagreement
+                | Unproven::Unsequenced,
             )
             | None,
         ) => (
