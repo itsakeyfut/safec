@@ -22,14 +22,38 @@ error[SC0309]: an array cannot have `int (void)` as its element
     │        ╰── declared here
 ────╯
   = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
-error[SC0309]: the length of an array is greater than zero
-    ╭─[ an_array_declarator_is_held_to_its_constraints.c:19:11 ]
+error[SC0309]: an array cannot have `int[]` as its element
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:17:7 ]
     │
- 19 │     int w[0];
+ 17 │ int (*fr(void))[2][];
+    │       ─┬  
+    │        ╰── declared here
+────╯
+  = note: the element of an array is a complete object type (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:18:15 ]
+    │
+ 18 │ int a1[2], b1[0];
+    │               ┬  
+    │               ╰── this is 0
+────╯
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array is greater than zero
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:22:11 ]
+    │
+ 22 │     int w[0];
     │           ┬  
     │           ╰── this is 0
 ────╯
   = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0309]: the length of an array cannot be `void`
+    ╭─[ an_array_declarator_is_held_to_its_constraints.c:23:11 ]
+    │
+ 23 │     int y[v()];
+    │           ─┬─  
+    │            ╰─── this is `void`
+────╯
+  = note: the length of an array is an integer (C17 6.7.6.2 p1)
 error[SC0309]: an array cannot have `int[]` as its element
    ╭─[ an_array_declarator_is_held_to_its_constraints.c:1:13 ]
    │

@@ -2464,16 +2464,21 @@ cases! {
         an_argument_is_checked_against_an_adjusted_parameter: ["--emit", "ast"],
         // C17 6.7.6.2 p1, once per declaration and wherever it is written: an
         // element that is not a complete object type, a length that is not an
-        // integer, a constant length that is not greater than zero, at file
-        // scope, in a block, in a parameter list and in one inside a pointer.
-        // The last four declarations are the controls. Mutation: stop refusing
+        // integer, a literal length that is not greater than zero, at file
+        // scope, in a block, in a parameter list, in one inside a pointer, in
+        // what a function returns, and in a second declarator of one
+        // declaration. `ok2`, whose length is a `char`, and the last four
+        // declarations are the controls. Mutation: stop refusing
         // an element of unknown length, a `void` one, or a function one; the
         // `q` and `x`, the `r`, `g` and `nest`, or the `fp` report goes.
         // Mutation: stop asking a length's type, or its value; the `k`, or the
         // `z`, `h` and `w`, report goes. Mutation: refuse every element; the
         // controls report. Mutation: skip parameter lists; the parameter
         // reports go. Mutation: report every array of a declaration; `z` is
-        // two.
+        // two. Mutation: stop at a function's return type; the `fr` report
+        // goes. Mutation: ask only a declaration's first declarator; the `b1`
+        // report goes. Mutation: refuse a `char` length, or take a `void` one;
+        // `ok2` reports, or the `y` report goes.
         an_array_declarator_is_held_to_its_constraints: ["--emit", "ast"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],
