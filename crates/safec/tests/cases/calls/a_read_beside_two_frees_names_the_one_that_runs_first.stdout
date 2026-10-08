@@ -1,0 +1,92 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_beside_two_frees_names_the_one_that_runs_first.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_read_beside_two_frees_names_the_one_that_runs_first.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_read_beside_two_frees_names_the_one_that_runs_first.c:3:5 "g" declared
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+Function a_read_beside_two_frees_names_the_one_that_runs_first.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int *"
+  Local "_6" "int"
+  Local "_7" "int"
+  Local "_8" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_read_beside_two_frees_names_the_one_that_runs_first.c:5:14 generated
+    Call a_read_beside_two_frees_names_the_one_that_runs_first.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:5:14 generated
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:6:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_read_beside_two_frees_names_the_one_that_runs_first.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:6:9 generated
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:9:5 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:9:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:9:5 generated
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:10:10 written
+      Destination "_5"
+      Use
+        Copy "_1"
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:10:14 generated
+    Call a_read_beside_two_frees_names_the_one_that_runs_first.c:11:13 "g" "bb5"
+      Destination "_7"
+      Copy "_1"
+        Deref
+  Block "bb5"
+    Call a_read_beside_two_frees_names_the_one_that_runs_first.c:11:31 "free" "bb6"
+      Copy "_5"
+  Block "bb6"
+    Call a_read_beside_two_frees_names_the_one_that_runs_first.c:11:22 "free" "bb7"
+      Copy "_1"
+  Block "bb7"
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:11:13 written
+      Destination "_8"
+      Binary "Add"
+        Copy "_7"
+        Constant 0
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:11:9 written
+      Destination "_6"
+      Use
+        Copy "_8"
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:11:13 generated
+    Operation a_read_beside_two_frees_names_the_one_that_runs_first.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_6"
+    Sequenced a_read_beside_two_frees_names_the_one_that_runs_first.c:12:12 generated
+    Return

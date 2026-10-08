@@ -2273,8 +2273,33 @@ cases! {
         // `a` escaped, so `handed` doubts it at the call and `used_before`
         // doubts it again from the free, at the same caret. Mutation: push in
         // `handed` rather than going through `say`; two `SC0407` about `a` at
-        // one caret.
+        // one caret. The second names the free and is the one that stands.
+        // Mutation: have `supersedes` answer `false` for `(None, Some(_))`;
+        // the report loses `freed here` and the p10 note.
         an_escaped_pointer_handed_to_a_call_before_a_free_is_one_report: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `g(*p)` is doubted twice at one caret, by the call `h` this check
+        // cannot read and by the free, and only the second names a free. Both
+        // orders are written, because which doubt arrives first is which
+        // operand comes first. Mutation: have `supersedes` answer `false` for
+        // `(None, Some(_))`; `call_first` loses `freed here` and the p10 note
+        // on `g(*p)` and `h(p)`, and `free_first` does not move. Mutation:
+        // answer `true` for `(Some(_), None)`; `free_first` loses them on
+        // `g(*p)` instead. Mutation: keep the first of two suspicions
+        // whatever they carry; `call_first` loses them.
+        a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `g(*p)` is doubted at one caret by each of two frees, and both doubts
+        // name their free. The inner `free(q)` runs first, as an argument, and
+        // is written later; the doubt naming it arrives first and stands, so
+        // `freed here` agrees with the `SC0401` on the same line. Mutation:
+        // have two suspicions name the earlier span, as two proofs do; `g(*p)`
+        // names the outer free, which the next report calls freed again.
+        a_read_beside_two_frees_names_the_one_that_runs_first: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The read of `*tab` is doubted because `tab` may be freed, and what
+        // it hands `release` is doubted because `q` may be, at one caret. The
+        // second names a free and is a different kind, and the first stands.
+        // Mutation: drop the kind arm from `supersedes`; the caret becomes an
+        // `SC0407` about `q`.
+        a_doubt_about_a_table_is_kept_over_a_doubt_about_what_it_holds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Two reports about one full expression, and each is its own order: `g`
         // may free `a` before the free, which is the forward `SC0401`, and the
         // free may run before `g` reads `a`, which is the carried `SC0407`. The
