@@ -93,14 +93,18 @@ const OPERANDS: Code = Code::new("SC0306");
 /// C forbids it, and it is refused here as `docs/frontend.md` lists.
 const RETURN_SHAPE: Code = Code::new("SC0308");
 
-/// A declarator that derives a type C forbids, C17 6.7.6.2 p1 so far: an
-/// array whose element is not a complete object type, or whose length is
-/// not an integer, or is a constant that is not greater than zero.
+/// A declarator that derives a type C forbids, C17 6.7.6.2 so far: an array
+/// whose element is not a complete object type, or whose length is not an
+/// integer, or is a constant that is not greater than zero (p1); and, at file
+/// scope, an array length without a value, which is either a constant
+/// expression that overflows or divides by zero (6.6 p4) or not a constant
+/// at all (p2).
 ///
 /// A constant whose value [`Checker::evaluate`] gives: `[-1]` and `[1 - 1]`
-/// are asked, and one whose evaluation overflows is not. A zero length is
-/// refused though `clang` takes it as an extension, which `docs/frontend.md`
-/// records.
+/// are asked p1's question. One whose evaluation overflows is asked p2's
+/// at file scope and nothing in a block, where a length need not be a
+/// constant. A zero length is refused though `clang` takes it as an
+/// extension, which `docs/frontend.md` records.
 ///
 /// Not `OPERANDS`, which is an operator's: a declarator is not an operator,
 /// and a code is never reassigned. 6.7.6.3 p1, a function returning an array
@@ -137,9 +141,11 @@ impl Types {
     /// The cases are one answer on purpose: a caller has nothing to do
     /// differently. A literal that could not be read was reported where it
     /// was read; an expression that is not a constant has no value to ask
-    /// for; and one that overflows or divides by zero is, for every caller
-    /// today, an expression that is not a constant (#386). All are "do not
-    /// build an operand out of this", which `Checker::evaluate` says more of.
+    /// for; and one that overflows or divides by zero is, to every caller but
+    /// one, an expression that is not a constant. All are "do not build an
+    /// operand out of this", which `Checker::evaluate` says more of. The one
+    /// that tells them apart is the type checker's own report on an array
+    /// length at file scope, which this table does not carry.
     ///
     /// # Panics
     ///
@@ -175,6 +181,7 @@ pub fn check(
         resolution,
         types: vec![None; ast.expr_ids().count()],
         values: vec![None; ast.expr_ids().count()],
+        undefined: vec![false; ast.expr_ids().count()],
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::Int),
@@ -192,6 +199,8 @@ pub fn check(
         // anything that reads it as a null pointer constant is asked.
         if ty.is_some() && checker.values[id.index()].is_none() {
             checker.values[id.index()] = checker.evaluate(ast, id);
+            checker.undefined[id.index()] =
+                checker.values[id.index()].is_none() && checker.constant_shaped(ast, id);
         }
         checker.check_received(ast, id, diagnostics);
     }
@@ -254,6 +263,13 @@ struct Checker<'a> {
     /// What each integer constant is worth, filled by the same walk that
     /// fills `types` and empty everywhere else.
     values: Vec<Option<i128>>,
+    /// Whether each expression is a constant expression in shape whose
+    /// evaluation overflows or has no defined result, so that
+    /// [`Checker::evaluate`] gave it no value. Set by `check` beside the
+    /// value, from [`Checker::constant_shaped`]. What tells `int a[1 << 31];`
+    /// (C17 6.6 p4) from `int a[n];` (6.7.6.2 p2) when a length at file scope
+    /// has no value.
+    undefined: Vec<bool>,
     int: TypeId,
     /// The range of `int` on the target this run is for.
     int_range: Integer,
@@ -288,34 +304,43 @@ impl Checker<'_> {
     ///
     /// [`Declaration::written`]: crate::ast::Declaration::written
     fn check_declarators(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        // What was declared, where to point, and the type as written.
-        let mut declared: Vec<(Span, TypeId)> = Vec::new();
-        let push = |declarators: &[InitDeclarator], declared: &mut Vec<(Span, TypeId)>| {
+        // What was declared, where to point, the type as written, and whether
+        // it is at file scope, where C17 6.7.6.2 p2 wants every array length
+        // a constant: only an identifier with block or prototype scope may
+        // have a variably modified type, so an object there and a function's
+        // own type, `int (*f(void))[n]`, may not, whether declared or
+        // defined. A parameter, reached through any function type, has
+        // prototype or block scope.
+        let mut declared: Vec<(Span, TypeId, bool)> = Vec::new();
+        let push = |declarators: &[InitDeclarator],
+                    at_file_scope: bool,
+                    declared: &mut Vec<(Span, TypeId, bool)>| {
             for declarator in declarators {
                 let declaration = &declarator.declaration;
                 declared.push((
                     declaration.name.unwrap_or(declaration.span),
                     declaration.written,
+                    at_file_scope,
                 ));
             }
         };
         for item in ast.items() {
             match item {
-                Item::Function(function) => declared.push((function.name, function.ty)),
-                Item::Declaration { declarators, .. } => push(declarators, &mut declared),
+                Item::Function(function) => declared.push((function.name, function.ty, true)),
+                Item::Declaration { declarators, .. } => push(declarators, true, &mut declared),
                 Item::Error { .. } => {}
             }
         }
         for id in ast.stmt_ids() {
             if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
-                push(declarators, &mut declared);
+                push(declarators, false, &mut declared);
             }
         }
 
         // Grows as it is read: every function type met on the way down hands
         // its parameters on as declarations of their own.
         let mut next = 0;
-        while let Some(&(at, written)) = declared.get(next) {
+        while let Some(&(at, written, at_file_scope)) = declared.get(next) {
             next += 1;
             let mut reported = false;
             let mut current = written;
@@ -324,7 +349,14 @@ impl Checker<'_> {
                     Type::Array { element, length } => {
                         let (element, length) = (*element, *length);
                         if !reported {
-                            reported = self.report_array(ast, at, element, length, diagnostics);
+                            reported = self.report_array(
+                                ast,
+                                at,
+                                element,
+                                length,
+                                at_file_scope,
+                                diagnostics,
+                            );
                         }
                         current = element;
                     }
@@ -339,6 +371,7 @@ impl Checker<'_> {
                                 declared.push((
                                     parameter.name.unwrap_or(parameter.span),
                                     parameter.written,
+                                    false,
                                 ));
                             }
                         }
@@ -351,13 +384,15 @@ impl Checker<'_> {
     }
 
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
-    /// and say whether it was one.
+    /// or, `at_file_scope`, whose length p2 and 6.6 p4 forbid, and say
+    /// whether it was one.
     fn report_array(
         &self,
         ast: &Ast,
         at: Span,
         element: TypeId,
         length: Option<ExprId>,
+        at_file_scope: bool,
         diagnostics: &mut DiagnosticSink,
     ) -> bool {
         // "The element type shall not be an incomplete or function type."
@@ -419,7 +454,61 @@ impl Checker<'_> {
             );
             return true;
         }
+        // At file scope a length has to be a constant with a value. Untyped,
+        // it was asked nothing above and is asked nothing here: an undeclared
+        // name has been reported already, and `p - q`, the one untyped length
+        // a valid program can write, goes unasked for want of a `ptrdiff_t`.
+        if at_file_scope && ty.is_some() && self.values[length.index()].is_none() {
+            let at = ast.expr(length).span();
+            diagnostics.report(if self.undefined[length.index()] {
+                Diagnostic::error("the length of an array has no defined value")
+                    .with_code(DECLARATOR)
+                    .with_label(Label::primary(at, "this overflows `int` or divides by zero"))
+                    .with_note(
+                        "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
+                    )
+            } else {
+                Diagnostic::error(
+                    "a declaration at file scope cannot have an array length that is not a constant",
+                )
+                .with_code(DECLARATOR)
+                .with_label(Label::primary(at, "this is not a constant"))
+                .with_note(
+                    "a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)",
+                )
+            });
+            return true;
+        }
         false
+    }
+
+    /// Whether `id` is a constant expression in shape: an operator
+    /// [`Checker::evaluate`] reads, over operands that each have a value or
+    /// are themselves constant in shape and undefined. So `1 << 31` and
+    /// `(1 << 31) + 1` are, and `n + 1` and a call are not. Asked only of an
+    /// expression `evaluate` gave no value, where it says why: `1 + 2` is
+    /// constant in shape too, and has its value.
+    fn constant_shaped(&self, ast: &Ast, id: ExprId) -> bool {
+        let known = |id: ExprId| self.values[id.index()].is_some() || self.undefined[id.index()];
+        match *ast.expr(id) {
+            Expr::Unary { op, operand, .. } => {
+                matches!(op, UnOp::Plus | UnOp::Minus | UnOp::BitNot | UnOp::Not) && known(operand)
+            }
+            Expr::Binary { lhs, rhs, .. } => known(lhs) && known(rhs),
+            Expr::Conditional {
+                condition,
+                then,
+                otherwise,
+                ..
+            } => known(condition) && known(then) && known(otherwise),
+            Expr::Number { .. }
+            | Expr::Identifier { .. }
+            | Expr::Assign { .. }
+            | Expr::Comma { .. }
+            | Expr::Subscript { .. }
+            | Expr::Call { .. }
+            | Expr::Error { .. } => false,
+        }
     }
 
     /// Find every `return` with a value and every initializer, and what each
@@ -1769,9 +1858,12 @@ impl Checker<'_> {
     /// outside `int` (6.6 p4 for a constant, 6.5 p5 at run time), a division
     /// or remainder by zero (6.5.5 p5), a shift by a negative amount or by the
     /// width or more, and a left shift of a negative value or out of range.
-    /// Such an expression has no value and nothing is said about it here, so
-    /// an array length or a null pointer constant that overflows is not
-    /// refused for it (#386).
+    /// Such an expression has no value and nothing is said about it here;
+    /// `check` marks it in `Checker::undefined`, which is what reports an
+    /// array length at file scope that overflows. An operand C does not
+    /// evaluate, the right of a deciding `&&` or `||` and the arm a `?:` does
+    /// not take, is not asked for a value at all, only to be a constant. A null pointer constant that
+    /// overflows is an integer given to a pointer.
     ///
     /// A right shift of a negative value is implementation-defined (6.5.7
     /// p5), not undefined, and this implementation has chosen: the backend
@@ -1779,6 +1871,10 @@ impl Checker<'_> {
     /// is `-4` here as it is when the program runs.
     fn evaluate(&self, ast: &Ast, id: ExprId) -> Option<i128> {
         let value = |id: ExprId| self.values[id.index()];
+        // A constant expression in shape, with a value or without one. What
+        // an operand C does not evaluate has to be (6.6 p3, p6), since it is
+        // never asked for a value.
+        let known = |id: ExprId| self.values[id.index()].is_some() || self.undefined[id.index()];
         let int = self.int_range;
         let fits = |result: i128| int.holds(result).then_some(result);
         match *ast.expr(id) {
@@ -1798,7 +1894,19 @@ impl Checker<'_> {
                 }
             }
             Expr::Binary { op, lhs, rhs, .. } => {
-                let (lhs, rhs) = (value(lhs)?, value(rhs)?);
+                let left = value(lhs)?;
+                // 6.5.13 p4 and 6.5.14 p4: where the left operand decides,
+                // the right is not evaluated, so `1 || 1 / 0` is 1. It still
+                // has to be a constant in shape, so `1 || x` has no value.
+                let decided = match op {
+                    BinOp::LogAnd => (left == 0).then_some(0),
+                    BinOp::LogOr => (left != 0).then_some(1),
+                    _ => None,
+                };
+                if let Some(answer) = decided {
+                    return known(rhs).then_some(answer);
+                }
+                let (lhs, rhs) = (left, value(rhs)?);
                 let truth = |holds: bool| Some(i128::from(holds));
                 let width = i128::from(int.bits());
                 match op {
@@ -1830,17 +1938,25 @@ impl Checker<'_> {
                     BinOp::LogOr => truth(lhs != 0 || rhs != 0),
                 }
             }
-            // 6.6 p6 asks that every operand be a constant, the arm not
-            // taken included.
+            // 6.5.15 p4 evaluates one arm, so only that one is asked for a
+            // value: `1 ? 2 : 1 / 0` is 2. The other is not evaluated and
+            // need only be a constant in shape (6.6 p6), so `1 ? 2 : x` has
+            // no value.
             Expr::Conditional {
                 condition,
                 then,
                 otherwise,
                 ..
             } => {
-                let (condition, then, otherwise) =
-                    (value(condition)?, value(then)?, value(otherwise)?);
-                Some(if condition != 0 { then } else { otherwise })
+                let (taken, skipped) = if value(condition)? != 0 {
+                    (then, otherwise)
+                } else {
+                    (otherwise, then)
+                };
+                if !known(skipped) {
+                    return None;
+                }
+                value(taken)
             }
             Expr::Number { .. }
             | Expr::Identifier { .. }

@@ -115,7 +115,7 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Ten more are where the type checker declines what `clang` accepts.
+Eleven more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
@@ -129,6 +129,7 @@ Ten more are where the type checker declines what `clang` accepts.
 | `c ? p : q` with `int *p` and `char *q` | `error[SC0306]` | warns | `error: pointer type mismatch ('int *' and 'char *')` |
 | `c ? p : 1;` as a statement, with `int *p` | `error[SC0306]` | warns | `error: pointer/integer type mismatch in conditional expression ('int *' and 'int')` |
 | `int z[0];` | `error[SC0309]` | accepts | `error: zero size arrays are an extension` |
+| `int a[(1 << 31) < 0 ? 1 : 2];` | `error[SC0309]` | accepts | accepts |
 
 **The first two are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
@@ -172,6 +173,15 @@ expression is a constant expression, it shall have a value greater than zero."
 compiler takes no constraint-violating extension, as with `void *` above.
 `types.rs::Checker::report_array` asks it of any length whose constant value
 the type checker knows, so `[1 - 1]` and `[-1]` are refused too.
+
+**So is an evaluated shift out of `int`, even where `clang` is pedantic.** C17
+6.5.7 p4 leaves `1 << 31` undefined where `int` is 32 bits, since 2^31 does not
+fit, and 6.6 p4 requires a constant expression to evaluate to a value its type
+can hold. At file scope an array's length must be such a constant (6.7.6.2
+p2), so `(1 << 31) < 0 ? 1 : 2` has no defined value and is refused, where
+`clang` folds the shift to `INT_MIN` and says nothing. A division by zero that
+is never evaluated, `1 || 1 / 0` or the arm a `?:` does not take, leaves the
+length its value, as `clang` agrees.
 
 ### What an integer constant is worth, and what type it is not
 
@@ -270,7 +280,10 @@ makes any integer constant expression with the value 0 a null pointer
 constant, and `types.rs::Checker::evaluate` gives every integer constant
 expression of 6.6 p6 its value, so `1 - 1` and `-0` are recognised as `0` is.
 One whose evaluation overflows on the way, `(2147483647 + 1) * 0`, gets no
-value and is refused as an integer, which is #386. `i - i` is zero at run
+value and is refused as an integer, since an assignment does not require a
+constant expression and C17 6.6 p4 is a constraint on the constant
+expressions that are required. An array length at file scope is one, and an
+overflowing one there is refused as having no defined value. `i - i` is zero at run
 time and is not a constant expression, so it is an integer given to a pointer.
 C17 6.7.9 p11 gives an initializer the constraints of simple assignment and
 6.5.2.2 p2 gives an argument them too, so the three spellings answer alike, and

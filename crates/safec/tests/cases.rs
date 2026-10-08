@@ -2492,6 +2492,30 @@ cases! {
         // one. `ok` is the control. Mutation: give only a literal a value;
         // the three declarations build and every line of `f` is refused.
         a_constant_expression_is_a_constant: ["--emit", "ast"],
+        // At file scope an array's length is a constant with a value, C17
+        // 6.7.6.2 p2, whether it is an object's or a function's return type's:
+        // one that overflows or divides by zero has no defined value (6.6 p4),
+        // and so has one built on it by a binary operator, each of the four
+        // unary ones or a `?:` that evaluates it; one that names a variable is
+        // not a constant, through a pointer as well, and so is one that mixes
+        // the two. A division by zero that is never evaluated, under `||` or
+        // in the arm a `?:` does not take, leaves a value (6.6 p3), and `v1`
+        // and `v2` are controls with `ok`, a block's `w[k]` and a prototype's
+        // `x[m]`, which are variable-length arrays C allows. `q1`'s undeclared
+        // name is reported once, as `SC0301`, and not again as a length. The
+        // carets of the `u` lines leave out their `(`, which is the span
+        // `parser.rs::primary` gives a parenthesised operand, and the type
+        // `--emit ast` spells for them is unbalanced, which is #388; neither
+        // is this check's. Mutation: stop
+        // asking a file-scope length without a value; every `SC0309` goes.
+        // Mutation: ask it at block scope or of a parameter, ask an operand C
+        // does not evaluate for a value, or ask an untyped length; a control
+        // reports. Mutation: leave a function definition's type unasked; the
+        // `fr` report goes. Mutation: word every one alike, stop marking an
+        // expression built on an undefined one through any of the three kinds
+        // of operator or any unary one, or mark a mix of the two; a wording
+        // moves.
+        an_array_length_at_file_scope_has_a_value: ["--emit", "ast"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],
         a_file_scope_declaration_carries_its_initializer: ["--emit", "ast"],
