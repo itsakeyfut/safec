@@ -38,14 +38,17 @@ fn two_types_are_compatible_when_c_says_they_are() {
     let two_ints = ast.push_type(Type::Array {
         element: int,
         length: Some(two),
+        written: Some(Span::new(file, 0, 1)),
     });
     let three_ints = ast.push_type(Type::Array {
         element: also_int,
         length: Some(three),
+        written: Some(Span::new(file, 1, 2)),
     });
     let two_chars = ast.push_type(Type::Array {
         element: character,
         length: Some(two),
+        written: Some(Span::new(file, 0, 1)),
     });
 
     let unnamed = |ty| Declaration {
@@ -198,14 +201,17 @@ fn every_type_is_spelled_the_way_c_declares_it() {
     let array_of_int = ast.push_type(Type::Array {
         element: int,
         length: Some(ten),
+        written: Some(Span::new(file, 0, 2)),
     });
     let incomplete = ast.push_type(Type::Array {
         element: int,
         length: None,
+        written: None,
     });
     let array_of_pointer = ast.push_type(Type::Array {
         element: pointer_to_int,
         length: Some(ten),
+        written: Some(Span::new(file, 0, 2)),
     });
     let pointer_to_array = ast.push_type(Type::Pointer(array_of_int));
 

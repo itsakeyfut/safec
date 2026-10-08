@@ -11,7 +11,7 @@ Declaration an_array_length_at_file_scope_has_a_value.c:10:1 "n" "int"
 Declaration an_array_length_at_file_scope_has_a_value.c:11:1 "q1" "int[nowhere]"
 Declaration an_array_length_at_file_scope_has_a_value.c:12:1 "d" "int[n]"
 Declaration an_array_length_at_file_scope_has_a_value.c:13:1 "e" "int (*)[n]"
-Declaration an_array_length_at_file_scope_has_a_value.c:14:1 "m2" "int[1 << 31) + n]"
+Declaration an_array_length_at_file_scope_has_a_value.c:14:1 "m2" "int[(1 << 31) + n]"
 Function an_array_length_at_file_scope_has_a_value.c:15:1 "fr" "int (*(void))[n]"
   Compound an_array_length_at_file_scope_has_a_value.c:15:20
     Return an_array_length_at_file_scope_has_a_value.c:16:5

@@ -321,7 +321,11 @@ impl Resolver<'_> {
         match self.ast.ty(ty) {
             Type::Int | Type::Char | Type::Void => {}
             Type::Pointer(pointee) => self.walk_type(*pointee, diagnostics),
-            Type::Array { element, length } => {
+            Type::Array {
+                element,
+                length,
+                written: _,
+            } => {
                 if let Some(length) = *length {
                     self.expr(length, diagnostics);
                 }

@@ -2698,9 +2698,8 @@ cases! {
         // `x[m]`, which are variable-length arrays C allows. `q1`'s undeclared
         // name is reported once, as `SC0301`, and not again as a length. The
         // carets of the `u` lines leave out their `(`, which is the span
-        // `parser.rs::primary` gives a parenthesised operand, and the type
-        // `--emit ast` spells for them is unbalanced, which is #388; neither
-        // is this check's. Mutation: stop
+        // `parser.rs::primary` gives a parenthesised operand, which is not
+        // this check's. Mutation: stop
         // asking a file-scope length without a value; every `SC0309` goes.
         // Mutation: ask it at block scope or of a parameter, ask an operand C
         // does not evaluate for a value, or ask an untyped length; a control
@@ -2722,6 +2721,15 @@ cases! {
         abstract_function_type_parameter: ["--emit", "ast"],
         add: ["--emit", "tokens"],
         an_array_length_stops_at_a_comma: ["--emit", "ast"],
+        // A length is spelled as the tokens between its brackets, so one that
+        // starts or ends with a parenthesised operand keeps both parentheses,
+        // and whitespace inside the brackets is not part of it. Mutation:
+        // spell the length expression's span again; `h` keeps a `)` with no
+        // `(`, `f` a `(` with no `)`, and `g` loses both. Mutation: take the span from the `[` to the
+        // `]`; every spelling doubles its brackets. Mutation: end the span at
+        // the length expression's end; `g` and `f`, whose lengths end with a
+        // parenthesis, lose it.
+        an_array_length_is_spelled_as_written: ["--emit", "ast"],
         an_initializer_can_name_what_it_initializes: ["--emit", "ast"],
         an_initializer_stops_at_the_comma: ["--emit", "ast"],
         array_declaration: ["--emit", "ast"],

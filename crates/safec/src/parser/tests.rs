@@ -676,6 +676,7 @@ fn the_last_suffix_written_wraps_the_base_first() {
     let Type::Array {
         element,
         length: Some(outer),
+        ..
     } = parsed.ast.ty(declaration.ty)
     else {
         panic!("{:?}", parsed.ast.ty(declaration.ty));

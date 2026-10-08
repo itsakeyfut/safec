@@ -856,7 +856,12 @@ impl Lowering<'_> {
     fn adjusted_without_loss(&self, written: TypeId) -> bool {
         let mut current = written;
         let mut array = false;
-        while let Type::Array { element, length } = self.ast.ty(current) {
+        while let Type::Array {
+            element,
+            length,
+            written: _,
+        } = self.ast.ty(current)
+        {
             array = true;
             if let Some(length) = *length {
                 let positive = self.types.value(length).is_some_and(|value| value > 0);

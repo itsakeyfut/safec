@@ -1,0 +1,4 @@
+Declaration an_array_length_is_spelled_as_written.c:1:1 "h" "int[(1 + 2) * 3]"
+Declaration an_array_length_is_spelled_as_written.c:2:1 "g" "int[(2)]"
+Declaration an_array_length_is_spelled_as_written.c:3:1 "f" "int[2 * (3)]"
+Declaration an_array_length_is_spelled_as_written.c:4:1 "s" "int[4]"
