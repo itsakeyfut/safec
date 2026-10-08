@@ -149,14 +149,13 @@ fn written_promise(written: Option<Nullability>) -> Option<Promise> {
 /// frontend, or by hand, is answered as it was, which is conservatively.
 ///
 /// **Only a constant expression that already lowered to a constant**, which
-/// `constant` says of the expression as written. `(x, 1)` lowers to the
+/// `constant` says: whether `types.rs` gave the condition a value. `(x, 1)` lowers to the
 /// constant its right operand is, and is not a constant expression: C17 6.6 p3
 /// forbids a comma operator in one, and 6.8.5 p6 lets an implementation assume
 /// a loop on an expression that is not one terminates, so `while ((x, 1)) {}`
 /// is not `while (1) {}` and is left a `Branch`. `1 == 1` and `!0` are
-/// constant expressions this frontend does not evaluate yet, so they stay a
-/// `Branch` and a false report rather than a guess. The arm not taken is still
-/// lowered, into blocks nothing reaches.
+/// constant expressions, given their values by `types.rs`, and are decided
+/// as `1` is. The arm not taken is still lowered, into blocks nothing reaches.
 fn decided(
     condition: Operand,
     constant: bool,
@@ -850,19 +849,17 @@ impl Lowering<'_> {
     /// `T[N]` with `N` a positive number, of an element that is neither
     /// `void` nor a function, are lowered, and anything else is refused as
     /// it was before parameters were adjusted, rather than lowered with its
-    /// length's effects gone. The element and a literal length are
+    /// length's effects gone. The element and a constant length are
     /// `types.rs`'s to refuse first, under C17 6.7.6.2 p1, and this is a
-    /// defence for them; a length that is not a literal is what reaches
-    /// here, `[-1]` among them until #384, and evaluating one that is not a
-    /// constant on entry is #382.
+    /// defence for them; a length that is not a constant is what reaches
+    /// here, and evaluating it on entry is #382.
     fn adjusted_without_loss(&self, written: TypeId) -> bool {
         let mut current = written;
         let mut array = false;
         while let Type::Array { element, length } = self.ast.ty(current) {
             array = true;
             if let Some(length) = *length {
-                let positive = self.constant_expression(length)
-                    && self.types.value(length).is_some_and(|value| value > 0);
+                let positive = self.types.value(length).is_some_and(|value| value > 0);
                 if !positive {
                     return false;
                 }
@@ -1151,10 +1148,11 @@ impl Lowering<'_> {
         // Which operand is the pointer is read off which side holds the
         // literal, and that is sound only because an `Operand::Constant` is
         // always an `int`: a constant expression is the one thing that builds
-        // one, and `types.rs` gives a value only to an expression of `int`. A cast or a string literal would break
-        // that, and `((int *)0)[n]` would fold to `n`, which is a wrong
-        // **value** rather than a wrong report. Neither is implemented; when
-        // one is, this decides by the operand's type instead.
+        // one, and `types.rs` gives a value only to an expression of `int`.
+        // A cast or a string literal would break that, and `((int *)0)[n]`
+        // would fold to `n`, which is a wrong **value** rather than a wrong
+        // report. Neither is implemented; when one is, this decides by the
+        // operand's type instead.
         match op {
             BinOp::Add if matches!(rhs, Operand::Constant(0)) => Some(lhs.clone()),
             BinOp::Add if matches!(lhs, Operand::Constant(0)) => Some(rhs.clone()),
@@ -1651,6 +1649,8 @@ impl Lowering<'_> {
         // constant too. Not the folding of `E + 0` over a non-constant that
         // ADR-0021 declines: nothing here is read or written at run time.
         // Before the descent, so none of its operands is lowered.
+        // A literal is left to its own arm below, which says why its value
+        // is asked there; it would give the same operand here.
         let folded = match self.ast.expr(id) {
             Expr::Number { .. } => None,
             _ => self.types.value(id),
@@ -2202,9 +2202,10 @@ impl Lowering<'_> {
                 // `types.rs` has refused every pairing of typed operands that
                 // is not a pointer and an integer, so the index is the pointer
                 // wherever the base is not; where it is untyped, as in
-                // `x[p - q]`, asking its type below is what reports it. Of the pointer's type rather than the
-                // subscript's: what is worked out here is the address, and the
-                // subscript is what that address reaches.
+                // `x[p - q]`, asking its type below is what reports it. Of the
+                // pointer's type rather than the subscript's: what is worked
+                // out here is the address, and the subscript is what that
+                // address reaches.
                 let base_ty = self.ty_of(base, diagnostics)?;
                 let (base, pointer, offset, addressed) =
                     if matches!(self.unit.ty(base_ty), Ty::Pointer(_)) {

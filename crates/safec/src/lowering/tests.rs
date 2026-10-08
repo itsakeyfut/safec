@@ -1555,12 +1555,12 @@ fn a_call_whose_callee_has_no_type_is_reported() {
 /// where the type check let it through.
 ///
 /// The driver does not lower a tree the type check reported about, so the
-/// element and the literal length `types.rs` refuses under C17 6.7.6.2 p1
+/// element and the constant length `types.rs` refuses under C17 6.7.6.2 p1
 /// never reach this stage in a run. This is the lowering's own defence for
 /// them, asked with that gate open.
 ///
 /// Mutation: in `adjusted_without_loss`, stop asking the element, or stop
-/// asking whether a literal length is positive. That function lowers, the
+/// asking whether a constant length is positive. That function lowers, the
 /// `SC0304` goes and this fails.
 #[test]
 fn a_parameter_whose_array_the_adjustment_would_lose_is_refused() {
@@ -1588,14 +1588,15 @@ fn a_parameter_whose_array_the_adjustment_would_lose_is_refused() {
 /// `Goto` that `decided` makes of `if (1)`. `(x, 1)` is not a constant
 /// expression by 6.6 p3 and stays a `Branch`.
 ///
-/// Mutation: lower a constant expression's operands rather than its value.
-/// A `Binary` appears and the `if` is a `Branch`, and this fails. Mutation:
+/// Mutation: lower a constant expression's operands rather than its value,
+/// or a constant `?:`'s. A `Binary` or a branch appears, and this fails. Mutation:
 /// give a comma a value. The `while` is a `Goto`, and this fails.
 #[test]
 fn a_constant_expression_lowers_to_its_constant() {
     let lowered = lowered(concat!(
         "int f(int *p, int x) {\n",
         "    p = 1 - 1;\n",
+        "    x = 1 ? 2 : 3;\n",
         "    if (1 == 1) {\n",
         "        x = 2;\n",
         "    }\n",
@@ -1606,7 +1607,11 @@ fn a_constant_expression_lowers_to_its_constant() {
         "}\n",
     ));
     let f = function(&lowered, "f");
-    let p = f.parameters().next().expect("`p`");
+    let mut parameters = f.parameters();
+    let (p, x) = (
+        parameters.next().expect("`p`"),
+        parameters.next().expect("`x`"),
+    );
 
     let operations: Vec<&Operation> = f.blocks().flat_map(assigns).collect();
     assert!(
@@ -1614,6 +1619,13 @@ fn a_constant_expression_lowers_to_its_constant() {
             .iter()
             .any(|operation| operation.place == Place::local(p)
                 && operation.value == Rvalue::Use(Operand::Constant(0))),
+        "{operations:?}"
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation.place == Place::local(x)
+                && operation.value == Rvalue::Use(Operand::Constant(2))),
         "{operations:?}"
     );
     assert!(
@@ -1627,6 +1639,22 @@ fn a_constant_expression_lowers_to_its_constant() {
         .filter(|block| matches!(block.terminator, Terminator::Branch { .. }))
         .count();
     assert_eq!(branches, 1, "only the `while` asks at run time");
+}
+
+/// A parameter whose array length is a positive constant loses nothing to
+/// the adjustment, and lowers, whether the length is a literal or not.
+///
+/// Mutation: in `adjusted_without_loss`, ask only of a literal length, or
+/// ask for a length greater than one. `f` or `g` is refused and this fails.
+#[test]
+fn a_parameter_whose_array_length_is_a_positive_constant_lowers() {
+    for (name, text) in [
+        ("f", "int f(int a[1 + 1]) {\n    return 0;\n}\n"),
+        ("g", "int g(int a[1]) {\n    return 0;\n}\n"),
+    ] {
+        let lowered = lowered(text);
+        assert!(function(&lowered, name).is_defined(), "{text}");
+    }
 }
 
 /// A call to a function whose signature was refused says nothing more.
