@@ -365,35 +365,47 @@ fn a_main_that_falls_off_the_end_answers_zero() {
 /// spelling that moved fails, and the message names it.
 #[test]
 fn every_operator_computes_what_c_says() {
-    for (spelling, expected) in [
-        ("7 * 6", 42),
-        ("-7 / 2", -3),
-        ("-7 % 2", -1),
-        ("7 + 6", 13),
-        ("7 - 6", 1),
-        ("1 << 5", 32),
-        ("-8 >> 1", -4),
-        ("7 < 6", 0),
-        ("7 > 6", 1),
-        ("6 <= 6", 1),
-        ("6 >= 7", 0),
-        ("6 == 6", 1),
-        ("6 != 6", 0),
-        ("12 & 10", 8),
-        ("12 ^ 10", 6),
-        ("12 | 10", 14),
-        ("-7", -7),
-        ("!7", 0),
-        ("!0", 1),
-        ("~7", -8),
-        ("+7", 7),
+    for (left, op, right, expected) in [
+        ("7", "*", "6", 42),
+        ("-7", "/", "2", -3),
+        ("-7", "%", "2", -1),
+        ("7", "+", "6", 13),
+        ("7", "-", "6", 1),
+        ("1", "<<", "5", 32),
+        ("-8", ">>", "1", -4),
+        ("7", "<", "6", 0),
+        ("7", ">", "6", 1),
+        ("6", "<=", "6", 1),
+        ("6", ">=", "7", 0),
+        ("6", "==", "6", 1),
+        ("6", "!=", "6", 0),
+        ("12", "&", "10", 8),
+        ("12", "^", "10", 6),
+        ("12", "|", "10", 14),
     ] {
-        // Through a local, so that the operands are read rather than folded
-        // by anything on the way: nothing folds today and this stops that
-        // from being what the test depends on.
-        let program =
-            format!("int main(void) {{\n    int n;\n    n = {spelling};\n    return n;\n}}\n");
-        assert_eq!(ran(&program), Ok(Value::Int(expected)), "{spelling}");
+        // Through locals, so that the operation is the interpreter's: a
+        // constant expression is folded by `types.rs` and the lowering since
+        // #384, and `7 * 6` written as one would never reach `binary`.
+        let program = format!(
+            "int main(void) {{\n    int a;\n    int b;\n    int n;\n    a = {left};\n    b = {right};\n    n = a {op} b;\n    return n;\n}}\n"
+        );
+        assert_eq!(
+            ran(&program),
+            Ok(Value::Int(expected)),
+            "{left} {op} {right}"
+        );
+    }
+    for (op, operand, expected) in [
+        ("-", "7", -7),
+        ("!", "7", 0),
+        ("!", "0", 1),
+        ("~", "7", -8),
+        ("+", "7", 7),
+    ] {
+        let program = format!(
+            "int main(void) {{\n    int a;\n    int n;\n    a = {operand};\n    n = {op}a;\n    return n;\n}}\n"
+        );
+        assert_eq!(ran(&program), Ok(Value::Int(expected)), "{op}{operand}");
     }
 }
 

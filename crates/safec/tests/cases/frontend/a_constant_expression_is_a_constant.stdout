@@ -1,0 +1,40 @@
+Declaration a_constant_expression_is_a_constant.c:1:1 "a1" "int[-1]"
+Declaration a_constant_expression_is_a_constant.c:2:1 "a2" "int[1 - 1]"
+Declaration a_constant_expression_is_a_constant.c:3:1 "q" "int (*)[-1]"
+Declaration a_constant_expression_is_a_constant.c:4:1 "ok" "int[2 * 3]"
+Declaration a_constant_expression_is_a_constant.c:6:1 "g" "int (int *)"
+  Parameter a_constant_expression_is_a_constant.c:6:7 "p" "int *"
+Function a_constant_expression_is_a_constant.c:8:1 "f" "int (int, int *)"
+  Parameter a_constant_expression_is_a_constant.c:8:7 "c" "int"
+  Parameter a_constant_expression_is_a_constant.c:8:14 "p" "int *"
+  Compound a_constant_expression_is_a_constant.c:8:22
+    Declaration a_constant_expression_is_a_constant.c:9:5 "r" "int *"
+      Binary a_constant_expression_is_a_constant.c:9:14 "-"
+        Number a_constant_expression_is_a_constant.c:9:14 "1"
+        Number a_constant_expression_is_a_constant.c:9:18 "1"
+    Expression a_constant_expression_is_a_constant.c:10:5
+      Assign a_constant_expression_is_a_constant.c:10:5 "="
+        Identifier a_constant_expression_is_a_constant.c:10:5 "p"
+        Unary a_constant_expression_is_a_constant.c:10:9 "-"
+          Number a_constant_expression_is_a_constant.c:10:10 "0"
+    Expression a_constant_expression_is_a_constant.c:11:5
+      Call a_constant_expression_is_a_constant.c:11:5
+        Identifier a_constant_expression_is_a_constant.c:11:5 "g"
+        Binary a_constant_expression_is_a_constant.c:11:7 "-"
+          Number a_constant_expression_is_a_constant.c:11:7 "1"
+          Number a_constant_expression_is_a_constant.c:11:11 "1"
+    Expression a_constant_expression_is_a_constant.c:12:5
+      Assign a_constant_expression_is_a_constant.c:12:5 "="
+        Identifier a_constant_expression_is_a_constant.c:12:5 "r"
+        Conditional a_constant_expression_is_a_constant.c:12:9
+          Identifier a_constant_expression_is_a_constant.c:12:9 "c"
+          Identifier a_constant_expression_is_a_constant.c:12:13 "p"
+          Binary a_constant_expression_is_a_constant.c:12:17 "-"
+            Number a_constant_expression_is_a_constant.c:12:17 "1"
+            Number a_constant_expression_is_a_constant.c:12:21 "1"
+    Return a_constant_expression_is_a_constant.c:13:5
+      Binary a_constant_expression_is_a_constant.c:13:12 "=="
+        Identifier a_constant_expression_is_a_constant.c:13:12 "p"
+        Binary a_constant_expression_is_a_constant.c:13:17 "-"
+          Number a_constant_expression_is_a_constant.c:13:17 "1"
+          Number a_constant_expression_is_a_constant.c:13:21 "1"

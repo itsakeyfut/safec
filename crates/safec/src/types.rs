@@ -95,12 +95,12 @@ const RETURN_SHAPE: Code = Code::new("SC0308");
 
 /// A declarator that derives a type C forbids, C17 6.7.6.2 p1 so far: an
 /// array whose element is not a complete object type, or whose length is
-/// not an integer, or is an integer literal that is not greater than zero.
+/// not an integer, or is a constant that is not greater than zero.
 ///
-/// A literal, not every constant: this stage knows the value of a literal
-/// and nothing else, so `[-1]` and `[1 - 1]` are not asked (#384). A zero
-/// length is refused though `clang` takes it as an extension, which
-/// `docs/frontend.md` records.
+/// A constant whose value [`Checker::evaluate`] gives: `[-1]` and `[1 - 1]`
+/// are asked, and one whose evaluation overflows is not. A zero length is
+/// refused though `clang` takes it as an extension, which `docs/frontend.md`
+/// records.
 ///
 /// Not `OPERANDS`, which is an operator's: a declarator is not an operator,
 /// and a code is never reassigned. 6.7.6.3 p1, a function returning an array
@@ -130,13 +130,16 @@ impl Types {
         self.of[id.index()]
     }
 
-    /// What the integer constant `id` is worth, or `None` where it is not a
-    /// constant or is one this stage could not read.
+    /// What the integer constant expression `id` is worth, or `None` where it
+    /// is not one, is a literal this stage could not read, or is one whose
+    /// operation C leaves without a defined result.
     ///
-    /// The two cases are one answer on purpose: a caller has nothing to do
-    /// differently, because a constant this stage could not read was reported
-    /// where it was read, and an expression that is not a constant has no
-    /// value to ask for. Both are "do not build an operand out of this".
+    /// The cases are one answer on purpose: a caller has nothing to do
+    /// differently. A literal that could not be read was reported where it
+    /// was read; an expression that is not a constant has no value to ask
+    /// for; and one that overflows or divides by zero is, for every caller
+    /// today, an expression that is not a constant (#386). All are "do not
+    /// build an operand out of this", which `Checker::evaluate` says more of.
     ///
     /// # Panics
     ///
@@ -184,6 +187,12 @@ pub fn check(
     for id in ast.expr_ids().collect::<Vec<_>>() {
         let ty = checker.type_of(ast, id, diagnostics);
         checker.types[id.index()] = ty;
+        // A literal's value is `constant`'s, set while it was typed; every
+        // other expression's is worked out from its operands' here, before
+        // anything that reads it as a null pointer constant is asked.
+        if ty.is_some() && checker.values[id.index()].is_none() {
+            checker.values[id.index()] = checker.evaluate(ast, id);
+        }
         checker.check_received(ast, id, diagnostics);
     }
 
@@ -396,8 +405,8 @@ impl Checker<'_> {
             return true;
         }
         // "If the expression is a constant expression, it shall have a value
-        // greater than zero." Of a literal only, the one constant whose value
-        // this stage holds; see `DECLARATOR`.
+        // greater than zero." Of a constant whose value this stage knows; see
+        // `DECLARATOR`.
         if let Some(value) = self.values[length.index()].filter(|&value| value <= 0) {
             diagnostics.report(
                 Diagnostic::error("the length of an array is greater than zero")
@@ -1735,15 +1744,8 @@ impl Checker<'_> {
     /// Whether `value` is a null pointer constant, C17 6.3.2.3 p3.
     ///
     /// That paragraph says "an integer constant expression with the value 0",
-    /// and nothing here evaluates a constant expression, so this answers for
-    /// the literal: `0`, `0x0` and `00` are null pointer constants and
-    /// `1 - 1` is one that this reports as a mistake.
-    ///
-    /// The alternative was not reporting an integer assigned to a pointer at
-    /// all, which is the mistake this check exists for. Between missing every
-    /// `p = i` and reporting a `p = 1 - 1` nobody writes, the second costs
-    /// less, and it stops costing anything the day a constant expression can
-    /// be evaluated.
+    /// and [`Checker::evaluate`] is what gives one its value, so `0`, `0x0`,
+    /// `-0` and `1 - 1` are null pointer constants and `i - i` is not.
     ///
     /// Read off the value rather than off the text: `constant` below is the
     /// one place a spelling is turned into a number, so `0x0`, `00` and `0u`
@@ -1751,6 +1753,103 @@ impl Checker<'_> {
     /// text would be a second answer to drift from the first.
     fn is_null_pointer_constant(&self, value: ExprId) -> bool {
         self.values[value.index()] == Some(0)
+    }
+
+    /// The value of an integer constant expression, C17 6.6 p6, or `None`.
+    ///
+    /// Asked of each expression once its operands have theirs, which the
+    /// order `check` walks in gives: a parent is pushed after its operands.
+    /// An expression has a value only when every operand has one and its
+    /// operator is one 6.6 lets a constant expression hold, so an identifier,
+    /// an assignment, a call, `++`, `*`, `&`, a subscript and a comma (6.6
+    /// p3) have none, and nor does anything built on them.
+    ///
+    /// Computed at `int`, the only integer type with a range here, and given
+    /// no value where C gives the operation no defined result: a result
+    /// outside `int` (6.6 p4 for a constant, 6.5 p5 at run time), a division
+    /// or remainder by zero (6.5.5 p5), a shift by a negative amount or by the
+    /// width or more, and a left shift of a negative value or out of range.
+    /// Such an expression has no value and nothing is said about it here, so
+    /// an array length or a null pointer constant that overflows is not
+    /// refused for it (#386).
+    ///
+    /// A right shift of a negative value is implementation-defined (6.5.7
+    /// p5), not undefined, and this implementation has chosen: the backend
+    /// writes `ashr` and the interpreter shifts arithmetically, so `-8 >> 1`
+    /// is `-4` here as it is when the program runs.
+    fn evaluate(&self, ast: &Ast, id: ExprId) -> Option<i128> {
+        let value = |id: ExprId| self.values[id.index()];
+        let int = self.int_range;
+        let fits = |result: i128| int.holds(result).then_some(result);
+        match *ast.expr(id) {
+            Expr::Unary { op, operand, .. } => {
+                let operand = value(operand)?;
+                match op {
+                    UnOp::Plus => Some(operand),
+                    UnOp::Minus => fits(-operand),
+                    UnOp::BitNot => Some(!operand),
+                    UnOp::Not => Some(i128::from(operand == 0)),
+                    UnOp::Deref
+                    | UnOp::AddrOf
+                    | UnOp::PreInc
+                    | UnOp::PreDec
+                    | UnOp::PostInc
+                    | UnOp::PostDec => None,
+                }
+            }
+            Expr::Binary { op, lhs, rhs, .. } => {
+                let (lhs, rhs) = (value(lhs)?, value(rhs)?);
+                let truth = |holds: bool| Some(i128::from(holds));
+                let width = i128::from(int.bits());
+                match op {
+                    BinOp::Mul => fits(lhs * rhs),
+                    BinOp::Div => (rhs != 0).then(|| lhs / rhs).and_then(fits),
+                    // 6.5.5 p6 defines `a % b` only where `a / b` is
+                    // representable, so `INT_MIN % -1` has no value though
+                    // its remainder, zero, would fit.
+                    BinOp::Rem => (rhs != 0)
+                        .then(|| lhs % rhs)
+                        .and_then(|r| fits(lhs / rhs).map(|_| r)),
+                    BinOp::Add => fits(lhs + rhs),
+                    BinOp::Sub => fits(lhs - rhs),
+                    BinOp::Shl => ((0..width).contains(&rhs) && lhs >= 0)
+                        .then(|| lhs << rhs)
+                        .and_then(fits),
+                    // Arithmetic, as the backend's `ashr` is; see above.
+                    BinOp::Shr => (0..width).contains(&rhs).then(|| lhs >> rhs),
+                    BinOp::Lt => truth(lhs < rhs),
+                    BinOp::Gt => truth(lhs > rhs),
+                    BinOp::Le => truth(lhs <= rhs),
+                    BinOp::Ge => truth(lhs >= rhs),
+                    BinOp::Eq => truth(lhs == rhs),
+                    BinOp::Ne => truth(lhs != rhs),
+                    BinOp::BitAnd => Some(lhs & rhs),
+                    BinOp::BitXor => Some(lhs ^ rhs),
+                    BinOp::BitOr => Some(lhs | rhs),
+                    BinOp::LogAnd => truth(lhs != 0 && rhs != 0),
+                    BinOp::LogOr => truth(lhs != 0 || rhs != 0),
+                }
+            }
+            // 6.6 p6 asks that every operand be a constant, the arm not
+            // taken included.
+            Expr::Conditional {
+                condition,
+                then,
+                otherwise,
+                ..
+            } => {
+                let (condition, then, otherwise) =
+                    (value(condition)?, value(then)?, value(otherwise)?);
+                Some(if condition != 0 { then } else { otherwise })
+            }
+            Expr::Number { .. }
+            | Expr::Identifier { .. }
+            | Expr::Assign { .. }
+            | Expr::Comma { .. }
+            | Expr::Subscript { .. }
+            | Expr::Call { .. }
+            | Expr::Error { .. } => None,
+        }
     }
 
     /// The type and the value of an integer constant, C17 6.4.4.1.

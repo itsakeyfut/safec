@@ -562,6 +562,12 @@ cases! {
         a_write_through_a_pointer_that_may_land_elsewhere_keeps_what_was_there: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_an_address_plus_one_is_not_a_write_to_the_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_write_is_the_write_it_is_defined_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And `*(pp + (1 - 1))`, whose offset is a constant expression rather
+        // than the literal: it lowers to the constant it is, so the zero is
+        // folded as `pp[0]`'s is (ADR-0021) and the use after free is seen.
+        // Mutation: lower a constant expression's operands rather than its
+        // value; this goes silent.
+        a_constant_zero_offset_is_the_write_it_is_defined_as: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_zero_added_to_an_integer_keeps_its_operation: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_plus_zero_on_the_left: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_write_through_a_pointer_minus_zero: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -2480,6 +2486,12 @@ cases! {
         // report goes. Mutation: refuse a `char` length, or take a `void` one;
         // `ok2` reports, or the `y` report goes.
         an_array_declarator_is_held_to_its_constraints: ["--emit", "ast"],
+        // A constant expression has the value C gives it (C17 6.6 p6): `-1`
+        // and `1 - 1` are lengths 6.7.6.2 p1 refuses, and `1 - 1` and `-0`
+        // are null pointer constants (6.3.2.3 p3) wherever a pointer meets
+        // one. `ok` is the control. Mutation: give only a literal a value;
+        // the three declarations build and every line of `f` is refused.
+        a_constant_expression_is_a_constant: ["--emit", "ast"],
         a_declaration_is_not_a_body: ["--emit", "ast"],
         a_failed_parse_reports_no_names: ["--emit", "ast"],
         a_file_scope_declaration_carries_its_initializer: ["--emit", "ast"],
@@ -2675,7 +2687,8 @@ cases! {
         // C17 6.5.5 to 6.5.14, one clause per operator: the same `SC0306`, for
         // a binary operator. Every row but `p == 1 - 1` is an error under
         // `clang --target=x86_64-unknown-linux-gnu -std=c17 -pedantic-errors`,
-        // and that one is `docs/frontend.md`'s null pointer constant table. The
+        // and that one is a null pointer constant compared, which C allows and
+        // this accepts since constant expressions are evaluated (#384). The
         // control holds every pairing the clauses allow, so a clause answered
         // too strictly fails as surely as one answered too loosely; the unit
         // test `a_binary_operator_answers_for_every_operator_and_operand` holds
