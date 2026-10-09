@@ -354,8 +354,10 @@ impl Punct {
     /// and doing so. It holds across both tables, so `%:%:` is `##` and `<%`
     /// is `{` rather than `<` then `%`.
     ///
-    /// The spelling is returned rather than left to the caller to look up,
-    /// so that advancing by the wrong length does not compile.
+    /// The spelling is returned so that the caller advances by what was
+    /// written rather than by [`Punct::as_str`], which is shorter for a
+    /// digraph; `digraphs_are_the_punctuators_they_stand_for` is what
+    /// fails if it does not.
     pub fn starting(text: &str) -> Option<(Self, &'static str)> {
         let plain = Self::ALL
             .iter()
@@ -365,13 +367,11 @@ impl Punct {
             .iter()
             .map(|&(spelled, punct)| (punct, spelled))
             .find(|(_, spelled)| text.starts_with(spelled));
-        // Every digraph begins with `<`, `:` or `%`, each a punctuator alone,
-        // so where a digraph matches a plain one does too, and the question
-        // is only which is longer.
-        match (plain, digraph) {
-            (Some(plain), Some(digraph)) if digraph.1.len() > plain.1.len() => Some(digraph),
-            (plain, _) => plain,
-        }
+        // A digraph that matches is always the longer: the plain punctuators
+        // that share its first character are that character alone or that
+        // character followed by `<` or `=` (`<<=`, `<<`, `<=`, `%=`), and no
+        // digraph's second character is either.
+        digraph.or(plain)
     }
 
     /// Whether a punctuator can begin with `c`.

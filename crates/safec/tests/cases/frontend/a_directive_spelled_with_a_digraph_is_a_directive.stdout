@@ -5,4 +5,6 @@ a_directive_spelled_with_a_digraph_is_a_directive.c:3:5 identifier "x"
 a_directive_spelled_with_a_digraph_is_a_directive.c:3:7 punct "%:%:"
 a_directive_spelled_with_a_digraph_is_a_directive.c:3:12 identifier "y"
 a_directive_spelled_with_a_digraph_is_a_directive.c:3:13 punct ";"
-a_directive_spelled_with_a_digraph_is_a_directive.c:4:1 eof
+a_directive_spelled_with_a_digraph_is_a_directive.c:4:1 punct "%:%:"
+a_directive_spelled_with_a_digraph_is_a_directive.c:4:6 identifier "x"
+a_directive_spelled_with_a_digraph_is_a_directive.c:5:1 eof
