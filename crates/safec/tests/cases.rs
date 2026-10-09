@@ -2873,7 +2873,8 @@ cases! {
         // and the prototypes before and after are not, so the IR is never
         // built. Mutation: drop the call to `define` in `Resolver::item`;
         // nothing reports it here and the lowering's `fill_function` panics.
-        // Mutation: swap the two labels' spans; the carets move.
+        // Mutation: swap the two labels' spans; the labels trade places and
+        // the header points at the first.
         a_function_defined_twice_is_a_redefinition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
