@@ -2764,13 +2764,14 @@ cases! {
         an_array_declarator_is_held_to_its_constraints: ["--emit", "ast"],
         // C17 6.7.9 p3: a function, `void` and a variable length array are
         // refused an initializer at file scope and in a block, each once under
-        // `SC0310`, and an array of unknown size is not, which p3 allows.
-        // `u` and `bu` are still accepted in silence: 6.7.9 p16 asks for a
-        // brace-enclosed list there, which is a Semantics paragraph and not
-        // this check's. Mutation: stop asking whether the declared type is a
+        // `SC0310`, and an array of unknown size or of a constant length is
+        // not, which p3 allows. `u`, `s`, `bu` and `bs` are still accepted in
+        // silence: 6.7.9 p16 asks for a brace-enclosed list there, which is a
+        // Semantics paragraph and not this check's. Mutation: stop asking whether the declared type is a
         // function, or `void`; `f` and `bf`, or `v` and `bv`, go. Mutation:
         // stop asking whether an array's length has a value; `va` goes, and
-        // refusing every array instead makes `u` and `bu` report. Mutation:
+        // refusing every array with a length makes `s` and `bs` report, and
+        // every array, `u` and `bu` too. Mutation:
         // walk only the items, or only the statements; the block's reports,
         // or the file's, go.
         only_an_object_can_be_initialized: ["--emit", "ast"],

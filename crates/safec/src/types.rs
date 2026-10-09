@@ -409,19 +409,22 @@ impl Checker<'_> {
     /// whose length has no value; at file scope the same declarator is also
     /// 6.7.6.2 p2's, and both are reported, being two constraints.
     fn check_initialized(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        let mut initialized: Vec<&InitDeclarator> = Vec::new();
+        let mut declared: Vec<&InitDeclarator> = Vec::new();
         for item in ast.items() {
             if let Item::Declaration { declarators, .. } = item {
-                initialized.extend(declarators.iter().filter(|d| d.init.is_some()));
+                declared.extend(declarators);
             }
         }
         for id in ast.stmt_ids() {
             if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
-                initialized.extend(declarators.iter().filter(|d| d.init.is_some()));
+                declared.extend(declarators);
             }
         }
 
-        for declarator in initialized {
+        for declarator in declared {
+            let Some(init) = declarator.init else {
+                continue;
+            };
             let declaration = &declarator.declaration;
             let ty = declaration.ty;
             let name = declaration.name.unwrap_or(declaration.span);
@@ -441,9 +444,6 @@ impl Checker<'_> {
                     format!("`{called}` is a variable length array, which cannot be initialized")
                 }
                 Type::Array { .. } | Type::Int | Type::Char | Type::Pointer(_) => continue,
-            };
-            let Some(init) = declarator.init else {
-                continue;
             };
             diagnostics.report(
                 Diagnostic::error(message)
