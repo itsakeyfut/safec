@@ -2766,10 +2766,6 @@ impl Checker<'_> {
     /// is `-4` here as it is when the program runs.
     fn evaluate(&self, ast: &Ast, id: ExprId) -> Option<i128> {
         let value = |id: ExprId| self.values[id.index()];
-        // A constant expression in shape, with a value or without one. What
-        // an operand C does not evaluate has to be (6.6 p3, p6), since it is
-        // never asked for a value.
-        let known = |id: ExprId| self.values[id.index()].is_some() || self.undefined[id.index()];
         let int = self.int_range;
         let fits = |result: i128| int.holds(result).then_some(result);
         match *ast.expr(id) {
@@ -2799,7 +2795,7 @@ impl Checker<'_> {
                     _ => None,
                 };
                 if let Some(answer) = decided {
-                    return known(rhs).then_some(answer);
+                    return self.unevaluated_constant(ast, rhs).then_some(answer);
                 }
                 let (lhs, rhs) = (left, value(rhs)?);
                 let truth = |holds: bool| Some(i128::from(holds));
@@ -2848,7 +2844,7 @@ impl Checker<'_> {
                 } else {
                     (otherwise, then)
                 };
-                if !known(skipped) {
+                if !self.unevaluated_constant(ast, skipped) {
                     return None;
                 }
                 value(taken)
@@ -2862,6 +2858,43 @@ impl Checker<'_> {
             | Expr::Call { .. }
             | Expr::Error { .. } => None,
         }
+    }
+
+    /// Whether `id`, an operand C does not evaluate, is what a constant
+    /// expression may hold there: constant in shape, as `known` asks, or
+    /// built of such operands by an operator `evaluate` reads or by a comma,
+    /// which C17 6.6 p3 allows "within a subexpression that is not
+    /// evaluated". So `0 && (1, 2)` is a constant, and `0 && x` is not,
+    /// since 6.6 p6 asks every operand of an integer constant expression to
+    /// be a constant whether or not it is evaluated.
+    ///
+    /// A loop over a stack rather than a recursion, since a comma or an
+    /// operator chain is as long as the source makes it.
+    fn unevaluated_constant(&self, ast: &Ast, id: ExprId) -> bool {
+        let mut pending = vec![id];
+        while let Some(id) = pending.pop() {
+            if self.values[id.index()].is_some() || self.undefined[id.index()] {
+                continue;
+            }
+            match *ast.expr(id) {
+                Expr::Comma { lhs, rhs, .. } | Expr::Binary { lhs, rhs, .. } => {
+                    pending.extend([lhs, rhs]);
+                }
+                Expr::Unary {
+                    op: UnOp::Plus | UnOp::Minus | UnOp::BitNot | UnOp::Not,
+                    operand,
+                    ..
+                } => pending.push(operand),
+                Expr::Conditional {
+                    condition,
+                    then,
+                    otherwise,
+                    ..
+                } => pending.extend([condition, then, otherwise]),
+                _ => return false,
+            }
+        }
+        true
     }
 
     /// The type and the value of an integer constant, C17 6.4.4.1.
