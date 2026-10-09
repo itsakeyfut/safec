@@ -469,7 +469,6 @@ a declaration. They are gaps rather than decisions, and each one is a program
 | `int a[3];`, or any array or function type | the IR holds `int`, `char`, `void` and pointers to them |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
 | `1 = 2` | C17 6.5.16 p2 wants a modifiable lvalue and nothing checks that yet, so the first thing to notice is a stage that needs somewhere to write |
-| a second definition of one name | C17 6.9 p5 allows one, and nothing before this stage counts them |
 
 The reason a refusal is reported rather than lowered around is that the IR has
 no way to say a function has a hole in it: a body with a piece missing and a
