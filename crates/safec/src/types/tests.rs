@@ -1644,3 +1644,449 @@ fn a_constant_expression_has_the_value_c_gives_it() {
         assert_eq!(checked.types.value(assigned), value, "{written}");
     }
 }
+
+/// An object of struct type is typed, and what C says of a struct is asked
+/// of it: assigned from a struct of its tag and of nothing else, and an
+/// operand of no operator, no condition and no `*` (C17 6.5.16.1 p1, 6.5.3,
+/// 6.5.5 to 6.5.14, 6.8.4.1 p1).
+///
+/// Mutation: answer `assignable` true for every struct pair; `s = t` goes
+/// silent. Mutation: give `OperandClass::of` no class for a struct, as
+/// before; `s + 1` goes silent. Mutation: refuse only `void` as a
+/// condition; `if (s)` goes silent. Mutation: drop the struct arm in
+/// `increment`; `s++` goes silent. Each fails this.
+#[test]
+fn a_struct_is_typed_and_held_to_what_c_says_of_one() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nstruct T {\n    int b;\n};\nint f(struct S s, struct T t, struct S u) {\n    int x = s;\n    s = t;\n    s = u;\n    if (s) {\n        return 1;\n    }\n    s++;\n    -s;\n    x = s + 1;\n    return *s;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "cannot initialize `int` with `struct S`",
+            "cannot assign `struct T` to `struct S`",
+            "`if` cannot take `struct S`",
+            "`++` cannot take `struct S`",
+            "`-` cannot take `struct S`",
+            "`+` cannot take `struct S` and `int`",
+            "`*` cannot take `struct S`",
+        ]
+    );
+}
+
+/// Pointers to structs are compared, subtracted, chosen between and
+/// assigned by their tag at every place the type checker asks
+/// `Ast::compatible`: two tags are refused at each, and one tag at none.
+///
+/// Mutation: pass `|_, _| true` for `same_struct` at any of the five calls
+/// in this module that compare pointers; that call accepts two tags, and
+/// this fails. The two that compare struct values, in `assignable` and
+/// `conditional`, are held by
+/// `a_struct_is_an_operand_of_no_operator_and_is_held_to_its_tag`.
+#[test]
+fn pointers_to_structs_are_held_to_their_tag_everywhere_types_are_compared() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nstruct T {\n    int b;\n};\nint f(struct S *p, struct S *r, struct T *q, int c) {\n    int x = p == r;\n    x = p < r;\n    x = p - r;\n    p = c ? p : r;\n    p = r;\n    x = p == q;\n    x = p < q;\n    x = p - q;\n    p = c ? p : q;\n    p = q;\n    return x;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`==` cannot take `struct S *` and `struct T *`",
+            "`<` cannot take `struct S *` and `struct T *`",
+            "`-` cannot take `struct S *` and `struct T *`",
+            "`?:` cannot take `struct S *` and `struct T *`",
+            "cannot assign `struct T *` to `struct S *`",
+        ]
+    );
+}
+
+/// A step of a pointer to a struct asks whether the struct is complete
+/// where the step is written, not where the pointer was declared: `p + 1`
+/// above `struct S`'s definition is refused, and below it is not (C17 6.5.6
+/// p2, 6.7.2.1 p8).
+///
+/// Mutation: ask completeness where the type was written, by answering
+/// `complete_here` with `Resolution::complete`; the second step is refused
+/// too. Mutation: answer every struct complete in `unsteppable`; the first
+/// is not refused. Either fails this.
+#[test]
+fn a_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
+    let checked = checked(
+        "struct S;\nstruct S *p;\nvoid f(void) {\n    p + 1;\n}\nstruct S {\n    int a;\n};\nvoid g(void) {\n    p + 1;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        ["`+` cannot take `struct S *` and `int`"]
+    );
+}
+
+/// An object whose struct is not complete where C needs it is reported: in
+/// a block at the end of its declarator (C17 6.7 p7), although `S` is
+/// defined below it, and at file scope by the end of the translation unit
+/// (6.9.2 p2). One completed later at file scope, and one with no tag, are
+/// not.
+///
+/// Mutation: ask a file-scope object at its declarator as a block's is;
+/// `u` is reported. Mutation: ask a block's object by the end of the
+/// translation unit as a file-scope one is; `s` goes silent. Mutation: ask
+/// only whether the tag is defined; the struct with no tag is reported.
+/// Mutation: drop the check; `s` and `t` go silent. Mutation: change either
+/// note; its row fails. Each fails this.
+#[test]
+fn an_object_of_an_incomplete_struct_is_reported() {
+    let checked = checked(
+        "struct S;\nvoid f(void) {\n    struct S s;\n}\nstruct T t;\nstruct U u;\nstruct U {\n    int a;\n};\nstruct {\n    int x;\n} v;\nstruct S {\n    int x;\n};\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`t` has incomplete type `struct T`",
+            "`s` has incomplete type `struct S`",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0315", "SC0315"]);
+    assert_eq!(
+        checked.notes(),
+        [
+            "an object at file scope has a type completed by the end of the translation unit (C17 6.9.2 p2)",
+            "an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)",
+        ]
+    );
+}
+
+/// What C needs complete of a function is held to it where it is written: a
+/// definition's parameter (C17 6.7.6.3 p4) and what it returns (6.9.1 p3),
+/// and what a call returns, where the call is (6.5.2.2 p1). A declaration
+/// that is not a definition may name an incomplete struct, and a call below
+/// the definition of `S` is complete.
+///
+/// Mutation: collect no parameter of a definition; `s` goes silent.
+/// Mutation: drop `report_incomplete_return`; `g` goes silent. Mutation:
+/// drop the check in `call`; `h()` in `k` goes silent. Mutation: ask the
+/// call with `Resolution::complete`, where `h`'s type was written; `h()` in
+/// `m` is reported too. Each fails this.
+#[test]
+fn a_function_is_held_to_what_c_needs_complete_of_it() {
+    let checked = checked(
+        "struct S;\nint f(struct S s) {\n    return 0;\n}\nstruct S g(void) {\n}\nstruct S h(void);\nint q(struct S s);\nvoid k(void) {\n    h();\n}\nstruct S {\n    int a;\n};\nvoid m(void) {\n    h();\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "this call returns incomplete type `struct S`",
+            "`g` returns incomplete type `struct S`",
+            "`s` has incomplete type `struct S`",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0315", "SC0315", "SC0315"]);
+}
+
+/// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1): the wrong
+/// one is refused as the program's, and the right one as this compiler's,
+/// until #423.
+///
+/// Mutation: refuse every member access as not yet checked, whatever its
+/// base; `.` on a pointer is called this compiler's gap. Mutation: refuse
+/// every typed base as the program's, as before; `s.a` is called a fault.
+/// Mutation: answer an array base `false` whatever its element; `a->a`,
+/// which is C after 6.3.2.1 p3, is called a fault. Mutation: say nothing of
+/// a base with no type; `(i - j).a`, left untyped as this compiler's gap,
+/// goes silent. Each fails this.
+#[test]
+fn a_member_access_of_the_wrong_shape_is_the_programs_and_of_the_right_one_is_not_yet() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + p->a + p.a + s->a + a->a + a.a + (i - j).a;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "cannot check `.` yet",
+            "cannot check `->` yet",
+            "`.` needs a struct, and this is `struct S *`",
+            "`->` needs a pointer to a struct, and this is `struct S`",
+            "cannot check `->` yet",
+            "`.` needs a struct, and this is `struct S[2]`",
+            "cannot check `.` yet",
+        ]
+    );
+}
+
+/// An array's element is a complete object type (C17 6.7.6.2 p1), and a
+/// struct is one only where its definition has closed: `struct S a[2];`
+/// above it is refused and below it is not.
+///
+/// Mutation: answer a struct element complete in `report_array`; `a` goes
+/// silent. Mutation: answer it incomplete; `b` is refused too. Either fails
+/// this.
+#[test]
+fn an_array_of_a_struct_needs_the_struct_complete_where_it_is_written() {
+    let checked =
+        checked("struct S;\nstruct S a[2];\nstruct S {\n    int x;\n};\nstruct S b[2];\n");
+
+    assert_eq!(
+        checked.messages(),
+        ["an array cannot have `struct S` as its element"]
+    );
+}
+
+/// A struct is an operand of no operator `binary`, `unary` or `increment`
+/// asks, and no condition (C17 6.5.3 to 6.5.15, 6.8.4 p1, 6.8.5 p2): each
+/// in a program of its own, with the message, the code and the primary
+/// label written out. It is assigned, passed and chosen between only beside
+/// a struct of its own tag (6.5.16.1 p1, 6.5.2.2 p2, 6.5.15 p3).
+///
+/// A row is `(statement, message, code, primary label)`, and an empty
+/// message is a statement that must stay silent.
+///
+/// Mutation: let `&&` and `||` take anything but `void`, as they did; their
+/// rows go silent. Mutation: answer a struct on the left `false` in
+/// `report_operands`; `s * 1` points at `1`. Mutation: let `!`, `~` or `+`
+/// take a struct; its row goes silent. Mutation: let `==` or `<` take two
+/// structs; its row goes silent. Mutation: answer `Some(true)` for a struct
+/// place in `assignable` or `compound_assignable`; `s = 1` or `s += 1` goes
+/// silent. Mutation: pass `|_, _| true` for `same_struct` in
+/// `conditional`; `c ? s : t` goes silent. Mutation: refuse a struct as an
+/// `if` condition only; the `while`, `for` and `?:` rows go silent.
+/// Mutation: report the struct arm of `increment` under another code; its
+/// row fails. Each fails this.
+#[test]
+fn a_struct_is_an_operand_of_no_operator_and_is_held_to_its_tag() {
+    for (statement, message, code, primary) in [
+        (
+            "x = s && 1;",
+            "`&&` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = 1 || s;",
+            "`||` cannot take `int` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s == u;",
+            "`==` cannot take `struct S` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s < u;",
+            "`<` cannot take `struct S` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s * 1;",
+            "`*` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = 1 * s;",
+            "`*` cannot take `int` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = !s;",
+            "`!` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = ~s;",
+            "`~` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = +s;",
+            "`+` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "s++;",
+            "`++` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "s = 1;",
+            "cannot assign `int` to `struct S`",
+            "SC0302",
+            "this is `int`",
+        ),
+        (
+            "s += 1;",
+            "`+=` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "s = c ? s : t;",
+            "`?:` cannot take `struct S` and `struct T`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = c ? s : 1;",
+            "`?:` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "while (s) {}",
+            "`while` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "for (; s;) {}",
+            "`for` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s ? 1 : 2;",
+            "`?:` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "h(t);",
+            "cannot pass `struct T` to a parameter of type `struct S`",
+            "SC0302",
+            "this is `struct T`",
+        ),
+        ("s = c ? s : u;", "", "", ""),
+        ("s = u;", "", "", ""),
+        ("h(u);", "", "", ""),
+    ] {
+        let checked = checked(&format!(
+            "struct S {{
+    int a;
+}};
+struct T {{
+    int b;
+}};
+void h(struct S s);
+int f(struct S s, struct T t, struct S u, int c) {{
+    int x;
+    {statement}
+    return x;
+}}
+"
+        ));
+
+        if message.is_empty() {
+            assert_eq!(checked.messages(), Vec::<&str>::new(), "{statement}");
+        } else {
+            assert_eq!(checked.messages(), [message], "{statement}");
+            assert_eq!(checked.codes(), [code], "{statement}");
+            assert_eq!(checked.labels().first(), Some(&primary), "{statement}");
+        }
+    }
+}
+
+/// Every step of a pointer to a struct asks whether the struct is complete
+/// where the step is written, at each of the places one is spelled: `+` on
+/// either side, `-` by an integer and between two pointers, `++`, `[]` on
+/// either side, and `+=`. `B` closes after `A`, so its step is numbered
+/// apart from the first definition's.
+///
+/// Mutation: pass `|_| true` for completeness at any one of those places;
+/// its row in `f` goes silent, or for `+=` in `compound_assignment`, which
+/// says why, loses its note. `p - p` asks both pointees, and either alone
+/// still refuses one struct, so the mutation there is to both. Mutation:
+/// record every definition as closed at step 0 in `close_definition`; `B`
+/// is complete in `f`, and every row goes silent. Either fails this.
+#[test]
+fn every_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
+    let steps = "    p + 1;\n    1 + p;\n    p - 1;\n    p - p;\n    p++;\n    p[0];\n    0[p];\n    p += 1;\n";
+    let checked = checked(&format!(
+        "struct A;\nstruct B;\nstruct B *p;\nstruct A {{\n    int a;\n}};\nvoid f(void) {{\n{steps}}}\nstruct B {{\n    int b;\n}};\nvoid g(void) {{\n{steps}}}\n"
+    ));
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`+` cannot take `struct B *` and `int`",
+            "`+` cannot take `int` and `struct B *`",
+            "`-` cannot take `struct B *` and `int`",
+            "`-` cannot take `struct B *` and `struct B *`",
+            "`++` cannot take `struct B *`",
+            "`[]` cannot take `struct B *` and `int`",
+            "`[]` cannot take `int` and `struct B *`",
+            "`+=` cannot take `struct B *` and `int`",
+        ]
+    );
+    let note = |clause: &str| {
+        format!(
+            "a pointer steps by the size of what it points to, and a struct that is not complete here has no size (C17 {clause})"
+        )
+    };
+    assert_eq!(
+        checked.notes(),
+        [
+            note("6.5.6 p2"),
+            note("6.5.6 p2"),
+            note("6.5.6 p3"),
+            note("6.5.6 p3"),
+            note("6.5.2.4 p2"),
+            note("6.5.2.1 p1"),
+            note("6.5.2.1 p1"),
+            note("6.5.16.2 p1"),
+        ]
+    );
+}
+
+/// A struct defined in a declaration's specifier is complete in every
+/// length its declarator writes, since the specifier is written first: `p
+/// + 1` in `arr`'s length steps a complete `struct S *` (C17 6.7.2.1 p8).
+///
+/// Mutation: drop the step in `Resolver::walk` that walks the specifier's
+/// definition first; the step is refused as over an incomplete struct, and
+/// this fails.
+#[test]
+fn a_struct_defined_in_a_specifier_is_complete_in_its_declarators_lengths() {
+    let checked = checked(
+        "void f(void) {\n    struct S *p;\n    struct S {\n        int a;\n    } arr[(p + 1, 2)];\n}\n",
+    );
+
+    assert_eq!(checked.messages(), Vec::<&str>::new());
+}
+
+/// A member's array length is a constant, in a block as at file scope,
+/// since a member has no variably modified type (C17 6.7.6.2 p2, 6.7.2.1
+/// p9); and a definition shared by two declarators has its members asked
+/// once.
+///
+/// Mutation: hold a member to what a block's array is held to; the first
+/// row goes silent. Mutation: drop the member's own message; both say what
+/// a file-scope array is told. Mutation: walk a definition's members once
+/// per declarator in `check_declarators`; `a[0]` is reported twice, and a
+/// chain of such definitions is walked in time exponential in its depth.
+/// Each fails this.
+#[test]
+fn a_member_is_held_to_what_c_says_of_a_member_once_per_definition() {
+    let checked = checked(
+        "void f(int n) {\n    struct S {\n        int a[n];\n    } s;\n}\nint m;\nstruct T {\n    int b[m];\n};\nstruct U {\n    int a[0];\n} x, y;\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "a member of a struct cannot have an array length that is not a constant",
+            "the length of an array is greater than zero",
+            "a member of a struct cannot have an array length that is not a constant",
+        ]
+    );
+}

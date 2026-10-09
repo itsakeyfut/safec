@@ -149,6 +149,11 @@ pub struct Resolution {
     /// The struct types that are complete where they are written. See
     /// [`Resolution::complete`].
     complete: HashSet<TypeId>,
+    /// The step of the walk at which each struct definition closed, and the
+    /// step at which each expression was walked. See
+    /// [`Resolution::complete_at`].
+    closed_at: HashMap<TagId, u32>,
+    walked_at: HashMap<ExprId, u32>,
     /// Every binding whose name's standing declaration, when its scope
     /// closed, is another binding. See [`Resolution::standing`].
     standing: HashMap<BindingId, BindingId>,
@@ -233,12 +238,44 @@ impl Resolution {
     /// Asked of a type this stage walked, which is every type written in the
     /// tree.
     pub fn complete(&self, ast: &Ast, ty: TypeId) -> bool {
+        self.complete_where(ast, ty, &|current| self.complete.contains(&current))
+    }
+
+    /// [`Resolution::complete`], asked where the expression `at` is rather
+    /// than where `ty` was written: a struct is complete there when its
+    /// definition closed before the walk reached `at`. So with `struct S *p;`
+    /// declared above `struct S`'s definition, `p + 1` is a step over an
+    /// incomplete type above the definition and a complete one below it
+    /// (C17 6.7.2.1 p8), although `p`'s type was written once.
+    ///
+    /// An expression the walk did not reach, which none should be, is
+    /// answered where `ty` was written.
+    pub fn complete_at(&self, ast: &Ast, ty: TypeId, at: ExprId) -> bool {
+        let Some(&walked) = self.walked_at.get(&at) else {
+            return self.complete(ast, ty);
+        };
+        self.complete_where(ast, ty, &|current| {
+            self.tag_of
+                .get(&current)
+                .and_then(|tag| self.closed_at.get(tag))
+                .is_some_and(|&closed| closed < walked)
+        })
+    }
+
+    /// Whether `ty` is a complete object type, a struct being complete when
+    /// `struct_complete` says so of it.
+    fn complete_where(
+        &self,
+        ast: &Ast,
+        ty: TypeId,
+        struct_complete: &dyn Fn(TypeId) -> bool,
+    ) -> bool {
         let mut current = ty;
         loop {
             match ast.ty(current) {
                 Type::Int | Type::Char | Type::Pointer(_) => return true,
                 Type::Void | Type::Function { .. } => return false,
-                Type::Struct { .. } => return self.complete.contains(&current),
+                Type::Struct { .. } => return struct_complete(current),
                 Type::Array {
                     element, length, ..
                 } => {
@@ -311,6 +348,8 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
             tags: Vec::new(),
             tag_of: HashMap::new(),
             complete: HashSet::new(),
+            closed_at: HashMap::new(),
+            walked_at: HashMap::new(),
             standing: HashMap::new(),
             declared: HashMap::new(),
         },
@@ -321,6 +360,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         children: Vec::new(),
         walked: HashSet::new(),
         completed: HashSet::new(),
+        step: 0,
         definitions: HashMap::new(),
     };
 
@@ -377,6 +417,10 @@ struct Resolver<'a> {
     /// makes a struct written after the `}` complete and one written before it,
     /// or inside it, not (C17 6.7.2.1 p8).
     completed: HashSet<TagId>,
+    /// How many struct definitions the walk has closed, which is what an
+    /// expression and a definition are numbered by. See
+    /// [`Resolution::complete_at`].
+    step: u32,
     /// Where every function defined so far was named, by its spelling, which
     /// is what a second definition of one is compared with. A declaration,
     /// `int f(void);`, is never here: 6.9 p5 counts definitions, and a
@@ -618,6 +662,31 @@ impl Resolver<'_> {
     fn walk(&mut self, root: TypeId, skip_root_parameters: bool, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let mut pending = vec![Step::Type(root)];
+        // The specifier is written before the declarator, so a struct defined
+        // there is closed before any length in the declarator is walked:
+        // `struct S { int a; } arr[(p + 1, 2)]` steps a `struct S *` that is
+        // complete. The tree holds the specifier at its leaf, below every
+        // length, so it is walked first; reached again from the root, its tag
+        // is bound and its members walked already, and nothing is repeated.
+        let mut leaf = root;
+        loop {
+            leaf = match ast.ty(leaf) {
+                Type::Pointer(next) | Type::Array { element: next, .. } => *next,
+                Type::Function { returns, .. } => *returns,
+                Type::Int | Type::Char | Type::Void | Type::Struct { .. } => break,
+            };
+        }
+        if leaf != root
+            && matches!(
+                ast.ty(leaf),
+                Type::Struct {
+                    members: Some(_),
+                    ..
+                }
+            )
+        {
+            pending.push(Step::Type(leaf));
+        }
         while let Some(step) = pending.pop() {
             let ty = match step {
                 Step::Type(ty) => ty,
@@ -660,7 +729,7 @@ impl Resolver<'_> {
                 }
                 // A member's array lengths are expressions too, walked once
                 // per definition, for the reason `walked` gives. Its name is
-                // not looked up: what it means is #27's. The tag is, and is
+                // not looked up: what it means is #423's. The tag is, and is
                 // bound before its members are walked, because C17 6.2.1 p7
                 // starts a tag's scope just after it appears: `struct L {
                 // struct L *next; }` is one type.
@@ -735,6 +804,8 @@ impl Resolver<'_> {
         let tag = self.resolution.tag(definition);
         self.completed.insert(tag);
         self.resolution.complete.insert(definition);
+        self.resolution.closed_at.insert(tag, self.step);
+        self.step += 1;
     }
 
     /// The constraints on one struct's member list.
@@ -893,6 +964,7 @@ impl Resolver<'_> {
 
         while let Some(id) = pending.pop() {
             let expr = ast.expr(id);
+            self.resolution.walked_at.insert(id, self.step);
 
             if let Expr::Identifier { span } = *expr {
                 match self.lookup(span) {

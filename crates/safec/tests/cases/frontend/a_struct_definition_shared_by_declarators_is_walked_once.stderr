@@ -12,27 +12,3 @@ error[SC0301]: use of undeclared identifier `k`
    │                  ┬  
    │                  ╰── no declaration for this name is in scope
 ───╯
-error[SC0304]: cannot check something of type `struct S` yet
-   ╭─[ a_struct_definition_shared_by_declarators_is_walked_once.c:1:24 ]
-   │
- 1 │ struct S { int a[n]; } x, y;
-   │                        ┬  
-   │                        ╰── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
-error[SC0304]: cannot check something of type `struct S` yet
-   ╭─[ a_struct_definition_shared_by_declarators_is_walked_once.c:1:27 ]
-   │
- 1 │ struct S { int a[n]; } x, y;
-   │                           ┬  
-   │                           ╰── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
-error[SC0304]: cannot check something of type `struct T` yet
-   ╭─[ a_struct_definition_shared_by_declarators_is_walked_once.c:2:1 ]
-   │
- 2 │ struct T { int b[k]; };
-   │ ───────────┬───────────  
-   │            ╰───────────── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's

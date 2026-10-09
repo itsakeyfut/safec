@@ -1,0 +1,14 @@
+Target "x86_64-pc-windows-msvc"
+Function a_struct_program_is_typed_and_refused_by_the_lowering.c:17:5 "main"
+  Local "_0" "int" return
+  Block "bb0" entry
+    Operation a_struct_program_is_typed_and_refused_by_the_lowering.c:17:5 generated
+      Destination "_0"
+      Use
+        Constant 0
+    Operation a_struct_program_is_typed_and_refused_by_the_lowering.c:18:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_struct_program_is_typed_and_refused_by_the_lowering.c:18:12 generated
+    Return

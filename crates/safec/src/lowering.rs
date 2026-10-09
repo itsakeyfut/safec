@@ -1108,8 +1108,8 @@ impl Lowering<'_> {
                 // asked the IR to hold either an array or a function yet, and
                 // #74, which is the issue for what it cannot say, is about
                 // storage duration rather than about these.
-                // A struct does not get here past the type checker, which
-                // refuses every one; answered as the others are all the same.
+                // A struct is typed by the type checker and reaches here in
+                // any program that declares one, and the IR holds none.
                 Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
@@ -1559,7 +1559,7 @@ impl Lowering<'_> {
     ///
     /// The type checker refuses every one first, and a program refused
     /// anything there is not lowered, so none reaches here today. Answered as
-    /// a report rather than a panic, so that #27, which gives a member access
+    /// a report rather than a panic, so that #423, which gives a member access
     /// a type, is not obliged to change this stage in the same step.
     fn member_not_yet(&self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<()> {
         diagnostics.report(
