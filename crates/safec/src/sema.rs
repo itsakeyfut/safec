@@ -1198,4 +1198,86 @@ mod tests {
         );
         assert_eq!(twice.messages(), ["redefinition of `struct S`"]);
     }
+
+    /// A tag first written in a prototype's parameters is declared in that
+    /// prototype's scope (C17 6.7.2.3 p8), which ends with the declarator,
+    /// so a definition after it is a different tag.
+    ///
+    /// Mutation: open only the ordinary scope around the parameters in
+    /// `Resolver::declaration`, by `self.scopes.push(Vec::new())` and
+    /// `self.scopes.pop()`; the prototype's `S` lands at file scope, the
+    /// definition completes it, and this fails.
+    #[test]
+    fn a_tag_first_written_in_a_prototype_is_not_the_one_defined_after_it() {
+        let resolved = resolved("void f(struct S *p);\nstruct S { int a; };\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_ne!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+    }
+
+    /// A use in a block finds a tag declared in a scope outside it (C17
+    /// 6.7.2.3 p8 only declares a new one when none is visible).
+    ///
+    /// Mutation: look a use up in the innermost scope only, by making
+    /// `tag_visible` return `self.tag_here(name)`; the use in `f` declares a
+    /// second `S`, and this fails.
+    #[test]
+    fn a_use_in_a_block_is_the_tag_declared_outside_it() {
+        let resolved =
+            resolved("struct S { int a; };\nint f(void) {\n    struct S *p;\n    return 0;\n}\n");
+
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+    }
+
+    /// `struct S;` where `S` is declared already in the same scope declares
+    /// nothing new (C17 6.7.2.3 p4): one type, before and after it.
+    ///
+    /// Mutation: declare a new tag at every `struct S;`, by replacing
+    /// `self.tag_here(*tag)` in `Resolver::specified` with `None`; the `S`
+    /// after it is a second tag, and this fails.
+    #[test]
+    fn a_declaration_of_a_tag_alone_after_its_definition_is_that_tag() {
+        let resolved = resolved("struct S { int a; };\nstruct S;\nstruct S *p;\n");
+
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 2));
+    }
+
+    /// A tag completed after a use records where, so a third `struct U { }`
+    /// is a redefinition, and [`Resolution::tag_declaration`] answers for
+    /// the tag asked about. `T` comes first so that `U` is not the first tag.
+    ///
+    /// Mutations: leave `defined` unset when a definition completes a tag in
+    /// `bind_tag`, and the redefinition is not reported; answer `&self.tags[0]`
+    /// in `tag_declaration`, and `T`'s span comes back. Both fail this.
+    #[test]
+    fn a_tag_completed_after_a_use_is_defined_there() {
+        let resolved = resolved(
+            "struct T { int t; };\nstruct U *p;\nstruct U { int a; };\nstruct U { int b; };\n",
+        );
+
+        assert_eq!(resolved.messages(), ["redefinition of `struct U`"]);
+        let tag = resolved.resolution.tag_declaration(resolved.tag_at("U", 0));
+        assert_eq!(tag.name, Some(resolved.occurrence("U", 0)));
+        assert_eq!(tag.defined, Some(resolved.occurrence("U", 1)));
+    }
+
+    /// Every struct with no tag is a type of its own, since nothing can name
+    /// it again (C17 6.7.2.3 p5).
+    ///
+    /// Mutation: bind every struct with no tag after the first to `TagId(0)`
+    /// in `bind_tag`; `x` and `y` are one type, and this fails.
+    #[test]
+    fn structs_with_no_tag_are_each_a_type_of_their_own() {
+        let resolved = resolved("struct { int a; } x;\nstruct { int b; } y;\n");
+
+        let untagged: Vec<TagId> = resolved
+            .ast
+            .type_ids()
+            .filter(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { tag: None, .. }))
+            .map(|ty| resolved.resolution.tag(ty).expect("every struct is bound"))
+            .collect();
+        assert_eq!(untagged.len(), 2);
+        assert_ne!(untagged[0], untagged[1]);
+    }
 }
