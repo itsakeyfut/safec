@@ -111,6 +111,17 @@ const RETURN_SHAPE: Code = Code::new("SC0308");
 /// or a function, is the same kind of fault and would go here.
 const DECLARATOR: Code = Code::new("SC0309");
 
+/// Something initialized that C17 6.7.9 p3 says cannot be: a function, an
+/// object of incomplete type, or a variable length array. Only an array of
+/// unknown size or a complete object type that is not a variable length
+/// array may have an initializer.
+///
+/// Not `MISMATCH`, because no value of any type would make `int f(void) = 1;`
+/// right: what has to change is the `=` or the declaration. Not `DECLARATOR`,
+/// because `int f(void);` is a correct declarator, and the fault is
+/// initializing it.
+const INITIALIZED: Code = Code::new("SC0310");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -208,6 +219,7 @@ pub fn check(
     // After every expression is typed, because a length's type and value are
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
+    checker.check_initialized(ast, diagnostics);
 
     Types {
         of: checker.types,
@@ -385,6 +397,87 @@ impl Checker<'_> {
                 }
             }
         }
+    }
+
+    /// Hold every declarator that has an initializer to C17 6.7.9 p3, and
+    /// report one that initializes what cannot be under [`INITIALIZED`].
+    ///
+    /// At file scope and in a block alike, since p3 is about the entity and
+    /// not where it is. `assignable` answers nothing for a function, `void` or
+    /// an array target, so without this `int f(void) = 1;` was accepted in
+    /// silence and its initializer dropped. A variable length array is one
+    /// with a length down its chain of elements that has no value, which
+    /// [`Checker::is_variable_length`] asks; at file scope the same declarator
+    /// is also 6.7.6.2 p2's, and both are reported, being two constraints.
+    ///
+    /// **A length whose evaluation overflows is answered as variable too.**
+    /// `int a[1 << 31] = 1;` in a block breaks 6.6 p4 rather than p3, and
+    /// nothing else refuses that length in a block, so calling it variable is
+    /// the wrong reason given for a right refusal, where leaving it out would
+    /// accept it in silence.
+    fn check_initialized(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        let mut declared: Vec<&InitDeclarator> = Vec::new();
+        for item in ast.items() {
+            if let Item::Declaration { declarators, .. } = item {
+                declared.extend(declarators);
+            }
+        }
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+                declared.extend(declarators);
+            }
+        }
+
+        for declarator in declared {
+            let Some(init) = declarator.init else {
+                continue;
+            };
+            let declaration = &declarator.declaration;
+            let ty = declaration.ty;
+            let name = declaration.name.unwrap_or(declaration.span);
+            let called = self.sources.snippet(name);
+            // Every variant named, so that a type added later is asked here.
+            let message = match ast.ty(ty) {
+                Type::Function { .. } => {
+                    format!("`{called}` is a function, and only an object can be initialized")
+                }
+                Type::Void => format!(
+                    "`{called}` has type `void`, which is incomplete, and only a complete object can be initialized"
+                ),
+                Type::Array { .. } if self.is_variable_length(ast, ty) => {
+                    format!("`{called}` is a variable length array, which cannot be initialized")
+                }
+                Type::Array { .. } | Type::Int | Type::Char | Type::Pointer(_) => continue,
+            };
+            diagnostics.report(
+                Diagnostic::error(message)
+                    .with_code(INITIALIZED)
+                    .with_label(Label::primary(
+                        name,
+                        format!("declared as `{}`", self.spelled(ast, ty)),
+                    ))
+                    .with_label(Label::secondary(ast.expr(init).span(), "this initializer"))
+                    .with_note("C17 6.7.9 p3"),
+            );
+        }
+    }
+
+    /// Whether `ty` is a variable length array type: an array, any of whose
+    /// lengths down the chain of elements has no value. C17 6.7.6.2 p4 makes
+    /// an array whose element is one a variable length array too, so
+    /// `int a[2][n]` is one although its own length is a constant.
+    fn is_variable_length(&self, ast: &Ast, ty: TypeId) -> bool {
+        let mut current = ty;
+        while let Type::Array {
+            element, length, ..
+        } = ast.ty(current)
+        {
+            if length.is_some_and(|length| self.values[length.index()].is_none()) {
+                return true;
+            }
+            current = *element;
+        }
+        false
     }
 
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
