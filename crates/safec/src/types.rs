@@ -916,7 +916,10 @@ impl Checker<'_> {
             // already, and nothing could be said about it that #27 would not
             // have to take back.
             Expr::Identifier { .. } => {
-                let ty = self.resolution.binding(self.resolution.resolved(id)?).ty;
+                // The standing declaration's type, not the one the use
+                // resolved to: see `Resolution::standing`.
+                let declared = self.resolution.standing(self.resolution.resolved(id)?);
+                let ty = self.resolution.binding(declared).ty;
                 (!holds_a_struct(ast, ty)).then_some(ty)
             }
             Expr::Member {
@@ -2025,8 +2028,9 @@ impl Checker<'_> {
         // Only a callee that is a name has a declaration to point at, so
         // `(*g)(1, 2)` and `(&g)(1, 2)` are reported without one.
         if let Some(binding) = self.resolution.resolved(callee) {
+            let declared = self.resolution.standing(binding);
             diagnostic = diagnostic.with_label(Label::secondary(
-                self.resolution.binding(binding).name,
+                self.resolution.binding(declared).name,
                 format!("declared with {expected} parameters here"),
             ));
         }

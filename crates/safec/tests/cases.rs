@@ -1060,10 +1060,6 @@ cases! {
         a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A call through `void g();` passes nothing for a parameter the body
-        // believes. Mutation: zip the arguments with the parameters in
-        // `report_arguments`; only this case fails, and it goes silent.
-        a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `g(*pp)` asks two questions at one caret: whether `pp` is null, and
         // whether what it holds is. Mutation: skip an argument with a
         // projection in `report_arguments`; only this case fails, losing the
@@ -3304,6 +3300,14 @@ cases! {
         subscript: ["--emit", "ast"],
         too_few_arguments: ["--emit", "ast"],
         too_many_arguments: ["--emit", "ast"],
+        // A name is typed by its standing declaration, the prototype, rather
+        // than the `int g();` the use resolves to, so a pointer for its `int`
+        // parameter and a call with none are both refused, and the label is
+        // on the prototype. A call written before the prototype is held to
+        // it too. Mutation: type a name by the binding it resolves to in
+        // `types.rs`; all three are silent.
+        a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one: ["--emit", "ast"],
+        a_call_written_before_the_prototype_is_checked_against_it: ["--emit", "ast"],
         undeclared_identifier: ["--emit", "ast"],
         unexpected_character: ["--emit", "tokens"],
         unexpected_characters: ["--emit", "tokens"],

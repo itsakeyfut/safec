@@ -19,8 +19,8 @@
 
 use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{
-    BinOp, Block, BlockId, Element, Function, LocalId, Operand, Operation, Origin, Place,
-    Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
+    BinOp, Block, BlockId, Element, Function, LocalId, Operand, Operation, Origin, Parameter,
+    Place, Projection, Promise, Rvalue, Terminator, TranslationUnit, Ty, TyId, UnOp,
 };
 use safec_ir::nullability;
 use safec_ir::source::{SourceMap, Span};
@@ -1499,4 +1499,60 @@ fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy() {
             "the remedy that settles both, through memory first: {through_memory_first}"
         );
     }
+}
+
+/// A call that passes nothing for a `_Nonnull` parameter is not proved: the
+/// parameter holds nothing anybody chose, and the body believes it all the
+/// same (C17 6.5.2.2 p6).
+///
+/// **This compiler's own frontend no longer produces it.** A call is type
+/// checked against the prototype the translation unit ends with, so `void
+/// g(); void h(void) { g(); } void g(int * _Nonnull p);` is too few arguments
+/// before anything is lowered. A frontend that checks a call against the
+/// declaration in scope at it, as C does, lowers that call, and so would the
+/// Clang adapter.
+///
+/// Mutation: zip the arguments with the parameters in
+/// `nullability::report_arguments`; nothing is concluded and this fails.
+#[test]
+fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
+    let (_sources, names) = sources();
+
+    let mut unit = TranslationUnit::new(
+        Target::from_triple("x86_64-pc-windows-msvc").expect("a known triple"),
+    );
+    let int = unit.push_type(Ty::Int);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let callee = unit.push_function(Function::declaration_with_parameters(
+        names.function,
+        int,
+        [Parameter {
+            ty: pointer,
+            nonnull: Some(Promise::Declared(names.at[1])),
+        }],
+    ));
+    let mut function = Function::new(names.function, int, vec![]);
+
+    let entry = function.reserve_block();
+    let after = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Call {
+                callee,
+                arguments: vec![],
+                destination: None,
+                then: Some(after),
+                origin: Origin::Written(names.at[0]),
+            },
+        },
+    );
+    function.fill_block(after, returns());
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].conclusion, Conclusion::Unknown);
+    assert_eq!(found[0].at, names.at[0]);
 }
