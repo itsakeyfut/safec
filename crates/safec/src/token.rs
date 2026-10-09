@@ -365,10 +365,12 @@ impl Punct {
             .iter()
             .map(|&(spelled, punct)| (punct, spelled))
             .find(|(_, spelled)| text.starts_with(spelled));
+        // Every digraph begins with `<`, `:` or `%`, each a punctuator alone,
+        // so where a digraph matches a plain one does too, and the question
+        // is only which is longer.
         match (plain, digraph) {
             (Some(plain), Some(digraph)) if digraph.1.len() > plain.1.len() => Some(digraph),
-            (Some(plain), _) => Some(plain),
-            (None, digraph) => digraph,
+            (plain, _) => plain,
         }
     }
 
