@@ -1465,7 +1465,7 @@ impl Checker<'_> {
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     // Both pointees are asked: `int[3]` is compatible with
                     // `int[]`, and only one of them is complete.
-                    if ast.compatible(left, right) {
+                    if ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b)) {
                         Some(
                             pointee_steppable(ast, left, true)
                                 .and(pointee_steppable(ast, right, false)),
@@ -1482,7 +1482,8 @@ impl Checker<'_> {
             BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    ast.compatible(left, right) && !matches!(ast.ty(left), Type::Function { .. })
+                    ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
+                        && !matches!(ast.ty(left), Type::Function { .. })
                 }
                 _ => false,
             })),
@@ -1491,7 +1492,7 @@ impl Checker<'_> {
             BinOp::Eq | BinOp::Ne => Some(pairing(match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => true,
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
-                    ast.compatible(left, right)
+                    ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
                         || is_void_beside_an_object(ast, left, right)
                         || is_void_beside_an_object(ast, right, left)
                 }
@@ -1551,7 +1552,9 @@ impl Checker<'_> {
                 let right_void = matches!(ast.ty(*right_pointee), Type::Void);
                 let left_function = matches!(ast.ty(*left_pointee), Type::Function { .. });
                 let right_function = matches!(ast.ty(*right_pointee), Type::Function { .. });
-                if ast.compatible(left, right) || (left_void && !right_function) {
+                if ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
+                    || (left_void && !right_function)
+                {
                     Some(left)
                 } else if right_void && !left_function {
                     Some(right)
@@ -2117,7 +2120,7 @@ impl Checker<'_> {
             // p1's pointer case, with the `void *` half of it. Qualifiers are
             // a thing this compiler cannot yet write.
             (Type::Pointer(target_pointee), Type::Pointer(source_pointee)) => Some(
-                ast.compatible(target, source)
+                ast.compatible(target, source, &|a, b| self.resolution.same_struct(a, b))
                     || matches!(ast.ty(*target_pointee), Type::Void)
                     || matches!(ast.ty(*source_pointee), Type::Void),
             ),

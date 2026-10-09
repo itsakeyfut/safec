@@ -2915,6 +2915,11 @@ cases! {
         // trade places. Mutation: compare with the latest declaration; the
         // third is compatible with it and nothing is said.
         declarations_of_one_name_with_conflicting_types: ["--emit", "ast"],
+        // C17 6.2.7 p1: `p` declared as a pointer to two tags is `SC0313`,
+        // both struct types spelled; the struct gate refuses each struct as
+        // well, until #419. Mutation: answer every struct pair compatible in
+        // `Ast::compatible`; the conflict goes silent.
+        declarations_of_one_name_as_two_struct_types_conflict: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
         // bit-field, named or not (p9). Mutation: send a member with no

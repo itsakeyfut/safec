@@ -1,0 +1,43 @@
+error[SC0313]: conflicting types for `p`
+   ╭─[ declarations_of_one_name_as_two_struct_types_conflict.c:4:11 ]
+   │
+ 3 │ struct A *p;
+   │           ┬  
+   │           ╰── previously declared as `struct A *`
+ 4 │ struct B *p;
+   │           ┬  
+   │           ╰── declared here as `struct B *`
+───╯
+  = note: C17 6.7 p4
+error[SC0304]: cannot check something of type `struct A` yet
+   ╭─[ declarations_of_one_name_as_two_struct_types_conflict.c:1:1 ]
+   │
+ 1 │ struct A;
+   │ ────┬────  
+   │     ╰────── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct B` yet
+   ╭─[ declarations_of_one_name_as_two_struct_types_conflict.c:2:1 ]
+   │
+ 2 │ struct B;
+   │ ────┬────  
+   │     ╰────── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct A` yet
+   ╭─[ declarations_of_one_name_as_two_struct_types_conflict.c:3:11 ]
+   │
+ 3 │ struct A *p;
+   │           ┬  
+   │           ╰── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct B` yet
+   ╭─[ declarations_of_one_name_as_two_struct_types_conflict.c:4:11 ]
+   │
+ 4 │ struct B *p;
+   │           ┬  
+   │           ╰── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's

@@ -271,6 +271,17 @@ impl Resolution {
             .unwrap_or_else(|| panic!("the struct at {ty:?} was bound to no tag"))
     }
 
+    /// Whether the struct types at `left` and `right` are one type, which
+    /// they are exactly when they are one tag (C17 6.2.7 p1). What a caller
+    /// passes [`Ast::compatible`] as its `same_struct`.
+    ///
+    /// # Panics
+    ///
+    /// As [`Resolution::tag`] does, if either is not a struct this stage bound.
+    pub fn same_struct(&self, left: TypeId, right: TypeId) -> bool {
+        self.tag(left) == self.tag(right)
+    }
+
     /// The tag `id` names.
     ///
     /// # Panics
@@ -1060,8 +1071,8 @@ impl Resolver<'_> {
     ///
     /// Two declarations that are allowed refer to one entity, and 6.7 p4
     /// wants their types compatible. The new one is compared with the name's
-    /// standing declaration, see [`Declared`], and a type that reaches a
-    /// struct is not compared, see [`reaches_a_struct`].
+    /// standing declaration, see [`Declared`]; two struct types are
+    /// compatible when they are one tag, see [`Resolution::same_struct`].
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
@@ -1088,10 +1099,7 @@ impl Resolver<'_> {
                     "declared",
                     "C17 6.7 p3",
                 ));
-            } else if !earlier.standing.reaches_a_struct
-                && !reaches_a_struct(self.ast, ty)
-                && !self.agrees(earlier.standing, ty, definition)
-            {
+            } else if !self.agrees(earlier.standing, ty, definition) {
                 conflicts = true;
                 diagnostics.report(conflicting(
                     self.sources,
@@ -1154,7 +1162,6 @@ impl Resolver<'_> {
         };
         Standing {
             id,
-            reaches_a_struct: reaches_a_struct(self.ast, ty),
             accepts_no_prototype,
             defined_without_a_prototype: definition && !has_a_prototype(self.ast, ty),
         }
@@ -1185,12 +1192,13 @@ impl Resolver<'_> {
                     parameters: Parameters::Unspecified,
                 },
             ) if pointers(self.ast, earlier) == pointers(self.ast, ty) => {
-                self.ast.compatible(*left_returns, *right_returns)
-                    && if definition {
-                        prototype.is_empty()
-                    } else {
-                        standing.accepts_no_prototype
-                    }
+                self.ast.compatible(*left_returns, *right_returns, &|a, b| {
+                    self.resolution.same_struct(a, b)
+                }) && if definition {
+                    prototype.is_empty()
+                } else {
+                    standing.accepts_no_prototype
+                }
             }
             (
                 Type::Function {
@@ -1202,9 +1210,14 @@ impl Resolver<'_> {
                     ..
                 },
             ) if standing.defined_without_a_prototype => {
-                prototype.is_empty() && self.ast.compatible(earlier, ty)
+                prototype.is_empty()
+                    && self
+                        .ast
+                        .compatible(earlier, ty, &|a, b| self.resolution.same_struct(a, b))
             }
-            _ => self.ast.compatible(earlier, ty),
+            _ => self
+                .ast
+                .compatible(earlier, ty, &|a, b| self.resolution.same_struct(a, b)),
         }
     }
 
@@ -1274,8 +1287,6 @@ struct Declared {
 #[derive(Clone, Copy)]
 struct Standing {
     id: BindingId,
-    /// See [`reaches_a_struct`].
-    reaches_a_struct: bool,
     /// Whether a declaration with no prototype agrees with this one's
     /// parameters, which by C17 6.7.6.3 p15 is whether none of them is
     /// changed by the default argument promotions. True where this has no
@@ -1317,40 +1328,6 @@ fn has_a_prototype(ast: &Ast, ty: TypeId) -> bool {
             ..
         }
     )
-}
-
-/// Whether `ty` reaches a struct: along its pointers, arrays and return type
-/// as `types.rs`'s `holds_a_struct` walks, and also through a prototype's
-/// parameters, because [`Ast::compatible`] compares those too.
-///
-/// A type that does is not compared, because `compatible` answers every pair
-/// of structs incompatible until #27 gives a tag its meaning, and comparing
-/// would report `struct S *p; struct S *p;`, which is valid C. #27 removes
-/// this along with the struct gate. A recursion only into parameter lists,
-/// which the parser bounds.
-fn reaches_a_struct(ast: &Ast, ty: TypeId) -> bool {
-    let mut current = ty;
-    loop {
-        match ast.ty(current) {
-            Type::Struct { .. } => return true,
-            Type::Pointer(inner) | Type::Array { element: inner, .. } => current = *inner,
-            Type::Function {
-                returns,
-                parameters,
-            } => {
-                if let Parameters::Prototype(parameters) = parameters {
-                    if parameters
-                        .iter()
-                        .any(|parameter| reaches_a_struct(ast, parameter.ty))
-                    {
-                        return true;
-                    }
-                }
-                current = *returns;
-            }
-            Type::Int | Type::Char | Type::Void => return false,
-        }
-    }
 }
 
 /// `name`, declared at `again` as one type, where it was declared at `first`
@@ -2101,9 +2078,8 @@ mod tests {
     /// a `char` parameter beside `()`, which the default promotions part.
     ///
     /// Mutation: drop the comparison in `Resolver::declare`; nothing is
-    /// reported and this fails. Mutation: let `reaches_a_struct` answer true
-    /// of `void`; `h` is not compared. Mutation: record every standing
-    /// declaration as accepting `()`; `k` is not reported.
+    /// reported and this fails. Mutation: record every standing declaration
+    /// as accepting `()`; `k` is not reported.
     #[test]
     fn declarations_of_one_name_with_incompatible_types_are_reported() {
         for (text, name) in [
@@ -2171,21 +2147,6 @@ mod tests {
         );
     }
 
-    /// A type that reaches a struct, along its spine or through a parameter,
-    /// is not compared until #27 says when two struct types are one.
-    ///
-    /// Mutation: drop the struct test in `Resolver::declare`; both pairs are
-    /// reported. Mutation: walk only the spine in `reaches_a_struct`, as
-    /// `types.rs`'s `holds_a_struct` does; `f` is reported. Either fails this.
-    #[test]
-    fn a_type_that_reaches_a_struct_is_not_compared() {
-        let resolved = resolved(
-            "struct S;\nstruct S *p;\nstruct S *p;\nint f(struct S *q);\nint f(struct S *q);\n",
-        );
-
-        assert_eq!(resolved.messages(), Vec::<&str>::new());
-    }
-
     /// A definition with an empty identifier list agrees only with a
     /// prototype of no parameters, in either order (C17 6.7.6.3 p15).
     ///
@@ -2251,22 +2212,6 @@ mod tests {
     #[test]
     fn a_declaration_hiding_one_of_another_type_is_not_compared_with_it() {
         let resolved = resolved("int x;\nint main(void) {\n    char x;\n    return 0;\n}\n");
-
-        assert_eq!(resolved.messages(), Vec::<&str>::new());
-    }
-
-    /// A pair is not compared when either side reaches a struct, whichever
-    /// is first, and through an array or a return type as well as a pointer.
-    ///
-    /// Mutation: drop the test of the standing side; `p` is reported.
-    /// Mutation: drop the test of the new side; `q` is reported. Mutation:
-    /// let `reaches_a_struct` stop at an array; `a` is reported. Mutation:
-    /// let it stop at a function's return; `f` is reported.
-    #[test]
-    fn a_pair_is_not_compared_when_either_side_reaches_a_struct() {
-        let resolved = resolved(
-            "struct S;\nstruct S *p;\nint p;\nint q;\nstruct S *q;\nstruct S *a[2];\nint a[2];\nstruct S *f(void);\nint f(void);\n",
-        );
 
         assert_eq!(resolved.messages(), Vec::<&str>::new());
     }
@@ -2630,5 +2575,31 @@ mod tests {
             .find(|&ty| matches!(resolved.ast.ty(ty), Type::Int))
             .expect("`int` is in the tree");
         let _ = resolved.resolution.tag(int);
+    }
+
+    /// Two struct types are one type exactly when they are one tag (C17
+    /// 6.2.7 p1): one tag declared twice is not reported, through a pointer
+    /// or a parameter; two tags are; a struct against `int` is; and two
+    /// structs with no tag, each its own type (6.7.2.3 p5), are, whatever
+    /// their members.
+    ///
+    /// Mutation: answer every struct pair compatible in `Ast::compatible`;
+    /// `q`, `x` go silent. Mutation: answer every pair incompatible, as
+    /// before #417; `p` and `f` are reported. Mutation: let a struct match a
+    /// type that is not one; `r` goes silent. Each fails this.
+    #[test]
+    fn two_struct_types_are_one_when_they_are_one_tag() {
+        let resolved = resolved(
+            "struct S;\nstruct T;\nstruct S *p;\nstruct S *p;\nint f(struct S *a);\nint f(struct S *b);\nstruct S *q;\nstruct T *q;\nstruct U {\n    int u;\n} r;\nint r;\nstruct {\n    int a;\n} x;\nstruct {\n    int a;\n} x;\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            [
+                "conflicting types for `q`",
+                "conflicting types for `r`",
+                "conflicting types for `x`",
+            ]
+        );
     }
 }
