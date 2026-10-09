@@ -10,7 +10,10 @@
 //! [`LineCol`](safec_ir::source::LineCol).
 //!
 //! `ariadne` breaks lines on seven separators, among them a lone `\r` and a
-//! vertical tab; the source map breaks only on `\n`. And a file ending in `\n`
+//! vertical tab; the source map breaks only on `\n`. `echoed` replaces every
+//! one of them but `\r` before `ariadne` sees it, the vertical tab as a
+//! control character and U+2028 and U+2029 as characters that break a line
+//! (`is_obeyed`), so a lone `\r` is the separator still counted differently. And a file ending in `\n`
 //! has a final empty line for the source map, deliberately, so that it is
 //! numbered the way an editor numbers it. `ariadne` has no such line, so an
 //! offset at end of file is numbered differently by the two. That last one is
