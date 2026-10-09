@@ -1,0 +1,3 @@
+Declaration a_nested_parameter_list_is_held_to_its_own_scope.c:1:1 "f" "void (void (*)(int, int))"
+  Parameter a_nested_parameter_list_is_held_to_its_own_scope.c:1:8 "cb" "void (*)(int, int)"
+Declaration a_nested_parameter_list_is_held_to_its_own_scope.c:2:1 "p" "void (*)(int[m])"
