@@ -38,6 +38,38 @@ error[SC0304]: cannot check something of type `struct T` yet
    │          ╰── declared here
 ───╯
   = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct D` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:16:25 ]
+    │
+ 16 │ struct D { int a, b; } *d;
+    │                         ┬  
+    │                         ╰── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct (anonymous)` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:17:19 ]
+    │
+ 17 │ struct { int x; } anonymous;
+    │                   ────┬────  
+    │                       ╰────── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:18:10 ]
+    │
+ 18 │ struct S many[3];
+    │          ──┬─  
+    │            ╰─── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:19:10 ]
+    │
+ 19 │ struct S make(void);
+    │          ──┬─  
+    │            ╰─── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
 error[SC0304]: cannot check something of type `struct S` yet
    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:5:14 ]
    │
@@ -45,6 +77,30 @@ error[SC0304]: cannot check something of type `struct S` yet
    │              ┬  
    │              ╰── declared here
 ───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct U` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:22:5 ]
+    │
+ 22 │     struct U;
+    │     ────┬────  
+    │         ╰────── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct E` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:23:26 ]
+    │
+ 23 │     struct E { int e; } *e;
+    │                          ┬  
+    │                          ╰── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:24:20 ]
+    │
+ 24 │     for (struct S *r = 0; 0;) {
+    │                    ┬  
+    │                    ╰── declared here
+────╯
   = note: structs are read, and what a tag and its members mean is #27's
 error[SC0304]: cannot check something of type `struct S` yet
    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:4:17 ]
@@ -68,5 +124,13 @@ error[SC0304]: cannot check something of type `struct S` yet
  12 │ int h(struct S *a, struct S *b) {
     │                              ┬  
     │                              ╰── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:20:14 ]
+    │
+ 20 │ int (*takes)(struct S *);
+    │              ─────┬────  
+    │                   ╰────── declared here
 ────╯
   = note: structs are read, and what a tag and its members mean is #27's

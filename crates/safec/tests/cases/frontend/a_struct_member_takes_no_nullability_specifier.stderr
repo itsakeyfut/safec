@@ -1,0 +1,7 @@
+error[SC0204]: `_Nonnull` cannot apply here
+   ╭─[ a_struct_member_takes_no_nullability_specifier.c:1:17 ]
+   │
+ 1 │ struct S { int *_Nonnull p; };
+   │                 ────┬───  
+   │                     ╰───── this is not the pointer a parameter holds or a function returns
+───╯

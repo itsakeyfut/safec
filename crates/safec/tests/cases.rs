@@ -2795,14 +2795,27 @@ cases! {
         // only its parameters are reported: a name whose type holds a struct
         // is given no type. Mutation: give it its type; `a = b` is also
         // refused as `SC0302`, since nothing yet says two structs are one.
+        // The rest is every place a struct is read: two members in one
+        // declaration, a definition with a declarator at file scope and in a
+        // block, a tag declared in a block, a `for` and a parenthesised
+        // declarator beginning with `struct`, a struct with no tag, an array
+        // of one and a function returning one, each used. Mutation: stop
+        // reading a member list's `,`; `int a, b` is `expected ;`. Mutation:
+        // give a declaration with declarators its first declarator's type as
+        // `specified`; `D`'s and `E`'s fields go. Mutation: test a `for` or a
+        // parenthesised declarator for a specifier with `specifier` alone;
+        // `for` or `takes` is a syntax error. Mutation: let `holds_a_struct`
+        // stop at an array or a function; `many[0]` or `make()` is typed and
+        // refused again by a rule that does not know a struct.
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
         // A struct with no tag declares nothing when nothing else is
         // declared (6.7 p2). Mutation: let any struct through without a
         // declarator; this loses its `SC0206`.
         a_struct_with_no_tag_and_no_declarator_declares_nothing: ["--emit", "ast"],
         // A declaration with no declarator has only its specifiers' type, and
-        // the gate asks it, so a member breaking a constraint is not
-        // accepted unchecked. Mutation: leave a declaration's `specified`
+        // the gate asks it, so a struct whose member breaks a constraint is
+        // refused by the gate rather than accepted. The member itself is not
+        // checked: nothing below a struct is, until #27. Mutation: leave a declaration's `specified`
         // type out of the gate; this exits 0.
         a_struct_whose_member_breaks_a_constraint_is_still_refused: ["--emit", "ast"],
         // 6.7.2.1 p1's grammar asks for a member, and `clang
@@ -2837,6 +2850,20 @@ cases! {
         // `struct` with no tag and no member list names nothing. Mutation:
         // accept it; this loses its `SC0201`.
         a_struct_with_neither_tag_nor_members_is_refused: ["--emit", "ast"],
+        // A member's pointer promises nothing yet, so a nullability
+        // specifier in one is refused as in a block. Mutation: let
+        // `Declares::Member` take one; this is read.
+        a_struct_member_takes_no_nullability_specifier: ["--emit", "ast"],
+        // A hatch is a function definition, and a declaration of a tag has
+        // no body. Mutation: drop the attribute check on that path; the hatch
+        // is read onto `struct S`.
+        a_hatch_on_a_declaration_of_a_tag_is_refused: ["--emit", "ast"],
+        // Three hundred `->` in a row are one thing not checked yet, and are
+        // reported once, at the first. A report each, with a span growing by
+        // one access each, was output and time quadratic in the chain.
+        // Mutation: report a member access whose base is one; three hundred
+        // reports.
+        a_chain_of_member_accesses_is_refused_once: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
         // bit-field, named or not (p9). Mutation: send a member with no

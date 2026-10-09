@@ -1,0 +1,4 @@
+struct S *p;
+int f(void) {
+    return p->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m->m;
+}

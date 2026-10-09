@@ -947,6 +947,13 @@ impl Checker<'_> {
                     );
                     return None;
                 }
+                // A base that is itself a member access was refused there, and
+                // `a.m.m.m` is one thing this cannot check, not three: a report
+                // each, with a span growing by one access each, was output and
+                // time quadratic in the chain.
+                if matches!(ast.expr(base), Expr::Member { .. }) {
+                    return None;
+                }
                 diagnostics.report(
                     Diagnostic::error(format!("cannot check `{operator}` yet"))
                         .with_code(NOT_YET)
