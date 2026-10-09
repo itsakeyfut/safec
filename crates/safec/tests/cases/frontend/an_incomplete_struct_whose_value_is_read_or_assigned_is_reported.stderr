@@ -1,4 +1,4 @@
-error[SC0315]: `struct S` is not complete here, and cannot be assigned to
+error[SC0315]: `struct S` is not complete here, and cannot be modified
    ╭─[ an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:5 ]
    │
  3 │     *p = *q;

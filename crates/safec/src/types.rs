@@ -778,22 +778,28 @@ impl Checker<'_> {
     }
 
     /// Report every lvalue whose type is a struct not complete where it is
-    /// written, under [`INCOMPLETE_OBJECT`], unless it is the operand of `&`.
+    /// written, under [`INCOMPLETE_OBJECT`], unless C does not convert it.
     ///
-    /// A name and `*e` are the only lvalues that can be one: a member access
-    /// asks for its struct complete, and a subscript for its pointee, so
-    /// neither gets here. The left operand of a plain `=` is not a modifiable
-    /// lvalue (C17 6.5.16 p2, with 6.3.2.1 p1), and anywhere else its value
-    /// is read, which 6.3.2.1 p2 leaves undefined for an incomplete type.
+    /// The lvalues that can be one are a name, `*e`, and a subscript with an
+    /// operand this stage left untyped, whose pointee `subscript` could not
+    /// ask about; a subscript with both operands typed asked already, and a
+    /// member access asks for its struct complete. Of those, C17 6.3.2.1 p2
+    /// converts every one to its value except the operand of `&`, of `++`
+    /// and `--`, the left operand of `.` and of an assignment. The first and
+    /// the `.` base read nothing and are not reported. The other two need a
+    /// modifiable lvalue (6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), which one of
+    /// incomplete type is not (6.3.2.1 p1), and are reported as such. Every
+    /// other is a value read, which p2 leaves undefined for an incomplete
+    /// type.
     ///
     /// Decided by exclusion rather than by a list of the places a value is
     /// read: a place forgotten in such a list would accept the program in
-    /// silence, and one forgotten here reports valid C, visibly. `&` is the
-    /// one operand C does not convert today; `sizeof` joins it when it is
-    /// read. See the design comment on #424.
+    /// silence, and one forgotten here reports valid C, visibly. `sizeof`
+    /// joins the operands that read nothing when it is read. See the design
+    /// comment on #424.
     fn check_incomplete_values(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        let mut addressed = HashSet::new();
-        let mut places = HashSet::new();
+        let mut unread = HashSet::new();
+        let mut modified: HashMap<ExprId, &str> = HashMap::new();
         for id in ast.expr_ids() {
             match ast.expr(id) {
                 Expr::Unary {
@@ -801,46 +807,64 @@ impl Checker<'_> {
                     operand,
                     ..
                 } => {
-                    addressed.insert(*operand);
+                    unread.insert(*operand);
                 }
-                Expr::Assign {
-                    op: None, place, ..
+                Expr::Member {
+                    base, arrow: false, ..
                 } => {
-                    places.insert(*place);
+                    unread.insert(*base);
+                }
+                Expr::Unary {
+                    op: UnOp::PreInc | UnOp::PreDec,
+                    operand,
+                    ..
+                } => {
+                    modified.insert(*operand, "C17 6.5.3.1 p1 and 6.3.2.1 p1");
+                }
+                Expr::Unary {
+                    op: UnOp::PostInc | UnOp::PostDec,
+                    operand,
+                    ..
+                } => {
+                    modified.insert(*operand, "C17 6.5.2.4 p1 and 6.3.2.1 p1");
+                }
+                Expr::Assign { place, .. } => {
+                    modified.insert(*place, "C17 6.5.16 p2 and 6.3.2.1 p1");
                 }
                 _ => {}
             }
         }
         for id in ast.expr_ids() {
-            let lvalue = matches!(
-                ast.expr(id),
+            let lvalue = match ast.expr(id) {
                 Expr::Identifier { .. }
-                    | Expr::Unary {
-                        op: UnOp::Deref,
-                        ..
-                    }
-            );
+                | Expr::Unary {
+                    op: UnOp::Deref, ..
+                } => true,
+                Expr::Subscript { base, index, .. } => {
+                    self.types[base.index()].is_none() || self.types[index.index()].is_none()
+                }
+                _ => false,
+            };
             let Some(ty) = self.types[id.index()] else {
                 continue;
             };
             if !lvalue
                 || !matches!(ast.ty(ty), Type::Struct { .. })
-                || addressed.contains(&id)
+                || unread.contains(&id)
                 || self.resolution.complete_at(ast, ty, id)
             {
                 continue;
             }
             let spelled = self.spelled(ast, ty);
-            let (message, note) = if places.contains(&id) {
-                (
-                    format!("`{spelled}` is not complete here, and cannot be assigned to"),
-                    "C17 6.5.16 p2 and 6.3.2.1 p1",
-                )
-            } else {
-                (
+            let (message, note) = match modified.get(&id) {
+                Some(note) => (
+                    format!("`{spelled}` is not complete here, and cannot be modified"),
+                    *note,
+                ),
+                None => (
                     format!("`{spelled}` is not complete here, and its value cannot be read"),
                     "C17 6.3.2.1 p2",
-                )
+                ),
             };
             diagnostics.report(
                 Diagnostic::error(message)

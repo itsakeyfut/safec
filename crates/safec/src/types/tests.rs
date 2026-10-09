@@ -2276,34 +2276,49 @@ fn a_member_is_held_to_what_c_says_of_a_member_once_per_definition() {
 }
 
 /// An lvalue of a struct not complete where it is written is reported
-/// wherever its value is read (C17 6.3.2.1 p2) and where it is assigned to
-/// (6.5.16 p2), and not as the operand of `&`, which reads no value. Below
-/// the definition the same statements are not reported, `s` included,
-/// though it was declared above it.
+/// wherever its value is read (C17 6.3.2.1 p2), and as unmodifiable where
+/// it is assigned to or stepped (6.5.16 p2, 6.5.3.1 p1, with 6.3.2.1 p1).
+/// It is not reported as the operand of `&` or the left of `.`, which read
+/// nothing, the second already refused for its struct. A subscript is
+/// reported only where an untyped operand kept its own check from asking.
+/// Below the definition the same statements are not reported, `s`
+/// included, though it was declared above it.
 ///
-/// Mutation: skip the pass; every row goes silent. Mutation: do not exclude
-/// `&`'s operand; `&*p` is reported. Mutation: word a place as a value; the
-/// first message changes. Mutation: ask completeness where the type was
+/// Mutation: skip the pass; every `SC0315` but the member's goes. Mutation:
+/// do not exclude `&`'s operand or `.`'s base; `&*p`, `&s` or `(*p).a` is
+/// reported. Mutation: word a place as a value, or count only a plain `=`
+/// or no `++` as one; the `*p =`, `s =`, `*p +=` or `++*p` row changes.
+/// Mutation: ask a subscript with both operands typed too; `p[0]` is
+/// reported twice, beside its own report. Mutation: never ask a subscript;
+/// `p[i - j]` goes silent. Mutation: ask completeness where the type was
 /// written, with `Resolution::complete`; `s` is reported below the
-/// definition too. Each fails this.
+/// definition. Each fails this.
 #[test]
 fn an_incomplete_struct_is_reported_where_its_value_is_read_or_assigned() {
     let checked = checked(
         "struct S;
 struct S s;
+struct S t;
 void k(struct S v);
-int f(struct S *p, struct S *q, int c) {
+int f(struct S *p, struct S *q, int c, int *i, int *j) {
     *p = *q;
+    s = t;
     0, *p;
     c ? *p : *q;
     k(s);
-    return &*p != 0;
+    k(p[i - j]);
+    *p += *q;
+    ++*p;
+    p[0];
+    (*p).a;
+    return &*p != 0 && &s != 0;
 }
 struct S {
     int a;
 };
 int g(struct S *p, struct S *q, int c) {
     *p = *q;
+    s = t;
     c ? *p : *q;
     k(s);
     return &*p != 0;
@@ -2311,27 +2326,46 @@ int g(struct S *p, struct S *q, int c) {
 ",
     );
 
+    let value = "`struct S` is not complete here, and its value cannot be read";
+    let modified = "`struct S` is not complete here, and cannot be modified";
     assert_eq!(
         checked.messages(),
         [
-            "`struct S` is not complete here, and cannot be assigned to",
-            "`struct S` is not complete here, and its value cannot be read",
-            "`struct S` is not complete here, and its value cannot be read",
-            "`struct S` is not complete here, and its value cannot be read",
-            "`struct S` is not complete here, and its value cannot be read",
-            "`struct S` is not complete here, and its value cannot be read",
+            "`+=` cannot take `struct S` and `struct S`",
+            "`++` cannot take `struct S`",
+            "`[]` cannot take `struct S *` and `int`",
+            "`struct S` is not complete here, and has no members yet",
+            modified,
+            value,
+            modified,
+            value,
+            value,
+            value,
+            value,
+            value,
+            value,
+            modified,
+            value,
+            modified,
         ]
     );
-    assert_eq!(checked.codes(), ["SC0315"; 6]);
+    // This pass reports last, one note each.
+    let notes = checked.notes();
     assert_eq!(
-        checked.notes(),
+        notes[notes.len() - 12..],
         [
+            "C17 6.5.16 p2 and 6.3.2.1 p1",
+            "C17 6.3.2.1 p2",
             "C17 6.5.16 p2 and 6.3.2.1 p1",
             "C17 6.3.2.1 p2",
             "C17 6.3.2.1 p2",
             "C17 6.3.2.1 p2",
             "C17 6.3.2.1 p2",
             "C17 6.3.2.1 p2",
+            "C17 6.3.2.1 p2",
+            "C17 6.5.16 p2 and 6.3.2.1 p1",
+            "C17 6.3.2.1 p2",
+            "C17 6.5.3.1 p1 and 6.3.2.1 p1",
         ]
     );
 }
