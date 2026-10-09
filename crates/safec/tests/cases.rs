@@ -2878,6 +2878,14 @@ cases! {
         // look a definition up in every visible scope; `W` is reported.
         // Mutation: drop the report; `V`'s goes.
         a_tag_defined_twice_in_one_scope_is_a_redefinition: ["--emit", "ast"],
+        // C17 6.7.2.1 p3 and 6.7 p3: a member that is the struct being
+        // defined, `void`, or a function is `SC0314`, two members of one name
+        // are `SC0312`, and a flexible array member after a named one is
+        // neither. The struct gate refuses each struct as well, until #419.
+        // Mutation: mark a definition complete when it is bound; `s` goes
+        // silent. Mutation: swap the redeclaration's labels; the labels
+        // trade places.
+        a_struct_member_a_struct_cannot_have_is_reported: ["--emit", "ast"],
         // C17 6.9 p5: the second body of `f` is `SC0312` from the frontend,
         // and the prototypes before and after are not, so the IR is never
         // built. Mutation: drop the call to `define` in `Resolver::item`;

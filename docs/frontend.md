@@ -228,6 +228,19 @@ function in one scope to be. `clang` refuses the prototype first, `int f(int
 *a); int f() {...}`, as conflicting types, and accepts the definition first.
 `sema.rs::Resolver::agrees` asks both orders the same.
 
+And one the resolver refuses that `clang` accepts without being asked to be
+pedantic.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `struct G { int a[]; };` | `error[SC0314]` | accepts | `error: flexible array member 'a' in otherwise empty struct is a GNU extension` |
+
+**It is a constraint violation, and this compiler takes no
+constraint-violating extension.** C17 6.7.2.1 p18 allows the last member an
+array of unknown length only "with more than one named member", and p3
+forbids an incomplete member otherwise. `sema.rs::Resolver::check_members`
+asks both.
+
 And one the type checker refuses that `clang` accepts with a warning.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
