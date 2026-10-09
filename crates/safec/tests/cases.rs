@@ -2787,12 +2787,13 @@ cases! {
         // the condition, the step and the body. Mutation: read a declaration
         // start as an expression clause again; both functions are `SC0201`.
         // Mutation: read one declarator and stop; `two` is refused at the
-        // `,`. Mutation: open the scope after the declaration is resolved, or
-        // close it before the body; `i` is undeclared where it is used.
+        // `,`. Mutation: close the scope before the body; `i` is undeclared
+        // there.
         a_for_may_begin_with_a_declaration: ["--emit", "ast"],
         // 6.8.5 p5 scopes a `for`'s declaration to the loop, so `i` is
         // undeclared after it. Mutation: declare it in the block around the
-        // `for`, by not pushing a scope; the `SC0301` goes.
+        // `for`, by not pushing a scope or by pushing it only after the
+        // declaration is resolved; the `SC0301` goes.
         a_name_a_for_declares_is_out_of_scope_after_it: ["--emit", "ast"],
         // A `for`'s declaration is the statement a block would hold, so every
         // constraint on one reaches it: 6.7.6.2 p1 (`SC0309`), 6.7.9 p3
@@ -3206,9 +3207,8 @@ cases! {
         // `i`, declared by the `for`, begins its storage once before the
         // first turn and ends it once in the block the loop is left to, and
         // `t`, declared in the body, begins and ends it each turn (ADR-0012).
-        // Mutation: close the `for`'s scope at the end of the body rather
-        // than where the loop is left; `i`'s `StorageDead` moves into the
-        // loop. Mutation: do not close it; `i`'s `StorageDead` goes.
+        // Mutation: do not end the `for`'s scope's storage; `i`'s
+        // `StorageDead` goes.
         a_for_declaration_lives_across_the_whole_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void` value is nothing: a call to a `void` function has no
         // `Destination`, a `void` `?:` has no answer and its arms write
