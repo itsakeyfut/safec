@@ -966,6 +966,13 @@ impl Ast {
         (0..self.exprs.len() as u32).map(ExprId)
     }
 
+    /// Every type id, in the order the types were pushed, for the reason
+    /// [`Ast::expr_ids`] gives: a test asks what a type written at a place
+    /// was bound to, and the table is keyed by the id.
+    pub fn type_ids(&self) -> impl Iterator<Item = TypeId> + use<> {
+        (0..self.types.len() as u32).map(TypeId)
+    }
+
     /// Every statement id, in the order the nodes were pushed, for the same
     /// reason as [`Ast::expr_ids`]: a pass about every declaration in a body
     /// names them through their statements.

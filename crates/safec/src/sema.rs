@@ -35,9 +35,43 @@ use safec_ir::source::{SourceMap, Span};
 /// toolchain should not have to learn a second phrasing for the same thing.
 const UNDECLARED: Code = Code::new("SC0301");
 
+/// A tag given its content twice in one scope, which C17 6.7.2.3 p1 forbids:
+/// "A specific type shall have its content defined at most once."
+///
+/// Its own code, for a redefinition rather than for tags: #77's second
+/// definition of an ordinary name is the same class of fault. The wording
+/// follows `clang`'s `redefinition of 'S'`, for the reason [`UNDECLARED`]
+/// gives, but keeps the `struct`: a tag and an ordinary name of one spelling
+/// are two names, and a message that drops the keyword reads the same for
+/// either once #77 reports the second.
+const REDEFINED: Code = Code::new("SC0312");
+
 /// One declared name, addressed by [`BindingId`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BindingId(u32);
+
+/// One tag, addressed by [`TagId`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TagId(u32);
+
+/// A tag the program declared, which is one structure type: C17 6.2.3 puts
+/// tags in a name space of their own, and 6.7.2.3 says when two uses of one
+/// name are one type.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Tag {
+    /// The name as first written, or `None` for a struct with no tag, which
+    /// is a type of its own wherever it is written.
+    pub name: Option<Span>,
+    /// The name as written where the content was given, or `None` if nothing
+    /// in the translation unit gives it.
+    ///
+    /// This is the state after the whole walk, not at any one use: the tag a
+    /// use before the definition is bound to, or a member inside it, has this
+    /// set too, though C17 6.7.2.1 p8 leaves the type incomplete there until
+    /// the closing brace. Whether a type is complete where it is used is not
+    /// recorded, and #27, which is the first reader to need it, has to.
+    pub defined: Option<Span>,
+}
 
 /// A name the program declared, and where.
 ///
@@ -79,6 +113,9 @@ pub struct Resolution {
     resolved: HashMap<ExprId, BindingId>,
     /// Every attribute this stage accepted as a hatch, by where it was written.
     hatches: Vec<Span>,
+    tags: Vec<Tag>,
+    /// The tag every struct written in the tree is, by the type's id.
+    tag_of: HashMap<TypeId, TagId>,
 }
 
 impl Resolution {
@@ -111,6 +148,36 @@ impl Resolution {
     pub fn resolved(&self, use_site: ExprId) -> Option<BindingId> {
         self.resolved.get(&use_site).copied()
     }
+
+    /// The tag the struct at `ty` is.
+    ///
+    /// Two struct types are one type exactly when this answers one tag for
+    /// both. Nothing asks it yet: the type checker refuses every struct, and
+    /// #27, which gives a struct its meaning, is the reader.
+    ///
+    /// # Panics
+    ///
+    /// If `ty` is not a struct this stage bound. That includes a struct in
+    /// the parameters of a function declarator nested inside another type,
+    /// `void f(void (*cb)(struct A *))`, which the walk does not reach yet:
+    /// #409. A panic rather than an `Option`, because two answers of `None`
+    /// compare equal, and a comparison that called two unrelated structs one
+    /// type would be believed.
+    pub fn tag(&self, ty: TypeId) -> TagId {
+        self.tag_of
+            .get(&ty)
+            .copied()
+            .unwrap_or_else(|| panic!("the struct at {ty:?} was bound to no tag"))
+    }
+
+    /// The tag `id` names.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`Resolution`].
+    pub fn tag_declaration(&self, id: TagId) -> &Tag {
+        &self.tags[id.0 as usize]
+    }
 }
 
 /// Resolve every name in `ast`, reporting the ones nothing declares.
@@ -129,9 +196,12 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
             bindings: Vec::new(),
             resolved: HashMap::new(),
             hatches: Vec::new(),
+            tags: Vec::new(),
+            tag_of: HashMap::new(),
         },
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
+        tag_scopes: vec![Vec::new()],
         children: Vec::new(),
         walked: HashSet::new(),
     };
@@ -157,6 +227,10 @@ struct Resolver<'a> {
     /// Innermost last. Never empty: the file scope is pushed before the walk
     /// and popped by nobody.
     scopes: Vec<Vec<BindingId>>,
+    /// The tags each scope declared, in step with `scopes`: C17 6.2.3 gives
+    /// tags a name space of their own and 6.2.1 p4 the same scopes, so the
+    /// two are opened and closed together, by [`Resolver::open_scope`].
+    tag_scopes: Vec<Vec<TagId>>,
     /// Reused across every expression walk, so that a run allocates once.
     children: Vec<ExprId>,
     /// The struct definitions [`Resolver::walk_type`] has walked, so that each
@@ -180,16 +254,27 @@ impl Resolver<'_> {
                 // name at the end of its declarator, which is before the body.
                 self.declare(function.name, function.ty);
 
-                self.scopes.push(Vec::new());
+                self.open_scope();
                 self.parameters(function.ty, diagnostics);
-                // The body is a compound statement and pushes a scope of its
-                // own, so a parameter sits one scope outside the block rather
-                // than in it, where C17 6.2.1 p4 puts it. The difference is
-                // invisible to everything here: it decides only whether
-                // `int f(int a) { int a; }` is a redeclaration or a shadowing,
-                // and this stage reports neither. #57 is where that lands.
-                self.stmt(function.body, diagnostics);
-                self.scopes.pop();
+                // C17 6.2.1 p4 puts a parameter in the body's outermost block,
+                // so the body's statements are walked here, in the parameters'
+                // scope, rather than through `stmt`, which would open a second
+                // one. It decides whether `int f(struct S *p) { struct S {
+                // int a; } s; }` is one tag or two, and whether a struct the
+                // parameter list defines and the body defines again is a
+                // redefinition. The same holds for ordinary names, where it
+                // makes `int f(int a) { int a; }` a redeclaration rather than
+                // a shadowing, which this stage does not report: #57 does.
+                let ast = self.ast;
+                match ast.stmt(function.body) {
+                    Stmt::Compound { body, .. } => {
+                        for &statement in body {
+                            self.stmt(statement, diagnostics);
+                        }
+                    }
+                    _ => self.stmt(function.body, diagnostics),
+                }
+                self.close_scope();
             }
             Item::Declaration {
                 declarators,
@@ -265,6 +350,18 @@ impl Resolver<'_> {
         diagnostics: &mut DiagnosticSink,
     ) {
         if declarators.is_empty() {
+            // C17 6.7.2.3 p7: `struct S;` declares `S` in this scope, hiding
+            // an outer one, rather than using whatever `S` is visible, which
+            // is the only thing that tells it from `struct S *p;`.
+            if let Type::Struct {
+                tag: Some(tag),
+                members: None,
+            } = self.ast.ty(specified)
+            {
+                let found = self.tag_here(*tag);
+                let id = found.unwrap_or_else(|| self.declare_tag(Some(*tag), None));
+                self.resolution.tag_of.insert(specified, id);
+            }
             self.walk_type(specified, diagnostics);
         }
     }
@@ -284,9 +381,9 @@ impl Resolver<'_> {
     fn declaration(&mut self, declaration: &Declaration, diagnostics: &mut DiagnosticSink) {
         self.walk_type(declaration.ty, diagnostics);
 
-        self.scopes.push(Vec::new());
+        self.open_scope();
         self.parameters(declaration.ty, diagnostics);
-        self.scopes.pop();
+        self.close_scope();
 
         if let Some(name) = declaration.name {
             self.declare(name, declaration.ty);
@@ -367,17 +464,21 @@ impl Resolver<'_> {
                 }
                 Type::Function { returns, .. } => pending.push(*returns),
                 // A member's array lengths are expressions too, walked once
-                // per definition, for the reason `walked` gives. Its name and
-                // the tag are not looked up: what they mean is #27's.
-                Type::Struct {
-                    members: Some(members),
-                    ..
-                } => {
-                    if self.walked.insert(ty) {
-                        pending.extend(members.iter().rev().map(|member| member.written));
+                // per definition, for the reason `walked` gives. Its name is
+                // not looked up: what it means is #27's. The tag is, and is
+                // bound before its members are walked, because C17 6.2.1 p7
+                // starts a tag's scope just after it appears: `struct L {
+                // struct L *next; }` is one type.
+                Type::Struct { tag, members } => {
+                    if !self.resolution.tag_of.contains_key(&ty) {
+                        self.bind_tag(ty, *tag, members.is_some(), diagnostics);
+                    }
+                    if let Some(members) = members {
+                        if self.walked.insert(ty) {
+                            pending.extend(members.iter().rev().map(|member| member.written));
+                        }
                     }
                 }
-                Type::Struct { members: None, .. } => {}
             }
         }
     }
@@ -394,11 +495,11 @@ impl Resolver<'_> {
 
         match ast.stmt(id) {
             Stmt::Compound { body, .. } => {
-                self.scopes.push(Vec::new());
+                self.open_scope();
                 for &statement in body {
                     self.stmt(statement, diagnostics);
                 }
-                self.scopes.pop();
+                self.close_scope();
             }
             Stmt::Declaration {
                 declarators,
@@ -444,7 +545,7 @@ impl Resolver<'_> {
                 // and closes after the body, and an expression start needs none.
                 let declares = match *start {
                     Some(ForStart::Declaration(declaration)) => {
-                        self.scopes.push(Vec::new());
+                        self.open_scope();
                         self.stmt(declaration, diagnostics);
                         true
                     }
@@ -459,7 +560,7 @@ impl Resolver<'_> {
                 }
                 self.stmt(*body, diagnostics);
                 if declares {
-                    self.scopes.pop();
+                    self.close_scope();
                 }
             }
             Stmt::Error { .. } => {}
@@ -504,6 +605,106 @@ impl Resolver<'_> {
         }
     }
 
+    /// Open a scope for ordinary names and tags alike, which C17 6.2.1 p4
+    /// gives the same extent.
+    fn open_scope(&mut self) {
+        self.scopes.push(Vec::new());
+        self.tag_scopes.push(Vec::new());
+    }
+
+    /// Close the scope [`Resolver::open_scope`] opened last.
+    fn close_scope(&mut self) {
+        self.scopes.pop();
+        self.tag_scopes.pop();
+    }
+
+    /// Bind the struct at `ty` to a tag, by C17 6.7.2.3.
+    ///
+    /// A definition, `struct S { ... }`, looks in this scope only: a tag
+    /// defined here already is a redefinition (p1), one only declared here is
+    /// completed, and none here declares a new one, hiding an outer `S`. Any
+    /// other use, `struct S *p`, is the innermost visible `S`, or if none is
+    /// visible declares a new incomplete one here (p8), which in a parameter
+    /// list is the prototype's scope. A struct with no tag is a type of its
+    /// own. `struct S;` alone is [`Resolver::specified`]'s.
+    fn bind_tag(
+        &mut self,
+        ty: TypeId,
+        tag: Option<Span>,
+        defines: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let Some(tag) = tag else {
+            let id = self.declare_tag(None, None);
+            self.resolution.tag_of.insert(ty, id);
+            return;
+        };
+
+        let id = if defines {
+            match self.tag_here(tag) {
+                Some(id) => {
+                    if let Some(first) = self.resolution.tags[id.0 as usize].defined {
+                        diagnostics.report(redefined(self.sources.snippet(tag), tag, first));
+                    } else {
+                        self.resolution.tags[id.0 as usize].defined = Some(tag);
+                    }
+                    id
+                }
+                None => self.declare_tag(Some(tag), Some(tag)),
+            }
+        } else {
+            match self.tag_visible(tag) {
+                Some(id) => id,
+                None => self.declare_tag(Some(tag), None),
+            }
+        };
+        self.resolution.tag_of.insert(ty, id);
+    }
+
+    /// The tag named as `name` is, declared in the innermost scope only.
+    fn tag_here(&self, name: Span) -> Option<TagId> {
+        let scope = self
+            .tag_scopes
+            .last()
+            .expect("the file scope is never popped");
+        self.tag_in(scope, name)
+    }
+
+    /// The innermost visible tag named as `name` is.
+    fn tag_visible(&self, name: Span) -> Option<TagId> {
+        self.tag_scopes
+            .iter()
+            .rev()
+            .find_map(|scope| self.tag_in(scope, name))
+    }
+
+    fn tag_in(&self, scope: &[TagId], name: Span) -> Option<TagId> {
+        let spelled = self.sources.snippet(name);
+        scope
+            .iter()
+            .rev()
+            .find(|&&id| {
+                self.resolution.tags[id.0 as usize]
+                    .name
+                    .is_some_and(|written| self.sources.snippet(written) == spelled)
+            })
+            .copied()
+    }
+
+    /// Add a tag to the innermost scope, or to none for a struct with no tag,
+    /// which nothing can name.
+    fn declare_tag(&mut self, name: Option<Span>, defined: Option<Span>) -> TagId {
+        let id = TagId(self.resolution.tags.len() as u32);
+        self.resolution.tags.push(Tag { name, defined });
+        if name.is_some() {
+            self.tag_scopes
+                .last_mut()
+                .expect("the file scope is never popped")
+                .push(id);
+        }
+        id
+    }
+
     /// The innermost declaration of the name written at `use_site`.
     fn lookup(&self, use_site: Span) -> Option<BindingId> {
         let name = self.sources.snippet(use_site);
@@ -528,6 +729,17 @@ impl Resolver<'_> {
             .expect("the file scope is never popped")
             .push(id);
     }
+}
+
+/// A tag defined at `again` that was defined at `first` in the same scope.
+///
+/// `name` is interpolated raw, for the reason [`undeclared`] gives.
+fn redefined(name: &str, again: Span, first: Span) -> Diagnostic {
+    Diagnostic::error(format!("redefinition of `struct {name}`"))
+        .with_code(REDEFINED)
+        .with_label(Label::primary(again, "defined again here"))
+        .with_label(Label::secondary(first, "first defined here"))
+        .with_note("C17 6.7.2.3 p1")
 }
 
 /// `name` is source text, and it reaches a terminal through this message.
@@ -631,6 +843,17 @@ mod tests {
             let use_site = self.used_at(self.occurrence(text, nth));
             let binding = self.resolution.resolved(use_site)?;
             Some(self.resolution.binding(binding).name)
+        }
+
+        /// The tag the struct whose tag is the `nth` written `name` is bound to.
+        fn tag_at(&self, name: &str, nth: usize) -> TagId {
+            let at = self.occurrence(name, nth);
+            let ty = self
+                .ast
+                .type_ids()
+                .find(|&ty| matches!(self.ast.ty(ty), Type::Struct { tag: Some(tag), .. } if *tag == at))
+                .unwrap_or_else(|| panic!("no struct's tag is written at {at:?}"));
+            self.resolution.tag(ty)
         }
 
         fn messages(&self) -> Vec<&str> {
@@ -857,7 +1080,7 @@ mod tests {
 
     /// A parameter is gone when the function it belongs to is.
     ///
-    /// Mutation: remove the `self.scopes.pop()` that closes the parameter
+    /// Mutation: remove the `self.close_scope()` that closes the parameter
     /// scope in `Resolver::item`. `a` is still in scope inside `g`, nothing is
     /// reported, and this fails. Before it existed, that `pop` was held by
     /// nothing in the suite: every other program declares one function.
@@ -867,5 +1090,223 @@ mod tests {
             resolved("int f(int a) {\n    return a;\n}\n\nint g(void) {\n    return a;\n}\n");
 
         assert_eq!(resolved.messages(), ["use of undeclared identifier `a`"]);
+    }
+
+    /// A tag and an ordinary name of one spelling are two names (C17 6.2.3),
+    /// in one scope, and a use of the name is the variable.
+    ///
+    /// The variable is declared first, so that a tag kept among the ordinary
+    /// names, being the later declaration, is what an innermost-first lookup
+    /// would find.
+    ///
+    /// Mutation: keep tags in the ordinary table as well, by declaring each
+    /// new tag through `declare`; the use of `S` resolves to the tag, the
+    /// second `S` written, and this fails.
+    #[test]
+    fn a_tag_and_a_variable_of_one_name_are_two_names() {
+        let resolved = resolved("int S;\nstruct S { int x; };\nint f(void) {\n    return S;\n}\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_eq!(
+            resolved.declaration_of("S", 2),
+            Some(resolved.occurrence("S", 0)),
+            "the use is the variable"
+        );
+        let _ = resolved.tag_at("S", 1);
+    }
+
+    /// A tag defined in a block binds nothing after the block: the `struct T`
+    /// written after it declares a new, incomplete `T` (C17 6.7.2.3 p8).
+    ///
+    /// Mutation: leave the tag scope open at a block's end, by popping only
+    /// `scopes` in `close_scope`; the outer use finds the inner `T` and this
+    /// fails on the two being one.
+    #[test]
+    fn an_inner_tag_binds_no_use_after_its_block() {
+        let resolved = resolved(
+            "int f(void) {\n    {\n        struct T { int y; } inner;\n    }\n    struct T *outer;\n    return 0;\n}\n",
+        );
+
+        assert_ne!(resolved.tag_at("T", 0), resolved.tag_at("T", 1));
+    }
+
+    /// A use before the definition, with nothing visible, declares the tag
+    /// the definition then completes: one type (C17 6.7.2.3 p8 and p4).
+    ///
+    /// Mutation: declare a new tag at every definition, ignoring one already
+    /// declared in the scope; two tags, and this fails.
+    #[test]
+    fn a_tag_used_before_its_definition_is_the_tag_it_defines() {
+        let resolved = resolved("struct U *p;\nstruct U { int a; };\n");
+
+        assert_eq!(resolved.tag_at("U", 0), resolved.tag_at("U", 1));
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// A struct naming itself in its own members is one type, because a tag's
+    /// scope begins just after it appears (C17 6.2.1 p7).
+    ///
+    /// Mutation: leave a definition's tag out of the scope until its members
+    /// are walked, by declaring it in no scope; the member's `struct L`
+    /// finds nothing, declares a second `L`, and this fails.
+    #[test]
+    fn a_struct_that_names_itself_is_one_type() {
+        let resolved = resolved("struct L { struct L *next; };\n");
+
+        assert_eq!(resolved.tag_at("L", 0), resolved.tag_at("L", 1));
+    }
+
+    /// `struct S;` alone declares `S` in its own scope and hides an outer one
+    /// (C17 6.7.2.3 p7), so a use after it in that block is the inner `S`.
+    ///
+    /// Mutation: treat `struct S;` as a use, in `Resolver::specified`; it
+    /// finds the outer `S`, and so does the use, and this fails.
+    #[test]
+    fn a_declaration_of_a_tag_alone_hides_an_outer_one() {
+        let resolved = resolved(
+            "struct S { int a; };\nint f(void) {\n    struct S;\n    struct S *p;\n    return 0;\n}\n",
+        );
+
+        assert_ne!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+        assert_eq!(resolved.tag_at("S", 1), resolved.tag_at("S", 2));
+    }
+
+    /// A tag given its content twice in one scope is reported (C17 6.7.2.3
+    /// p1), and given it again in an inner scope is a new tag and is not.
+    ///
+    /// Mutation: look a definition up in every visible scope rather than this
+    /// one; the inner `W` is reported as a redefinition, and this fails.
+    #[test]
+    fn a_tag_defined_twice_in_one_scope_is_reported_and_in_two_is_not() {
+        let twice = resolved("struct V { int a; };\nstruct V { int b; };\n");
+        assert_eq!(twice.messages(), ["redefinition of `struct V`"]);
+
+        let nested = resolved(
+            "struct W { int a; };\nint g(void) {\n    struct W { int b; } w;\n    return 0;\n}\n",
+        );
+        assert_eq!(nested.messages(), Vec::<&str>::new());
+        assert_ne!(nested.tag_at("W", 0), nested.tag_at("W", 1));
+    }
+
+    /// A tag a definition's parameter list declares is in the body's
+    /// outermost block (C17 6.2.1 p4), so the body's `struct S` completes it
+    /// rather than declaring a second `S`, and defining it in both is a
+    /// redefinition.
+    ///
+    /// Mutation: walk the body through `self.stmt(function.body, ..)` in
+    /// `Resolver::item`, which opens a second scope; the two `S` are two tags
+    /// and the redefinition goes unreported, and this fails.
+    #[test]
+    fn a_tag_in_a_definitions_parameters_is_in_its_body() {
+        let completed =
+            resolved("int f(struct S *p) {\n    struct S { int a; } s;\n    return 0;\n}\n");
+        assert_eq!(completed.messages(), Vec::<&str>::new());
+        assert_eq!(completed.tag_at("S", 0), completed.tag_at("S", 1));
+
+        let twice = resolved(
+            "int f(struct S { int a; } x) {\n    struct S { int b; } y;\n    return 0;\n}\n",
+        );
+        assert_eq!(twice.messages(), ["redefinition of `struct S`"]);
+    }
+
+    /// A tag first written in a prototype's parameters is declared in that
+    /// prototype's scope (C17 6.7.2.3 p8), which ends with the declarator,
+    /// so a definition after it is a different tag.
+    ///
+    /// Mutation: open only the ordinary scope around the parameters in
+    /// `Resolver::declaration`, by `self.scopes.push(Vec::new())` and
+    /// `self.scopes.pop()`; the prototype's `S` lands at file scope, the
+    /// definition completes it, and this fails.
+    #[test]
+    fn a_tag_first_written_in_a_prototype_is_not_the_one_defined_after_it() {
+        let resolved = resolved("void f(struct S *p);\nstruct S { int a; };\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_ne!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+    }
+
+    /// A use in a block finds a tag declared in a scope outside it (C17
+    /// 6.7.2.3 p8 only declares a new one when none is visible).
+    ///
+    /// Mutation: look a use up in the innermost scope only, by making
+    /// `tag_visible` return `self.tag_here(name)`; the use in `f` declares a
+    /// second `S`, and this fails.
+    #[test]
+    fn a_use_in_a_block_is_the_tag_declared_outside_it() {
+        let resolved =
+            resolved("struct S { int a; };\nint f(void) {\n    struct S *p;\n    return 0;\n}\n");
+
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+    }
+
+    /// `struct S;` where `S` is declared already in the same scope declares
+    /// nothing new (C17 6.7.2.3 p4): one type, before and after it.
+    ///
+    /// Mutation: declare a new tag at every `struct S;`, by replacing
+    /// `self.tag_here(*tag)` in `Resolver::specified` with `None`; the `S`
+    /// after it is a second tag, and this fails.
+    #[test]
+    fn a_declaration_of_a_tag_alone_after_its_definition_is_that_tag() {
+        let resolved = resolved("struct S { int a; };\nstruct S;\nstruct S *p;\n");
+
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 2));
+    }
+
+    /// A tag completed after a use records where, so a third `struct U { }`
+    /// is a redefinition, and [`Resolution::tag_declaration`] answers for
+    /// the tag asked about. `T` comes first so that `U` is not the first tag.
+    ///
+    /// Mutations: leave `defined` unset when a definition completes a tag in
+    /// `bind_tag`, and the redefinition is not reported; answer `&self.tags[0]`
+    /// in `tag_declaration`, and `T`'s span comes back. Both fail this.
+    #[test]
+    fn a_tag_completed_after_a_use_is_defined_there() {
+        let resolved = resolved(
+            "struct T { int t; };\nstruct U *p;\nstruct U { int a; };\nstruct U { int b; };\n",
+        );
+
+        assert_eq!(resolved.messages(), ["redefinition of `struct U`"]);
+        let tag = resolved.resolution.tag_declaration(resolved.tag_at("U", 0));
+        assert_eq!(tag.name, Some(resolved.occurrence("U", 0)));
+        assert_eq!(tag.defined, Some(resolved.occurrence("U", 1)));
+    }
+
+    /// Every struct with no tag is a type of its own, since nothing can name
+    /// it again (C17 6.7.2.3 p5).
+    ///
+    /// Mutation: bind every struct with no tag after the first to `TagId(0)`
+    /// in `bind_tag`; `x` and `y` are one type, and this fails.
+    #[test]
+    fn structs_with_no_tag_are_each_a_type_of_their_own() {
+        let resolved = resolved("struct { int a; } x;\nstruct { int b; } y;\n");
+
+        let untagged: Vec<TagId> = resolved
+            .ast
+            .type_ids()
+            .filter(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { tag: None, .. }))
+            .map(|ty| resolved.resolution.tag(ty))
+            .collect();
+        assert_eq!(untagged.len(), 2);
+        assert_ne!(untagged[0], untagged[1]);
+    }
+
+    /// A struct the walk did not bind is a panic naming it, not an answer
+    /// that compares equal to another unbound struct's: the struct in `cb`'s
+    /// parameters is one such today.
+    ///
+    /// Mutation: answer `.unwrap_or(TagId(0))` in `Resolution::tag`; nothing
+    /// panics, and this fails.
+    #[test]
+    #[should_panic(expected = "was bound to no tag")]
+    fn a_struct_bound_to_no_tag_is_a_panic_and_not_an_answer() {
+        let resolved = resolved("void f(void (*cb)(struct A *));\n");
+
+        let unbound = resolved
+            .ast
+            .type_ids()
+            .find(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { .. }))
+            .expect("the struct is in the tree");
+        let _ = resolved.resolution.tag(unbound);
     }
 }
