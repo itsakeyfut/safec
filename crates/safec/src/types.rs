@@ -789,6 +789,21 @@ impl Checker<'_> {
             );
             return true;
         }
+        // C17 6.7.2.1 p3: a struct with a flexible array member is no
+        // element of an array, since where the next element begins would
+        // depend on how long the last one's array is.
+        if self.resolution.has_flexible_array_member(ast, element) {
+            let spelled = self.spelled(ast, element);
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "an array cannot have `{spelled}` as its element, which has a flexible array member"
+                ))
+                .with_code(DECLARATOR)
+                .with_label(Label::primary(at, "declared here"))
+                .with_note("C17 6.7.2.1 p3"),
+            );
+            return true;
+        }
 
         let Some(length) = length else {
             return false;

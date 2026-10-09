@@ -2875,6 +2875,12 @@ cases! {
         // Mutation: report a member access whose base is one; three hundred
         // reports.
         a_chain_of_member_accesses_is_refused_once: ["--emit", "ast"],
+        // C17 6.7.2.1 p3's second sentence: a struct with a flexible array
+        // member is no member of another (`SC0314`) and no element of an
+        // array (`SC0309`). clang accepts both as an extension and refuses
+        // them under `-pedantic-errors`. Mutation: drop either check; its
+        // report goes.
+        a_struct_with_a_flexible_array_member_is_no_member_and_no_element: ["--emit", "ast"],
         // C17 6.7.2.3 p1: `V` given its content twice in one scope is
         // `SC0312`, and `W` given it again in a block is a new tag, which is
         // not. Mutation: look a definition up in every visible scope; `W` is

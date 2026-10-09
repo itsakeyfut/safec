@@ -1835,6 +1835,31 @@ fn an_array_of_a_struct_needs_the_struct_complete_where_it_is_written() {
     );
 }
 
+/// A struct with a flexible array member is no member of another struct and
+/// no element of an array (C17 6.7.2.1 p3), and a struct whose last member
+/// is an array with a length, or which holds a pointer to one, is neither.
+///
+/// Mutation: drop the member check in `check_members`; `f` goes silent.
+/// Mutation: drop the element check in `report_array`; `arr` goes silent.
+/// Mutation: answer every struct with an array member as having a flexible
+/// one; `harr` is reported. Mutation: answer from the first member rather
+/// than the last; both go silent. Each fails this.
+#[test]
+fn a_struct_with_a_flexible_array_member_is_no_member_and_no_element() {
+    let checked = checked(
+        "struct F {\n    int n;\n    int a[];\n};\nstruct G {\n    struct F f;\n    int m;\n};\nstruct F arr[2];\nstruct H {\n    struct F *p;\n    int k[3];\n};\nstruct H harr[2];\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "member `f` has type `struct F`, which has a flexible array member",
+            "an array cannot have `struct F` as its element, which has a flexible array member",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0314", "SC0309"]);
+}
+
 /// A struct is an operand of no operator `binary`, `unary` or `increment`
 /// asks, and no condition (C17 6.5.3 to 6.5.15, 6.8.4 p1, 6.8.5 p2): each
 /// in a program of its own, with the message, the code and the primary

@@ -1,0 +1,7 @@
+Declaration a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:1:1 "struct F"
+  Field a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:2:5 "n" "int"
+  Field a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:3:5 "a" "int[]"
+Declaration a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:5:1 "struct G"
+  Field a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:6:5 "f" "struct F"
+  Field a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:7:5 "m" "int"
+Declaration a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:9:1 "arr" "struct F[2]"
