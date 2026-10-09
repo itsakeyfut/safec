@@ -13,8 +13,8 @@
 //!
 //! Everything it refuses is `SC0304`: an expression the frontend could not
 //! type, a type the IR cannot hold, a name it cannot reach, a constant it
-//! cannot read, a call with no function to name, and a second definition of
-//! one name. One code rather than six, for the reason `types.rs` gives for
+//! cannot read, and a call with no function to name. One code rather than
+//! five, for the reason `types.rs` gives for
 //! `MISMATCH`: what differs between them is the message, and a reader
 //! filtering on the code wants to know the IR could not be built rather than a
 //! list of ways that can happen.
@@ -938,26 +938,6 @@ impl Lowering<'_> {
             let Some(id) = self.functions.get(self.sources.snippet(name)).copied() else {
                 continue;
             };
-            // C17 6.9 p5 allows one external definition of a name and this
-            // compiler does not check it yet, so a second one arrives here
-            // rather than being reported before it. The first body is kept,
-            // because replacing it would leave every call that was lowered
-            // against it pointing at another function's blocks.
-            if self.unit.function(id).is_defined() {
-                diagnostics.report(
-                    Diagnostic::error(format!(
-                        "`{}` is defined more than once",
-                        self.sources.snippet(name)
-                    ))
-                    .with_code(LOWERING)
-                    .with_label(Label::primary(name, "this definition is not used"))
-                    .with_label(Label::secondary(
-                        self.unit.function(id).name,
-                        "the first one is here",
-                    )),
-                );
-                continue;
-            }
             let Some(built) = self.body(name, ty, body, hatch, written, diagnostics) else {
                 continue;
             };

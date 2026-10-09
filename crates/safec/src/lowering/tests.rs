@@ -1448,27 +1448,6 @@ fn a_prototype_and_its_definition_are_one_function() {
     assert!(lowered.unit.function(*callee).is_defined());
 }
 
-/// A name defined twice keeps the first body and is reported.
-///
-/// C17 6.9 p5 allows one external definition and nothing before this stage
-/// checks it, so the check that would panic is answered here instead.
-///
-/// Mutation: fill the function with the second definition anyway. The
-/// assertion in `fill_function` panics, which is a different failure and
-/// the reason this arm exists.
-#[test]
-fn a_name_defined_twice_keeps_the_first_body() {
-    let lowered = lowered("int f(void) {\n    return 1;\n}\n\nint f(void) {\n    return 2;\n}\n");
-    assert_eq!(codes(&lowered), ["SC0304"]);
-
-    let f = function(&lowered, "f");
-    assert!(f.is_defined());
-    assert_eq!(
-        assigns(f.blocks().next().expect("a block"))[0].value,
-        Rvalue::Use(Operand::Constant(1))
-    );
-}
-
 /// The value of an assignment is what was assigned, and a call cannot
 /// change it afterwards.
 ///
