@@ -393,13 +393,28 @@ it of an object with static storage duration, which every object at file
 scope is, and `types.rs::Checker::check_static_initializers` refuses one that
 is not under `SC0317`: an integer constant expression, a null pointer
 constant, an address constant (6.6 p9) and one of those plus or minus an
-integer constant (6.6 p7) are what it accepts. Two refusals are clang's
-warnings, even under `-pedantic-errors` (clang 20.1.6): a comma operator,
-`int m = (1, 2);`, which 6.6 p3 keeps out of a constant expression, and an
-overflow, `int o = 2147483647 + 1;`, which 6.6 p4 does. Both are
-constraints, and this compiler takes no constraint-violating extension. `?:`
-is not one of the operators p9 lets an address constant be made with, so
-`c ? &x : &y` is refused too.
+integer constant (6.6 p7) are what it accepts. An address constant is made
+through `[]`, `.`, `->`, `&` and `*`, so `&a2[1][2]`, `s.m` and `*f` are
+accepted, and an operand C does not evaluate may hold a comma, as 6.6 p3
+allows, so `0 && (1, 2)` is accepted too. An initializer this compiler left
+untyped is declined as `SC0304`, because passing it over would build the
+program.
+
+clang 20.1.6 accepts several of what this refuses, even under
+`-pedantic-errors`:
+
+| Written at file scope | This compiler | clang |
+|---|---|---|
+| `int m = (1, 2);` | `SC0317`: a comma, 6.6 p3 | a warning |
+| `int o = 2147483647 + 1;` | `SC0317`: no defined value, 6.6 p4 | a warning |
+| `int o = 1 << 31;` | `SC0317`: no defined value, 6.6 p4 | accepted |
+| `int *p = 1 ? &x : &x;` | `SC0317`: 6.6 p9 lists no `?:` | accepted |
+| `int z = 0 && x;`, `int z = 1 ? 2 : x;` | `SC0317`: `x` is an operand, 6.6 p6 | accepted |
+| `int b = &x != 0;` | `SC0317`: not an integer constant, 6.6 p6 | a warning |
+
+The first three break a constraint and are refused for the reason every one
+here is. The last three are forms 6.6 p10 lets an implementation accept and
+does not require; this compiler takes only the forms C names.
 
 ### Where a nullability specifier is read
 
