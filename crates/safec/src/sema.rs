@@ -2580,4 +2580,55 @@ mod tests {
             ]
         );
     }
+
+    /// The rest of what a nested list is: a parameter written as a function
+    /// type has a list of its own; the return is outside the list's scope,
+    /// with a prototype or without one; the list's lengths are reported in
+    /// the order they are written; and a parameter is declared with its
+    /// adjusted type, so two `int f(void)` parameters are two pointers and a
+    /// redeclaration rather than two declarations of one function.
+    ///
+    /// Mutation: skip the root's list in `walk_type` as well as in
+    /// `walk_declarator`; `g`'s `a` goes silent. Mutation: walk the return
+    /// inside the scope; the first `m` resolves to the parameter. Mutation:
+    /// push the return only for a prototype; the second `m` goes silent.
+    /// Mutation: queue the parameters' types without `.rev()`; `k` comes
+    /// before `x`'s `j`. Mutation: declare a nested parameter with its
+    /// written type; the two `f`s go silent. Each fails this.
+    #[test]
+    fn a_nested_list_s_return_order_and_types_are_as_written() {
+        let resolved = resolved(
+            "void f(int g(int a, int a));\nint (*(*p)(int m))[m];\nint (*(*q)())[m];\nvoid (*r)(int x[j], int y[k]);\nvoid (*s)(int f(void), int f(void));\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            [
+                "redefinition of `a`",
+                "use of undeclared identifier `m`",
+                "use of undeclared identifier `m`",
+                "use of undeclared identifier `j`",
+                "use of undeclared identifier `k`",
+                "redefinition of `f`",
+            ]
+        );
+    }
+
+    /// Asking the tag of a type that is not a struct is a panic naming it,
+    /// not an answer that would compare equal to another's.
+    ///
+    /// Mutation: answer `.unwrap_or(TagId(0))` in `Resolution::tag`; nothing
+    /// panics, and this fails.
+    #[test]
+    #[should_panic(expected = "was bound to no tag")]
+    fn a_type_bound_to_no_tag_is_a_panic_and_not_an_answer() {
+        let resolved = resolved("int x;\n");
+
+        let int = resolved
+            .ast
+            .type_ids()
+            .find(|&ty| matches!(resolved.ast.ty(ty), Type::Int))
+            .expect("`int` is in the tree");
+        let _ = resolved.resolution.tag(int);
+    }
 }
