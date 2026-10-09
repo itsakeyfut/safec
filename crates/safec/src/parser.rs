@@ -3,10 +3,11 @@
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
-//! `return`, an expression statement, `if`, `while` and both forms of `for`.
-//! What it does not read yet is `switch`, `do`, `goto`, a labelled statement,
-//! `break`, `continue`, structs, member access, casts, `sizeof`, the type
-//! qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
+//! `return`, an expression statement, `if`, `while` and both forms of `for`,
+//! and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is `switch`, `do`, `goto`, a labelled statement,
+//! `break`, `continue`, `union`, a bit-field, an anonymous member, casts,
+//! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
@@ -105,8 +106,9 @@ pub(crate) const UNREAD_ANNOTATION: Code = Code::new("SC0205");
 /// [`EXPECTED`], because no missing token would make it right: the fix is to
 /// name something or delete the line. The parser's, for the reason
 /// [`MISPLACED_ANNOTATION`] is, since it is the stage that knows there was no
-/// declarator. A tag is the one thing that would make this valid, and there
-/// are none until #34, which lets one through here.
+/// declarator. A tag is the one thing that would make this valid, and
+/// [`Parser::declared`] lets a struct with one through. In a member list it is
+/// C17 6.7.2.1 p2's constraint instead, and the same code.
 const NOTHING_DECLARED: Code = Code::new("SC0206");
 
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
@@ -208,6 +210,16 @@ struct Declared {
     declares: Declares,
 }
 
+/// What a declaration's specifiers were followed by.
+enum Specified {
+    /// A declarator with a name, which every declaration but one has.
+    Named(Declared),
+    /// The `;`, after specifiers that declared a tag and nothing else, which
+    /// C17 6.7 p2 allows: `struct S;` and `struct S { int x; };`. The type
+    /// is what they named.
+    Tag(TypeId),
+}
+
 /// What a declarator declares, which is what decides whether a nullability
 /// specifier may be written in it.
 ///
@@ -223,6 +235,9 @@ enum Declares {
     /// file-scope items, so a function declared here is not one a call is
     /// checked against, and nothing in it may carry a nullability specifier.
     BlockScope,
+    /// A member of a struct, which may carry none either: what a member's
+    /// pointer promises is a question about the struct, and #27's.
+    Member,
 }
 
 /// One step a declarator derives, in the order it wraps the base type.
@@ -270,6 +285,14 @@ fn specifier(kind: TokenKind) -> Option<Type> {
         TokenKind::Keyword(Keyword::Void) => Some(Type::Void),
         _ => None,
     }
+}
+
+/// Whether declaration specifiers begin at this token: one [`specifier`]
+/// names, or `struct`, which is more than one token and is read by
+/// [`Parser::struct_specifier`]. The one test for where a declaration, a
+/// parameter list or a `for`'s declaration begins.
+fn begins_specifiers(kind: TokenKind) -> bool {
+    specifier(kind).is_some() || kind == TokenKind::Keyword(Keyword::Struct)
 }
 
 /// The nullability specifier this token is, if it is one this compiler reads.
@@ -532,9 +555,31 @@ impl Parser<'_> {
         };
         let start = self.peek().span;
 
-        let Some(declared) = self.declared(Declares::FileScope, diagnostics) else {
-            return Item::Error { span: first };
+        let declared = match self.declared(Declares::FileScope, diagnostics) {
+            Some(Specified::Named(declared)) => declared,
+            Some(Specified::Tag(specified)) => {
+                // A hatch is a function definition, and this is not one.
+                if let Some(attribute) = attribute {
+                    self.report_at(
+                        attribute.span,
+                        MISPLACED_ANNOTATION,
+                        "`__attribute__` cannot apply here",
+                        "a hatch is a function definition, and this declaration has no body",
+                        diagnostics,
+                    );
+                    return Item::Error { span: first };
+                }
+                self.advance();
+                let span = Span::new(self.file, start.start(), self.previous().span.end());
+                return Item::Declaration {
+                    declarators: Vec::new(),
+                    specified,
+                    span,
+                };
+            }
+            None => return Item::Error { span: first },
         };
+        let specified = declared.base;
 
         if self.check(TokenKind::Punct(Punct::LeftBrace)) {
             let Some(body) = self.compound(diagnostics) else {
@@ -579,7 +624,11 @@ impl Parser<'_> {
         }
 
         let span = Span::new(self.file, start.start(), self.previous().span.end());
-        Item::Declaration { declarators, span }
+        Item::Declaration {
+            declarators,
+            specified,
+            span,
+        }
     }
 
     /// The specifiers and one declarator, which is how a declaration and a
@@ -588,9 +637,25 @@ impl Parser<'_> {
         &mut self,
         declares: Declares,
         diagnostics: &mut DiagnosticSink,
-    ) -> Option<Declared> {
+    ) -> Option<Specified> {
         let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
+        // C17 6.7 p2: a declaration may declare a tag and nothing else, and a
+        // struct with a tag is the one this compiler reads. In a member list
+        // any struct goes back to `members`, which tells an anonymous member
+        // from one that declares nothing.
+        if self.check(TokenKind::Punct(Punct::Semicolon)) {
+            if let Type::Struct { tag, .. } = self.ast.ty(base) {
+                if tag.is_some() || declares == Declares::Member {
+                    return Some(Specified::Tag(base));
+                }
+            }
+        }
+        // A bit-field with no name, `int : 3;`, before a name is asked for.
+        if declares == Declares::Member && self.check(TokenKind::Punct(Punct::Colon)) {
+            self.unread_bit_field(diagnostics);
+            return None;
+        }
         // Before asking for a name, so that `int;` is told what it is rather
         // than that a name is missing. `int *;` has a declarator and goes on,
         // to be refused as one without a name, which is a syntax error.
@@ -608,14 +673,14 @@ impl Parser<'_> {
         }
         let (name, ty, returns) = self.named_declarator(start, base, declares, diagnostics)?;
 
-        Some(Declared {
+        Some(Specified::Named(Declared {
             start,
             base,
             name,
             ty,
             return_nullability: returns,
             declares,
-        })
+        }))
     }
 
     /// One declarator that has to have a name, with its derivations folded onto
@@ -807,6 +872,10 @@ impl Parser<'_> {
             return None;
         }
 
+        if self.check(TokenKind::Keyword(Keyword::Struct)) {
+            return self.struct_specifier(diagnostics);
+        }
+
         let Some(ty) = specifier(self.peek().kind) else {
             self.report(
                 "expected a declaration",
@@ -818,6 +887,152 @@ impl Parser<'_> {
 
         self.advance();
         Some(self.ast.push_type(ty))
+    }
+
+    /// `struct`, an optional tag, and an optional member list. C17 6.7.2.1.
+    ///
+    /// One of the two has to be there: `struct` alone names nothing. The
+    /// member list goes through [`Parser::deeper`], because a member can be a
+    /// struct and so can its, and the tree would otherwise be as deep as the
+    /// source cared to make it.
+    fn struct_specifier(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+        self.advance();
+
+        let tag = if self.check(TokenKind::Identifier) {
+            Some(self.advance().span)
+        } else {
+            None
+        };
+
+        let members = if self.check(TokenKind::Punct(Punct::LeftBrace)) {
+            self.advance();
+            Some(self.deeper(
+                diagnostics,
+                |parser, diagnostics| parser.members(diagnostics),
+                |_, _| None,
+            )?)
+        } else {
+            None
+        };
+
+        if tag.is_none() && members.is_none() {
+            self.report(
+                "expected a tag or `{`",
+                "a tag or `{` is missing here",
+                diagnostics,
+            );
+            return None;
+        }
+
+        Some(self.ast.push_type(Type::Struct { tag, members }))
+    }
+
+    /// The member declarations of a struct through its `}`.
+    ///
+    /// Each is C17 6.7.2.1 p1's `struct-declaration`: specifiers and at least
+    /// one named declarator, with no initializer. A bit-field's `:` and an
+    /// `=` are refused as the `;` they are not, and so is a `}` before any
+    /// member, since the grammar asks for one and `clang -pedantic-errors`
+    /// calls `struct S {};` a GNU extension.
+    fn members(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Vec<Declaration>> {
+        let mut members = Vec::new();
+        loop {
+            if self.check(TokenKind::Punct(Punct::RightBrace)) {
+                if members.is_empty() {
+                    self.report(
+                        "expected a member",
+                        "a struct has at least one",
+                        diagnostics,
+                    );
+                    return None;
+                }
+                self.advance();
+                return Some(members);
+            }
+
+            let at = self.peek().span;
+            let declared = match self.declared(Declares::Member, diagnostics)? {
+                Specified::Named(declared) => declared,
+                Specified::Tag(base) => {
+                    self.member_with_no_name(at, base, diagnostics);
+                    return None;
+                }
+            };
+            let Declared {
+                start,
+                base,
+                name,
+                ty,
+                return_nullability,
+                declares,
+            } = declared;
+            members.push(Declaration {
+                name: Some(name),
+                ty,
+                written: ty,
+                span: Span::new(self.file, start.start(), self.previous().span.end()),
+                nullability: return_nullability,
+            });
+            while self.eat(TokenKind::Punct(Punct::Comma)) {
+                let at = self.peek().span;
+                let (name, ty, returns) = self.named_declarator(at, base, declares, diagnostics)?;
+                members.push(Declaration {
+                    name: Some(name),
+                    ty,
+                    written: ty,
+                    span: Span::new(self.file, start.start(), self.previous().span.end()),
+                    nullability: returns,
+                });
+            }
+            if self.check(TokenKind::Punct(Punct::Colon)) {
+                self.unread_bit_field(diagnostics);
+                return None;
+            }
+            self.expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)?;
+        }
+    }
+
+    /// A member declaration of a struct type with no declarator.
+    ///
+    /// One with neither a tag nor a name is C17 6.7.2.1 p13's anonymous
+    /// member, which is valid and is not read yet. Any other declares nothing,
+    /// which 6.7.2.1 p2 forbids in a member list: `struct T;` names a tag that
+    /// a member list has nowhere to put.
+    ///
+    /// `at` is where the member declaration began, which is where both reports
+    /// point: the parser is standing on its `;` by now.
+    fn member_with_no_name(&mut self, at: Span, base: TypeId, diagnostics: &mut DiagnosticSink) {
+        let anonymous = matches!(
+            self.ast.ty(base),
+            Type::Struct {
+                tag: None,
+                members: Some(_),
+            }
+        );
+        if anonymous {
+            let built = Diagnostic::error("an anonymous member is not read yet")
+                .with_code(EXPECTED)
+                .with_label(Label::primary(at, "a struct with no name of its own"))
+                .with_note("C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet");
+            self.report_built(at, built, diagnostics);
+            return;
+        }
+        let built = Diagnostic::error("this member declares nothing")
+            .with_code(NOTHING_DECLARED)
+            .with_label(Label::primary(at, "a tag, and no member's name"))
+            .with_note("C17 6.7.2.1 p2");
+        self.report_built(at, built, diagnostics);
+    }
+
+    /// Refuse a bit-field, at its `:`: valid C, not read yet.
+    fn unread_bit_field(&mut self, diagnostics: &mut DiagnosticSink) {
+        self.report_noted(
+            EXPECTED,
+            "a bit-field is not read yet",
+            "a bit-field's width",
+            "C17 6.7.2.1 p9 makes it valid; this compiler does not read one yet",
+            diagnostics,
+        );
     }
 
     /// A declarator, and the derivations it applies to the base type.
@@ -989,7 +1204,7 @@ impl Parser<'_> {
     /// genuinely ambiguous in full C, and `typedef` is a later stage.
     fn parenthesised_declarator(&self) -> bool {
         let after = self.peek_at(1).kind;
-        specifier(after).is_none() && after != TokenKind::Punct(Punct::RightParen)
+        !begins_specifiers(after) && after != TokenKind::Punct(Punct::RightParen)
     }
 
     /// The `[...]` and `(...)` that follow a direct-declarator, in source order.
@@ -1069,7 +1284,9 @@ impl Parser<'_> {
                     self.ast.push_type(Type::Pointer(element))
                 }
                 Type::Function { .. } => self.ast.push_type(Type::Pointer(written)),
-                Type::Int | Type::Char | Type::Void | Type::Pointer(_) => written,
+                Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Struct { .. } => {
+                    written
+                }
             };
 
             let span = Span::new(self.file, start.start(), self.previous().span.end());
@@ -1215,7 +1432,7 @@ impl Parser<'_> {
                         returns = Some(*written);
                         None
                     }
-                    Declares::FileScope | Declares::BlockScope => Some((
+                    Declares::FileScope | Declares::BlockScope | Declares::Member => Some((
                         *written,
                         "this is not the pointer a parameter holds or a function returns",
                     )),
@@ -1281,7 +1498,7 @@ impl Parser<'_> {
                     // `__attribute__` goes with the declarations, where
                     // `specifiers` refuses it by name, rather than to the
                     // expressions, which would call it a missing one.
-                    let item = if specifier(parser.peek().kind).is_some()
+                    let item = if begins_specifiers(parser.peek().kind)
                         || parser.check(TokenKind::Annotation(Annotation::Attribute))
                     {
                         parser.declaration_statement(diagnostics)
@@ -1305,9 +1522,20 @@ impl Parser<'_> {
     fn declaration_statement(&mut self, diagnostics: &mut DiagnosticSink) -> StmtId {
         let start = self.peek().span;
 
-        let Some(declared) = self.declared(Declares::BlockScope, diagnostics) else {
-            return self.ast.push_stmt(Stmt::Error { span: start });
+        let declared = match self.declared(Declares::BlockScope, diagnostics) {
+            Some(Specified::Named(declared)) => declared,
+            Some(Specified::Tag(specified)) => {
+                self.advance();
+                let span = Span::new(self.file, start.start(), self.previous().span.end());
+                return self.ast.push_stmt(Stmt::Declaration {
+                    declarators: Vec::new(),
+                    specified,
+                    span,
+                });
+            }
+            None => return self.ast.push_stmt(Stmt::Error { span: start }),
         };
+        let specified = declared.base;
 
         let Some(declarators) = self.init_declarator_list(declared, diagnostics) else {
             return self.ast.push_stmt(Stmt::Error { span: start });
@@ -1321,7 +1549,11 @@ impl Parser<'_> {
         }
 
         let span = Span::new(self.file, start.start(), self.previous().span.end());
-        self.ast.push_stmt(Stmt::Declaration { declarators, span })
+        self.ast.push_stmt(Stmt::Declaration {
+            declarators,
+            specified,
+            span,
+        })
     }
 
     /// One statement, and where it went in the tree.
@@ -1497,7 +1729,7 @@ impl Parser<'_> {
 
         // The same test a block makes, so a `for` reads a declaration where a
         // block would and nowhere else.
-        let first = if specifier(self.peek().kind).is_some()
+        let first = if begins_specifiers(self.peek().kind)
             || self.check(TokenKind::Annotation(Annotation::Attribute))
         {
             let declaration = self.declaration_statement(diagnostics);
@@ -1717,7 +1949,7 @@ impl Parser<'_> {
 
     /// A primary expression with whatever follows it. C17 6.5.2.
     ///
-    /// Member access is not here yet, and neither are casts or `sizeof`.
+    /// Casts and `sizeof` are not here yet.
     fn postfix(&mut self, diagnostics: &mut DiagnosticSink) -> ExprId {
         let mut base = self.primary(diagnostics);
 
@@ -1736,6 +1968,25 @@ impl Parser<'_> {
                 Punct::LeftBracket => {
                     self.spend();
                     self.subscript(base, diagnostics)
+                }
+                // C17 6.5.2.3 p1: `.` and `->` are followed by an identifier,
+                // which names a member and is looked up by nothing yet.
+                Punct::Dot | Punct::Arrow => {
+                    self.spend();
+                    self.advance();
+                    let Some(member) =
+                        self.expect(TokenKind::Identifier, "a member's name", diagnostics)
+                    else {
+                        let span = self.ast.expr(base).span();
+                        return self.ast.push_expr(Expr::Error { span });
+                    };
+                    let span = self.ast.expr(base).span().to(member);
+                    self.ast.push_expr(Expr::Member {
+                        base,
+                        member,
+                        arrow: punct == Punct::Arrow,
+                        span,
+                    })
                 }
                 Punct::PlusPlus | Punct::MinusMinus => {
                     self.spend();

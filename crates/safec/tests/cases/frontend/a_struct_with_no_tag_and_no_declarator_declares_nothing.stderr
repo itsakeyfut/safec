@@ -1,0 +1,8 @@
+error[SC0206]: this declaration declares nothing
+   ╭─[ a_struct_with_no_tag_and_no_declarator_declares_nothing.c:1:1 ]
+   │
+ 1 │ struct { int x; };
+   │ ────────┬────────  
+   │         ╰────────── no name and no tag
+───╯
+  = note: C17 6.7 p2

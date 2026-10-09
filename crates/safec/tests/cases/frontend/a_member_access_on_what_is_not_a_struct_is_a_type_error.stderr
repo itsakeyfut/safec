@@ -1,0 +1,16 @@
+error[SC0306]: `.` needs a struct, and this is `int`
+   ╭─[ a_member_access_on_what_is_not_a_struct_is_a_type_error.c:4:12 ]
+   │
+ 4 │     return x.y + p->y;
+   │            ┬  
+   │            ╰── this is `int`
+───╯
+  = note: C17 6.5.2.3 p1
+error[SC0306]: `->` needs a pointer to a struct, and this is `int *`
+   ╭─[ a_member_access_on_what_is_not_a_struct_is_a_type_error.c:4:18 ]
+   │
+ 4 │     return x.y + p->y;
+   │                  ┬  
+   │                  ╰── this is `int *`
+───╯
+  = note: C17 6.5.2.3 p1

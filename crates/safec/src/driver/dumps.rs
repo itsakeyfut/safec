@@ -5,6 +5,7 @@
 //! `--emit safety-ir` is not here: what an IR line says is a fact about the IR,
 //! and it is written by `safec_ir::print`.
 
+use std::collections::HashSet;
 use std::fmt::Write as _;
 
 use crate::ast::{
@@ -145,8 +146,20 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
             dump_parameters(sources, ast, function.ty, depth + 1, out);
             dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
         }
-        Item::Declaration { declarators, span } => {
-            dump_declarators(sources, ast, declarators, item.name(), *span, depth, out);
+        Item::Declaration {
+            declarators,
+            specified,
+            span,
+        } => {
+            dump_declarators(
+                sources,
+                ast,
+                (declarators, *specified),
+                item.name(),
+                *span,
+                depth,
+                out,
+            );
         }
         Item::Error { .. } => out.push('\n'),
     }
@@ -165,19 +178,16 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
 fn dump_declarators(
     sources: &SourceMap,
     ast: &Ast,
-    declarators: &[InitDeclarator],
+    (declarators, specified): (&[InitDeclarator], TypeId),
     name: &'static str,
     span: Span,
     depth: usize,
     out: &mut String,
 ) {
     if declarators.is_empty() {
-        // `dump_node` has written a prefix and nothing below would end the
-        // line. Both variants say in their doc comments that a list is never
-        // empty, and #34 is the change that would make one: this is the line
-        // it has to find.
-        out.push('\n');
-        return;
+        // A declaration of a tag and nothing else: the type is all it has.
+        writeln!(out, " {:?}", spell_type(sources, ast, specified))
+            .expect("writing to a string cannot fail");
     }
 
     for (at, declarator) in declarators.iter().enumerate() {
@@ -190,6 +200,58 @@ fn dump_declarators(
         if let Some(init) = declarator.init {
             dump_expr(sources, ast, init, depth + 1, out);
         }
+    }
+
+    // The members a struct the specifiers defined was given, a line each, once
+    // per declaration rather than once per declarator.
+    dump_fields(sources, ast, specified, depth + 1, out);
+}
+
+/// The members of the struct `ty` defines, if it defines one, a line each at
+/// `depth`, with the members of a struct a member defines under that member.
+///
+/// An explicit stack, for the reason `sema.rs`'s `walk_type` gives: a struct
+/// nests as deep as `Parser::deeper` allows and each member's declarator as
+/// deep again. Each definition is printed once, under the first member that
+/// reaches it, because every declarator of `struct T { ... } a, b;` shares it.
+fn dump_fields(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &mut String) {
+    // The members of the struct `ty` is built on, if it defines one this walk
+    // has not printed, pushed so that they pop in the order written.
+    fn push_members<'a>(
+        ast: &'a Ast,
+        seen: &mut HashSet<TypeId>,
+        ty: TypeId,
+        depth: usize,
+        pending: &mut Vec<(&'a Declaration, usize)>,
+    ) {
+        let mut current = ty;
+        loop {
+            match ast.ty(current) {
+                Type::Pointer(inner) | Type::Array { element: inner, .. } => current = *inner,
+                Type::Function { returns, .. } => current = *returns,
+                Type::Struct {
+                    members: Some(members),
+                    ..
+                } => {
+                    if seen.insert(current) {
+                        pending.extend(members.iter().rev().map(|member| (member, depth)));
+                    }
+                    return;
+                }
+                Type::Struct { members: None, .. } | Type::Int | Type::Char | Type::Void => {
+                    return;
+                }
+            }
+        }
+    }
+
+    let mut seen = HashSet::new();
+    let mut pending = Vec::new();
+    push_members(ast, &mut seen, ty, depth, &mut pending);
+    while let Some((member, depth)) = pending.pop() {
+        dump_node(sources, "Field", member.span, depth, out);
+        dump_declaration(sources, ast, member, out);
+        push_members(ast, &mut seen, member.written, depth + 1, &mut pending);
     }
 }
 
@@ -269,8 +331,20 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
                 dump_expr(sources, ast, *id, depth + 1, out);
             }
         }
-        Stmt::Declaration { declarators, span } => {
-            dump_declarators(sources, ast, declarators, stmt.name(), *span, depth, out);
+        Stmt::Declaration {
+            declarators,
+            specified,
+            span,
+        } => {
+            dump_declarators(
+                sources,
+                ast,
+                (declarators, *specified),
+                stmt.name(),
+                *span,
+                depth,
+                out,
+            );
         }
         Stmt::Expression { value, .. } => {
             out.push('\n');
@@ -392,6 +466,12 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
             }
             Expr::Binary { op, .. } => {
                 write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
+            }
+            // The operator as written, then the member's name.
+            Expr::Member { member, arrow, .. } => {
+                let operator = if *arrow { "->" } else { "." };
+                write!(out, " {operator:?} {:?}", quoted(sources, *member))
+                    .expect("writing to a string cannot fail");
             }
             Expr::Assign { op, .. } => {
                 // `+=` is `+` and `=`, built rather than tabulated: eleven more

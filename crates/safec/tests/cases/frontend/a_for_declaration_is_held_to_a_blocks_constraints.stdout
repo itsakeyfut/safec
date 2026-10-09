@@ -20,9 +20,13 @@ Function a_for_declaration_is_held_to_a_blocks_constraints.c:1:1 "f" "int (void)
       Number a_for_declaration_is_held_to_a_blocks_constraints.c:8:30 "0"
       Compound a_for_declaration_is_held_to_a_blocks_constraints.c:8:34
     For a_for_declaration_is_held_to_a_blocks_constraints.c:10:5 declaration condition
-      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:10:10 "p" "int *"
-        Number a_for_declaration_is_held_to_a_blocks_constraints.c:10:19 "1"
-      Number a_for_declaration_is_held_to_a_blocks_constraints.c:10:22 "0"
-      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:10:26
-    Return a_for_declaration_is_held_to_a_blocks_constraints.c:12:5
-      Number a_for_declaration_is_held_to_a_blocks_constraints.c:12:12 "0"
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:10:10 "struct S"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:10:20 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:10:24
+    For a_for_declaration_is_held_to_a_blocks_constraints.c:12:5 declaration condition
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:12:10 "p" "int *"
+        Number a_for_declaration_is_held_to_a_blocks_constraints.c:12:19 "1"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:12:22 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:12:26
+    Return a_for_declaration_is_held_to_a_blocks_constraints.c:14:5
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:14:12 "0"

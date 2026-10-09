@@ -1,0 +1,7 @@
+error[SC0201]: expected a tag or `{`
+   ╭─[ a_struct_with_neither_tag_nor_members_is_refused.c:1:7 ]
+   │
+ 1 │ struct;
+   │       ┬  
+   │       ╰── a tag or `{` is missing here
+───╯

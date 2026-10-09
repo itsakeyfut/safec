@@ -1,0 +1,62 @@
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:1:1 "struct S"
+  Field a_struct_is_read_and_refused_until_it_means_something.c:1:12 "x" "int"
+  Field a_struct_is_read_and_refused_until_it_means_something.c:1:19 "p" "char *"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:2:1 "struct S"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:3:1 "s" "struct T"
+Function a_struct_is_read_and_refused_until_it_means_something.c:4:1 "f" "int (struct S *)"
+  Parameter a_struct_is_read_and_refused_until_it_means_something.c:4:7 "p" "struct S *"
+  Compound a_struct_is_read_and_refused_until_it_means_something.c:4:20
+    Declaration a_struct_is_read_and_refused_until_it_means_something.c:5:5 "q" "struct S"
+    Return a_struct_is_read_and_refused_until_it_means_something.c:6:5
+      Binary a_struct_is_read_and_refused_until_it_means_something.c:6:12 "+"
+        Member a_struct_is_read_and_refused_until_it_means_something.c:6:12 "->" "x"
+          Identifier a_struct_is_read_and_refused_until_it_means_something.c:6:12 "p"
+        Member a_struct_is_read_and_refused_until_it_means_something.c:6:19 "." "x"
+          Identifier a_struct_is_read_and_refused_until_it_means_something.c:6:19 "q"
+Function a_struct_is_read_and_refused_until_it_means_something.c:8:1 "g" "int (void)"
+  Compound a_struct_is_read_and_refused_until_it_means_something.c:8:13
+    Declaration a_struct_is_read_and_refused_until_it_means_something.c:9:5 "k" "int"
+      Number a_struct_is_read_and_refused_until_it_means_something.c:9:13 "1"
+    Return a_struct_is_read_and_refused_until_it_means_something.c:10:5
+      Identifier a_struct_is_read_and_refused_until_it_means_something.c:10:12 "k"
+Function a_struct_is_read_and_refused_until_it_means_something.c:12:1 "h" "int (struct S *, struct S *)"
+  Parameter a_struct_is_read_and_refused_until_it_means_something.c:12:7 "a" "struct S *"
+  Parameter a_struct_is_read_and_refused_until_it_means_something.c:12:20 "b" "struct S *"
+  Compound a_struct_is_read_and_refused_until_it_means_something.c:12:33
+    Expression a_struct_is_read_and_refused_until_it_means_something.c:13:5
+      Assign a_struct_is_read_and_refused_until_it_means_something.c:13:5 "="
+        Identifier a_struct_is_read_and_refused_until_it_means_something.c:13:5 "a"
+        Identifier a_struct_is_read_and_refused_until_it_means_something.c:13:9 "b"
+    Return a_struct_is_read_and_refused_until_it_means_something.c:14:5
+      Number a_struct_is_read_and_refused_until_it_means_something.c:14:12 "0"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:16:1 "d" "struct D *"
+  Field a_struct_is_read_and_refused_until_it_means_something.c:16:12 "a" "int"
+  Field a_struct_is_read_and_refused_until_it_means_something.c:16:12 "b" "int"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:17:1 "anonymous" "struct (anonymous)"
+  Field a_struct_is_read_and_refused_until_it_means_something.c:17:10 "x" "int"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:18:1 "many" "struct S[3]"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:19:1 "make" "struct S (void)"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:20:1 "takes" "int (*)(struct S *)"
+Declaration a_struct_is_read_and_refused_until_it_means_something.c:21:1 "abstract" "int (int (struct S *))"
+  Parameter a_struct_is_read_and_refused_until_it_means_something.c:21:14 "int (struct S *)"
+Function a_struct_is_read_and_refused_until_it_means_something.c:22:1 "i" "int (void)"
+  Compound a_struct_is_read_and_refused_until_it_means_something.c:22:13
+    Declaration a_struct_is_read_and_refused_until_it_means_something.c:23:5 "struct U"
+    Declaration a_struct_is_read_and_refused_until_it_means_something.c:24:5 "e" "struct E *"
+      Field a_struct_is_read_and_refused_until_it_means_something.c:24:16 "e" "int"
+    For a_struct_is_read_and_refused_until_it_means_something.c:25:5 declaration condition
+      Declaration a_struct_is_read_and_refused_until_it_means_something.c:25:10 "r" "struct S *"
+        Number a_struct_is_read_and_refused_until_it_means_something.c:25:24 "0"
+      Number a_struct_is_read_and_refused_until_it_means_something.c:25:27 "0"
+      Compound a_struct_is_read_and_refused_until_it_means_something.c:25:31
+    Expression a_struct_is_read_and_refused_until_it_means_something.c:27:5
+      Member a_struct_is_read_and_refused_until_it_means_something.c:27:5 "." "x"
+        Subscript a_struct_is_read_and_refused_until_it_means_something.c:27:5
+          Identifier a_struct_is_read_and_refused_until_it_means_something.c:27:5 "many"
+          Number a_struct_is_read_and_refused_until_it_means_something.c:27:10 "0"
+    Expression a_struct_is_read_and_refused_until_it_means_something.c:28:5
+      Member a_struct_is_read_and_refused_until_it_means_something.c:28:5 "." "x"
+        Call a_struct_is_read_and_refused_until_it_means_something.c:28:5
+          Identifier a_struct_is_read_and_refused_until_it_means_something.c:28:5 "make"
+    Return a_struct_is_read_and_refused_until_it_means_something.c:29:5
+      Number a_struct_is_read_and_refused_until_it_means_something.c:29:12 "0"

@@ -2782,6 +2782,105 @@ cases! {
         // declarator under `SC0309` as well, and both are reported; dropping
         // the file-scope walk's arrays loses its `SC0310`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
+        // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
+        // members, a declaration of a tag and nothing else, an object, a
+        // parameter, a local, and `.` and `->`, each in the tree. The type
+        // checker refuses every one under `SC0304` until #27 says what they
+        // mean, the two declarations with no declarator included, and `g`,
+        // which holds no struct, is not reported. Mutation: refuse `struct` in
+        // `specifiers` again; this is `SC0201` at the first `struct`.
+        // Mutation: let a parameter's type past the gate, or skip a member
+        // access; a report goes. Mutation: read `->` as `.`; the dump's
+        // `"->"` goes. `h` assigns one pointer to a struct to another, and
+        // only its parameters are reported: a name whose type holds a struct
+        // is given no type. Mutation: give it its type; `a = b` is also
+        // refused as `SC0302`, since nothing yet says two structs are one.
+        // The rest is every place a struct is read: two members in one
+        // declaration, a definition with a declarator at file scope and in a
+        // block, a tag declared in a block, a `for` and a parenthesised
+        // declarator beginning with `struct`, a struct with no tag, an array
+        // of one and a function returning one, each used. Mutation: stop
+        // reading a member list's `,`; `int a, b` is `expected ;`. Mutation:
+        // test a `for` or a parenthesised declarator for a specifier with
+        // `specifier` alone; the `for` or `abstract`'s parameter is a syntax
+        // error. Mutation: let `holds_a_struct` stop at an array or a
+        // function; `many[0]` or `make()` gets a struct type, and `.x` on it
+        // is refused as needing a struct, which it is.
+        a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
+        // A struct with no tag declares nothing when nothing else is
+        // declared (6.7 p2). Mutation: let any struct through without a
+        // declarator; this loses its `SC0206`.
+        a_struct_with_no_tag_and_no_declarator_declares_nothing: ["--emit", "ast"],
+        // A declaration with no declarator has only its specifiers' type, and
+        // the gate asks it, so a struct whose member breaks a constraint is
+        // refused by the gate rather than accepted. The member itself is not
+        // checked: nothing below a struct is, until #27. Mutation: leave a declaration's `specified`
+        // type out of the gate; this exits 0.
+        a_struct_whose_member_breaks_a_constraint_is_still_refused: ["--emit", "ast"],
+        // 6.7.2.1 p1's grammar asks for a member, and `clang
+        // -pedantic-errors` calls `struct S {};` a GNU extension. Mutation:
+        // accept a `}` before any member; this loses its `SC0201`.
+        a_struct_with_no_members_is_refused: ["--emit", "ast"],
+        // Three hundred structs each the only member of the one around it,
+        // past the parser's nesting limit, so a member list goes through
+        // `Parser::deeper`. Mutation: read members without `deeper`; this is
+        // a struct as deep as the source, which the parser does not refuse.
+        a_struct_nested_past_the_limit_is_refused_rather_than_read: ["--emit", "ast"],
+        // Two hundred and fifty structs, each reached from the one around it
+        // through twenty `*`s. The parser bounds the two nestings apart, so
+        // a walk of the type that recursed through both went the product of
+        // them deep and overflowed the stack, with nothing reported.
+        // Mutation: make `sema.rs`'s `walk_type` recurse again; the process
+        // dies and this fails.
+        a_struct_nested_through_long_pointer_chains_is_walked_without_recursion: ["--emit", "ast"],
+        // `x` and `y` share one definition, so its member's undeclared `n` is
+        // reported once, and `struct T`, declared with no declarator, still
+        // has its `k` resolved. Walking the definition per declarator
+        // reported `n` twice, and nested, took time exponential in the
+        // depth. Mutation: drop `walked`; `n` is reported twice. Mutation:
+        // skip a declaration's `specified` in sema; `k`'s report goes.
+        a_struct_definition_shared_by_declarators_is_walked_once: ["--emit", "ast"],
+        // `struct T` is defined inside a member and its own member `y` is
+        // printed under `t`, the first member that reaches it, and not again
+        // under `u`, which shares it. Mutation: drop `seen` in
+        // `dump_fields`; `y` is printed twice. Mutation: print only the
+        // specifiers' struct's members; `y` goes.
+        a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined: ["--emit", "ast"],
+        // `struct` with no tag and no member list names nothing. Mutation:
+        // accept it; this loses its `SC0201`.
+        a_struct_with_neither_tag_nor_members_is_refused: ["--emit", "ast"],
+        // A member's pointer promises nothing yet, so a nullability
+        // specifier in one is refused as in a block. Mutation: let
+        // `Declares::Member` take one; this is read.
+        a_struct_member_takes_no_nullability_specifier: ["--emit", "ast"],
+        // A hatch is a function definition, and a declaration of a tag has
+        // no body. Mutation: drop the attribute check on that path; the hatch
+        // is read onto `struct S`.
+        a_hatch_on_a_declaration_of_a_tag_is_refused: ["--emit", "ast"],
+        // Three hundred `->` in a row are one thing not checked yet, and are
+        // reported once, at the first. A report each, with a span growing by
+        // one access each, was output and time quadratic in the chain.
+        // Mutation: report a member access whose base is one; three hundred
+        // reports.
+        a_chain_of_member_accesses_is_refused_once: ["--emit", "ast"],
+        // Valid C that is not read yet, each told so with the paragraph that
+        // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
+        // bit-field, named or not (p9). Mutation: send a member with no
+        // declarator to the `int;` check again; the anonymous member is
+        // `SC0206`, a claim that valid C is invalid. Mutation: drop either
+        // `:` check; that bit-field is `expected` something instead.
+        a_struct_with_an_anonymous_member_is_not_read_yet: ["--emit", "ast"],
+        a_bit_field_is_not_read_yet: ["--emit", "ast"],
+        a_bit_field_with_no_name_is_not_read_yet: ["--emit", "ast"],
+        // A member list has nowhere to put a tag (6.7.2.1 p2), so `struct T;`
+        // in one declares nothing, which `clang -pedantic-errors` refuses
+        // too. Mutation: call it an anonymous member; this moves.
+        a_member_that_declares_only_a_tag_declares_nothing: ["--emit", "ast"],
+        // A base with a type is not a struct, since a name holding one has
+        // none, so `.` on an `int` and `->` on an `int *` break 6.5.2.3 p1
+        // and are type errors rather than structs not checked yet. Mutation:
+        // refuse every member access as `SC0304`; both move.
+        a_member_access_on_what_is_not_a_struct_is_a_type_error: ["--emit", "ast"],
         // C17 6.7 p2: a declaration has to declare something, and specifiers
         // followed by their `;` declare nothing, at file scope, in a block and
         // as a `for`'s first clause alike, since all three are read by
@@ -2821,7 +2920,10 @@ cases! {
         // a function under `SC0311`, `g` and `h` and `k`, the last declared
         // second. Mutation: stop asking a `for`'s declarators whether they
         // declare a function; the `SC0311`s go. Mutation: ask only the first
-        // declarator; `k`'s goes. Mutation: stop receiving a `for` declaration's
+        // declarator; `k`'s goes. `for (struct S; 0;)` declares a tag, which
+        // is not an object either, and is `SC0311` as well as the struct
+        // gate's. Mutation: ask only a declaration's declarators; its
+        // `SC0311` goes. Mutation: stop receiving a `for` declaration's
         // initializers; the `SC0302` goes.
         a_for_declaration_is_held_to_a_blocks_constraints: ["--emit", "ast"],
         // A `for` reads a declaration where a block would, and that includes

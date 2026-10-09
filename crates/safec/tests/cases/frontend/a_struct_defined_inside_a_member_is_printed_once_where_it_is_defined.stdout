@@ -1,0 +1,5 @@
+Declaration a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined.c:1:1 "f" "struct S"
+  Field a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined.c:1:12 "t" "struct T"
+    Field a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined.c:1:23 "y" "int"
+  Field a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined.c:1:12 "u" "struct T"
+  Field a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined.c:1:38 "z" "int"

@@ -17,7 +17,7 @@
 //! `&SourceMap`. This is not that moment, and nothing here measures a cost:
 //! the program this phase targets has three names in it.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, Attribute, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
@@ -133,6 +133,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
         children: Vec::new(),
+        walked: HashSet::new(),
     };
 
     for item in ast.items() {
@@ -158,6 +159,12 @@ struct Resolver<'a> {
     scopes: Vec<Vec<BindingId>>,
     /// Reused across every expression walk, so that a run allocates once.
     children: Vec<ExprId>,
+    /// The struct definitions [`Resolver::walk_type`] has walked, so that each
+    /// is walked once: every declarator of `struct S { ... } a, b;` shares the
+    /// one definition, and walking it per declarator reported a member's
+    /// undeclared length once per declarator and took time exponential in how
+    /// deep such declarations nest.
+    walked: HashSet<TypeId>,
 }
 
 impl Resolver<'_> {
@@ -184,7 +191,12 @@ impl Resolver<'_> {
                 self.stmt(function.body, diagnostics);
                 self.scopes.pop();
             }
-            Item::Declaration { declarators, .. } => {
+            Item::Declaration {
+                declarators,
+                specified,
+                ..
+            } => {
+                self.specified(declarators, *specified, diagnostics);
                 self.declarators(declarators, diagnostics);
             }
             Item::Error { .. } => {}
@@ -240,6 +252,20 @@ impl Resolver<'_> {
             if let Some(init) = declarator.init {
                 self.expr(init, diagnostics);
             }
+        }
+    }
+
+    /// The type a declaration with no declarator names, which nothing else
+    /// walks: `struct S { int a[n]; };` has a length to resolve and no
+    /// declarator to reach it through.
+    fn specified(
+        &mut self,
+        declarators: &[InitDeclarator],
+        specified: TypeId,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        if declarators.is_empty() {
+            self.walk_type(specified, diagnostics);
         }
     }
 
@@ -307,10 +333,15 @@ impl Resolver<'_> {
         }
     }
 
-    /// The expressions inside a type, which is its array lengths.
+    /// The expressions inside a type, which is its array lengths, a struct
+    /// member's included.
     ///
-    /// A recursion, bounded the way `parser.rs::apply` bounds a declarator's
-    /// derivations, so a type is at most `MAX_NESTING` deep.
+    /// An explicit stack rather than a recursion. A type is a declarator's
+    /// derivations, which `parser.rs::apply` bounds, and a struct's members,
+    /// each a type of its own, which `Parser::deeper` bounds separately, so
+    /// the two multiply: `MAX_NESTING` structs each reached through a long
+    /// pointer chain overflowed the stack. In the order the recursion visited
+    /// them, so the names are resolved, and reported, in source order.
     ///
     /// A function's parameters are not walked here, because they need a scope
     /// of their own and this has none to give: [`Resolver::parameters`] is
@@ -318,20 +349,36 @@ impl Resolver<'_> {
     /// instead reports `n` in `int f(int n, int a[n])` as undeclared, which is
     /// a false positive about valid C.
     fn walk_type(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
-        match self.ast.ty(ty) {
-            Type::Int | Type::Char | Type::Void => {}
-            Type::Pointer(pointee) => self.walk_type(*pointee, diagnostics),
-            Type::Array {
-                element,
-                length,
-                written: _,
-            } => {
-                if let Some(length) = *length {
-                    self.expr(length, diagnostics);
+        let ast = self.ast;
+        let mut pending = vec![ty];
+        while let Some(ty) = pending.pop() {
+            match ast.ty(ty) {
+                Type::Int | Type::Char | Type::Void => {}
+                Type::Pointer(pointee) => pending.push(*pointee),
+                Type::Array {
+                    element,
+                    length,
+                    written: _,
+                } => {
+                    if let Some(length) = *length {
+                        self.expr(length, diagnostics);
+                    }
+                    pending.push(*element);
                 }
-                self.walk_type(*element, diagnostics);
+                Type::Function { returns, .. } => pending.push(*returns),
+                // A member's array lengths are expressions too, walked once
+                // per definition, for the reason `walked` gives. Its name and
+                // the tag are not looked up: what they mean is #27's.
+                Type::Struct {
+                    members: Some(members),
+                    ..
+                } => {
+                    if self.walked.insert(ty) {
+                        pending.extend(members.iter().rev().map(|member| member.written));
+                    }
+                }
+                Type::Struct { members: None, .. } => {}
             }
-            Type::Function { returns, .. } => self.walk_type(*returns, diagnostics),
         }
     }
 
@@ -353,7 +400,12 @@ impl Resolver<'_> {
                 }
                 self.scopes.pop();
             }
-            Stmt::Declaration { declarators, .. } => {
+            Stmt::Declaration {
+                declarators,
+                specified,
+                ..
+            } => {
+                self.specified(declarators, *specified, diagnostics);
                 self.declarators(declarators, diagnostics);
             }
             Stmt::Return { value, .. } | Stmt::Expression { value, .. } => {
