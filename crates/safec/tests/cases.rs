@@ -2883,10 +2883,10 @@ cases! {
         // Mutation: type a member access without looking its member up;
         // this goes silent.
         a_member_the_struct_does_not_have_is_reported: ["--emit", "ast"],
-        // `p->a` in `f` is above `struct S`'s definition, where the struct
-        // has no members yet (6.7.2.1 p8), and is `SC0315`; in `g` it is
-        // below and typed. Mutation: ask completeness where `p` was
-        // declared; `g`'s is reported too.
+        // `p` is declared above `struct S`'s definition. `p->a` in `f` is
+        // above it too, where the struct has no members yet (6.7.2.1 p8),
+        // and is `SC0315`; in `g` it is below and typed. Mutation: ask
+        // completeness where `p` was declared; `g`'s is reported too.
         a_member_of_a_struct_not_complete_where_it_is_named_is_reported: ["--emit", "ast"],
         // C17 6.7.2.1 p3's second sentence: a struct with a flexible array
         // member is no member of another (`SC0314`) and no element of an

@@ -1,7 +1,7 @@
 error[SC0315]: `struct S` is not complete here, and has no members yet
-   ╭─[ a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:3:12 ]
+   ╭─[ a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:4:12 ]
    │
- 3 │     return p->a;
+ 4 │     return p->a;
    │            ┬  
    │            ╰── this is `struct S *`
 ───╯
