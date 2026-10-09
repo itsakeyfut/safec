@@ -2641,21 +2641,30 @@ mod tests {
     }
 
     /// The return of a function without a prototype is compared with the
-    /// prototype standing before it, a struct's by its tag; and a struct in a
-    /// definition without a prototype against one that has none.
+    /// prototype standing before it, a struct's by its tag, and so is a
+    /// definition without a prototype against one with: two tags conflict
+    /// and one tag does not. A parameter's struct is compared by its tag too.
     ///
     /// Mutation: answer every struct pair the same in the `()`-against-a-
-    /// prototype arm of `Resolver::agrees`; `f` goes silent. Mutation: the
-    /// same in its definition-without-a-prototype arm; `g` goes silent.
+    /// prototype arm of `Resolver::agrees`; `f` goes silent. Mutation: every
+    /// pair different there; `h` is reported. Mutation: every pair the same
+    /// in its definition-without-a-prototype arm; `g` goes silent. Mutation:
+    /// every pair different there; `k` is reported. Mutation: every pair of
+    /// parameters the same in `Ast::compatible_parameters`; `n` goes silent.
+    /// Each fails this.
     #[test]
     fn a_return_is_compared_by_its_struct_without_a_prototype() {
         let resolved = resolved(
-            "struct S;\nstruct T;\nstruct S *f(void);\nstruct T *f();\nstruct S *g() {\n    return 0;\n}\nstruct T *g(void);\n",
+            "struct S;\nstruct T;\nstruct S *f(void);\nstruct T *f();\nstruct S *g() {\n    return 0;\n}\nstruct T *g(void);\nstruct S *h(void);\nstruct S *h();\nstruct S *k() {\n    return 0;\n}\nstruct S *k(void);\nint n(struct S *a);\nint n(struct T *a);\n",
         );
 
         assert_eq!(
             resolved.messages(),
-            ["conflicting types for `f`", "conflicting types for `g`"]
+            [
+                "conflicting types for `f`",
+                "conflicting types for `g`",
+                "conflicting types for `n`",
+            ]
         );
     }
 }
