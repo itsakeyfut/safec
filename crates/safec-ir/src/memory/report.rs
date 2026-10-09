@@ -831,11 +831,12 @@ pub(super) fn handed_places<'a>(
 /// place as said when it had only been looked at spent the right to report it:
 /// a dereference this check proved live said nothing and registered anyway, so
 /// a later one of the same place at the same span was skipped as a repeat of a
-/// report that never happened. Two dereferences do share a span, because both
-/// operands of a `&&` or a `||` are written into one temporary at the whole
-/// expression's span, and `if (*p || (free(p), *p))` was exit 0 with no output:
+/// report that never happened. Two dereferences can share a span: the C
+/// lowering wrote both operands of a `&&` or a `||` at the whole expression's
+/// span until #147, and `if (*p || (free(p), *p))` was exit 0 with no output,
 /// a proved use of a freed value, silent, which is the worst answer
-/// `docs/safety-model.md` allows for. A function rather than the tail of
+/// `docs/safety-model.md` allows for. Another frontend may still build such
+/// a pair, and the tests in `tests/freed.rs` build it as IR. A function rather than the tail of
 /// [`used`] because [`used_before`] reaches the same caret from the other
 /// direction, and two copies of this rule would be two answers to which report
 /// stands.

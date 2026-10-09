@@ -7,7 +7,7 @@ Function a_loop_on_a_comma_expression_is_not_taken_for_a_constant.c:1:5 "f"
     Goto "bb1"
   Block "bb1"
     Sequenced a_loop_on_a_comma_expression_is_not_taken_for_a_constant.c:2:13 generated
-    Branch a_loop_on_a_comma_expression_is_not_taken_for_a_constant.c:2:13 "bb2" "bb3"
+    Branch a_loop_on_a_comma_expression_is_not_taken_for_a_constant.c:2:16 "bb2" "bb3"
       Constant 1
   Block "bb2"
     Sequenced a_loop_on_a_comma_expression_is_not_taken_for_a_constant.c:2:13 generated

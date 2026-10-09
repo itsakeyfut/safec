@@ -27,7 +27,7 @@ Function a_dereference_after_a_comma_in_a_condition.c:3:5 "f"
   Block "bb2"
     Sequenced a_dereference_after_a_comma_in_a_condition.c:5:5 generated
     Sequenced a_dereference_after_a_comma_in_a_condition.c:6:9 generated
-    Branch a_dereference_after_a_comma_in_a_condition.c:6:9 "bb3" "bb4"
+    Branch a_dereference_after_a_comma_in_a_condition.c:6:12 "bb3" "bb4"
       Copy "_2"
         Deref
   Block "bb3"

@@ -1267,9 +1267,9 @@ fn evaluating_a_place_moves_no_site() {
 
 /// A proof at a caret replaces the suspicion already standing there.
 ///
-/// **Two dereferences of one place can share a caret**, because both operands
-/// of a `&&` or a `||` are written into one temporary at the whole
-/// expression's span, and `used` collapses such a pair into one report. Which
+/// **Two dereferences of one place can share a caret**, as both operands of a
+/// `&&` or a `||` did in the C lowering until #147, and `used` collapses such
+/// a pair into one report. Which
 /// of the two survives is the question: the first read here is unproven,
 /// because a call this check cannot read was handed the pointer and may have
 /// freed it, and the second is proved, because a `free` writes `Freed` over an
@@ -1282,9 +1282,9 @@ fn evaluating_a_place_moves_no_site() {
 /// `Reached::Lost` and there is no proof left to replace the suspicion with.
 /// A call marks the sites it was handed, and a later `free` writes over them.
 ///
-/// **Written as IR rather than as C on purpose.** The C that reaches this
-/// today does so because the lowering gives both operands of a `||` the whole
-/// expression's span, and #147 is open to narrow exactly that. A guard a
+/// **Written as IR rather than as C on purpose.** The C that reached this did
+/// so only because the lowering gave both operands of a `||` the whole
+/// expression's span, and #147 narrowed exactly that and retired it. A guard a
 /// caret-precision change can retire is not a guard for a rule about what this
 /// check is allowed to be silent about, and `docs/c-family.md` asks that
 /// another frontend be able to build this IR with no C frontend present.
@@ -2504,10 +2504,10 @@ fn a_read_with_the_span_of_a_later_free_is_still_carried_to_it() {
 ///
 /// **No C program reaches this pending at the call, and a frontend can build
 /// it.** An argument ends where its call's parentheses do, so a read reaching
-/// past the call is not written inside it. The C lowering does make such spans,
-/// since it gives both operands of a `||` the whole expression's span, so the
-/// right operand of `h(x) || *a` starts where `h(x)` does; but that read runs
-/// after the call and is never pending when it is asked. Nothing orders the
+/// past the call is not written inside it. The C lowering made such spans
+/// until #147, when both operands of a `||` had the whole expression's span
+/// and the right operand of `h(x) || *a` started where `h(x)` does; even then
+/// that read ran after the call and was never pending when it was asked. Nothing orders the
 /// read below before the free, so it is carried to it and reported.
 ///
 /// Mutation: drop `inner.end() <= outer.end()` from `memory/report.rs::inside`.

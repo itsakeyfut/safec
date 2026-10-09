@@ -14,7 +14,7 @@ Function a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm.c:1:5 "f
       Use
         Copy "_2"
     Sequenced a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm.c:3:10 generated
-    Branch a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm.c:3:10 "bb1" "bb2"
+    Branch a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm.c:3:17 "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_assigned_before_a_comma_is_not_null_on_the_taken_arm.c:3:10 generated

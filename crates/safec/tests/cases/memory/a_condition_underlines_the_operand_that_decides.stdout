@@ -1,0 +1,535 @@
+Target "x86_64-pc-windows-msvc"
+Function a_condition_underlines_the_operand_that_decides.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter
+Function a_condition_underlines_the_operand_that_decides.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_condition_underlines_the_operand_that_decides.c:4:5 "if_comma"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:5:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:5:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:5:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:5:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:6:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:6:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:6:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:7:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:7:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:9:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:9:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:9:5 generated
+    Sequenced a_condition_underlines_the_operand_that_decides.c:10:9 generated
+    Branch a_condition_underlines_the_operand_that_decides.c:10:12 "bb6" "bb7"
+      Copy "_2"
+        Deref
+  Block "bb6"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:10:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:11:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_condition_underlines_the_operand_that_decides.c:11:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:10:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_condition_underlines_the_operand_that_decides.c:13:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:13:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:16:5 "if_chain"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:17:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:17:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:17:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:17:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:18:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:18:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:18:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:19:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:19:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:18:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:21:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:21:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:21:5 generated
+    Sequenced a_condition_underlines_the_operand_that_decides.c:22:9 generated
+    Sequenced a_condition_underlines_the_operand_that_decides.c:22:9 generated
+    Branch a_condition_underlines_the_operand_that_decides.c:22:15 "bb6" "bb7"
+      Copy "_2"
+        Deref
+  Block "bb6"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:22:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:23:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_condition_underlines_the_operand_that_decides.c:23:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:22:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_condition_underlines_the_operand_that_decides.c:25:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:25:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:28:5 "if_left"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:29:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:29:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:29:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:29:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:30:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:30:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:30:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:31:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:31:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:30:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:33:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:33:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:33:5 generated
+    Evaluate a_condition_underlines_the_operand_that_decides.c:34:9 written
+      Place "_2"
+        Deref
+    Sequenced a_condition_underlines_the_operand_that_decides.c:34:9 generated
+    Branch a_condition_underlines_the_operand_that_decides.c:34:13 "bb6" "bb7"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:34:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:35:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_condition_underlines_the_operand_that_decides.c:35:16 generated
+    Return
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:34:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_condition_underlines_the_operand_that_decides.c:37:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:37:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:40:5 "while_comma"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:41:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:41:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:41:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:41:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:42:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:42:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:42:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:43:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:43:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:42:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:45:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:45:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:45:5 generated
+    Goto "bb6"
+  Block "bb6"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:46:12 generated
+    Branch a_condition_underlines_the_operand_that_decides.c:46:15 "bb7" "bb8"
+      Copy "_2"
+        Deref
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:46:12 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:47:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_condition_underlines_the_operand_that_decides.c:47:16 generated
+    Return
+  Block "bb8"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:46:12 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:49:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:49:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:52:5 "for_comma"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:53:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:53:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:53:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:53:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:54:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:54:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:54:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:55:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:55:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:54:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:57:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:57:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:57:5 generated
+    Goto "bb6"
+  Block "bb6"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:58:12 generated
+    Branch a_condition_underlines_the_operand_that_decides.c:58:15 "bb7" "bb8"
+      Copy "_2"
+        Deref
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:58:12 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:59:9 written
+      Destination "_0"
+      Use
+        Constant 1
+    Sequenced a_condition_underlines_the_operand_that_decides.c:59:16 generated
+    Return
+  Block "bb8"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:58:12 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:61:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:61:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:64:5 "conditional_comma"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:65:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:65:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:65:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:65:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:66:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:66:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:66:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:67:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:67:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:66:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:69:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:69:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:69:5 generated
+    Sequenced a_condition_underlines_the_operand_that_decides.c:70:13 generated
+    Branch a_condition_underlines_the_operand_that_decides.c:70:16 "bb7" "bb8"
+      Copy "_2"
+        Deref
+  Block "bb6"
+    Operation a_condition_underlines_the_operand_that_decides.c:70:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:70:13 generated
+    Return
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:70:13 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:70:13 written
+      Destination "_5"
+      Use
+        Constant 1
+    Goto "bb6"
+  Block "bb8"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:70:13 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:70:13 written
+      Destination "_5"
+      Use
+        Constant 2
+    Goto "bb6"
+  Block "bb9"
+    Operation a_condition_underlines_the_operand_that_decides.c:71:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:71:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:74:5 "and_left"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:75:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:75:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:75:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:75:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:76:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:76:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:76:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:77:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:77:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:76:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:79:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:79:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:79:5 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:80:12 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_2"
+          Deref
+        Constant 0
+    Branch a_condition_underlines_the_operand_that_decides.c:80:12 "bb7" "bb6"
+      Copy "_5"
+  Block "bb6"
+    Operation a_condition_underlines_the_operand_that_decides.c:80:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:80:12 generated
+    Return
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:80:12 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:80:18 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Goto "bb6"
+  Block "bb8"
+    Operation a_condition_underlines_the_operand_that_decides.c:81:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:81:12 generated
+    Return
+Function a_condition_underlines_the_operand_that_decides.c:84:5 "or_right"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:85:14 generated
+    Call a_condition_underlines_the_operand_that_decides.c:85:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_condition_underlines_the_operand_that_decides.c:85:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:85:14 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:86:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_condition_underlines_the_operand_that_decides.c:86:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:86:9 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:87:9 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:87:16 generated
+    Return
+  Block "bb3"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:86:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_condition_underlines_the_operand_that_decides.c:89:5 generated
+    Call a_condition_underlines_the_operand_that_decides.c:89:5 "free" "bb5"
+      Copy "_2"
+  Block "bb5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:89:5 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:90:12 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_1"
+        Constant 0
+    Branch a_condition_underlines_the_operand_that_decides.c:90:12 "bb6" "bb7"
+      Copy "_5"
+  Block "bb6"
+    Operation a_condition_underlines_the_operand_that_decides.c:90:5 written
+      Destination "_0"
+      Use
+        Copy "_5"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:90:12 generated
+    Return
+  Block "bb7"
+    Sequenced a_condition_underlines_the_operand_that_decides.c:90:12 generated
+    Operation a_condition_underlines_the_operand_that_decides.c:90:17 written
+      Destination "_5"
+      Binary "Ne"
+        Copy "_2"
+          Deref
+        Constant 0
+    Goto "bb6"
+  Block "bb8"
+    Operation a_condition_underlines_the_operand_that_decides.c:91:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_condition_underlines_the_operand_that_decides.c:91:12 generated
+    Return

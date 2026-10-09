@@ -1,2 +1,3 @@
 Hatch a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported.c:2:5 "both"
-  Conclusion a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported.c:4:12 "SC0403" "unsafe" "this dereferences a null pointer"
+  Conclusion a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported.c:4:12 "SC0403" "unknown" "this may dereference a null pointer"
+  Conclusion a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported.c:4:18 "SC0403" "unsafe" "this dereferences a null pointer"

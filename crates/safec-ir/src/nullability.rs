@@ -1240,9 +1240,10 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     //
     // **The worst survives, not the first.** `report` takes the worst of the
     // places one element dereferences, but two elements can share a caret and
-    // disagree: `*p && *q` writes both operands at the whole expression's span,
-    // so an unproven `*p` and a proved `*q` arrive as two findings at one
-    // caret, the unproven one first. Keeping the first reported a proof as a
+    // disagree: until #147 the C lowering wrote both operands of `*p && *q` at
+    // the whole expression's span, so an unproven `*p` and a proved `*q`
+    // arrived as two findings at one caret, the unproven one first, and
+    // another frontend may still build that. Keeping the first reported a proof as a
     // suspicion, and inside a hatch, where a suspicion is listed rather than
     // reported, a proved null dereference built and ran. `memory::report::say`
     // answers the same shape with `supersedes`; this is the same rule.

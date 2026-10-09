@@ -28,12 +28,12 @@ Function a_logical_or_sequences_a_free_before_a_use.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_logical_or_sequences_a_free_before_a_use.c:5:14 generated
-    Operation a_logical_or_sequences_a_free_before_a_use.c:5:14 written
+    Operation a_logical_or_sequences_a_free_before_a_use.c:5:23 written
       Destination "_4"
       Binary "Ne"
         Constant 0
         Constant 0
-    Branch a_logical_or_sequences_a_free_before_a_use.c:5:14 "bb3" "bb4"
+    Branch a_logical_or_sequences_a_free_before_a_use.c:5:23 "bb3" "bb4"
       Copy "_4"
   Block "bb3"
     Operation a_logical_or_sequences_a_free_before_a_use.c:5:9 written
@@ -55,7 +55,7 @@ Function a_logical_or_sequences_a_free_before_a_use.c:3:5 "f"
         Copy "_1"
           Deref
         Constant 0
-    Operation a_logical_or_sequences_a_free_before_a_use.c:5:14 written
+    Operation a_logical_or_sequences_a_free_before_a_use.c:5:30 written
       Destination "_4"
       Binary "Ne"
         Copy "_5"

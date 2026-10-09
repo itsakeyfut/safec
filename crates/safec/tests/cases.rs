@@ -365,10 +365,26 @@ cases! {
         // address; both become proofs.
         a_pointer_to_an_allocation_freed_on_one_arm_or_to_a_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_to_an_allocation_or_a_local_freed_after_the_join_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        a_live_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_unproven_read_and_a_freed_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        an_escaped_local_read_twice_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_freed_read_and_an_unproven_one_at_one_span: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p || (free(p), *p)`: the left read is live and says nothing, the
+        // right is a proof at its own span. Mutation: give the operands'
+        // writes the whole `||` span again; the proof moves onto the whole
+        // condition.
+        a_live_read_and_a_freed_one_in_one_or_are_reported_apart: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The left read is doubted, since a call the check cannot read was
+        // handed `p`, and the right is proved after the free; each at its own
+        // operand. Mutation: give the operands' writes the whole `||` span
+        // again; the two fold into the proof at one caret.
+        an_unproven_read_and_a_freed_one_in_one_or_are_reported_apart: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `p`'s address escaped, so both reads of `*p || (free(p), *p)` are
+        // doubted, each at its own operand. Mutation: give the operands'
+        // writes the whole `||` span again; the two fold into one report.
+        an_escaped_local_read_twice_in_one_or_is_reported_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The two reads of `*p || (q = &p, *p)` are reported where each is
+        // written: the left proved, the right doubted once `p`'s address is
+        // taken. Mutation: give the operands' writes the whole `||` span
+        // again; the two fold into the proof at one caret. Which of a pair at
+        // one caret stands is held as IR in `crates/safec-ir/tests/freed.rs`.
+        a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_discarded_dereference_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_discarded_subscript_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_discarded_dereference_in_a_comma_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -388,6 +404,20 @@ cases! {
         a_freed_pointer_read_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_written_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_after_a_comma_in_a_condition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Each function underlines only the operand whose value decides,
+        // after a free, at every place a condition or a `&&` or `||` operand
+        // is recorded: the comma under `if`, `while`, `for` and `?:`, a chain
+        // of two commas, and each side of a short circuit. `if_left` pins that
+        // a comma's left operand is underlined by its own read, since its
+        // branch reads `c` and reports nothing, so no mutation of an origin
+        // moves it. Mutation: take the whole controlling expression again at
+        // one of the `if`, `while` or `for` sites, or the `?:` branch; that
+        // function's row widens. Mutation: take a comma's left operand; the
+        // comma rows move onto `c`. Mutation: unwrap one comma only, `if let`
+        // for `while let` in `decides`; `if_chain` widens to `c, *p`.
+        // Mutation: give the left or the right operand's write the whole
+        // binary span again; `and_left` or `or_right` widens.
+        a_condition_underlines_the_operand_that_decides: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_subscript_in_a_condition_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_in_a_conditional_expression_after_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         two_allocations_are_freed_once_each: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -952,13 +982,14 @@ cases! {
         // Mutation: have `Analysis::edge` refine a source this check has
         // settled; `return *p` is reported as a null dereference.
         a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `*p && **q` writes both operands at one caret, a plain doubt about
-        // `p` first and one through memory about `q` second, and the reader is
-        // told one thing. It has to settle both, so the remedy for a pointer
-        // read out of memory survives. Mutation: have `Asked::joined` keep the
-        // first question as it is; the remedy becomes the plain one, which
-        // would leave `**q` refused after it was followed.
-        a_doubt_through_memory_beside_a_plain_one_at_one_caret_is_told_how_to_settle_both: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p && **q` doubts `p` plainly and `q` through memory, each at its
+        // own operand since #147, so each is told the remedy that settles it.
+        // Mutation: give the operands' writes the whole `&&` span again; the
+        // two fold into one report at one caret. The fold's own rule, that the
+        // remedy through memory is the one kept, is held by
+        // `a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy`
+        // in `crates/safec-ir/tests/nulls.rs`.
+        a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The root's own answer still counts, and a proof outranks the doubt
         // beside it. Mutation: answer only the deeper question whenever there
         // is one; this fails as unproven where it expects proved.
@@ -1302,9 +1333,12 @@ cases! {
         // handed reaches but was not handed directly; this builds with
         // nothing reported.
         a_free_proved_before_a_call_handed_what_holds_it_stays_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // `&&` writes both operands at one caret. Mutation: keep the first
-        // finding at a caret in `nullability::findings`' `dedup_by` rather than
-        // the worst; this fails, and the proved dereference builds.
+        // Each operand of the `&&` is reported at its own span since #147, so
+        // the proved `*q` is not folded with the unproven `*p` and is
+        // reported rather than listed. The fold that used to decide this, the
+        // worst kept at one caret, is held by
+        // `a_proof_and_a_suspicion_at_one_caret_report_the_proof` in
+        // `crates/safec-ir/tests/nulls.rs`.
         a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // An attribute `sema::resolve` refused is an error, so the run stops
         // before the lowering: no hatch is marked and no check runs, and the
