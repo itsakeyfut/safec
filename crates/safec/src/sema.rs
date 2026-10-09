@@ -2639,4 +2639,23 @@ mod tests {
             Some(resolved.occurrence("f", 1))
         );
     }
+
+    /// The return of a function without a prototype is compared with the
+    /// prototype standing before it, a struct's by its tag; and a struct in a
+    /// definition without a prototype against one that has none.
+    ///
+    /// Mutation: answer every struct pair the same in the `()`-against-a-
+    /// prototype arm of `Resolver::agrees`; `f` goes silent. Mutation: the
+    /// same in its definition-without-a-prototype arm; `g` goes silent.
+    #[test]
+    fn a_return_is_compared_by_its_struct_without_a_prototype() {
+        let resolved = resolved(
+            "struct S;\nstruct T;\nstruct S *f(void);\nstruct T *f();\nstruct S *g() {\n    return 0;\n}\nstruct T *g(void);\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            ["conflicting types for `f`", "conflicting types for `g`"]
+        );
+    }
 }
