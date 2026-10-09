@@ -843,7 +843,7 @@ impl Checker<'_> {
                 )
                 .with_code(DECLARATOR)
                 .with_label(Label::primary(at, "this is not a constant"))
-                .with_note("a member of a structure has no variably modified type (C17 6.7.2.1 p9)")
+                .with_note("a member of a structure has no variably modified type (C17 6.7.6.2 p2 and 6.7.2.1 p9)")
             } else {
                 Diagnostic::error(
                     "a declaration at file scope cannot have an array length that is not a constant",

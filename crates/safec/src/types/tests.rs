@@ -1996,6 +1996,58 @@ int f(struct S s, struct T t, struct S u, int c) {{
     }
 }
 
+/// Every step of a pointer to a struct asks whether the struct is complete
+/// where the step is written, at each of the places one is spelled: `+` on
+/// either side, `-` by an integer and between two pointers, `++`, `[]` on
+/// either side, and `+=`. `B` closes after `A`, so its step is numbered
+/// apart from the first definition's.
+///
+/// Mutation: pass `|_| true` for completeness at any one of those places;
+/// its row in `f` goes silent, or for `+=` in `compound_assignment`, which
+/// says why, loses its note. `p - p` asks both pointees, and either alone
+/// still refuses one struct, so the mutation there is to both. Mutation:
+/// record every definition as closed at step 0 in `close_definition`; `B`
+/// is complete in `f`, and every row goes silent. Either fails this.
+#[test]
+fn every_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
+    let steps = "    p + 1;\n    1 + p;\n    p - 1;\n    p - p;\n    p++;\n    p[0];\n    0[p];\n    p += 1;\n";
+    let checked = checked(&format!(
+        "struct A;\nstruct B;\nstruct B *p;\nstruct A {{\n    int a;\n}};\nvoid f(void) {{\n{steps}}}\nstruct B {{\n    int b;\n}};\nvoid g(void) {{\n{steps}}}\n"
+    ));
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`+` cannot take `struct B *` and `int`",
+            "`+` cannot take `int` and `struct B *`",
+            "`-` cannot take `struct B *` and `int`",
+            "`-` cannot take `struct B *` and `struct B *`",
+            "`++` cannot take `struct B *`",
+            "`[]` cannot take `struct B *` and `int`",
+            "`[]` cannot take `int` and `struct B *`",
+            "`+=` cannot take `struct B *` and `int`",
+        ]
+    );
+    let note = |clause: &str| {
+        format!(
+            "a pointer steps by the size of what it points to, and a struct that is not complete here has no size (C17 {clause})"
+        )
+    };
+    assert_eq!(
+        checked.notes(),
+        [
+            note("6.5.6 p2"),
+            note("6.5.6 p2"),
+            note("6.5.6 p3"),
+            note("6.5.6 p3"),
+            note("6.5.2.4 p2"),
+            note("6.5.2.1 p1"),
+            note("6.5.2.1 p1"),
+            note("6.5.16.2 p1"),
+        ]
+    );
+}
+
 /// A struct defined in a declaration's specifier is complete in every
 /// length its declarator writes, since the specifier is written first: `p
 /// + 1` in `arr`'s length steps a complete `struct S *` (C17 6.7.2.1 p8).
@@ -2010,4 +2062,31 @@ fn a_struct_defined_in_a_specifier_is_complete_in_its_declarators_lengths() {
     );
 
     assert_eq!(checked.messages(), Vec::<&str>::new());
+}
+
+/// A member's array length is a constant, in a block as at file scope,
+/// since a member has no variably modified type (C17 6.7.6.2 p2, 6.7.2.1
+/// p9); and a definition shared by two declarators has its members asked
+/// once.
+///
+/// Mutation: hold a member to what a block's array is held to; the first
+/// row goes silent. Mutation: drop the member's own message; both say what
+/// a file-scope array is told. Mutation: walk a definition's members once
+/// per declarator in `check_declarators`; `a[0]` is reported twice, and a
+/// chain of such definitions is walked in time exponential in its depth.
+/// Each fails this.
+#[test]
+fn a_member_is_held_to_what_c_says_of_a_member_once_per_definition() {
+    let checked = checked(
+        "void f(int n) {\n    struct S {\n        int a[n];\n    } s;\n}\nint m;\nstruct T {\n    int b[m];\n};\nstruct U {\n    int a[0];\n} x, y;\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "a member of a struct cannot have an array length that is not a constant",
+            "the length of an array is greater than zero",
+            "a member of a struct cannot have an array length that is not a constant",
+        ]
+    );
 }
