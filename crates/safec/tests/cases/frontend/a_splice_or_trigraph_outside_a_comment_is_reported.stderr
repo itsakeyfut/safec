@@ -1,0 +1,71 @@
+error[SC0107]: a line splice outside a comment is not supported yet
+   ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:1:7 ]
+   │
+ 1 │ int na\
+   │       ┬  
+   │       ╰── this joins the next line to this one
+───╯
+  = note: C17 5.1.1.2 p1 phase 2; only a comment reads one so far
+error[SC0107]: a line splice outside a comment is not supported yet
+   ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:3:13 ]
+   │
+ 3 │ char *s = "a\
+   │             ┬  
+   │             ╰── this joins the next line to this one
+───╯
+  = note: C17 5.1.1.2 p1 phase 2; only a comment reads one so far
+error[SC0107]: trigraphs are not supported yet
+   ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:5:9 ]
+   │
+ 5 │ int t = ??-1;
+   │         ─┬─  
+   │          ╰─── this is `~` in C17
+───╯
+  = note: C17 5.2.1.1
+error[SC0107]: a line splice outside a comment is not supported yet
+   ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:6:7 ]
+   │
+ 6 │ int a ??/
+   │       ─┬─  
+   │        ╰─── this joins the next line to this one
+───╯
+  = note: C17 5.1.1.2 p1 phase 2; only a comment reads one so far
+error[SC0107]: a line splice outside a comment is not supported yet
+   ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:8:14 ]
+   │
+ 8 │ char *u = "c\\
+   │              ┬  
+   │              ╰── this joins the next line to this one
+───╯
+  = note: C17 5.1.1.2 p1 phase 2; only a comment reads one so far
+error[SC0107]: trigraphs are not supported yet
+    ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:10:12 ]
+    │
+ 10 │ char *v = "??=";
+    │            ─┬─  
+    │             ╰─── this is `#` in C17
+────╯
+  = note: C17 5.2.1.1
+error[SC0107]: trigraphs are not supported yet
+    ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:11:12 ]
+    │
+ 11 │ char w = '\??/';
+    │            ─┬─  
+    │             ╰─── this is `\` in C17
+────╯
+  = note: C17 5.2.1.1
+error[SC0103]: unexpected character
+    ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:12:9 ]
+    │
+ 12 │ int z = @\
+    │         ┬  
+    │         ╰── not part of any token
+────╯
+error[SC0107]: a line splice outside a comment is not supported yet
+    ╭─[ a_splice_or_trigraph_outside_a_comment_is_reported.c:12:10 ]
+    │
+ 12 │ int z = @\
+    │          ┬  
+    │          ╰── this joins the next line to this one
+────╯
+  = note: C17 5.1.1.2 p1 phase 2; only a comment reads one so far

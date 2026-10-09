@@ -1,0 +1,4 @@
+Function a_spaced_splice_in_a_comment_is_spliced_with_a_warning.c:1:1 "main" "int (void)"
+  Compound a_spaced_splice_in_a_comment_is_spliced_with_a_warning.c:1:16
+    Return a_spaced_splice_in_a_comment_is_spliced_with_a_warning.c:6:5
+      Number a_spaced_splice_in_a_comment_is_spliced_with_a_warning.c:6:12 "0"

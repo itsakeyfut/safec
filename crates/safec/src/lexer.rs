@@ -24,7 +24,8 @@
 //!
 //! # Not here yet
 //!
-//! Line splicing (a `\` before a newline), a universal character name in an
+//! Line splicing (a `\` before a newline) and trigraphs outside a comment,
+//! which are reported as `SC0107`, a universal character name in an
 //! identifier (`\u00e9`, which is ASCII and which 6.4.2.1 puts in
 //! `identifier-nondigit`), literal prefixes (`L"..."`, `u8'x'`), and non-ASCII
 //! identifiers. Each currently scans as something else and is reported or
@@ -48,6 +49,18 @@ const UNTERMINATED_LITERAL: Code = Code::new("SC0102");
 const UNEXPECTED_CHARACTERS: Code = Code::new("SC0103");
 const UNSUPPORTED_DIRECTIVE: Code = Code::new("SC0104");
 const EMPTY_LITERAL: Code = Code::new("SC0105");
+/// Valid C the lexer does not read yet outside a comment: a line splice, a
+/// `\` or `??/` before a newline (C17 5.1.1.2 p1 phase 2), or a trigraph
+/// (5.2.1.1, phase 1). Not `SC0103`, which says a character can begin no
+/// token, where these are C; this is `SC0104`'s kind of refusal.
+const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
+/// A `\` and the newline it splices with only spaces or tabs between them,
+/// a warning. C17 splices only a `\` right before the newline, and how
+/// physical lines map to source lines is phase 1's, an implementation's
+/// choice: clang and gcc splice this, with a warning, and so does this
+/// compiler, since reading the line below as code would analyse a program
+/// they do not build.
+const SPACED_SPLICE: Code = Code::new("SC0108");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
@@ -141,6 +154,10 @@ impl<'a> Lexer<'a> {
         // punctuator, and within itself longest-first, which is C's rule: the
         // scan takes the longest run of characters that could be a token even
         // when a shorter one would let the rest parse.
+        if c == '?' && trigraph(self.rest()).is_some() {
+            self.report_trigraph(diagnostics);
+            return TokenKind::Unknown;
+        }
         // By the spelling matched, which a digraph makes longer than the
         // punctuator's own: `<:` is two bytes of `[`.
         if let Some((punct, spelled)) = Punct::starting(self.rest()) {
@@ -205,6 +222,16 @@ impl<'a> Lexer<'a> {
         self.bump();
 
         loop {
+            // A splice or a trigraph in a literal is reported in place, and
+            // the literal goes on as C would read it.
+            if splice(self.rest()).is_some() {
+                self.report_splice(diagnostics);
+                continue;
+            }
+            if trigraph(self.rest()).is_some() {
+                self.report_trigraph(diagnostics);
+                continue;
+            }
             match self.peek() {
                 // A literal closes on the line it opens on. Reporting at the
                 // newline rather than running to the end of the file keeps one
@@ -232,10 +259,16 @@ impl<'a> Lexer<'a> {
                 }
                 Some('\\') => {
                     self.bump();
-                    // Not past a newline: that is a line splice, which is not
-                    // implemented, and consuming it here would hide the
-                    // unterminated literal instead of reporting it.
-                    if self.peek().is_some_and(|c| c != '\n') {
+                    // The character after the `\` is the escape's, unless a
+                    // splice or a trigraph begins there: phases 1 and 2 come
+                    // before escapes are read, so `"a\\` newline `b"` is
+                    // `"a\b"` and `'\??/'` is `'\\'`, and the top of the loop
+                    // reports either. Not past a newline either, which would
+                    // hide an unterminated literal.
+                    if splice(self.rest()).is_none()
+                        && trigraph(self.rest()).is_none()
+                        && self.peek().is_some_and(|c| c != '\n')
+                    {
                         self.bump();
                     }
                 }
@@ -281,7 +314,8 @@ impl<'a> Lexer<'a> {
     /// under thousands of identical reports.
     fn scan_unknown(&mut self, diagnostics: &mut DiagnosticSink) -> TokenKind {
         let start = self.offset;
-        while self.peek().is_some_and(is_stray) {
+        // Not into a splice, whose `\` is `SC0107`'s to report.
+        while self.peek().is_some_and(is_stray) && splice(self.rest()).is_none() {
             self.bump();
         }
 
@@ -370,10 +404,27 @@ impl<'a> Lexer<'a> {
                 Some(c) if is_whitespace(c) => {
                     self.bump();
                 }
-                Some('/') if self.rest().starts_with("//") => {
-                    while self.peek().is_some_and(|c| c != '\n') {
-                        self.bump();
+                // A line comment goes on across a splice, as C17 5.1.1.2 p1
+                // phase 2 joins the next line to it before comments are
+                // removed in phase 3: `// a \` makes the line below it part
+                // of the comment.
+                Some('/') if self.rest().starts_with("//") => loop {
+                    if let Some(splice) = splice(self.rest()) {
+                        self.splice_in_comment(splice, diagnostics);
+                        continue;
                     }
+                    match self.peek() {
+                        Some(c) if c != '\n' => {
+                            self.bump();
+                        }
+                        _ => break,
+                    }
+                },
+                // Outside a comment a splice is reported rather than
+                // performed, and passed over so that its `\` is not also an
+                // unexpected character.
+                Some('\\' | '?') if splice(self.rest()).is_some() => {
+                    self.report_splice(diagnostics);
                 }
                 Some('/') if self.rest().starts_with("/*") => {
                     self.skip_block_comment(diagnostics);
@@ -388,9 +439,30 @@ impl<'a> Lexer<'a> {
         self.offset += "/*".len();
 
         loop {
-            if self.rest().starts_with("*/") {
-                self.offset += "*/".len();
-                return;
+            // A `*` closes the comment with a `/` after it, across any splice
+            // between the two: C17 phase 2 has joined them by phase 3.
+            if self.rest().starts_with('*') {
+                let mut after = 1;
+                while let Some(splice) = splice(&self.rest()[after..]) {
+                    after += splice.length;
+                }
+                if self.rest()[after..].starts_with('/') {
+                    // Each splice between them decides where the comment
+                    // ends, so each is asked what a line comment's is.
+                    self.offset += 1;
+                    while let Some(splice) = splice(self.rest()) {
+                        self.splice_in_comment(splice, diagnostics);
+                    }
+                    self.offset += 1;
+                    return;
+                }
+            }
+            // A splice's newline goes on the logical line, so it opens none.
+            // Anywhere else in a block comment a splice decides nothing, so
+            // it is passed over without a word.
+            if let Some(splice) = splice(self.rest()) {
+                self.offset += splice.length;
+                continue;
             }
             match self.bump() {
                 Some('\n') => self.at_line_start = true,
@@ -411,6 +483,77 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Report the splice at the scan's position under [`UNSUPPORTED_SPLICE`]
+    /// and pass over it.
+    fn report_splice(&mut self, diagnostics: &mut DiagnosticSink) {
+        let splice = splice(self.rest()).expect("a splice is here");
+        let (length, backslash) = (splice.length, splice.marker);
+        let start = self.offset;
+        diagnostics.report(
+            Diagnostic::error("a line splice outside a comment is not supported yet")
+                .with_code(UNSUPPORTED_SPLICE)
+                .with_label(Label::primary(
+                    // The `\` or `??/`, not the newline after it.
+                    Span::new(self.file, start as u32, (start + backslash) as u32),
+                    "this joins the next line to this one",
+                ))
+                .with_note("C17 5.1.1.2 p1 phase 2; only a comment reads one so far"),
+        );
+        self.offset += length;
+    }
+
+    /// Pass over the splice at the scan's position inside a comment, where it
+    /// is performed, and say what makes it doubtful: a `??/` is a splice only
+    /// where trigraphs are read, which clang's and gcc's default modes do not,
+    /// so the comment it extends or closes depends on how the file is built,
+    /// and is refused (`UNSUPPORTED_SPLICE`); a `\` with spaces before the
+    /// newline is spliced as clang and gcc do, with a warning
+    /// (`SPACED_SPLICE`).
+    fn splice_in_comment(&mut self, splice: Splice, diagnostics: &mut DiagnosticSink) {
+        let start = self.offset;
+        let marker = Span::new(self.file, start as u32, (start + splice.marker) as u32);
+        if splice.marker == 3 {
+            diagnostics.report(
+                Diagnostic::error("a trigraph splice in a comment is not supported")
+                    .with_code(UNSUPPORTED_SPLICE)
+                    .with_label(Label::primary(
+                        marker,
+                        "this joins the next line to the comment in C17",
+                    ))
+                    .with_note(
+                        "clang's and gcc's default modes do not read trigraphs, so the comment would end here when built with them",
+                    ),
+            );
+        } else if splice.spaced {
+            diagnostics.report(
+                Diagnostic::warning("a backslash and the newline it splices are separated by space")
+                    .with_code(SPACED_SPLICE)
+                    .with_label(Label::primary(marker, "this joins the next line to this one"))
+                    .with_note(
+                        "C17 splices only a backslash right before the newline; clang and gcc splice this too, and so does this compiler",
+                    ),
+            );
+        }
+        self.offset += splice.length;
+    }
+
+    /// Report the trigraph at the scan's position under [`UNSUPPORTED_SPLICE`]
+    /// and pass over its three bytes.
+    fn report_trigraph(&mut self, diagnostics: &mut DiagnosticSink) {
+        let meant = trigraph(self.rest()).expect("a trigraph is here");
+        let start = self.offset;
+        diagnostics.report(
+            Diagnostic::error("trigraphs are not supported yet")
+                .with_code(UNSUPPORTED_SPLICE)
+                .with_label(Label::primary(
+                    Span::new(self.file, start as u32, (start + 3) as u32),
+                    format!("this is `{meant}` in C17"),
+                ))
+                .with_note("C17 5.2.1.1"),
+        );
+        self.offset += 3;
+    }
+
     fn rest(&self) -> &'a str {
         &self.text[self.offset..]
     }
@@ -428,6 +571,65 @@ impl<'a> Lexer<'a> {
     fn span(&self, start: usize) -> Span {
         Span::new(self.file, start as u32, self.offset as u32)
     }
+}
+
+/// A line splice at the start of some text: a `\`, or the trigraph `??/`
+/// that stands for one, before a newline (C17 5.1.1.2 p1 phases 1 and 2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Splice {
+    /// Its bytes, the newline's included.
+    length: usize,
+    /// The bytes of the `\` or the `??/`, which is what a caret points at.
+    marker: usize,
+    /// Whether spaces or tabs stand between the marker and the newline.
+    spaced: bool,
+}
+
+/// The splice `text` begins with, or `None`. The newline is `\n` or
+/// `\r\n`. Spaces and tabs before it are taken, and said, because clang and
+/// gcc splice across them where C17 names only a `\` right before the
+/// newline; see `SPACED_SPLICE`.
+fn splice(text: &str) -> Option<Splice> {
+    let marker = if text.starts_with('\\') {
+        1
+    } else if text.starts_with("??/") {
+        3
+    } else {
+        return None;
+    };
+    let after = &text[marker..];
+    let blank = after.len() - after.trim_start_matches([' ', '\t']).len();
+    let rest = &after[blank..];
+    let newline = if rest.starts_with('\n') {
+        1
+    } else if rest.starts_with("\r\n") {
+        2
+    } else {
+        return None;
+    };
+    Some(Splice {
+        length: marker + blank + newline,
+        marker,
+        spaced: blank > 0,
+    })
+}
+
+/// The character the trigraph `text` begins with stands for, or `None`
+/// where it begins with none (C17 5.2.1.1).
+fn trigraph(text: &str) -> Option<char> {
+    let rest = text.strip_prefix("??")?;
+    Some(match rest.chars().next()? {
+        '=' => '#',
+        '(' => '[',
+        '/' => '\\',
+        ')' => ']',
+        '\'' => '^',
+        '<' => '{',
+        '!' => '|',
+        '>' => '}',
+        '-' => '~',
+        _ => return None,
+    })
 }
 
 /// Whitespace as C spells it, which is ASCII and nothing else.
@@ -672,6 +874,63 @@ mod tests {
         }
     }
 
+    /// A splice is a `\` or `??/` before a newline, `\n` or `\r\n`, its
+    /// length covering both, with spaces or tabs between taken and said
+    /// (C17 5.1.1.2 p1 phases 1 and 2, as clang and gcc map them); anything
+    /// else between, or a `?` too few, makes none.
+    ///
+    /// Mutation: refuse spaces before the newline; the spaced rows are none.
+    /// Mutation: count `\r\n` as one byte; its length is short. Mutation:
+    /// drop `??/`; its rows are none. Mutation: mark a spaced splice
+    /// unspaced; its row fails. Each fails this.
+    #[test]
+    fn a_splice_is_a_backslash_or_its_trigraph_before_a_newline() {
+        let at = |length, marker, spaced| {
+            Some(Splice {
+                length,
+                marker,
+                spaced,
+            })
+        };
+        for (text, expected) in [
+            ("\\\nx", at(2, 1, false)),
+            ("\\\r\nx", at(3, 1, false)),
+            ("??/\nx", at(4, 3, false)),
+            ("??/\r\nx", at(5, 3, false)),
+            ("\\ \nx", at(3, 1, true)),
+            ("\\ \t\r\nx", at(5, 1, true)),
+            ("\\ x\nx", None),
+            ("\\x", None),
+            ("?/\nx", None),
+            ("\\", None),
+        ] {
+            assert_eq!(splice(text), expected, "{text:?}");
+        }
+    }
+
+    /// The nine trigraphs of C17 5.2.1.1, written out, and two that are not.
+    ///
+    /// Mutation: map any one to another character, or drop it; its row
+    /// fails.
+    #[test]
+    fn each_trigraph_is_the_character_c_says_it_is() {
+        for (text, meant) in [
+            ("??=", Some('#')),
+            ("??(", Some('[')),
+            ("??/", Some('\\')),
+            ("??)", Some(']')),
+            ("??'", Some('^')),
+            ("??<", Some('{')),
+            ("??!", Some('|')),
+            ("??>", Some('}')),
+            ("??-", Some('~')),
+            ("??a", None),
+            ("?=", None),
+        ] {
+            assert_eq!(trigraph(text), meant, "{text:?}");
+        }
+    }
+
     /// The other side of the same line, so that the fix cannot be read as
     /// "reject anything unusual". These five are C's whitespace, and a vertical
     /// tab is the one `is_ascii_whitespace` leaves out.
@@ -717,7 +976,7 @@ mod tests {
     /// wording is found, and a suppression flag, a suppression comment and a
     /// user's notes all key on the code instead, so a code is assigned once and
     /// never changes. `docs/diagnostics.md` says which range each one comes
-    /// from. The corpus holds these five as well, inside the rendered line it
+    /// from. The corpus holds these as well, inside the rendered line it
     /// compares byte for byte; this is the only place that asserts the code by
     /// itself.
     #[test]
@@ -728,6 +987,8 @@ mod tests {
             ("int x = @;\n", "SC0103"),
             ("#define X 1\n", "SC0104"),
             ("c = '';\n", "SC0105"),
+            ("int a\\\nb;\n", "SC0107"),
+            ("// a \\ \nb\n", "SC0108"),
         ] {
             let scan = scan(text);
             let reported = scan
