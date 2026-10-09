@@ -971,15 +971,17 @@ impl Checker<'_> {
             // reported there, and `a.b.c` with no `b` is one fault rather
             // than two. Any other base with no type may be a struct: not
             // every one was reported where it was typed, `p - q` being left
-            // untyped as this compiler's gap, so it is this compiler's to
-            // decline rather than nothing to say.
+            // untyped as this compiler's gap, so it is declined rather than
+            // passed over. Whose fault it is cannot be told here, since a
+            // base reported as the program's has no type either, and the
+            // note says both.
             if !matches!(ast.expr(base), Expr::Member { .. }) {
                 diagnostics.report(
                     Diagnostic::error(format!("cannot check `{operator}` yet"))
                         .with_code(NOT_YET)
-                        .with_label(Label::primary(span, "a member of something untyped"))
+                        .with_label(Label::primary(span, "a member of something with no type"))
                         .with_note(
-                            "this compiler gave the base no type, which is its gap rather than the program's",
+                            "the base has no type here: either a fault reported above, or a gap in this compiler",
                         ),
                 );
             }

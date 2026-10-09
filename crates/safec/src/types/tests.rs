@@ -1794,12 +1794,14 @@ fn a_function_is_held_to_what_c_needs_complete_of_it() {
 /// Mutation: refuse every member access as not yet checked, whatever its
 /// base; `s.a` goes untyped and `.` on a pointer is called this compiler's
 /// gap. Mutation: answer an array base as the wrong shape; `a->a` is called
-/// a fault. Mutation: say nothing of a base with no type; `(i - j).a`, left
-/// untyped as this compiler's gap, goes silent. Each fails this.
+/// a fault. Mutation: say nothing of a base with no type; `(i - j).a` and
+/// `(i - j)->a`, left untyped as this compiler's gap, go silent. Mutation:
+/// spell that report's operator as `.` whatever was written, or change its
+/// label or note; its row fails. Each fails this.
 #[test]
 fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_programs() {
     let checked = checked(
-        "struct S {\n    int a;\n    char *c;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + *p->c + a->a + p.a + s->a + a.a + (i - j).a;\n}\n",
+        "struct S {\n    int a;\n    char *c;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + *p->c + a->a + p.a + s->a + a.a + (i - j).a + (i - j)->a;\n}\n",
     );
 
     assert_eq!(checked.spelling("s.a"), "int");
@@ -1812,9 +1814,23 @@ fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_progr
             "`->` needs a pointer to a struct, and this is `struct S`",
             "`.` needs a struct, and this is `struct S[2]`",
             "cannot check `.` yet",
+            "cannot check `->` yet",
         ]
     );
-    assert_eq!(checked.codes(), ["SC0306", "SC0306", "SC0306", "SC0304"]);
+    assert_eq!(
+        checked.codes(),
+        ["SC0306", "SC0306", "SC0306", "SC0304", "SC0304"]
+    );
+    let untyped =
+        "the base has no type here: either a fault reported above, or a gap in this compiler";
+    assert_eq!(checked.notes()[3..], [untyped, untyped]);
+    assert_eq!(
+        checked.labels()[3..],
+        [
+            "a member of something with no type",
+            "a member of something with no type"
+        ]
+    );
 }
 
 /// A tag given two definitions, which is `SC0312`, answers every access
