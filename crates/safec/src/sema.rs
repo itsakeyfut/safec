@@ -1319,14 +1319,13 @@ mod tests {
     /// Mutation: drop the `rev` over `self.scopes` in `Resolver::lookup`. The
     /// outer `x` answers instead and this fails.
     ///
-    /// The other `rev`, over the bindings within one scope, is held by nothing
-    /// and cannot be until #360: it decides which of two declarations of one
-    /// name in one scope answers, and C makes that either an error, inside a
-    /// block, which `declare` reports, or two declarations of one entity at
-    /// file scope, whose types `declare` requires to be compatible. They can
-    /// still differ, `int f();` and `int f(int a);`, and which one a call is
-    /// checked against is #360's. There is no program whose meaning this
-    /// compiler can state today that tells the two orders apart.
+    /// The other `rev`, over the bindings within one scope, decides which of
+    /// two declarations of one name in one scope answers, and
+    /// `a_use_after_a_name_declared_twice_is_the_second_declaration` holds
+    /// it. At file scope two compatible declarations can still differ, `int
+    /// f(); int f(int *a);`, and a call after them is checked against the
+    /// second, so `f()` there is too few arguments; which declaration a call
+    /// ought to be checked against is the composite type, and #360's.
     #[test]
     fn a_name_finds_the_innermost_declaration_of_it() {
         let resolved = resolved("int main(void) { int x; { int x; return x; } return x; }\n");
