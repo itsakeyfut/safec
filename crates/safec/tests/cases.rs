@@ -2885,6 +2885,13 @@ cases! {
         // Mutation: keep the first binding of a spelling in `spelled` rather
         // than the latest; the second report points at line 2.
         a_name_declared_twice_in_one_block_is_a_redefinition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7 p4: `f` declared at file scope with a type that does not
+        // agree with its earlier prototype is `SC0313`, both types spelled,
+        // and the declaration with no prototype between them is not, being
+        // compatible with both. Mutation: swap the two labels; the types
+        // trade places. Mutation: compare with the latest declaration; the
+        // third is compatible with it and nothing is said.
+        declarations_of_one_name_with_conflicting_types: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
         // bit-field, named or not (p9). Mutation: send a member with no

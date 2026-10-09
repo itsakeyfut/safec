@@ -21,7 +21,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     Ast, Attribute, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
-    StmtId, Type, TypeId,
+    StmtId, Type, TypeId, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
@@ -53,6 +53,17 @@ const UNDECLARED: Code = Code::new("SC0301");
 /// tag and an ordinary name of one spelling are two names, and a message that
 /// dropped the keyword would read the same for either.
 const REDEFINED: Code = Code::new("SC0312");
+
+/// Two declarations of one name in one scope whose types are not compatible,
+/// which C17 6.7 p4 forbids: "All declarations in the same scope that refer
+/// to the same object or function shall specify compatible types."
+///
+/// Its own code rather than [`REDEFINED`]'s: one thing given twice and two
+/// declarations that disagree about what a thing is are different faults,
+/// and a reader filtering on a code should see them apart. The wording is
+/// `clang`'s `conflicting types for 'f'`, for the reason [`UNDECLARED`]
+/// gives.
+const CONFLICTING: Code = Code::new("SC0313");
 
 /// One declared name, addressed by [`BindingId`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -241,11 +252,11 @@ struct Resolver<'a> {
     /// tags a name space of their own and 6.2.1 p4 the same scopes, so the
     /// two are opened and closed together, by [`Resolver::open_scope`].
     tag_scopes: Vec<Vec<TagId>>,
-    /// The latest binding of each spelling, per scope and in step with
+    /// The declarations of each spelling, per scope and in step with
     /// `scopes`, which is what a second declaration in one scope is compared
     /// with. A map rather than a scan of the innermost scope, which would
     /// make a block of many declarations quadratic to resolve.
-    spelled: Vec<HashMap<String, BindingId>>,
+    spelled: Vec<HashMap<String, Declared>>,
     /// Reused across every expression walk, so that a run allocates once.
     children: Vec<ExprId>,
     /// The struct definitions [`Resolver::walk_type`] has walked, so that each
@@ -760,30 +771,46 @@ impl Resolver<'_> {
     ///
     /// Outside file scope only, because every name there has linkage while
     /// `static` and `extern` are not read: `int x; int x;` at file scope is
-    /// two tentative definitions of one object, and whether two declarations
-    /// there agree in type is #412's. Inside a block, a function declaration
-    /// has external linkage and an object or a parameter has none, so two
-    /// declarations are allowed only when both are of functions. The second
-    /// is declared all the same, so a use after it resolves as before.
+    /// two tentative definitions of one object. Inside a block, a function
+    /// declaration has external linkage and an object or a parameter has
+    /// none, so two declarations are allowed only when both are of functions.
+    /// The second is declared all the same, so a use after it resolves as
+    /// before.
+    ///
+    /// Two declarations that are allowed refer to one entity, and 6.7 p4
+    /// wants their types compatible. The new one is compared with the name's
+    /// standing declaration, see [`Declared`], and a type that reaches a
+    /// struct is not compared, see [`reaches_a_struct`].
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
     fn declare(&mut self, name: Span, ty: TypeId, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
         let here = self.spelled.last().expect("the file scope is never popped");
-        if self.scopes.len() > 1 {
-            if let Some(&first) = here.get(spelled) {
-                let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
-                let first = self.resolution.binding(first);
-                if !(function(first.ty) && function(ty)) {
-                    diagnostics.report(redefined(
-                        spelled,
-                        name,
-                        first.name,
-                        "declared",
-                        "C17 6.7 p3",
-                    ));
-                }
+        let earlier = here.get(spelled).copied();
+        if let Some(earlier) = earlier {
+            let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
+            let latest = self.resolution.binding(earlier.latest);
+            let standing = self.resolution.binding(earlier.standing);
+            if self.scopes.len() > 1 && !(function(latest.ty) && function(ty)) {
+                diagnostics.report(redefined(
+                    spelled,
+                    name,
+                    latest.name,
+                    "declared",
+                    "C17 6.7 p3",
+                ));
+            } else if !reaches_a_struct(self.ast, standing.ty)
+                && !reaches_a_struct(self.ast, ty)
+                && !self.ast.compatible(standing.ty, ty)
+            {
+                diagnostics.report(conflicting(
+                    self.sources,
+                    self.ast,
+                    spelled,
+                    (name, ty),
+                    (standing.name, standing.ty),
+                ));
             }
         }
 
@@ -793,10 +820,25 @@ impl Resolver<'_> {
             .last_mut()
             .expect("the file scope is never popped")
             .push(id);
+        let standing = match earlier {
+            Some(earlier)
+                if has_a_prototype(self.ast, self.resolution.binding(earlier.standing).ty)
+                    && !has_a_prototype(self.ast, ty) =>
+            {
+                earlier.standing
+            }
+            _ => id,
+        };
         self.spelled
             .last_mut()
             .expect("the file scope is never popped")
-            .insert(spelled.to_owned(), id);
+            .insert(
+                spelled.to_owned(),
+                Declared {
+                    latest: id,
+                    standing,
+                },
+            );
     }
 
     /// Record the definition of the function named at `name`, or report it
@@ -834,6 +876,99 @@ fn redefined(what: &str, again: Span, first: Span, verb: &str, clause: &str) -> 
         .with_label(Label::primary(again, format!("{verb} again here")))
         .with_label(Label::secondary(first, format!("previously {verb} here")))
         .with_note(clause)
+}
+
+/// The declarations of one spelling in one scope that a new one is compared
+/// with.
+///
+/// `standing` stands in for the composite type C17 6.2.7 p3 gives a name
+/// declared more than once, without building it: it is the most recent
+/// declaration with a prototype, or the most recent one where none has one.
+/// A prototype is what a later declaration has to agree with, and one
+/// without a prototype adds nothing a later one can disagree with beyond its
+/// return type, which is compared all the same. So `int f(); int f(char *a);
+/// int f(); int f(int *a);` compares the fourth with the second and reports
+/// it, where comparing with the third would not, and each declaration costs
+/// one comparison. The parameters of a parameter of function type are not
+/// composed in turn, which no program this compiler can build tells apart.
+#[derive(Clone, Copy)]
+struct Declared {
+    /// The most recent, which a second declaration of a name with no linkage
+    /// is reported against.
+    latest: BindingId,
+    standing: BindingId,
+}
+
+/// Whether `ty` is a function type with a parameter type list.
+fn has_a_prototype(ast: &Ast, ty: TypeId) -> bool {
+    matches!(
+        ast.ty(ty),
+        Type::Function {
+            parameters: Parameters::Prototype(_),
+            ..
+        }
+    )
+}
+
+/// Whether `ty` reaches a struct: along its pointers, arrays and return type
+/// as `types.rs`'s `holds_a_struct` walks, and also through a prototype's
+/// parameters, because [`Ast::compatible`] compares those too.
+///
+/// A type that does is not compared, because `compatible` answers every pair
+/// of structs incompatible until #27 gives a tag its meaning, and comparing
+/// would report `struct S *p; struct S *p;`, which is valid C. #27 removes
+/// this along with the struct gate. A recursion only into parameter lists,
+/// which the parser bounds.
+fn reaches_a_struct(ast: &Ast, ty: TypeId) -> bool {
+    let mut current = ty;
+    loop {
+        match ast.ty(current) {
+            Type::Struct { .. } => return true,
+            Type::Pointer(inner) | Type::Array { element: inner, .. } => current = *inner,
+            Type::Function {
+                returns,
+                parameters,
+            } => {
+                if let Parameters::Prototype(parameters) = parameters {
+                    if parameters
+                        .iter()
+                        .any(|parameter| reaches_a_struct(ast, parameter.ty))
+                    {
+                        return true;
+                    }
+                }
+                current = *returns;
+            }
+            Type::Int | Type::Char | Type::Void => return false,
+        }
+    }
+}
+
+/// `name`, declared at `again` as one type, where it was declared at `first`
+/// as another that is not compatible with it.
+///
+/// Both types are spelled, which is the whole of what the reader needs to see
+/// why: `int (void)` beside `char (void)`. `name` is interpolated raw, for
+/// the reason [`undeclared`] gives.
+fn conflicting(
+    sources: &SourceMap,
+    ast: &Ast,
+    name: &str,
+    again: (Span, TypeId),
+    first: (Span, TypeId),
+) -> Diagnostic {
+    let spelled = |ty| spell_type(sources, ast, ty);
+    Diagnostic::error(format!("conflicting types for `{name}`"))
+        .with_code(CONFLICTING)
+        .with_label(Label::primary(
+            again.0,
+            format!("declared here as `{}`", spelled(again.1)),
+        ))
+        .with_label(Label::secondary(
+            first.0,
+            format!("previously declared as `{}`", spelled(first.1)),
+        ))
+        .with_note("C17 6.7 p4")
 }
 
 /// `name` is source text, and it reaches a terminal through this message.
@@ -1057,12 +1192,13 @@ mod tests {
     /// outer `x` answers instead and this fails.
     ///
     /// The other `rev`, over the bindings within one scope, is held by nothing
-    /// and cannot be until #412: it decides which of two declarations of one
+    /// and cannot be until #360: it decides which of two declarations of one
     /// name in one scope answers, and C makes that either an error, inside a
     /// block, which `declare` reports, or two declarations of one entity at
-    /// file scope, which tell apart only when their types differ. There is no
-    /// program whose meaning this compiler can state today that tells the two
-    /// orders apart.
+    /// file scope, whose types `declare` requires to be compatible. They can
+    /// still differ, `int f();` and `int f(int a);`, and which one a call is
+    /// checked against is #360's. There is no program whose meaning this
+    /// compiler can state today that tells the two orders apart.
     #[test]
     fn a_name_finds_the_innermost_declaration_of_it() {
         let resolved = resolved("int main(void) { int x; { int x; return x; } return x; }\n");
@@ -1520,5 +1656,91 @@ mod tests {
             resolved.declaration_of("x", 2),
             Some(resolved.occurrence("x", 1))
         );
+    }
+
+    /// Declarations of one name at file scope whose types are not compatible
+    /// are reported (C17 6.7 p4): two functions, two objects, and an object
+    /// and then a function's definition.
+    ///
+    /// Mutation: drop the comparison in `Resolver::declare`; nothing is
+    /// reported and this fails.
+    #[test]
+    fn declarations_of_one_name_with_incompatible_types_are_reported() {
+        for (text, name) in [
+            ("int f(void);\nchar f(void);\n", "f"),
+            ("int x;\nchar x;\n", "x"),
+            ("int g;\nint g(void) {\n    return 2;\n}\n", "g"),
+        ] {
+            let resolved = resolved(text);
+            assert_eq!(
+                resolved.messages(),
+                [format!("conflicting types for `{name}`").as_str()],
+                "{text}"
+            );
+        }
+    }
+
+    /// A declaration is compared with the type the earlier ones composed,
+    /// which a prototype carries: `int f(int *a)` agrees with the `int f()`
+    /// just before it and not with the `int f(char *a)` before that. Pointer
+    /// parameters, because a `char` would disagree with `int f()` as well,
+    /// through 6.7.6.3 p15's default promotions, and tell nothing apart.
+    ///
+    /// Mutation: compare with `latest` rather than `standing` in
+    /// `Resolver::declare`; the fourth is not reported and this fails.
+    /// Mutation: let a declaration with no prototype replace `standing`; the
+    /// same.
+    #[test]
+    fn a_declaration_is_compared_with_the_prototype_before_it() {
+        let resolved = resolved("int f();\nint f(char *a);\nint f();\nint f(int *a);\n");
+
+        assert_eq!(resolved.messages(), ["conflicting types for `f`"]);
+    }
+
+    /// Compatible declarations of one name are not reported: two prototypes
+    /// whose parameters are named differently, a declaration with no
+    /// prototype after one, and two tentative definitions of one object.
+    ///
+    /// Mutation: report every pair, by negating the `compatible` test in
+    /// `Resolver::declare`; this fails.
+    #[test]
+    fn compatible_declarations_of_one_name_are_not_reported() {
+        let resolved = resolved("int f(int a);\nint f(int b);\nint f();\nint x;\nint x;\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// Two function declarations in one block are compared too, being one
+    /// function, while a name with no linkage declared twice there is a
+    /// redefinition and not also a conflict.
+    ///
+    /// Mutation: compare at file scope only; `g` is not reported. Mutation:
+    /// compare a pair already reported under 6.7 p3 as well; `h` gets a
+    /// second report. Either fails this.
+    #[test]
+    fn functions_declared_twice_in_a_block_are_compared_and_objects_are_redefined() {
+        let resolved = resolved(
+            "int main(void) {\n    int g(void);\n    char g(void);\n    int h;\n    char h;\n    return 0;\n}\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            ["conflicting types for `g`", "redefinition of `h`"]
+        );
+    }
+
+    /// A type that reaches a struct, along its spine or through a parameter,
+    /// is not compared until #27 says when two struct types are one.
+    ///
+    /// Mutation: drop the struct test in `Resolver::declare`; both pairs are
+    /// reported. Mutation: walk only the spine in `reaches_a_struct`, as
+    /// `types.rs`'s `holds_a_struct` does; `f` is reported. Either fails this.
+    #[test]
+    fn a_type_that_reaches_a_struct_is_not_compared() {
+        let resolved = resolved(
+            "struct S;\nstruct S *p;\nstruct S *p;\nint f(struct S *q);\nint f(struct S *q);\n",
+        );
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
     }
 }

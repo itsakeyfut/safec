@@ -1,0 +1,5 @@
+Declaration declarations_of_one_name_with_conflicting_types.c:1:1 "f" "int (char *)"
+  Parameter declarations_of_one_name_with_conflicting_types.c:1:7 "a" "char *"
+Declaration declarations_of_one_name_with_conflicting_types.c:2:1 "f" "int ()"
+Declaration declarations_of_one_name_with_conflicting_types.c:3:1 "f" "int (int *)"
+  Parameter declarations_of_one_name_with_conflicting_types.c:3:7 "a" "int *"
