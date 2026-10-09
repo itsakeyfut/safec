@@ -1445,7 +1445,9 @@ mod tests {
 
     /// A name with no linkage declared twice in one scope is reported (C17
     /// 6.7 p3): two locals in a block, a local in a definition's body beside
-    /// its parameter, and two parameters of one prototype.
+    /// its parameter, and two parameters of the declared function's own
+    /// prototype. A prototype nested inside a type, a function pointer's, is
+    /// not walked yet: #409.
     ///
     /// Mutation: drop the report in `Resolver::declare`; nothing is reported
     /// and this fails.
@@ -1465,17 +1467,23 @@ mod tests {
     /// function declared there has external linkage, and a function and an
     /// object of one name there are not.
     ///
+    /// Both orders of a function and an object are checked.
+    ///
     /// Mutation: drop the both-functions exception in `Resolver::declare`;
     /// the two declarations of `g` are reported and this fails. Mutation:
-    /// exempt a pair when either is a function; `h` is not reported and this
-    /// fails.
+    /// exempt a pair when either is a function; `h` and `k` are not reported.
+    /// Mutation: ask only whether the second is a function; `k`, an object
+    /// and then a function, is not reported. Either fails this.
     #[test]
     fn a_function_declared_twice_in_a_block_is_allowed_and_beside_an_object_is_not() {
         let resolved = resolved(
-            "int main(void) {\n    int g(void);\n    int g(void);\n    int h(void);\n    int h;\n    return 0;\n}\n",
+            "int main(void) {\n    int g(void);\n    int g(void);\n    int h(void);\n    int h;\n    int k;\n    int k(void);\n    return 0;\n}\n",
         );
 
-        assert_eq!(resolved.messages(), ["redefinition of `h`"]);
+        assert_eq!(
+            resolved.messages(),
+            ["redefinition of `h`", "redefinition of `k`"]
+        );
     }
 
     /// File scope is not checked, since every name there has linkage, and a
@@ -1493,5 +1501,22 @@ mod tests {
         );
 
         assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// The second declaration of a name in a block is declared all the same,
+    /// so a use after it is that declaration, as it would be had nothing been
+    /// wrong: the rest of the function is resolved as written.
+    ///
+    /// Mutation: return from `Resolver::declare` after reporting, before the
+    /// binding is pushed; the use resolves to the first `x` and this fails.
+    #[test]
+    fn a_use_after_a_name_declared_twice_is_the_second_declaration() {
+        let resolved = resolved("int main(void) {\n    int x;\n    int x;\n    return x;\n}\n");
+
+        assert_eq!(resolved.messages(), ["redefinition of `x`"]);
+        assert_eq!(
+            resolved.declaration_of("x", 2),
+            Some(resolved.occurrence("x", 1))
+        );
     }
 }

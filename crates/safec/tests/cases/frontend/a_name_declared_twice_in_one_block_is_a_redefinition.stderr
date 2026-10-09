@@ -9,3 +9,14 @@ error[SC0312]: redefinition of `x`
    │         ╰── declared again here
 ───╯
   = note: C17 6.7 p3
+error[SC0312]: redefinition of `x`
+   ╭─[ a_name_declared_twice_in_one_block_is_a_redefinition.c:4:9 ]
+   │
+ 3 │     int x = 2;
+   │         ┬  
+   │         ╰── previously declared here
+ 4 │     int x = 3;
+   │         ┬  
+   │         ╰── declared again here
+───╯
+  = note: C17 6.7 p3
