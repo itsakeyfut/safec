@@ -672,7 +672,13 @@ impl Resolver<'_> {
                 Some(id) => {
                     if let Some(first) = self.resolution.tags[id.0 as usize].defined {
                         let what = format!("struct {}", self.sources.snippet(tag));
-                        diagnostics.report(redefined(&what, tag, first, "C17 6.7.2.3 p1"));
+                        diagnostics.report(redefined(
+                            &what,
+                            tag,
+                            first,
+                            "defined",
+                            "C17 6.7.2.3 p1",
+                        ));
                     } else {
                         self.resolution.tags[id.0 as usize].defined = Some(tag);
                     }
@@ -768,7 +774,13 @@ impl Resolver<'_> {
                 let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
                 let first = self.resolution.binding(first);
                 if !(function(first.ty) && function(ty)) {
-                    diagnostics.report(redefined(spelled, name, first.name, "C17 6.7 p3"));
+                    diagnostics.report(redefined(
+                        spelled,
+                        name,
+                        first.name,
+                        "declared",
+                        "C17 6.7 p3",
+                    ));
                 }
             }
         }
@@ -794,7 +806,9 @@ impl Resolver<'_> {
     fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
         match self.definitions.get(spelled) {
-            Some(&first) => diagnostics.report(redefined(spelled, name, first, "C17 6.9 p5")),
+            Some(&first) => {
+                diagnostics.report(redefined(spelled, name, first, "defined", "C17 6.9 p5"))
+            }
             None => {
                 self.definitions.insert(spelled.to_owned(), name);
             }
@@ -802,16 +816,21 @@ impl Resolver<'_> {
     }
 }
 
-/// `what`, defined at `again`, which was defined at `first` where `clause`
-/// says it can be defined only once: `struct S` for a tag, and the name for a
-/// function.
+/// `what`, written at `again`, which was written at `first` where `clause`
+/// says it can be written only once: `struct S` for a tag, and the name for a
+/// function, an object or a parameter.
+///
+/// `verb` is what the labels say happened at each, "defined" or "declared",
+/// because `int h(void);` and a parameter of a prototype are declarations,
+/// and a label calling them definitions would be false about the program.
+/// The headline is `clang`'s for every one of them.
 ///
 /// `what` is interpolated raw, for the reason [`undeclared`] gives.
-fn redefined(what: &str, again: Span, first: Span, clause: &str) -> Diagnostic {
+fn redefined(what: &str, again: Span, first: Span, verb: &str, clause: &str) -> Diagnostic {
     Diagnostic::error(format!("redefinition of `{what}`"))
         .with_code(REDEFINED)
-        .with_label(Label::primary(again, "defined again here"))
-        .with_label(Label::secondary(first, "first defined here"))
+        .with_label(Label::primary(again, format!("{verb} again here")))
+        .with_label(Label::secondary(first, format!("previously {verb} here")))
         .with_note(clause)
 }
 

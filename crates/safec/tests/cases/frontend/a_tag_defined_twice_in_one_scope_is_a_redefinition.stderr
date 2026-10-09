@@ -3,7 +3,7 @@ error[SC0312]: redefinition of `struct V`
    │
  1 │ struct V { int a; };
    │        ┬  
-   │        ╰── first defined here
+   │        ╰── previously defined here
  2 │ struct V { int b; };
    │        ┬  
    │        ╰── defined again here

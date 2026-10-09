@@ -3,9 +3,9 @@ error[SC0312]: redefinition of `x`
    │
  2 │     int x = 1;
    │         ┬  
-   │         ╰── first defined here
+   │         ╰── previously declared here
  3 │     int x = 2;
    │         ┬  
-   │         ╰── defined again here
+   │         ╰── declared again here
 ───╯
   = note: C17 6.7 p3
