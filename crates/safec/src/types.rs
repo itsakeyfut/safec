@@ -1021,26 +1021,28 @@ impl Checker<'_> {
                 base, span, arrow, ..
             } => {
                 let operator = if arrow { "->" } else { "." };
-                // A base with no type was reported where it was typed, and a
-                // base that is itself a member access was refused there:
+                // A base that is itself a member access was refused there:
                 // `a.m.m.m` is one thing this cannot check, not three, since a
                 // report each, with a span growing by one access each, was
                 // output and time quadratic in the chain.
-                let base_ty = self.types[base.index()]?;
+                if matches!(ast.expr(base), Expr::Member { .. }) {
+                    return None;
+                }
                 // C17 6.5.2.3 p1, a constraint: `.` takes a struct and `->` a
-                // pointer to one.
-                let shaped = match ast.ty(base_ty) {
+                // pointer to one. An array of structs is one after 6.3.2.1
+                // p3, so `a->m` is C. A base with no type may be either: not
+                // every one was reported where it was typed, `p - q` and `*a`
+                // being left untyped as this compiler's gap, so it is this
+                // compiler's to decline rather than nothing to say.
+                let base_ty = self.types[base.index()];
+                let shaped = base_ty.map(|base_ty| match ast.ty(base_ty) {
                     Type::Struct { .. } => !arrow,
-                    Type::Pointer(pointee) => {
-                        arrow && matches!(ast.ty(*pointee), Type::Struct { .. })
+                    Type::Pointer(element) | Type::Array { element, .. } => {
+                        arrow && matches!(ast.ty(*element), Type::Struct { .. })
                     }
-                    Type::Int
-                    | Type::Char
-                    | Type::Void
-                    | Type::Array { .. }
-                    | Type::Function { .. } => false,
-                };
-                if !shaped {
+                    Type::Int | Type::Char | Type::Void | Type::Function { .. } => false,
+                });
+                if let (Some(base_ty), Some(false)) = (base_ty, shaped) {
                     let spelled = self.spelled(ast, base_ty);
                     let wanted = if arrow {
                         "a pointer to a struct"

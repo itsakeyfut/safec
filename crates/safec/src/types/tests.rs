@@ -1754,11 +1754,14 @@ fn an_object_of_an_incomplete_struct_is_reported() {
 /// Mutation: refuse every member access as not yet checked, whatever its
 /// base; `.` on a pointer is called this compiler's gap. Mutation: refuse
 /// every typed base as the program's, as before; `s.a` is called a fault.
-/// Either fails this.
+/// Mutation: answer an array base `false` whatever its element; `a->a`,
+/// which is C after 6.3.2.1 p3, is called a fault. Mutation: say nothing of
+/// a base with no type; `(i - j).a`, left untyped as this compiler's gap,
+/// goes silent. Each fails this.
 #[test]
 fn a_member_access_of_the_wrong_shape_is_the_programs_and_of_the_right_one_is_not_yet() {
     let checked = checked(
-        "struct S {\n    int a;\n};\nint f(struct S s, struct S *p) {\n    return s.a + p->a + p.a + s->a;\n}\n",
+        "struct S {\n    int a;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + p->a + p.a + s->a + a->a + a.a + (i - j).a;\n}\n",
     );
 
     assert_eq!(
@@ -1768,6 +1771,9 @@ fn a_member_access_of_the_wrong_shape_is_the_programs_and_of_the_right_one_is_no
             "cannot check `->` yet",
             "`.` needs a struct, and this is `struct S *`",
             "`->` needs a pointer to a struct, and this is `struct S`",
+            "cannot check `->` yet",
+            "`.` needs a struct, and this is `struct S[2]`",
+            "cannot check `.` yet",
         ]
     );
 }
