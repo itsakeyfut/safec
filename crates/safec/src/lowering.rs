@@ -745,8 +745,9 @@ impl Lowering<'_> {
     /// the first. See [`DISAGREEING_ANNOTATION`].
     ///
     /// Position by position, over as many parameters as both have. A
-    /// declaration with a different count is a different disagreement, which is
-    /// #412's and is not answered here.
+    /// declaration with a different count is a different disagreement: the
+    /// frontend reports it as conflicting types (`SC0313`), and a program it
+    /// refuses is not lowered.
     ///
     /// **Three answers, compared as written**: `_Nonnull`, `_Nullable`, and
     /// none. The last two lower alike, which is why the specifiers are compared
