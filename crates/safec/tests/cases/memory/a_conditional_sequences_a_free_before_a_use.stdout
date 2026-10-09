@@ -27,7 +27,7 @@ Function a_conditional_sequences_a_free_before_a_use.c:3:5 "f"
       Copy "_1"
   Block "bb2"
     Sequenced a_conditional_sequences_a_free_before_a_use.c:5:14 generated
-    Branch a_conditional_sequences_a_free_before_a_use.c:5:14 "bb4" "bb5"
+    Branch a_conditional_sequences_a_free_before_a_use.c:5:23 "bb4" "bb5"
       Constant 1
   Block "bb3"
     Operation a_conditional_sequences_a_free_before_a_use.c:5:9 written

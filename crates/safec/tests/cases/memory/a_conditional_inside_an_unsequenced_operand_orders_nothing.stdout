@@ -28,7 +28,7 @@ Function a_conditional_inside_an_unsequenced_operand_orders_nothing.c:3:5 "f"
     Call a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:19 "free" "bb2"
       Copy "_3"
   Block "bb2"
-    Branch a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:19 "bb4" "bb5"
+    Branch a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:28 "bb4" "bb5"
       Copy "_2"
   Block "bb3"
     Operation a_conditional_inside_an_unsequenced_operand_orders_nothing.c:5:13 written

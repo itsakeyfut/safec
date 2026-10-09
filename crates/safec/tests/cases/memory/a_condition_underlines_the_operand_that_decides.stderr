@@ -1,0 +1,144 @@
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:10:12 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  9 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     if (c, *p) {
+    │            ─┬  
+    │             ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:22:15 ]
+    │
+ 17 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 21 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 22 │     if (c, c, *p) {
+    │               ─┬  
+    │                ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:34:16 ]
+    │
+ 29 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 33 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 34 │     if (c, (c, *p)) {
+    │                ─┬  
+    │                 ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:46:9 ]
+    │
+ 41 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 45 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 46 │     if (*p, c) {
+    │         ─┬  
+    │          ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:58:15 ]
+    │
+ 53 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 57 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 58 │     while (c, *p) {
+    │               ─┬  
+    │                ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:70:15 ]
+    │
+ 65 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 69 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 70 │     for (; c, *p;) {
+    │               ─┬  
+    │                ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:82:16 ]
+    │
+ 77 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 81 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 82 │     return (c, *p) ? 1 : 2;
+    │                ─┬  
+    │                 ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+    ╭─[ a_condition_underlines_the_operand_that_decides.c:92:12 ]
+    │
+ 87 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 91 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 92 │     return *p && c;
+    │            ─┬  
+    │             ╰── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses a value after it was freed
+     ╭─[ a_condition_underlines_the_operand_that_decides.c:102:17 ]
+     │
+  97 │     int *p = malloc(4);
+     │              ────┬────  
+     │                  ╰────── allocated here
+     │ 
+ 101 │     free(p);
+     │     ───┬───  
+     │        ╰───── freed here
+ 102 │     return c || *p;
+     │                 ─┬  
+     │                  ╰── used here
+─────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

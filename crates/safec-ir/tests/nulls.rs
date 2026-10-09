@@ -1379,3 +1379,124 @@ fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
     assert_eq!(found[0].conclusion, Conclusion::Unknown);
     assert_eq!(found[0].at, names.at[3]);
 }
+
+/// Where two dereferences share a caret and disagree, the proof is the one
+/// reported.
+///
+/// `*p` through a parameter nothing tested, and `*q` through a local just
+/// given null, both at one span. The first is unproven and the second proved,
+/// and the fold in `nullability::findings` keeps one of them. Keeping the
+/// first reported a proof as a suspicion, and inside a hatch, where a
+/// suspicion is listed rather than reported, a proved null dereference built.
+///
+/// **Built as IR so that it holds whatever a frontend's spans are.** The C
+/// lowering reaches it today only through the two arms of a `?:`, written at
+/// the whole conditional's span, which
+/// `a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported`
+/// holds; the operands of a `&&` reached it too until #147 narrowed them, and
+/// narrowing an arm would retire the `?:` case the same way.
+///
+/// Mutation: never swap in `nullability::findings`' `dedup_by`, keeping the
+/// earlier finding. The conclusion is `Unknown` and this fails.
+#[test]
+fn a_proof_and_a_suspicion_at_one_caret_report_the_proof() {
+    let (_sources, names) = sources();
+    let (mut unit, _, int) = a_unit(&names, &[]);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, [pointer]);
+    let p = function.parameters().next().expect("one parameter");
+    let q = function.push_local(pointer);
+
+    let entry = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                Element::Assign(Operation {
+                    place: Place::local(q),
+                    value: Rvalue::Use(Operand::Constant(0)),
+                    origin: Origin::Written(names.at[1]),
+                }),
+                write_through(p, names.at[0]),
+                write_through(q, names.at[0]),
+            ],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].at, names.at[0]);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unsafe,
+        "the proof survives"
+    );
+}
+
+/// Where a plain dereference and one through a pointer read out of memory
+/// share a caret, the question kept is the one through memory, in either
+/// order.
+///
+/// `*p` and `**pp` at one span, both unproven. The remedies differ: testing
+/// `p` settles the first, and the second needs the pointer read out of `*pp`
+/// kept in a local and tested there. One report stands for both, so it has to
+/// carry the remedy that settles both, whichever was met first.
+///
+/// **Built as IR** for the reason the test above gives; in C it is
+/// `a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy`.
+///
+/// Mutation: have `Asked::joined` keep the first question as it is. The order
+/// with `*p` first fails. Mutation: have it keep the second, `through_memory:
+/// other`. The order with `**pp` first fails.
+#[test]
+fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy() {
+    for through_memory_first in [false, true] {
+        let (_sources, names) = sources();
+        let (mut unit, _, int) = a_unit(&names, &[]);
+        let pointer = unit.push_type(Ty::Pointer(int));
+        let pointer_to_pointer = unit.push_type(Ty::Pointer(pointer));
+        let mut function = Function::new(names.function, int, [pointer, pointer_to_pointer]);
+        let mut parameters = function.parameters();
+        let p = parameters.next().expect("two parameters");
+        let pp = parameters.next().expect("two parameters");
+
+        let plain = write_through(p, names.at[0]);
+        let through_memory = Element::Assign(Operation {
+            place: Place {
+                local: pp,
+                projection: vec![Projection::Deref, Projection::Deref],
+            },
+            value: Rvalue::Use(Operand::Constant(1)),
+            origin: Origin::Written(names.at[0]),
+        });
+        let elements = if through_memory_first {
+            vec![through_memory, plain]
+        } else {
+            vec![plain, through_memory]
+        };
+
+        let entry = function.reserve_block();
+        function.fill_block(
+            entry,
+            Block {
+                elements,
+                terminator: Terminator::Return,
+            },
+        );
+
+        let found = concluded(unit, function);
+
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].at, names.at[0]);
+        assert_eq!(found[0].conclusion, Conclusion::Unknown);
+        assert_eq!(
+            found[0].asked,
+            nullability::Asked::Dereference {
+                through_memory: true
+            },
+            "the remedy that settles both, through memory first: {through_memory_first}"
+        );
+    }
+}

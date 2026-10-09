@@ -1353,6 +1353,7 @@ impl Lowering<'_> {
                 // asks for where the expression that decides is written, and
                 // one line down there is no expression left to ask.
                 let asked = self.ast.expr(condition).span();
+                let decides = self.decides(condition);
                 let constant = self.constant_expression(condition);
                 let condition = self.value(builder, condition, diagnostics)?;
                 let taken = builder.function.reserve_block();
@@ -1363,7 +1364,7 @@ impl Lowering<'_> {
                     constant,
                     taken,
                     skipped,
-                    Origin::Written(asked),
+                    Origin::Written(decides),
                 ));
 
                 builder.enter(taken, Some(asked));
@@ -1396,6 +1397,7 @@ impl Lowering<'_> {
                 // end of the body arrives here, above the branch.
                 builder.switch(header);
                 let asked = self.ast.expr(condition).span();
+                let decides = self.decides(condition);
                 let constant = self.constant_expression(condition);
                 let condition = self.value(builder, condition, diagnostics)?;
                 let inside = builder.function.reserve_block();
@@ -1405,7 +1407,7 @@ impl Lowering<'_> {
                     constant,
                     inside,
                     after,
-                    Origin::Written(asked),
+                    Origin::Written(decides),
                 ));
 
                 builder.enter(inside, Some(asked));
@@ -1441,7 +1443,7 @@ impl Lowering<'_> {
                 let asked = condition.map(|condition| self.ast.expr(condition).span());
                 match condition {
                     Some(condition) => {
-                        let asked = asked.expect("a condition carries a span");
+                        let decides = self.decides(condition);
                         let constant = self.constant_expression(condition);
                         let condition = self.value(builder, condition, diagnostics)?;
                         builder.end(decided(
@@ -1449,7 +1451,7 @@ impl Lowering<'_> {
                             constant,
                             inside,
                             after,
-                            Origin::Written(asked),
+                            Origin::Written(decides),
                         ));
                     }
                     // 6.8.5.3 p2: an absent condition is replaced by a non-zero
@@ -1598,6 +1600,21 @@ impl Lowering<'_> {
                 _ => return true,
             }
         }
+    }
+
+    /// Where the expression whose value `id` is was written: for a comma, its
+    /// right operand, followed down the chain, and otherwise `id` itself.
+    ///
+    /// C17 6.5.17 p2 evaluates a comma's left operand as a void expression and
+    /// gives the whole the right operand's value, so in `if (c, *p)` only `*p`
+    /// decides and only `*p` is underlined. A loop for [`Self::pushes`]'s
+    /// reason. What a branch or a recorded `&&` operand points at is this;
+    /// where the sequence point falls is still the whole expression's.
+    fn decides(&self, mut id: ExprId) -> Span {
+        while let Expr::Comma { rhs, .. } = self.ast.expr(id) {
+            id = *rhs;
+        }
+        self.ast.expr(id).span()
     }
 
     /// Whether `id` has type `void`, and so no value: C17 6.3.2.2 p1.
@@ -2313,18 +2330,21 @@ impl Lowering<'_> {
         let join = builder.function.reserve_block();
 
         match self.ast.expr(id) {
-            Expr::Binary { op, lhs, rhs, span } => {
-                let (op, lhs, rhs, span) = (*op, *lhs, *rhs, *span);
+            Expr::Binary { op, lhs, rhs, .. } => {
+                let (op, lhs, rhs) = (*op, *lhs, *rhs);
                 let answer = answer.expect("a `&&` or `||` is an `int`");
                 // The left operand decides the answer unless the right is
                 // reached, so it is written before the branch and overwritten
                 // after. What is written is whether it is non-zero and not
                 // what it is: C17 6.5.13 p3 and 6.5.14 p3 say `&&` and `||`
-                // yield 1 or 0, so `3 && 5` is 1 rather than 5.
+                // yield 1 or 0, so `3 && 5` is 1 rather than 5. At the left
+                // operand's span and not the whole `a && b`'s, because a read
+                // in it is what a caret here points at: `*p && c` after a free
+                // underlines `*p`.
                 builder.push(Operation {
                     place: Place::local(answer),
                     value: truth(condition),
-                    origin: Origin::Written(span),
+                    origin: Origin::Written(self.decides(lhs)),
                 });
 
                 let second = builder.function.reserve_block();
@@ -2343,7 +2363,7 @@ impl Lowering<'_> {
                     condition: Operand::Copy(Place::local(answer)),
                     then,
                     otherwise,
-                    origin: Origin::Written(self.ast.expr(lhs).span()),
+                    origin: Origin::Written(self.decides(lhs)),
                 });
                 builder.switch(second);
                 // C17 6.5.13 p4 and 6.5.14 p4: if the right operand is
@@ -2377,7 +2397,7 @@ impl Lowering<'_> {
                     condition,
                     then: taken,
                     otherwise,
-                    origin: Origin::Written(self.ast.expr(asked).span()),
+                    origin: Origin::Written(self.decides(asked)),
                 });
                 builder.switch(taken);
                 // C17 6.5.15 p4: between the first operand and whichever of
@@ -2424,12 +2444,11 @@ impl Lowering<'_> {
     /// statement does. The span is the left operand's own, so `*p, i;`
     /// underlines `*p` rather than both.
     ///
-    /// **The other half of a comma is not this precise, and that is #147.**
-    /// `i, *p;` is discarded by the statement, which has the whole comma in
-    /// hand and nothing narrower, so it underlines `i, *p`. Two reviewers
-    /// raised it as one thing: a span that covers more than the sub-expression
-    /// that mattered, which is the same defect #147 records for a controlling
-    /// expression and is settled for all of them there.
+    /// **The other half of a comma is not this precise.** `i, *p;` is
+    /// discarded by the statement, which has the whole comma in hand and
+    /// nothing narrower, so it underlines `i, *p`. #147 narrowed a controlling
+    /// expression's comma to its right operand and left this one, which
+    /// records a value rather than deciding anything, to an issue of its own.
     fn discard(&mut self, builder: &mut Builder, id: ExprId, values: &mut Vec<Operand>) {
         let Expr::Comma { lhs, .. } = self.ast.expr(id) else {
             // Only the arm above pushes this, and it pushes it for a comma.
@@ -2531,9 +2550,14 @@ impl Lowering<'_> {
         // worth. C17 6.5.13 p3 and 6.5.14 p3 say the first, and 6.5.15 p4 the
         // second: the conditional operator's value is the operand's, converted,
         // rather than a truth value.
-        let value = match self.ast.expr(id) {
-            Expr::Binary { .. } => truth(value),
-            _ => Rvalue::Use(value),
+        //
+        // A `&&` or `||` writes at its right operand's span, as `split` writes
+        // the left at the left's. A `?:` arm keeps the whole span for now:
+        // what its write points at is a different question, left to its own
+        // issue.
+        let (value, span) = match self.ast.expr(id) {
+            Expr::Binary { rhs, .. } => (truth(value), self.decides(*rhs)),
+            _ => (Rvalue::Use(value), span),
         };
         builder.push(Operation {
             place: Place::local(answer),

@@ -43,7 +43,7 @@ Function a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the
       Destination "_7"
       Use
         Copy "_5"
-    Branch a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 "bb1" "bb2"
+    Branch a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:18 "bb1" "bb2"
       Copy "_7"
   Block "bb1"
     Sequenced a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:5:10 generated

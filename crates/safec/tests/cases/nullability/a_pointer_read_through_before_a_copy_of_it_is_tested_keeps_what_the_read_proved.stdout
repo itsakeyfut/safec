@@ -18,7 +18,7 @@ Function a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_rea
       Place "_1"
         Deref
     Sequenced a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved.c:3:10 generated
-    Branch a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved.c:3:10 "bb1" "bb2"
+    Branch a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved.c:3:21 "bb1" "bb2"
       Copy "_2"
   Block "bb1"
     Sequenced a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved.c:3:10 generated
