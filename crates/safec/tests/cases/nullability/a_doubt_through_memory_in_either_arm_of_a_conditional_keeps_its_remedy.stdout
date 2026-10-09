@@ -1,0 +1,67 @@
+Target "x86_64-pc-windows-msvc"
+Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:1:5 "plain_first"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *" parameter
+  Local "_3" "int **" parameter
+  Local "_4" "int"
+  Block "bb0" entry
+    Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 "bb2" "bb3"
+      Copy "_1"
+  Block "bb1"
+    Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 generated
+    Return
+  Block "bb2"
+    Sequenced a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 generated
+    Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 written
+      Destination "_4"
+      Use
+        Copy "_2"
+          Deref
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 generated
+    Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+            Deref
+    Goto "bb1"
+Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:5:5 "through_memory_first"
+  Local "_0" "int" return
+  Local "_1" "int" parameter
+  Local "_2" "int *" parameter
+  Local "_3" "int **" parameter
+  Local "_4" "int"
+  Block "bb0" entry
+    Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 "bb2" "bb3"
+      Copy "_1"
+  Block "bb1"
+    Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:5 written
+      Destination "_0"
+      Use
+        Copy "_4"
+    Sequenced a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 generated
+    Return
+  Block "bb2"
+    Sequenced a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 generated
+    Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 written
+      Destination "_4"
+      Use
+        Copy "_3"
+          Deref
+            Deref
+    Goto "bb1"
+  Block "bb3"
+    Sequenced a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 generated
+    Operation a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 written
+      Destination "_4"
+      Use
+        Copy "_2"
+          Deref
+    Goto "bb1"

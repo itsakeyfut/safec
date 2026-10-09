@@ -404,6 +404,12 @@ cases! {
         a_freed_pointer_read_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_written_through_its_own_address: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_dereference_after_a_comma_in_a_condition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The two reads of `c ? (free(p), *p) : *p` share the conditional's
+        // caret: the first doubted, since `helper` was handed `p`, and the
+        // second proved after the free. Mutation: have `supersedes` answer
+        // `false` for `(Unknown, Unsafe)`; the proof is reported as a doubt.
+        // Narrowing an arm's write to the arm moves this case.
+        a_proof_in_one_arm_of_a_conditional_replaces_a_suspicion_in_the_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Each function underlines only the operand whose value decides,
         // after a free, at every place a condition or a `&&` or `||` operand
         // is recorded: the comma under `if`, `while`, `for` and `?:`, a chain
@@ -417,7 +423,8 @@ cases! {
         // one of the `if`, `while` or `for` sites, or the `?:` branch; that
         // function's row widens. Mutation: take a comma's left operand; the
         // comma rows move onto `c`. Mutation: unwrap one comma only, `if let`
-        // for `while let` in `decides`; `if_nested` widens to `(c, *p)`.
+        // for `while let` in `decides`; `if_nested` widens to `c, *p`, the
+        // inner comma, since parentheses make no node.
         // Mutation: give the left or the right operand's write the whole
         // binary span again; `and_left` or `or_right` widens.
         a_condition_underlines_the_operand_that_decides: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -993,6 +1000,12 @@ cases! {
         // `a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy`
         // in `crates/safec-ir/tests/nulls.rs`.
         a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p` and `**q` in the two arms of a `?:` share the conditional's
+        // caret, and the remedy kept is the one through memory whichever arm
+        // holds it. Mutation: have `Asked::joined` keep the first question,
+        // or the second; one of the two functions takes the plain remedy.
+        // Narrowing an arm's write to the arm moves this case.
+        a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The root's own answer still counts, and a proof outranks the doubt
         // beside it. Mutation: answer only the deeper question whenever there
         // is one; this fails as unproven where it expects proved.
@@ -1343,6 +1356,13 @@ cases! {
         // `a_proof_and_a_suspicion_at_one_caret_report_the_proof` in
         // `crates/safec-ir/tests/nulls.rs`.
         a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+        // Both arms of a `?:` are written at the whole conditional's span, so
+        // the proved `*q` and the unproven `*p` meet at one caret and the
+        // worst is kept, which in a hatch is the difference between reported
+        // and listed. Mutation: never swap in `nullability::findings`'
+        // `dedup_by`; the proof is listed as a suspicion and the run exits 0.
+        // Narrowing an arm's write to the arm moves this case.
+        a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // An attribute `sema::resolve` refused is an error, so the run stops
         // before the lowering: no hatch is marked and no check runs, and the
         // dereference behind it is not reported until the attribute is gone.
