@@ -149,13 +149,25 @@ impl Resolution {
         self.resolved.get(&use_site).copied()
     }
 
-    /// The tag the struct at `ty` is, if `ty` is a struct this stage reached.
+    /// The tag the struct at `ty` is.
     ///
     /// Two struct types are one type exactly when this answers one tag for
     /// both. Nothing asks it yet: the type checker refuses every struct, and
     /// #27, which gives a struct its meaning, is the reader.
-    pub fn tag(&self, ty: TypeId) -> Option<TagId> {
-        self.tag_of.get(&ty).copied()
+    ///
+    /// # Panics
+    ///
+    /// If `ty` is not a struct this stage bound. That includes a struct in
+    /// the parameters of a function declarator nested inside another type,
+    /// `void f(void (*cb)(struct A *))`, which the walk does not reach yet:
+    /// #409. A panic rather than an `Option`, because two answers of `None`
+    /// compare equal, and a comparison that called two unrelated structs one
+    /// type would be believed.
+    pub fn tag(&self, ty: TypeId) -> TagId {
+        self.tag_of
+            .get(&ty)
+            .copied()
+            .unwrap_or_else(|| panic!("the struct at {ty:?} was bound to no tag"))
     }
 
     /// The tag `id` names.
@@ -841,9 +853,7 @@ mod tests {
                 .type_ids()
                 .find(|&ty| matches!(self.ast.ty(ty), Type::Struct { tag: Some(tag), .. } if *tag == at))
                 .unwrap_or_else(|| panic!("no struct's tag is written at {at:?}"));
-            self.resolution
-                .tag(ty)
-                .unwrap_or_else(|| panic!("the struct at {at:?} was bound to no tag"))
+            self.resolution.tag(ty)
         }
 
         fn messages(&self) -> Vec<&str> {
@@ -1275,9 +1285,28 @@ mod tests {
             .ast
             .type_ids()
             .filter(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { tag: None, .. }))
-            .map(|ty| resolved.resolution.tag(ty).expect("every struct is bound"))
+            .map(|ty| resolved.resolution.tag(ty))
             .collect();
         assert_eq!(untagged.len(), 2);
         assert_ne!(untagged[0], untagged[1]);
+    }
+
+    /// A struct the walk did not bind is a panic naming it, not an answer
+    /// that compares equal to another unbound struct's: the struct in `cb`'s
+    /// parameters is one such today.
+    ///
+    /// Mutation: answer `.unwrap_or(TagId(0))` in `Resolution::tag`; nothing
+    /// panics, and this fails.
+    #[test]
+    #[should_panic(expected = "was bound to no tag")]
+    fn a_struct_bound_to_no_tag_is_a_panic_and_not_an_answer() {
+        let resolved = resolved("void f(void (*cb)(struct A *));\n");
+
+        let unbound = resolved
+            .ast
+            .type_ids()
+            .find(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { .. }))
+            .expect("the struct is in the tree");
+        let _ = resolved.resolution.tag(unbound);
     }
 }
