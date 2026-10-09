@@ -1363,4 +1363,26 @@ mod tests {
         let declared = resolved("int g(void);\nint g(void) {\n    return 1;\n}\nint g(void);\n");
         assert_eq!(declared.messages(), Vec::<&str>::new());
     }
+
+    /// Every definition is remembered, not only the first, and the second
+    /// body is still read (C17 6.9 p5): a function defined after another and
+    /// then again is reported, and an undeclared name in its second body is
+    /// reported too.
+    ///
+    /// Mutation: remember only the first definition, by pushing in
+    /// `Resolver::define` only while `definitions` is empty; `b` is not
+    /// reported and this fails. Mutation: return from `Resolver::item`'s
+    /// function arm after `define` when it reports; `zzz` is not reported
+    /// and this fails.
+    #[test]
+    fn a_later_function_defined_twice_is_reported_and_its_second_body_is_read() {
+        let resolved = resolved(
+            "int a(void) {\n    return 1;\n}\nint b(void) {\n    return 2;\n}\nint b(void) {\n    return zzz;\n}\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            ["redefinition of `b`", "use of undeclared identifier `zzz`"]
+        );
+    }
 }
