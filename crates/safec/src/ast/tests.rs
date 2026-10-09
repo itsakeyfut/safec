@@ -167,8 +167,14 @@ fn two_types_are_compatible_when_c_says_they_are() {
             "int () against int ()",
         ),
     ] {
-        assert_eq!(ast.compatible(left, right), same, "{what}");
-        assert_eq!(ast.compatible(right, left), same, "{what}, the other way");
+        // No struct is compared here, so nothing is the same struct.
+        let no_struct = |_, _| false;
+        assert_eq!(ast.compatible(left, right, &no_struct), same, "{what}");
+        assert_eq!(
+            ast.compatible(right, left, &no_struct),
+            same,
+            "{what}, the other way"
+        );
     }
 }
 

@@ -123,10 +123,11 @@ pub enum Type {
     /// A structure, C17 6.7.2.1: `struct S`, `struct S { ... }` or
     /// `struct { ... }`.
     ///
-    /// **Read, and not yet given a meaning.** What a tag names, whether two
-    /// occurrences are one type, and where a member lies are #27's; until then
-    /// the type checker refuses every struct under `SC0304`, so no stage after
-    /// it has to answer for one. Each occurrence is its own `TypeId`, as every
+    /// **Read, and not yet given a meaning.** Which tag one names, and so
+    /// whether two occurrences are one type, is the resolver's
+    /// (`Resolution::tag`); where a member lies is #27's, and until then the
+    /// type checker refuses every struct under `SC0304`, so no stage after it
+    /// has to answer for one. Each occurrence is its own `TypeId`, as every
     /// type is here.
     Struct {
         /// The tag, if one was written.
@@ -988,9 +989,11 @@ impl Ast {
     /// cases that are compatible without being identical. `clang` keeps the
     /// two apart as `hasSameType` and `typesAreCompatible` for that reason.
     /// One of the extra cases is reachable in the subset this compiler reads,
-    /// and it is in `compatible_parameters` below; a struct will bring the
-    /// rest, and this is named for the relation so that whoever adds one is
-    /// extending the right thing.
+    /// and it is in `compatible_parameters` below; another is a struct, which
+    /// is compatible with a struct of the same tag, answered by
+    /// `same_struct`: `Resolution::same_struct` is what a caller passes. It is
+    /// named for the relation so that whoever adds a case is extending the
+    /// right thing.
     ///
     /// The comparison [`Type`]'s own comment refuses to derive, written where
     /// the arena is, because a type reaches the rest of itself through ids and
@@ -1012,12 +1015,19 @@ impl Ast {
     /// Recursion, bounded the way `parser.rs::apply` bounds a declarator's
     /// derivations, so a type is at most `MAX_NESTING` deep. The nesting a
     /// parameter list adds is bounded by the parser's own recursion.
-    pub fn compatible(&self, left: TypeId, right: TypeId) -> bool {
+    pub fn compatible(
+        &self,
+        left: TypeId,
+        right: TypeId,
+        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+    ) -> bool {
         match (self.ty(left), self.ty(right)) {
             (Type::Int, Type::Int) | (Type::Char, Type::Char) | (Type::Void, Type::Void) => true,
-            (Type::Pointer(left), Type::Pointer(right)) => self.compatible(*left, *right),
+            (Type::Pointer(left), Type::Pointer(right)) => {
+                self.compatible(*left, *right, same_struct)
+            }
             (Type::Array { element: left, .. }, Type::Array { element: right, .. }) => {
-                self.compatible(*left, *right)
+                self.compatible(*left, *right, same_struct)
             }
             (
                 Type::Function {
@@ -1029,8 +1039,8 @@ impl Ast {
                     parameters: right_parameters,
                 },
             ) => {
-                self.compatible(*left, *right)
-                    && self.compatible_parameters(left_parameters, right_parameters)
+                self.compatible(*left, *right, same_struct)
+                    && self.compatible_parameters(left_parameters, right_parameters, same_struct)
             }
             // Written out rather than `_ => false`, so that a variant added to
             // `Type` has to be answered for here: `error[E0004]` is what says
@@ -1042,9 +1052,11 @@ impl Ast {
             | (Type::Pointer(_), _)
             | (Type::Array { .. }, _)
             | (Type::Function { .. }, _) => false,
-            // Whether two struct types are one is #27's, which gives a tag its
-            // meaning; until then nothing that asks reaches a struct, since
-            // the type checker refuses every one first.
+            // Two struct types are one type exactly when they are one tag (C17
+            // 6.2.7 p1, with 6.7.2.3 p4 and p5 saying when they are), which is
+            // the resolver's to answer: `same_struct` asks it, so that this
+            // module depends on nothing that knows what a tag is.
+            (Type::Struct { .. }, Type::Struct { .. }) => same_struct(left, right),
             (Type::Struct { .. }, _) => false,
         }
     }
@@ -1066,14 +1078,19 @@ impl Ast {
     /// all three, measured. Answering `false` for every one of them, which is
     /// what reading p10 and p14 alone gives, rejected `int (*p)(void) = q`
     /// where `q` is `int (*)()`: a program `clang` compiles.
-    fn compatible_parameters(&self, left: &Parameters, right: &Parameters) -> bool {
+    fn compatible_parameters(
+        &self,
+        left: &Parameters,
+        right: &Parameters,
+        same_struct: &impl Fn(TypeId, TypeId) -> bool,
+    ) -> bool {
         match (left, right) {
             (Parameters::Prototype(left), Parameters::Prototype(right)) => {
                 left.len() == right.len()
                     && left
                         .iter()
                         .zip(right)
-                        .all(|(left, right)| self.compatible(left.ty, right.ty))
+                        .all(|(left, right)| self.compatible(left.ty, right.ty, same_struct))
             }
             (Parameters::Unspecified, Parameters::Unspecified) => true,
             (Parameters::Prototype(parameters), Parameters::Unspecified)

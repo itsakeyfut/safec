@@ -1010,6 +1010,6 @@ fn a_parameter_declared_as_an_array_or_a_function_is_a_pointer() {
         ]
     );
 
-    assert!(parsed.ast.compatible(first, second));
+    assert!(parsed.ast.compatible(first, second, &|_, _| false));
     assert!(!parsed.diagnostics.has_errors());
 }

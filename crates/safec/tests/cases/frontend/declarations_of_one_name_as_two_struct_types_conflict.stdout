@@ -1,0 +1,4 @@
+Declaration declarations_of_one_name_as_two_struct_types_conflict.c:1:1 "struct A"
+Declaration declarations_of_one_name_as_two_struct_types_conflict.c:2:1 "struct B"
+Declaration declarations_of_one_name_as_two_struct_types_conflict.c:3:1 "p" "struct A *"
+Declaration declarations_of_one_name_as_two_struct_types_conflict.c:4:1 "p" "struct B *"
