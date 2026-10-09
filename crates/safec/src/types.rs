@@ -153,7 +153,8 @@ const NOT_YET: Code = Code::new("SC0304");
 /// The wording follows `clang`'s `variable has incomplete type 'struct S'`.
 /// A member access on a struct not complete where it is written is the same
 /// question again (C17 6.5.2.3 p1 with 6.7.2.1 p8): there are no members to
-/// name yet.
+/// name yet. So is an object of one whose value is read (6.3.2.1 p2) or
+/// which is assigned to (6.5.16 p2), each where it is written.
 const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 
 /// A member access naming a member its struct does not have, C17 6.5.2.3 p1
@@ -291,6 +292,7 @@ pub fn check(
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
     checker.check_complete_objects(ast, diagnostics);
+    checker.check_incomplete_values(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
 
@@ -773,6 +775,107 @@ impl Checker<'_> {
             .with_label(Label::primary(at, "defined here"))
             .with_note("a function definition returns `void` or a complete type (C17 6.9.1 p3)"),
         );
+    }
+
+    /// Report every lvalue whose type is a struct not complete where it is
+    /// written, under [`INCOMPLETE_OBJECT`], unless C does not convert it.
+    ///
+    /// The lvalues that can be one are a name, `*e`, and a subscript with an
+    /// operand this stage left untyped, whose pointee `subscript` could not
+    /// ask about; a subscript with both operands typed asked already, and a
+    /// member access asks for its struct complete. Of those, C17 6.3.2.1 p2
+    /// converts every one to its value except the operand of `&`, of `++`
+    /// and `--`, the left operand of `.` and of an assignment. The first and
+    /// the `.` base read nothing and are not reported. The other two need a
+    /// modifiable lvalue (6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), which one of
+    /// incomplete type is not (6.3.2.1 p1), and are reported as such. Every
+    /// other is a value read, which p2 leaves undefined for an incomplete
+    /// type.
+    ///
+    /// Decided by exclusion rather than by a list of the places a value is
+    /// read: a place forgotten in such a list would accept the program in
+    /// silence, and one forgotten here reports valid C, visibly. `sizeof`
+    /// joins the operands that read nothing when it is read. See the design
+    /// comment on #424.
+    fn check_incomplete_values(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        let mut unread = HashSet::new();
+        let mut modified: HashMap<ExprId, &str> = HashMap::new();
+        for id in ast.expr_ids() {
+            match ast.expr(id) {
+                Expr::Unary {
+                    op: UnOp::AddrOf,
+                    operand,
+                    ..
+                } => {
+                    unread.insert(*operand);
+                }
+                Expr::Member {
+                    base, arrow: false, ..
+                } => {
+                    unread.insert(*base);
+                }
+                Expr::Unary {
+                    op: UnOp::PreInc | UnOp::PreDec,
+                    operand,
+                    ..
+                } => {
+                    modified.insert(*operand, "C17 6.5.3.1 p1 and 6.3.2.1 p1");
+                }
+                Expr::Unary {
+                    op: UnOp::PostInc | UnOp::PostDec,
+                    operand,
+                    ..
+                } => {
+                    modified.insert(*operand, "C17 6.5.2.4 p1 and 6.3.2.1 p1");
+                }
+                Expr::Assign { place, .. } => {
+                    modified.insert(*place, "C17 6.5.16 p2 and 6.3.2.1 p1");
+                }
+                _ => {}
+            }
+        }
+        for id in ast.expr_ids() {
+            let lvalue = match ast.expr(id) {
+                Expr::Identifier { .. }
+                | Expr::Unary {
+                    op: UnOp::Deref, ..
+                } => true,
+                Expr::Subscript { base, index, .. } => {
+                    self.types[base.index()].is_none() || self.types[index.index()].is_none()
+                }
+                _ => false,
+            };
+            let Some(ty) = self.types[id.index()] else {
+                continue;
+            };
+            if !lvalue
+                || !matches!(ast.ty(ty), Type::Struct { .. })
+                || unread.contains(&id)
+                || self.resolution.complete_at(ast, ty, id)
+            {
+                continue;
+            }
+            let spelled = self.spelled(ast, ty);
+            let (message, note) = match modified.get(&id) {
+                Some(note) => (
+                    format!("`{spelled}` is not complete here, and cannot be modified"),
+                    *note,
+                ),
+                None => (
+                    format!("`{spelled}` is not complete here, and its value cannot be read"),
+                    "C17 6.3.2.1 p2",
+                ),
+            };
+            diagnostics.report(
+                Diagnostic::error(message)
+                    .with_code(INCOMPLETE_OBJECT)
+                    .with_label(Label::primary(
+                        ast.expr(id).span(),
+                        format!("this is `{spelled}`"),
+                    ))
+                    .with_note(note),
+            );
+        }
     }
 
     /// Whether `ty` is a variable length array type: an array, any of whose

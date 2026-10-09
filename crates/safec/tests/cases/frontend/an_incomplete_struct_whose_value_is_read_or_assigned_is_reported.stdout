@@ -1,0 +1,28 @@
+Declaration an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:1:1 "struct S"
+Function an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:2:1 "f" "void (struct S *, struct S *)"
+  Parameter an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:2:8 "p" "struct S *"
+  Parameter an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:2:21 "q" "struct S *"
+  Compound an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:2:34
+    Expression an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:5
+      Assign an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:5 "="
+        Unary an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:5 "*"
+          Identifier an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:6 "p"
+        Unary an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:10 "*"
+          Identifier an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:3:11 "q"
+Function an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:5:1 "g" "int (struct S *)"
+  Parameter an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:5:7 "p" "struct S *"
+  Compound an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:5:20
+    Return an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:6:5
+      Comma an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:6:12 ","
+        Unary an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:6:12 "*"
+          Identifier an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:6:13 "p"
+        Number an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:6:16 "0"
+Function an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:8:1 "h" "int (struct S *)"
+  Parameter an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:8:7 "p" "struct S *"
+  Compound an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:8:20
+    Return an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:9:5
+      Binary an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:9:12 "!="
+        Unary an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:9:12 "&"
+          Unary an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:9:13 "*"
+            Identifier an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:9:14 "p"
+        Number an_incomplete_struct_whose_value_is_read_or_assigned_is_reported.c:9:19 "0"

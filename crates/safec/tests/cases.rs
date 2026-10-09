@@ -2901,6 +2901,12 @@ cases! {
         // type checker again; that report is the type checker's, and the
         // lowering is never reached.
         a_program_using_members_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `struct S` is never completed, so `*p = *q` assigns to an object
+        // of incomplete type (C17 6.5.16 p2) and reads the value of another,
+        // and `*p, 0` reads one (6.3.2.1 p2): three `SC0315`. `&*p` reads no
+        // value and is not reported. Mutation: report the operand of `&`
+        // too; a fourth report, in `h`.
+        an_incomplete_struct_whose_value_is_read_or_assigned_is_reported: ["--emit", "ast"],
         // C17 6.7.2.3 p1: `V` given its content twice in one scope is
         // `SC0312`, and `W` given it again in a block is a new tag, which is
         // not. Mutation: look a definition up in every visible scope; `W` is
