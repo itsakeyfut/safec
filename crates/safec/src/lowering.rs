@@ -725,8 +725,19 @@ impl Lowering<'_> {
 
         // A name declared twice is one function. The first declaration is
         // the one whose span the IR carries, which is where a reader of a
-        // diagnostic about the callee is pointed.
+        // diagnostic about the callee is pointed. What it returns and takes
+        // is the standing declaration's, the one the type checker checks a
+        // call against (see `Resolution::standing`): built from the first,
+        // `int f(); int f(int *_Nonnull a);` gave `f` no parameter, and
+        // `f(0)` passed a null pointer to a `_Nonnull` one in silence.
         if !self.functions.contains_key(self.sources.snippet(name)) {
+            let Some((returns, lowered)) = self.standing_signature(name, (returns, lowered)) else {
+                // The standing declaration's signature cannot be read. It is
+                // a declaration of this file too, and is reported where it is
+                // walked, so nothing is said here.
+                self.refused.insert(self.sources.snippet(name).to_owned());
+                return;
+            };
             let mut declared = Function::declaration_with_parameters(name, returns, lowered);
             // A written promise is believed of a function this unit does not
             // define, since nobody here can ask its body: the boundary
@@ -738,6 +749,29 @@ impl Lowering<'_> {
             self.functions
                 .insert(self.sources.snippet(name).to_owned(), id);
         }
+    }
+
+    /// The signature of `name`'s standing declaration, or `own`, the one in
+    /// hand, where the standing declaration is not a function or is this one.
+    ///
+    /// Read into a sink of its own: the standing declaration is a declaration
+    /// in this file, and `declare` reports what is wrong with it when it walks
+    /// it, so a second report from here would say the same thing twice.
+    fn standing_signature(
+        &mut self,
+        name: Span,
+        own: (TyId, Vec<Parameter>),
+    ) -> Option<(TyId, Vec<Parameter>)> {
+        let standing = self.resolution.declared(self.sources.snippet(name));
+        let Some(Type::Function {
+            returns,
+            parameters,
+        }) = standing.map(|ty| self.ast.ty(ty))
+        else {
+            return Some(own);
+        };
+        let (returns, parameters) = (*returns, parameters.clone());
+        self.signature(name, returns, &parameters, &mut DiagnosticSink::new())
     }
 
     /// Refuse a prototype of a function that disagrees with the first prototype
