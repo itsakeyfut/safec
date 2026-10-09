@@ -254,8 +254,8 @@ impl Resolution {
     /// The tag the struct at `ty` is.
     ///
     /// Two struct types are one type exactly when this answers one tag for
-    /// both. Nothing asks it yet: the type checker refuses every struct, and
-    /// #27, which gives a struct its meaning, is the reader.
+    /// both, which is what [`Resolution::same_struct`] asks for every caller
+    /// of `Ast::compatible`.
     ///
     /// # Panics
     ///

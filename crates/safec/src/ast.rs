@@ -123,10 +123,11 @@ pub enum Type {
     /// A structure, C17 6.7.2.1: `struct S`, `struct S { ... }` or
     /// `struct { ... }`.
     ///
-    /// **Read, and not yet given a meaning.** What a tag names, whether two
-    /// occurrences are one type, and where a member lies are #27's; until then
-    /// the type checker refuses every struct under `SC0304`, so no stage after
-    /// it has to answer for one. Each occurrence is its own `TypeId`, as every
+    /// **Read, and not yet given a meaning.** Which tag one names, and so
+    /// whether two occurrences are one type, is the resolver's
+    /// (`Resolution::tag`); where a member lies is #27's, and until then the
+    /// type checker refuses every struct under `SC0304`, so no stage after it
+    /// has to answer for one. Each occurrence is its own `TypeId`, as every
     /// type is here.
     Struct {
         /// The tag, if one was written.
