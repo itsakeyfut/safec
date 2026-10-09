@@ -97,8 +97,9 @@ pub struct Tag {
     /// This is the state after the whole walk, not at any one use: the tag a
     /// use before the definition is bound to, or a member inside it, has this
     /// set too, though C17 6.7.2.1 p8 leaves the type incomplete there until
-    /// the closing brace. Whether a type is complete where it is used is
-    /// [`Resolution::complete`]'s question.
+    /// the closing brace. Whether a struct is complete where it is written is
+    /// [`Resolution::complete`]'s question, which says why that is not the
+    /// same as where an expression of it is used.
     pub defined: Option<Span>,
 }
 
@@ -219,6 +220,15 @@ impl Resolution {
     /// p1: `int`, `char` and a pointer are; `void` and a function are not; a
     /// struct is from the `}` of its definition on (6.7.2.1 p8); and an array
     /// is when it has a length and its element is complete.
+    ///
+    /// **Where `ty` is written, not where an expression of it is used.** An
+    /// expression's type is some declaration's, written elsewhere: before the
+    /// use for an object, `struct S *p;` above the definition answering
+    /// incomplete at a `p->a` after it, and possibly after the use for a
+    /// function, whose type is its standing declaration's. So a reader
+    /// asking whether a struct is complete at a `.` or a `->` cannot ask this
+    /// of the base's type; what was complete at that point in the walk has to
+    /// be recorded there, which #419 does.
     ///
     /// Asked of a type this stage walked. A struct it did not reach, in the
     /// parameters of a function declarator nested inside a type (#409), is
