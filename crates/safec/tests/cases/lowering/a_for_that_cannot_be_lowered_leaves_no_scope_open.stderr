@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile something of type `int[n]` yet
+   ╭─[ a_for_that_cannot_be_lowered_leaves_no_scope_open.c:2:10 ]
+   │
+ 2 │     for (int a[n]; 0;) {
+   │          ────┬───  
+   │              ╰───── declared here
+───╯
+  = note: `int`, `char`, `void` and pointers to them are all this compiler holds so far

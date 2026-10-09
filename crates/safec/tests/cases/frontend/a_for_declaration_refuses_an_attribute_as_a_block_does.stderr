@@ -1,0 +1,7 @@
+error[SC0204]: `__attribute__` cannot apply here
+   ╭─[ a_for_declaration_refuses_an_attribute_as_a_block_does.c:2:10 ]
+   │
+ 2 │     for (__attribute__((unused)) int i = 0; 0;) {
+   │          ──────┬──────  
+   │                ╰──────── it is read once, before a function definition at file scope
+───╯

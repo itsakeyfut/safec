@@ -1,12 +1,12 @@
 error[SC0302]: cannot initialize `int *` with `int`
-   ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:8:19 ]
-   │
- 8 │     for (int *p = 1; 0;) {
-   │               ┬   ┬  
-   │               ╰────── this holds `int *`
-   │                   │  
-   │                   ╰── this is `int`
-───╯
+    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:10:19 ]
+    │
+ 10 │     for (int *p = 1; 0;) {
+    │               ┬   ┬  
+    │               ╰────── this holds `int *`
+    │                   │  
+    │                   ╰── this is `int`
+────╯
 error[SC0309]: the length of an array is greater than zero
    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:2:16 ]
    │
@@ -39,5 +39,13 @@ error[SC0311]: `h` is a function, and a `for` may declare only objects
  6 │     for (int h(void); 0;) {
    │              ┬  
    │              ╰── declared as `int (void)`
+───╯
+  = note: C17 6.8.5 p3
+error[SC0311]: `k` is a function, and a `for` may declare only objects
+   ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:8:21 ]
+   │
+ 8 │     for (int i = 0, k(void); 0;) {
+   │                     ┬  
+   │                     ╰── declared as `int (void)`
 ───╯
   = note: C17 6.8.5 p3
