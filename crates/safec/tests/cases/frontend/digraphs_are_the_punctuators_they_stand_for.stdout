@@ -1,0 +1,9 @@
+Declaration digraphs_are_the_punctuators_they_stand_for.c:1:1 "a" "int[2]"
+Function digraphs_are_the_punctuators_they_stand_for.c:2:1 "main" "int (void)"
+  Compound digraphs_are_the_punctuators_they_stand_for.c:2:16
+    Return digraphs_are_the_punctuators_they_stand_for.c:3:5
+      Binary digraphs_are_the_punctuators_they_stand_for.c:3:12 "-"
+        Subscript digraphs_are_the_punctuators_they_stand_for.c:3:12
+          Identifier digraphs_are_the_punctuators_they_stand_for.c:3:12 "a"
+          Number digraphs_are_the_punctuators_they_stand_for.c:3:15 "1"
+        Number digraphs_are_the_punctuators_they_stand_for.c:3:21 "2"

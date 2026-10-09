@@ -96,10 +96,10 @@ impl<'a> Lexer<'a> {
 
             // A directive is `#` as the first preprocessing *token* on a line,
             // so this asks what the scan is about to take rather than what the
-            // next character is: `##` is one token and begins no directive.
+            // next character is: `##` is one token and begins no directive,
+            // and `%:` is `#` (C17 6.4.6 p3) and begins one.
             let kind = if self.at_line_start
-                && c == '#'
-                && Punct::starting(self.rest()) == Some(Punct::Hash)
+                && Punct::starting(self.rest()).is_some_and(|(punct, _)| punct == Punct::Hash)
             {
                 self.scan_directive(diagnostics)
             } else {
@@ -141,8 +141,10 @@ impl<'a> Lexer<'a> {
         // punctuator, and within itself longest-first, which is C's rule: the
         // scan takes the longest run of characters that could be a token even
         // when a shorter one would let the rest parse.
-        if let Some(punct) = Punct::starting(self.rest()) {
-            self.offset += punct.as_str().len();
+        // By the spelling matched, which a digraph makes longer than the
+        // punctuator's own: `<:` is two bytes of `[`.
+        if let Some((punct, spelled)) = Punct::starting(self.rest()) {
+            self.offset += spelled.len();
             return TokenKind::Punct(punct);
         }
         self.scan_unknown(diagnostics)
@@ -322,6 +324,8 @@ impl<'a> Lexer<'a> {
     /// newline even where C would join two.
     fn scan_directive(&mut self, diagnostics: &mut DiagnosticSink) -> TokenKind {
         let opening = self.offset;
+        // Two bytes where the `#` is written `%:`.
+        let hash = Punct::starting(self.rest()).map_or(1, |(_, spelled)| spelled.len());
         while self.peek().is_some_and(|c| c != '\n') {
             self.bump();
         }
@@ -333,7 +337,7 @@ impl<'a> Lexer<'a> {
                     // The `#`, not the line. A caret under a long macro
                     // definition is a wall, and the line is quoted above it
                     // anyway.
-                    Span::new(self.file, opening as u32, opening as u32 + 1),
+                    Span::new(self.file, opening as u32, (opening + hash) as u32),
                     "directive begins here",
                 ))
                 // Which directives, rather than which stage. `docs/frontend.md`

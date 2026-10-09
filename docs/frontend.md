@@ -88,6 +88,14 @@ None of the three is a decision anybody has taken to refuse forever. They are
 where the lexer stopped, and this section exists so that stopping there is
 visible rather than inferred from a diagnostic.
 
+**Digraphs are read; trigraphs and line splices are not yet.** C17 6.4.6 p3
+makes `<:` `:>` `<%` `%>` `%:` `%:%:` the punctuators `[` `]` `{` `}` `#` `##`
+"in all aspects of the language", so `token.rs::DIGRAPHS` scans each to that
+punctuator and nothing after the lexer can tell them apart: `%:define` is a
+directive and `SC0104`, as `#define` is. The trigraphs of 5.2.1.1 and the
+splice of phase 2 happen before any token exists, and a splice the lexer does
+not perform compiles a different program; that is #430.
+
 Three more are where the *parser* stopped, and belong here for the same reason.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
