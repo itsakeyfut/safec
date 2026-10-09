@@ -2762,6 +2762,18 @@ cases! {
         // report goes. Mutation: refuse a `char` length, or take a `void` one;
         // `ok2` reports, or the `y` report goes.
         an_array_declarator_is_held_to_its_constraints: ["--emit", "ast"],
+        // C17 6.7.9 p3: a function, `void` and a variable length array are
+        // refused an initializer at file scope and in a block, each once under
+        // `SC0310`, and an array of unknown size is not, which p3 allows.
+        // `u` and `bu` are still accepted in silence: 6.7.9 p16 asks for a
+        // brace-enclosed list there, which is a Semantics paragraph and not
+        // this check's. Mutation: stop asking whether the declared type is a
+        // function, or `void`; `f` and `bf`, or `v` and `bv`, go. Mutation:
+        // stop asking whether an array's length has a value; `va` goes, and
+        // refusing every array instead makes `u` and `bu` report. Mutation:
+        // walk only the items, or only the statements; the block's reports,
+        // or the file's, go.
+        only_an_object_can_be_initialized: ["--emit", "ast"],
         // A constant expression has the value C gives it (C17 6.6 p6): `-1`
         // and `1 - 1` are lengths 6.7.6.2 p1 refuses, and `1 - 1` and `-0`
         // are null pointer constants (6.3.2.3 p3) wherever a pointer meets

@@ -111,6 +111,17 @@ const RETURN_SHAPE: Code = Code::new("SC0308");
 /// or a function, is the same kind of fault and would go here.
 const DECLARATOR: Code = Code::new("SC0309");
 
+/// Something initialized that C17 6.7.9 p3 says cannot be: a function, an
+/// object of incomplete type, or a variable length array. Only an array of
+/// unknown size or a complete object type that is not a variable length
+/// array may have an initializer.
+///
+/// Not `MISMATCH`, because no value of any type would make `int f(void) = 1;`
+/// right: what has to change is the `=` or the declaration. Not `DECLARATOR`,
+/// because `int f(void);` is a correct declarator, and the fault is
+/// initializing it.
+const INITIALIZED: Code = Code::new("SC0310");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -208,6 +219,7 @@ pub fn check(
     // After every expression is typed, because a length's type and value are
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
+    checker.check_initialized(ast, diagnostics);
 
     Types {
         of: checker.types,
@@ -384,6 +396,65 @@ impl Checker<'_> {
                     Type::Int | Type::Char | Type::Void => break,
                 }
             }
+        }
+    }
+
+    /// Hold every declarator that has an initializer to C17 6.7.9 p3, and
+    /// report one that initializes what cannot be under [`INITIALIZED`].
+    ///
+    /// At file scope and in a block alike, since p3 is about the entity and
+    /// not where it is. `assignable` answers nothing for a function, `void` or
+    /// an array target, so without this `int f(void) = 1;` was accepted in
+    /// silence and its initializer dropped. A variable length array is one
+    /// whose length has no value; at file scope the same declarator is also
+    /// 6.7.6.2 p2's, and both are reported, being two constraints.
+    fn check_initialized(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        let mut initialized: Vec<&InitDeclarator> = Vec::new();
+        for item in ast.items() {
+            if let Item::Declaration { declarators, .. } = item {
+                initialized.extend(declarators.iter().filter(|d| d.init.is_some()));
+            }
+        }
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+                initialized.extend(declarators.iter().filter(|d| d.init.is_some()));
+            }
+        }
+
+        for declarator in initialized {
+            let declaration = &declarator.declaration;
+            let ty = declaration.ty;
+            let name = declaration.name.unwrap_or(declaration.span);
+            let called = self.sources.snippet(name);
+            // Every variant named, so that a type added later is asked here.
+            let message = match ast.ty(ty) {
+                Type::Function { .. } => {
+                    format!("`{called}` is a function, and only an object can be initialized")
+                }
+                Type::Void => format!(
+                    "`{called}` has type `void`, which is incomplete, and only a complete object can be initialized"
+                ),
+                Type::Array {
+                    length: Some(length),
+                    ..
+                } if self.values[length.index()].is_none() => {
+                    format!("`{called}` is a variable length array, which cannot be initialized")
+                }
+                Type::Array { .. } | Type::Int | Type::Char | Type::Pointer(_) => continue,
+            };
+            let Some(init) = declarator.init else {
+                continue;
+            };
+            diagnostics.report(
+                Diagnostic::error(message)
+                    .with_code(INITIALIZED)
+                    .with_label(Label::primary(
+                        name,
+                        format!("declared as `{}`", self.spelled(ast, ty)),
+                    ))
+                    .with_label(Label::secondary(ast.expr(init).span(), "this initializer"))
+                    .with_note("C17 6.7.9 p3"),
+            );
         }
     }
 
