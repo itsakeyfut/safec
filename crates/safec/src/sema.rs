@@ -397,13 +397,18 @@ impl Resolver<'_> {
                 }
                 self.walk_declarator(function.ty, diagnostics);
                 self.define(function.name, diagnostics);
-                // Declared before the body is walked, so that a function can
-                // call itself. C17 6.2.1 p7 puts the start of a file-scope
-                // name at the end of its declarator, which is before the body.
-                self.declare(function.name, function.ty, true, diagnostics);
 
                 self.open_scope();
                 self.parameters(function.ty, diagnostics);
+                // Declared after its parameters, which are part of its
+                // declarator, and before the body, so that a function can call
+                // itself: C17 6.2.1 p7 starts a file-scope name at the end of
+                // its declarator. After them because comparing it with an
+                // earlier declaration of it compares their parameters' types,
+                // and a struct written in its parameters is bound to a tag
+                // only once they are walked. Into the file scope, since the
+                // one open is its body's.
+                self.declare_in(0, function.name, function.ty, true, diagnostics);
                 // C17 6.2.1 p4 puts a parameter in the body's outermost block,
                 // so the body's statements are walked here, in the parameters'
                 // scope, rather than through `stmt`, which would open a second
@@ -1083,15 +1088,30 @@ impl Resolver<'_> {
         definition: bool,
         diagnostics: &mut DiagnosticSink,
     ) {
+        let innermost = self.scopes.len() - 1;
+        self.declare_in(innermost, name, ty, definition, diagnostics);
+    }
+
+    /// [`Resolver::declare`], into the scope at `scope`, counted from the
+    /// file scope at 0: a function definition's name, declared into the file
+    /// scope while its body's scope is open.
+    fn declare_in(
+        &mut self,
+        scope: usize,
+        name: Span,
+        ty: TypeId,
+        definition: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         let spelled = self.sources.snippet(name);
-        let here = self.spelled.last().expect("the file scope is never popped");
+        let here = &self.spelled[scope];
         let earlier = here.get(spelled).copied();
         let mut conflicts = false;
         if let Some(earlier) = earlier {
             let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
             let latest = self.resolution.binding(earlier.latest);
             let standing = self.resolution.binding(earlier.standing.id);
-            if self.scopes.len() > 1 && !(function(latest.ty) && function(ty)) {
+            if scope > 0 && !(function(latest.ty) && function(ty)) {
                 diagnostics.report(redefined(
                     spelled,
                     name,
@@ -1113,10 +1133,7 @@ impl Resolver<'_> {
 
         let id = BindingId(self.resolution.bindings.len() as u32);
         self.resolution.bindings.push(Binding { name, ty });
-        self.scopes
-            .last_mut()
-            .expect("the file scope is never popped")
-            .push(id);
+        self.scopes[scope].push(id);
         // A declaration that conflicts is not what the next one is compared
         // with, so a later line that agrees with the earlier ones is not
         // blamed for the one that did not, which is how `clang` reads it too.
@@ -1136,16 +1153,13 @@ impl Resolver<'_> {
             }
             _ => self.standing(id, ty, definition),
         };
-        self.spelled
-            .last_mut()
-            .expect("the file scope is never popped")
-            .insert(
-                spelled.to_owned(),
-                Declared {
-                    latest: id,
-                    standing,
-                },
-            );
+        self.spelled[scope].insert(
+            spelled.to_owned(),
+            Declared {
+                latest: id,
+                standing,
+            },
+        );
     }
 
     /// What [`Standing`] records of the declaration `id`, worked out once
@@ -2600,6 +2614,29 @@ mod tests {
                 "conflicting types for `r`",
                 "conflicting types for `x`",
             ]
+        );
+    }
+
+    /// A definition with a struct in its parameters, after a declaration of
+    /// it, is compared once the struct is bound: its parameters are part of
+    /// its declarator, so its name is declared after them (C17 6.2.1 p7), and
+    /// into the file scope, where a use after it finds it.
+    ///
+    /// Mutation: declare a definition's name before its parameters are
+    /// walked, in `Resolver::item`; `Resolution::tag` panics on the
+    /// definition's unbound `struct S`. Mutation: declare it into the scope
+    /// that is open, the body's; the call in `g` finds nothing. Either fails
+    /// this.
+    #[test]
+    fn a_definition_with_a_struct_parameter_is_compared_after_its_parameters() {
+        let resolved = resolved(
+            "struct S;\nint f(struct S *a);\nint f(struct S *a) {\n    return 0;\n}\nint g(struct S *p) {\n    return f(p);\n}\nint h(int (*k)(struct S *));\nint h(int (*k)(struct S *)) {\n    return 0;\n}\n",
+        );
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_eq!(
+            resolved.declaration_of("f", 2),
+            Some(resolved.occurrence("f", 1))
         );
     }
 }
