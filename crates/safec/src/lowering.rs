@@ -1539,6 +1539,25 @@ impl Lowering<'_> {
         Some(())
     }
 
+    /// Refuse a member access, which this stage cannot hold yet.
+    ///
+    /// The type checker refuses every one first, and a program refused
+    /// anything there is not lowered, so none reaches here today. Answered as
+    /// a report rather than a panic, so that #27, which gives a member access
+    /// a type, is not obliged to change this stage in the same step.
+    fn member_not_yet(&self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<()> {
+        diagnostics.report(
+            Diagnostic::error("cannot compile a member access yet")
+                .with_code(LOWERING)
+                .with_label(Label::primary(
+                    self.ast.expr(id).span(),
+                    "a member of a struct",
+                ))
+                .with_note("structs are read, and not yet held by the IR"),
+        );
+        None
+    }
+
     /// The value of a full expression that has one.
     ///
     /// Every caller reads what this answers, and C17 6.3.2.2 p1 forbids using
@@ -1746,9 +1765,7 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
-            // The type checker refuses every member access, and a program it
-            // refused anything in is not lowered. One here is a hole in that gate.
-            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
+            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Number { .. } => {
                 // Worked out by `types.rs`, where the base, the suffix and
                 // the range of `int` are all one question. A constant it
@@ -1876,9 +1893,7 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
-            // The type checker refuses every member access, and a program it
-            // refused anything in is not lowered. One here is a hole in that gate.
-            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
+            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Identifier { .. } => {
                 places.push(Place::local(self.local(id, diagnostics)?));
             }
@@ -1973,9 +1988,7 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.expr(id) {
-            // The type checker refuses every member access, and a program it
-            // refused anything in is not lowered. One here is a hole in that gate.
-            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
+            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
@@ -2264,9 +2277,7 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.expr(id) {
-            // The type checker refuses every member access, and a program it
-            // refused anything in is not lowered. One here is a hole in that gate.
-            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
+            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Unary { .. } => {
                 let operand = values.pop().expect("a pointer");
                 let mut place = self.pointed_at(id, operand, diagnostics)?;
@@ -2398,9 +2409,7 @@ impl Lowering<'_> {
         let join = builder.function.reserve_block();
 
         match self.ast.expr(id) {
-            // The type checker refuses every member access, and a program it
-            // refused anything in is not lowered. One here is a hole in that gate.
-            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
+            Expr::Member { .. } => return self.member_not_yet(id, diagnostics),
             Expr::Binary { op, lhs, rhs, .. } => {
                 let (op, lhs, rhs) = (*op, *lhs, *rhs);
                 let answer = answer.expect("a `&&` or `||` is an `int`");

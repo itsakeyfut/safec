@@ -395,7 +395,7 @@ impl Checker<'_> {
             let mut current = written;
             loop {
                 match ast.ty(current) {
-                    // The gate, once per declaration, parameters included.
+                    // The gate, once per declarator, parameters included.
                     // Nothing below a struct is walked: its members are #27's.
                     Type::Struct { .. } => {
                         self.refuse_a_struct(ast, at, current, diagnostics);
@@ -635,10 +635,10 @@ impl Checker<'_> {
             Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
             // Whether a struct is complete is #27's, and the declaration is
             // refused as holding one already.
+            Type::Struct { .. } => behind_the_gate(false),
             Type::Int
             | Type::Char
             | Type::Pointer(_)
-            | Type::Struct { .. }
             | Type::Array {
                 length: Some(_), ..
             } => false,
@@ -1027,7 +1027,7 @@ impl Checker<'_> {
                 // the arm above.
                 Type::Function { .. } => operand_ty,
                 // A name that holds a struct has no type, so nothing gets here.
-                Type::Struct { .. } => None,
+                Type::Struct { .. } => behind_the_gate(None),
                 // Valid C: 6.3.2.1 p3 makes `a` a pointer to its first
                 // element, and `*` does not ask `decayed` for it. Having no
                 // type here is this compiler's gap, so it is not reported as
@@ -1548,7 +1548,7 @@ impl Checker<'_> {
             | (Type::Array { .. } | Type::Function { .. }, _)
             | (_, Type::Array { .. } | Type::Function { .. }) => None,
             // Nothing typed holds a struct, so no operand here is one.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => None,
+            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => behind_the_gate(None),
         };
 
         if paired.is_none() {
@@ -1823,7 +1823,7 @@ impl Checker<'_> {
             },
             (Type::Array { .. } | Type::Function { .. }, _) => None,
             // Nothing typed holds a struct; a declared one is refused already.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => None,
+            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => behind_the_gate(None),
             (
                 Type::Int | Type::Char | Type::Pointer(_) | Type::Void,
                 Type::Pointer(_) | Type::Void | Type::Array { .. } | Type::Function { .. },
@@ -2114,7 +2114,7 @@ impl Checker<'_> {
             | (_, Type::Array { .. } | Type::Function { .. }) => None,
             // A struct target is a declaration refused already, and nothing
             // typed holds one as a source.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => None,
+            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => behind_the_gate(None),
         }
     }
 
@@ -2362,6 +2362,18 @@ impl OperandClass {
     }
 }
 
+/// An answer about a struct given only because the gate [`NOT_YET`] refuses
+/// every struct first, so that nothing could tell whether it is right.
+///
+/// **#27 deletes this function.** Each answer it wraps is then a compile
+/// error to replace with a real one, rather than a placeholder that would go
+/// on answering once a struct gets past the gate: `assignable` answering
+/// nothing would accept `int x = s;` in silence. A wrapper rather than a
+/// comment, so the compiler is what finds them.
+const fn behind_the_gate<T>(answer: T) -> T {
+    answer
+}
+
 /// Whether `ty` is a struct, or is built from one: a pointer to it, an array
 /// of it, or a function that returns one.
 ///
@@ -2397,9 +2409,8 @@ fn unsteppable(ast: &Ast, pointee: TypeId) -> Option<&'static str> {
         Type::Function { .. } => Some("a function is not an object"),
         Type::Array { length: None, .. } => Some("an array of unknown length has no size"),
         // Nothing typed points at a struct, so no step asks about one.
-        Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } | Type::Struct { .. } => {
-            None
-        }
+        Type::Struct { .. } => behind_the_gate(None),
+        Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => None,
     }
 }
 

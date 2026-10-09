@@ -1,0 +1,5 @@
+Declaration a_struct_definition_shared_by_declarators_is_walked_once.c:1:1 "x" "struct S"
+Declaration a_struct_definition_shared_by_declarators_is_walked_once.c:1:1 "y" "struct S"
+  Field a_struct_definition_shared_by_declarators_is_walked_once.c:1:12 "a" "int[n]"
+Declaration a_struct_definition_shared_by_declarators_is_walked_once.c:2:1 "struct T"
+  Field a_struct_definition_shared_by_declarators_is_walked_once.c:2:12 "b" "int[k]"

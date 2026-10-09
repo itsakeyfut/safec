@@ -55,7 +55,7 @@ pub struct StmtId(u32);
 pub struct ItemId(u32);
 
 /// Where a type is in [`Ast`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TypeId(u32);
 
 /// A type, as C17 6.7.6 derives one from a declarator.

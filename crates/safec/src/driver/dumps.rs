@@ -5,6 +5,7 @@
 //! `--emit safety-ir` is not here: what an IR line says is a fact about the IR,
 //! and it is written by `safec_ir::print`.
 
+use std::collections::HashSet;
 use std::fmt::Write as _;
 
 use crate::ast::{
@@ -203,15 +204,54 @@ fn dump_declarators(
 
     // The members a struct the specifiers defined was given, a line each, once
     // per declaration rather than once per declarator.
-    if let Type::Struct {
-        members: Some(members),
-        ..
-    } = ast.ty(specified)
-    {
-        for member in members {
-            dump_node(sources, "Field", member.span, depth + 1, out);
-            dump_declaration(sources, ast, member, out);
+    dump_fields(sources, ast, specified, depth + 1, out);
+}
+
+/// The members of the struct `ty` defines, if it defines one, a line each at
+/// `depth`, with the members of a struct a member defines under that member.
+///
+/// An explicit stack, for the reason `sema.rs`'s `walk_type` gives: a struct
+/// nests as deep as `Parser::deeper` allows and each member's declarator as
+/// deep again. Each definition is printed once, under the first member that
+/// reaches it, because every declarator of `struct T { ... } a, b;` shares it.
+fn dump_fields(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &mut String) {
+    // The members of the struct `ty` is built on, if it defines one this walk
+    // has not printed, pushed so that they pop in the order written.
+    fn push_members<'a>(
+        ast: &'a Ast,
+        seen: &mut HashSet<TypeId>,
+        ty: TypeId,
+        depth: usize,
+        pending: &mut Vec<(&'a Declaration, usize)>,
+    ) {
+        let mut current = ty;
+        loop {
+            match ast.ty(current) {
+                Type::Pointer(inner) | Type::Array { element: inner, .. } => current = *inner,
+                Type::Function { returns, .. } => current = *returns,
+                Type::Struct {
+                    members: Some(members),
+                    ..
+                } => {
+                    if seen.insert(current) {
+                        pending.extend(members.iter().rev().map(|member| (member, depth)));
+                    }
+                    return;
+                }
+                Type::Struct { members: None, .. } | Type::Int | Type::Char | Type::Void => {
+                    return;
+                }
+            }
         }
+    }
+
+    let mut seen = HashSet::new();
+    let mut pending = Vec::new();
+    push_members(ast, &mut seen, ty, depth, &mut pending);
+    while let Some((member, depth)) = pending.pop() {
+        dump_node(sources, "Field", member.span, depth, out);
+        dump_declaration(sources, ast, member, out);
+        push_members(ast, &mut seen, member.written, depth + 1, &mut pending);
     }
 }
 

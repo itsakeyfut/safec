@@ -2814,6 +2814,29 @@ cases! {
         // `Parser::deeper`. Mutation: read members without `deeper`; this is
         // a struct as deep as the source, which the parser does not refuse.
         a_struct_nested_past_the_limit_is_refused_rather_than_read: ["--emit", "ast"],
+        // Two hundred and fifty structs, each reached from the one around it
+        // through twenty `*`s. The parser bounds the two nestings apart, so
+        // a walk of the type that recursed through both went the product of
+        // them deep and overflowed the stack, with nothing reported.
+        // Mutation: make `sema.rs`'s `walk_type` recurse again; the process
+        // dies and this fails.
+        a_struct_nested_through_long_pointer_chains_is_walked_without_recursion: ["--emit", "ast"],
+        // `x` and `y` share one definition, so its member's undeclared `n` is
+        // reported once, and `struct T`, declared with no declarator, still
+        // has its `k` resolved. Walking the definition per declarator
+        // reported `n` twice, and nested, took time exponential in the
+        // depth. Mutation: drop `walked`; `n` is reported twice. Mutation:
+        // skip a declaration's `specified` in sema; `k`'s report goes.
+        a_struct_definition_shared_by_declarators_is_walked_once: ["--emit", "ast"],
+        // `struct T` is defined inside a member and its own member `y` is
+        // printed under `t`, the first member that reaches it, and not again
+        // under `u`, which shares it. Mutation: drop `seen` in
+        // `dump_fields`; `y` is printed twice. Mutation: print only the
+        // specifiers' struct's members; `y` goes.
+        a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined: ["--emit", "ast"],
+        // `struct` with no tag and no member list names nothing. Mutation:
+        // accept it; this loses its `SC0201`.
+        a_struct_with_neither_tag_nor_members_is_refused: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
         // bit-field, named or not (p9). Mutation: send a member with no
