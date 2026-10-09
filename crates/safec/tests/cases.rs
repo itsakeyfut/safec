@@ -2794,13 +2794,14 @@ cases! {
         // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
         // members, a declaration of a tag and nothing else, an object, a
         // parameter, a local, and `.` and `->`, each in the tree. Every
-        // object of struct type is typed, so the only reports are the four
-        // member accesses, refused under `SC0304` until #423 types them, and
-        // `s`, of a `struct T` nothing completes (`SC0315`, C17 6.9.2 p2).
-        // `h` assigns one pointer to a struct to another of its tag, and is
-        // not reported. Mutation: refuse `struct` in `specifiers` again; this
-        // is `SC0201` at the first `struct`. Mutation: skip a member access;
-        // a report goes. Mutation: read `->` as `.`; the dump's `"->"` goes.
+        // object of struct type and every member access is typed, so the
+        // only report is `s`, of a `struct T` nothing completes (`SC0315`,
+        // C17 6.9.2 p2). `h` assigns one pointer to a struct to another of
+        // its tag, and is not reported. Mutation: refuse `struct` in
+        // `specifiers` again; this is `SC0201` at the first `struct`.
+        // Mutation: skip a member access; its `Member` goes from the dump.
+        // Mutation: read `->` as `.`; the dump's `"->"` goes, and `p->x` is
+        // `SC0306`.
         // The rest is every place a struct is read: two members in one
         // declaration, a definition with a declarator at file scope and in a
         // block, a tag declared in a block, a `for` and a parenthesised
@@ -2869,18 +2870,37 @@ cases! {
         // no body. Mutation: drop the attribute check on that path; the hatch
         // is read onto `struct S`.
         a_hatch_on_a_declaration_of_a_tag_is_refused: ["--emit", "ast"],
-        // Three hundred `->` in a row are one thing not checked yet, and are
-        // reported once, at the first. A report each, with a span growing by
-        // one access each, was output and time quadratic in the chain.
-        // Mutation: report a member access whose base is one; three hundred
-        // reports.
+        // Three hundred `->` in a row through a struct nothing completes
+        // are one fault, reported once, at the first (`SC0315`): every later
+        // access has a base with no type, which was reported there. A report
+        // each, with a span growing by one access each, was output and time
+        // quadratic in the chain. Mutation: report a member access whose
+        // base is an untyped member access as this compiler's gap; three
+        // hundred reports.
         a_chain_of_member_accesses_is_refused_once: ["--emit", "ast"],
+        // `s.b` names a member `struct S` does not have (C17 6.5.2.3 p1),
+        // reported at `b` under `SC0316`, with the definition beside it.
+        // Mutation: type a member access without looking its member up;
+        // this goes silent.
+        a_member_the_struct_does_not_have_is_reported: ["--emit", "ast"],
+        // `p->a` in `f` is above `struct S`'s definition, where the struct
+        // has no members yet (6.7.2.1 p8), and is `SC0315`; in `g` it is
+        // below and typed. Mutation: ask completeness where `p` was
+        // declared; `g`'s is reported too.
+        a_member_of_a_struct_not_complete_where_it_is_named_is_reported: ["--emit", "ast"],
         // C17 6.7.2.1 p3's second sentence: a struct with a flexible array
         // member is no member of another (`SC0314`) and no element of an
         // array (`SC0309`). clang accepts both as an extension and refuses
         // them under `-pedantic-errors`. Mutation: drop either check; its
         // report goes.
         a_struct_with_a_flexible_array_member_is_no_member_and_no_element: ["--emit", "ast"],
+        // A program using members as C allows passes the type checker, and
+        // the lowering refuses its one member access, the first it meets,
+        // under `SC0304`, since the IR holds no struct to take a member
+        // of. Mutation: refuse a member access of the right shape in the
+        // type checker again; that report is the type checker's, and the
+        // lowering is never reached.
+        a_program_using_members_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.2.3 p1: `V` given its content twice in one scope is
         // `SC0312`, and `W` given it again in a block is a new tag, which is
         // not. Mutation: look a definition up in every visible scope; `W` is

@@ -1,0 +1,12 @@
+error[SC0316]: no member named `b` in `struct S`
+   ╭─[ a_member_the_struct_does_not_have_is_reported.c:5:14 ]
+   │
+ 1 │ struct S {
+   │        ┬  
+   │        ╰── `struct S` is defined here
+   │ 
+ 5 │     return s.b;
+   │              ┬  
+   │              ╰── not a member of `struct S`
+───╯
+  = note: C17 6.5.2.3 p1

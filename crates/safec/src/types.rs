@@ -131,8 +131,8 @@ const INITIALIZED: Code = Code::new("SC0310");
 /// class specifier, when one is read, is the other half of p3 and comes here.
 const FOR_DECLARATION: Code = Code::new("SC0311");
 
-/// Valid C this compiler reads and cannot check yet: a member access, `.`
-/// or `->`, until #423 gives one its type.
+/// Valid C this compiler reads and cannot check yet: a member access whose
+/// base this stage left with no type, such as `(p - q).a`.
 ///
 /// The lowering's code, `SC0304`, rather than one of this stage's own,
 /// because it is the same class of refusal: what a reader searches for is
@@ -151,13 +151,41 @@ const NOT_YET: Code = Code::new("SC0304");
 /// Its own code: the type is a correct one and the declarator a correct
 /// declarator, and what is wrong is that the struct is not complete there.
 /// The wording follows `clang`'s `variable has incomplete type 'struct S'`.
+/// A member access on a struct not complete where it is written is the same
+/// question again (C17 6.5.2.3 p1 with 6.7.2.1 p8): there are no members to
+/// name yet.
 const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
+
+/// A member access naming a member its struct does not have, C17 6.5.2.3 p1
+/// ("shall name a member of that type").
+///
+/// Not `SC0301`, the resolver's undeclared name: that is a name looked up in
+/// the scopes of ordinary identifiers, and a member is looked up in its
+/// struct, a name space of its own (6.2.3), which only the type checker can
+/// do because only it knows the base's type. The wording follows `clang`'s
+/// `no member named 'b' in 'struct S'`.
+const NO_MEMBER: Code = Code::new("SC0316");
 
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
     of: Vec<Option<TypeId>>,
     value: Vec<Option<i128>>,
+    member: Vec<Option<Member>>,
+}
+
+/// The member a member access names: the struct definition its base's tag
+/// names, and the member's position among that definition's members.
+///
+/// Self-contained, so that a stage reading it needs neither the resolution
+/// nor a second lookup by spelling: `ast.ty(definition)` is a struct with
+/// members, and `index` is in range of them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Member {
+    /// The struct type whose `{ ... }` declares the member.
+    pub definition: TypeId,
+    /// Which of its members, counting from zero in the order written.
+    pub index: usize,
 }
 
 impl Types {
@@ -195,6 +223,16 @@ impl Types {
     pub fn value(&self, id: ExprId) -> Option<i128> {
         self.value[id.index()]
     }
+
+    /// The member the member access `id` names, or `None` where `id` is not
+    /// one or this stage gave it no type.
+    ///
+    /// # Panics
+    ///
+    /// If `id` came from a different [`Ast`].
+    pub fn member(&self, id: ExprId) -> Option<Member> {
+        self.member[id.index()]
+    }
 }
 
 /// Give every expression a type, and report the constraints this stage checks.
@@ -223,6 +261,7 @@ pub fn check(
         resolution,
         types: vec![None; ast.expr_ids().count()],
         values: vec![None; ast.expr_ids().count()],
+        members: vec![None; ast.expr_ids().count()],
         undefined: vec![false; ast.expr_ids().count()],
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
@@ -258,6 +297,7 @@ pub fn check(
     Types {
         of: checker.types,
         value: checker.values,
+        member: checker.members,
     }
 }
 
@@ -323,6 +363,9 @@ struct Checker<'a> {
     /// What each integer constant is worth, filled by the same walk that
     /// fills `types` and empty everywhere else.
     values: Vec<Option<i128>>,
+    /// What each member access names, filled by the same walk. See
+    /// [`Types::member`].
+    members: Vec<Option<Member>>,
     /// Whether each expression is a constant expression in shape whose
     /// evaluation overflows or has no defined result, so that
     /// [`Checker::evaluate`] gave it no value. Set by `check` beside the
@@ -904,6 +947,132 @@ impl Checker<'_> {
         }
     }
 
+    /// The type of the member access `id`, C17 6.5.2.3: the type of the
+    /// member it names, which is recorded in `members`.
+    ///
+    /// Three things are asked, in the order a reader would: whether the base
+    /// is the shape the operator takes (p1, `OPERANDS`), whether its struct
+    /// is complete where the access is written, since an incomplete struct
+    /// has no members yet (6.7.2.1 p8, `INCOMPLETE_OBJECT`), and whether the
+    /// struct has a member of that name (p1, `NO_MEMBER`). The member is
+    /// found by spelling among the members of the definition the base's tag
+    /// names, so `s.a` with `s` declared before `struct S`'s definition is
+    /// typed below it.
+    fn member(
+        &mut self,
+        ast: &Ast,
+        id: ExprId,
+        (base, member, arrow, span): (ExprId, Span, bool, Span),
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        let operator = if arrow { "->" } else { "." };
+        let Some(base_ty) = self.types[base.index()] else {
+            // A base that is itself a member access with no type was
+            // reported there, and `a.b.c` with no `b` is one fault rather
+            // than two. Any other base with no type may be a struct: not
+            // every one was reported where it was typed, `p - q` being left
+            // untyped as this compiler's gap, so it is this compiler's to
+            // decline rather than nothing to say.
+            if !matches!(ast.expr(base), Expr::Member { .. }) {
+                diagnostics.report(
+                    Diagnostic::error(format!("cannot check `{operator}` yet"))
+                        .with_code(NOT_YET)
+                        .with_label(Label::primary(span, "a member of something untyped"))
+                        .with_note(
+                            "this compiler gave the base no type, which is its gap rather than the program's",
+                        ),
+                );
+            }
+            return None;
+        };
+
+        // p1: `.` takes a struct and `->` a pointer to one. An array of
+        // structs is one after 6.3.2.1 p3, so `a->m` is C.
+        let structure = match ast.ty(base_ty) {
+            Type::Struct { .. } => (!arrow).then_some(base_ty),
+            Type::Pointer(element) | Type::Array { element, .. } => {
+                (arrow && matches!(ast.ty(*element), Type::Struct { .. })).then_some(*element)
+            }
+            Type::Int | Type::Char | Type::Void | Type::Function { .. } => None,
+        };
+        let Some(structure) = structure else {
+            let spelled = self.spelled(ast, base_ty);
+            let wanted = if arrow {
+                "a pointer to a struct"
+            } else {
+                "a struct"
+            };
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`{operator}` needs {wanted}, and this is `{spelled}`"
+                ))
+                .with_code(OPERANDS)
+                .with_label(Label::primary(
+                    ast.expr(base).span(),
+                    format!("this is `{spelled}`"),
+                ))
+                .with_note("C17 6.5.2.3 p1"),
+            );
+            return None;
+        };
+
+        let tag = self.resolution.tag(structure);
+        let spelled = self.spelled(ast, structure);
+        // Complete here means its definition closed above, so it has one.
+        let definition = self
+            .complete_here(ast, structure)
+            .then(|| self.resolution.definition(tag))
+            .flatten();
+        let Some(definition) = definition else {
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`{spelled}` is not complete here, and has no members yet"
+                ))
+                .with_code(INCOMPLETE_OBJECT)
+                .with_label(Label::primary(
+                    ast.expr(base).span(),
+                    format!("this is `{}`", self.spelled(ast, base_ty)),
+                ))
+                .with_note("C17 6.5.2.3 p1 and 6.7.2.1 p8"),
+            );
+            return None;
+        };
+        let Type::Struct {
+            members: Some(members),
+            ..
+        } = ast.ty(definition)
+        else {
+            unreachable!("a definition the resolver recorded has members");
+        };
+
+        let name = self.sources.snippet(member);
+        let found = members.iter().position(|declared| {
+            declared
+                .name
+                .is_some_and(|declared| self.sources.snippet(declared) == name)
+        });
+        let Some(index) = found else {
+            let mut diagnostic =
+                Diagnostic::error(format!("no member named `{name}` in `{spelled}`"))
+                    .with_code(NO_MEMBER)
+                    .with_label(Label::primary(
+                        member,
+                        format!("not a member of `{spelled}`"),
+                    ))
+                    .with_note("C17 6.5.2.3 p1");
+            if let Some(defined) = self.resolution.tag_declaration(tag).defined {
+                diagnostic = diagnostic.with_label(Label::secondary(
+                    defined,
+                    format!("`{spelled}` is defined here"),
+                ));
+            }
+            diagnostics.report(diagnostic);
+            return None;
+        };
+        self.members[id.index()] = Some(Member { definition, index });
+        Some(members[index].ty)
+    }
+
     /// Find every `return` with a value and every initializer, and what each
     /// has to be assignable to, and report every `return` that has a value
     /// where it may not or lacks one where it must.
@@ -1086,58 +1255,11 @@ impl Checker<'_> {
                 Some(ty)
             }
             Expr::Member {
-                base, span, arrow, ..
-            } => {
-                let operator = if arrow { "->" } else { "." };
-                // A base that is itself a member access was refused there:
-                // `a.m.m.m` is one thing this cannot check, not three, since a
-                // report each, with a span growing by one access each, was
-                // output and time quadratic in the chain.
-                if matches!(ast.expr(base), Expr::Member { .. }) {
-                    return None;
-                }
-                // C17 6.5.2.3 p1, a constraint: `.` takes a struct and `->` a
-                // pointer to one. An array of structs is one after 6.3.2.1
-                // p3, so `a->m` is C. A base with no type may be either: not
-                // every one was reported where it was typed, `p - q` and `*a`
-                // being left untyped as this compiler's gap, so it is this
-                // compiler's to decline rather than nothing to say.
-                let base_ty = self.types[base.index()];
-                let shaped = base_ty.map(|base_ty| match ast.ty(base_ty) {
-                    Type::Struct { .. } => !arrow,
-                    Type::Pointer(element) | Type::Array { element, .. } => {
-                        arrow && matches!(ast.ty(*element), Type::Struct { .. })
-                    }
-                    Type::Int | Type::Char | Type::Void | Type::Function { .. } => false,
-                });
-                if let (Some(base_ty), Some(false)) = (base_ty, shaped) {
-                    let spelled = self.spelled(ast, base_ty);
-                    let wanted = if arrow {
-                        "a pointer to a struct"
-                    } else {
-                        "a struct"
-                    };
-                    diagnostics.report(
-                        Diagnostic::error(format!(
-                            "`{operator}` needs {wanted}, and this is `{spelled}`"
-                        ))
-                        .with_code(OPERANDS)
-                        .with_label(Label::primary(
-                            ast.expr(base).span(),
-                            format!("this is `{spelled}`"),
-                        ))
-                        .with_note("C17 6.5.2.3 p1"),
-                    );
-                    return None;
-                }
-                diagnostics.report(
-                    Diagnostic::error(format!("cannot check `{operator}` yet"))
-                        .with_code(NOT_YET)
-                        .with_label(Label::primary(span, "a member of a struct"))
-                        .with_note("structs are typed, and what a member is is #423's"),
-                );
-                None
-            }
+                base,
+                member,
+                arrow,
+                span,
+            } => self.member(ast, id, (base, member, arrow, span), diagnostics),
             Expr::Unary { op, operand, .. } => self.unary(ast, op, operand, diagnostics),
             Expr::Binary { op, lhs, rhs, .. } => self.binary(ast, op, lhs, rhs, diagnostics),
             Expr::Assign {

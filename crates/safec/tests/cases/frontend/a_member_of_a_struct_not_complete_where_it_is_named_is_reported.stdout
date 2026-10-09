@@ -1,0 +1,15 @@
+Declaration a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:1:1 "struct S"
+Function a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:2:1 "f" "int (struct S *)"
+  Parameter a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:2:7 "p" "struct S *"
+  Compound a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:2:20
+    Return a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:3:5
+      Member a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:3:12 "->" "a"
+        Identifier a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:3:12 "p"
+Declaration a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:5:1 "struct S"
+  Field a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:6:5 "a" "int"
+Function a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:8:1 "g" "int (struct S *)"
+  Parameter a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:8:7 "p" "struct S *"
+  Compound a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:8:20
+    Return a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:9:5
+      Member a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:9:12 "->" "a"
+        Identifier a_member_of_a_struct_not_complete_where_it_is_named_is_reported.c:9:12 "p"

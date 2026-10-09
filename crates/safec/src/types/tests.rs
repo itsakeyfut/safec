@@ -1786,35 +1786,111 @@ fn a_function_is_held_to_what_c_needs_complete_of_it() {
     assert_eq!(checked.codes(), ["SC0315", "SC0315", "SC0315"]);
 }
 
-/// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1): the wrong
-/// one is refused as the program's, and the right one as this compiler's,
-/// until #423.
+/// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1), an array
+/// of structs being one after 6.3.2.1 p3: the right shape is typed by the
+/// member it names, the wrong one is the program's fault, and a base this
+/// compiler left untyped is its own gap.
 ///
 /// Mutation: refuse every member access as not yet checked, whatever its
-/// base; `.` on a pointer is called this compiler's gap. Mutation: refuse
-/// every typed base as the program's, as before; `s.a` is called a fault.
-/// Mutation: answer an array base `false` whatever its element; `a->a`,
-/// which is C after 6.3.2.1 p3, is called a fault. Mutation: say nothing of
-/// a base with no type; `(i - j).a`, left untyped as this compiler's gap,
-/// goes silent. Each fails this.
+/// base; `s.a` goes untyped and `.` on a pointer is called this compiler's
+/// gap. Mutation: answer an array base as the wrong shape; `a->a` is called
+/// a fault. Mutation: say nothing of a base with no type; `(i - j).a`, left
+/// untyped as this compiler's gap, goes silent. Each fails this.
 #[test]
-fn a_member_access_of_the_wrong_shape_is_the_programs_and_of_the_right_one_is_not_yet() {
+fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_programs() {
     let checked = checked(
-        "struct S {\n    int a;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + p->a + p.a + s->a + a->a + a.a + (i - j).a;\n}\n",
+        "struct S {\n    int a;\n    char *c;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + *p->c + a->a + p.a + s->a + a.a + (i - j).a;\n}\n",
     );
 
+    assert_eq!(checked.spelling("s.a"), "int");
+    assert_eq!(checked.spelling("p->c"), "char *");
+    assert_eq!(checked.spelling("a->a"), "int");
     assert_eq!(
         checked.messages(),
         [
-            "cannot check `.` yet",
-            "cannot check `->` yet",
             "`.` needs a struct, and this is `struct S *`",
             "`->` needs a pointer to a struct, and this is `struct S`",
-            "cannot check `->` yet",
             "`.` needs a struct, and this is `struct S[2]`",
             "cannot check `.` yet",
         ]
     );
+    assert_eq!(checked.codes(), ["SC0306", "SC0306", "SC0306", "SC0304"]);
+}
+
+/// A member access names a member of the struct its base is, found by
+/// spelling among the members of the definition the base's tag names, and
+/// recorded as that definition and the member's position in it (C17
+/// 6.5.2.3 p1). A name the struct does not have is `SC0316`, at the name,
+/// with the definition beside it.
+///
+/// Mutation: type a member access `int` without looking the member up;
+/// `s.b` goes silent and `s.c` is `int`. Mutation: record index 0 for every
+/// member; `s.c` is recorded as `a`. Mutation: look the name up among the
+/// members of the base's own type rather than its tag's definition; `s`,
+/// declared before the definition, has none. Each fails this.
+#[test]
+fn a_member_access_names_a_member_of_its_struct_or_is_reported() {
+    let checked = checked(
+        "struct S s;\nstruct S {\n    int a;\n    int *b2;\n    char c;\n};\nint f(void) {\n    return s.c + s.b;\n}\n",
+    );
+
+    assert_eq!(checked.spelling("s.c"), "char");
+    let access = checked
+        .ast
+        .expr_ids()
+        .find(|&id| checked.sources.snippet(checked.ast.expr(id).span()) == "s.c")
+        .expect("`s.c`");
+    let member = checked.types.member(access).expect("`s.c` names a member");
+    assert_eq!(member.index, 2);
+    assert!(matches!(
+        checked.ast.ty(member.definition),
+        Type::Struct { members: Some(members), .. } if members.len() == 3
+    ));
+    assert_eq!(checked.messages(), ["no member named `b` in `struct S`"]);
+    assert_eq!(checked.codes(), ["SC0316"]);
+    assert_eq!(
+        checked.labels(),
+        ["not a member of `struct S`", "`struct S` is defined here"]
+    );
+}
+
+/// A member access asks whether its struct is complete where the access is
+/// written, since an incomplete struct has no members yet (C17 6.7.2.1 p8):
+/// `p->a` above `struct S`'s definition is `SC0315`, and below it is typed.
+///
+/// Mutation: ask completeness where `p`'s type was written, with
+/// `Resolution::complete`; the second is refused too. Mutation: drop the
+/// question, answering from the tag's definition alone; the first is typed.
+/// Either fails this.
+#[test]
+fn a_member_access_needs_its_struct_complete_where_it_is_written() {
+    let checked = checked(
+        "struct S *p;\nint f(void) {\n    return p->a;\n}\nstruct S {\n    int a;\n};\nint g(void) {\n    return p->a + 0;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        ["`struct S` is not complete here, and has no members yet"]
+    );
+    assert_eq!(checked.codes(), ["SC0315"]);
+    assert_eq!(checked.spelling("p->a + 0"), "int");
+}
+
+/// A chain of member accesses is typed link by link: `s.t.x` reaches a
+/// struct defined inside a member, and `s.t.y` is reported once, at `y`,
+/// with `s.t.y.z` after it silent rather than a second fault.
+///
+/// Mutation: look every link up in the outermost base's struct; `s.t.x` is
+/// reported. Mutation: report a base that is an untyped member access as
+/// this compiler's gap; `s.t.y.z` is a second report. Either fails this.
+#[test]
+fn a_chain_of_member_accesses_is_typed_link_by_link() {
+    let checked = checked(
+        "struct S {\n    struct T {\n        int x;\n    } t;\n} s;\nint f(void) {\n    return s.t.x + s.t.y.z;\n}\n",
+    );
+
+    assert_eq!(checked.spelling("s.t.x"), "int");
+    assert_eq!(checked.messages(), ["no member named `y` in `struct T`"]);
 }
 
 /// An array's element is a complete object type (C17 6.7.6.2 p1), and a

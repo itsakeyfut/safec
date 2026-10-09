@@ -1,0 +1,8 @@
+error[SC0304]: cannot compile a member access yet
+   ╭─[ a_program_using_members_is_typed_and_refused_by_the_lowering.c:7:12 ]
+   │
+ 7 │     return s.a + s.b;
+   │            ─┬─  
+   │             ╰─── a member of a struct
+───╯
+  = note: structs are read, and not yet held by the IR
