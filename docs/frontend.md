@@ -103,6 +103,18 @@ It is not a gap the lexer left, which is why it is a table of its own: the
 first three rows are about what a token is, and this one is about what a
 sequence of them is allowed to be.
 
+And one the parser refuses that `clang` accepts with a warning.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `int;` | `error[SC0206]` | warns | `error: declaration does not declare anything` |
+
+**It is a constraint violation, and this compiler takes no constraint-violating
+extension.** C17 6.7 p2 requires a declaration to declare a declarator, a tag
+or an enumeration's members, and `int;` declares none. The parser reports it,
+being the stage that knows there was no declarator; a declaration that
+declares only a tag is valid and is #34's, with the first tag.
+
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so
 it also holds literal prefixes and non-ASCII identifiers, which are a token's

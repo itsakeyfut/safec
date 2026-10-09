@@ -103,7 +103,7 @@ pub(crate) const UNREAD_ANNOTATION: Code = Code::new("SC0205");
 /// C17 6.7 p2, a constraint, requires a declaration to declare a declarator, a
 /// tag, or an enumeration's members, and `int;` declares none of them. Not
 /// [`EXPECTED`], because no missing token would make it right: the fix is to
-/// name something or delete the line. The parser's for the reason
+/// name something or delete the line. The parser's, for the reason
 /// [`MISPLACED_ANNOTATION`] is, since it is the stage that knows there was no
 /// declarator. A tag is the one thing that would make this valid, and there
 /// are none until #34, which lets one through here.
