@@ -65,6 +65,16 @@ const REDEFINED: Code = Code::new("SC0312");
 /// gives.
 const CONFLICTING: Code = Code::new("SC0313");
 
+/// A member of a struct whose type a member cannot have, which C17 6.7.2.1 p3
+/// forbids: "A structure or union shall not contain a member with incomplete
+/// or function type", except for the flexible array member p18 allows last.
+///
+/// Its own code: it is a constraint on the member itself, which neither a
+/// redefinition nor a conflict of types is. The wording names the member and
+/// spells its type, where `clang` says `field has incomplete type 'struct S'`
+/// and `field 'f' declared as a function`.
+const INCOMPLETE_MEMBER: Code = Code::new("SC0314");
+
 /// One declared name, addressed by [`BindingId`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BindingId(u32);
@@ -87,8 +97,8 @@ pub struct Tag {
     /// This is the state after the whole walk, not at any one use: the tag a
     /// use before the definition is bound to, or a member inside it, has this
     /// set too, though C17 6.7.2.1 p8 leaves the type incomplete there until
-    /// the closing brace. Whether a type is complete where it is used is not
-    /// recorded, and #27, which is the first reader to need it, has to.
+    /// the closing brace. Whether a type is complete where it is used is
+    /// [`Resolution::complete`]'s question.
     pub defined: Option<Span>,
 }
 
@@ -135,6 +145,9 @@ pub struct Resolution {
     tags: Vec<Tag>,
     /// The tag every struct written in the tree is, by the type's id.
     tag_of: HashMap<TypeId, TagId>,
+    /// The struct types that are complete where they are written. See
+    /// [`Resolution::complete`].
+    complete: HashSet<TypeId>,
     /// Every binding whose name's standing declaration, when its scope
     /// closed, is another binding. See [`Resolution::standing`].
     standing: HashMap<BindingId, BindingId>,
@@ -202,6 +215,33 @@ impl Resolution {
         self.declared.get(name).copied()
     }
 
+    /// Whether `ty` is a complete object type where it is written, C17 6.2.5
+    /// p1: `int`, `char` and a pointer are; `void` and a function are not; a
+    /// struct is from the `}` of its definition on (6.7.2.1 p8); and an array
+    /// is when it has a length and its element is complete.
+    ///
+    /// Asked of a type this stage walked. A struct it did not reach, in the
+    /// parameters of a function declarator nested inside a type (#409), is
+    /// answered incomplete.
+    pub fn complete(&self, ast: &Ast, ty: TypeId) -> bool {
+        let mut current = ty;
+        loop {
+            match ast.ty(current) {
+                Type::Int | Type::Char | Type::Pointer(_) => return true,
+                Type::Void | Type::Function { .. } => return false,
+                Type::Struct { .. } => return self.complete.contains(&current),
+                Type::Array {
+                    element, length, ..
+                } => {
+                    if length.is_none() {
+                        return false;
+                    }
+                    current = *element;
+                }
+            }
+        }
+    }
+
     /// The tag the struct at `ty` is.
     ///
     /// Two struct types are one type exactly when this answers one tag for
@@ -251,6 +291,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
             hatches: Vec::new(),
             tags: Vec::new(),
             tag_of: HashMap::new(),
+            complete: HashSet::new(),
             standing: HashMap::new(),
             declared: HashMap::new(),
         },
@@ -260,6 +301,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         spelled: vec![HashMap::new()],
         children: Vec::new(),
         walked: HashSet::new(),
+        completed: HashSet::new(),
         definitions: HashMap::new(),
     };
 
@@ -312,6 +354,10 @@ struct Resolver<'a> {
     /// undeclared length once per declarator and took time exponential in how
     /// deep such declarations nest.
     walked: HashSet<TypeId>,
+    /// The tags whose definition the walk has closed so far, which is what
+    /// makes a struct written after the `}` complete and one written before it,
+    /// or inside it, not (C17 6.7.2.1 p8).
+    completed: HashSet<TagId>,
     /// Where every function defined so far was named, by its spelling, which
     /// is what a second definition of one is compared with. A declaration,
     /// `int f(void);`, is never here: 6.9 p5 counts definitions, and a
@@ -532,11 +578,18 @@ impl Resolver<'_> {
     /// a false positive about valid C.
     fn walk_type(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
-        let mut pending = vec![ty];
-        while let Some(ty) = pending.pop() {
+        let mut pending = vec![Step::Type(ty)];
+        while let Some(step) = pending.pop() {
+            let ty = match step {
+                Step::Type(ty) => ty,
+                Step::Close(definition) => {
+                    self.close_definition(definition, diagnostics);
+                    continue;
+                }
+            };
             match ast.ty(ty) {
                 Type::Int | Type::Char | Type::Void => {}
-                Type::Pointer(pointee) => pending.push(*pointee),
+                Type::Pointer(pointee) => pending.push(Step::Type(*pointee)),
                 Type::Array {
                     element,
                     length,
@@ -545,9 +598,9 @@ impl Resolver<'_> {
                     if let Some(length) = *length {
                         self.expr(length, diagnostics);
                     }
-                    pending.push(*element);
+                    pending.push(Step::Type(*element));
                 }
-                Type::Function { returns, .. } => pending.push(*returns),
+                Type::Function { returns, .. } => pending.push(Step::Type(*returns)),
                 // A member's array lengths are expressions too, walked once
                 // per definition, for the reason `walked` gives. Its name is
                 // not looked up: what it means is #27's. The tag is, and is
@@ -560,10 +613,87 @@ impl Resolver<'_> {
                     }
                     if let Some(members) = members {
                         if self.walked.insert(ty) {
-                            pending.extend(members.iter().rev().map(|member| member.written));
+                            // Below the members, so it is taken after every
+                            // one of them, nested definitions included.
+                            pending.push(Step::Close(ty));
+                            pending.extend(
+                                members
+                                    .iter()
+                                    .rev()
+                                    .map(|member| Step::Type(member.written)),
+                            );
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /// The `}` of the struct definition at `definition`: check its members
+    /// against what was complete as each was written, then make the type
+    /// complete from here on (C17 6.7.2.1 p8), for the declarators after the
+    /// `}` and every struct written later.
+    fn close_definition(&mut self, definition: TypeId, diagnostics: &mut DiagnosticSink) {
+        let ast = self.ast;
+        if let Type::Struct {
+            members: Some(members),
+            ..
+        } = ast.ty(definition)
+        {
+            self.check_members(members, diagnostics);
+        }
+        let tag = self.resolution.tag(definition);
+        self.completed.insert(tag);
+        self.resolution.complete.insert(definition);
+    }
+
+    /// The constraints on one struct's member list.
+    ///
+    /// Two members of one name are a redeclaration: a member has no linkage,
+    /// and C17 6.7 p3 allows one declaration of such a name in a name space,
+    /// which each struct's members are (6.2.3). A member of function type, or
+    /// of a type not complete where it is written, breaks 6.7.2.1 p3, except
+    /// the last when it is an array of unknown length and an earlier member
+    /// has a name, which p18 makes a flexible array member.
+    fn check_members(&mut self, members: &[Declaration], diagnostics: &mut DiagnosticSink) {
+        let ast = self.ast;
+        let mut names: HashMap<&str, Span> = HashMap::new();
+        for (index, member) in members.iter().enumerate() {
+            let at = member.name.unwrap_or(member.span);
+            if let Some(name) = member.name {
+                let spelled = self.sources.snippet(name);
+                match names.get(spelled) {
+                    Some(&first) => diagnostics.report(redefined(
+                        spelled,
+                        name,
+                        first,
+                        "declared",
+                        "C17 6.7 p3",
+                    )),
+                    None => {
+                        names.insert(spelled, name);
+                    }
+                }
+            }
+
+            let flexible = index + 1 == members.len()
+                && matches!(ast.ty(member.ty), Type::Array { length: None, .. })
+                && members[..index]
+                    .iter()
+                    .any(|earlier| earlier.name.is_some());
+            if matches!(ast.ty(member.ty), Type::Function { .. }) {
+                diagnostics.report(unfit_member(
+                    self.sources,
+                    at,
+                    "is declared as a function".to_owned(),
+                ));
+            } else if !flexible && !self.resolution.complete(ast, member.ty) {
+                let spelled = spell_type(self.sources, ast, member.ty);
+                diagnostics.report(unfit_member(
+                    self.sources,
+                    at,
+                    format!("has incomplete type `{spelled}`"),
+                ));
             }
         }
     }
@@ -775,6 +905,12 @@ impl Resolver<'_> {
             }
         };
         self.resolution.tag_of.insert(ty, id);
+        // A struct written without its members is complete exactly when its
+        // definition has closed already. A definition is recorded when it
+        // closes, by `walk_type`.
+        if !defines && self.completed.contains(&id) {
+            self.resolution.complete.insert(ty);
+        }
     }
 
     /// The tag named as `name` is, declared in the innermost scope only.
@@ -1166,6 +1302,23 @@ fn conflicting(
             format!("previously declared as `{}`", spelled(first.1)),
         ))
         .with_note("C17 6.7 p4")
+}
+
+/// The member written at `at`, which `why` a member cannot be. `at` is the
+/// member's name, which is source text, interpolated raw for the reason
+/// [`undeclared`] gives.
+fn unfit_member(sources: &SourceMap, at: Span, why: String) -> Diagnostic {
+    Diagnostic::error(format!("member `{}` {why}", sources.snippet(at)))
+        .with_code(INCOMPLETE_MEMBER)
+        .with_label(Label::primary(at, "declared here"))
+        .with_note("C17 6.7.2.1 p3")
+}
+
+/// One step of [`Resolver::walk_type`]: a type to walk, or the close of a
+/// struct definition whose members are all walked.
+enum Step {
+    Type(TypeId),
+    Close(TypeId),
 }
 
 /// `name` is source text, and it reaches a terminal through this message.
@@ -2112,5 +2265,98 @@ mod tests {
                 .map(|ty| matches!(resolved.ast.ty(ty), Type::Function { .. })),
             Some(true)
         );
+    }
+
+    /// A struct is incomplete where it is written before its definition's
+    /// `}`, and complete after it (C17 6.7.2.1 p8): the first `struct S` is
+    /// not, and the definition and the `struct S` after it are.
+    ///
+    /// Mutation: drop the record of a use in `Resolver::bind_tag`; the third
+    /// answers incomplete. Mutation: answer every struct complete in
+    /// `Resolution::complete`; the first answers complete. Either fails this.
+    /// Reading `Tag::defined` instead of what has closed is held by
+    /// `a_member_of_incomplete_or_function_type_is_reported`, since only a
+    /// use inside the definition tells the two apart.
+    #[test]
+    fn a_struct_is_complete_only_after_its_definition_closes() {
+        let resolved = resolved("struct S *p;\nstruct S { int a; } s;\nstruct S *q;\n");
+
+        let complete: Vec<bool> = (0..3)
+            .map(|nth| {
+                let at = resolved.occurrence("S", nth);
+                let ty = resolved
+                    .ast
+                    .type_ids()
+                    .find(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { tag: Some(tag), .. } if *tag == at))
+                    .expect("a struct is written there");
+                resolved.resolution.complete(&resolved.ast, ty)
+            })
+            .collect();
+        assert_eq!(complete, [false, true, true]);
+    }
+
+    /// A member may not have a type that is incomplete where it is written,
+    /// nor a function type (C17 6.7.2.1 p3): the struct itself, `void`, an
+    /// array of a struct not yet complete, and a function are each reported.
+    ///
+    /// Mutation: mark a definition complete when it is bound rather than when
+    /// it closes, by inserting into `completed` in `Resolver::bind_tag`; `s`
+    /// and `t` are not reported and this fails. Mutation: drop the function
+    /// test in `Resolver::check_members`; `f` is reported as incomplete
+    /// rather than as a function, and this fails.
+    #[test]
+    fn a_member_of_incomplete_or_function_type_is_reported() {
+        let resolved = resolved(
+            "struct S {\n    struct S s;\n    void v;\n    struct S t[2];\n    int f(void);\n};\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            [
+                "member `s` has incomplete type `struct S`",
+                "member `v` has incomplete type `void`",
+                "member `t` has incomplete type `struct S[2]`",
+                "member `f` is declared as a function",
+            ]
+        );
+    }
+
+    /// A pointer to the struct being defined is complete, and so is a
+    /// flexible array member after a named one (C17 6.7.2.1 p18), while an
+    /// array of unknown length that is the only member is not one.
+    ///
+    /// Mutation: drop the flexible-array exception in
+    /// `Resolver::check_members`; `F`'s `a` is reported. Mutation: drop its
+    /// condition that an earlier member is named; `G`'s `a` is not. Either
+    /// fails this.
+    #[test]
+    fn a_flexible_array_member_needs_a_named_member_before_it() {
+        let resolved = resolved(
+            "struct L {\n    struct L *next;\n};\nstruct F {\n    int n;\n    int a[];\n};\nstruct G {\n    int a[];\n};\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            ["member `a` has incomplete type `int[]`"]
+        );
+        assert_eq!(
+            resolved.diagnostics.diagnostics()[0]
+                .primary_label()
+                .map(Label::span),
+            Some(resolved.occurrence("a", 1))
+        );
+    }
+
+    /// Two members of one name are a redeclaration (C17 6.7 p3), and members
+    /// of two structs are two name spaces.
+    ///
+    /// Mutation: drop the name check in `Resolver::check_members`; this
+    /// fails.
+    #[test]
+    fn two_members_of_one_name_are_a_redeclaration() {
+        let resolved =
+            resolved("struct S {\n    int a;\n    int a;\n};\nstruct T {\n    int a;\n};\n");
+
+        assert_eq!(resolved.messages(), ["redefinition of `a`"]);
     }
 }

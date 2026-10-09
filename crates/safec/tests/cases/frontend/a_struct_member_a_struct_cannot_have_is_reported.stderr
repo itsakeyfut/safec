@@ -1,0 +1,55 @@
+error[SC0314]: member `s` has incomplete type `struct S`
+   ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:2:14 ]
+   │
+ 2 │     struct S s;
+   │              ┬  
+   │              ╰── declared here
+───╯
+  = note: C17 6.7.2.1 p3
+error[SC0314]: member `v` has incomplete type `void`
+   ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:3:10 ]
+   │
+ 3 │     void v;
+   │          ┬  
+   │          ╰── declared here
+───╯
+  = note: C17 6.7.2.1 p3
+error[SC0314]: member `f` is declared as a function
+   ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:4:9 ]
+   │
+ 4 │     int f(void);
+   │         ┬  
+   │         ╰── declared here
+───╯
+  = note: C17 6.7.2.1 p3
+error[SC0312]: redefinition of `n`
+   ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:6:9 ]
+   │
+ 5 │     int n;
+   │         ┬  
+   │         ╰── previously declared here
+ 6 │     int n;
+   │         ┬  
+   │         ╰── declared again here
+───╯
+  = note: C17 6.7 p3
+error[SC0304]: cannot check something of type `struct S` yet
+   ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:1:1 ]
+   │
+ 1 │ ╭─▶ struct S {
+   ┆ ┆   
+ 7 │ ├─▶ };
+   │ │        
+   │ ╰──────── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct F` yet
+    ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:8:1 ]
+    │
+  8 │ ╭─▶ struct F {
+    ┆ ┆   
+ 11 │ ├─▶ };
+    │ │        
+    │ ╰──────── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
