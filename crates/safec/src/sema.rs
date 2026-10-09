@@ -210,6 +210,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
         tag_scopes: vec![Vec::new()],
+        spelled: vec![HashMap::new()],
         children: Vec::new(),
         walked: HashSet::new(),
         definitions: HashMap::new(),
@@ -240,6 +241,11 @@ struct Resolver<'a> {
     /// tags a name space of their own and 6.2.1 p4 the same scopes, so the
     /// two are opened and closed together, by [`Resolver::open_scope`].
     tag_scopes: Vec<Vec<TagId>>,
+    /// The latest binding of each spelling, per scope and in step with
+    /// `scopes`, which is what a second declaration in one scope is compared
+    /// with. A map rather than a scan of the innermost scope, which would
+    /// make a block of many declarations quadratic to resolve.
+    spelled: Vec<HashMap<String, BindingId>>,
     /// Reused across every expression walk, so that a run allocates once.
     children: Vec<ExprId>,
     /// The struct definitions [`Resolver::walk_type`] has walked, so that each
@@ -271,7 +277,7 @@ impl Resolver<'_> {
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
                 // name at the end of its declarator, which is before the body.
-                self.declare(function.name, function.ty);
+                self.declare(function.name, function.ty, diagnostics);
 
                 self.open_scope();
                 self.parameters(function.ty, diagnostics);
@@ -283,7 +289,7 @@ impl Resolver<'_> {
                 // parameter list defines and the body defines again is a
                 // redefinition. The same holds for ordinary names, where it
                 // makes `int f(int a) { int a; }` a redeclaration rather than
-                // a shadowing, which this stage does not report: #57 does.
+                // a shadowing, and `declare` reports it.
                 let ast = self.ast;
                 match ast.stmt(function.body) {
                     Stmt::Compound { body, .. } => {
@@ -405,7 +411,7 @@ impl Resolver<'_> {
         self.close_scope();
 
         if let Some(name) = declaration.name {
-            self.declare(name, declaration.ty);
+            self.declare(name, declaration.ty, diagnostics);
         }
     }
 
@@ -423,8 +429,10 @@ impl Resolver<'_> {
     /// Only the outermost type, which is what
     /// `driver/dumps.rs::dump_parameters` does as well: a definition whose
     /// declarator derives something other than a function is a constraint
-    /// violation, and reporting it is #57's rather than this walk's to invent
-    /// an answer for.
+    /// violation, and not this walk's to invent an answer for. The lowering
+    /// reports it when nothing before it has: a body that uses a parameter is
+    /// reported here first, as using an undeclared name, because none was
+    /// declared, and the lowering is then never reached.
     fn parameters(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let Type::Function {
@@ -437,7 +445,7 @@ impl Resolver<'_> {
 
         for parameter in parameters {
             if let Some(name) = parameter.name {
-                self.declare(name, parameter.ty);
+                self.declare(name, parameter.ty, diagnostics);
             }
         }
 
@@ -629,12 +637,14 @@ impl Resolver<'_> {
     fn open_scope(&mut self) {
         self.scopes.push(Vec::new());
         self.tag_scopes.push(Vec::new());
+        self.spelled.push(HashMap::new());
     }
 
     /// Close the scope [`Resolver::open_scope`] opened last.
     fn close_scope(&mut self) {
         self.scopes.pop();
         self.tag_scopes.pop();
+        self.spelled.pop();
     }
 
     /// Bind the struct at `ty` to a tag, by C17 6.7.2.3.
@@ -664,7 +674,13 @@ impl Resolver<'_> {
                 Some(id) => {
                     if let Some(first) = self.resolution.tags[id.0 as usize].defined {
                         let what = format!("struct {}", self.sources.snippet(tag));
-                        diagnostics.report(redefined(&what, tag, first, "C17 6.7.2.3 p1"));
+                        diagnostics.report(redefined(
+                            &what,
+                            tag,
+                            first,
+                            "defined",
+                            "C17 6.7.2.3 p1",
+                        ));
                     } else {
                         self.resolution.tags[id.0 as usize].defined = Some(tag);
                     }
@@ -737,17 +753,50 @@ impl Resolver<'_> {
             .copied()
     }
 
-    /// Add a name to the innermost scope.
+    /// Add a name to the innermost scope, reporting it if that scope already
+    /// declares it and C17 6.7 p3 forbids the second: "If an identifier has
+    /// no linkage, there shall be no more than one declaration of the
+    /// identifier ... with the same scope and in the same name space".
+    ///
+    /// Outside file scope only, because every name there has linkage while
+    /// `static` and `extern` are not read: `int x; int x;` at file scope is
+    /// two tentative definitions of one object, and whether two declarations
+    /// there agree in type is #412's. Inside a block, a function declaration
+    /// has external linkage and an object or a parameter has none, so two
+    /// declarations are allowed only when both are of functions. The second
+    /// is declared all the same, so a use after it resolves as before.
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
-    fn declare(&mut self, name: Span, ty: TypeId) {
+    fn declare(&mut self, name: Span, ty: TypeId, diagnostics: &mut DiagnosticSink) {
+        let spelled = self.sources.snippet(name);
+        let here = self.spelled.last().expect("the file scope is never popped");
+        if self.scopes.len() > 1 {
+            if let Some(&first) = here.get(spelled) {
+                let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
+                let first = self.resolution.binding(first);
+                if !(function(first.ty) && function(ty)) {
+                    diagnostics.report(redefined(
+                        spelled,
+                        name,
+                        first.name,
+                        "declared",
+                        "C17 6.7 p3",
+                    ));
+                }
+            }
+        }
+
         let id = BindingId(self.resolution.bindings.len() as u32);
         self.resolution.bindings.push(Binding { name, ty });
         self.scopes
             .last_mut()
             .expect("the file scope is never popped")
             .push(id);
+        self.spelled
+            .last_mut()
+            .expect("the file scope is never popped")
+            .insert(spelled.to_owned(), id);
     }
 
     /// Record the definition of the function named at `name`, or report it
@@ -759,7 +808,9 @@ impl Resolver<'_> {
     fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
         match self.definitions.get(spelled) {
-            Some(&first) => diagnostics.report(redefined(spelled, name, first, "C17 6.9 p5")),
+            Some(&first) => {
+                diagnostics.report(redefined(spelled, name, first, "defined", "C17 6.9 p5"))
+            }
             None => {
                 self.definitions.insert(spelled.to_owned(), name);
             }
@@ -767,16 +818,21 @@ impl Resolver<'_> {
     }
 }
 
-/// `what`, defined at `again`, which was defined at `first` where `clause`
-/// says it can be defined only once: `struct S` for a tag, and the name for a
-/// function.
+/// `what`, written at `again`, which was written at `first` where `clause`
+/// says it can be written only once: `struct S` for a tag, and the name for a
+/// function, an object or a parameter.
+///
+/// `verb` is what the labels say happened at each, "defined" or "declared",
+/// because `int h(void);` and a parameter of a prototype are declarations,
+/// and a label calling them definitions would be false about the program.
+/// The headline is `clang`'s for every one of them.
 ///
 /// `what` is interpolated raw, for the reason [`undeclared`] gives.
-fn redefined(what: &str, again: Span, first: Span, clause: &str) -> Diagnostic {
+fn redefined(what: &str, again: Span, first: Span, verb: &str, clause: &str) -> Diagnostic {
     Diagnostic::error(format!("redefinition of `{what}`"))
         .with_code(REDEFINED)
-        .with_label(Label::primary(again, "defined again here"))
-        .with_label(Label::secondary(first, "first defined here"))
+        .with_label(Label::primary(again, format!("{verb} again here")))
+        .with_label(Label::secondary(first, format!("previously {verb} here")))
         .with_note(clause)
 }
 
@@ -1001,9 +1057,10 @@ mod tests {
     /// outer `x` answers instead and this fails.
     ///
     /// The other `rev`, over the bindings within one scope, is held by nothing
-    /// and cannot be until #57: it decides which of two declarations of one
+    /// and cannot be until #412: it decides which of two declarations of one
     /// name in one scope answers, and C makes that either an error, inside a
-    /// block, or two spellings of one object, at file scope. There is no
+    /// block, which `declare` reports, or two declarations of one entity at
+    /// file scope, which tell apart only when their types differ. There is no
     /// program whose meaning this compiler can state today that tells the two
     /// orders apart.
     #[test]
@@ -1385,6 +1442,83 @@ mod tests {
         assert_eq!(
             resolved.messages(),
             ["redefinition of `b`", "use of undeclared identifier `zzz`"]
+        );
+    }
+
+    /// A name with no linkage declared twice in one scope is reported (C17
+    /// 6.7 p3): two locals in a block, a local in a definition's body beside
+    /// its parameter, and two parameters of the declared function's own
+    /// prototype. A prototype nested inside a type, a function pointer's, is
+    /// not walked yet: #409.
+    ///
+    /// Mutation: drop the report in `Resolver::declare`; nothing is reported
+    /// and this fails.
+    #[test]
+    fn a_name_with_no_linkage_declared_twice_in_one_scope_is_reported() {
+        let block = resolved("int main(void) {\n    int x;\n    int x;\n    return 0;\n}\n");
+        assert_eq!(block.messages(), ["redefinition of `x`"]);
+
+        let parameter = resolved("int f(int a) {\n    int a;\n    return 0;\n}\n");
+        assert_eq!(parameter.messages(), ["redefinition of `a`"]);
+
+        let prototype = resolved("void f(int a, int a);\n");
+        assert_eq!(prototype.messages(), ["redefinition of `a`"]);
+    }
+
+    /// Two declarations of a function in one block are allowed, since a
+    /// function declared there has external linkage, and a function and an
+    /// object of one name there are not.
+    ///
+    /// Both orders of a function and an object are checked.
+    ///
+    /// Mutation: drop the both-functions exception in `Resolver::declare`;
+    /// the two declarations of `g` are reported and this fails. Mutation:
+    /// exempt a pair when either is a function; `h` and `k` are not reported.
+    /// Mutation: ask only whether the second is a function; `k`, an object
+    /// and then a function, is not reported. Either fails this.
+    #[test]
+    fn a_function_declared_twice_in_a_block_is_allowed_and_beside_an_object_is_not() {
+        let resolved = resolved(
+            "int main(void) {\n    int g(void);\n    int g(void);\n    int h(void);\n    int h;\n    int k;\n    int k(void);\n    return 0;\n}\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            ["redefinition of `h`", "redefinition of `k`"]
+        );
+    }
+
+    /// File scope is not checked, since every name there has linkage, and a
+    /// declaration in an inner block hides an outer one rather than repeating
+    /// it.
+    ///
+    /// Mutation: check at file scope as well, by testing `len() > 0` in
+    /// `Resolver::declare`; the second `x` is reported. Mutation: look for
+    /// the first declaration in every visible scope rather than the innermost;
+    /// the inner `y` is reported. Either fails this.
+    #[test]
+    fn a_name_declared_twice_at_file_scope_or_again_in_an_inner_block_is_not_reported() {
+        let resolved = resolved(
+            "int x;\nint x;\nint main(void) {\n    int y;\n    {\n        int y;\n    }\n    return 0;\n}\n",
+        );
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// The second declaration of a name in a block is declared all the same,
+    /// so a use after it is that declaration, as it would be had nothing been
+    /// wrong: the rest of the function is resolved as written.
+    ///
+    /// Mutation: return from `Resolver::declare` after reporting, before the
+    /// binding is pushed; the use resolves to the first `x` and this fails.
+    #[test]
+    fn a_use_after_a_name_declared_twice_is_the_second_declaration() {
+        let resolved = resolved("int main(void) {\n    int x;\n    int x;\n    return x;\n}\n");
+
+        assert_eq!(resolved.messages(), ["redefinition of `x`"]);
+        assert_eq!(
+            resolved.declaration_of("x", 2),
+            Some(resolved.occurrence("x", 1))
         );
     }
 }

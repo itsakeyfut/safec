@@ -143,11 +143,15 @@ Function a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.
         Copy "_8"
           Deref
     Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:18:5 generated
-    Operation a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:19:9 written
-      Destination "_12"
+    Operation a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:19:5 written
+      Destination "_4"
       Use
         Constant 0
-    Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:19:13 generated
+    Operation a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:19:5 written
+      Destination "_12"
+      Use
+        Copy "_4"
+    Sequenced a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:19:5 generated
     Operation a_local_given_something_else_after_a_doubted_load_stores_it_in_silence.c:20:9 written
       Destination "_13"
       Use

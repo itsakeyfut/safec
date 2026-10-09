@@ -746,7 +746,7 @@ impl Lowering<'_> {
     ///
     /// Position by position, over as many parameters as both have. A
     /// declaration with a different count is a different disagreement, which is
-    /// #57's and is not answered here.
+    /// #412's and is not answered here.
     ///
     /// **Three answers, compared as written**: `_Nonnull`, `_Nullable`, and
     /// none. The last two lower alike, which is why the specifiers are compared

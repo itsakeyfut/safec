@@ -3,7 +3,7 @@ error[SC0312]: redefinition of `f`
    │
  2 │ int f(void) {
    │     ┬  
-   │     ╰── first defined here
+   │     ╰── previously defined here
    │ 
  5 │ int f(void) {
    │     ┬  

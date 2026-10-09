@@ -145,11 +145,15 @@ Function a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c
         Copy "_8"
           Deref
     Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:19:5 generated
-    Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:20:9 written
-      Destination "_12"
+    Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:20:5 written
+      Destination "_4"
       Use
         Constant 0
-    Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:20:13 generated
+    Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:20:5 written
+      Destination "_12"
+      Use
+        Copy "_4"
+    Sequenced a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:20:5 generated
     Operation a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:21:9 written
       Destination "_13"
       Use
