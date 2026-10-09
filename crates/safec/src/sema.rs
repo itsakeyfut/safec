@@ -235,13 +235,24 @@ impl Resolver<'_> {
 
                 self.open_scope();
                 self.parameters(function.ty, diagnostics);
-                // The body is a compound statement and pushes a scope of its
-                // own, so a parameter sits one scope outside the block rather
-                // than in it, where C17 6.2.1 p4 puts it. The difference is
-                // invisible to everything here: it decides only whether
-                // `int f(int a) { int a; }` is a redeclaration or a shadowing,
-                // and this stage reports neither. #57 is where that lands.
-                self.stmt(function.body, diagnostics);
+                // C17 6.2.1 p4 puts a parameter in the body's outermost block,
+                // so the body's statements are walked here, in the parameters'
+                // scope, rather than through `stmt`, which would open a second
+                // one. It decides whether `int f(struct S *p) { struct S {
+                // int a; } s; }` is one tag or two, and whether a struct the
+                // parameter list defines and the body defines again is a
+                // redefinition. The same holds for ordinary names, where it
+                // makes `int f(int a) { int a; }` a redeclaration rather than
+                // a shadowing, which this stage does not report: #57 does.
+                let ast = self.ast;
+                match ast.stmt(function.body) {
+                    Stmt::Compound { body, .. } => {
+                        for &statement in body {
+                            self.stmt(statement, diagnostics);
+                        }
+                    }
+                    _ => self.stmt(function.body, diagnostics),
+                }
                 self.close_scope();
             }
             Item::Declaration {
@@ -1156,5 +1167,26 @@ mod tests {
         );
         assert_eq!(nested.messages(), Vec::<&str>::new());
         assert_ne!(nested.tag_at("W", 0), nested.tag_at("W", 1));
+    }
+
+    /// A tag a definition's parameter list declares is in the body's
+    /// outermost block (C17 6.2.1 p4), so the body's `struct S` completes it
+    /// rather than declaring a second `S`, and defining it in both is a
+    /// redefinition.
+    ///
+    /// Mutation: walk the body through `self.stmt(function.body, ..)` in
+    /// `Resolver::item`, which opens a second scope; the two `S` are two tags
+    /// and the redefinition goes unreported, and this fails.
+    #[test]
+    fn a_tag_in_a_definitions_parameters_is_in_its_body() {
+        let completed =
+            resolved("int f(struct S *p) {\n    struct S { int a; } s;\n    return 0;\n}\n");
+        assert_eq!(completed.messages(), Vec::<&str>::new());
+        assert_eq!(completed.tag_at("S", 0), completed.tag_at("S", 1));
+
+        let twice = resolved(
+            "int f(struct S { int a; } x) {\n    struct S { int b; } y;\n    return 0;\n}\n",
+        );
+        assert_eq!(twice.messages(), ["redefinition of `struct S`"]);
     }
 }
