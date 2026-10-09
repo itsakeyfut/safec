@@ -282,8 +282,8 @@ fn dump_declaration(sources: &SourceMap, ast: &Ast, declaration: &Declaration, o
 ///
 /// Only directly. A parameter of `int (*g)(int x)` is inside a pointer, and
 /// what it is called is not something anything can refer to, so the type string
-/// is where it stays. What a definition writes is reachable, and #27 resolves
-/// it, so it gets a line of its own.
+/// is where it stays. What a definition writes is reachable, and the resolver
+/// resolves it, so it gets a line of its own.
 fn dump_parameters(sources: &SourceMap, ast: &Ast, ty: TypeId, depth: usize, out: &mut String) {
     let Type::Function {
         parameters: Parameters::Prototype(parameters),

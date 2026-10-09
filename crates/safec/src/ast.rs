@@ -125,9 +125,10 @@ pub enum Type {
     ///
     /// **Read, and not yet given a meaning.** Which tag one names, and so
     /// whether two occurrences are one type, is the resolver's
-    /// (`Resolution::tag`); where a member lies is #27's, and until then the
-    /// type checker refuses every struct under `SC0304`, so no stage after it
-    /// has to answer for one. Each occurrence is its own `TypeId`, as every
+    /// (`Resolution::tag`); the type checker types an object of one, and
+    /// where a member lies is #423's. The lowering refuses every struct under
+    /// `SC0304`, since the IR holds none, so no stage after it has to answer
+    /// for one. Each occurrence is its own `TypeId`, as every
     /// type is here.
     Struct {
         /// The tag, if one was written.
@@ -501,8 +502,8 @@ pub enum Expr {
     /// `s.m` or `p->m`. C17 6.5.2.3.
     ///
     /// The member is a span and is resolved by nothing yet: which member of
-    /// which struct it names is #27's, and the type checker refuses every
-    /// access until then.
+    /// which struct it names is #423's, and the type checker refuses every
+    /// access of the right shape until then.
     Member {
         /// The struct, or for `->` the pointer to it.
         base: ExprId,

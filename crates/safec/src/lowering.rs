@@ -1559,7 +1559,7 @@ impl Lowering<'_> {
     ///
     /// The type checker refuses every one first, and a program refused
     /// anything there is not lowered, so none reaches here today. Answered as
-    /// a report rather than a panic, so that #27, which gives a member access
+    /// a report rather than a panic, so that #423, which gives a member access
     /// a type, is not obliged to change this stage in the same step.
     fn member_not_yet(&self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<()> {
         diagnostics.report(
