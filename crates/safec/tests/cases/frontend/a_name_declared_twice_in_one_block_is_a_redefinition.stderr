@@ -1,0 +1,11 @@
+error[SC0312]: redefinition of `x`
+   ╭─[ a_name_declared_twice_in_one_block_is_a_redefinition.c:3:9 ]
+   │
+ 2 │     int x = 1;
+   │         ┬  
+   │         ╰── first defined here
+ 3 │     int x = 2;
+   │         ┬  
+   │         ╰── defined again here
+───╯
+  = note: C17 6.7 p3

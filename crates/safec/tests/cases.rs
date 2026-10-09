@@ -2876,6 +2876,12 @@ cases! {
         // Mutation: swap the two labels' spans; the labels trade places and
         // the header points at the first.
         a_function_defined_twice_is_a_redefinition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.7 p3: `x` declared twice in one block is `SC0312`, and the
+        // `x` in the inner block hides it rather than repeating it, so is
+        // not. Mutation: swap the two labels' spans; the labels trade places
+        // and the header points at the first. Mutation: drop the report in
+        // `Resolver::declare`; nothing is said here and the lowering builds.
+        a_name_declared_twice_in_one_block_is_a_redefinition: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
         // bit-field, named or not (p9). Mutation: send a member with no
