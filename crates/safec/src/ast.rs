@@ -1090,7 +1090,7 @@ impl Ast {
     /// compiler has no `float`, so `char` is the whole of it, and an arm for
     /// each of the others rather than a wildcard so that a type added later
     /// has to say which side it is on.
-    fn is_promoted_by_default(&self, ty: TypeId) -> bool {
+    pub(crate) fn is_promoted_by_default(&self, ty: TypeId) -> bool {
         match self.ty(ty) {
             Type::Char => true,
             Type::Int

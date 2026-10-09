@@ -213,6 +213,21 @@ only declare identifiers for objects having storage class auto or register."
 be pedantic, so it appears to ask only a declaration with one declarator.
 `types.rs::Checker::check_for_declarations` asks every declarator.
 
+And one the resolver refuses that `clang` accepts with a warning.
+
+| Written | This compiler | `clang` | `clang -pedantic-errors` |
+|---|---|---|---|
+| `int f() { return 0; }` then `int f(int *a);` | `error[SC0313]` | warns | accepts, with `-Wno-strict-prototypes -Wno-deprecated-non-prototype` |
+
+**It is a constraint violation, in either order.** C17 6.7.6.3 p15: if one
+type has a parameter type list and the other is "specified by a function
+definition that contains a (possibly empty) identifier list, both shall agree
+in the number of parameters", so a definition with `()` and a prototype with
+a parameter are not compatible, and 6.7 p4 requires declarations of one
+function in one scope to be. `clang` refuses the prototype first, `int f(int
+*a); int f() {...}`, as conflicting types, and accepts the definition first.
+`sema.rs::Resolver::agrees` asks both orders the same.
+
 ### What an integer constant is worth, and what type it is not
 
 The scan settles where a constant ends and stops there. `crates/safec/src/types.rs`

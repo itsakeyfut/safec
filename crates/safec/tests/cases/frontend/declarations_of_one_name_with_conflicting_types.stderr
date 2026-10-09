@@ -1,0 +1,12 @@
+error[SC0313]: conflicting types for `f`
+   ╭─[ declarations_of_one_name_with_conflicting_types.c:3:5 ]
+   │
+ 1 │ int f(char *a);
+   │     ┬  
+   │     ╰── previously declared as `int (char *)`
+   │ 
+ 3 │ int f(int *a);
+   │     ┬  
+   │     ╰── declared here as `int (int *)`
+───╯
+  = note: C17 6.7 p4
