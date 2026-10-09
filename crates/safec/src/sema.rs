@@ -248,8 +248,8 @@ impl Resolution {
     /// incomplete type above the definition and a complete one below it
     /// (C17 6.7.2.1 p8), although `p`'s type was written once.
     ///
-    /// An expression the walk did not reach is answered where `ty` was
-    /// written, which is every expression this stage walks.
+    /// An expression the walk did not reach, which none should be, is
+    /// answered where `ty` was written.
     pub fn complete_at(&self, ast: &Ast, ty: TypeId, at: ExprId) -> bool {
         let Some(&walked) = self.walked_at.get(&at) else {
             return self.complete(ast, ty);

@@ -1108,8 +1108,8 @@ impl Lowering<'_> {
                 // asked the IR to hold either an array or a function yet, and
                 // #74, which is the issue for what it cannot say, is about
                 // storage duration rather than about these.
-                // A struct does not get here past the type checker, which
-                // refuses every one; answered as the others are all the same.
+                // A struct is typed by the type checker and reaches here in
+                // any program that declares one, and the IR holds none.
                 Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(

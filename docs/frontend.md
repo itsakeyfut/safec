@@ -127,8 +127,8 @@ its members and `.` and `->`; the resolver binds each struct to its tag and
 checks its member list; and the type checker types an object of one and holds
 it to what C says of a struct. A member access of the right shape is refused
 under `SC0304`, the code for valid C this compiler cannot handle yet, until
-#423 types it, and the lowering refuses every struct under the same code,
-since the IR holds none.
+#423 types it, and the lowering refuses a struct wherever it is asked to
+lower one, under the same code, since the IR holds none.
 
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so
