@@ -388,6 +388,19 @@ C17 6.7.9 p11 gives an initializer the constraints of simple assignment and
 6.5.9 p2 and 6.5.15 p3 let a comparison and a conditional pair a pointer with a
 null pointer constant and no other integer, so those answer alike too.
 
+**An initializer at file scope is a constant expression.** C17 6.7.9 p4 asks
+it of an object with static storage duration, which every object at file
+scope is, and `types.rs::Checker::check_static_initializers` refuses one that
+is not under `SC0317`: an integer constant expression, a null pointer
+constant, an address constant (6.6 p9) and one of those plus or minus an
+integer constant (6.6 p7) are what it accepts. Two refusals are clang's
+warnings, even under `-pedantic-errors` (clang 20.1.6): a comma operator,
+`int m = (1, 2);`, which 6.6 p3 keeps out of a constant expression, and an
+overflow, `int o = 2147483647 + 1;`, which 6.6 p4 does. Both are
+constraints, and this compiler takes no constraint-violating extension. `?:`
+is not one of the operators p9 lets an address constant be made with, so
+`c ? &x : &y` is refused too.
+
 ### Where a nullability specifier is read
 
 `_Nonnull` and `_Nullable` are what `clang` calls type nullability specifiers,

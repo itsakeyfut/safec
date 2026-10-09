@@ -1401,7 +1401,9 @@ fn a_subscript_refused_for_its_pairing_has_no_type() {
 /// silences are asserted against a run that does report and cannot pass by
 /// checking nothing. The silences are a null pointer constant, and a
 /// `void *` both ways, which is an implicit conversion with no cast in the
-/// grammar.
+/// grammar. `w` and `q` read an object at file scope, so each is also not
+/// the constant C17 6.7.9 p4 asks (`SC0317`), and `w` is that alone: its
+/// `void *` is still converted in silence.
 ///
 /// Mutation: have `collect_receivers` skip an `Item::Declaration`. The
 /// file-scope report goes and this fails; nothing else in the suite
@@ -1431,6 +1433,8 @@ int main(void) {
         [
             "cannot initialize `int *` with `int`",
             "cannot initialize `char *` with `int *`",
+            "the initializer of `w` is not a constant",
+            "the initializer of `q` is not a constant",
         ]
     );
     assert_eq!(
@@ -1440,6 +1444,8 @@ int main(void) {
             "this holds `int *`",
             "this is `int *`",
             "this holds `char *`",
+            "not a constant expression",
+            "not a constant expression",
         ]
     );
 }
@@ -2368,4 +2374,62 @@ int g(struct S *p, struct S *q, int c) {
             "C17 6.5.3.1 p1 and 6.3.2.1 p1",
         ]
     );
+}
+
+/// An initializer at file scope is a constant expression (C17 6.7.9 p4): an
+/// integer constant, a null pointer constant, an address constant (6.6 p9),
+/// or one of those plus or minus an integer constant (6.6 p7). A name of an
+/// object, a read through one, a comma, a call, a subscript by a name, and
+/// an address made with `?:` are not; an overflow is reported as one.
+///
+/// Mutation: skip the pass; every refused row goes silent. Mutation: accept
+/// any `&e` without asking `static_lvalue`; `&arr[x]` goes silent.
+/// Mutation: drop the `+` arm, or its right-hand order; `&x + 1` or `1 +
+/// arr` is reported. Mutation: drop the name arm of `address_constant`;
+/// `arr` and `f` are reported. Mutation: word every one as not constant;
+/// the overflow's message changes. Each fails this.
+#[test]
+fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
+    let checked = checked(
+        "int x;
+int arr[3];
+struct S {
+    int *p;
+    int q;
+} s;
+int f(void);
+int g = x;
+int h = *s.p;
+int m = (1, 2);
+int c = f();
+int *pe = &arr[x];
+int *pt = 1 ? &x : &x;
+int o = 2147483647 + 1;
+int k = 1 + 2;
+int *pa = &x;
+int *pq = 0;
+int *pr = &x + 1;
+int *pm = &x - 1;
+int *pg = 1 + arr;
+int *pb = arr;
+int *pc = &arr[1];
+int *pd = &s.q;
+int (*pf)(void) = f;
+int *ph = &*&x;
+",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "the initializer of `g` is not a constant",
+            "the initializer of `h` is not a constant",
+            "the initializer of `m` is not a constant",
+            "the initializer of `c` is not a constant",
+            "the initializer of `pe` is not a constant",
+            "the initializer of `pt` is not a constant",
+            "the initializer of `o` overflows",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0317"; 7]);
 }

@@ -122,6 +122,18 @@ const DECLARATOR: Code = Code::new("SC0309");
 /// initializing it.
 const INITIALIZED: Code = Code::new("SC0310");
 
+/// An expression C requires to be a constant that is not one: so far, the
+/// initializer of an object at file scope, which C17 6.7.9 p4 asks to be a
+/// constant expression, and which 6.6 p7 lets be an arithmetic constant, a
+/// null pointer constant or an address constant.
+///
+/// Not `INITIALIZED`, which is a declaration that may not be initialized at
+/// all, and not `MISMATCH`, which is a value of the wrong type: here the
+/// declaration and the `=` are right, and what is wrong is the shape of
+/// what follows. The wording follows `clang`'s `initializer element is not a
+/// compile-time constant`.
+const NOT_CONSTANT: Code = Code::new("SC0317");
+
 /// Something a `for` declares that C17 6.8.5 p3 says it may not: anything
 /// but an object with storage class `auto` or `register`. With no storage
 /// class specifier in the language yet, that is a function.
@@ -294,6 +306,7 @@ pub fn check(
     checker.check_complete_objects(ast, diagnostics);
     checker.check_incomplete_values(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
+    checker.check_static_initializers(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
 
     Types {
@@ -527,6 +540,119 @@ impl Checker<'_> {
                     Type::Int | Type::Char | Type::Void => break,
                 }
             }
+        }
+    }
+
+    /// Report every initializer of an object at file scope that is not a
+    /// constant expression, under [`NOT_CONSTANT`]: C17 6.7.9 p4 asks one
+    /// of an object with static storage duration, which is every object at
+    /// file scope here. It may be an integer constant expression, whose
+    /// value `values` holds, a null pointer constant among them, or an
+    /// address constant ([`Checker::address_constant`]). One that is constant
+    /// in shape and overflows is told so (6.6 p4), as a file-scope array
+    /// length is.
+    fn check_static_initializers(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for item in ast.items() {
+            let Item::Declaration { declarators, .. } = item else {
+                continue;
+            };
+            for declarator in declarators {
+                let Some(init) = declarator.init else {
+                    continue;
+                };
+                // An initializer this stage could not type was reported, or
+                // is this compiler's gap, and is not asked again.
+                if self.types[init.index()].is_none()
+                    || self.values[init.index()].is_some()
+                    || self.address_constant(ast, init)
+                {
+                    continue;
+                }
+                let declaration = &declarator.declaration;
+                let name = self
+                    .sources
+                    .snippet(declaration.name.unwrap_or(declaration.span));
+                let span = ast.expr(init).span();
+                let diagnostic = if self.undefined[init.index()] {
+                    Diagnostic::error(format!("the initializer of `{name}` overflows"))
+                        .with_label(Label::primary(span, "this has no value as an `int`"))
+                        .with_note("a constant expression is in the range of its type (C17 6.6 p4)")
+                } else {
+                    Diagnostic::error(format!("the initializer of `{name}` is not a constant"))
+                        .with_label(Label::primary(span, "not a constant expression"))
+                        .with_note(
+                            "an object at file scope is initialized with a constant expression (C17 6.7.9 p4)",
+                        )
+                };
+                diagnostics.report(diagnostic.with_code(NOT_CONSTANT));
+            }
+        }
+    }
+
+    /// Whether `id` is an address constant, C17 6.6 p9, or one plus or minus
+    /// an integer constant expression (p7): a name of array or function type,
+    /// which 6.3.2.1 p3 and p4 make a pointer; `&e` of an lvalue
+    /// [`Checker::static_lvalue`] designates; or either of those with an
+    /// integer constant added or, on the right, subtracted.
+    ///
+    /// `?:` is not one of the operators p9 lists, so `c ? &x : &y` is not
+    /// one here. A recursion, bounded by `parser::MAX_NESTING` as every walk
+    /// over an expression is.
+    fn address_constant(&self, ast: &Ast, id: ExprId) -> bool {
+        let constant = |id: ExprId| self.values[id.index()].is_some();
+        match ast.expr(id) {
+            Expr::Identifier { .. } => self.types[id.index()]
+                .is_some_and(|ty| matches!(ast.ty(ty), Type::Array { .. } | Type::Function { .. })),
+            Expr::Unary {
+                op: UnOp::AddrOf,
+                operand,
+                ..
+            } => self.static_lvalue(ast, *operand),
+            Expr::Binary {
+                op: BinOp::Add,
+                lhs,
+                rhs,
+                ..
+            } => {
+                (self.address_constant(ast, *lhs) && constant(*rhs))
+                    || (constant(*lhs) && self.address_constant(ast, *rhs))
+            }
+            Expr::Binary {
+                op: BinOp::Sub,
+                lhs,
+                rhs,
+                ..
+            } => self.address_constant(ast, *lhs) && constant(*rhs),
+            _ => false,
+        }
+    }
+
+    /// Whether `id` designates an object or function of static storage
+    /// duration through the operators C17 6.6 p9 lets an address constant be
+    /// made with: a name, every one of which a file-scope initializer can see
+    /// being at file scope; `e[i]` with one side an address constant and the
+    /// other an integer constant; `e.m` of such an lvalue; `e->m` and `*e` of
+    /// an address constant.
+    fn static_lvalue(&self, ast: &Ast, id: ExprId) -> bool {
+        let constant = |id: ExprId| self.values[id.index()].is_some();
+        match ast.expr(id) {
+            Expr::Identifier { .. } => true,
+            Expr::Subscript { base, index, .. } => {
+                (self.address_constant(ast, *base) && constant(*index))
+                    || (constant(*base) && self.address_constant(ast, *index))
+            }
+            Expr::Member {
+                base, arrow: false, ..
+            } => self.static_lvalue(ast, *base),
+            Expr::Member {
+                base, arrow: true, ..
+            } => self.address_constant(ast, *base),
+            Expr::Unary {
+                op: UnOp::Deref,
+                operand,
+                ..
+            } => self.address_constant(ast, *operand),
+            _ => false,
         }
     }
 

@@ -2907,6 +2907,12 @@ cases! {
         // value and is not reported. Mutation: report the operand of `&`
         // too; a fourth report, in `h`.
         an_incomplete_struct_whose_value_is_read_or_assigned_is_reported: ["--emit", "ast"],
+        // An object at file scope is initialized with a constant expression
+        // (C17 6.7.9 p4): `g`'s initializer reads `x` and `h`'s reads through
+        // `s.p`, so both are `SC0317`, and the lowering, which drops a
+        // file-scope initializer unread, is never reached. Before this, the
+        // program built. Mutation: skip the check; this exits 0.
+        an_initializer_at_file_scope_that_is_not_constant_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.2.3 p1: `V` given its content twice in one scope is
         // `SC0312`, and `W` given it again in a block is a new tag, which is
         // not. Mutation: look a definition up in every visible scope; `W` is
