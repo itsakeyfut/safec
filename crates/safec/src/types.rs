@@ -549,8 +549,11 @@ impl Checker<'_> {
     /// file scope here. It may be an integer constant expression, whose
     /// value `values` holds, a null pointer constant among them, or an
     /// address constant ([`Checker::address_constant`]). One that is constant
-    /// in shape and overflows is told so (6.6 p4), as a file-scope array
-    /// length is.
+    /// in shape and has no defined value is told so (6.6 p4), as a
+    /// file-scope array length is. One this stage left untyped is declined
+    /// as `NOT_YET` unless the run has already failed, since the lowering
+    /// drops the initializer unread and would otherwise build the program.
+    /// A function given one is `INITIALIZED`'s.
     fn check_static_initializers(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         for item in ast.items() {
             let Item::Declaration { declarators, .. } = item else {
@@ -560,23 +563,48 @@ impl Checker<'_> {
                 let Some(init) = declarator.init else {
                     continue;
                 };
-                // An initializer this stage could not type was reported, or
-                // is this compiler's gap, and is not asked again.
-                if self.types[init.index()].is_none()
-                    || self.values[init.index()].is_some()
-                    || self.address_constant(ast, init)
-                {
+                let declaration = &declarator.declaration;
+                // A function with an initializer is `INITIALIZED`'s, and no
+                // initializer would make it right.
+                if matches!(ast.ty(declaration.ty), Type::Function { .. }) {
                     continue;
                 }
-                let declaration = &declarator.declaration;
                 let name = self
                     .sources
                     .snippet(declaration.name.unwrap_or(declaration.span));
                 let span = ast.expr(init).span();
+                if self.types[init.index()].is_none() {
+                    // Either the program's fault, reported where it was
+                    // typed, or this compiler's gap, `*arr` and `p - q`
+                    // among them, which nobody reported: the lowering drops
+                    // a file-scope initializer unread, so passing it over
+                    // here would build a program C forbids. Declined unless
+                    // something was already reported, since then the run
+                    // fails either way.
+                    if !diagnostics.has_errors() {
+                        diagnostics.report(
+                            Diagnostic::error(format!(
+                                "cannot check whether the initializer of `{name}` is a constant"
+                            ))
+                            .with_code(NOT_YET)
+                            .with_label(Label::primary(span, "this compiler gave this no type"))
+                            .with_note("a gap in this compiler rather than a fault in the program"),
+                        );
+                    }
+                    continue;
+                }
+                if self.values[init.index()].is_some() || self.address_constant(ast, init) {
+                    continue;
+                }
                 let diagnostic = if self.undefined[init.index()] {
-                    Diagnostic::error(format!("the initializer of `{name}` overflows"))
-                        .with_label(Label::primary(span, "this has no value as an `int`"))
-                        .with_note("a constant expression is in the range of its type (C17 6.6 p4)")
+                    Diagnostic::error(format!("the initializer of `{name}` has no defined value"))
+                        .with_label(Label::primary(
+                            span,
+                            "this overflows `int`, divides by zero, or shifts too far",
+                        ))
+                        .with_note(
+                            "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
+                        )
                 } else {
                     Diagnostic::error(format!("the initializer of `{name}` is not a constant"))
                         .with_label(Label::primary(span, "not a constant expression"))
@@ -590,69 +618,99 @@ impl Checker<'_> {
     }
 
     /// Whether `id` is an address constant, C17 6.6 p9, or one plus or minus
-    /// an integer constant expression (p7): a name of array or function type,
-    /// which 6.3.2.1 p3 and p4 make a pointer; `&e` of an lvalue
-    /// [`Checker::static_lvalue`] designates; or either of those with an
-    /// integer constant added or, on the right, subtracted.
+    /// an integer constant expression (p7).
     ///
-    /// `?:` is not one of the operators p9 lists, so `c ? &x : &y` is not
-    /// one here. A recursion, bounded by `parser::MAX_NESTING` as every walk
-    /// over an expression is.
+    /// Two questions asked in turn of one walk down the expression. As an
+    /// address: an expression of array or function type that designates
+    /// something with static storage duration, which 6.3.2.1 p3 and p4 make
+    /// a pointer; `&e` of such a designator; or either of those with an
+    /// integer constant added, on either side, or subtracted on the right.
+    /// As a designator of something with static storage duration: a name,
+    /// every one of which a file-scope initializer can see being at file
+    /// scope; `e[i]` with one side an address and the other an integer
+    /// constant; `e.m` of a designator; and `e->m` and `*e` of an address.
+    /// Those are the operators p9 lets an address constant be made with, so
+    /// `?:`, which it does not list, makes none.
+    ///
+    /// A loop rather than a recursion, since every step goes to one operand
+    /// and `x + 1 + 1 + ...` or `s.a.b.c...` is as long as the source makes
+    /// it: the parser bounds the depth of nesting, not of a chain.
     fn address_constant(&self, ast: &Ast, id: ExprId) -> bool {
         let constant = |id: ExprId| self.values[id.index()].is_some();
-        match ast.expr(id) {
-            Expr::Identifier { .. } => self.types[id.index()]
-                .is_some_and(|ty| matches!(ast.ty(ty), Type::Array { .. } | Type::Function { .. })),
-            Expr::Unary {
-                op: UnOp::AddrOf,
-                operand,
-                ..
-            } => self.static_lvalue(ast, *operand),
-            Expr::Binary {
-                op: BinOp::Add,
-                lhs,
-                rhs,
-                ..
-            } => {
-                (self.address_constant(ast, *lhs) && constant(*rhs))
-                    || (constant(*lhs) && self.address_constant(ast, *rhs))
+        let (mut id, mut designator) = (id, false);
+        loop {
+            if designator {
+                id = match *ast.expr(id) {
+                    Expr::Identifier { .. } => return true,
+                    Expr::Subscript { base, index, .. } => {
+                        designator = false;
+                        if constant(index) {
+                            base
+                        } else if constant(base) {
+                            index
+                        } else {
+                            return false;
+                        }
+                    }
+                    Expr::Member {
+                        base, arrow: false, ..
+                    } => base,
+                    Expr::Member {
+                        base, arrow: true, ..
+                    }
+                    | Expr::Unary {
+                        op: UnOp::Deref,
+                        operand: base,
+                        ..
+                    } => {
+                        designator = false;
+                        base
+                    }
+                    _ => return false,
+                };
+                continue;
             }
-            Expr::Binary {
-                op: BinOp::Sub,
-                lhs,
-                rhs,
-                ..
-            } => self.address_constant(ast, *lhs) && constant(*rhs),
-            _ => false,
-        }
-    }
-
-    /// Whether `id` designates an object or function of static storage
-    /// duration through the operators C17 6.6 p9 lets an address constant be
-    /// made with: a name, every one of which a file-scope initializer can see
-    /// being at file scope; `e[i]` with one side an address constant and the
-    /// other an integer constant; `e.m` of such an lvalue; `e->m` and `*e` of
-    /// an address constant.
-    fn static_lvalue(&self, ast: &Ast, id: ExprId) -> bool {
-        let constant = |id: ExprId| self.values[id.index()].is_some();
-        match ast.expr(id) {
-            Expr::Identifier { .. } => true,
-            Expr::Subscript { base, index, .. } => {
-                (self.address_constant(ast, *base) && constant(*index))
-                    || (constant(*base) && self.address_constant(ast, *index))
-            }
-            Expr::Member {
-                base, arrow: false, ..
-            } => self.static_lvalue(ast, *base),
-            Expr::Member {
-                base, arrow: true, ..
-            } => self.address_constant(ast, *base),
-            Expr::Unary {
-                op: UnOp::Deref,
-                operand,
-                ..
-            } => self.address_constant(ast, *operand),
-            _ => false,
+            id = match *ast.expr(id) {
+                Expr::Unary {
+                    op: UnOp::AddrOf,
+                    operand,
+                    ..
+                } => {
+                    designator = true;
+                    operand
+                }
+                Expr::Binary {
+                    op: BinOp::Add,
+                    lhs,
+                    rhs,
+                    ..
+                } => {
+                    if constant(rhs) {
+                        lhs
+                    } else if constant(lhs) {
+                        rhs
+                    } else {
+                        return false;
+                    }
+                }
+                Expr::Binary {
+                    op: BinOp::Sub,
+                    lhs,
+                    rhs,
+                    ..
+                } if constant(rhs) => lhs,
+                // An array or a function is a pointer once it is read, and
+                // is an address constant when it designates something with
+                // static storage duration.
+                _ if self.types[id.index()].is_some_and(|ty| {
+                    matches!(ast.ty(ty), Type::Array { .. } | Type::Function { .. })
+                }) =>
+                {
+                    designator = true;
+                    id
+                }
+                _ => return false,
+            };
         }
     }
 
