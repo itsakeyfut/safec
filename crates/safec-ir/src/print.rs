@@ -72,8 +72,35 @@ pub fn shown(text: &str) -> Cow<'_, str> {
 /// Public because `render::echoed` in `safec` is the other half of the pair
 /// [`shown`] belongs to, and the two must agree about which characters are the
 /// dangerous ones. One predicate rather than two that could drift.
+///
+/// A control character (Unicode's Cc) other than newline and tab, and also
+/// the characters that are not controls but change how the text around them
+/// reads: the bidirectional controls, which reorder the rest of a line so
+/// that a name can be printed as something it does not say, and the line and
+/// paragraph separators, which `ariadne` breaks a line on where the source
+/// map counts none, so that a diagnostic would name a line its code is not
+/// on. Other format characters, a zero-width joiner among them, hide rather
+/// than reorder or break, and a quoted source line uses them legitimately,
+/// so they are printed.
 pub fn is_obeyed(ch: char) -> bool {
-    ch.is_control() && ch != '\n' && ch != '\t'
+    (ch.is_control() && ch != '\n' && ch != '\t') || reorders_or_breaks(ch)
+}
+
+/// Whether `ch` reorders the text around it or breaks a line in it without
+/// being a control character. See [`is_obeyed`].
+fn reorders_or_breaks(ch: char) -> bool {
+    matches!(
+        ch,
+        // The Arabic letter mark, and the left-to-right and right-to-left
+        // marks.
+        '\u{061c}' | '\u{200e}' | '\u{200f}'
+        // The embeddings, the pop and the overrides.
+        | '\u{202a}'..='\u{202e}'
+        // The isolates and their pop.
+        | '\u{2066}'..='\u{2069}'
+        // The line separator and the paragraph separator.
+        | '\u{2028}' | '\u{2029}'
+    )
 }
 
 /// The source text a span covers, resolved against the file the span names.
@@ -547,6 +574,40 @@ mod tests {
         }
     }
 
+    /// The characters that are not controls but reorder or break the text
+    /// around them are escaped as a control is: every bidirectional control,
+    /// each range walked whole, and both separators. The characters either
+    /// side of each range, a zero-width space and a zero-width joiner, and an
+    /// accented letter are printed as written.
+    ///
+    /// Mutation: drop any one arm of `reorders_or_breaks`, or narrow a range
+    /// to its ends, or drop the whole of it from `is_obeyed`; a character
+    /// survives `shown`. Mutation: widen a range by one, or escape every
+    /// format character; a text row fails. Each fails this.
+    #[test]
+    fn what_reorders_or_breaks_a_line_is_shown_rather_than_obeyed() {
+        let obeyed = ['\u{061c}', '\u{200e}', '\u{200f}', '\u{2028}', '\u{2029}']
+            .into_iter()
+            .chain('\u{202a}'..='\u{202e}')
+            .chain('\u{2066}'..='\u{2069}');
+        for ch in obeyed {
+            assert!(is_obeyed(ch), "{ch:?} reaches a terminal unescaped");
+            assert!(
+                !shown(&format!("a{ch}b")).contains(ch),
+                "{ch:?} survived `shown`"
+            );
+        }
+        // Beside each run: U+061B and U+061D, U+200D below the marks, U+2027
+        // below the separators, U+202F above the overrides, U+2065 and
+        // U+206A either side of the isolates.
+        for ch in [
+            '\u{061b}', '\u{061d}', '\u{200b}', '\u{200d}', '\u{2027}', '\u{202f}', '\u{2060}',
+            '\u{2065}', '\u{206a}', 'é',
+        ] {
+            assert!(!is_obeyed(ch), "{ch:?} is escaped though it is text");
+        }
+    }
+
     /// A file's name is content, and every artifact line begins with one.
     ///
     /// A name is not something this compiler wrote: it comes from a command
@@ -586,6 +647,14 @@ mod tests {
         let mut tree = String::new();
         dump_node(&sources, "Node", at, 0, &mut tree);
         assert!(!tree.contains('\u{1b}'), "{tree:?}");
+
+        // A right-to-left override is not a control character, and reverses
+        // the rest of the line it is printed on.
+        let reversed = sources.add_virtual("a\u{202e}gnp.c", "int f(void) { return 0; }\n");
+        let mut tree = String::new();
+        dump_node(&sources, "Node", Span::new(reversed, 4, 5), 0, &mut tree);
+        assert!(!tree.contains('\u{202e}'), "{tree:?}");
+        assert!(tree.contains("\\u{202e}"), "{tree:?}");
     }
 
     /// An operation nobody wrote says so, and one somebody wrote says that.

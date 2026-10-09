@@ -10,8 +10,12 @@
 //! [`LineCol`](safec_ir::source::LineCol).
 //!
 //! `ariadne` breaks lines on seven separators, among them a lone `\r` and a
-//! vertical tab; the source map breaks only on `\n`. And a file ending in `\n`
-//! has a final empty line for the source map, deliberately, so that it is
+//! vertical tab; the source map breaks only on `\n`. `echoed` replaces every
+//! one of them but `\r` before `ariadne` sees it, the vertical tab as a
+//! control character and U+2028 and U+2029 as characters that break a line
+//! (`is_obeyed`), so a lone `\r` is the separator still counted differently.
+//! And a file ending in `\n` has a final empty line for the source map,
+//! deliberately, so that it is
 //! numbered the way an editor numbers it. `ariadne` has no such line, so an
 //! offset at end of file is numbered differently by the two. That last one is
 //! the ordinary case for `error: unexpected end of file`, not an exotic one.
@@ -414,8 +418,10 @@ fn write_remedies(remedies: &[Remedy], out: &mut impl io::Write) -> io::Result<(
 /// [`shown`] is the wrong tool here. It turns one character into several, and a
 /// label span is a byte offset into this very text, which `ariadne` slices with
 /// to find the line and place the caret. A substitution that changed a length
-/// would move every caret after it. So each byte of a control character becomes
-/// one byte, and the text stays the size the spans were measured against.
+/// would move every caret after it. So each character replaced becomes one
+/// character of the same size ([`replacement`]), and the text stays the size
+/// the spans were measured against and the length in characters a header's
+/// column is counted in.
 ///
 /// `\r` is left alone, unlike in a message. `ariadne` breaks lines on it and
 /// never emits it, so it does not reach a terminal on this path, and replacing
@@ -435,11 +441,7 @@ fn echoed(text: &str) -> Cow<'_, str> {
     let mut safe = String::with_capacity(text.len());
     for ch in text.chars() {
         if replaced(ch) {
-            // One byte out for each byte in, so every offset after this one is
-            // still the offset the span was built from.
-            for _ in 0..ch.len_utf8() {
-                safe.push(REPLACEMENT);
-            }
+            safe.push(replacement(ch));
         } else {
             safe.push(ch);
         }
@@ -447,12 +449,25 @@ fn echoed(text: &str) -> Cow<'_, str> {
     Cow::Owned(safe)
 }
 
-/// What a control character in a source file is shown as.
+/// What a character [`echoed`] replaces is shown as: one printable character
+/// of the same UTF-8 length.
 ///
-/// One byte, because [`echoed`] has to hand back text of the same size. That
-/// rules out the characters that would say it better, U+FFFD and the Control
-/// Pictures block among them.
-const REPLACEMENT: char = '?';
+/// The same length in bytes, because a label's span is a byte offset into the
+/// echoed text, so a replacement of another size would move every caret after
+/// it. And one character for one, because `ariadne` numbers the column in a
+/// header by counting characters in the echoed line, as `SourceFile` counts
+/// them in the text: three `?` for a three-byte right-to-left override put
+/// the header two columns past the one `--emit tokens` names for the same
+/// byte. Every character replaced is one to three bytes long, a control at
+/// most two and a bidirectional control or a separator at most three.
+fn replacement(ch: char) -> char {
+    match ch.len_utf8() {
+        1 => '?',
+        2 => '\u{bf}',
+        3 => '\u{fffd}',
+        length => unreachable!("{ch:?} is {length} bytes, and `is_obeyed` takes none that long"),
+    }
+}
 
 /// Remove the colour `ariadne` insists on putting in a custom header.
 ///

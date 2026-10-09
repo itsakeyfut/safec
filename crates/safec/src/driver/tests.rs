@@ -594,6 +594,15 @@ fn a_file_name_is_escaped_on_every_line_of_the_token_dump() {
 
     assert!(out.contains("evil\\u{1b}"), "{out:?}");
     assert!(!out.contains('\u{1b}'), "{out:?}");
+
+    // A right-to-left override is no control character, and reverses the
+    // rest of the line it is printed on.
+    let reversed = sources.add_virtual("a\u{202e}gnp.c", "int x;\n");
+    let tokens = lex(reversed, sources.file(reversed), &mut diagnostics);
+    let mut out = String::new();
+    dump_tokens(sources.file(reversed), &tokens, &mut out);
+    assert!(out.contains("a\\u{202e}gnp.c"), "{out:?}");
+    assert!(!out.contains('\u{202e}'), "{out:?}");
 }
 
 /// The text is quoted rather than written plainly, which is what keeps a
