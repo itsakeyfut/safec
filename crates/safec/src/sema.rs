@@ -288,7 +288,7 @@ impl Resolver<'_> {
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
                 // name at the end of its declarator, which is before the body.
-                self.declare(function.name, function.ty, diagnostics);
+                self.declare(function.name, function.ty, true, diagnostics);
 
                 self.open_scope();
                 self.parameters(function.ty, diagnostics);
@@ -422,7 +422,7 @@ impl Resolver<'_> {
         self.close_scope();
 
         if let Some(name) = declaration.name {
-            self.declare(name, declaration.ty, diagnostics);
+            self.declare(name, declaration.ty, false, diagnostics);
         }
     }
 
@@ -456,7 +456,7 @@ impl Resolver<'_> {
 
         for parameter in parameters {
             if let Some(name) = parameter.name {
-                self.declare(name, parameter.ty, diagnostics);
+                self.declare(name, parameter.ty, false, diagnostics);
             }
         }
 
@@ -784,14 +784,21 @@ impl Resolver<'_> {
     ///
     /// The id is taken before the push, not from `len()` after it, which is the
     /// mistake ADR-0008 records for the tree's arenas and the same one here.
-    fn declare(&mut self, name: Span, ty: TypeId, diagnostics: &mut DiagnosticSink) {
+    fn declare(
+        &mut self,
+        name: Span,
+        ty: TypeId,
+        definition: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) {
         let spelled = self.sources.snippet(name);
         let here = self.spelled.last().expect("the file scope is never popped");
         let earlier = here.get(spelled).copied();
+        let mut conflicts = false;
         if let Some(earlier) = earlier {
             let function = |ty| matches!(self.ast.ty(ty), Type::Function { .. });
             let latest = self.resolution.binding(earlier.latest);
-            let standing = self.resolution.binding(earlier.standing);
+            let standing = self.resolution.binding(earlier.standing.id);
             if self.scopes.len() > 1 && !(function(latest.ty) && function(ty)) {
                 diagnostics.report(redefined(
                     spelled,
@@ -800,10 +807,11 @@ impl Resolver<'_> {
                     "declared",
                     "C17 6.7 p3",
                 ));
-            } else if !reaches_a_struct(self.ast, standing.ty)
+            } else if !earlier.standing.reaches_a_struct
                 && !reaches_a_struct(self.ast, ty)
-                && !self.ast.compatible(standing.ty, ty)
+                && !self.agrees(earlier.standing, ty, definition)
             {
+                conflicts = true;
                 diagnostics.report(conflicting(
                     self.sources,
                     self.ast,
@@ -820,14 +828,24 @@ impl Resolver<'_> {
             .last_mut()
             .expect("the file scope is never popped")
             .push(id);
+        // A declaration that conflicts is not what the next one is compared
+        // with, so a later line that agrees with the earlier ones is not
+        // blamed for the one that did not, which is how `clang` reads it too.
+        // Nor is one that says less than the standing declaration already
+        // does: no prototype, after a prototype or after a definition with
+        // an empty list, which fixes the count at none.
         let standing = match earlier {
             Some(earlier)
-                if has_a_prototype(self.ast, self.resolution.binding(earlier.standing).ty)
-                    && !has_a_prototype(self.ast, ty) =>
+                if conflicts
+                    || ((has_a_prototype(
+                        self.ast,
+                        self.resolution.binding(earlier.standing.id).ty,
+                    ) || earlier.standing.defined_without_a_prototype)
+                        && !has_a_prototype(self.ast, ty)) =>
             {
                 earlier.standing
             }
-            _ => id,
+            _ => self.standing(id, ty, definition),
         };
         self.spelled
             .last_mut()
@@ -839,6 +857,74 @@ impl Resolver<'_> {
                     standing,
                 },
             );
+    }
+
+    /// What [`Standing`] records of the declaration `id`, worked out once
+    /// rather than at every later declaration it is compared with.
+    fn standing(&self, id: BindingId, ty: TypeId, definition: bool) -> Standing {
+        let accepts_no_prototype = match self.ast.ty(called(self.ast, ty)) {
+            Type::Function {
+                parameters: Parameters::Prototype(parameters),
+                ..
+            } => parameters
+                .iter()
+                .all(|parameter| !self.ast.is_promoted_by_default(parameter.ty)),
+            _ => true,
+        };
+        Standing {
+            id,
+            reaches_a_struct: reaches_a_struct(self.ast, ty),
+            accepts_no_prototype,
+            defined_without_a_prototype: definition && !has_a_prototype(self.ast, ty),
+        }
+    }
+
+    /// Whether a declaration of type `ty` agrees with the `standing` one,
+    /// C17 6.7 p4 through 6.2.7 and 6.7.6.3 p15.
+    ///
+    /// [`Ast::compatible`], except in the two places 6.7.6.3 p15 tells a
+    /// function definition apart from a declaration, which `compatible`
+    /// cannot see: a definition with an empty identifier list fixes the
+    /// count of parameters at none, so it agrees only with a prototype that
+    /// has none, in either order. A declaration with no prototype against a
+    /// standing prototype is answered from what [`Standing`] recorded,
+    /// rather than by walking the prototype's parameters again, so that one
+    /// long prototype followed by many `int f();` stays linear.
+    fn agrees(&self, standing: Standing, ty: TypeId, definition: bool) -> bool {
+        let earlier = self.resolution.binding(standing.id).ty;
+        let (left, right) = (called(self.ast, earlier), called(self.ast, ty));
+        match (self.ast.ty(left), self.ast.ty(right)) {
+            (
+                Type::Function {
+                    returns: left_returns,
+                    parameters: Parameters::Prototype(prototype),
+                },
+                Type::Function {
+                    returns: right_returns,
+                    parameters: Parameters::Unspecified,
+                },
+            ) if pointers(self.ast, earlier) == pointers(self.ast, ty) => {
+                self.ast.compatible(*left_returns, *right_returns)
+                    && if definition {
+                        prototype.is_empty()
+                    } else {
+                        standing.accepts_no_prototype
+                    }
+            }
+            (
+                Type::Function {
+                    parameters: Parameters::Unspecified,
+                    ..
+                },
+                Type::Function {
+                    parameters: Parameters::Prototype(prototype),
+                    ..
+                },
+            ) if standing.defined_without_a_prototype => {
+                prototype.is_empty() && self.ast.compatible(earlier, ty)
+            }
+            _ => self.ast.compatible(earlier, ty),
+        }
     }
 
     /// Record the definition of the function named at `name`, or report it
@@ -883,26 +969,68 @@ fn redefined(what: &str, again: Span, first: Span, verb: &str, clause: &str) -> 
 ///
 /// `standing` stands in for the composite type C17 6.2.7 p3 gives a name
 /// declared more than once, without building it: it is the most recent
-/// declaration with a prototype, or the most recent one where none has one.
-/// A prototype is what a later declaration has to agree with, and one
-/// without a prototype adds nothing a later one can disagree with beyond its
-/// return type, which is compared all the same. So `int f(); int f(char *a);
-/// int f(); int f(int *a);` compares the fourth with the second and reports
-/// it, where comparing with the third would not, and each declaration costs
-/// one comparison. The parameters of a parameter of function type are not
-/// composed in turn, which no program this compiler can build tells apart.
+/// declaration that agreed and said the most, a prototype over none, and a
+/// definition with an empty list over a declaration with one, since that
+/// fixes the count at none. A declaration without a prototype otherwise adds
+/// nothing a later one can disagree with beyond its return type, which is
+/// compared all the same. So `int f(); int f(char *a); int f(); int f(int
+/// *a);` compares the fourth with the second and reports it, where comparing
+/// with the third would not. A declaration that conflicts does not become
+/// it. An object of pointer-to-function type is read through its pointers,
+/// `int (*p)(int);` as the prototype it points at. The parameters of a
+/// parameter of function type are not composed in turn, which no program
+/// this compiler can build tells apart.
 #[derive(Clone, Copy)]
 struct Declared {
     /// The most recent, which a second declaration of a name with no linkage
     /// is reported against.
     latest: BindingId,
-    standing: BindingId,
+    standing: Standing,
 }
 
-/// Whether `ty` is a function type with a parameter type list.
+/// The standing declaration of a name, with what every later comparison
+/// asks of it, so that asking costs nothing more than once.
+#[derive(Clone, Copy)]
+struct Standing {
+    id: BindingId,
+    /// See [`reaches_a_struct`].
+    reaches_a_struct: bool,
+    /// Whether a declaration with no prototype agrees with this one's
+    /// parameters, which by C17 6.7.6.3 p15 is whether none of them is
+    /// changed by the default argument promotions. True where this has no
+    /// prototype.
+    accepts_no_prototype: bool,
+    /// Whether this is a function definition with an empty identifier list,
+    /// `int f() { ... }`, which 6.7.6.3 p15 holds to a count of none.
+    defined_without_a_prototype: bool,
+}
+
+/// The type `ty` names once its pointers are read through: the function an
+/// object of pointer-to-function type points at, or `ty` itself.
+fn called(ast: &Ast, ty: TypeId) -> TypeId {
+    let mut current = ty;
+    while let Type::Pointer(inner) = ast.ty(current) {
+        current = *inner;
+    }
+    current
+}
+
+/// How many pointers `ty` is read through by [`called`].
+fn pointers(ast: &Ast, ty: TypeId) -> usize {
+    let mut count = 0;
+    let mut current = ty;
+    while let Type::Pointer(inner) = ast.ty(current) {
+        current = *inner;
+        count += 1;
+    }
+    count
+}
+
+/// Whether `ty`, read through its pointers, is a function type with a
+/// parameter type list.
 fn has_a_prototype(ast: &Ast, ty: TypeId) -> bool {
     matches!(
-        ast.ty(ty),
+        ast.ty(called(ast, ty)),
         Type::Function {
             parameters: Parameters::Prototype(_),
             ..
@@ -1742,5 +1870,62 @@ mod tests {
         );
 
         assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// A definition with an empty identifier list agrees only with a
+    /// prototype of no parameters, in either order (C17 6.7.6.3 p15).
+    ///
+    /// Mutation: answer a `()` definition after a prototype as a `()`
+    /// declaration in `Resolver::agrees`; `f` is not reported. Mutation: drop
+    /// the arm for a prototype after a `()` definition; `g` is not reported.
+    /// Either fails this.
+    #[test]
+    fn a_definition_with_an_empty_list_agrees_only_with_a_prototype_of_none() {
+        for (text, expected) in [
+            (
+                "int f(int *a);\nint f() {\n    return 0;\n}\n",
+                vec!["conflicting types for `f`"],
+            ),
+            (
+                "int g() {\n    return 0;\n}\nint g(int *a);\n",
+                vec!["conflicting types for `g`"],
+            ),
+            (
+                "int h() {\n    return 0;\n}\nint h();\nint h(int *a);\n",
+                vec!["conflicting types for `h`"],
+            ),
+            (
+                "int k(void);\nint k() {\n    return 0;\n}\nint k(void);\n",
+                vec![],
+            ),
+        ] {
+            assert_eq!(resolved(text).messages(), expected, "{text}");
+        }
+    }
+
+    /// A declaration that conflicts does not become the one the next is
+    /// compared with, so a later line that agrees with the earlier ones is
+    /// not reported for the one that did not.
+    ///
+    /// Mutation: let a conflicting declaration become the standing one in
+    /// `Resolver::declare`; the third `f` is reported too, and this fails.
+    #[test]
+    fn a_conflicting_declaration_is_not_what_the_next_is_compared_with() {
+        let resolved = resolved("int f(int *a);\nint f(char *a);\nint f(int *a);\n");
+
+        assert_eq!(resolved.messages(), ["conflicting types for `f`"]);
+    }
+
+    /// An object of pointer-to-function type is read through its pointer:
+    /// `int (*p)(int *a)` is the prototype a later `int (*p)()` does not
+    /// replace, so a third that disagrees with it is reported.
+    ///
+    /// Mutation: have `has_a_prototype` look at the type itself rather than
+    /// through `called`; the second `p` replaces the first and this fails.
+    #[test]
+    fn a_pointer_to_a_function_is_compared_with_the_prototype_it_points_at() {
+        let resolved = resolved("int (*p)(int *a);\nint (*p)();\nint (*p)(char *a);\n");
+
+        assert_eq!(resolved.messages(), ["conflicting types for `p`"]);
     }
 }
