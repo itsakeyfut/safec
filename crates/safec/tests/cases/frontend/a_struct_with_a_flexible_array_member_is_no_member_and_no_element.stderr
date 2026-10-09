@@ -1,0 +1,16 @@
+error[SC0314]: member `f` has type `struct F`, which has a flexible array member
+   ╭─[ a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:6:14 ]
+   │
+ 6 │     struct F f;
+   │              ┬  
+   │              ╰── declared here
+───╯
+  = note: C17 6.7.2.1 p3
+error[SC0309]: an array cannot have `struct F` as its element, which has a flexible array member
+   ╭─[ a_struct_with_a_flexible_array_member_is_no_member_and_no_element.c:9:10 ]
+   │
+ 9 │ struct F arr[2];
+   │          ─┬─  
+   │           ╰─── declared here
+───╯
+  = note: C17 6.7.2.1 p3

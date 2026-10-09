@@ -1786,35 +1786,194 @@ fn a_function_is_held_to_what_c_needs_complete_of_it() {
     assert_eq!(checked.codes(), ["SC0315", "SC0315", "SC0315"]);
 }
 
-/// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1): the wrong
-/// one is refused as the program's, and the right one as this compiler's,
-/// until #423.
+/// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1), an array
+/// of structs being one after 6.3.2.1 p3: the right shape is typed by the
+/// member it names, the wrong one is the program's fault, and a base this
+/// compiler left untyped is its own gap.
 ///
 /// Mutation: refuse every member access as not yet checked, whatever its
-/// base; `.` on a pointer is called this compiler's gap. Mutation: refuse
-/// every typed base as the program's, as before; `s.a` is called a fault.
-/// Mutation: answer an array base `false` whatever its element; `a->a`,
-/// which is C after 6.3.2.1 p3, is called a fault. Mutation: say nothing of
-/// a base with no type; `(i - j).a`, left untyped as this compiler's gap,
-/// goes silent. Each fails this.
+/// base; `s.a` goes untyped and `.` on a pointer is called this compiler's
+/// gap. Mutation: answer an array base as the wrong shape; `a->a` is called
+/// a fault. Mutation: say nothing of a base with no type; `(i - j).a` and
+/// `(i - j)->a`, left untyped as this compiler's gap, go silent. Mutation:
+/// spell that report's operator as `.` whatever was written, or change its
+/// label or note; its row fails. Each fails this.
 #[test]
-fn a_member_access_of_the_wrong_shape_is_the_programs_and_of_the_right_one_is_not_yet() {
+fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_programs() {
     let checked = checked(
-        "struct S {\n    int a;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + p->a + p.a + s->a + a->a + a.a + (i - j).a;\n}\n",
+        "struct S {\n    int a;\n    char *c;\n};\nint f(struct S s, struct S *p, int *i, int *j) {\n    struct S a[2];\n    return s.a + *p->c + a->a + p.a + s->a + a.a + (i - j).a + (i - j)->a;\n}\n",
+    );
+
+    assert_eq!(checked.spelling("s.a"), "int");
+    assert_eq!(checked.spelling("p->c"), "char *");
+    assert_eq!(checked.spelling("a->a"), "int");
+    assert_eq!(
+        checked.messages(),
+        [
+            "`.` needs a struct, and this is `struct S *`",
+            "`->` needs a pointer to a struct, and this is `struct S`",
+            "`.` needs a struct, and this is `struct S[2]`",
+            "cannot check `.` yet",
+            "cannot check `->` yet",
+        ]
+    );
+    assert_eq!(
+        checked.codes(),
+        ["SC0306", "SC0306", "SC0306", "SC0304", "SC0304"]
+    );
+    let untyped =
+        "the base has no type here: either a fault reported above, or a gap in this compiler";
+    assert_eq!(checked.notes()[3..], [untyped, untyped]);
+    assert_eq!(
+        checked.labels()[3..],
+        [
+            "a member of something with no type",
+            "a member of something with no type"
+        ]
+    );
+}
+
+/// A base that is neither a struct for `.` nor a pointer to one, or an
+/// array of them, for `->` is the program's fault, whatever else it is:
+/// `void`, a function, `char`, a pointer to a pointer to a struct, and an
+/// array of pointers to structs. `p->b` names the struct, not the pointer,
+/// in its report.
+///
+/// Mutation: answer `void`, a function or `char` as a struct; that row is
+/// not reported, and asking its tag panics. Mutation: look through one more
+/// pointer for `->`; the `pp` and `ap` rows go silent. Mutation: spell the
+/// base's type in a missing member's report; `p->b` says `struct S *`.
+/// Each fails this.
+#[test]
+fn a_member_access_on_a_base_that_is_no_struct_is_the_programs() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nvoid v(void);\nchar c;\nint f(struct S **pp, struct S *p) {\n    struct S *ap[2];\n    return v().a + f.a + c.a + pp->a + ap->a + p->b;\n}\n",
     );
 
     assert_eq!(
         checked.messages(),
         [
-            "cannot check `.` yet",
-            "cannot check `->` yet",
-            "`.` needs a struct, and this is `struct S *`",
-            "`->` needs a pointer to a struct, and this is `struct S`",
-            "cannot check `->` yet",
-            "`.` needs a struct, and this is `struct S[2]`",
-            "cannot check `.` yet",
+            "`.` needs a struct, and this is `void`",
+            "`.` needs a struct, and this is `int (struct S **, struct S *)`",
+            "`.` needs a struct, and this is `char`",
+            "`->` needs a pointer to a struct, and this is `struct S **`",
+            "`->` needs a pointer to a struct, and this is `struct S *[2]`",
+            "no member named `b` in `struct S`",
         ]
     );
+}
+
+/// A tag given two definitions, which is `SC0312`, answers every access
+/// from its first: what its members are, and from where they are known. So
+/// `p->b` is no member wherever it is written, `p->a` is one, and `f`'s
+/// access between the two definitions is not called incomplete.
+///
+/// Mutation: let the second definition be the one `Resolution::definition`
+/// answers; `p->a` is reported and `p->b` is not. Mutation: let the second
+/// move the step at which the tag closed; `f`'s access is `SC0315`. Either
+/// fails this.
+#[test]
+fn a_tag_defined_twice_answers_from_its_first_definition() {
+    let checked = checked(
+        "struct V {\n    int a;\n};\nstruct V *p;\nint f(void) {\n    return p->b;\n}\nstruct V {\n    int b;\n};\nint g(void) {\n    return p->b + p->a;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "redefinition of `struct V`",
+            "no member named `b` in `struct V`",
+            "no member named `b` in `struct V`",
+        ]
+    );
+}
+
+/// A member access names a member of the struct its base is, found by
+/// spelling among the members of the definition the base's tag names, and
+/// recorded as that definition and the member's position in it (C17
+/// 6.5.2.3 p1). A name the struct does not have is `SC0316`, at the name,
+/// with the definition beside it.
+///
+/// Mutation: type a member access `int` without looking the member up;
+/// `s.b` goes silent and `s.c` is `int`. Mutation: record index 0 for every
+/// member; `s.c` is recorded as `a`. Mutation: look the name up among the
+/// members of the base's own type rather than its tag's definition; `s`,
+/// declared before the definition, has none. Mutation: answer
+/// `Types::member` with any member recorded rather than `id`'s; `s.a` is
+/// recorded as `c`, or `s.b` as a member. Each fails this.
+#[test]
+fn a_member_access_names_a_member_of_its_struct_or_is_reported() {
+    let checked = checked(
+        "struct S s;\nstruct S {\n    int a;\n    int *b2;\n    char c;\n};\nint f(void) {\n    return s.c + s.b + s.a;\n}\n",
+    );
+
+    assert_eq!(checked.spelling("s.c"), "char");
+    let access = |text: &str| {
+        checked
+            .ast
+            .expr_ids()
+            .find(|&id| checked.sources.snippet(checked.ast.expr(id).span()) == text)
+            .unwrap_or_else(|| panic!("{text:?} is not written"))
+    };
+    let member = checked
+        .types
+        .member(access("s.c"))
+        .expect("`s.c` names a member");
+    assert_eq!(member.index, 2);
+    assert_eq!(
+        checked.types.member(access("s.a")).map(|m| m.index),
+        Some(0)
+    );
+    assert_eq!(checked.types.member(access("s.b")), None);
+    assert!(matches!(
+        checked.ast.ty(member.definition),
+        Type::Struct { members: Some(members), .. } if members.len() == 3
+    ));
+    assert_eq!(checked.messages(), ["no member named `b` in `struct S`"]);
+    assert_eq!(checked.codes(), ["SC0316"]);
+    assert_eq!(
+        checked.labels(),
+        ["not a member of `struct S`", "`struct S` is defined here"]
+    );
+}
+
+/// A member access asks whether its struct is complete where the access is
+/// written, since an incomplete struct has no members yet (C17 6.7.2.1 p8):
+/// `p->a` above `struct S`'s definition is `SC0315`, and below it is typed.
+///
+/// Mutation: ask completeness where `p`'s type was written, with
+/// `Resolution::complete`; the second is refused too. Mutation: drop the
+/// question, answering from the tag's definition alone; the first is typed.
+/// Either fails this.
+#[test]
+fn a_member_access_needs_its_struct_complete_where_it_is_written() {
+    let checked = checked(
+        "struct S *p;\nint f(void) {\n    return p->a;\n}\nstruct S {\n    int a;\n};\nint g(void) {\n    return p->a + 0;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        ["`struct S` is not complete here, and has no members yet"]
+    );
+    assert_eq!(checked.codes(), ["SC0315"]);
+    assert_eq!(checked.spelling("p->a + 0"), "int");
+}
+
+/// A chain of member accesses is typed link by link: `s.t.x` reaches a
+/// struct defined inside a member, and `s.t.y` is reported once, at `y`,
+/// with `s.t.y.z` after it silent rather than a second fault.
+///
+/// Mutation: look every link up in the outermost base's struct; `s.t.x` is
+/// reported. Mutation: report a base that is an untyped member access as
+/// this compiler's gap; `s.t.y.z` is a second report. Either fails this.
+#[test]
+fn a_chain_of_member_accesses_is_typed_link_by_link() {
+    let checked = checked(
+        "struct S {\n    struct T {\n        int x;\n    } t;\n} s;\nint f(void) {\n    return s.t.x + s.t.y.z;\n}\n",
+    );
+
+    assert_eq!(checked.spelling("s.t.x"), "int");
+    assert_eq!(checked.messages(), ["no member named `y` in `struct T`"]);
 }
 
 /// An array's element is a complete object type (C17 6.7.6.2 p1), and a
@@ -1833,6 +1992,31 @@ fn an_array_of_a_struct_needs_the_struct_complete_where_it_is_written() {
         checked.messages(),
         ["an array cannot have `struct S` as its element"]
     );
+}
+
+/// A struct with a flexible array member is no member of another struct and
+/// no element of an array (C17 6.7.2.1 p3), and a struct whose last member
+/// is an array with a length, or which holds a pointer to one, is neither.
+///
+/// Mutation: drop the member check in `check_members`; `f` goes silent.
+/// Mutation: drop the element check in `report_array`; `arr` goes silent.
+/// Mutation: answer every struct with an array member as having a flexible
+/// one; `harr` is reported. Mutation: answer from the first member rather
+/// than the last; both go silent. Each fails this.
+#[test]
+fn a_struct_with_a_flexible_array_member_is_no_member_and_no_element() {
+    let checked = checked(
+        "struct F {\n    int n;\n    int a[];\n};\nstruct G {\n    struct F f;\n    int m;\n};\nstruct F arr[2];\nstruct H {\n    struct F *p;\n    int k[3];\n};\nstruct H harr[2];\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "member `f` has type `struct F`, which has a flexible array member",
+            "an array cannot have `struct F` as its element, which has a flexible array member",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0314", "SC0309"]);
 }
 
 /// A struct is an operand of no operator `binary`, `unary` or `increment`

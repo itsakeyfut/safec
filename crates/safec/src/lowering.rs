@@ -1557,10 +1557,11 @@ impl Lowering<'_> {
 
     /// Refuse a member access, which this stage cannot hold yet.
     ///
-    /// The type checker refuses every one first, and a program refused
-    /// anything there is not lowered, so none reaches here today. Answered as
-    /// a report rather than a panic, so that #423, which gives a member access
-    /// a type, is not obliged to change this stage in the same step.
+    /// The type checker types one and records the member it names, and the
+    /// IR holds no struct to project it from. A function whose parameter or
+    /// local is a struct, or a pointer to one, is refused at that type
+    /// first, so this is the refusal met by a member access on a file-scope
+    /// object, under the code for what this compiler cannot do yet.
     fn member_not_yet(&self, id: ExprId, diagnostics: &mut DiagnosticSink) -> Option<()> {
         diagnostics.report(
             Diagnostic::error("cannot compile a member access yet")

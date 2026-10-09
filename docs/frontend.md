@@ -122,13 +122,25 @@ declares only a tag, `struct S;`, is valid and is read. `struct S {};` is
 refused for the same reason: C17 6.7.2.1 p1's grammar asks for at least one
 member, and the empty list is an extension.
 
-**Structs are typed, and members are not yet.** The parser reads a struct,
-its members and `.` and `->`; the resolver binds each struct to its tag and
-checks its member list; and the type checker types an object of one and holds
-it to what C says of a struct. A member access of the right shape is refused
-under `SC0304`, the code for valid C this compiler cannot handle yet, until
-#423 types it, and the lowering refuses a struct wherever it is asked to
-lower one, under the same code, since the IR holds none.
+**Structs and their members are typed, and not yet lowered.** The parser
+reads a struct, its members and `.` and `->`; the resolver binds each struct
+to its tag and checks its member list; and the type checker types an object
+of one, holds it to what C says of a struct, and types a member access by
+the member it names (`SC0316` for one the struct does not have, `SC0315` for
+a struct not complete where the access is). The lowering refuses a struct,
+and a member access, wherever it is asked to lower one, under `SC0304`, the
+code for valid C this compiler cannot handle yet, since the IR holds no
+struct.
+
+A struct with a flexible array member is refused as a member of another
+struct (`SC0314`) and as an element of an array (`SC0309`), as C17 6.7.2.1 p3
+says. p3 is a constraint, and this compiler takes no constraint-violating
+extension. clang 20.1.6 refuses each only under `-pedantic-errors`: without
+it, such a struct as the last member of another, or as an array's element,
+is accepted with no warning, and as any other member with a warning
+(`-Wgnu-variable-sized-type-not-at-end`). gcc documents both as an extension
+and was not run. So a program that nests a header struct this way and
+builds with either today is refused here.
 
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so
@@ -523,6 +535,7 @@ a declaration. They are gaps rather than decisions, and each one is a program
 | Written | Why it stops here |
 |---|---|
 | `int a[3];`, or any array, function or struct type | the IR holds `int`, `char`, `void` and pointers to them |
+| `s.a` or `p->a`, a member access, typed by the type checker | the IR holds no struct to take a member of |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
 | `1 = 2` | C17 6.5.16 p2 wants a modifiable lvalue and nothing checks that yet, so the first thing to notice is a stage that needs somewhere to write |
 

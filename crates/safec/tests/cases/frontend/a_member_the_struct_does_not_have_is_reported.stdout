@@ -1,0 +1,7 @@
+Declaration a_member_the_struct_does_not_have_is_reported.c:1:1 "s" "struct S"
+  Field a_member_the_struct_does_not_have_is_reported.c:2:5 "a" "int"
+Function a_member_the_struct_does_not_have_is_reported.c:4:1 "f" "int (void)"
+  Compound a_member_the_struct_does_not_have_is_reported.c:4:13
+    Return a_member_the_struct_does_not_have_is_reported.c:5:5
+      Member a_member_the_struct_does_not_have_is_reported.c:5:12 "." "b"
+        Identifier a_member_the_struct_does_not_have_is_reported.c:5:12 "s"

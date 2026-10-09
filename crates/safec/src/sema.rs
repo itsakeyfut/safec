@@ -149,11 +149,14 @@ pub struct Resolution {
     /// The struct types that are complete where they are written. See
     /// [`Resolution::complete`].
     complete: HashSet<TypeId>,
-    /// The step of the walk at which each struct definition closed, and the
-    /// step at which each expression was walked. See
+    /// The step of the walk at which each tag's first definition closed,
+    /// and the step at which each expression was walked. See
     /// [`Resolution::complete_at`].
     closed_at: HashMap<TagId, u32>,
     walked_at: HashMap<ExprId, u32>,
+    /// The struct type whose `{ ... }` gave each tag its content, the first
+    /// where it was given twice. See [`Resolution::definition`].
+    definitions: HashMap<TagId, TypeId>,
     /// Every binding whose name's standing declaration, when its scope
     /// closed, is another binding. See [`Resolution::standing`].
     standing: HashMap<BindingId, BindingId>,
@@ -327,6 +330,44 @@ impl Resolution {
     pub fn tag_declaration(&self, id: TagId) -> &Tag {
         &self.tags[id.0 as usize]
     }
+
+    /// The struct type whose `{ ... }` gives `tag` its content, which is
+    /// where its members are, or `None` if nothing in the translation unit
+    /// gives it. A second definition is `SC0312`'s, and the first answers.
+    ///
+    /// The state after the whole walk, as [`Tag::defined`] is: whether the
+    /// members are known where an expression is, rather than below it, is
+    /// [`Resolution::complete_at`]'s question.
+    pub fn definition(&self, tag: TagId) -> Option<TypeId> {
+        self.definitions.get(&tag).copied()
+    }
+
+    /// Whether `ty` is a struct whose definition ends in an array of no
+    /// length, which C17 6.7.2.1 p18 calls a flexible array member, and p3
+    /// keeps out of another struct and out of an array.
+    ///
+    /// Asked of the last member alone, and not of whether p18's other
+    /// conditions hold: a struct whose only member is `int a[]` was reported
+    /// where it was defined, and saying so again where it is used is a
+    /// second report of one fault rather than a wrong one.
+    pub fn has_flexible_array_member(&self, ast: &Ast, ty: TypeId) -> bool {
+        if !matches!(ast.ty(ty), Type::Struct { .. }) {
+            return false;
+        }
+        let Some(definition) = self.definition(self.tag(ty)) else {
+            return false;
+        };
+        let Type::Struct {
+            members: Some(members),
+            ..
+        } = ast.ty(definition)
+        else {
+            return false;
+        };
+        members
+            .last()
+            .is_some_and(|last| matches!(ast.ty(last.ty), Type::Array { length: None, .. }))
+    }
 }
 
 /// Resolve every name in `ast`, reporting the ones nothing declares.
@@ -350,6 +391,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
             complete: HashSet::new(),
             closed_at: HashMap::new(),
             walked_at: HashMap::new(),
+            definitions: HashMap::new(),
             standing: HashMap::new(),
             declared: HashMap::new(),
         },
@@ -729,7 +771,9 @@ impl Resolver<'_> {
                 }
                 // A member's array lengths are expressions too, walked once
                 // per definition, for the reason `walked` gives. Its name is
-                // not looked up: what it means is #423's. The tag is, and is
+                // not looked up here: the type checker looks a member up in
+                // the struct an access's base is (`Types::member`). The tag
+                // is, and is
                 // bound before its members are walked, because C17 6.2.1 p7
                 // starts a tag's scope just after it appears: `struct L {
                 // struct L *next; }` is one type.
@@ -803,8 +847,13 @@ impl Resolver<'_> {
         }
         let tag = self.resolution.tag(definition);
         self.completed.insert(tag);
+        // The first definition answers both what the members are and from
+        // where they are known, so the two never come from different
+        // definitions of one tag. A second one is `SC0312`'s, and letting
+        // it move the step made an access between the two incomplete.
+        self.resolution.definitions.entry(tag).or_insert(definition);
         self.resolution.complete.insert(definition);
-        self.resolution.closed_at.insert(tag, self.step);
+        self.resolution.closed_at.entry(tag).or_insert(self.step);
         self.step += 1;
     }
 
@@ -816,7 +865,9 @@ impl Resolver<'_> {
     /// of a type not complete where it is written, breaks 6.7.2.1 p3, except
     /// the last when it is an array of unknown length whose element is
     /// complete and an earlier member has a name, which p18 makes a flexible
-    /// array member: its element is held to 6.7.6.2 p1 like any array's.
+    /// array member: its element is held to 6.7.6.2 p1 like any array's. A
+    /// struct with a flexible array member is no member of another, which is
+    /// p3's second sentence.
     fn check_members(&mut self, members: &[Declaration], diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let mut names: HashMap<&str, Span> = HashMap::new();
@@ -856,6 +907,13 @@ impl Resolver<'_> {
                     self.sources,
                     at,
                     format!("has incomplete type `{spelled}`"),
+                ));
+            } else if self.resolution.has_flexible_array_member(ast, member.ty) {
+                let spelled = spell_type(self.sources, ast, member.ty);
+                diagnostics.report(unfit_member(
+                    self.sources,
+                    at,
+                    format!("has type `{spelled}`, which has a flexible array member"),
                 ));
             }
         }
