@@ -2788,7 +2788,9 @@ cases! {
         // `Parser::declared`. One case each, because only the first syntax
         // error in an input is reported. Mutation: drop the `;` check in
         // `declared`; each is `SC0201` "expected a name" again. Mutation: ask
-        // it only at file scope; the block and `for` cases move.
+        // it only at file scope; the block and `for` cases move. Mutation:
+        // report it without `report_built`; the `;` left unread is refused as
+        // well, a second report about one mistake.
         a_declaration_that_declares_nothing_at_file_scope: ["--emit", "ast"],
         a_declaration_that_declares_nothing_in_a_block: ["--emit", "ast"],
         a_for_that_declares_nothing: ["--emit", "ast"],
