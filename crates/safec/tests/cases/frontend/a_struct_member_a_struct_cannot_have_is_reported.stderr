@@ -33,23 +33,3 @@ error[SC0312]: redefinition of `n`
    │         ╰── declared again here
 ───╯
   = note: C17 6.7 p3
-error[SC0304]: cannot check something of type `struct S` yet
-   ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:1:1 ]
-   │
- 1 │ ╭─▶ struct S {
-   ┆ ┆   
- 7 │ ├─▶ };
-   │ │        
-   │ ╰──────── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
-error[SC0304]: cannot check something of type `struct F` yet
-    ╭─[ a_struct_member_a_struct_cannot_have_is_reported.c:8:1 ]
-    │
-  8 │ ╭─▶ struct F {
-    ┆ ┆   
- 11 │ ├─▶ };
-    │ │        
-    │ ╰──────── declared here
-────╯
-  = note: structs are read, and what a tag and its members mean is #27's

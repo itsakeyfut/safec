@@ -5,12 +5,4 @@ error[SC0304]: cannot check `->` yet
    │            ──┬─  
    │              ╰─── a member of a struct
 ───╯
-  = note: structs are read, and what a member is is #27's
-error[SC0304]: cannot check something of type `struct S` yet
-   ╭─[ a_chain_of_member_accesses_is_refused_once.c:1:11 ]
-   │
- 1 │ struct S *p;
-   │           ┬  
-   │           ╰── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
+  = note: structs are typed, and what a member is is #423's

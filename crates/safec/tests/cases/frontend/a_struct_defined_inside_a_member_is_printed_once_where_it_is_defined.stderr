@@ -1,8 +1,0 @@
-error[SC0304]: cannot check something of type `struct S` yet
-   ╭─[ a_struct_defined_inside_a_member_is_printed_once_where_it_is_defined.c:1:47 ]
-   │
- 1 │ struct S { struct T { int y; } t, u; int z; } f;
-   │                                               ┬  
-   │                                               ╰── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's

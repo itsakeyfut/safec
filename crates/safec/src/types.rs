@@ -21,11 +21,11 @@
 //! a child can hang, and a place it did not know would be a silent hole.
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
-    Ast, BinOp, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId, Type,
-    TypeId, UnOp, spell_type,
+    Ast, BinOp, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
+    StmtId, Type, TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -131,15 +131,24 @@ const INITIALIZED: Code = Code::new("SC0310");
 /// class specifier, when one is read, is the other half of p3 and comes here.
 const FOR_DECLARATION: Code = Code::new("SC0311");
 
-/// Valid C this compiler reads and cannot check yet: a struct, until #27
-/// gives a tag and its members their meaning.
+/// Valid C this compiler reads and cannot check yet: a member access, `.`
+/// or `->`, until #423 gives one its type.
 ///
 /// The lowering's code, `SC0304`, rather than one of this stage's own,
 /// because it is the same class of refusal: what a reader searches for is
-/// what this compiler cannot do yet. Here is the one gate, so that no stage
-/// after this one has to answer for a struct: a program refused anything
-/// here is not lowered.
+/// what this compiler cannot do yet. A struct object is typed here and
+/// refused by the lowering, whose IR holds no struct, under the same code.
 const NOT_YET: Code = Code::new("SC0304");
+
+/// An object whose type is a struct that is not complete where C needs it
+/// to be: at the end of its declarator for one with no linkage (C17 6.7 p7),
+/// and by the end of the translation unit for one at file scope (6.9.2 p2,
+/// which makes it a definition as if initialized with zero).
+///
+/// Its own code: the type is a correct one and the declarator a correct
+/// declarator, and what is wrong is that the struct is not complete there.
+/// The wording follows `clang`'s `variable has incomplete type 'struct S'`.
+const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
@@ -217,6 +226,7 @@ pub fn check(
         int: ast.push_type(Type::Int),
         int_range,
         receivers: HashMap::new(),
+        at: None,
     };
 
     checker.collect_receivers(ast, diagnostics);
@@ -238,6 +248,7 @@ pub fn check(
     // After every expression is typed, because a length's type and value are
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
+    checker.check_complete_objects(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
 
@@ -245,6 +256,16 @@ pub fn check(
         of: checker.types,
         value: checker.values,
     }
+}
+
+/// Where a declarator is, for the rules on an array's length: at file scope
+/// and as a member of a struct the length is a constant (C17 6.7.6.2 p2,
+/// 6.7.2.1 p9), and in a block or a prototype it need not be.
+#[derive(Clone, Copy)]
+enum Where {
+    FileScope,
+    Inner,
+    Member,
 }
 
 /// What a `return` in this function has to be assignable to.
@@ -291,6 +312,10 @@ enum Receiving {
 struct Checker<'a> {
     sources: &'a SourceMap,
     resolution: &'a Resolution,
+    /// The expression being typed, so that whether a struct is complete is
+    /// asked where it is (`Resolution::complete_at`) rather than where its
+    /// type was written. `None` outside the walk over expressions.
+    at: Option<ExprId>,
     types: Vec<Option<TypeId>>,
     /// What each integer constant is worth, filled by the same walk that
     /// fills `types` and empty everywhere else.
@@ -343,35 +368,46 @@ impl Checker<'_> {
         // own type, `int (*f(void))[n]`, may not, whether declared or
         // defined. A parameter, reached through any function type, has
         // prototype or block scope.
-        let mut declared: Vec<(Span, TypeId, bool)> = Vec::new();
+        let mut declared: Vec<(Span, TypeId, Where)> = Vec::new();
+        // Each struct definition's members are walked once, however many
+        // declarators share it.
+        let mut walked: HashSet<TypeId> = HashSet::new();
         // A declaration of a tag and nothing else has no declarator, and its
-        // specifiers' type is all there is to ask: `struct S { int x; };` is
-        // refused as holding a struct, which is the gate `NOT_YET` describes.
+        // specifiers' type is all there is to ask: `struct S { int a[0]; };`
+        // has a member to hold to the rules for arrays.
         let push = |declarators: &[InitDeclarator],
                     specified: TypeId,
                     span: Span,
-                    at_file_scope: bool,
-                    declared: &mut Vec<(Span, TypeId, bool)>| {
+                    place: Where,
+                    declared: &mut Vec<(Span, TypeId, Where)>| {
             if declarators.is_empty() {
-                declared.push((span, specified, at_file_scope));
+                declared.push((span, specified, place));
             }
             for declarator in declarators {
                 let declaration = &declarator.declaration;
                 declared.push((
                     declaration.name.unwrap_or(declaration.span),
                     declaration.written,
-                    at_file_scope,
+                    place,
                 ));
             }
         };
         for item in ast.items() {
             match item {
-                Item::Function(function) => declared.push((function.name, function.ty, true)),
+                Item::Function(function) => {
+                    declared.push((function.name, function.ty, Where::FileScope))
+                }
                 Item::Declaration {
                     declarators,
                     specified,
                     span,
-                } => push(declarators, *specified, *span, true, &mut declared),
+                } => push(
+                    declarators,
+                    *specified,
+                    *span,
+                    Where::FileScope,
+                    &mut declared,
+                ),
                 Item::Error { .. } => {}
             }
         }
@@ -382,23 +418,33 @@ impl Checker<'_> {
                 span,
             } = ast.stmt(id)
             {
-                push(declarators, *specified, *span, false, &mut declared);
+                push(declarators, *specified, *span, Where::Inner, &mut declared);
             }
         }
 
         // Grows as it is read: every function type met on the way down hands
         // its parameters on as declarations of their own.
         let mut next = 0;
-        while let Some(&(at, written, at_file_scope)) = declared.get(next) {
+        while let Some(&(at, written, place)) = declared.get(next) {
             next += 1;
             let mut reported = false;
             let mut current = written;
             loop {
                 match ast.ty(current) {
-                    // The gate, once per declarator, parameters included.
-                    // Nothing below a struct is walked: its members are #27's.
-                    Type::Struct { .. } => {
-                        self.refuse_a_struct(ast, at, current, diagnostics);
+                    // A definition's members are declarations of their own,
+                    // each held to the rules an array has.
+                    Type::Struct { members, .. } => {
+                        if let Some(members) = members {
+                            if walked.insert(current) {
+                                for member in members {
+                                    declared.push((
+                                        member.name.unwrap_or(member.span),
+                                        member.written,
+                                        Where::Member,
+                                    ));
+                                }
+                            }
+                        }
                         break;
                     }
                     Type::Array {
@@ -408,14 +454,8 @@ impl Checker<'_> {
                     } => {
                         let (element, length) = (*element, *length);
                         if !reported {
-                            reported = self.report_array(
-                                ast,
-                                at,
-                                element,
-                                length,
-                                at_file_scope,
-                                diagnostics,
-                            );
+                            reported =
+                                self.report_array(ast, at, element, length, place, diagnostics);
                         }
                         current = element;
                     }
@@ -430,7 +470,7 @@ impl Checker<'_> {
                                 declared.push((
                                     parameter.name.unwrap_or(parameter.span),
                                     parameter.written,
-                                    false,
+                                    Where::Inner,
                                 ));
                             }
                         }
@@ -578,24 +618,65 @@ impl Checker<'_> {
         }
     }
 
-    /// Refuse a declaration at `at` whose type holds `structure`, under
-    /// [`NOT_YET`]. The gate [`NOT_YET`] describes.
-    fn refuse_a_struct(
-        &self,
-        ast: &Ast,
-        at: Span,
-        structure: TypeId,
-        diagnostics: &mut DiagnosticSink,
-    ) {
-        diagnostics.report(
-            Diagnostic::error(format!(
-                "cannot check something of type `{}` yet",
-                self.spelled(ast, structure)
-            ))
-            .with_code(NOT_YET)
-            .with_label(Label::primary(at, "declared here"))
-            .with_note("structs are read, and what a tag and its members mean is #27's"),
-        );
+    /// Whether `ty` is complete where the expression being typed is, or where
+    /// it was written outside the walk over expressions. See [`Checker::at`].
+    fn complete_here(&self, ast: &Ast, ty: TypeId) -> bool {
+        match self.at {
+            Some(at) => self.resolution.complete_at(ast, ty, at),
+            None => self.resolution.complete(ast, ty),
+        }
+    }
+
+    /// Report every object whose type is a struct not complete where C needs
+    /// it to be, under [`INCOMPLETE_OBJECT`]: in a block, at the end of its
+    /// declarator (C17 6.7 p7), which is where its type was written; at file
+    /// scope, by the end of the translation unit (6.9.2 p2), which is whether
+    /// it is complete where written or its tag has a definition at all. A
+    /// struct with no tag has no name to define and is complete where written. A function is not an object, and a
+    /// parameter's is asked by neither.
+    fn check_complete_objects(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        let mut objects: Vec<(&Declaration, bool)> = Vec::new();
+        for item in ast.items() {
+            if let Item::Declaration { declarators, .. } = item {
+                objects.extend(declarators.iter().map(|d| (&d.declaration, true)));
+            }
+        }
+        for id in ast.stmt_ids() {
+            if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
+                objects.extend(declarators.iter().map(|d| (&d.declaration, false)));
+            }
+        }
+        for (declaration, at_file_scope) in objects {
+            let ty = declaration.ty;
+            if !matches!(ast.ty(ty), Type::Struct { .. }) {
+                continue;
+            }
+            // Complete where it is written, which a definition and every
+            // struct with no tag is; or, at file scope, defined anywhere.
+            let complete = self.resolution.complete(ast, ty)
+                || (at_file_scope && {
+                    let tag = self.resolution.tag(ty);
+                    self.resolution.tag_declaration(tag).defined.is_some()
+                });
+            if complete {
+                continue;
+            }
+            let name = declaration.name.unwrap_or(declaration.span);
+            let spelled = self.spelled(ast, ty);
+            diagnostics.report(
+                Diagnostic::error(format!(
+                    "`{}` has incomplete type `{spelled}`",
+                    self.sources.snippet(name)
+                ))
+                .with_code(INCOMPLETE_OBJECT)
+                .with_label(Label::primary(name, "declared here"))
+                .with_note(if at_file_scope {
+                    "an object at file scope has a type completed by the end of the translation unit (C17 6.9.2 p2)"
+                } else {
+                    "an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7)"
+                }),
+            );
+        }
     }
 
     /// Whether `ty` is a variable length array type: an array, any of whose
@@ -617,7 +698,8 @@ impl Checker<'_> {
     }
 
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
-    /// or, `at_file_scope`, whose length p2 and 6.6 p4 forbid, and say
+    /// or, at file scope or as a member, whose length p2, 6.7.2.1 p9 and 6.6 p4
+    /// forbid, and say
     /// whether it was one.
     fn report_array(
         &self,
@@ -625,7 +707,7 @@ impl Checker<'_> {
         at: Span,
         element: TypeId,
         length: Option<ExprId>,
-        at_file_scope: bool,
+        place: Where,
         diagnostics: &mut DiagnosticSink,
     ) -> bool {
         // "The element type shall not be an incomplete or function type."
@@ -633,9 +715,8 @@ impl Checker<'_> {
         // compiler has.
         let incomplete = match ast.ty(element) {
             Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
-            // Whether a struct is complete is #27's, and the declaration is
-            // refused as holding one already.
-            Type::Struct { .. } => behind_the_gate(false),
+            // Complete where the array is written (C17 6.7.2.1 p8).
+            Type::Struct { .. } => !self.resolution.complete(ast, element),
             Type::Int
             | Type::Char
             | Type::Pointer(_)
@@ -694,7 +775,7 @@ impl Checker<'_> {
         // it was asked nothing above and is asked nothing here: an undeclared
         // name has been reported already, and `p - q`, the one untyped length
         // a valid program can write, goes unasked for want of a `ptrdiff_t`.
-        if at_file_scope && ty.is_some() && self.values[length.index()].is_none() {
+        if !matches!(place, Where::Inner) && ty.is_some() && self.values[length.index()].is_none() {
             let at = ast.expr(length).span();
             diagnostics.report(if self.undefined[length.index()] {
                 Diagnostic::error("the length of an array has no defined value")
@@ -703,6 +784,13 @@ impl Checker<'_> {
                     .with_note(
                         "a constant expression evaluates to a value its type can hold (C17 6.6 p4)",
                     )
+            } else if matches!(place, Where::Member) {
+                Diagnostic::error(
+                    "a member of a struct cannot have an array length that is not a constant",
+                )
+                .with_code(DECLARATOR)
+                .with_label(Label::primary(at, "this is not a constant"))
+                .with_note("a member of a structure has no variably modified type (C17 6.7.2.1 p9)")
             } else {
                 Diagnostic::error(
                     "a declaration at file scope cannot have an array length that is not a constant",
@@ -904,6 +992,7 @@ impl Checker<'_> {
         id: ExprId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<TypeId> {
+        self.at = Some(id);
         // Cloned rather than borrowed, because working out the type can push
         // into the arena that the borrow would be from. A `Call`'s argument
         // list is the only part of this that allocates.
@@ -911,10 +1000,6 @@ impl Checker<'_> {
 
         match expr {
             Expr::Number { span } => self.constant(id, span, diagnostics),
-            // A name whose type holds a struct has no type here, so that no
-            // rule below is asked about a struct: its declaration is refused
-            // already, and nothing could be said about it that #27 would not
-            // have to take back.
             Expr::Identifier { .. } => {
                 // A function is typed by its standing declaration, not the
                 // one the use resolved to: see `Resolution::standing`. An
@@ -930,17 +1015,32 @@ impl Checker<'_> {
                     }
                     _ => self.resolution.binding(resolved).ty,
                 };
-                (!holds_a_struct(ast, ty)).then_some(ty)
+                Some(ty)
             }
             Expr::Member {
                 base, span, arrow, ..
             } => {
                 let operator = if arrow { "->" } else { "." };
-                // A base with a type is not a struct, since a name that holds
-                // one has none: C17 6.5.2.3 p1, a constraint, asks for a
-                // struct, or for `->` a pointer to one. Only an untyped base
-                // may be a struct, and only that is this compiler's to decline.
-                if let Some(base_ty) = self.types[base.index()] {
+                // A base with no type was reported where it was typed, and a
+                // base that is itself a member access was refused there:
+                // `a.m.m.m` is one thing this cannot check, not three, since a
+                // report each, with a span growing by one access each, was
+                // output and time quadratic in the chain.
+                let base_ty = self.types[base.index()]?;
+                // C17 6.5.2.3 p1, a constraint: `.` takes a struct and `->` a
+                // pointer to one.
+                let shaped = match ast.ty(base_ty) {
+                    Type::Struct { .. } => !arrow,
+                    Type::Pointer(pointee) => {
+                        arrow && matches!(ast.ty(*pointee), Type::Struct { .. })
+                    }
+                    Type::Int
+                    | Type::Char
+                    | Type::Void
+                    | Type::Array { .. }
+                    | Type::Function { .. } => false,
+                };
+                if !shaped {
                     let spelled = self.spelled(ast, base_ty);
                     let wanted = if arrow {
                         "a pointer to a struct"
@@ -960,18 +1060,11 @@ impl Checker<'_> {
                     );
                     return None;
                 }
-                // A base that is itself a member access was refused there, and
-                // `a.m.m.m` is one thing this cannot check, not three: a report
-                // each, with a span growing by one access each, was output and
-                // time quadratic in the chain.
-                if matches!(ast.expr(base), Expr::Member { .. }) {
-                    return None;
-                }
                 diagnostics.report(
                     Diagnostic::error(format!("cannot check `{operator}` yet"))
                         .with_code(NOT_YET)
                         .with_label(Label::primary(span, "a member of a struct"))
-                        .with_note("structs are read, and what a member is is #27's"),
+                        .with_note("structs are typed, and what a member is is #423's"),
                 );
                 None
             }
@@ -1046,8 +1139,6 @@ impl Checker<'_> {
                 // checked as `g(x)` is. `*fp` reaches the function through
                 // the arm above.
                 Type::Function { .. } => operand_ty,
-                // A name that holds a struct has no type, so nothing gets here.
-                Type::Struct { .. } => behind_the_gate(None),
                 // Valid C: 6.3.2.1 p3 makes `a` a pointer to its first
                 // element, and `*` does not ask `decayed` for it. Having no
                 // type here is this compiler's gap, so it is not reported as
@@ -1057,7 +1148,7 @@ impl Checker<'_> {
                 // and `None`: there is no type `*x` would have had. Nothing
                 // after the type check reads the tree once it has reported,
                 // so no later stage speaks about the missing type.
-                Type::Int | Type::Char | Type::Void => {
+                Type::Int | Type::Char | Type::Void | Type::Struct { .. } => {
                     let spelled = self.spelled(ast, operand_ty?);
                     diagnostics.report(
                         Diagnostic::error(format!("`*` cannot take `{spelled}`"))
@@ -1153,8 +1244,22 @@ impl Checker<'_> {
     ) -> Option<TypeId> {
         let ty = self.types[operand.index()]?;
 
+        // p1: a real or a pointer operand, which a struct is not.
+        if let Type::Struct { .. } = ast.ty(ty) {
+            let spelled = self.spelled(ast, ty);
+            diagnostics.report(
+                Diagnostic::error(format!("`{}` cannot take `{spelled}`", op.as_str()))
+                    .with_code(OPERANDS)
+                    .with_label(Label::primary(
+                        ast.expr(operand).span(),
+                        format!("this is `{spelled}`"),
+                    )),
+            );
+            return None;
+        }
+
         if let Type::Pointer(pointee) = ast.ty(ty) {
-            if let Some(why) = unsteppable(ast, *pointee) {
+            if let Some(why) = unsteppable(ast, *pointee, &|ty| self.complete_here(ast, ty)) {
                 let spelled = self.spelled(ast, ty);
                 diagnostics.report(
                     Diagnostic::error(format!("`{}` cannot take `{spelled}`", op.as_str()))
@@ -1208,10 +1313,10 @@ impl Checker<'_> {
             // p[q];` from a second report about an `int` nobody wrote.
             let refused = match (OperandClass::of(ast, left), OperandClass::of(ast, right)) {
                 (Some(OperandClass::Pointer(pointee)), Some(OperandClass::Arithmetic)) => {
-                    pointee_steppable(ast, pointee, true).err()
+                    pointee_steppable(ast, pointee, true, &|ty| self.complete_here(ast, ty)).err()
                 }
                 (Some(OperandClass::Arithmetic), Some(OperandClass::Pointer(pointee))) => {
-                    pointee_steppable(ast, pointee, false).err()
+                    pointee_steppable(ast, pointee, false, &|ty| self.complete_here(ast, ty)).err()
                 }
                 _ => Some(Refused::Pairing),
             };
@@ -1449,10 +1554,14 @@ impl Checker<'_> {
             BinOp::Add => match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(Ok(())),
                 (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
-                    Some(pointee_steppable(ast, pointee, true))
+                    Some(pointee_steppable(ast, pointee, true, &|ty| {
+                        self.complete_here(ast, ty)
+                    }))
                 }
                 (OperandClass::Arithmetic, OperandClass::Pointer(pointee)) => {
-                    Some(pointee_steppable(ast, pointee, false))
+                    Some(pointee_steppable(ast, pointee, false, &|ty| {
+                        self.complete_here(ast, ty)
+                    }))
                 }
                 _ => Some(pairing(false)),
             },
@@ -1460,15 +1569,19 @@ impl Checker<'_> {
             BinOp::Sub => match (left, right) {
                 (OperandClass::Arithmetic, OperandClass::Arithmetic) => Some(Ok(())),
                 (OperandClass::Pointer(pointee), OperandClass::Arithmetic) => {
-                    Some(pointee_steppable(ast, pointee, true))
+                    Some(pointee_steppable(ast, pointee, true, &|ty| {
+                        self.complete_here(ast, ty)
+                    }))
                 }
                 (OperandClass::Pointer(left), OperandClass::Pointer(right)) => {
                     // Both pointees are asked: `int[3]` is compatible with
                     // `int[]`, and only one of them is complete.
                     if ast.compatible(left, right, &|a, b| self.resolution.same_struct(a, b)) {
                         Some(
-                            pointee_steppable(ast, left, true)
-                                .and(pointee_steppable(ast, right, false)),
+                            pointee_steppable(ast, left, true, &|ty| self.complete_here(ast, ty))
+                                .and(pointee_steppable(ast, right, false, &|ty| {
+                                    self.complete_here(ast, ty)
+                                })),
                         )
                     } else {
                         Some(pairing(false))
@@ -1570,8 +1683,12 @@ impl Checker<'_> {
             | (Type::Void, Type::Int | Type::Char | Type::Pointer(_))
             | (Type::Array { .. } | Type::Function { .. }, _)
             | (_, Type::Array { .. } | Type::Function { .. }) => None,
-            // Nothing typed holds a struct, so no operand here is one.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => behind_the_gate(None),
+            // p3: both of one structure type, which two structs are when
+            // they are one tag, and nothing else beside a struct.
+            (Type::Struct { .. }, Type::Struct { .. }) => ast
+                .compatible(left, right, &|a, b| self.resolution.same_struct(a, b))
+                .then_some(left),
+            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => None,
         };
 
         if paired.is_none() {
@@ -1755,7 +1872,7 @@ impl Checker<'_> {
             (Type::Pointer(pointee), Type::Int | Type::Char)
                 if matches!(op, BinOp::Add | BinOp::Sub) =>
             {
-                unsteppable(ast, *pointee)
+                unsteppable(ast, *pointee, &|ty| self.complete_here(ast, ty))
             }
             _ => None,
         };
@@ -1822,7 +1939,9 @@ impl Checker<'_> {
         match (ast.ty(target), ast.ty(source)) {
             (Type::Int | Type::Char, Type::Int | Type::Char) => Some(true),
             (Type::Pointer(pointee), Type::Int | Type::Char) => match op {
-                BinOp::Add | BinOp::Sub => Some(unsteppable(ast, *pointee).is_none()),
+                BinOp::Add | BinOp::Sub => {
+                    Some(unsteppable(ast, *pointee, &|ty| self.complete_here(ast, ty)).is_none())
+                }
                 // A comparison and a logical operator have no compound
                 // form, so the parser never builds one here. They are listed
                 // rather than caught by a wildcard so that a new operator
@@ -1845,8 +1964,9 @@ impl Checker<'_> {
                 | BinOp::LogOr => Some(false),
             },
             (Type::Array { .. } | Type::Function { .. }, _) => None,
-            // Nothing typed holds a struct; a declared one is refused already.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => behind_the_gate(None),
+            // p1 and p2 want arithmetic or pointer operands, which a struct
+            // is neither.
+            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
             (
                 Type::Int | Type::Char | Type::Pointer(_) | Type::Void,
                 Type::Pointer(_) | Type::Void | Type::Array { .. } | Type::Function { .. },
@@ -1859,12 +1979,10 @@ impl Checker<'_> {
     /// words `!` and `&&` use, and whether it was. `word` is what read it:
     /// `if`, `while`, `for` or `?:`.
     ///
-    /// Only `void` is refused, which is right only because every other type
-    /// this compiler has is a scalar or becomes one: an array or a function
-    /// is a pointer by 6.3.2.1 p3 and p4 before C reads it as a condition.
-    /// Nothing here converts it; it is not `void`, so it passes. A structure
-    /// type, when one lands, is not a scalar and has to be refused here
-    /// too.
+    /// `void` and a struct are refused, which is right only because every
+    /// other type this compiler has is a scalar or becomes one: an array or a
+    /// function is a pointer by 6.3.2.1 p3 and p4 before C reads it as a
+    /// condition. Nothing here converts it; it is neither, so it passes.
     fn refuse_a_void_condition(
         &self,
         ast: &Ast,
@@ -1873,13 +1991,17 @@ impl Checker<'_> {
         ty: TypeId,
         diagnostics: &mut DiagnosticSink,
     ) -> bool {
-        if !matches!(ast.ty(ty), Type::Void) {
+        if !matches!(ast.ty(ty), Type::Void | Type::Struct { .. }) {
             return false;
         }
+        let spelled = self.spelled(ast, ty);
         diagnostics.report(
-            Diagnostic::error(format!("`{word}` cannot take `void`"))
+            Diagnostic::error(format!("`{word}` cannot take `{spelled}`"))
                 .with_code(OPERANDS)
-                .with_label(Label::primary(ast.expr(condition).span(), "this is `void`")),
+                .with_label(Label::primary(
+                    ast.expr(condition).span(),
+                    format!("this is `{spelled}`"),
+                )),
         );
         true
     }
@@ -2136,9 +2258,12 @@ impl Checker<'_> {
             (Type::Int | Type::Char | Type::Pointer(_), Type::Void) => Some(false),
             (Type::Void | Type::Array { .. } | Type::Function { .. }, _)
             | (_, Type::Array { .. } | Type::Function { .. }) => None,
-            // A struct target is a declaration refused already, and nothing
-            // typed holds one as a source.
-            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => behind_the_gate(None),
+            // p1: a structure type compatible with the target's, which two
+            // structs are when they are one tag, and nothing else.
+            (Type::Struct { .. }, Type::Struct { .. }) => {
+                Some(ast.compatible(target, source, &|a, b| self.resolution.same_struct(a, b)))
+            }
+            (Type::Struct { .. }, _) | (_, Type::Struct { .. }) => Some(false),
         }
     }
 
@@ -2371,6 +2496,9 @@ enum OperandClass {
     Pointer(TypeId),
     /// 6.2.5 p19: no value, and so an operand of nothing.
     Void,
+    /// 6.2.5 p21: an aggregate, neither arithmetic nor scalar, and so an
+    /// operand of no operator that `binary` asks.
+    Struct,
 }
 
 impl OperandClass {
@@ -2381,38 +2509,8 @@ impl OperandClass {
             Type::Int | Type::Char => Some(Self::Arithmetic),
             Type::Pointer(pointee) => Some(Self::Pointer(*pointee)),
             Type::Void => Some(Self::Void),
-            Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => None,
-        }
-    }
-}
-
-/// An answer about a struct given only because the gate [`NOT_YET`] refuses
-/// every struct first, so that nothing could tell whether it is right.
-///
-/// **#27 deletes this function.** Each answer it wraps is then a compile
-/// error to replace with a real one, rather than a placeholder that would go
-/// on answering once a struct gets past the gate: `assignable` answering
-/// nothing would accept `int x = s;` in silence. A wrapper rather than a
-/// comment, so the compiler is what finds them.
-const fn behind_the_gate<T>(answer: T) -> T {
-    answer
-}
-
-/// Whether `ty` is a struct, or is built from one: a pointer to it, an array
-/// of it, or a function that returns one.
-///
-/// A name of such a type is given no type by the checker, so that no rule
-/// about an operator or an assignment is ever asked about a struct before
-/// #27 says what one is. A parameter's type is not asked: a call passes it
-/// an argument whose own type is what the check reads.
-fn holds_a_struct(ast: &Ast, ty: TypeId) -> bool {
-    let mut current = ty;
-    loop {
-        match ast.ty(current) {
-            Type::Struct { .. } => return true,
-            Type::Pointer(inner) | Type::Array { element: inner, .. } => current = *inner,
-            Type::Function { returns, .. } => current = *returns,
-            Type::Int | Type::Char | Type::Void => return false,
+            Type::Struct { .. } => Some(Self::Struct),
+            Type::Array { .. } | Type::Function { .. } => None,
         }
     }
 }
@@ -2427,13 +2525,19 @@ fn holds_a_struct(ast: &Ast, ty: TypeId) -> bool {
 /// than spelled from `pointee`, because a spelled type can carry the file's
 /// own bytes, which are content, and none of the three needs the type to be
 /// read.
-fn unsteppable(ast: &Ast, pointee: TypeId) -> Option<&'static str> {
+fn unsteppable(
+    ast: &Ast,
+    pointee: TypeId,
+    complete: &dyn Fn(TypeId) -> bool,
+) -> Option<&'static str> {
     match ast.ty(pointee) {
         Type::Void => Some("`void` has no size"),
         Type::Function { .. } => Some("a function is not an object"),
         Type::Array { length: None, .. } => Some("an array of unknown length has no size"),
-        // Nothing typed points at a struct, so no step asks about one.
-        Type::Struct { .. } => behind_the_gate(None),
+        // Complete where the step is written, which `complete` answers.
+        Type::Struct { .. } => {
+            (!complete(pointee)).then_some("a struct that is not complete here has no size")
+        }
         Type::Int | Type::Char | Type::Pointer(_) | Type::Array { .. } => None,
     }
 }
@@ -2465,8 +2569,13 @@ fn pairing(taken: bool) -> Result<(), Refused> {
 /// `Ok` where a pointer to `pointee` can take the step 6.5.6 or 6.5.2.1 would
 /// make, and [`Refused::Pointee`] where it cannot, naming the operand by
 /// `on_left`.
-fn pointee_steppable(ast: &Ast, pointee: TypeId, on_left: bool) -> Result<(), Refused> {
-    match unsteppable(ast, pointee) {
+fn pointee_steppable(
+    ast: &Ast,
+    pointee: TypeId,
+    on_left: bool,
+    complete: &dyn Fn(TypeId) -> bool,
+) -> Result<(), Refused> {
+    match unsteppable(ast, pointee, complete) {
         None => Ok(()),
         Some(why) => Err(Refused::Pointee { on_left, why }),
     }

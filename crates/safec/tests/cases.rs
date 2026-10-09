@@ -2793,17 +2793,14 @@ cases! {
         only_an_object_can_be_initialized: ["--emit", "ast"],
         // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
         // members, a declaration of a tag and nothing else, an object, a
-        // parameter, a local, and `.` and `->`, each in the tree. The type
-        // checker refuses every one under `SC0304` until #27 says what they
-        // mean, the two declarations with no declarator included, and `g`,
-        // which holds no struct, is not reported. Mutation: refuse `struct` in
-        // `specifiers` again; this is `SC0201` at the first `struct`.
-        // Mutation: let a parameter's type past the gate, or skip a member
-        // access; a report goes. Mutation: read `->` as `.`; the dump's
-        // `"->"` goes. `h` assigns one pointer to a struct to another, and
-        // only its parameters are reported: a name whose type holds a struct
-        // is given no type. Mutation: give it its type; `a = b` is also
-        // refused as `SC0302`, since nothing yet says two structs are one.
+        // parameter, a local, and `.` and `->`, each in the tree. Every
+        // object of struct type is typed, so the only reports are the four
+        // member accesses, refused under `SC0304` until #423 types them, and
+        // `s`, of a `struct T` nothing completes (`SC0315`, C17 6.9.2 p2).
+        // `h` assigns one pointer to a struct to another of its tag, and is
+        // not reported. Mutation: refuse `struct` in `specifiers` again; this
+        // is `SC0201` at the first `struct`. Mutation: skip a member access;
+        // a report goes. Mutation: read `->` as `.`; the dump's `"->"` goes.
         // The rest is every place a struct is read: two members in one
         // declaration, a definition with a declarator at file scope and in a
         // block, a tag declared in a block, a `for` and a parenthesised
@@ -2812,19 +2809,25 @@ cases! {
         // reading a member list's `,`; `int a, b` is `expected ;`. Mutation:
         // test a `for` or a parenthesised declarator for a specifier with
         // `specifier` alone; the `for` or `abstract`'s parameter is a syntax
-        // error. Mutation: let `holds_a_struct` stop at an array or a
-        // function; `many[0]` or `make()` gets a struct type, and `.x` on it
-        // is refused as needing a struct, which it is.
+        // error.
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
+        // A program that uses structs as C allows, an object assigned from
+        // `*p`, passed and returned, passes the type checker, and the lowering
+        // refuses `make`, `take` and `f` under `SC0304`, since the IR holds no
+        // struct, and lowers `main`. Mutation: refuse a declaration holding a
+        // struct in the type checker again; the lowering is never reached,
+        // `main` is not printed, and this fails.
+        a_struct_program_is_typed_and_refused_by_the_lowering: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A struct with no tag declares nothing when nothing else is
         // declared (6.7 p2). Mutation: let any struct through without a
         // declarator; this loses its `SC0206`.
         a_struct_with_no_tag_and_no_declarator_declares_nothing: ["--emit", "ast"],
         // A declaration with no declarator has only its specifiers' type, and
-        // the gate asks it, so a struct whose member breaks a constraint is
-        // refused by the gate rather than accepted. The member itself is not
-        // checked: nothing below a struct is, until #27. Mutation: leave a declaration's `specified`
-        // type out of the gate; this exits 0.
+        // a struct definition's members are declarations of their own, so
+        // the zero-length member is refused as any array of length zero is
+        // (`SC0309`, C17 6.7.6.2 p1). Mutation: leave a declaration's
+        // `specified` type out of `check_declarators`; this exits 0.
+        // Mutation: walk no member of a struct definition there; the same.
         a_struct_whose_member_breaks_a_constraint_is_still_refused: ["--emit", "ast"],
         // 6.7.2.1 p1's grammar asks for a member, and `clang
         // -pedantic-errors` calls `struct S {};` a GNU extension. Mutation:
@@ -2874,15 +2877,14 @@ cases! {
         a_chain_of_member_accesses_is_refused_once: ["--emit", "ast"],
         // C17 6.7.2.3 p1: `V` given its content twice in one scope is
         // `SC0312`, and `W` given it again in a block is a new tag, which is
-        // not. The struct gate refuses every one of them as well. Mutation:
-        // look a definition up in every visible scope; `W` is reported.
+        // not. Mutation: look a definition up in every visible scope; `W` is
+        // reported.
         // Mutation: drop the report; `V`'s goes.
         a_tag_defined_twice_in_one_scope_is_a_redefinition: ["--emit", "ast"],
         // C17 6.7.2.1 p3 and 6.7 p3: a member that is the struct being
         // defined, `void`, or a function is `SC0314`, two members of one name
         // are `SC0312`, and a flexible array member after a named one is
-        // neither. The struct gate refuses each struct as well, until #419.
-        // Mutation: mark a definition complete when it is bound; `s` goes
+        // neither. Mutation: mark a definition complete when it is bound; `s` goes
         // silent. Mutation: swap the redeclaration's labels; the labels
         // trade places.
         a_struct_member_a_struct_cannot_have_is_reported: ["--emit", "ast"],
@@ -2916,9 +2918,8 @@ cases! {
         // third is compatible with it and nothing is said.
         declarations_of_one_name_with_conflicting_types: ["--emit", "ast"],
         // C17 6.2.7 p1: `p` declared as a pointer to two tags is `SC0313`,
-        // both struct types spelled; the struct gate refuses each struct as
-        // well, until #419. Mutation: answer every struct pair compatible in
-        // `Ast::compatible`; the conflict goes silent.
+        // both struct types spelled. Mutation: answer every struct pair
+        // compatible in `Ast::compatible`; the conflict goes silent.
         declarations_of_one_name_as_two_struct_types_conflict: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a

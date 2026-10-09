@@ -9,35 +9,3 @@ error[SC0312]: redefinition of `struct V`
    │        ╰── defined again here
 ───╯
   = note: C17 6.7.2.3 p1
-error[SC0304]: cannot check something of type `struct V` yet
-   ╭─[ a_tag_defined_twice_in_one_scope_is_a_redefinition.c:1:1 ]
-   │
- 1 │ struct V { int a; };
-   │ ──────────┬─────────  
-   │           ╰─────────── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
-error[SC0304]: cannot check something of type `struct V` yet
-   ╭─[ a_tag_defined_twice_in_one_scope_is_a_redefinition.c:2:1 ]
-   │
- 2 │ struct V { int b; };
-   │ ──────────┬─────────  
-   │           ╰─────────── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
-error[SC0304]: cannot check something of type `struct W` yet
-   ╭─[ a_tag_defined_twice_in_one_scope_is_a_redefinition.c:3:1 ]
-   │
- 3 │ struct W { int a; };
-   │ ──────────┬─────────  
-   │           ╰─────────── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's
-error[SC0304]: cannot check something of type `struct W` yet
-   ╭─[ a_tag_defined_twice_in_one_scope_is_a_redefinition.c:5:25 ]
-   │
- 5 │     struct W { int b; } w;
-   │                         ┬  
-   │                         ╰── declared here
-───╯
-  = note: structs are read, and what a tag and its members mean is #27's

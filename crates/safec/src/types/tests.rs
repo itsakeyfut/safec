@@ -1644,3 +1644,145 @@ fn a_constant_expression_has_the_value_c_gives_it() {
         assert_eq!(checked.types.value(assigned), value, "{written}");
     }
 }
+
+/// An object of struct type is typed, and what C says of a struct is asked
+/// of it: assigned from a struct of its tag and of nothing else, and an
+/// operand of no operator, no condition and no `*` (C17 6.5.16.1 p1, 6.5.3,
+/// 6.5.5 to 6.5.14, 6.8.4.1 p1).
+///
+/// Mutation: answer `assignable` true for every struct pair; `s = t` goes
+/// silent. Mutation: give `OperandClass::of` no class for a struct, as
+/// before; `s + 1` goes silent. Mutation: refuse only `void` as a
+/// condition; `if (s)` goes silent. Mutation: drop the struct arm in
+/// `increment`; `s++` goes silent. Each fails this.
+#[test]
+fn a_struct_is_typed_and_held_to_what_c_says_of_one() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nstruct T {\n    int b;\n};\nint f(struct S s, struct T t, struct S u) {\n    int x = s;\n    s = t;\n    s = u;\n    if (s) {\n        return 1;\n    }\n    s++;\n    -s;\n    x = s + 1;\n    return *s;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "cannot initialize `int` with `struct S`",
+            "cannot assign `struct T` to `struct S`",
+            "`if` cannot take `struct S`",
+            "`++` cannot take `struct S`",
+            "`-` cannot take `struct S`",
+            "`+` cannot take `struct S` and `int`",
+            "`*` cannot take `struct S`",
+        ]
+    );
+}
+
+/// Pointers to structs are compared, subtracted, chosen between and
+/// assigned by their tag at every place the type checker asks
+/// `Ast::compatible`: two tags are refused at each, and one tag at none.
+///
+/// Mutation: pass `|_, _| true` for `same_struct` at any of the five calls
+/// in this module; that call accepts two tags, and this fails.
+#[test]
+fn pointers_to_structs_are_held_to_their_tag_everywhere_types_are_compared() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nstruct T {\n    int b;\n};\nint f(struct S *p, struct S *r, struct T *q, int c) {\n    int x = p == r;\n    x = p < r;\n    x = p - r;\n    p = c ? p : r;\n    p = r;\n    x = p == q;\n    x = p < q;\n    x = p - q;\n    p = c ? p : q;\n    p = q;\n    return x;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`==` cannot take `struct S *` and `struct T *`",
+            "`<` cannot take `struct S *` and `struct T *`",
+            "`-` cannot take `struct S *` and `struct T *`",
+            "`?:` cannot take `struct S *` and `struct T *`",
+            "cannot assign `struct T *` to `struct S *`",
+        ]
+    );
+}
+
+/// A step of a pointer to a struct asks whether the struct is complete
+/// where the step is written, not where the pointer was declared: `p + 1`
+/// above `struct S`'s definition is refused, and below it is not (C17 6.5.6
+/// p2, 6.7.2.1 p8).
+///
+/// Mutation: ask completeness where the type was written, by answering
+/// `complete_here` with `Resolution::complete`; the second step is refused
+/// too. Mutation: answer every struct complete in `unsteppable`; the first
+/// is not refused. Either fails this.
+#[test]
+fn a_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
+    let checked = checked(
+        "struct S;\nstruct S *p;\nvoid f(void) {\n    p + 1;\n}\nstruct S {\n    int a;\n};\nvoid g(void) {\n    p + 1;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        ["`+` cannot take `struct S *` and `int`"]
+    );
+}
+
+/// An object whose struct is not complete where C needs it is reported: in
+/// a block at the end of its declarator (C17 6.7 p7), at file scope by the
+/// end of the translation unit (6.9.2 p2). One completed later at file
+/// scope, and one with no tag, are not.
+///
+/// Mutation: ask a file-scope object at its declarator as a block's is;
+/// `u` is reported. Mutation: ask only whether the tag is defined; the
+/// struct with no tag is reported. Mutation: drop the check; `s` and `t`
+/// go silent. Each fails this.
+#[test]
+fn an_object_of_an_incomplete_struct_is_reported() {
+    let checked = checked(
+        "struct S;\nvoid f(void) {\n    struct S s;\n}\nstruct T t;\nstruct U u;\nstruct U {\n    int a;\n};\nstruct {\n    int x;\n} v;\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`t` has incomplete type `struct T`",
+            "`s` has incomplete type `struct S`",
+        ]
+    );
+}
+
+/// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1): the wrong
+/// one is refused as the program's, and the right one as this compiler's,
+/// until #423.
+///
+/// Mutation: refuse every member access as not yet checked, whatever its
+/// base; `.` on a pointer is called this compiler's gap. Mutation: refuse
+/// every typed base as the program's, as before; `s.a` is called a fault.
+/// Either fails this.
+#[test]
+fn a_member_access_of_the_wrong_shape_is_the_programs_and_of_the_right_one_is_not_yet() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nint f(struct S s, struct S *p) {\n    return s.a + p->a + p.a + s->a;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "cannot check `.` yet",
+            "cannot check `->` yet",
+            "`.` needs a struct, and this is `struct S *`",
+            "`->` needs a pointer to a struct, and this is `struct S`",
+        ]
+    );
+}
+
+/// An array's element is a complete object type (C17 6.7.6.2 p1), and a
+/// struct is one only where its definition has closed: `struct S a[2];`
+/// above it is refused and below it is not.
+///
+/// Mutation: answer a struct element complete in `report_array`; `a` goes
+/// silent. Mutation: answer it incomplete; `b` is refused too. Either fails
+/// this.
+#[test]
+fn an_array_of_a_struct_needs_the_struct_complete_where_it_is_written() {
+    let checked =
+        checked("struct S;\nstruct S a[2];\nstruct S {\n    int x;\n};\nstruct S b[2];\n");
+
+    assert_eq!(
+        checked.messages(),
+        ["an array cannot have `struct S` as its element"]
+    );
+}

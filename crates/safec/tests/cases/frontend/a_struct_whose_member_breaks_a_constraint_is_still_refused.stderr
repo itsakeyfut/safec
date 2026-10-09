@@ -1,8 +1,8 @@
-error[SC0304]: cannot check something of type `struct S` yet
-   ╭─[ a_struct_whose_member_breaks_a_constraint_is_still_refused.c:1:1 ]
+error[SC0309]: the length of an array is greater than zero
+   ╭─[ a_struct_whose_member_breaks_a_constraint_is_still_refused.c:1:18 ]
    │
  1 │ struct S { int a[0]; };
-   │ ───────────┬───────────  
-   │            ╰───────────── declared here
+   │                  ┬  
+   │                  ╰── this is 0
 ───╯
-  = note: structs are read, and what a tag and its members mean is #27's
+  = note: a constant length is greater than zero (C17 6.7.6.2 p1)
