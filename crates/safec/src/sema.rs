@@ -1065,20 +1065,24 @@ mod tests {
     /// A tag and an ordinary name of one spelling are two names (C17 6.2.3),
     /// in one scope, and a use of the name is the variable.
     ///
-    /// Mutation: keep tags in the ordinary table, by declaring each tag
-    /// through `declare` as well; the use of `S` resolves to the tag's
-    /// declaration, which is the first `S` written, and this fails.
+    /// The variable is declared first, so that a tag kept among the ordinary
+    /// names, being the later declaration, is what an innermost-first lookup
+    /// would find.
+    ///
+    /// Mutation: keep tags in the ordinary table as well, by declaring each
+    /// new tag through `declare`; the use of `S` resolves to the tag, the
+    /// second `S` written, and this fails.
     #[test]
     fn a_tag_and_a_variable_of_one_name_are_two_names() {
-        let resolved = resolved("struct S { int x; };\nint S;\nint f(void) {\n    return S;\n}\n");
+        let resolved = resolved("int S;\nstruct S { int x; };\nint f(void) {\n    return S;\n}\n");
 
         assert_eq!(resolved.messages(), Vec::<&str>::new());
         assert_eq!(
             resolved.declaration_of("S", 2),
-            Some(resolved.occurrence("S", 1)),
+            Some(resolved.occurrence("S", 0)),
             "the use is the variable"
         );
-        let _ = resolved.tag_at("S", 0);
+        let _ = resolved.tag_at("S", 1);
     }
 
     /// A tag defined in a block binds nothing after the block: the `struct T`
@@ -1112,9 +1116,9 @@ mod tests {
     /// A struct naming itself in its own members is one type, because a tag's
     /// scope begins just after it appears (C17 6.2.1 p7).
     ///
-    /// Mutation: bind a struct's tag after its members are pushed rather than
-    /// before; the member's `struct L` finds nothing, declares a second `L`,
-    /// and this fails.
+    /// Mutation: leave a definition's tag out of the scope until its members
+    /// are walked, by declaring it in no scope; the member's `struct L`
+    /// finds nothing, declares a second `L`, and this fails.
     #[test]
     fn a_struct_that_names_itself_is_one_type() {
         let resolved = resolved("struct L { struct L *next; };\n");
