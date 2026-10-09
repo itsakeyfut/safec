@@ -429,8 +429,10 @@ impl Resolver<'_> {
     /// Only the outermost type, which is what
     /// `driver/dumps.rs::dump_parameters` does as well: a definition whose
     /// declarator derives something other than a function is a constraint
-    /// violation, which the lowering reports, and not this walk's to invent an
-    /// answer for.
+    /// violation, and not this walk's to invent an answer for. The lowering
+    /// reports it when nothing before it has: a body that uses a parameter is
+    /// reported here first, as using an undeclared name, because none was
+    /// declared, and the lowering is then never reached.
     fn parameters(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let Type::Function {
