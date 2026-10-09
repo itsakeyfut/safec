@@ -1401,7 +1401,9 @@ fn a_subscript_refused_for_its_pairing_has_no_type() {
 /// silences are asserted against a run that does report and cannot pass by
 /// checking nothing. The silences are a null pointer constant, and a
 /// `void *` both ways, which is an implicit conversion with no cast in the
-/// grammar.
+/// grammar. `w` and `q` read an object at file scope, so each is also not
+/// the constant C17 6.7.9 p4 asks (`SC0317`), and `w` is that alone: its
+/// `void *` is still converted in silence.
 ///
 /// Mutation: have `collect_receivers` skip an `Item::Declaration`. The
 /// file-scope report goes and this fails; nothing else in the suite
@@ -1431,6 +1433,8 @@ int main(void) {
         [
             "cannot initialize `int *` with `int`",
             "cannot initialize `char *` with `int *`",
+            "the initializer of `w` is not a constant",
+            "the initializer of `q` is not a constant",
         ]
     );
     assert_eq!(
@@ -1440,6 +1444,8 @@ int main(void) {
             "this holds `int *`",
             "this is `int *`",
             "this holds `char *`",
+            "not a constant expression",
+            "not a constant expression",
         ]
     );
 }
@@ -2368,4 +2374,78 @@ int g(struct S *p, struct S *q, int c) {
             "C17 6.5.3.1 p1 and 6.3.2.1 p1",
         ]
     );
+}
+
+/// An initializer at file scope is a constant expression (C17 6.7.9 p4): an
+/// integer constant, a null pointer constant, an address constant (6.6 p9),
+/// or one of those plus or minus an integer constant (6.6 p7). An address
+/// constant may be made through `[]`, `.`, `->`, `&` and `*`, and an array
+/// or function designated through them is one; `0 && (1, 2)` is a constant,
+/// since 6.6 p3 lets an operand that is not evaluated hold a comma. A name
+/// of an object, a read through one, a comma, a call, `?:` on addresses, a
+/// pointer that is not static, and an address plus or minus a name are not.
+/// One without a defined value is told so.
+///
+/// Mutation: skip the pass; every refused row goes silent. Mutation: accept
+/// any `&e` without asking what it designates; `&arr[x]`, `&*s.p` and
+/// `&p[1]` go silent. Mutation: let `+` or `-` take any right operand;
+/// `&x + x` or `&x - x` goes silent.
+/// Mutation: drop either order of `+` or of `[]`; `1 + arr` or `&1[arr]` is
+/// reported. Mutation: ask only a name of array type; `s.m`, `a2[1]`,
+/// `&a2[1][2]` and `*f` are reported. Mutation: let `->` take a designator
+/// rather than an address; `&ps->q` goes silent. Mutation: drop `->`;
+/// `&(&sa[1])->q` is reported. Mutation: ask an unevaluated operand only
+/// for a value; `0 && (1, 2)` is reported. Mutation: word every one as not
+/// constant; `1 / 0`'s message changes. Each fails this.
+#[test]
+fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
+    let checked = checked(
+        "int x;\nint arr[3];\nint a2[2][3];\nint *p;\nstruct S {\n    int *p;\n    int q;\n    int m[4];\n} s;\nstruct S sa[2];\nstruct S *ps;\nint f(void);\nint g = x;\nint h = *s.p;\nint m = (1, 2);\nint c = f();\nint *pe = &arr[x];\nint *pt = 1 ? &x : &x;\nint *pu = &*s.p;\nint *pv = &p[1];\nint *pw = &ps->q;\nint *px = &x + x;\nint *py = &x - x;\nint z = 0 && x;\nint d = 1 / 0;\nint k = 1 + 2;\nint o = 0 && (1, 2);\nint *pa = &x;\nint *pq = 0;\nint *pr = &x + 1;\nint *pm = &x - 1;\nint *pg = 1 + arr;\nint *pb = arr;\nint *pc = &arr[1];\nint *pi = &1[arr];\nint *pd = &s.q;\nint *pj = s.m;\nint *pk = a2[1];\nint *pl = &a2[1][2];\nint *pn = &(&sa[1])->q;\nint (*pf)(void) = f;\nint (*po)(void) = *f;\nint *ph = &*&x;\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "the initializer of `g` is not a constant",
+            "the initializer of `h` is not a constant",
+            "the initializer of `m` is not a constant",
+            "the initializer of `c` is not a constant",
+            "the initializer of `pe` is not a constant",
+            "the initializer of `pt` is not a constant",
+            "the initializer of `pu` is not a constant",
+            "the initializer of `pv` is not a constant",
+            "the initializer of `pw` is not a constant",
+            "the initializer of `px` is not a constant",
+            "the initializer of `py` is not a constant",
+            "the initializer of `z` is not a constant",
+            "the initializer of `d` has no defined value",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0317"; 13]);
+}
+
+/// An initializer at file scope this stage left untyped, `*arr` being one,
+/// is declined as this compiler's gap rather than passed over, since the
+/// lowering drops it unread and the program would build. A function given
+/// one is `SC0310`'s alone. A chain of `+` as long as the source makes it
+/// is walked without running out of stack.
+///
+/// Mutation: pass an untyped initializer over; `g` goes silent and the run
+/// would exit 0. Mutation: ask a function's initializer too; `f2` gets a
+/// second report. Mutation: walk `address_constant` by recursion; the
+/// chain overflows the stack. Each fails one of these.
+#[test]
+fn an_initializer_at_file_scope_this_stage_cannot_ask_is_still_refused() {
+    let untyped = checked("int arr[3];\nint g = *arr;\n");
+    assert_eq!(
+        untyped.messages(),
+        ["cannot check whether the initializer of `g` is a constant"]
+    );
+    assert_eq!(untyped.codes(), ["SC0304"]);
+
+    let function = checked("int x;\nint f2(void) = x;\n");
+    assert_eq!(function.codes(), ["SC0310"]);
+
+    let chain = checked(&format!("int x;\nint *g = &x{};\n", " + 1".repeat(50_000)));
+    assert_eq!(chain.messages(), Vec::<&str>::new());
 }

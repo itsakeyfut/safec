@@ -1,0 +1,16 @@
+error[SC0317]: the initializer of `g` is not a constant
+   ╭─[ an_initializer_at_file_scope_that_is_not_constant_is_reported.c:2:9 ]
+   │
+ 2 │ int g = x;
+   │         ┬  
+   │         ╰── not a constant expression
+───╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)
+error[SC0317]: the initializer of `h` is not a constant
+   ╭─[ an_initializer_at_file_scope_that_is_not_constant_is_reported.c:4:9 ]
+   │
+ 4 │ int h = *s.p;
+   │         ──┬─  
+   │           ╰─── not a constant expression
+───╯
+  = note: an object at file scope is initialized with a constant expression (C17 6.7.9 p4)
