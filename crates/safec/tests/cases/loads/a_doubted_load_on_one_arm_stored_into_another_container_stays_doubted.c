@@ -17,7 +17,7 @@ int main(void) {
         return 0;
     }
     r[0] = 1;
-    int i = 0;
+    i = 0;
     int k = 0;
     while (k < 2) {
         int *p = malloc(4);
