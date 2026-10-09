@@ -2801,12 +2801,11 @@ cases! {
         // declarator beginning with `struct`, a struct with no tag, an array
         // of one and a function returning one, each used. Mutation: stop
         // reading a member list's `,`; `int a, b` is `expected ;`. Mutation:
-        // give a declaration with declarators its first declarator's type as
-        // `specified`; `D`'s and `E`'s fields go. Mutation: test a `for` or a
-        // parenthesised declarator for a specifier with `specifier` alone;
-        // `for` or `takes` is a syntax error. Mutation: let `holds_a_struct`
-        // stop at an array or a function; `many[0]` or `make()` is typed and
-        // refused again by a rule that does not know a struct.
+        // test a `for` or a parenthesised declarator for a specifier with
+        // `specifier` alone; the `for` or `abstract`'s parameter is a syntax
+        // error. Mutation: let `holds_a_struct` stop at an array or a
+        // function; `many[0]` or `make()` gets a struct type, and `.x` on it
+        // is refused as needing a struct, which it is.
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
         // A struct with no tag declares nothing when nothing else is
         // declared (6.7 p2). Mutation: let any struct through without a

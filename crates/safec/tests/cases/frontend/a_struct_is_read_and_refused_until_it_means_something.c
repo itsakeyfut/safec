@@ -18,12 +18,13 @@ struct { int x; } anonymous;
 struct S many[3];
 struct S make(void);
 int (*takes)(struct S *);
+int abstract(int (struct S *));
 int i(void) {
     struct U;
     struct E { int e; } *e;
     for (struct S *r = 0; 0;) {
     }
-    many[0];
-    make();
+    many[0].x;
+    make().x;
     return 0;
 }
