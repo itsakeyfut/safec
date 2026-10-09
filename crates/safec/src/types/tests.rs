@@ -1833,6 +1833,36 @@ fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_progr
     );
 }
 
+/// A base that is neither a struct for `.` nor a pointer to one, or an
+/// array of them, for `->` is the program's fault, whatever else it is:
+/// `void`, a function, `char`, a pointer to a pointer to a struct, and an
+/// array of pointers to structs. `p->b` names the struct, not the pointer,
+/// in its report.
+///
+/// Mutation: answer `void`, a function or `char` as a struct; that row is
+/// not reported, and asking its tag panics. Mutation: look through one more
+/// pointer for `->`; the `pp` and `ap` rows go silent. Mutation: spell the
+/// base's type in a missing member's report; `p->b` says `struct S *`.
+/// Each fails this.
+#[test]
+fn a_member_access_on_a_base_that_is_no_struct_is_the_programs() {
+    let checked = checked(
+        "struct S {\n    int a;\n};\nvoid v(void);\nchar c;\nint f(struct S **pp, struct S *p) {\n    struct S *ap[2];\n    return v().a + f.a + c.a + pp->a + ap->a + p->b;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`.` needs a struct, and this is `void`",
+            "`.` needs a struct, and this is `int (struct S **, struct S *)`",
+            "`.` needs a struct, and this is `char`",
+            "`->` needs a pointer to a struct, and this is `struct S **`",
+            "`->` needs a pointer to a struct, and this is `struct S *[2]`",
+            "no member named `b` in `struct S`",
+        ]
+    );
+}
+
 /// A tag given two definitions, which is `SC0312`, answers every access
 /// from its first: what its members are, and from where they are known. So
 /// `p->b` is no member wherever it is written, `p->a` is one, and `f`'s
@@ -1868,21 +1898,33 @@ fn a_tag_defined_twice_answers_from_its_first_definition() {
 /// `s.b` goes silent and `s.c` is `int`. Mutation: record index 0 for every
 /// member; `s.c` is recorded as `a`. Mutation: look the name up among the
 /// members of the base's own type rather than its tag's definition; `s`,
-/// declared before the definition, has none. Each fails this.
+/// declared before the definition, has none. Mutation: answer
+/// `Types::member` with any member recorded rather than `id`'s; `s.a` is
+/// recorded as `c`, or `s.b` as a member. Each fails this.
 #[test]
 fn a_member_access_names_a_member_of_its_struct_or_is_reported() {
     let checked = checked(
-        "struct S s;\nstruct S {\n    int a;\n    int *b2;\n    char c;\n};\nint f(void) {\n    return s.c + s.b;\n}\n",
+        "struct S s;\nstruct S {\n    int a;\n    int *b2;\n    char c;\n};\nint f(void) {\n    return s.c + s.b + s.a;\n}\n",
     );
 
     assert_eq!(checked.spelling("s.c"), "char");
-    let access = checked
-        .ast
-        .expr_ids()
-        .find(|&id| checked.sources.snippet(checked.ast.expr(id).span()) == "s.c")
-        .expect("`s.c`");
-    let member = checked.types.member(access).expect("`s.c` names a member");
+    let access = |text: &str| {
+        checked
+            .ast
+            .expr_ids()
+            .find(|&id| checked.sources.snippet(checked.ast.expr(id).span()) == text)
+            .unwrap_or_else(|| panic!("{text:?} is not written"))
+    };
+    let member = checked
+        .types
+        .member(access("s.c"))
+        .expect("`s.c` names a member");
     assert_eq!(member.index, 2);
+    assert_eq!(
+        checked.types.member(access("s.a")).map(|m| m.index),
+        Some(0)
+    );
+    assert_eq!(checked.types.member(access("s.b")), None);
     assert!(matches!(
         checked.ast.ty(member.definition),
         Type::Struct { members: Some(members), .. } if members.len() == 3
