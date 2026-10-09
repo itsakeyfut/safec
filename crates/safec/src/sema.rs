@@ -653,8 +653,9 @@ impl Resolver<'_> {
     /// and C17 6.7 p3 allows one declaration of such a name in a name space,
     /// which each struct's members are (6.2.3). A member of function type, or
     /// of a type not complete where it is written, breaks 6.7.2.1 p3, except
-    /// the last when it is an array of unknown length and an earlier member
-    /// has a name, which p18 makes a flexible array member.
+    /// the last when it is an array of unknown length whose element is
+    /// complete and an earlier member has a name, which p18 makes a flexible
+    /// array member: its element is held to 6.7.6.2 p1 like any array's.
     fn check_members(&mut self, members: &[Declaration], diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let mut names: HashMap<&str, Span> = HashMap::new();
@@ -677,7 +678,8 @@ impl Resolver<'_> {
             }
 
             let flexible = index + 1 == members.len()
-                && matches!(ast.ty(member.ty), Type::Array { length: None, .. })
+                && matches!(ast.ty(member.ty), Type::Array { length: None, element, .. }
+                    if self.resolution.complete(ast, *element))
                 && members[..index]
                     .iter()
                     .any(|earlier| earlier.name.is_some());
@@ -2323,21 +2325,28 @@ mod tests {
 
     /// A pointer to the struct being defined is complete, and so is a
     /// flexible array member after a named one (C17 6.7.2.1 p18), while an
-    /// array of unknown length that is the only member is not one.
+    /// array of unknown length that is the only member, one that is not
+    /// last, and one whose element is incomplete are not one.
     ///
     /// Mutation: drop the flexible-array exception in
     /// `Resolver::check_members`; `F`'s `a` is reported. Mutation: drop its
-    /// condition that an earlier member is named; `G`'s `a` is not. Either
-    /// fails this.
+    /// condition that an earlier member is named; `G`'s `a` is not.
+    /// Mutation: drop its condition that the member is last; `M`'s is not.
+    /// Mutation: drop its condition that the element is complete; `X`'s is
+    /// not. Each fails this.
     #[test]
     fn a_flexible_array_member_needs_a_named_member_before_it() {
         let resolved = resolved(
-            "struct L {\n    struct L *next;\n};\nstruct F {\n    int n;\n    int a[];\n};\nstruct G {\n    int a[];\n};\n",
+            "struct L {\n    struct L *next;\n};\nstruct F {\n    int n;\n    int a[];\n};\nstruct G {\n    int a[];\n};\nstruct M {\n    int n;\n    int b[];\n    int m;\n};\nstruct E;\nstruct X {\n    int n;\n    struct E c[];\n};\n",
         );
 
         assert_eq!(
             resolved.messages(),
-            ["member `a` has incomplete type `int[]`"]
+            [
+                "member `a` has incomplete type `int[]`",
+                "member `b` has incomplete type `int[]`",
+                "member `c` has incomplete type `struct E[]`",
+            ]
         );
         assert_eq!(
             resolved.diagnostics.diagnostics()[0]
