@@ -771,7 +771,9 @@ impl Resolver<'_> {
                 }
                 // A member's array lengths are expressions too, walked once
                 // per definition, for the reason `walked` gives. Its name is
-                // not looked up: what it means is #423's. The tag is, and is
+                // not looked up here: the type checker looks a member up in
+                // the struct an access's base is (`Types::member`). The tag
+                // is, and is
                 // bound before its members are walked, because C17 6.2.1 p7
                 // starts a tag's scope just after it appears: `struct L {
                 // struct L *next; }` is one type.

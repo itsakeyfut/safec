@@ -123,10 +123,10 @@ pub enum Type {
     /// A structure, C17 6.7.2.1: `struct S`, `struct S { ... }` or
     /// `struct { ... }`.
     ///
-    /// **Read, and not yet given a meaning.** Which tag one names, and so
-    /// whether two occurrences are one type, is the resolver's
-    /// (`Resolution::tag`); the type checker types an object of one, and
-    /// where a member lies is #423's. The lowering refuses a struct wherever
+    /// **Typed, and not yet lowered.** Which tag one names, and so whether
+    /// two occurrences are one type, is the resolver's (`Resolution::tag`);
+    /// the type checker types an object of one and the member an access
+    /// names (`Types::member`). The lowering refuses a struct wherever
     /// it is asked to lower one, under `SC0304`, since the IR holds none, so
     /// no stage after it has to answer for one: a file-scope object nothing
     /// uses is dropped as every one is. Each occurrence is its own `TypeId`,
@@ -502,9 +502,9 @@ pub enum Expr {
     },
     /// `s.m` or `p->m`. C17 6.5.2.3.
     ///
-    /// The member is a span and is resolved by nothing yet: which member of
-    /// which struct it names is #423's, and the type checker refuses every
-    /// access of the right shape until then.
+    /// The member is a span, which the type checker resolves to a member of
+    /// the struct the base's tag names (`Types::member`), since only it knows
+    /// the base's type.
     Member {
         /// The struct, or for `->` the pointer to it.
         base: ExprId,
