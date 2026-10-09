@@ -174,7 +174,7 @@ fn dump_declarators(
     if declarators.is_empty() {
         // `dump_node` has written a prefix and nothing below would end the
         // line. Both variants say in their doc comments that a list is never
-        // empty, and #125 is the change that would make one: this is the line
+        // empty, and #34 is the change that would make one: this is the line
         // it has to find.
         out.push('\n');
         return;

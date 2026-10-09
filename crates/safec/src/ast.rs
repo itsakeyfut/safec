@@ -550,8 +550,9 @@ pub enum Stmt {
         /// and accepts it silently only as an extension. What is valid and
         /// empty here is `struct S { int x; };`, which declares a tag, and
         /// this parser reads no tags yet. Either way nothing downstream has to
-        /// answer for an empty list, and #125 is the change that would alter
-        /// that.
+        /// answer for an empty list: the parser refuses `int;` under
+        /// `SC0206`, and #34, which brings the first tag, is the change that
+        /// would alter that.
         declarators: Vec<InitDeclarator>,
         /// The specifiers through the `;`.
         span: Span,

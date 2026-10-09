@@ -1,0 +1,8 @@
+error[SC0206]: this declaration declares nothing
+   ╭─[ a_for_that_declares_nothing.c:2:10 ]
+   │
+ 2 │     for (int; 0;) {
+   │          ─┬─  
+   │           ╰─── no name and no tag
+───╯
+  = note: C17 6.7 p2

@@ -2782,6 +2782,21 @@ cases! {
         // declarator under `SC0309` as well, and both are reported; dropping
         // the file-scope walk's arrays loses its `SC0310`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
+        // C17 6.7 p2: a declaration has to declare something, and specifiers
+        // followed by their `;` declare nothing, at file scope, in a block and
+        // as a `for`'s first clause alike, since all three are read by
+        // `Parser::declared`. One case each, because only the first syntax
+        // error in an input is reported. Mutation: drop the `;` check in
+        // `declared`; each is `SC0201` "expected a name" again. Mutation: ask
+        // it only at file scope; the block and `for` cases move.
+        a_declaration_that_declares_nothing_at_file_scope: ["--emit", "ast"],
+        a_declaration_that_declares_nothing_in_a_block: ["--emit", "ast"],
+        a_for_that_declares_nothing: ["--emit", "ast"],
+        // `int *;` has a declarator, with no name, which is a syntax error and
+        // not 6.7 p2's; `clang -pedantic-errors` calls it "expected identifier
+        // or '('". Mutation: report `SC0206` for any declarator with no name;
+        // this moves.
+        a_declarator_with_no_name_is_still_a_syntax_error: ["--emit", "ast"],
         // C17 6.8.5 p1's second form: a `for` whose first clause is a
         // declaration, of one declarator and of two, with the name read in
         // the condition, the step and the body. Mutation: read a declaration

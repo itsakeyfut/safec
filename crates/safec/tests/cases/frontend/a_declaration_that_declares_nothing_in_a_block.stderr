@@ -1,0 +1,8 @@
+error[SC0206]: this declaration declares nothing
+   ╭─[ a_declaration_that_declares_nothing_in_a_block.c:2:5 ]
+   │
+ 2 │     void;
+   │     ──┬─  
+   │       ╰─── no name and no tag
+───╯
+  = note: C17 6.7 p2
