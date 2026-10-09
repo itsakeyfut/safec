@@ -2794,6 +2794,14 @@ cases! {
         // undeclared after it. Mutation: declare it in the block around the
         // `for`, by not pushing a scope; the `SC0301` goes.
         a_name_a_for_declares_is_out_of_scope_after_it: ["--emit", "ast"],
+        // A `for`'s declaration is the statement a block would hold, so every
+        // constraint on one reaches it: 6.7.6.2 p1 (`SC0309`), 6.7.9 p3
+        // (`SC0310`) and p11 (`SC0302`); and 6.8.5 p3, the `for`'s own, refuses
+        // a function under `SC0311`, `g` as well as `h`. Mutation: stop asking
+        // a `for`'s declarators whether they declare a function; both
+        // `SC0311`s go. Mutation: stop receiving a `for` declaration's
+        // initializers; the `SC0302` goes.
+        a_for_declaration_is_held_to_a_blocks_constraints: ["--emit", "ast"],
         // A constant expression has the value C gives it (C17 6.6 p6): `-1`
         // and `1 - 1` are lengths 6.7.6.2 p1 refuses, and `1 - 1` and `-0`
         // are null pointer constants (6.3.2.3 p3) wherever a pointer meets
