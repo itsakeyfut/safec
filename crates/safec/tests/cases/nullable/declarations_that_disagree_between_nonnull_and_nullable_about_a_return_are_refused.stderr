@@ -8,4 +8,4 @@ error[SC0307]: the declarations of `f` disagree about nullability
    │       ────┬────  
    │           ╰────── one declaration says `_Nullable` here
 ───╯
-  = note: every declaration of a function has to agree about its nullability specifiers, because a caller is checked against the declaration it sees
+  = note: every declaration of a function has to agree about its nullability specifiers, because each of them is a promise to the function's callers

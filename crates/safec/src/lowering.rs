@@ -114,7 +114,7 @@ fn disagreement(
     .with_label(Label::secondary(other, other_label))
     .with_note(
         "every declaration of a function has to agree about its nullability \
-         specifiers, because a caller is checked against the declaration it sees",
+         specifiers, because each of them is a promise to the function's callers",
     )
 }
 
@@ -733,9 +733,8 @@ impl Lowering<'_> {
         if !self.functions.contains_key(self.sources.snippet(name)) {
             let Some((returns, lowered)) = self.standing_signature(name, (returns, lowered)) else {
                 // The standing declaration's signature cannot be read. It is
-                // a declaration of this file too, and is reported where it is
-                // walked, so nothing is said here.
-                self.refused.insert(self.sources.snippet(name).to_owned());
+                // a declaration of this file too, so it is reported, and its
+                // name refused, where it is walked; nothing is done here.
                 return;
             };
             let mut declared = Function::declaration_with_parameters(name, returns, lowered);
