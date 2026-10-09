@@ -143,7 +143,10 @@ const NOT_YET: Code = Code::new("SC0304");
 /// An object whose type is a struct that is not complete where C needs it
 /// to be: at the end of its declarator for one with no linkage (C17 6.7 p7),
 /// and by the end of the translation unit for one at file scope (6.9.2 p2,
-/// which makes it a definition as if initialized with zero).
+/// which makes it a definition as if initialized with zero). A parameter of
+/// a definition (6.7.6.3 p4), what a definition returns (6.9.1 p3) and what
+/// a call returns (6.5.2.2 p1) are held to the same, each where it is
+/// written.
 ///
 /// Its own code: the type is a correct one and the declarator a correct
 /// declarator, and what is wrong is that the struct is not complete there.
@@ -632,13 +635,37 @@ impl Checker<'_> {
     /// declarator (C17 6.7 p7), which is where its type was written; at file
     /// scope, by the end of the translation unit (6.9.2 p2), which is whether
     /// it is complete where written or its tag has a definition at all. A
-    /// struct with no tag has no name to define and is complete where written. A function is not an object, and a
-    /// parameter's is asked by neither.
+    /// struct with no tag has no name to define and is complete where
+    /// written.
+    ///
+    /// A definition's parameters (6.7.6.3 p4) and what it returns (6.9.1 p3)
+    /// are asked where they are written, which is before the body, so a
+    /// definition of the struct inside the body completes neither. A
+    /// parameter of a declaration that is not a definition may be incomplete,
+    /// and a call to one is asked in `call`.
     fn check_complete_objects(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         let mut objects: Vec<(&Declaration, bool)> = Vec::new();
         for item in ast.items() {
-            if let Item::Declaration { declarators, .. } = item {
-                objects.extend(declarators.iter().map(|d| (&d.declaration, true)));
+            match item {
+                Item::Declaration { declarators, .. } => {
+                    objects.extend(declarators.iter().map(|d| (&d.declaration, true)));
+                }
+                Item::Function(function) => {
+                    let Type::Function {
+                        returns,
+                        parameters,
+                    } = ast.ty(function.ty)
+                    else {
+                        continue;
+                    };
+                    if let Parameters::Prototype(parameters) = parameters {
+                        // `false`, since a parameter has no linkage and its
+                        // type is the one written in the declarator.
+                        objects.extend(parameters.iter().map(|d| (d, false)));
+                    }
+                    self.report_incomplete_return(ast, *returns, function.name, diagnostics);
+                }
+                Item::Error { .. } => {}
             }
         }
         for id in ast.stmt_ids() {
@@ -673,10 +700,36 @@ impl Checker<'_> {
                 .with_note(if at_file_scope {
                     "an object at file scope has a type completed by the end of the translation unit (C17 6.9.2 p2)"
                 } else {
-                    "an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7)"
+                    "an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)"
                 }),
             );
         }
+    }
+
+    /// Report `returns` under [`INCOMPLETE_OBJECT`] if it is a struct not
+    /// complete where it was written: what a definition returns (C17 6.9.1
+    /// p3). `at` is the definition's name.
+    fn report_incomplete_return(
+        &self,
+        ast: &Ast,
+        returns: TypeId,
+        at: Span,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        if !matches!(ast.ty(returns), Type::Struct { .. }) || self.resolution.complete(ast, returns)
+        {
+            return;
+        }
+        let spelled = self.spelled(ast, returns);
+        diagnostics.report(
+            Diagnostic::error(format!(
+                "`{}` returns incomplete type `{spelled}`",
+                self.sources.snippet(at)
+            ))
+            .with_code(INCOMPLETE_OBJECT)
+            .with_label(Label::primary(at, "defined here"))
+            .with_note("a function definition returns `void` or a complete type (C17 6.9.1 p3)"),
+        );
     }
 
     /// Whether `ty` is a variable length array type: an array, any of whose
@@ -2137,6 +2190,20 @@ impl Checker<'_> {
             return None;
         };
         let returns = *returns;
+        // 6.5.2.2 p1 once more: what a call returns is complete where the
+        // call is. Reported, and the call still typed, since its type is the
+        // one declared and what follows is asked of that.
+        if matches!(ast.ty(returns), Type::Struct { .. }) && !self.complete_here(ast, returns) {
+            let spelled = self.spelled(ast, returns);
+            diagnostics.report(
+                Diagnostic::error(format!("this call returns incomplete type `{spelled}`"))
+                    .with_code(INCOMPLETE_OBJECT)
+                    .with_label(Label::primary(ast.expr(call).span(), "this call"))
+                    .with_note(
+                        "a function called returns `void` or a complete type (C17 6.5.2.2 p1)",
+                    ),
+            );
+        }
 
         let Parameters::Prototype(parameters) = parameters else {
             return Some(returns);

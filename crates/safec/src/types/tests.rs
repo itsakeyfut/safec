@@ -1724,18 +1724,21 @@ fn a_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
 }
 
 /// An object whose struct is not complete where C needs it is reported: in
-/// a block at the end of its declarator (C17 6.7 p7), at file scope by the
-/// end of the translation unit (6.9.2 p2). One completed later at file
-/// scope, and one with no tag, are not.
+/// a block at the end of its declarator (C17 6.7 p7), although `S` is
+/// defined below it, and at file scope by the end of the translation unit
+/// (6.9.2 p2). One completed later at file scope, and one with no tag, are
+/// not.
 ///
 /// Mutation: ask a file-scope object at its declarator as a block's is;
-/// `u` is reported. Mutation: ask only whether the tag is defined; the
-/// struct with no tag is reported. Mutation: drop the check; `s` and `t`
-/// go silent. Each fails this.
+/// `u` is reported. Mutation: ask a block's object by the end of the
+/// translation unit as a file-scope one is; `s` goes silent. Mutation: ask
+/// only whether the tag is defined; the struct with no tag is reported.
+/// Mutation: drop the check; `s` and `t` go silent. Mutation: change either
+/// note; its row fails. Each fails this.
 #[test]
 fn an_object_of_an_incomplete_struct_is_reported() {
     let checked = checked(
-        "struct S;\nvoid f(void) {\n    struct S s;\n}\nstruct T t;\nstruct U u;\nstruct U {\n    int a;\n};\nstruct {\n    int x;\n} v;\n",
+        "struct S;\nvoid f(void) {\n    struct S s;\n}\nstruct T t;\nstruct U u;\nstruct U {\n    int a;\n};\nstruct {\n    int x;\n} v;\nstruct S {\n    int x;\n};\n",
     );
 
     assert_eq!(
@@ -1745,6 +1748,42 @@ fn an_object_of_an_incomplete_struct_is_reported() {
             "`s` has incomplete type `struct S`",
         ]
     );
+    assert_eq!(checked.codes(), ["SC0315", "SC0315"]);
+    assert_eq!(
+        checked.notes(),
+        [
+            "an object at file scope has a type completed by the end of the translation unit (C17 6.9.2 p2)",
+            "an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)",
+        ]
+    );
+}
+
+/// What C needs complete of a function is held to it where it is written: a
+/// definition's parameter (C17 6.7.6.3 p4) and what it returns (6.9.1 p3),
+/// and what a call returns, where the call is (6.5.2.2 p1). A declaration
+/// that is not a definition may name an incomplete struct, and a call below
+/// the definition of `S` is complete.
+///
+/// Mutation: collect no parameter of a definition; `s` goes silent.
+/// Mutation: drop `report_incomplete_return`; `g` goes silent. Mutation:
+/// drop the check in `call`; `h()` in `k` goes silent. Mutation: ask the
+/// call with `Resolution::complete`, where `h`'s type was written; `h()` in
+/// `m` is reported too. Each fails this.
+#[test]
+fn a_function_is_held_to_what_c_needs_complete_of_it() {
+    let checked = checked(
+        "struct S;\nint f(struct S s) {\n    return 0;\n}\nstruct S g(void) {\n}\nstruct S h(void);\nint q(struct S s);\nvoid k(void) {\n    h();\n}\nstruct S {\n    int a;\n};\nvoid m(void) {\n    h();\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "this call returns incomplete type `struct S`",
+            "`g` returns incomplete type `struct S`",
+            "`s` has incomplete type `struct S`",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0315", "SC0315", "SC0315"]);
 }
 
 /// `.` takes a struct and `->` a pointer to one (C17 6.5.2.3 p1): the wrong
