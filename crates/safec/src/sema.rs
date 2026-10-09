@@ -1787,17 +1787,22 @@ mod tests {
     }
 
     /// Declarations of one name at file scope whose types are not compatible
-    /// are reported (C17 6.7 p4): two functions, two objects, and an object
-    /// and then a function's definition.
+    /// are reported (C17 6.7 p4): two functions, two objects, an object and
+    /// then a function's definition, a `void` return beside an `int` one, and
+    /// a `char` parameter beside `()`, which the default promotions part.
     ///
     /// Mutation: drop the comparison in `Resolver::declare`; nothing is
-    /// reported and this fails.
+    /// reported and this fails. Mutation: let `reaches_a_struct` answer true
+    /// of `void`; `h` is not compared. Mutation: record every standing
+    /// declaration as accepting `()`; `k` is not reported.
     #[test]
     fn declarations_of_one_name_with_incompatible_types_are_reported() {
         for (text, name) in [
             ("int f(void);\nchar f(void);\n", "f"),
             ("int x;\nchar x;\n", "x"),
             ("int g;\nint g(void) {\n    return 2;\n}\n", "g"),
+            ("void h(void);\nint h(void);\n", "h"),
+            ("int k(char c);\nint k();\n", "k"),
         ] {
             let resolved = resolved(text);
             assert_eq!(
@@ -1927,5 +1932,55 @@ mod tests {
         let resolved = resolved("int (*p)(int *a);\nint (*p)();\nint (*p)(char *a);\n");
 
         assert_eq!(resolved.messages(), ["conflicting types for `p`"]);
+    }
+
+    /// A declaration in a block that hides a file-scope one of another type
+    /// is not compared with it: they are two scopes and two entities.
+    ///
+    /// Mutation: find the earlier declaration in every visible scope in
+    /// `Resolver::declare`; the inner `x` is reported and this fails.
+    #[test]
+    fn a_declaration_hiding_one_of_another_type_is_not_compared_with_it() {
+        let resolved = resolved("int x;\nint main(void) {\n    char x;\n    return 0;\n}\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// A pair is not compared when either side reaches a struct, whichever
+    /// is first, and through an array or a return type as well as a pointer.
+    ///
+    /// Mutation: drop the test of the standing side; `p` is reported.
+    /// Mutation: drop the test of the new side; `q` is reported. Mutation:
+    /// let `reaches_a_struct` stop at an array; `a` is reported. Mutation:
+    /// let it stop at a function's return; `f` is reported.
+    #[test]
+    fn a_pair_is_not_compared_when_either_side_reaches_a_struct() {
+        let resolved = resolved(
+            "struct S;\nstruct S *p;\nint p;\nint q;\nstruct S *q;\nstruct S *a[2];\nint a[2];\nstruct S *f(void);\nint f(void);\n",
+        );
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+    }
+
+    /// A name with no linkage declared again in a block is reported against
+    /// the declaration just before it, which is not the standing one when an
+    /// earlier declaration had a prototype.
+    ///
+    /// Mutation: report it against `standing` rather than `latest` in
+    /// `Resolver::declare`; the label points at the first `g` and this fails.
+    #[test]
+    fn a_redeclaration_in_a_block_points_at_the_declaration_before_it() {
+        let resolved = resolved(
+            "int main(void) {\n    int g(int *a);\n    int g();\n    int g;\n    return 0;\n}\n",
+        );
+
+        assert_eq!(resolved.messages(), ["redefinition of `g`"]);
+        let previous: Vec<Span> = resolved.diagnostics.diagnostics()[0]
+            .labels()
+            .iter()
+            .filter(|label| !label.is_primary())
+            .map(|label| label.span())
+            .collect();
+        assert_eq!(previous, [resolved.occurrence("g", 1)]);
     }
 }
