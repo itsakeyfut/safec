@@ -1,0 +1,8 @@
+error[SC0206]: this member declares nothing
+   ╭─[ a_member_that_declares_only_a_tag_declares_nothing.c:1:12 ]
+   │
+ 1 │ struct S { struct T; int b; };
+   │            ───┬──  
+   │               ╰──── a tag, and no member's name
+───╯
+  = note: C17 6.7.2.1 p2

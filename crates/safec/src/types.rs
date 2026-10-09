@@ -526,9 +526,27 @@ impl Checker<'_> {
             };
             // `ForStart` promises a declaration statement, and the parser is
             // the one place that builds it.
-            let Stmt::Declaration { declarators, .. } = ast.stmt(*declaration) else {
+            let Stmt::Declaration {
+                declarators,
+                specified,
+                span,
+            } = ast.stmt(*declaration)
+            else {
                 unreachable!("a `for` begins with a statement that is not a declaration")
             };
+            // A tag and nothing else, `for (struct S; ...)`: the identifier it
+            // declares is a tag, which is not an object either.
+            if declarators.is_empty() {
+                diagnostics.report(
+                    Diagnostic::error(format!(
+                        "`{}` is a tag, and a `for` may declare only objects",
+                        self.spelled(ast, *specified)
+                    ))
+                    .with_code(FOR_DECLARATION)
+                    .with_label(Label::primary(*span, "this declares a tag"))
+                    .with_note("C17 6.8.5 p3"),
+                );
+            }
             for declarator in declarators {
                 let declaration = &declarator.declaration;
                 // Every variant named, so that a type added later is asked here.
@@ -901,8 +919,34 @@ impl Checker<'_> {
                 let ty = self.resolution.binding(self.resolution.resolved(id)?).ty;
                 (!holds_a_struct(ast, ty)).then_some(ty)
             }
-            Expr::Member { span, arrow, .. } => {
+            Expr::Member {
+                base, span, arrow, ..
+            } => {
                 let operator = if arrow { "->" } else { "." };
+                // A base with a type is not a struct, since a name that holds
+                // one has none: C17 6.5.2.3 p1, a constraint, asks for a
+                // struct, or for `->` a pointer to one. Only an untyped base
+                // may be a struct, and only that is this compiler's to decline.
+                if let Some(base_ty) = self.types[base.index()] {
+                    let spelled = self.spelled(ast, base_ty);
+                    let wanted = if arrow {
+                        "a pointer to a struct"
+                    } else {
+                        "a struct"
+                    };
+                    diagnostics.report(
+                        Diagnostic::error(format!(
+                            "`{operator}` needs {wanted}, and this is `{spelled}`"
+                        ))
+                        .with_code(OPERANDS)
+                        .with_label(Label::primary(
+                            ast.expr(base).span(),
+                            format!("this is `{spelled}`"),
+                        ))
+                        .with_note("C17 6.5.2.3 p1"),
+                    );
+                    return None;
+                }
                 diagnostics.report(
                     Diagnostic::error(format!("cannot check `{operator}` yet"))
                         .with_code(NOT_YET)

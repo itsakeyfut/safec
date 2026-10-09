@@ -1,7 +1,7 @@
 error[SC0302]: cannot initialize `int *` with `int`
-    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:10:19 ]
+    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:12:19 ]
     │
- 10 │     for (int *p = 1; 0;) {
+ 12 │     for (int *p = 1; 0;) {
     │               ┬   ┬  
     │               ╰────── this holds `int *`
     │                   │  
@@ -15,6 +15,14 @@ error[SC0309]: the length of an array is greater than zero
    │                ╰── this is 0
 ───╯
   = note: a constant length is greater than zero (C17 6.7.6.2 p1)
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:10:10 ]
+    │
+ 10 │     for (struct S; 0;) {
+    │          ────┬────  
+    │              ╰────── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
 error[SC0310]: `g` is a function, and only an object can be initialized
    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:4:14 ]
    │
@@ -48,4 +56,12 @@ error[SC0311]: `k` is a function, and a `for` may declare only objects
    │                     ┬  
    │                     ╰── declared as `int (void)`
 ───╯
+  = note: C17 6.8.5 p3
+error[SC0311]: `struct S` is a tag, and a `for` may declare only objects
+    ╭─[ a_for_declaration_is_held_to_a_blocks_constraints.c:10:10 ]
+    │
+ 10 │     for (struct S; 0;) {
+    │          ────┬────  
+    │              ╰────── this declares a tag
+────╯
   = note: C17 6.8.5 p3

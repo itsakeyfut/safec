@@ -2814,6 +2814,24 @@ cases! {
         // `Parser::deeper`. Mutation: read members without `deeper`; this is
         // a struct as deep as the source, which the parser does not refuse.
         a_struct_nested_past_the_limit_is_refused_rather_than_read: ["--emit", "ast"],
+        // Valid C that is not read yet, each told so with the paragraph that
+        // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
+        // bit-field, named or not (p9). Mutation: send a member with no
+        // declarator to the `int;` check again; the anonymous member is
+        // `SC0206`, a claim that valid C is invalid. Mutation: drop either
+        // `:` check; that bit-field is `expected` something instead.
+        a_struct_with_an_anonymous_member_is_not_read_yet: ["--emit", "ast"],
+        a_bit_field_is_not_read_yet: ["--emit", "ast"],
+        a_bit_field_with_no_name_is_not_read_yet: ["--emit", "ast"],
+        // A member list has nowhere to put a tag (6.7.2.1 p2), so `struct T;`
+        // in one declares nothing, which `clang -pedantic-errors` refuses
+        // too. Mutation: call it an anonymous member; this moves.
+        a_member_that_declares_only_a_tag_declares_nothing: ["--emit", "ast"],
+        // A base with a type is not a struct, since a name holding one has
+        // none, so `.` on an `int` and `->` on an `int *` break 6.5.2.3 p1
+        // and are type errors rather than structs not checked yet. Mutation:
+        // refuse every member access as `SC0304`; both move.
+        a_member_access_on_what_is_not_a_struct_is_a_type_error: ["--emit", "ast"],
         // C17 6.7 p2: a declaration has to declare something, and specifiers
         // followed by their `;` declare nothing, at file scope, in a block and
         // as a `for`'s first clause alike, since all three are read by
@@ -2853,7 +2871,10 @@ cases! {
         // a function under `SC0311`, `g` and `h` and `k`, the last declared
         // second. Mutation: stop asking a `for`'s declarators whether they
         // declare a function; the `SC0311`s go. Mutation: ask only the first
-        // declarator; `k`'s goes. Mutation: stop receiving a `for` declaration's
+        // declarator; `k`'s goes. `for (struct S; 0;)` declares a tag, which
+        // is not an object either, and is `SC0311` as well as the struct
+        // gate's. Mutation: ask only a declaration's declarators; its
+        // `SC0311` goes. Mutation: stop receiving a `for` declaration's
         // initializers; the `SC0302` goes.
         a_for_declaration_is_held_to_a_blocks_constraints: ["--emit", "ast"],
         // A `for` reads a declaration where a block would, and that includes

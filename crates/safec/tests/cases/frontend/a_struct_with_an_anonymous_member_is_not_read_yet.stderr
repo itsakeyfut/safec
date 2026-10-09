@@ -1,0 +1,8 @@
+error[SC0201]: an anonymous member is not read yet
+   ╭─[ a_struct_with_an_anonymous_member_is_not_read_yet.c:1:12 ]
+   │
+ 1 │ struct S { struct { int a; }; int b; };
+   │            ───┬──  
+   │               ╰──── a struct with no name of its own
+───╯
+  = note: C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet

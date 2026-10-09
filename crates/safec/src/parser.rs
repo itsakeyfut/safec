@@ -3,10 +3,11 @@
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
-//! `return`, an expression statement, `if`, `while` and both forms of `for`.
-//! What it does not read yet is `switch`, `do`, `goto`, a labelled statement,
-//! `break`, `continue`, structs, member access, casts, `sizeof`, the type
-//! qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
+//! `return`, an expression statement, `if`, `while` and both forms of `for`,
+//! and a struct with its members and member access (6.7.2.1, 6.5.2.3). What
+//! it does not read yet is `switch`, `do`, `goto`, a labelled statement,
+//! `break`, `continue`, `union`, a bit-field, an anonymous member, casts,
+//! `sizeof`, the type qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
@@ -105,8 +106,9 @@ pub(crate) const UNREAD_ANNOTATION: Code = Code::new("SC0205");
 /// [`EXPECTED`], because no missing token would make it right: the fix is to
 /// name something or delete the line. The parser's, for the reason
 /// [`MISPLACED_ANNOTATION`] is, since it is the stage that knows there was no
-/// declarator. A tag is the one thing that would make this valid, and there
-/// are none until #34, which lets one through here.
+/// declarator. A tag is the one thing that would make this valid, and
+/// [`Parser::declared`] lets a struct with one through. In a member list it is
+/// C17 6.7.2.1 p2's constraint instead, and the same code.
 const NOTHING_DECLARED: Code = Code::new("SC0206");
 
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
@@ -639,13 +641,20 @@ impl Parser<'_> {
         let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
         // C17 6.7 p2: a declaration may declare a tag and nothing else, and a
-        // struct with a tag is the one this compiler reads. A member list is
-        // not a place for one: what that would be is C11's anonymous member.
-        if self.check(TokenKind::Punct(Punct::Semicolon))
-            && declares != Declares::Member
-            && matches!(self.ast.ty(base), Type::Struct { tag: Some(_), .. })
-        {
-            return Some(Specified::Tag(base));
+        // struct with a tag is the one this compiler reads. In a member list
+        // any struct goes back to `members`, which tells an anonymous member
+        // from one that declares nothing.
+        if self.check(TokenKind::Punct(Punct::Semicolon)) {
+            if let Type::Struct { tag, .. } = self.ast.ty(base) {
+                if tag.is_some() || declares == Declares::Member {
+                    return Some(Specified::Tag(base));
+                }
+            }
+        }
+        // A bit-field with no name, `int : 3;`, before a name is asked for.
+        if declares == Declares::Member && self.check(TokenKind::Punct(Punct::Colon)) {
+            self.unread_bit_field(diagnostics);
+            return None;
         }
         // Before asking for a name, so that `int;` is told what it is rather
         // than that a name is missing. `int *;` has a declarator and goes on,
@@ -941,15 +950,13 @@ impl Parser<'_> {
                 return Some(members);
             }
 
-            let Specified::Named(declared) = self.declared(Declares::Member, diagnostics)? else {
-                // A struct member with no name of its own: C11's anonymous
-                // member, which this compiler does not read.
-                self.report(
-                    "expected a member's name",
-                    "a name is missing here",
-                    diagnostics,
-                );
-                return None;
+            let at = self.peek().span;
+            let declared = match self.declared(Declares::Member, diagnostics)? {
+                Specified::Named(declared) => declared,
+                Specified::Tag(base) => {
+                    self.member_with_no_name(at, base, diagnostics);
+                    return None;
+                }
             };
             let Declared {
                 start,
@@ -977,8 +984,55 @@ impl Parser<'_> {
                     nullability: returns,
                 });
             }
+            if self.check(TokenKind::Punct(Punct::Colon)) {
+                self.unread_bit_field(diagnostics);
+                return None;
+            }
             self.expect(TokenKind::Punct(Punct::Semicolon), "`;`", diagnostics)?;
         }
+    }
+
+    /// A member declaration of a struct type with no declarator.
+    ///
+    /// One with neither a tag nor a name is C17 6.7.2.1 p13's anonymous
+    /// member, which is valid and is not read yet. Any other declares nothing,
+    /// which 6.7.2.1 p2 forbids in a member list: `struct T;` names a tag that
+    /// a member list has nowhere to put.
+    ///
+    /// `at` is where the member declaration began, which is where both reports
+    /// point: the parser is standing on its `;` by now.
+    fn member_with_no_name(&mut self, at: Span, base: TypeId, diagnostics: &mut DiagnosticSink) {
+        let anonymous = matches!(
+            self.ast.ty(base),
+            Type::Struct {
+                tag: None,
+                members: Some(_),
+            }
+        );
+        if anonymous {
+            let built = Diagnostic::error("an anonymous member is not read yet")
+                .with_code(EXPECTED)
+                .with_label(Label::primary(at, "a struct with no name of its own"))
+                .with_note("C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet");
+            self.report_built(at, built, diagnostics);
+            return;
+        }
+        let built = Diagnostic::error("this member declares nothing")
+            .with_code(NOTHING_DECLARED)
+            .with_label(Label::primary(at, "a tag, and no member's name"))
+            .with_note("C17 6.7.2.1 p2");
+        self.report_built(at, built, diagnostics);
+    }
+
+    /// Refuse a bit-field, at its `:`: valid C, not read yet.
+    fn unread_bit_field(&mut self, diagnostics: &mut DiagnosticSink) {
+        self.report_noted(
+            EXPECTED,
+            "a bit-field is not read yet",
+            "a bit-field's width",
+            "C17 6.7.2.1 p9 makes it valid; this compiler does not read one yet",
+            diagnostics,
+        );
     }
 
     /// A declarator, and the derivations it applies to the base type.

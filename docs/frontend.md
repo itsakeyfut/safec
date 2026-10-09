@@ -88,19 +88,22 @@ None of the three is a decision anybody has taken to refuse forever. They are
 where the lexer stopped, and this section exists so that stopping there is
 visible rather than inferred from a diagnostic.
 
-One more is where the *parser* stopped, and belongs here for the same reason.
+Three more are where the *parser* stopped, and belong here for the same reason.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int x = {1};` | `error[SC0203]` at the `{` | accepts | accepts |
+| `struct B { int x : 3; };` | `error[SC0201]` at the `:` | accepts | accepts |
+| `struct S { struct { int a; }; };` | `error[SC0201]` at the inner `struct` | accepts | accepts |
 
-**It is C and is not implemented.** 6.7.9 p11 lets a scalar's initializer be a
+**Each is C and is not implemented.** C17 6.7.2.1 p9 makes a bit-field valid
+and p13 an anonymous member, and neither is read yet. 6.7.9 p11 lets a scalar's initializer be a
 single expression "optionally enclosed in braces", so it is valid with no
 designator and no nested list in it; unwrapping the braces is only correct
 where the declared type is scalar, and the parser does not know the type.
 
-It is not a gap the lexer left, which is why it is a table of its own: the
-first three rows are about what a token is, and this one is about what a
+None is a gap the lexer left, which is why they are a table of their own:
+the first three rows are about what a token is, and these are about what a
 sequence of them is allowed to be.
 
 And one the parser refuses that `clang` accepts with a warning.
@@ -109,6 +112,7 @@ And one the parser refuses that `clang` accepts with a warning.
 |---|---|---|---|
 | `int;` | `error[SC0206]` | warns | `error: declaration does not declare anything` |
 | `struct S {};` | `error[SC0201]` | accepts | `error: empty struct is a GNU extension` |
+| `struct { int x; };` | `error[SC0206]` | warns | `error: declaration does not declare anything` |
 
 **It is a constraint violation, and this compiler takes no constraint-violating
 extension.** C17 6.7 p2 requires a declaration to declare a declarator, a tag
