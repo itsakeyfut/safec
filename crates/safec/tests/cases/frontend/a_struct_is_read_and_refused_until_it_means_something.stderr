@@ -54,3 +54,19 @@ error[SC0304]: cannot check something of type `struct S` yet
    │                 ╰── declared here
 ───╯
   = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:12:17 ]
+    │
+ 12 │ int h(struct S *a, struct S *b) {
+    │                 ┬  
+    │                 ╰── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+    ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:12:30 ]
+    │
+ 12 │ int h(struct S *a, struct S *b) {
+    │                              ┬  
+    │                              ╰── declared here
+────╯
+  = note: structs are read, and what a tag and its members mean is #27's

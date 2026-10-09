@@ -2791,7 +2791,10 @@ cases! {
         // `specifiers` again; this is `SC0201` at the first `struct`.
         // Mutation: let a parameter's type past the gate, or skip a member
         // access; a report goes. Mutation: read `->` as `.`; the dump's
-        // `"->"` goes.
+        // `"->"` goes. `h` assigns one pointer to a struct to another, and
+        // only its parameters are reported: a name whose type holds a struct
+        // is given no type. Mutation: give it its type; `a = b` is also
+        // refused as `SC0302`, since nothing yet says two structs are one.
         a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
         // A struct with no tag declares nothing when nothing else is
         // declared (6.7 p2). Mutation: let any struct through without a

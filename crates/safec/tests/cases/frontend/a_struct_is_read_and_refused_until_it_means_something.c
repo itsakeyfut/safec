@@ -9,3 +9,7 @@ int g(void) {
     int k = 1;
     return k;
 }
+int h(struct S *a, struct S *b) {
+    a = b;
+    return 0;
+}

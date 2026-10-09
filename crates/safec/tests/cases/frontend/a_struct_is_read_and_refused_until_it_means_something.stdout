@@ -19,3 +19,13 @@ Function a_struct_is_read_and_refused_until_it_means_something.c:8:1 "g" "int (v
       Number a_struct_is_read_and_refused_until_it_means_something.c:9:13 "1"
     Return a_struct_is_read_and_refused_until_it_means_something.c:10:5
       Identifier a_struct_is_read_and_refused_until_it_means_something.c:10:12 "k"
+Function a_struct_is_read_and_refused_until_it_means_something.c:12:1 "h" "int (struct S *, struct S *)"
+  Parameter a_struct_is_read_and_refused_until_it_means_something.c:12:7 "a" "struct S *"
+  Parameter a_struct_is_read_and_refused_until_it_means_something.c:12:20 "b" "struct S *"
+  Compound a_struct_is_read_and_refused_until_it_means_something.c:12:33
+    Expression a_struct_is_read_and_refused_until_it_means_something.c:13:5
+      Assign a_struct_is_read_and_refused_until_it_means_something.c:13:5 "="
+        Identifier a_struct_is_read_and_refused_until_it_means_something.c:13:5 "a"
+        Identifier a_struct_is_read_and_refused_until_it_means_something.c:13:9 "b"
+    Return a_struct_is_read_and_refused_until_it_means_something.c:14:5
+      Number a_struct_is_read_and_refused_until_it_means_something.c:14:12 "0"
