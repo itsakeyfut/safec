@@ -406,8 +406,15 @@ impl Checker<'_> {
     /// not where it is. `assignable` answers nothing for a function, `void` or
     /// an array target, so without this `int f(void) = 1;` was accepted in
     /// silence and its initializer dropped. A variable length array is one
-    /// whose length has no value; at file scope the same declarator is also
-    /// 6.7.6.2 p2's, and both are reported, being two constraints.
+    /// with a length down its chain of elements that has no value, which
+    /// [`Checker::is_variable_length`] asks; at file scope the same declarator
+    /// is also 6.7.6.2 p2's, and both are reported, being two constraints.
+    ///
+    /// **A length whose evaluation overflows is answered as variable too.**
+    /// `int a[1 << 31] = 1;` in a block breaks 6.6 p4 rather than p3, and
+    /// nothing else refuses that length in a block, so calling it variable is
+    /// the wrong reason given for a right refusal, where leaving it out would
+    /// accept it in silence.
     fn check_initialized(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
         let mut declared: Vec<&InitDeclarator> = Vec::new();
         for item in ast.items() {
@@ -437,10 +444,7 @@ impl Checker<'_> {
                 Type::Void => format!(
                     "`{called}` has type `void`, which is incomplete, and only a complete object can be initialized"
                 ),
-                Type::Array {
-                    length: Some(length),
-                    ..
-                } if self.values[length.index()].is_none() => {
+                Type::Array { .. } if self.is_variable_length(ast, ty) => {
                     format!("`{called}` is a variable length array, which cannot be initialized")
                 }
                 Type::Array { .. } | Type::Int | Type::Char | Type::Pointer(_) => continue,
@@ -456,6 +460,24 @@ impl Checker<'_> {
                     .with_note("C17 6.7.9 p3"),
             );
         }
+    }
+
+    /// Whether `ty` is a variable length array type: an array, any of whose
+    /// lengths down the chain of elements has no value. C17 6.7.6.2 p4 makes
+    /// an array whose element is one a variable length array too, so
+    /// `int a[2][n]` is one although its own length is a constant.
+    fn is_variable_length(&self, ast: &Ast, ty: TypeId) -> bool {
+        let mut current = ty;
+        while let Type::Array {
+            element, length, ..
+        } = ast.ty(current)
+        {
+            if length.is_some_and(|length| self.values[length.index()].is_none()) {
+                return true;
+            }
+            current = *element;
+        }
+        false
     }
 
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,

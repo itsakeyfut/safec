@@ -2767,13 +2767,20 @@ cases! {
         // `SC0310`, and an array of unknown size or of a constant length is
         // not, which p3 allows. `u`, `s`, `bu` and `bs` are still accepted in
         // silence: 6.7.9 p16 asks for a brace-enclosed list there, which is a
-        // Semantics paragraph and not this check's. Mutation: stop asking whether the declared type is a
-        // function, or `void`; `f` and `bf`, or `v` and `bv`, go. Mutation:
-        // stop asking whether an array's length has a value; `va` goes, and
-        // refusing every array with a length makes `s` and `bs` report, and
-        // every array, `u` and `bu` too. Mutation:
-        // walk only the items, or only the statements; the block's reports,
-        // or the file's, go.
+        // Semantics paragraph and not this check's. Mutation: stop asking
+        // whether the declared type is a function, or `void`; `f` and `bf`,
+        // or `v` and `bv`, go. Mutation: stop asking whether an array's
+        // length has a value; `va` goes, and asking only the outermost one
+        // lets `vb` through, whose inner length makes it a variable length
+        // array too (6.7.6.2 p4); `vp` points at one and is not one, so it
+        // may be initialized. Refusing every array with a
+        // length makes `s` and `bs` report, and every array, `u` and `bu`
+        // too. Mutation: walk only the items, or only the statements; the
+        // block's reports, or the file's, go. Mutation: ask only a
+        // declaration's first declarator; `second` and `bsecond` go. `fv` is
+        // a variable length array at file scope, so 6.7.6.2 p2 refuses its
+        // declarator under `SC0309` as well, and both are reported; dropping
+        // the file-scope walk's arrays loses its `SC0310`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
         // A constant expression has the value C gives it (C17 6.6 p6): `-1`
         // and `1 - 1` are lengths 6.7.6.2 p1 refuses, and `1 - 1` and `-0`

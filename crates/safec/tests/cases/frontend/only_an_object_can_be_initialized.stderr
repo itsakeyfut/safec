@@ -1,3 +1,11 @@
+error[SC0309]: a declaration at file scope cannot have an array length that is not a constant
+   ╭─[ only_an_object_can_be_initialized.c:6:8 ]
+   │
+ 6 │ int fv[m] = 1;
+   │        ┬  
+   │        ╰── this is not a constant
+───╯
+  = note: a variably modified type is allowed only at block scope or in a prototype (C17 6.7.6.2 p2)
 error[SC0310]: `f` is a function, and only an object can be initialized
    ╭─[ only_an_object_can_be_initialized.c:1:5 ]
    │
@@ -18,33 +26,73 @@ error[SC0310]: `v` has type `void`, which is incomplete, and only a complete obj
    │          ╰── this initializer
 ───╯
   = note: C17 6.7.9 p3
-error[SC0310]: `bf` is a function, and only an object can be initialized
-   ╭─[ only_an_object_can_be_initialized.c:7:9 ]
+error[SC0310]: `fv` is a variable length array, which cannot be initialized
+   ╭─[ only_an_object_can_be_initialized.c:6:5 ]
    │
- 7 │     int bf(void) = 1;
-   │         ─┬         ┬  
-   │          ╰──────────── declared as `int (void)`
-   │                    │  
-   │                    ╰── this initializer
+ 6 │ int fv[m] = 1;
+   │     ─┬      ┬  
+   │      ╰───────── declared as `int[m]`
+   │             │  
+   │             ╰── this initializer
 ───╯
+  = note: C17 6.7.9 p3
+error[SC0310]: `second` is a function, and only an object can be initialized
+   ╭─[ only_an_object_can_be_initialized.c:7:12 ]
+   │
+ 7 │ int first, second(void) = 1;
+   │            ───┬──         ┬  
+   │               ╰────────────── declared as `int (void)`
+   │                           │  
+   │                           ╰── this initializer
+───╯
+  = note: C17 6.7.9 p3
+error[SC0310]: `bf` is a function, and only an object can be initialized
+    ╭─[ only_an_object_can_be_initialized.c:10:9 ]
+    │
+ 10 │     int bf(void) = 1;
+    │         ─┬         ┬  
+    │          ╰──────────── declared as `int (void)`
+    │                    │  
+    │                    ╰── this initializer
+────╯
   = note: C17 6.7.9 p3
 error[SC0310]: `bv` has type `void`, which is incomplete, and only a complete object can be initialized
-   ╭─[ only_an_object_can_be_initialized.c:8:10 ]
-   │
- 8 │     void bv = 1;
-   │          ─┬   ┬  
-   │           ╰────── declared as `void`
-   │               │  
-   │               ╰── this initializer
-───╯
+    ╭─[ only_an_object_can_be_initialized.c:11:10 ]
+    │
+ 11 │     void bv = 1;
+    │          ─┬   ┬  
+    │           ╰────── declared as `void`
+    │               │  
+    │               ╰── this initializer
+────╯
   = note: C17 6.7.9 p3
 error[SC0310]: `va` is a variable length array, which cannot be initialized
-   ╭─[ only_an_object_can_be_initialized.c:9:9 ]
-   │
- 9 │     int va[n] = 1;
-   │         ─┬      ┬  
-   │          ╰───────── declared as `int[n]`
-   │                 │  
-   │                 ╰── this initializer
-───╯
+    ╭─[ only_an_object_can_be_initialized.c:12:9 ]
+    │
+ 12 │     int va[n] = 1;
+    │         ─┬      ┬  
+    │          ╰───────── declared as `int[n]`
+    │                 │  
+    │                 ╰── this initializer
+────╯
+  = note: C17 6.7.9 p3
+error[SC0310]: `vb` is a variable length array, which cannot be initialized
+    ╭─[ only_an_object_can_be_initialized.c:13:9 ]
+    │
+ 13 │     int vb[2][n] = 1;
+    │         ─┬         ┬  
+    │          ╰──────────── declared as `int[2][n]`
+    │                    │  
+    │                    ╰── this initializer
+────╯
+  = note: C17 6.7.9 p3
+error[SC0310]: `bsecond` is a function, and only an object can be initialized
+    ╭─[ only_an_object_can_be_initialized.c:17:17 ]
+    │
+ 17 │     int bfirst, bsecond(void) = 1;
+    │                 ───┬───         ┬  
+    │                    ╰─────────────── declared as `int (void)`
+    │                                 │  
+    │                                 ╰── this initializer
+────╯
   = note: C17 6.7.9 p3
