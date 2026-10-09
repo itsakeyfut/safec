@@ -374,26 +374,56 @@ fn a_file_name_is_escaped_on_the_line_that_locates_a_diagnostic() {
     assert!(!rendered.contains('\u{202e}'), "{rendered:?}");
 }
 
-/// A line separator in a file's text is no control character, and `ariadne`
-/// breaks a line on it that the source map does not count, so a header named
-/// a line the code is not on: the `@` below is on line 2, and was reported
-/// on line 4. It is replaced before `ariadne` sees it, as a control
-/// character is, so the two count alike.
+/// A line or paragraph separator in a file's text is no control character,
+/// and `ariadne` breaks a line on it that the source map does not count, so
+/// a header named a line the code is not on: the `@` below is on line 2, and
+/// was reported on line 4. Each is replaced before `ariadne` sees it, as a
+/// control character is, so the two count alike.
 ///
-/// Mutation: let `echoed` pass U+2028; the header says line 4.
+/// Mutation: let `echoed` pass U+2028, or U+2029; the header says line 4,
+/// or 3.
 #[test]
 fn a_line_separator_in_the_text_does_not_move_the_line_a_header_names() {
+    for (name, comment, header) in [
+        ("line.c", "/* a\u{2028}b\u{2028}c */", "<line.c>:2:9"),
+        ("paragraph.c", "/* a\u{2029}b */", "<paragraph.c>:2:9"),
+    ] {
+        let mut sources = SourceMap::new();
+        let text = format!("{comment}\nint x = @;\n");
+        let file = sources.add_virtual(name, &text);
+        let at = format!("{comment}\nint x = ").len();
+        let diagnostic = Diagnostic::error("boom").with_label(Label::primary(
+            Span::new(file, at as u32, at as u32 + 1),
+            "here",
+        ));
+
+        let rendered = render(&sources, &diagnostic);
+        assert!(rendered.contains(header), "{rendered:?}");
+        assert!(!rendered.contains(['\u{2028}', '\u{2029}']), "{rendered:?}");
+    }
+}
+
+/// A character replaced in a quoted line becomes one character of its own
+/// size, so a header's column, which `ariadne` counts in characters of the
+/// echoed line, is the column `--emit tokens` names for the same byte: the
+/// `@` after a right-to-left override in a comment is at 1:15, and is not
+/// echoed with the override.
+///
+/// Mutation: replace each byte with a `?`, as before; the header says 1:17.
+/// Mutation: let `echoed` pass U+202E; it reaches the quoted line.
+#[test]
+fn a_replaced_character_does_not_move_the_column_a_header_names() {
     let mut sources = SourceMap::new();
-    let file = sources.add_virtual("sep.c", "/* a\u{2028}b\u{2028}c */\nint x = @;\n");
-    let at = "/* a\u{2028}b\u{2028}c */\nint x = ".len();
+    let file = sources.add_virtual("bidi.c", "int x = /*\u{202e}*/ @;\n");
+    let at = "int x = /*\u{202e}*/ ".len();
     let diagnostic = Diagnostic::error("boom").with_label(Label::primary(
         Span::new(file, at as u32, at as u32 + 1),
         "here",
     ));
 
     let rendered = render(&sources, &diagnostic);
-    assert!(rendered.contains("<sep.c>:2:9"), "{rendered:?}");
-    assert!(!rendered.contains('\u{2028}'), "{rendered:?}");
+    assert!(rendered.contains("<bidi.c>:1:15"), "{rendered:?}");
+    assert!(!rendered.contains('\u{202e}'), "{rendered:?}");
 }
 
 /// The other half of `content_never_reaches_the_terminal_as_an_instruction`,
@@ -460,10 +490,10 @@ fn a_carriage_return_still_separates_lines() {
 
     let rendered = render(&sources, &at(lone));
     assert!(rendered.contains("<lone.c>:2:"), "{rendered:?}");
-    assert!(!rendered.contains(REPLACEMENT), "{rendered:?}");
+    assert!(!rendered.contains(replacement('\r')), "{rendered:?}");
 
     let rendered = render(&sources, &at(crlf));
-    assert!(!rendered.contains(REPLACEMENT), "{rendered:?}");
+    assert!(!rendered.contains(replacement('\r')), "{rendered:?}");
 }
 
 /// A newline is laid out rather than acted on, and a message that runs to

@@ -575,26 +575,35 @@ mod tests {
     }
 
     /// The characters that are not controls but reorder or break the text
-    /// around them are escaped as a control is: one from each run of
-    /// bidirectional controls and both separators. A zero-width joiner and
-    /// an accented letter are printed as written.
+    /// around them are escaped as a control is: every bidirectional control,
+    /// each range walked whole, and both separators. The characters either
+    /// side of each range, a zero-width space and a zero-width joiner, and an
+    /// accented letter are printed as written.
     ///
-    /// Mutation: drop any one arm of `reorders_or_breaks`, or the whole of
-    /// it from `is_obeyed`; its row survives `shown`. Mutation: escape every
-    /// format character; the joiner row fails. Each fails this.
+    /// Mutation: drop any one arm of `reorders_or_breaks`, or narrow a range
+    /// to its ends, or drop the whole of it from `is_obeyed`; a character
+    /// survives `shown`. Mutation: widen a range by one, or escape every
+    /// format character; a text row fails. Each fails this.
     #[test]
     fn what_reorders_or_breaks_a_line_is_shown_rather_than_obeyed() {
-        for ch in [
-            '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202e}', '\u{2066}', '\u{2069}',
-            '\u{2028}', '\u{2029}',
-        ] {
+        let obeyed = ['\u{061c}', '\u{200e}', '\u{200f}', '\u{2028}', '\u{2029}']
+            .into_iter()
+            .chain('\u{202a}'..='\u{202e}')
+            .chain('\u{2066}'..='\u{2069}');
+        for ch in obeyed {
             assert!(is_obeyed(ch), "{ch:?} reaches a terminal unescaped");
             assert!(
                 !shown(&format!("a{ch}b")).contains(ch),
                 "{ch:?} survived `shown`"
             );
         }
-        for ch in ['\u{200d}', 'é'] {
+        // Beside each run: U+061B and U+061D, U+200D below the marks, U+2027
+        // below the separators, U+202F above the overrides, U+2065 and
+        // U+206A either side of the isolates.
+        for ch in [
+            '\u{061b}', '\u{061d}', '\u{200b}', '\u{200d}', '\u{2027}', '\u{202f}', '\u{2060}',
+            '\u{2065}', '\u{206a}', 'é',
+        ] {
             assert!(!is_obeyed(ch), "{ch:?} is escaped though it is text");
         }
     }
