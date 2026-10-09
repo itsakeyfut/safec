@@ -2889,7 +2889,8 @@ cases! {
         // C17 6.2.1 p4: a parameter list nested in a type is a prototype
         // scope of its own, so a name declared twice there is `SC0312` and an
         // undeclared length is `SC0301`, each with its caret. Mutation:
-        // declare no nested parameter; both go silent.
+        // declare no nested parameter; the redefinition goes silent.
+        // Mutation: skip the nested lengths; `m` goes silent.
         a_nested_parameter_list_is_held_to_its_own_scope: ["--emit", "ast"],
         // C17 6.9 p5: the second body of `f` is `SC0312` from the frontend,
         // and the prototypes before and after are not, so the IR is never

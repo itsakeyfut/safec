@@ -580,10 +580,10 @@ impl Resolver<'_> {
     /// them, so the names are resolved, and reported, in source order.
     ///
     /// A function type's parameters are walked in a function prototype scope
-    /// of their own (C17 6.2.1 p4), opened here and closed by a step below
-    /// them: the names declared first and the lengths walked after, for the
-    /// reason [`Resolver::parameters`] gives, and the return walked outside
-    /// the scope. So `void (*p)(int n, int a[n])` finds its `n`, a struct
+    /// of their own (C17 6.2.1 p4), opened once the return, written first, is
+    /// walked outside it, and closed by a step below them: the names declared
+    /// first and the lengths walked after, for the reason
+    /// [`Resolver::parameters`] gives. So `void (*p)(int n, int a[n])` finds its `n`, a struct
     /// written there is a tag of that scope, and `void (*p)(int a, int a)` is
     /// a redeclaration.
     fn walk_type(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
@@ -613,6 +613,10 @@ impl Resolver<'_> {
                     self.close_scope();
                     continue;
                 }
+                Step::Parameters(function) => {
+                    self.open_parameters(function, &mut pending, diagnostics);
+                    continue;
+                }
             };
             match ast.ty(ty) {
                 Type::Int | Type::Char | Type::Void => {}
@@ -627,30 +631,16 @@ impl Resolver<'_> {
                     }
                     pending.push(Step::Type(*element));
                 }
-                Type::Function {
-                    returns,
-                    parameters,
-                } => {
+                // The parameters below the return, so that the return, written
+                // first, is walked first: `struct S *(*p)(struct S *)` binds
+                // the parameter's `S` to the tag the return declared, as C17
+                // 6.2.1 p7 starts its scope there, and the names are reported
+                // in the order they are written.
+                Type::Function { returns, .. } => {
+                    if !(skip_root_parameters && ty == root) {
+                        pending.push(Step::Parameters(ty));
+                    }
                     pending.push(Step::Type(*returns));
-                    let Parameters::Prototype(parameters) = parameters else {
-                        continue;
-                    };
-                    if skip_root_parameters && ty == root {
-                        continue;
-                    }
-                    pending.push(Step::CloseScope);
-                    self.open_scope();
-                    for parameter in parameters {
-                        if let Some(name) = parameter.name {
-                            self.declare(name, parameter.ty, false, diagnostics);
-                        }
-                    }
-                    pending.extend(
-                        parameters
-                            .iter()
-                            .rev()
-                            .map(|parameter| Step::Type(parameter.written)),
-                    );
                 }
                 // A member's array lengths are expressions too, walked once
                 // per definition, for the reason `walked` gives. Its name is
@@ -678,6 +668,39 @@ impl Resolver<'_> {
                 }
             }
         }
+    }
+
+    /// Open the function prototype scope of the function type `function`,
+    /// declare its parameters' names in it, and queue their types and the
+    /// step that closes it, for [`Resolver::walk`]. Every name goes in before
+    /// any length is walked, for the reason [`Resolver::parameters`] gives.
+    fn open_parameters(
+        &mut self,
+        function: TypeId,
+        pending: &mut Vec<Step>,
+        diagnostics: &mut DiagnosticSink,
+    ) {
+        let ast = self.ast;
+        let Type::Function {
+            parameters: Parameters::Prototype(parameters),
+            ..
+        } = ast.ty(function)
+        else {
+            return;
+        };
+        self.open_scope();
+        pending.push(Step::CloseScope);
+        for parameter in parameters {
+            if let Some(name) = parameter.name {
+                self.declare(name, parameter.ty, false, diagnostics);
+            }
+        }
+        pending.extend(
+            parameters
+                .iter()
+                .rev()
+                .map(|parameter| Step::Type(parameter.written)),
+        );
     }
 
     /// The `}` of the struct definition at `definition`: check its members
@@ -1368,11 +1391,13 @@ fn unfit_member(sources: &SourceMap, at: Span, why: String) -> Diagnostic {
 }
 
 /// One step of [`Resolver::walk_type`]: a type to walk, the close of a
-/// struct definition whose members are all walked, or the close of a function
-/// prototype scope whose parameters are.
+/// struct definition whose members are all walked, the opening of a function
+/// type's prototype scope once its return is walked, or the close of that
+/// scope once its parameters are.
 enum Step {
     Type(TypeId),
     Close(TypeId),
+    Parameters(TypeId),
     CloseScope,
 }
 
@@ -2527,6 +2552,32 @@ mod tests {
         assert_eq!(
             resolved.declaration_of("k", 2),
             Some(resolved.occurrence("k", 0))
+        );
+    }
+
+    /// A nested function's return is walked before its parameters, as it is
+    /// written: a struct the return declares or defines is the one its
+    /// parameters name (C17 6.2.1 p7), a member of one defined in a
+    /// parameter is complete, and undeclared lengths are reported in source
+    /// order.
+    ///
+    /// Mutation: push the return above `Step::Parameters` in
+    /// `Resolver::walk`, so the parameters are walked first; the parameter's
+    /// `S` is a tag of its own, `r` is reported as incomplete, and `n` is
+    /// reported before `k`. Each fails this.
+    #[test]
+    fn a_nested_function_s_return_is_walked_before_its_parameters() {
+        let resolved = resolved(
+            "struct S *(*p)(struct S *);\nstruct R {\n    int x;\n} (*q)(struct Q {\n    struct R r;\n} *);\nstruct T {\n    int a[k];\n} (*t)(int b[n]);\n",
+        );
+
+        assert_eq!(resolved.tag_at("S", 0), resolved.tag_at("S", 1));
+        assert_eq!(
+            resolved.messages(),
+            [
+                "use of undeclared identifier `k`",
+                "use of undeclared identifier `n`",
+            ]
         );
     }
 }
