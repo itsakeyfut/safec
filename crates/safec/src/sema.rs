@@ -37,8 +37,15 @@ const UNDECLARED: Code = Code::new("SC0301");
 
 /// Something given a definition twice: a tag given its content twice in one
 /// scope, which C17 6.7.2.3 p1 forbids ("A specific type shall have its
-/// content defined at most once"), or a function given two bodies, which 6.9
-/// p5 forbids ("there shall be no more than one" external definition).
+/// content defined at most once"), or a function given two bodies.
+///
+/// The second is not a constraint for a function with external linkage. 6.9
+/// p5 is a semantics rule, exactly one external definition where the name is
+/// used and no more than one where it is not, so breaking it is undefined
+/// rather than a diagnostic C requires. It is refused all the same, as
+/// `clang` refuses it: a program with two bodies for one function has no
+/// meaning to analyse. 6.9 p3 is the constraint, for internal linkage, which
+/// this compiler does not read yet.
 ///
 /// One code for both, because it is one class of fault, and the note names
 /// the clause that differs. The wording follows `clang`'s `redefinition of
