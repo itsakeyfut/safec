@@ -1,0 +1,28 @@
+Function a_for_declaration_is_held_to_a_blocks_constraints.c:1:1 "f" "int (void)"
+  Compound a_for_declaration_is_held_to_a_blocks_constraints.c:1:13
+    For a_for_declaration_is_held_to_a_blocks_constraints.c:2:5 declaration condition
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:2:10 "a" "int[0]"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:2:20 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:2:24
+    For a_for_declaration_is_held_to_a_blocks_constraints.c:4:5 declaration condition
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:4:10 "g" "int (void)"
+        Number a_for_declaration_is_held_to_a_blocks_constraints.c:4:24 "1"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:4:27 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:4:31
+    For a_for_declaration_is_held_to_a_blocks_constraints.c:6:5 declaration condition
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:6:10 "h" "int (void)"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:6:23 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:6:27
+    For a_for_declaration_is_held_to_a_blocks_constraints.c:8:5 declaration condition
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:8:10 "i" "int"
+        Number a_for_declaration_is_held_to_a_blocks_constraints.c:8:18 "0"
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:8:10 "k" "int (void)"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:8:30 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:8:34
+    For a_for_declaration_is_held_to_a_blocks_constraints.c:10:5 declaration condition
+      Declaration a_for_declaration_is_held_to_a_blocks_constraints.c:10:10 "p" "int *"
+        Number a_for_declaration_is_held_to_a_blocks_constraints.c:10:19 "1"
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:10:22 "0"
+      Compound a_for_declaration_is_held_to_a_blocks_constraints.c:10:26
+    Return a_for_declaration_is_held_to_a_blocks_constraints.c:12:5
+      Number a_for_declaration_is_held_to_a_blocks_constraints.c:12:12 "0"

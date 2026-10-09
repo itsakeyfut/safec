@@ -27,7 +27,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Ast, BinOp as AstBinOp, Expr, ExprId, Item, Parameters, Stmt, StmtId, Type};
+use crate::ast::{
+    Ast, BinOp as AstBinOp, Expr, ExprId, ForStart, Item, Parameters, Stmt, StmtId, Type,
+};
 use crate::ast::{Nullability, Specifier, TypeId, UnOp as AstUnOp, spell_type};
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -176,6 +178,33 @@ fn decided(
     }
 }
 
+/// End the storage of the locals one scope declared, where it closes.
+///
+/// Reverse order of declaration, which is the order a C++ destructor would run
+/// in and costs nothing to get right while the list is being written. Only
+/// where the end is reachable: a scope left only by `return` has its storage
+/// ended by the `return`, which ends every scope it leaves, so nothing is
+/// left to end here.
+///
+/// `span` is the statement the scope belongs to, a compound or a `for`, and
+/// the marker is `Generated` at its last byte. Nobody wrote "end this
+/// storage": the `}` or the end of the loop is what it exists because of,
+/// which is what `Generated` means and what stops a diagnostic quoting a
+/// block of source back as if a user had asked for this. The lowering only
+/// ever sees a tree that parsed without a word said about it, so that byte
+/// is the statement's own.
+fn end_storage(builder: &mut Builder, declared: &[LocalId], span: Span) {
+    if !builder.reachable() {
+        return;
+    }
+    for &local in declared.iter().rev() {
+        builder.element(Element::StorageDead {
+            origin: Origin::Generated(Span::new(span.file(), span.end() - 1, span.end())),
+            local,
+        });
+    }
+}
+
 /// Build the IR of one translation unit.
 ///
 /// Every function that can be lowered is, whatever the ones beside it did: a
@@ -239,8 +268,9 @@ struct Lowering<'a> {
     /// it is where the name was declared, so it is one per declaration, and a
     /// use reaches it through the binding it resolved to.
     locals: HashMap<Span, LocalId>,
-    /// The compound statements that are open, innermost last, each holding the
-    /// locals it declared directly.
+    /// The scopes that are open, innermost last, each holding the locals it
+    /// declared directly: a compound statement's, and a `for`'s whose first
+    /// clause is a declaration (C17 6.8.5 p5).
     ///
     /// The function's body is the first, so a scope narrower than the function
     /// is one at index 1 or beyond. Only those get storage markers: a local
@@ -1205,28 +1235,7 @@ impl Lowering<'_> {
                 // than the body is open, so there is nothing to close for it
                 // and no need to ask whether this is that one.
                 let declared = self.scopes.pop().expect("the scope this arm pushed");
-                if builder.reachable() {
-                    // Reverse order of declaration, which is the order a C++
-                    // destructor would run in and costs nothing to get right
-                    // while the list is being written.
-                    for &local in declared.iter().rev() {
-                        builder.element(Element::StorageDead {
-                            // Nobody wrote "end this storage": the `}` is what
-                            // it exists because of, which is what `Generated`
-                            // means and what stops a diagnostic quoting a
-                            // block of source back as if a user had asked for
-                            // this. The last byte of a compound statement is
-                            // its `}`, and the lowering only ever sees a tree
-                            // that parsed without a word said about it.
-                            origin: Origin::Generated(Span::new(
-                                span.file(),
-                                span.end() - 1,
-                                span.end(),
-                            )),
-                            local,
-                        });
-                    }
-                }
+                end_storage(builder, &declared, span);
                 lowered?;
             }
             Stmt::Return { value, span } => {
@@ -1419,59 +1428,29 @@ impl Lowering<'_> {
                 builder.enter(after, Some(asked));
             }
             Stmt::For {
-                initialiser,
+                start,
                 condition,
                 step,
                 body,
-                ..
+                span,
             } => {
-                let (initialiser, condition, step, body) = (*initialiser, *condition, *step, *body);
-                if let Some(initialiser) = initialiser {
-                    self.effect(builder, initialiser, diagnostics)?;
-                    builder.sequenced(self.ast.expr(initialiser).span());
+                let (start, condition, step, body, span) =
+                    (*start, *condition, *step, *body, *span);
+                // C17 6.8.5 p5 scopes a declaration here to the whole loop, so
+                // its storage begins before the first turn and ends where the
+                // loop is left, once, rather than each turn as the body's
+                // does. Not `?`, for the reason `Stmt::Compound` gives: the
+                // scope is closed whether or not the loop could be lowered.
+                let declares = matches!(start, Some(ForStart::Declaration(_)));
+                if declares {
+                    self.scopes.push(Vec::new());
                 }
-
-                let header = builder.function.reserve_block();
-                builder.end(Terminator::Goto(header));
-                builder.switch(header);
-
-                let inside = builder.function.reserve_block();
-                let after = builder.function.reserve_block();
-                // Read before the match so that both blocks below can ask for
-                // it: an absent condition is an absent sequence point, which
-                // is what `Builder::enter` answers `None` for.
-                let asked = condition.map(|condition| self.ast.expr(condition).span());
-                match condition {
-                    Some(condition) => {
-                        let decides = self.decides(condition);
-                        let constant = self.constant_expression(condition);
-                        let condition = self.value(builder, condition, diagnostics)?;
-                        builder.end(decided(
-                            condition,
-                            constant,
-                            inside,
-                            after,
-                            Origin::Written(decides),
-                        ));
-                    }
-                    // 6.8.5.3 p2: an absent condition is replaced by a non-zero
-                    // constant, so the loop has no exit edge of its own.
-                    None => builder.end(Terminator::Goto(inside)),
+                let lowered = self.for_loop(builder, start, condition, step, body, diagnostics);
+                if declares {
+                    let declared = self.scopes.pop().expect("the scope this arm pushed");
+                    end_storage(builder, &declared, span);
                 }
-
-                builder.enter(inside, asked);
-                self.stmt(builder, body, diagnostics)?;
-                if builder.reachable() {
-                    if let Some(step) = step {
-                        self.effect(builder, step, diagnostics)?;
-                        builder.sequenced(self.ast.expr(step).span());
-                    }
-                }
-                if builder.reachable() {
-                    builder.end(Terminator::Goto(header));
-                }
-
-                builder.enter(after, asked);
+                lowered?;
             }
             // The driver hands this stage a tree nothing reported about, so a
             // node the parser gave up on cannot be here. Reporting it would be
@@ -1480,6 +1459,76 @@ impl Lowering<'_> {
             Stmt::Error { .. } => {}
         }
 
+        Some(())
+    }
+
+    /// The blocks of a `for` from its first clause to where it is left, with
+    /// `builder` positioned in that last block. C17 6.8.5.3.
+    ///
+    /// A declaration start is lowered as the statement it is, inside the scope
+    /// [`Lowering::stmt`] opened for it, which is what gives its locals their
+    /// `StorageLive`.
+    fn for_loop(
+        &mut self,
+        builder: &mut Builder,
+        start: Option<ForStart>,
+        condition: Option<ExprId>,
+        step: Option<ExprId>,
+        body: StmtId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        match start {
+            Some(ForStart::Expression(initialiser)) => {
+                self.effect(builder, initialiser, diagnostics)?;
+                builder.sequenced(self.ast.expr(initialiser).span());
+            }
+            Some(ForStart::Declaration(declaration)) => {
+                self.stmt(builder, declaration, diagnostics)?;
+            }
+            None => {}
+        }
+
+        let header = builder.function.reserve_block();
+        builder.end(Terminator::Goto(header));
+        builder.switch(header);
+
+        let inside = builder.function.reserve_block();
+        let after = builder.function.reserve_block();
+        // Read before the match so that both blocks below can ask for
+        // it: an absent condition is an absent sequence point, which
+        // is what `Builder::enter` answers `None` for.
+        let asked = condition.map(|condition| self.ast.expr(condition).span());
+        match condition {
+            Some(condition) => {
+                let decides = self.decides(condition);
+                let constant = self.constant_expression(condition);
+                let condition = self.value(builder, condition, diagnostics)?;
+                builder.end(decided(
+                    condition,
+                    constant,
+                    inside,
+                    after,
+                    Origin::Written(decides),
+                ));
+            }
+            // 6.8.5.3 p2: an absent condition is replaced by a non-zero
+            // constant, so the loop has no exit edge of its own.
+            None => builder.end(Terminator::Goto(inside)),
+        }
+
+        builder.enter(inside, asked);
+        self.stmt(builder, body, diagnostics)?;
+        if builder.reachable() {
+            if let Some(step) = step {
+                self.effect(builder, step, diagnostics)?;
+                builder.sequenced(self.ast.expr(step).span());
+            }
+        }
+        if builder.reachable() {
+            builder.end(Terminator::Goto(header));
+        }
+
+        builder.enter(after, asked);
         Some(())
     }
 

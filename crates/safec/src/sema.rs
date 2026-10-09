@@ -20,8 +20,8 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    Ast, Attribute, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId,
-    Type, TypeId,
+    Ast, Attribute, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt,
+    StmtId, Type, TypeId,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::parser::{UNREAD_ANNOTATION, UNREAD_ATTRIBUTE_LABEL};
@@ -380,16 +380,35 @@ impl Resolver<'_> {
                 self.stmt(*body, diagnostics);
             }
             Stmt::For {
-                initialiser,
+                start,
                 condition,
                 step,
                 body,
                 ..
             } => {
-                for clause in [*initialiser, *condition, *step].into_iter().flatten() {
+                // C17 6.8.5 p5: a declaration here is in scope for the rest of
+                // the `for`, the other two clauses and the body included, and
+                // nowhere after it. So the scope opens before the declaration
+                // and closes after the body, and an expression start needs none.
+                let declares = match *start {
+                    Some(ForStart::Declaration(declaration)) => {
+                        self.scopes.push(Vec::new());
+                        self.stmt(declaration, diagnostics);
+                        true
+                    }
+                    Some(ForStart::Expression(initialiser)) => {
+                        self.expr(initialiser, diagnostics);
+                        false
+                    }
+                    None => false,
+                };
+                for clause in [*condition, *step].into_iter().flatten() {
                     self.expr(clause, diagnostics);
                 }
                 self.stmt(*body, diagnostics);
+                if declares {
+                    self.scopes.pop();
+                }
             }
             Stmt::Error { .. } => {}
         }

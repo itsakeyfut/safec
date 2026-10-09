@@ -447,7 +447,7 @@ fn every_node_kind_is_named_the_way_the_artifact_spells_it() {
     );
     assert_eq!(
         Stmt::For {
-            initialiser: None,
+            start: None,
             condition: None,
             step: None,
             body: t,

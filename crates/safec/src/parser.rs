@@ -3,15 +3,14 @@
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
-//! `return`, an expression statement, `if`, `while` and the `for` whose clauses
-//! are expressions. What it does not read yet is `switch`, `do`, `goto`, a
-//! labelled statement, `break`, `continue`, a declaration in a `for`
-//! initialiser, structs, member access, casts, `sizeof`, the type qualifiers,
-//! the storage classes, `typedef`, a variadic function's ellipsis, `[static N]`
-//! and `[*]`, and the two primary expressions the lexer already hands it: a
-//! character constant and a string literal. Each arrives in a sibling of the
-//! issues that built this, and each adds to [`crate::ast`] rather than
-//! reshaping it.
+//! `return`, an expression statement, `if`, `while` and both forms of `for`.
+//! What it does not read yet is `switch`, `do`, `goto`, a labelled statement,
+//! `break`, `continue`, structs, member access, casts, `sizeof`, the type
+//! qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
+//! `[static N]` and `[*]`, and the two primary expressions the lexer already
+//! hands it: a character constant and a string literal. Each arrives in a
+//! sibling of the issues that built this, and each adds to [`crate::ast`]
+//! rather than reshaping it.
 //!
 //! It is handed tokens and not the source. ADR-0006 reserved a trigger, that
 //! the parser asking for a `&SourceMap` is the moment an interner is worth
@@ -22,8 +21,8 @@
 //! [`docs/frontend.md`]: https://github.com/itsakeyfut/safec/blob/main/docs/frontend.md
 
 use crate::ast::{
-    Ast, Attribute, BinOp, Declaration, Expr, ExprId, Function, InitDeclarator, Item, Nullability,
-    Parameters, Specifier, Stmt, StmtId, Type, TypeId, UnOp,
+    Ast, Attribute, BinOp, Declaration, Expr, ExprId, ForStart, Function, InitDeclarator, Item,
+    Nullability, Parameters, Specifier, Stmt, StmtId, Type, TypeId, UnOp,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
@@ -1450,16 +1449,14 @@ impl Parser<'_> {
         )
     }
 
-    /// `for ( expression_opt ; expression_opt ; expression_opt ) statement`.
-    /// C17 6.8.5 p1.
+    /// `for ( expression_opt ; expression_opt ; expression_opt ) statement` and
+    /// `for ( declaration expression_opt ; expression_opt ) statement`, C17
+    /// 6.8.5 p1.
     ///
-    /// The other form the same paragraph gives, `for ( declaration
-    /// expression_opt ; expression_opt )`, is still refused, at the `int`. It
-    /// used to be blocked on there being no initializer to read, which is no
-    /// longer true: what is left is that `Stmt::For`'s first clause holds an
-    /// expression, and that 6.8.5 p5 gives a declaration written here a scope
-    /// of its own. `docs/frontend.md` carries the row, so the refusal is
-    /// visible to a reader who is not in this file.
+    /// The second form's declaration ends at its own `;`, so it is read as the
+    /// declaration a block would hold, by [`Parser::declaration_statement`],
+    /// and the first clause is that statement. See [`ForStart`] for why it is
+    /// a statement.
     fn for_statement(&mut self, start: Span, diagnostics: &mut DiagnosticSink) -> StmtId {
         self.advance();
 
@@ -1472,8 +1469,25 @@ impl Parser<'_> {
             return failed(self);
         }
 
-        let Some(initialiser) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics) else {
-            return failed(self);
+        // The same test a block makes, so a `for` reads a declaration where a
+        // block would and nowhere else.
+        let first = if specifier(self.peek().kind).is_some()
+            || self.check(TokenKind::Annotation(Annotation::Attribute))
+        {
+            let declaration = self.declaration_statement(diagnostics);
+            // Not observable today, since a tree with a syntax error goes no
+            // further, but it keeps `ForStart::Declaration` pointing only at a
+            // declaration, which `types.rs` asserts.
+            if matches!(self.ast.stmt(declaration), Stmt::Error { .. }) {
+                return failed(self);
+            }
+            Some(ForStart::Declaration(declaration))
+        } else {
+            let Some(initialiser) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics)
+            else {
+                return failed(self);
+            };
+            initialiser.map(ForStart::Expression)
         };
         let Some(condition) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics) else {
             return failed(self);
@@ -1488,7 +1502,7 @@ impl Parser<'_> {
                 let body = parser.statement(diagnostics);
                 let span = start.to(parser.previous().span);
                 parser.ast.push_stmt(Stmt::For {
-                    initialiser,
+                    start: first,
                     condition,
                     step,
                     body,

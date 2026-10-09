@@ -2782,6 +2782,35 @@ cases! {
         // declarator under `SC0309` as well, and both are reported; dropping
         // the file-scope walk's arrays loses its `SC0310`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
+        // C17 6.8.5 p1's second form: a `for` whose first clause is a
+        // declaration, of one declarator and of two, with the name read in
+        // the condition, the step and the body. Mutation: read a declaration
+        // start as an expression clause again; both functions are `SC0201`.
+        // Mutation: have `Parser::init_declarator_list` return after one
+        // declarator, which a block shares; `two` is refused at the `,`. Mutation: close the scope before the body; `i` is undeclared
+        // there.
+        a_for_may_begin_with_a_declaration: ["--emit", "ast"],
+        // 6.8.5 p5 scopes a `for`'s declaration to the loop, so `i` is
+        // undeclared after it. Mutation: declare it in the block around the
+        // `for`, by neither pushing nor popping a scope for it, or by pushing
+        // it only after the declaration is resolved; the `SC0301` goes.
+        // Removing only the push is not that: the pop then closes the block's
+        // scope, and other cases fail instead.
+        a_name_a_for_declares_is_out_of_scope_after_it: ["--emit", "ast"],
+        // A `for`'s declaration is the statement a block would hold, so every
+        // constraint on one reaches it: 6.7.6.2 p1 (`SC0309`), 6.7.9 p3
+        // (`SC0310`) and p11 (`SC0302`); and 6.8.5 p3, the `for`'s own, refuses
+        // a function under `SC0311`, `g` and `h` and `k`, the last declared
+        // second. Mutation: stop asking a `for`'s declarators whether they
+        // declare a function; the `SC0311`s go. Mutation: ask only the first
+        // declarator; `k`'s goes. Mutation: stop receiving a `for` declaration's
+        // initializers; the `SC0302` goes.
+        a_for_declaration_is_held_to_a_blocks_constraints: ["--emit", "ast"],
+        // A `for` reads a declaration where a block would, and that includes
+        // one an `__attribute__` begins, which is then refused as a block's is.
+        // Mutation: drop the attribute half of the test in `for_statement`;
+        // this becomes `SC0201` at the attribute.
+        a_for_declaration_refuses_an_attribute_as_a_block_does: ["--emit", "ast"],
         // A constant expression has the value C gives it (C17 6.6 p6): `-1`
         // and `1 - 1` are lengths 6.7.6.2 p1 refuses, and `1 - 1` and `-0`
         // are null pointer constants (6.3.2.3 p3) wherever a pointer meets
@@ -3183,6 +3212,23 @@ cases! {
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `i` and `j`, declared by the `for`, begin their storage once before
+        // the first turn and end it once, in reverse, in the block the loop is
+        // left to, and `t`, declared in the body, begins and ends it each turn
+        // (ADR-0012). `g`'s loop has no condition and so no edge out: `x`'s
+        // storage ends at the `return`, and again in the block after the
+        // loop, which is built and which nothing reaches, so no check walks
+        // it.
+        // Mutation: do not end the `for`'s scope's storage; `i`'s
+        // `StorageDead` goes.
+        a_for_declaration_lives_across_the_whole_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `f`'s `for` cannot be lowered, since a variable length array has no
+        // IR yet, and its scope is closed all the same, so `g`, lowered by the
+        // same `Lowering`, opens with only its body's scope and `x` gets no
+        // storage marker. The array is chosen for what the lowering cannot do
+        // and stops testing this the day it can. Mutation: close the `for`'s
+        // scope only when the loop was lowered; `g` gains a `StorageLive`.
+        a_for_that_cannot_be_lowered_leaves_no_scope_open: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A `void` value is nothing: a call to a `void` function has no
         // `Destination`, a `void` `?:` has no answer and its arms write
         // none, a comma discards no left operand that is `void`, and neither

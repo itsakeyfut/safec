@@ -1,0 +1,50 @@
+Function a_for_may_begin_with_a_declaration.c:1:1 "one" "int (int)"
+  Parameter a_for_may_begin_with_a_declaration.c:1:9 "n" "int"
+  Compound a_for_may_begin_with_a_declaration.c:1:16
+    Declaration a_for_may_begin_with_a_declaration.c:2:5 "s" "int"
+      Number a_for_may_begin_with_a_declaration.c:2:13 "0"
+    For a_for_may_begin_with_a_declaration.c:3:5 declaration condition step
+      Declaration a_for_may_begin_with_a_declaration.c:3:10 "i" "int"
+        Number a_for_may_begin_with_a_declaration.c:3:18 "0"
+      Binary a_for_may_begin_with_a_declaration.c:3:21 "<"
+        Identifier a_for_may_begin_with_a_declaration.c:3:21 "i"
+        Identifier a_for_may_begin_with_a_declaration.c:3:25 "n"
+      Assign a_for_may_begin_with_a_declaration.c:3:28 "="
+        Identifier a_for_may_begin_with_a_declaration.c:3:28 "i"
+        Binary a_for_may_begin_with_a_declaration.c:3:32 "+"
+          Identifier a_for_may_begin_with_a_declaration.c:3:32 "i"
+          Number a_for_may_begin_with_a_declaration.c:3:36 "1"
+      Compound a_for_may_begin_with_a_declaration.c:3:39
+        Expression a_for_may_begin_with_a_declaration.c:4:9
+          Assign a_for_may_begin_with_a_declaration.c:4:9 "="
+            Identifier a_for_may_begin_with_a_declaration.c:4:9 "s"
+            Binary a_for_may_begin_with_a_declaration.c:4:13 "+"
+              Identifier a_for_may_begin_with_a_declaration.c:4:13 "s"
+              Identifier a_for_may_begin_with_a_declaration.c:4:17 "i"
+    Return a_for_may_begin_with_a_declaration.c:6:5
+      Identifier a_for_may_begin_with_a_declaration.c:6:12 "s"
+Function a_for_may_begin_with_a_declaration.c:9:1 "two" "int (int)"
+  Parameter a_for_may_begin_with_a_declaration.c:9:9 "n" "int"
+  Compound a_for_may_begin_with_a_declaration.c:9:16
+    For a_for_may_begin_with_a_declaration.c:10:5 declaration condition step
+      Declaration a_for_may_begin_with_a_declaration.c:10:10 "i" "int"
+        Number a_for_may_begin_with_a_declaration.c:10:18 "0"
+      Declaration a_for_may_begin_with_a_declaration.c:10:10 "j" "int"
+        Identifier a_for_may_begin_with_a_declaration.c:10:25 "n"
+      Binary a_for_may_begin_with_a_declaration.c:10:28 "<"
+        Identifier a_for_may_begin_with_a_declaration.c:10:28 "i"
+        Identifier a_for_may_begin_with_a_declaration.c:10:32 "j"
+      Assign a_for_may_begin_with_a_declaration.c:10:35 "="
+        Identifier a_for_may_begin_with_a_declaration.c:10:35 "i"
+        Binary a_for_may_begin_with_a_declaration.c:10:39 "+"
+          Identifier a_for_may_begin_with_a_declaration.c:10:39 "i"
+          Number a_for_may_begin_with_a_declaration.c:10:43 "1"
+      Compound a_for_may_begin_with_a_declaration.c:10:46
+        Expression a_for_may_begin_with_a_declaration.c:11:9
+          Assign a_for_may_begin_with_a_declaration.c:11:9 "="
+            Identifier a_for_may_begin_with_a_declaration.c:11:9 "j"
+            Binary a_for_may_begin_with_a_declaration.c:11:13 "-"
+              Identifier a_for_may_begin_with_a_declaration.c:11:13 "j"
+              Number a_for_may_begin_with_a_declaration.c:11:17 "1"
+    Return a_for_may_begin_with_a_declaration.c:13:5
+      Number a_for_may_begin_with_a_declaration.c:13:12 "0"

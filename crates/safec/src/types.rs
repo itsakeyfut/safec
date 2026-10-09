@@ -24,8 +24,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use crate::ast::{
-    Ast, BinOp, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId, UnOp,
-    spell_type,
+    Ast, BinOp, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId, Type,
+    TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -121,6 +121,15 @@ const DECLARATOR: Code = Code::new("SC0309");
 /// because `int f(void);` is a correct declarator, and the fault is
 /// initializing it.
 const INITIALIZED: Code = Code::new("SC0310");
+
+/// Something a `for` declares that C17 6.8.5 p3 says it may not: anything
+/// but an object with storage class `auto` or `register`. With no storage
+/// class specifier in the language yet, that is a function.
+///
+/// Not `DECLARATOR`, for the reason [`INITIALIZED`] gives: `int f(void);` is
+/// a correct declarator, and what is wrong is where it is written. A storage
+/// class specifier, when one is read, is the other half of p3 and comes here.
+const FOR_DECLARATION: Code = Code::new("SC0311");
 
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
@@ -220,6 +229,7 @@ pub fn check(
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
+    checker.check_for_declarations(ast, diagnostics);
 
     Types {
         of: checker.types,
@@ -459,6 +469,52 @@ impl Checker<'_> {
                     .with_label(Label::secondary(ast.expr(init).span(), "this initializer"))
                     .with_note("C17 6.7.9 p3"),
             );
+        }
+    }
+
+    /// Hold every declaration that begins a `for` to C17 6.8.5 p3, and report
+    /// a declarator in one that declares a function under [`FOR_DECLARATION`].
+    ///
+    /// Every other constraint on such a declaration is checked where a block's
+    /// is, because it is the same `Stmt::Declaration`; this one is the `for`'s
+    /// own, so it is asked from the `for`.
+    fn check_for_declarations(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for id in ast.stmt_ids() {
+            let Stmt::For {
+                start: Some(ForStart::Declaration(declaration)),
+                ..
+            } = ast.stmt(id)
+            else {
+                continue;
+            };
+            // `ForStart` promises a declaration statement, and the parser is
+            // the one place that builds it.
+            let Stmt::Declaration { declarators, .. } = ast.stmt(*declaration) else {
+                unreachable!("a `for` begins with a statement that is not a declaration")
+            };
+            for declarator in declarators {
+                let declaration = &declarator.declaration;
+                // Every variant named, so that a type added later is asked here.
+                match ast.ty(declaration.ty) {
+                    Type::Function { .. } => {}
+                    Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Array { .. } => {
+                        continue;
+                    }
+                }
+                let name = declaration.name.unwrap_or(declaration.span);
+                diagnostics.report(
+                    Diagnostic::error(format!(
+                        "`{}` is a function, and a `for` may declare only objects",
+                        self.sources.snippet(name)
+                    ))
+                    .with_code(FOR_DECLARATION)
+                    .with_label(Label::primary(
+                        name,
+                        format!("declared as `{}`", self.spelled(ast, declaration.ty)),
+                    ))
+                    .with_note("C17 6.8.5 p3"),
+                );
+            }
         }
     }
 
@@ -707,8 +763,20 @@ impl Checker<'_> {
                 self.receivers_in(ast, *body, returning, diagnostics);
             }
             Stmt::For {
-                condition, body, ..
+                start,
+                condition,
+                step: _,
+                body,
+                span: _,
             } => {
+                // A declaration's initializers are received as a block's are,
+                // so `for (int *p = 1; ...)` is held to C17 6.7.9 p11.
+                match *start {
+                    Some(ForStart::Declaration(declaration)) => {
+                        self.receivers_in(ast, declaration, returning, diagnostics);
+                    }
+                    Some(ForStart::Expression(_)) | None => {}
+                }
                 if let Some(condition) = *condition {
                     self.receivers
                         .insert(condition, Receiving::Condition { keyword: "for" });

@@ -179,9 +179,10 @@ and fails.
   the interpreter cannot act on it: its identity is a frame's generation, so a
   pointer taken in one iteration of a loop still reads in the next. #86 is that
   work, and nothing here forecloses it.
-* Bad, because the lowering emits `StorageDead` at two places only: where a
-  compound statement falls off its end, and at a `return`, which ends every
-  scope it leaves. `break`, `continue` and `goto` will leave a scope on a path
+* Bad, because the lowering emits `StorageDead` at three places only: where a
+  compound statement falls off its end, where a `for` whose first clause is a
+  declaration is left (#127), and at a `return`, which ends every scope it
+  leaves. `break`, `continue` and `goto` will leave a scope on a path
   that has no marker on it unless each does the same, and if every path leaves
   that way the marker is emitted nowhere. The element shape is what makes the
   fix possible, and the fix is per-exit-edge emission in the lowering rather
