@@ -1680,7 +1680,10 @@ fn a_struct_is_typed_and_held_to_what_c_says_of_one() {
 /// `Ast::compatible`: two tags are refused at each, and one tag at none.
 ///
 /// Mutation: pass `|_, _| true` for `same_struct` at any of the five calls
-/// in this module; that call accepts two tags, and this fails.
+/// in this module that compare pointers; that call accepts two tags, and
+/// this fails. The two that compare struct values, in `assignable` and
+/// `conditional`, are held by
+/// `a_struct_is_an_operand_of_no_operator_and_is_held_to_its_tag`.
 #[test]
 fn pointers_to_structs_are_held_to_their_tag_everywhere_types_are_compared() {
     let checked = checked(
@@ -1785,4 +1788,165 @@ fn an_array_of_a_struct_needs_the_struct_complete_where_it_is_written() {
         checked.messages(),
         ["an array cannot have `struct S` as its element"]
     );
+}
+
+/// A struct is an operand of no operator `binary`, `unary` or `increment`
+/// asks, and no condition (C17 6.5.3 to 6.5.15, 6.8.4 p1, 6.8.5 p2): each
+/// in a program of its own, with the message, the code and the primary
+/// label written out. It is assigned, passed and chosen between only beside
+/// a struct of its own tag (6.5.16.1 p1, 6.5.2.2 p2, 6.5.15 p3).
+///
+/// A row is `(statement, message, code, primary label)`, and an empty
+/// message is a statement that must stay silent.
+///
+/// Mutation: let `&&` and `||` take anything but `void`, as they did; their
+/// rows go silent. Mutation: answer a struct on the left `false` in
+/// `report_operands`; `s * 1` points at `1`. Mutation: let `!`, `~` or `+`
+/// take a struct; its row goes silent. Mutation: let `==` or `<` take two
+/// structs; its row goes silent. Mutation: answer `Some(true)` for a struct
+/// place in `assignable` or `compound_assignable`; `s = 1` or `s += 1` goes
+/// silent. Mutation: pass `|_, _| true` for `same_struct` in
+/// `conditional`; `c ? s : t` goes silent. Mutation: refuse a struct as an
+/// `if` condition only; the `while`, `for` and `?:` rows go silent.
+/// Mutation: report the struct arm of `increment` under another code; its
+/// row fails. Each fails this.
+#[test]
+fn a_struct_is_an_operand_of_no_operator_and_is_held_to_its_tag() {
+    for (statement, message, code, primary) in [
+        (
+            "x = s && 1;",
+            "`&&` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = 1 || s;",
+            "`||` cannot take `int` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s == u;",
+            "`==` cannot take `struct S` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s < u;",
+            "`<` cannot take `struct S` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s * 1;",
+            "`*` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = 1 * s;",
+            "`*` cannot take `int` and `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = !s;",
+            "`!` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = ~s;",
+            "`~` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = +s;",
+            "`+` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "s++;",
+            "`++` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "s = 1;",
+            "cannot assign `int` to `struct S`",
+            "SC0302",
+            "this is `int`",
+        ),
+        (
+            "s += 1;",
+            "`+=` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "s = c ? s : t;",
+            "`?:` cannot take `struct S` and `struct T`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = c ? s : 1;",
+            "`?:` cannot take `struct S` and `int`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "while (s) {}",
+            "`while` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "for (; s;) {}",
+            "`for` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "x = s ? 1 : 2;",
+            "`?:` cannot take `struct S`",
+            "SC0306",
+            "this is `struct S`",
+        ),
+        (
+            "h(t);",
+            "cannot pass `struct T` to a parameter of type `struct S`",
+            "SC0302",
+            "this is `struct T`",
+        ),
+        ("s = c ? s : u;", "", "", ""),
+        ("s = u;", "", "", ""),
+        ("h(u);", "", "", ""),
+    ] {
+        let checked = checked(&format!(
+            "struct S {{
+    int a;
+}};
+struct T {{
+    int b;
+}};
+void h(struct S s);
+int f(struct S s, struct T t, struct S u, int c) {{
+    int x;
+    {statement}
+    return x;
+}}
+"
+        ));
+
+        if message.is_empty() {
+            assert_eq!(checked.messages(), Vec::<&str>::new(), "{statement}");
+        } else {
+            assert_eq!(checked.messages(), [message], "{statement}");
+            assert_eq!(checked.codes(), [code], "{statement}");
+            assert_eq!(checked.labels().first(), Some(&primary), "{statement}");
+        }
+    }
 }

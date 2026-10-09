@@ -1614,10 +1614,16 @@ impl Checker<'_> {
                 _ => false,
             })),
             // 6.5.13 p2 and 6.5.14 p2: each operand a scalar, whatever the
-            // other is.
-            BinOp::LogAnd | BinOp::LogOr => Some(pairing(
-                !matches!(left, OperandClass::Void) && !matches!(right, OperandClass::Void),
-            )),
+            // other is. Every class named, so that one added later has to
+            // say whether it is a scalar rather than passing as "not `void`",
+            // which is how a struct once did.
+            BinOp::LogAnd | BinOp::LogOr => {
+                let scalar = |class: OperandClass| match class {
+                    OperandClass::Arithmetic | OperandClass::Pointer(_) => true,
+                    OperandClass::Void | OperandClass::Struct => false,
+                };
+                Some(pairing(scalar(left) && scalar(right)))
+            }
         }
     }
 
@@ -1723,7 +1729,8 @@ impl Checker<'_> {
     /// against the left the way `assignment` reads a value against its place:
     /// in `p == 1` neither operand is wrong alone, and `1` is what does not
     /// fit beside `p`. A pointer refused for what it points to is wrong alone,
-    /// whichever side it is on, and the note says why.
+    /// whichever side it is on, and the note says why. So is a struct on the
+    /// left, so `s * 1` points at `s`.
     fn report_operands(
         &self,
         ast: &Ast,
@@ -1737,14 +1744,12 @@ impl Checker<'_> {
         let right_spelled = self.spelled(ast, right);
         let left_is_refused = match refused {
             Refused::Pointee { on_left, .. } => on_left,
+            // A struct, like `void`, is an operand of no operator here, so
+            // it is wrong alone whatever is beside it.
             Refused::Pairing => match ast.ty(left) {
-                Type::Void => true,
+                Type::Void | Type::Struct { .. } => true,
                 Type::Pointer(_) => !takes_a_pointer(op),
-                Type::Int
-                | Type::Char
-                | Type::Array { .. }
-                | Type::Function { .. }
-                | Type::Struct { .. } => false,
+                Type::Int | Type::Char | Type::Array { .. } | Type::Function { .. } => false,
             },
         };
         let (primary, secondary) = if left_is_refused {
