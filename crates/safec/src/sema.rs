@@ -2368,4 +2368,85 @@ mod tests {
 
         assert_eq!(resolved.messages(), ["redefinition of `a`"]);
     }
+
+    /// A name given to a third member is reported against the first, which
+    /// is the one it repeats, and not against the second.
+    ///
+    /// Mutation: record every member's name in `Resolver::check_members`,
+    /// so `first` is the one just before; the second report points at the
+    /// second `a`, and this fails.
+    #[test]
+    fn a_third_member_of_one_name_points_at_the_first() {
+        let resolved = resolved("struct D {\n    int a;\n    int a;\n    int a;\n};\n");
+
+        assert_eq!(
+            resolved.messages(),
+            ["redefinition of `a`", "redefinition of `a`"]
+        );
+        let previous: Vec<Span> = resolved
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .flat_map(|diagnostic| diagnostic.labels())
+            .filter(|label| !label.is_primary())
+            .map(|label| label.span())
+            .collect();
+        let first = resolved.occurrence("a", 0);
+        assert_eq!(previous, [first, first]);
+    }
+
+    /// A definition shared by two declarators closes once, so a member it
+    /// gets wrong is reported once.
+    ///
+    /// Mutation: push `Step::Close` outside the `walked` test in
+    /// `Resolver::walk_type`; the member list is checked per declarator,
+    /// `a` is reported twice, and this fails.
+    #[test]
+    fn a_definition_shared_by_declarators_checks_its_members_once() {
+        let resolved = resolved("struct S {\n    int a;\n    int a;\n} x, y;\n");
+
+        assert_eq!(resolved.messages(), ["redefinition of `a`"]);
+    }
+
+    /// What is a complete object type (C17 6.2.5 p1), arm by arm: `char`,
+    /// `int`, a pointer and an array of a known length of them are; `void`,
+    /// a function, an array of unknown length and an array of a struct not
+    /// yet complete are not.
+    ///
+    /// Mutation: answer `char` incomplete in `Resolution::complete`; a
+    /// `char` member would be reported. Mutation: answer a function
+    /// complete. Mutation: answer an array of a known length incomplete.
+    /// Each fails this.
+    #[test]
+    fn a_complete_object_type_is_answered_arm_by_arm() {
+        let resolved = resolved(
+            "struct S;\nchar c;\nint i;\nint *p;\nint a[3];\nvoid v(void);\nint u[];\nstruct S s[2];\n",
+        );
+
+        let answers: Vec<(&str, bool)> = ["c", "i", "p", "a", "v", "u", "s"]
+            .into_iter()
+            .map(|name| {
+                let ty = resolved
+                    .resolution
+                    .bindings
+                    .iter()
+                    .find(|binding| resolved.sources.snippet(binding.name) == name)
+                    .expect("declared")
+                    .ty;
+                (name, resolved.resolution.complete(&resolved.ast, ty))
+            })
+            .collect();
+        assert_eq!(
+            answers,
+            [
+                ("c", true),
+                ("i", true),
+                ("p", true),
+                ("a", true),
+                ("v", false),
+                ("u", false),
+                ("s", false),
+            ]
+        );
+    }
 }
