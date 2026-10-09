@@ -178,13 +178,17 @@ impl Resolution {
     /// gives a name declared more than once (see `Declared`), or `id` itself
     /// where nothing else stands for it.
     ///
-    /// The type checker types a name by this rather than by the declaration
-    /// the use resolved to, and the lowering builds a function from it, so
-    /// that the two agree on what a function is: `int f(); int f(int *a);`
-    /// is a function of one parameter to both, wherever a call to it is
-    /// written. For a name at file scope that is the translation unit's last
-    /// word, so a call written before the prototype is held to it too, which
-    /// is stricter than C and is recorded in `docs/frontend.md`.
+    /// The type checker types a function's name by this rather than by the
+    /// declaration the use resolved to, and the lowering builds a function
+    /// from it, so that the two agree on what a function is: `int f(); int
+    /// f(int *a);` is a function of one parameter to both, wherever a call
+    /// to it is written. For a function at file scope that is the
+    /// translation unit's last word, and for one declared in a block the
+    /// block's, so a call written before the prototype is held to it too:
+    /// stricter than C, which checks a call against the declaration in scope,
+    /// and recorded in `docs/frontend.md`. An object is typed by the
+    /// declaration in scope, as C types it, because what a pointer to a
+    /// function holds is whatever was assigned to it.
     pub fn standing(&self, id: BindingId) -> BindingId {
         self.standing.get(&id).copied().unwrap_or(id)
     }

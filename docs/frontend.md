@@ -241,7 +241,18 @@ not the one in scope where the call is written.** C checks the call against
 number of arguments to it undefined when it runs. The type checker and the
 lowering read the same declaration for a function, `Resolution::standing`, so
 the IR never holds a call that its function disagrees with, and a `_Nonnull`
-parameter that a later prototype declares is held at every call.
+parameter that a later prototype declares is held at every call. A function
+declared in a block is held to the type its block ends with, the same way.
+
+What it costs is stated here so it is weighed rather than found. The call is
+undefined only if it runs, so a translation unit whose only such call is on a
+path never taken is valid C and is refused all the same. And the refusal is a
+type error, which `--allow-unknown` does not lower to a warning, where the
+same mismatch caught by the safety checks would be one of their results. A
+pointer to a function is not held this way: `int (*fp)();` is typed by the
+declaration in scope, as C types it, because it holds whatever compatible
+function was assigned to it, and a later `int (*fp)(int);` does not change
+what a call written before it may pass.
 
 ### What an integer constant is worth, and what type it is not
 

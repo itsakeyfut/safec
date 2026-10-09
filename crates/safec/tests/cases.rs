@@ -3316,6 +3316,12 @@ cases! {
         // `types.rs`; all three are silent.
         a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one: ["--emit", "ast"],
         a_call_written_before_the_prototype_is_checked_against_it: ["--emit", "ast"],
+        // An object of pointer-to-function type is typed by the declaration
+        // in scope, as C types it: `fp` holds `two`, and `fp(1, 2)` is a
+        // defined call whatever `fp` is declared as later. Mutation: type
+        // every name by its standing declaration in `types.rs`; this is
+        // refused as too many arguments.
+        a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called: ["--emit", "ast"],
         undeclared_identifier: ["--emit", "ast"],
         unexpected_character: ["--emit", "tokens"],
         unexpected_characters: ["--emit", "tokens"],
