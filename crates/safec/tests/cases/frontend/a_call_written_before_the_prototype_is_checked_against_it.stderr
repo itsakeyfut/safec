@@ -1,0 +1,11 @@
+error[SC0303]: too many arguments: expected 1, found 2
+   ╭─[ a_call_written_before_the_prototype_is_checked_against_it.c:3:12 ]
+   │
+ 3 │     return f(1, 2);
+   │            ───┬───  
+   │               ╰───── this call
+   │ 
+ 5 │ int f(int a);
+   │     ┬  
+   │     ╰── declared with 1 parameters here
+───╯

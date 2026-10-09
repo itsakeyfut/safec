@@ -1,0 +1,15 @@
+Declaration a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:1:1 "g" "int (int)"
+  Parameter a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:1:7 "a" "int"
+Declaration a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:2:1 "g" "int ()"
+Function a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:3:1 "f" "int (int *)"
+  Parameter a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:3:7 "p" "int *"
+  Compound a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:3:15
+    Return a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:4:5
+      Call a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:4:12
+        Identifier a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:4:12 "g"
+        Identifier a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:4:14 "p"
+Function a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:6:1 "h" "int (void)"
+  Compound a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:6:13
+    Return a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:7:5
+      Call a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:7:12
+        Identifier a_call_is_checked_against_the_prototype_not_a_later_declaration_without_one.c:7:12 "g"

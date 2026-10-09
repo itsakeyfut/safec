@@ -1,0 +1,20 @@
+Function a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:1:1 "two" "int (int, int)"
+  Parameter a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:1:9 "a" "int"
+  Parameter a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:1:16 "b" "int"
+  Compound a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:1:23
+    Return a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:2:5
+      Binary a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:2:12 "+"
+        Identifier a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:2:12 "a"
+        Identifier a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:2:16 "b"
+Declaration a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:4:1 "fp" "int (*)()"
+  Identifier a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:4:15 "two"
+Function a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:5:1 "main" "int (void)"
+  Compound a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:5:16
+    Return a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:5
+      Binary a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:12 "-"
+        Call a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:12
+          Identifier a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:12 "fp"
+          Number a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:15 "1"
+          Number a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:18 "2"
+        Number a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:6:23 "3"
+Declaration a_pointer_to_a_function_is_called_as_it_is_declared_where_it_is_called.c:8:1 "fp" "int (*)(int)"

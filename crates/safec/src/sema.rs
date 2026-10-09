@@ -135,6 +135,11 @@ pub struct Resolution {
     tags: Vec<Tag>,
     /// The tag every struct written in the tree is, by the type's id.
     tag_of: HashMap<TypeId, TagId>,
+    /// Every binding whose name's standing declaration, when its scope
+    /// closed, is another binding. See [`Resolution::standing`].
+    standing: HashMap<BindingId, BindingId>,
+    /// The standing type of every file-scope name, by its spelling.
+    declared: HashMap<String, TypeId>,
 }
 
 impl Resolution {
@@ -166,6 +171,35 @@ impl Resolution {
     /// not here.
     pub fn resolved(&self, use_site: ExprId) -> Option<BindingId> {
         self.resolved.get(&use_site).copied()
+    }
+
+    /// The declaration that says what `id`'s name is: the standing one its
+    /// scope ended with, which stands in for the composite type C17 6.2.7 p3
+    /// gives a name declared more than once (see `Declared`), or `id` itself
+    /// where nothing else stands for it.
+    ///
+    /// The type checker types a function's name by this rather than by the
+    /// declaration the use resolved to, and the lowering builds a function
+    /// from it, so that the two agree on what a function is: `int f(); int
+    /// f(int *a);` is a function of one parameter to both, wherever a call
+    /// to it is written. For a function at file scope that is the
+    /// translation unit's last word, and for one declared in a block the
+    /// block's, so a call written before the prototype is held to it too:
+    /// stricter than C, which checks a call against the declaration in scope,
+    /// and recorded in `docs/frontend.md`. An object is typed by the
+    /// declaration in scope, as C types it, because what a pointer to a
+    /// function holds is whatever was assigned to it.
+    pub fn standing(&self, id: BindingId) -> BindingId {
+        self.standing.get(&id).copied().unwrap_or(id)
+    }
+
+    /// The type a file-scope name was given by its standing declaration, or
+    /// `None` if no file-scope declaration has that spelling.
+    ///
+    /// By the text, for the lowering, which keys a function by its name
+    /// because a prototype and its definition are one function at two spans.
+    pub fn declared(&self, name: &str) -> Option<TypeId> {
+        self.declared.get(name).copied()
     }
 
     /// The tag the struct at `ty` is.
@@ -217,6 +251,8 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
             hatches: Vec::new(),
             tags: Vec::new(),
             tag_of: HashMap::new(),
+            standing: HashMap::new(),
+            declared: HashMap::new(),
         },
         // The file scope, which is never popped.
         scopes: vec![Vec::new()],
@@ -231,6 +267,17 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         resolver.item(item, diagnostics);
     }
 
+    // The file scope is never popped, so it is settled here, and its names'
+    // standing types are what the lowering reads.
+    resolver.settle();
+    let file = resolver
+        .spelled
+        .last()
+        .expect("the file scope is never popped");
+    for (name, declared) in file {
+        let ty = resolver.resolution.binding(declared.standing.id).ty;
+        resolver.resolution.declared.insert(name.clone(), ty);
+    }
     resolver.resolution
 }
 
@@ -653,9 +700,31 @@ impl Resolver<'_> {
 
     /// Close the scope [`Resolver::open_scope`] opened last.
     fn close_scope(&mut self) {
+        self.settle();
         self.scopes.pop();
         self.tag_scopes.pop();
         self.spelled.pop();
+    }
+
+    /// Record, for every binding of the innermost scope, the standing
+    /// declaration its name ended the scope with. See
+    /// [`Resolution::standing`].
+    fn settle(&mut self) {
+        let scope = self.scopes.last().expect("the file scope is never popped");
+        let spelled = self.spelled.last().expect("the file scope is never popped");
+        let settled: Vec<(BindingId, BindingId)> = scope
+            .iter()
+            .filter_map(|&id| {
+                let name = self.sources.snippet(self.resolution.binding(id).name);
+                let standing = spelled
+                    .get(name)
+                    .expect("every binding of a scope is declared in it")
+                    .standing
+                    .id;
+                (standing != id).then_some((id, standing))
+            })
+            .collect();
+        self.resolution.standing.extend(settled);
     }
 
     /// Bind the struct at `ty` to a tag, by C17 6.7.2.3.
@@ -1202,6 +1271,18 @@ mod tests {
             Some(self.resolution.binding(binding).name)
         }
 
+        /// Where the standing declaration of what the `nth` occurrence of
+        /// `text` resolves to names it. See [`Resolution::standing`].
+        fn standing_of(&self, text: &str, nth: usize) -> Option<Span> {
+            let use_site = self.used_at(self.occurrence(text, nth));
+            let binding = self.resolution.resolved(use_site)?;
+            Some(
+                self.resolution
+                    .binding(self.resolution.standing(binding))
+                    .name,
+            )
+        }
+
         /// The tag the struct whose tag is the `nth` written `name` is bound to.
         fn tag_at(&self, name: &str, nth: usize) -> TagId {
             let at = self.occurrence(name, nth);
@@ -1324,8 +1405,8 @@ mod tests {
     /// `a_use_after_a_name_declared_twice_is_the_second_declaration` holds
     /// it. At file scope two compatible declarations can still differ, `int
     /// f(); int f(int *a);`, and a call after them is checked against the
-    /// second, so `f()` there is too few arguments; which declaration a call
-    /// ought to be checked against is the composite type, and #360's.
+    /// second, which is the standing declaration, so `f()` there is too few
+    /// arguments wherever the call is written; see `Resolution::standing`.
     #[test]
     fn a_name_finds_the_innermost_declaration_of_it() {
         let resolved = resolved("int main(void) { int x; { int x; return x; } return x; }\n");
@@ -1981,5 +2062,55 @@ mod tests {
             .map(|label| label.span())
             .collect();
         assert_eq!(previous, [resolved.occurrence("g", 1)]);
+    }
+
+    /// Every declaration of a name answers the standing declaration its
+    /// scope ended with, which is the prototype here, and a use written
+    /// before the prototype answers it too, and a function declared in a
+    /// block answers its block's. The file scope's standing type is what
+    /// `Resolution::declared` publishes, which is the prototype's even where
+    /// a declaration without one comes after it.
+    ///
+    /// Mutation: drop `settle` from `close_scope`; the block's `h` answers
+    /// itself and this fails. Mutation: drop `settle` at the end of
+    /// `resolve`; `f` answers the declaration it resolves to. Mutation:
+    /// settle each binding on `latest` rather than `standing`; `f` answers
+    /// its last declaration, the third. Mutation: publish `latest` in
+    /// `declared`; `f`'s published type has no parameters. Each fails this.
+    #[test]
+    fn every_declaration_of_a_name_answers_its_standing_one() {
+        let resolved = resolved(
+            "int f();\nint g(void) {\n    int h(int *a);\n    int h();\n    return f(0) + h(0);\n}\nint f(int *a);\nint f();\nint k(void) {\n    return f(0);\n}\n",
+        );
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        // The use in `g`, written before the prototype, and the one in `k`.
+        assert_eq!(
+            resolved.standing_of("f", 1),
+            Some(resolved.occurrence("f", 2))
+        );
+        assert_eq!(
+            resolved.standing_of("f", 4),
+            Some(resolved.occurrence("f", 2))
+        );
+        assert_eq!(
+            resolved.standing_of("h", 2),
+            Some(resolved.occurrence("h", 0))
+        );
+        let prototype = resolved
+            .resolution
+            .bindings
+            .iter()
+            .find(|binding| binding.name == resolved.occurrence("f", 2))
+            .expect("the prototype is a binding")
+            .ty;
+        assert_eq!(resolved.resolution.declared("f"), Some(prototype));
+        assert_eq!(
+            resolved
+                .resolution
+                .declared("k")
+                .map(|ty| matches!(resolved.ast.ty(ty), Type::Function { .. })),
+            Some(true)
+        );
     }
 }

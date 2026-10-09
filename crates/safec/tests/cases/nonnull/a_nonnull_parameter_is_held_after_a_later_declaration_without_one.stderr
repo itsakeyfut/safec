@@ -1,0 +1,13 @@
+error[SC0405]: this passes a null pointer to a parameter declared `_Nonnull`
+   ╭─[ a_nonnull_parameter_is_held_after_a_later_declaration_without_one.c:4:12 ]
+   │
+ 1 │ int f(int * _Nonnull a);
+   │             ────┬───  
+   │                 ╰───── the parameter is declared `_Nonnull` here
+   │ 
+ 4 │     return f(0);
+   │            ──┬─  
+   │              ╰─── this is null when it is passed
+───╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer to an object here, or remove `_Nonnull` from the parameter

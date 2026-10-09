@@ -1,0 +1,10 @@
+Declaration a_call_written_before_the_prototype_is_checked_against_it.c:1:1 "f" "int ()"
+Function a_call_written_before_the_prototype_is_checked_against_it.c:2:1 "g" "int (void)"
+  Compound a_call_written_before_the_prototype_is_checked_against_it.c:2:13
+    Return a_call_written_before_the_prototype_is_checked_against_it.c:3:5
+      Call a_call_written_before_the_prototype_is_checked_against_it.c:3:12
+        Identifier a_call_written_before_the_prototype_is_checked_against_it.c:3:12 "f"
+        Number a_call_written_before_the_prototype_is_checked_against_it.c:3:14 "1"
+        Number a_call_written_before_the_prototype_is_checked_against_it.c:3:17 "2"
+Declaration a_call_written_before_the_prototype_is_checked_against_it.c:5:1 "f" "int (int)"
+  Parameter a_call_written_before_the_prototype_is_checked_against_it.c:5:7 "a" "int"

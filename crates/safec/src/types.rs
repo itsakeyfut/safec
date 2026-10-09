@@ -916,7 +916,20 @@ impl Checker<'_> {
             // already, and nothing could be said about it that #27 would not
             // have to take back.
             Expr::Identifier { .. } => {
-                let ty = self.resolution.binding(self.resolution.resolved(id)?).ty;
+                // A function is typed by its standing declaration, not the
+                // one the use resolved to: see `Resolution::standing`. An
+                // object is typed by the declaration in scope, as C types
+                // it, since `int (*fp)();` holds whatever compatible
+                // function was assigned to it, and a later `int (*fp)(int);`
+                // does not change what a call written before it may pass.
+                let resolved = self.resolution.resolved(id)?;
+                let ty = match ast.ty(self.resolution.binding(resolved).ty) {
+                    Type::Function { .. } => {
+                        let declared = self.resolution.standing(resolved);
+                        self.resolution.binding(declared).ty
+                    }
+                    _ => self.resolution.binding(resolved).ty,
+                };
                 (!holds_a_struct(ast, ty)).then_some(ty)
             }
             Expr::Member {
@@ -2025,8 +2038,9 @@ impl Checker<'_> {
         // Only a callee that is a name has a declaration to point at, so
         // `(*g)(1, 2)` and `(&g)(1, 2)` are reported without one.
         if let Some(binding) = self.resolution.resolved(callee) {
+            let declared = self.resolution.standing(binding);
             diagnostic = diagnostic.with_label(Label::secondary(
-                self.resolution.binding(binding).name,
+                self.resolution.binding(declared).name,
                 format!("declared with {expected} parameters here"),
             ));
         }

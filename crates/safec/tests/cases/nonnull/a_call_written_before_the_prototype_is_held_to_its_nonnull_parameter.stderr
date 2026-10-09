@@ -1,0 +1,13 @@
+error[SC0405]: this passes a null pointer to a parameter declared `_Nonnull`
+   ╭─[ a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:3:12 ]
+   │
+ 3 │     return f(0);
+   │            ──┬─  
+   │              ╰─── this is null when it is passed
+   │ 
+ 5 │ int f(int * _Nonnull a);
+   │             ────┬───  
+   │                 ╰───── the parameter is declared `_Nonnull` here
+───╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer to an object here, or remove `_Nonnull` from the parameter
