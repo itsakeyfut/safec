@@ -3390,6 +3390,18 @@ cases! {
         unexpected_characters: ["--emit", "tokens"],
         unreadable_expression: ["--emit", "ast"],
         unsupported_directive: ["--emit", "tokens"],
+        // C17 6.4.6 p3: each digraph is its punctuator, so this is an array
+        // and a body. Mutation: advance past a digraph by the punctuator's
+        // own length; every token after `<:` starts a byte early, and this
+        // fails. Mutation: drop the digraph table; `<%` is `<` then `%`.
+        digraphs_are_the_punctuators_they_stand_for: ["--emit", "ast"],
+        // `%:` at the start of a line is `#`, so `%:define` is a directive
+        // and `SC0104`, as the `#define` beside it is, and `%:%:` mid-line is
+        // `##` and no directive. Mutation: ask the directive test of `#`
+        // alone; the first report goes and `%:define` is read as tokens.
+        // Mutation: point the label at one byte; the caret under `%:`
+        // narrows to `%`.
+        a_directive_spelled_with_a_digraph_is_a_directive: ["--emit", "tokens"],
         unterminated_block_comment: ["--emit", "tokens"],
         unterminated_character_constant: ["--emit", "tokens"],
         unterminated_string_literal: ["--emit", "tokens"],

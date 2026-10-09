@@ -1,0 +1,18 @@
+error[SC0104]: preprocessor directives are not supported yet
+   ╭─[ a_directive_spelled_with_a_digraph_is_a_directive.c:1:1 ]
+   │
+ 1 │ %:define N 3
+   │ ─┬  
+   │  ╰── directive begins here
+───╯
+  = note: `#include`, `#define`, `#ifdef` and `#ifndef` come first
+  = note: the line is one token and is not compiled
+error[SC0104]: preprocessor directives are not supported yet
+   ╭─[ a_directive_spelled_with_a_digraph_is_a_directive.c:2:1 ]
+   │
+ 2 │ #define M 4
+   │ ┬  
+   │ ╰── directive begins here
+───╯
+  = note: `#include`, `#define`, `#ifdef` and `#ifndef` come first
+  = note: the line is one token and is not compiled

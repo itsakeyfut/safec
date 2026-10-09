@@ -272,9 +272,9 @@ spellings! {
     /// maximal munch: the first spelling that matches is the longest one that
     /// could. Reordering this list makes `>>=` scan as `>>` and then `=`.
     ///
-    /// The digraphs (`<:`, `%>`, `%:%:` and the rest) are left out. They are
-    /// still in the standard and nothing writes them; adding them is a table
-    /// entry each, whenever something does.
+    /// The digraphs (`<:`, `%>`, `%:%:` and the rest) are not variants: C17
+    /// 6.4.6 p3 makes each the punctuator it stands for "in all aspects of the
+    /// language", so they are other spellings of these, in [`DIGRAPHS`].
     Punct {
         Ellipsis => "...",
         LessLessEqual => "<<=",
@@ -329,24 +329,54 @@ spellings! {
     }
 }
 
+/// The digraphs of C17 6.4.6 p3, each with the punctuator it is "in all
+/// aspects of the language", longest first.
+///
+/// A table of their own rather than variants of [`Punct`], because a token
+/// is what it means and not how it was spelled: `<:` is `[` to the parser,
+/// and [`Punct::as_str`] is what a message calls it.
+pub const DIGRAPHS: [(&str, Punct); 6] = [
+    ("%:%:", Punct::HashHash),
+    ("<:", Punct::LeftBracket),
+    (":>", Punct::RightBracket),
+    ("<%", Punct::LeftBrace),
+    ("%>", Punct::RightBrace),
+    ("%:", Punct::Hash),
+];
+
 impl Punct {
-    /// The longest punctuator `text` begins with, if any.
+    /// The longest punctuator `text` begins with, if any, and the spelling it
+    /// was written with, which is longer than [`Punct::as_str`] for a digraph.
     ///
     /// C's rule: a scanner takes the longest sequence of characters that could
     /// make up a token, even when a shorter one would let the rest parse. `a+++b`
     /// is `a` `++` `+` `b` and does not compile, rather than `a` `+` `++` `b`
-    /// and doing so.
-    pub fn starting(text: &str) -> Option<Self> {
-        Self::ALL
+    /// and doing so. It holds across both tables, so `%:%:` is `##` and `<%`
+    /// is `{` rather than `<` then `%`.
+    ///
+    /// The spelling is returned rather than left to the caller to look up,
+    /// so that advancing by the wrong length does not compile.
+    pub fn starting(text: &str) -> Option<(Self, &'static str)> {
+        let plain = Self::ALL
             .iter()
-            .copied()
-            .find(|punct| text.starts_with(punct.as_str()))
+            .map(|&punct| (punct, punct.as_str()))
+            .find(|(_, spelled)| text.starts_with(spelled));
+        let digraph = DIGRAPHS
+            .iter()
+            .map(|&(spelled, punct)| (punct, spelled))
+            .find(|(_, spelled)| text.starts_with(spelled));
+        match (plain, digraph) {
+            (Some(plain), Some(digraph)) if digraph.1.len() > plain.1.len() => Some(digraph),
+            (Some(plain), _) => Some(plain),
+            (None, digraph) => digraph,
+        }
     }
 
     /// Whether a punctuator can begin with `c`.
     ///
     /// What the lexer asks to decide where a run of unrecognised characters
-    /// ends.
+    /// ends. A digraph begins with `<`, `:` or `%`, each a punctuator alone,
+    /// which `every_character_that_can_begin_a_punctuator_is_one` holds.
     pub fn can_start_with(c: char) -> bool {
         Self::ALL.iter().any(|punct| punct.as_str().starts_with(c))
     }
@@ -456,7 +486,8 @@ mod tests {
     /// under any permutation within a length group, and a permutation is what
     /// binds `(` to `RightParen`.
     ///
-    /// Digraphs are absent on purpose; see the table.
+    /// The digraphs are other spellings of these, in `DIGRAPHS`, and are held
+    /// by `each_digraph_is_the_punctuator_c_says_it_is`.
     #[test]
     fn the_punctuator_table_is_the_c17_set_in_the_order_the_scan_needs() {
         let table: Vec<_> = Punct::ALL
@@ -533,19 +564,50 @@ mod tests {
     /// compiled out of a release build, so this is the guard that is not.
     ///
     /// It holds today because every multi-character punctuator's first
-    /// character is a punctuator in its own right. Adding one that is not, a
-    /// digraph among them, breaks it.
+    /// character, and every digraph's, is a punctuator in its own right.
+    /// Adding one that is not breaks it.
     #[test]
     fn every_character_that_can_begin_a_punctuator_is_one() {
-        for &punct in Punct::ALL {
-            let lead = punct.as_str().chars().next().expect("no empty spelling");
+        let spellings = Punct::ALL
+            .iter()
+            .map(|punct| punct.as_str())
+            .chain(DIGRAPHS.iter().map(|&(spelled, _)| spelled));
+        for spelled in spellings {
+            let lead = spelled.chars().next().expect("no empty spelling");
 
-            assert!(Punct::can_start_with(lead), "{punct:?}");
+            assert!(Punct::can_start_with(lead), "{spelled:?}");
             assert!(
                 Punct::starting(&lead.to_string()).is_some(),
-                "{lead:?} begins {punct:?} and is not a punctuator on its own, \
+                "{lead:?} begins {spelled:?} and is not a punctuator on its own, \
                  which makes a scan of it consume nothing"
             );
+        }
+    }
+
+    /// The six digraphs, written out rather than read back from `DIGRAPHS`,
+    /// each scanned to the punctuator C17 6.4.6 p3 makes it, with its own
+    /// spelling; and the longest match across both tables.
+    ///
+    /// Mutation: drop a digraph, or bind one to another punctuator; its row
+    /// fails. Mutation: answer from the `Punct` table alone, or prefer it
+    /// over a longer digraph; `<%` is `<` and `%:%:` is `%`. Mutation: give
+    /// a digraph `as_str` as its spelling; its row fails. Each fails this.
+    #[test]
+    fn each_digraph_is_the_punctuator_c_says_it_is() {
+        for (text, punct, spelled) in [
+            ("<:x", Punct::LeftBracket, "<:"),
+            (":>x", Punct::RightBracket, ":>"),
+            ("<%x", Punct::LeftBrace, "<%"),
+            ("%>x", Punct::RightBrace, "%>"),
+            ("%:x", Punct::Hash, "%:"),
+            ("%:%:x", Punct::HashHash, "%:%:"),
+            ("%:%x", Punct::Hash, "%:"),
+            ("<%=", Punct::LeftBrace, "<%"),
+            ("<<=", Punct::LessLessEqual, "<<="),
+            ("%=", Punct::PercentEqual, "%="),
+            (":x", Punct::Colon, ":"),
+        ] {
+            assert_eq!(Punct::starting(text), Some((punct, spelled)), "{text}");
         }
     }
 
@@ -629,11 +691,12 @@ mod tests {
 
     #[test]
     fn the_longest_punctuator_at_a_prefix_wins() {
-        assert_eq!(Punct::starting(">>=x"), Some(Punct::GreaterGreaterEqual));
-        assert_eq!(Punct::starting(">>x"), Some(Punct::GreaterGreater));
-        assert_eq!(Punct::starting(">x"), Some(Punct::Greater));
-        assert_eq!(Punct::starting("...)"), Some(Punct::Ellipsis));
-        assert_eq!(Punct::starting("..)"), Some(Punct::Dot));
+        let starting = |text| Punct::starting(text).map(|(punct, _)| punct);
+        assert_eq!(starting(">>=x"), Some(Punct::GreaterGreaterEqual));
+        assert_eq!(starting(">>x"), Some(Punct::GreaterGreater));
+        assert_eq!(starting(">x"), Some(Punct::Greater));
+        assert_eq!(starting("...)"), Some(Punct::Ellipsis));
+        assert_eq!(starting("..)"), Some(Punct::Dot));
     }
 
     /// `a+++b` is `a` `++` `+` `b`, which does not compile, and not
@@ -642,7 +705,7 @@ mod tests {
     /// expression.
     #[test]
     fn the_table_matches_the_longest_punctuator_even_when_a_shorter_one_would_parse() {
-        assert_eq!(Punct::starting("+++b"), Some(Punct::PlusPlus));
+        assert_eq!(Punct::starting("+++b"), Some((Punct::PlusPlus, "++")));
     }
 
     /// Both directions of the same table: what can start a punctuator, and

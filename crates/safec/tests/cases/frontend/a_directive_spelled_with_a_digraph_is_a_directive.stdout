@@ -1,0 +1,8 @@
+a_directive_spelled_with_a_digraph_is_a_directive.c:1:1 directive "%:define N 3"
+a_directive_spelled_with_a_digraph_is_a_directive.c:2:1 directive "#define M 4"
+a_directive_spelled_with_a_digraph_is_a_directive.c:3:1 keyword "int"
+a_directive_spelled_with_a_digraph_is_a_directive.c:3:5 identifier "x"
+a_directive_spelled_with_a_digraph_is_a_directive.c:3:7 punct "%:%:"
+a_directive_spelled_with_a_digraph_is_a_directive.c:3:12 identifier "y"
+a_directive_spelled_with_a_digraph_is_a_directive.c:3:13 punct ";"
+a_directive_spelled_with_a_digraph_is_a_directive.c:4:1 eof
