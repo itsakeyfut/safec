@@ -122,11 +122,13 @@ declares only a tag, `struct S;`, is valid and is read. `struct S {};` is
 refused for the same reason: C17 6.7.2.1 p1's grammar asks for at least one
 member, and the empty list is an extension.
 
-**Structs are read and not yet checked.** The parser reads a struct, its
-members and `.` and `->`, and the type checker refuses every one under
-`SC0304`, the code for valid C this compiler cannot handle yet, until #27
-gives a tag and its members a meaning. That is one gate rather than one per
-stage, so nothing after the type checker has to answer for a struct.
+**Structs are typed, and members are not yet.** The parser reads a struct,
+its members and `.` and `->`; the resolver binds each struct to its tag and
+checks its member list; and the type checker types an object of one and holds
+it to what C says of a struct. A member access of the right shape is refused
+under `SC0304`, the code for valid C this compiler cannot handle yet, until
+#423 types it, and the lowering refuses every struct under the same code,
+since the IR holds none.
 
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so
@@ -520,7 +522,7 @@ a declaration. They are gaps rather than decisions, and each one is a program
 
 | Written | Why it stops here |
 |---|---|
-| `int a[3];`, or any array or function type | the IR holds `int`, `char`, `void` and pointers to them |
+| `int a[3];`, or any array, function or struct type | the IR holds `int`, `char`, `void` and pointers to them |
 | `int g;` at file scope, used inside a function | every place the IR can name starts at a local |
 | `1 = 2` | C17 6.5.16 p2 wants a modifiable lvalue and nothing checks that yet, so the first thing to notice is a stage that needs somewhere to write |
 
