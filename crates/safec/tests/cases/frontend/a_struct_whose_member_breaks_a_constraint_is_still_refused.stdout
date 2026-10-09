@@ -1,0 +1,2 @@
+Declaration a_struct_whose_member_breaks_a_constraint_is_still_refused.c:1:1 "struct S"
+  Field a_struct_whose_member_breaks_a_constraint_is_still_refused.c:1:12 "a" "int[0]"

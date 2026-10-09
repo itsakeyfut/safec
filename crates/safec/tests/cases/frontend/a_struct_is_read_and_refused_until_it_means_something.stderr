@@ -1,0 +1,56 @@
+error[SC0304]: cannot check `->` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:6:12 ]
+   │
+ 6 │     return p->x + q.x;
+   │            ──┬─  
+   │              ╰─── a member of a struct
+───╯
+  = note: structs are read, and what a member is is #27's
+error[SC0304]: cannot check `.` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:6:19 ]
+   │
+ 6 │     return p->x + q.x;
+   │                   ─┬─  
+   │                    ╰─── a member of a struct
+───╯
+  = note: structs are read, and what a member is is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:1:1 ]
+   │
+ 1 │ struct S { int x; char *p; };
+   │ ──────────────┬──────────────  
+   │               ╰──────────────── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:2:1 ]
+   │
+ 2 │ struct S;
+   │ ────┬────  
+   │     ╰────── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct T` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:3:10 ]
+   │
+ 3 │ struct T s;
+   │          ┬  
+   │          ╰── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:5:14 ]
+   │
+ 5 │     struct S q;
+   │              ┬  
+   │              ╰── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's
+error[SC0304]: cannot check something of type `struct S` yet
+   ╭─[ a_struct_is_read_and_refused_until_it_means_something.c:4:17 ]
+   │
+ 4 │ int f(struct S *p) {
+   │                 ┬  
+   │                 ╰── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's

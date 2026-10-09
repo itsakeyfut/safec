@@ -145,8 +145,20 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
             dump_parameters(sources, ast, function.ty, depth + 1, out);
             dump_stmt(sources, ast, ast.stmt(function.body), depth + 1, out);
         }
-        Item::Declaration { declarators, span } => {
-            dump_declarators(sources, ast, declarators, item.name(), *span, depth, out);
+        Item::Declaration {
+            declarators,
+            specified,
+            span,
+        } => {
+            dump_declarators(
+                sources,
+                ast,
+                (declarators, *specified),
+                item.name(),
+                *span,
+                depth,
+                out,
+            );
         }
         Item::Error { .. } => out.push('\n'),
     }
@@ -165,19 +177,16 @@ fn dump_item(sources: &SourceMap, ast: &Ast, item: &Item, depth: usize, out: &mu
 fn dump_declarators(
     sources: &SourceMap,
     ast: &Ast,
-    declarators: &[InitDeclarator],
+    (declarators, specified): (&[InitDeclarator], TypeId),
     name: &'static str,
     span: Span,
     depth: usize,
     out: &mut String,
 ) {
     if declarators.is_empty() {
-        // `dump_node` has written a prefix and nothing below would end the
-        // line. Both variants say in their doc comments that a list is never
-        // empty, and #34 is the change that would make one: this is the line
-        // it has to find.
-        out.push('\n');
-        return;
+        // A declaration of a tag and nothing else: the type is all it has.
+        writeln!(out, " {:?}", spell_type(sources, ast, specified))
+            .expect("writing to a string cannot fail");
     }
 
     for (at, declarator) in declarators.iter().enumerate() {
@@ -189,6 +198,19 @@ fn dump_declarators(
         dump_parameters(sources, ast, declarator.declaration.ty, depth + 1, out);
         if let Some(init) = declarator.init {
             dump_expr(sources, ast, init, depth + 1, out);
+        }
+    }
+
+    // The members a struct the specifiers defined was given, a line each, once
+    // per declaration rather than once per declarator.
+    if let Type::Struct {
+        members: Some(members),
+        ..
+    } = ast.ty(specified)
+    {
+        for member in members {
+            dump_node(sources, "Field", member.span, depth + 1, out);
+            dump_declaration(sources, ast, member, out);
         }
     }
 }
@@ -269,8 +291,20 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
                 dump_expr(sources, ast, *id, depth + 1, out);
             }
         }
-        Stmt::Declaration { declarators, span } => {
-            dump_declarators(sources, ast, declarators, stmt.name(), *span, depth, out);
+        Stmt::Declaration {
+            declarators,
+            specified,
+            span,
+        } => {
+            dump_declarators(
+                sources,
+                ast,
+                (declarators, *specified),
+                stmt.name(),
+                *span,
+                depth,
+                out,
+            );
         }
         Stmt::Expression { value, .. } => {
             out.push('\n');
@@ -392,6 +426,12 @@ fn dump_expr(sources: &SourceMap, ast: &Ast, root: ExprId, depth: usize, out: &m
             }
             Expr::Binary { op, .. } => {
                 write!(out, " {:?}", op.as_str()).expect("writing to a string cannot fail");
+            }
+            // The operator as written, then the member's name.
+            Expr::Member { member, arrow, .. } => {
+                let operator = if *arrow { "->" } else { "." };
+                write!(out, " {operator:?} {:?}", quoted(sources, *member))
+                    .expect("writing to a string cannot fail");
             }
             Expr::Assign { op, .. } => {
                 // `+=` is `+` and `=`, built rather than tabulated: eleven more

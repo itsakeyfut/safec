@@ -1,0 +1,8 @@
+error[SC0304]: cannot check something of type `struct S` yet
+   ╭─[ a_struct_whose_member_breaks_a_constraint_is_still_refused.c:1:1 ]
+   │
+ 1 │ struct S { int a[0]; };
+   │ ───────────┬───────────  
+   │            ╰───────────── declared here
+───╯
+  = note: structs are read, and what a tag and its members mean is #27's

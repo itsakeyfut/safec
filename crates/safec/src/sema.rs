@@ -332,6 +332,13 @@ impl Resolver<'_> {
                 self.walk_type(*element, diagnostics);
             }
             Type::Function { returns, .. } => self.walk_type(*returns, diagnostics),
+            // A member's array lengths are expressions too. Its name and the
+            // tag are not looked up: what they mean is #27's.
+            Type::Struct { members, .. } => {
+                for member in members.iter().flatten() {
+                    self.walk_type(member.written, diagnostics);
+                }
+            }
         }
     }
 

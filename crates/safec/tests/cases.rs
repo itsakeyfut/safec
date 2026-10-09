@@ -2782,6 +2782,35 @@ cases! {
         // declarator under `SC0309` as well, and both are reported; dropping
         // the file-scope walk's arrays loses its `SC0310`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
+        // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
+        // members, a declaration of a tag and nothing else, an object, a
+        // parameter, a local, and `.` and `->`, each in the tree. The type
+        // checker refuses every one under `SC0304` until #27 says what they
+        // mean, the two declarations with no declarator included, and `g`,
+        // which holds no struct, is not reported. Mutation: refuse `struct` in
+        // `specifiers` again; this is `SC0201` at the first `struct`.
+        // Mutation: let a parameter's type past the gate, or skip a member
+        // access; a report goes. Mutation: read `->` as `.`; the dump's
+        // `"->"` goes.
+        a_struct_is_read_and_refused_until_it_means_something: ["--emit", "ast"],
+        // A struct with no tag declares nothing when nothing else is
+        // declared (6.7 p2). Mutation: let any struct through without a
+        // declarator; this loses its `SC0206`.
+        a_struct_with_no_tag_and_no_declarator_declares_nothing: ["--emit", "ast"],
+        // A declaration with no declarator has only its specifiers' type, and
+        // the gate asks it, so a member breaking a constraint is not
+        // accepted unchecked. Mutation: leave a declaration's `specified`
+        // type out of the gate; this exits 0.
+        a_struct_whose_member_breaks_a_constraint_is_still_refused: ["--emit", "ast"],
+        // 6.7.2.1 p1's grammar asks for a member, and `clang
+        // -pedantic-errors` calls `struct S {};` a GNU extension. Mutation:
+        // accept a `}` before any member; this loses its `SC0201`.
+        a_struct_with_no_members_is_refused: ["--emit", "ast"],
+        // Three hundred structs each the only member of the one around it,
+        // past the parser's nesting limit, so a member list goes through
+        // `Parser::deeper`. Mutation: read members without `deeper`; this is
+        // a struct as deep as the source, which the parser does not refuse.
+        a_struct_nested_past_the_limit_is_refused_rather_than_read: ["--emit", "ast"],
         // C17 6.7 p2: a declaration has to declare something, and specifiers
         // followed by their `;` declare nothing, at file scope, in a block and
         // as a `for`'s first clause alike, since all three are read by

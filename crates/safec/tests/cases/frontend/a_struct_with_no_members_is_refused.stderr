@@ -1,0 +1,7 @@
+error[SC0201]: expected a member
+   ╭─[ a_struct_with_no_members_is_refused.c:1:11 ]
+   │
+ 1 │ struct S {};
+   │           ┬  
+   │           ╰── a struct has at least one
+───╯

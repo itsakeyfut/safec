@@ -108,12 +108,21 @@ And one the parser refuses that `clang` accepts with a warning.
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int;` | `error[SC0206]` | warns | `error: declaration does not declare anything` |
+| `struct S {};` | `error[SC0201]` | accepts | `error: empty struct is a GNU extension` |
 
 **It is a constraint violation, and this compiler takes no constraint-violating
 extension.** C17 6.7 p2 requires a declaration to declare a declarator, a tag
 or an enumeration's members, and `int;` declares none. The parser reports it,
 being the stage that knows there was no declarator; a declaration that
-declares only a tag is valid and is #34's, with the first tag.
+declares only a tag, `struct S;`, is valid and is read. `struct S {};` is
+refused for the same reason: C17 6.7.2.1 p1's grammar asks for at least one
+member, and the empty list is an extension.
+
+**Structs are read and not yet checked.** The parser reads a struct, its
+members and `.` and `->`, and the type checker refuses every one under
+`SC0304`, the code for valid C this compiler cannot handle yet, until #27
+gives a tag and its members a meaning. That is one gate rather than one per
+stage, so nothing after the type checker has to answer for a struct.
 
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so

@@ -47,6 +47,10 @@ use safec_ir::target::Target;
 /// `MISMATCH`: what differs between them is the message, and a reader filtering
 /// on the code wants "the IR could not be built" rather than a list of ways
 /// that can happen.
+///
+/// The type checker reports a struct under the same code, as valid C this
+/// compiler cannot handle yet, and is the stage that does so: none reaches
+/// this one. See `types.rs`'s `NOT_YET`.
 const LOWERING: Code = Code::new("SC0304");
 
 /// Two declarations of one function that disagree about a nullability
@@ -597,6 +601,7 @@ fn sequences(expr: &Expr) -> bool {
         Expr::Number { .. }
         | Expr::Identifier { .. }
         | Expr::Unary { .. }
+        | Expr::Member { .. }
         | Expr::Assign { .. }
         | Expr::Call { .. }
         | Expr::Subscript { .. }
@@ -1087,7 +1092,9 @@ impl Lowering<'_> {
                 // asked the IR to hold either an array or a function yet, and
                 // #74, which is the issue for what it cannot say, is about
                 // storage duration rather than about these.
-                Type::Array { .. } | Type::Function { .. } => {
+                // A struct does not get here past the type checker, which
+                // refuses every one; answered as the others are all the same.
+                Type::Array { .. } | Type::Function { .. } | Type::Struct { .. } => {
                     diagnostics.report(
                         Diagnostic::error(format!(
                             "cannot compile something of type `{}` yet",
@@ -1739,6 +1746,9 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
+            // The type checker refuses every member access, and a program it
+            // refused anything in is not lowered. One here is a hole in that gate.
+            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
             Expr::Number { .. } => {
                 // Worked out by `types.rs`, where the base, the suffix and
                 // the range of `int` are all one question. A constant it
@@ -1866,6 +1876,9 @@ impl Lowering<'_> {
         self.descend(id, tasks);
 
         match self.ast.expr(id) {
+            // The type checker refuses every member access, and a program it
+            // refused anything in is not lowered. One here is a hole in that gate.
+            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
             Expr::Identifier { .. } => {
                 places.push(Place::local(self.local(id, diagnostics)?));
             }
@@ -1960,6 +1973,9 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.expr(id) {
+            // The type checker refuses every member access, and a program it
+            // refused anything in is not lowered. One here is a hole in that gate.
+            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
             // A constant is its own value, so nothing asks it to finish. The
             // arm is here because the match is written out: an expression kind
             // added later has to say what it does rather than fall through.
@@ -2248,6 +2264,9 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
         match self.ast.expr(id) {
+            // The type checker refuses every member access, and a program it
+            // refused anything in is not lowered. One here is a hole in that gate.
+            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
             Expr::Unary { .. } => {
                 let operand = values.pop().expect("a pointer");
                 let mut place = self.pointed_at(id, operand, diagnostics)?;
@@ -2379,6 +2398,9 @@ impl Lowering<'_> {
         let join = builder.function.reserve_block();
 
         match self.ast.expr(id) {
+            // The type checker refuses every member access, and a program it
+            // refused anything in is not lowered. One here is a hole in that gate.
+            Expr::Member { .. } => unreachable!("a member access reached the lowering"),
             Expr::Binary { op, lhs, rhs, .. } => {
                 let (op, lhs, rhs) = (*op, *lhs, *rhs);
                 let answer = answer.expect("a `&&` or `||` is an `int`");

@@ -120,6 +120,21 @@ pub enum Type {
         /// What it was written to take.
         parameters: Parameters,
     },
+    /// A structure, C17 6.7.2.1: `struct S`, `struct S { ... }` or
+    /// `struct { ... }`.
+    ///
+    /// **Read, and not yet given a meaning.** What a tag names, whether two
+    /// occurrences are one type, and where a member lies are #27's; until then
+    /// the type checker refuses every struct under `SC0304`, so no stage after
+    /// it has to answer for one. Each occurrence is its own `TypeId`, as every
+    /// type is here.
+    Struct {
+        /// The tag, if one was written.
+        tag: Option<Span>,
+        /// The members, if a `{ ... }` was written: never empty, because C17
+        /// 6.7.2.1 p1's grammar asks for at least one member declaration.
+        members: Option<Vec<Declaration>>,
+    },
 }
 
 /// What a function declarator wrote between its parentheses.
@@ -482,6 +497,21 @@ pub enum Expr {
         /// The base through the closing bracket.
         span: Span,
     },
+    /// `s.m` or `p->m`. C17 6.5.2.3.
+    ///
+    /// The member is a span and is resolved by nothing yet: which member of
+    /// which struct it names is #27's, and the type checker refuses every
+    /// access until then.
+    Member {
+        /// The struct, or for `->` the pointer to it.
+        base: ExprId,
+        /// The member's name.
+        member: Span,
+        /// Whether it was written `->` rather than `.`.
+        arrow: bool,
+        /// The base through the member's name.
+        span: Span,
+    },
     /// The comma operator. C17 6.5.17.
     ///
     /// Not what separates the arguments of a call: an argument is an
@@ -550,11 +580,16 @@ pub enum Stmt {
         /// and without `-pedantic-errors` it warns and accepts it as an
         /// extension. What is valid and
         /// empty here is `struct S { int x; };`, which declares a tag, and
-        /// this parser reads no tags yet. Either way nothing downstream has to
-        /// answer for an empty list: the parser refuses `int;` under
-        /// `SC0206`, and #34, which brings the first tag, is the change that
-        /// would alter that.
+        /// a declaration with no declarator is valid where it declares a tag,
+        /// `struct S;` and `struct S { int x; };`, and only there: the parser
+        /// refuses `int;` and `struct { int x; };` under `SC0206`. So the list
+        /// is empty exactly when [`Stmt::Declaration::specified`] is a
+        /// `Type::Struct` with a tag.
         declarators: Vec<InitDeclarator>,
+        /// What the specifiers named, before any declarator derived from it.
+        /// The only type a declaration with no declarator has, and what the
+        /// type checker asks of one.
+        specified: TypeId,
         /// The specifiers through the `;`.
         span: Span,
     },
@@ -684,8 +719,10 @@ pub enum Item {
     Declaration {
         /// C17 6.7's `init-declarator-list`, in the order it was written.
         ///
-        /// Never empty, for the reason [`Stmt::Declaration`] gives.
+        /// Empty exactly where [`Stmt::Declaration::declarators`] says.
         declarators: Vec<InitDeclarator>,
+        /// What the specifiers named, as [`Stmt::Declaration::specified`].
+        specified: TypeId,
         /// The specifiers through the `;`.
         span: Span,
     },
@@ -712,6 +749,7 @@ impl Expr {
             Self::Conditional { .. } => "Conditional",
             Self::Call { .. } => "Call",
             Self::Subscript { .. } => "Subscript",
+            Self::Member { .. } => "Member",
             Self::Comma { .. } => "Comma",
             Self::Error { .. } => "Error",
         }
@@ -728,6 +766,7 @@ impl Expr {
             | Self::Conditional { span, .. }
             | Self::Call { span, .. }
             | Self::Subscript { span, .. }
+            | Self::Member { span, .. }
             | Self::Comma { span, .. }
             | Self::Error { span, .. } => *span,
         }
@@ -772,7 +811,7 @@ impl Expr {
     pub fn extend_children(&self, out: &mut Vec<ExprId>) {
         match self {
             Self::Number { .. } | Self::Identifier { .. } | Self::Error { .. } => {}
-            Self::Unary { operand, .. } => out.push(*operand),
+            Self::Unary { operand, .. } | Self::Member { base: operand, .. } => out.push(*operand),
             Self::Binary { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
             Self::Assign { place, value, .. } => out.extend([*place, *value]),
             Self::Comma { lhs, rhs, .. } => out.extend([*lhs, *rhs]),
@@ -996,6 +1035,10 @@ impl Ast {
             | (Type::Pointer(_), _)
             | (Type::Array { .. }, _)
             | (Type::Function { .. }, _) => false,
+            // Whether two struct types are one is #27's, which gives a tag its
+            // meaning; until then nothing that asks reaches a struct, since
+            // the type checker refuses every one first.
+            (Type::Struct { .. }, _) => false,
         }
     }
 
@@ -1047,7 +1090,8 @@ impl Ast {
             | Type::Void
             | Type::Pointer(_)
             | Type::Array { .. }
-            | Type::Function { .. } => false,
+            | Type::Function { .. }
+            | Type::Struct { .. } => false,
         }
     }
 }
@@ -1083,6 +1127,18 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
             Type::Int => "int",
             Type::Char => "char",
             Type::Void => "void",
+            // The tag as written, and `(anonymous)` for none. A base of more
+            // than one word, so it is spelled here and returned with the same
+            // spacing as the others below.
+            Type::Struct { tag, .. } => {
+                let tag = tag.map_or("(anonymous)", |tag| sources.snippet(tag));
+                let spelled = format!("struct {tag}");
+                return if inner.is_empty() || inner.starts_with('[') {
+                    format!("{spelled}{inner}")
+                } else {
+                    format!("{spelled} {inner}")
+                };
+            }
             Type::Pointer(pointee) => {
                 inner = if binds_tighter_than_a_pointer(ast.ty(*pointee)) {
                     format!("(*{inner})")
@@ -1147,7 +1203,7 @@ pub fn spell_type(sources: &SourceMap, ast: &Ast, id: TypeId) -> String {
 fn binds_tighter_than_a_pointer(ty: &Type) -> bool {
     match ty {
         Type::Array { .. } | Type::Function { .. } => true,
-        Type::Int | Type::Char | Type::Void | Type::Pointer(_) => false,
+        Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Struct { .. } => false,
     }
 }
 
