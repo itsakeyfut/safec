@@ -111,7 +111,7 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Eleven more are where the type checker declines what `clang` accepts.
+Twelve more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
@@ -126,6 +126,7 @@ Eleven more are where the type checker declines what `clang` accepts.
 | `c ? p : 1;` as a statement, with `int *p` | `error[SC0306]` | warns | `error: pointer/integer type mismatch in conditional expression ('int *' and 'int')` |
 | `int z[0];` | `error[SC0309]` | accepts | `error: zero size arrays are an extension` |
 | `int a[(1 << 31) < 0 ? 1 : 2];` | `error[SC0309]` | accepts | accepts |
+| `for (int i = 0, h(void); 0;)` | `error[SC0311]` | accepts | accepts |
 
 **The first two are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
@@ -178,6 +179,14 @@ p2), so `(1 << 31) < 0 ? 1 : 2` has no defined value and is refused, where
 `clang` folds the shift to `INT_MIN` and says nothing. A division by zero that
 is never evaluated, `1 || 1 / 0` or the arm a `?:` does not take, leaves the
 length its value, as `clang` agrees.
+
+**And a function declared by a `for`, wherever it is in the declaration.**
+C17 6.8.5 p3, a constraint: "The declaration part of a for statement shall
+only declare identifiers for objects having storage class auto or register."
+`clang` 20 refuses `for (int h(void); 0;)` with "non-variable declaration in
+'for' loop" and accepts the same function declared second, even when asked to
+be pedantic, so it appears to ask only a declaration with one declarator.
+`types.rs::Checker::check_for_declarations` asks every declarator.
 
 ### What an integer constant is worth, and what type it is not
 

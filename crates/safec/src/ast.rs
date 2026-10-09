@@ -6,10 +6,9 @@
 //! What is here is part of the subset [`docs/frontend.md`] calls Stage 1: the
 //! types C17 6.7.6 derives from a declarator over `int`, `char` and `void`, the
 //! expressions of 6.5, and the statements of 6.8.3 through 6.8.5. What is not
-//! here is `switch`, `do`, `goto`, a labelled statement, `break`, `continue`, a
-//! declaration in a `for` initialiser, and structs. The siblings of the issues
-//! that added the rest fill those in, and each of them adds variants here
-//! rather than changing the shape.
+//! here is `switch`, `do`, `goto`, a labelled statement, `break`, `continue`,
+//! and structs. The siblings of the issues that added the rest fill those in,
+//! and each of them adds variants here rather than changing the shape.
 //!
 //! **A statement tree is bounded and an expression tree is not.** Every place a
 //! statement nests inside another is a recursion in the parser, which counts

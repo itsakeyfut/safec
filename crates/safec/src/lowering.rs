@@ -182,8 +182,9 @@ fn decided(
 ///
 /// Reverse order of declaration, which is the order a C++ destructor would run
 /// in and costs nothing to get right while the list is being written. Only
-/// where the end is reachable: a scope left by `return` alone ends with the
-/// frame, which ADR-0012 says needs no marker.
+/// where the end is reachable: a scope left only by `return` has its storage
+/// ended by the `return`, which ends every scope it leaves, so nothing is
+/// left to end here.
 ///
 /// `span` is the statement the scope belongs to, a compound or a `for`, and
 /// the marker is `Generated` at its last byte. Nobody wrote "end this
@@ -267,8 +268,9 @@ struct Lowering<'a> {
     /// it is where the name was declared, so it is one per declaration, and a
     /// use reaches it through the binding it resolved to.
     locals: HashMap<Span, LocalId>,
-    /// The compound statements that are open, innermost last, each holding the
-    /// locals it declared directly.
+    /// The scopes that are open, innermost last, each holding the locals it
+    /// declared directly: a compound statement's, and a `for`'s whose first
+    /// clause is a declaration (C17 6.8.5 p5).
     ///
     /// The function's body is the first, so a scope narrower than the function
     /// is one at index 1 or beyond. Only those get storage markers: a local

@@ -3,15 +3,14 @@
 //! What it reads is C17 6.7.6's declarators over `int`, `char` and `void`, the
 //! operators of 6.5 from an integer constant or an identifier up to the comma
 //! operator, and the statements of 6.8.3 through 6.8.5: a compound statement,
-//! `return`, an expression statement, `if`, `while` and the `for` whose clauses
-//! are expressions. What it does not read yet is `switch`, `do`, `goto`, a
-//! labelled statement, `break`, `continue`, a declaration in a `for`
-//! initialiser, structs, member access, casts, `sizeof`, the type qualifiers,
-//! the storage classes, `typedef`, a variadic function's ellipsis, `[static N]`
-//! and `[*]`, and the two primary expressions the lexer already hands it: a
-//! character constant and a string literal. Each arrives in a sibling of the
-//! issues that built this, and each adds to [`crate::ast`] rather than
-//! reshaping it.
+//! `return`, an expression statement, `if`, `while` and both forms of `for`.
+//! What it does not read yet is `switch`, `do`, `goto`, a labelled statement,
+//! `break`, `continue`, structs, member access, casts, `sizeof`, the type
+//! qualifiers, the storage classes, `typedef`, a variadic function's ellipsis,
+//! `[static N]` and `[*]`, and the two primary expressions the lexer already
+//! hands it: a character constant and a string literal. Each arrives in a
+//! sibling of the issues that built this, and each adds to [`crate::ast`]
+//! rather than reshaping it.
 //!
 //! It is handed tokens and not the source. ADR-0006 reserved a trigger, that
 //! the parser asking for a `&SourceMap` is the moment an interner is worth
@@ -1476,6 +1475,9 @@ impl Parser<'_> {
             || self.check(TokenKind::Annotation(Annotation::Attribute))
         {
             let declaration = self.declaration_statement(diagnostics);
+            // Not observable today, since a tree with a syntax error goes no
+            // further, but it keeps `ForStart::Declaration` pointing only at a
+            // declaration, which `types.rs` asserts.
             if matches!(self.ast.stmt(declaration), Stmt::Error { .. }) {
                 return failed(self);
             }
