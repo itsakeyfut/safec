@@ -153,7 +153,8 @@ const NOT_YET: Code = Code::new("SC0304");
 /// The wording follows `clang`'s `variable has incomplete type 'struct S'`.
 /// A member access on a struct not complete where it is written is the same
 /// question again (C17 6.5.2.3 p1 with 6.7.2.1 p8): there are no members to
-/// name yet.
+/// name yet. So is an object of one whose value is read (6.3.2.1 p2) or
+/// which is assigned to (6.5.16 p2), each where it is written.
 const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 
 /// A member access naming a member its struct does not have, C17 6.5.2.3 p1
@@ -291,6 +292,7 @@ pub fn check(
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
     checker.check_complete_objects(ast, diagnostics);
+    checker.check_incomplete_values(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
     checker.check_for_declarations(ast, diagnostics);
 
@@ -773,6 +775,83 @@ impl Checker<'_> {
             .with_label(Label::primary(at, "defined here"))
             .with_note("a function definition returns `void` or a complete type (C17 6.9.1 p3)"),
         );
+    }
+
+    /// Report every lvalue whose type is a struct not complete where it is
+    /// written, under [`INCOMPLETE_OBJECT`], unless it is the operand of `&`.
+    ///
+    /// A name and `*e` are the only lvalues that can be one: a member access
+    /// asks for its struct complete, and a subscript for its pointee, so
+    /// neither gets here. The left operand of a plain `=` is not a modifiable
+    /// lvalue (C17 6.5.16 p2, with 6.3.2.1 p1), and anywhere else its value
+    /// is read, which 6.3.2.1 p2 leaves undefined for an incomplete type.
+    ///
+    /// Decided by exclusion rather than by a list of the places a value is
+    /// read: a place forgotten in such a list would accept the program in
+    /// silence, and one forgotten here reports valid C, visibly. `&` is the
+    /// one operand C does not convert today; `sizeof` joins it when it is
+    /// read. See the design comment on #424.
+    fn check_incomplete_values(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        let mut addressed = HashSet::new();
+        let mut places = HashSet::new();
+        for id in ast.expr_ids() {
+            match ast.expr(id) {
+                Expr::Unary {
+                    op: UnOp::AddrOf,
+                    operand,
+                    ..
+                } => {
+                    addressed.insert(*operand);
+                }
+                Expr::Assign {
+                    op: None, place, ..
+                } => {
+                    places.insert(*place);
+                }
+                _ => {}
+            }
+        }
+        for id in ast.expr_ids() {
+            let lvalue = matches!(
+                ast.expr(id),
+                Expr::Identifier { .. }
+                    | Expr::Unary {
+                        op: UnOp::Deref,
+                        ..
+                    }
+            );
+            let Some(ty) = self.types[id.index()] else {
+                continue;
+            };
+            if !lvalue
+                || !matches!(ast.ty(ty), Type::Struct { .. })
+                || addressed.contains(&id)
+                || self.resolution.complete_at(ast, ty, id)
+            {
+                continue;
+            }
+            let spelled = self.spelled(ast, ty);
+            let (message, note) = if places.contains(&id) {
+                (
+                    format!("`{spelled}` is not complete here, and cannot be assigned to"),
+                    "C17 6.5.16 p2 and 6.3.2.1 p1",
+                )
+            } else {
+                (
+                    format!("`{spelled}` is not complete here, and its value cannot be read"),
+                    "C17 6.3.2.1 p2",
+                )
+            };
+            diagnostics.report(
+                Diagnostic::error(message)
+                    .with_code(INCOMPLETE_OBJECT)
+                    .with_label(Label::primary(
+                        ast.expr(id).span(),
+                        format!("this is `{spelled}`"),
+                    ))
+                    .with_note(note),
+            );
+        }
     }
 
     /// Whether `ty` is a variable length array type: an array, any of whose

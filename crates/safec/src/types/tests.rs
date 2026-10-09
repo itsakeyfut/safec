@@ -2274,3 +2274,64 @@ fn a_member_is_held_to_what_c_says_of_a_member_once_per_definition() {
         ]
     );
 }
+
+/// An lvalue of a struct not complete where it is written is reported
+/// wherever its value is read (C17 6.3.2.1 p2) and where it is assigned to
+/// (6.5.16 p2), and not as the operand of `&`, which reads no value. Below
+/// the definition the same statements are not reported, `s` included,
+/// though it was declared above it.
+///
+/// Mutation: skip the pass; every row goes silent. Mutation: do not exclude
+/// `&`'s operand; `&*p` is reported. Mutation: word a place as a value; the
+/// first message changes. Mutation: ask completeness where the type was
+/// written, with `Resolution::complete`; `s` is reported below the
+/// definition too. Each fails this.
+#[test]
+fn an_incomplete_struct_is_reported_where_its_value_is_read_or_assigned() {
+    let checked = checked(
+        "struct S;
+struct S s;
+void k(struct S v);
+int f(struct S *p, struct S *q, int c) {
+    *p = *q;
+    0, *p;
+    c ? *p : *q;
+    k(s);
+    return &*p != 0;
+}
+struct S {
+    int a;
+};
+int g(struct S *p, struct S *q, int c) {
+    *p = *q;
+    c ? *p : *q;
+    k(s);
+    return &*p != 0;
+}
+",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "`struct S` is not complete here, and cannot be assigned to",
+            "`struct S` is not complete here, and its value cannot be read",
+            "`struct S` is not complete here, and its value cannot be read",
+            "`struct S` is not complete here, and its value cannot be read",
+            "`struct S` is not complete here, and its value cannot be read",
+            "`struct S` is not complete here, and its value cannot be read",
+        ]
+    );
+    assert_eq!(checked.codes(), ["SC0315"; 6]);
+    assert_eq!(
+        checked.notes(),
+        [
+            "C17 6.5.16 p2 and 6.3.2.1 p1",
+            "C17 6.3.2.1 p2",
+            "C17 6.3.2.1 p2",
+            "C17 6.3.2.1 p2",
+            "C17 6.3.2.1 p2",
+            "C17 6.3.2.1 p2",
+        ]
+    );
+}
