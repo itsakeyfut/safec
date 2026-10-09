@@ -230,9 +230,8 @@ impl Resolution {
     /// of the base's type; what was complete at that point in the walk has to
     /// be recorded there, which #419 does.
     ///
-    /// Asked of a type this stage walked. A struct it did not reach, in the
-    /// parameters of a function declarator nested inside a type (#409), is
-    /// answered incomplete.
+    /// Asked of a type this stage walked, which is every type written in the
+    /// tree.
     pub fn complete(&self, ast: &Ast, ty: TypeId) -> bool {
         let mut current = ty;
         loop {
@@ -260,12 +259,11 @@ impl Resolution {
     ///
     /// # Panics
     ///
-    /// If `ty` is not a struct this stage bound. That includes a struct in
-    /// the parameters of a function declarator nested inside another type,
-    /// `void f(void (*cb)(struct A *))`, which the walk does not reach yet:
-    /// #409. A panic rather than an `Option`, because two answers of `None`
-    /// compare equal, and a comparison that called two unrelated structs one
-    /// type would be believed.
+    /// If `ty` is not a struct this stage bound, which every struct written in
+    /// the tree is, a nested parameter list's included. A panic rather than
+    /// an `Option` all the same, because two answers of `None` compare equal,
+    /// and a comparison that called two unrelated structs one type would be
+    /// believed.
     pub fn tag(&self, ty: TypeId) -> TagId {
         self.tag_of
             .get(&ty)
@@ -386,7 +384,7 @@ impl Resolver<'_> {
                 if let Some(attribute) = function.attribute {
                     self.attribute(attribute, diagnostics);
                 }
-                self.walk_type(function.ty, diagnostics);
+                self.walk_declarator(function.ty, diagnostics);
                 self.define(function.name, diagnostics);
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
@@ -518,7 +516,7 @@ impl Resolver<'_> {
     /// parameters are the same names in a scope [`Resolver::item`] keeps open
     /// for the body instead.
     fn declaration(&mut self, declaration: &Declaration, diagnostics: &mut DiagnosticSink) {
-        self.walk_type(declaration.ty, diagnostics);
+        self.walk_declarator(declaration.ty, diagnostics);
 
         self.open_scope();
         self.parameters(declaration.ty, diagnostics);
@@ -581,19 +579,38 @@ impl Resolver<'_> {
     /// pointer chain overflowed the stack. In the order the recursion visited
     /// them, so the names are resolved, and reported, in source order.
     ///
-    /// A function's parameters are not walked here, because they need a scope
-    /// of their own and this has none to give: [`Resolver::parameters`] is
-    /// where they are declared and their lengths looked up. Doing it here
-    /// instead reports `n` in `int f(int n, int a[n])` as undeclared, which is
-    /// a false positive about valid C.
+    /// A function type's parameters are walked in a function prototype scope
+    /// of their own (C17 6.2.1 p4), opened here and closed by a step below
+    /// them: the names declared first and the lengths walked after, for the
+    /// reason [`Resolver::parameters`] gives, and the return walked outside
+    /// the scope. So `void (*p)(int n, int a[n])` finds its `n`, a struct
+    /// written there is a tag of that scope, and `void (*p)(int a, int a)` is
+    /// a redeclaration.
     fn walk_type(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
+        self.walk(ty, false, diagnostics);
+    }
+
+    /// [`Resolver::walk_type`], except for the parameters of `ty` itself when
+    /// it is a function type: a declaration's or a definition's own parameter
+    /// list, which [`Resolver::parameters`] walks in the scope its caller
+    /// opens, closed at once for a declaration and kept open over the body for
+    /// a definition. Walked here as well, they would be declared twice.
+    fn walk_declarator(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
+        self.walk(ty, true, diagnostics);
+    }
+
+    fn walk(&mut self, root: TypeId, skip_root_parameters: bool, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
-        let mut pending = vec![Step::Type(ty)];
+        let mut pending = vec![Step::Type(root)];
         while let Some(step) = pending.pop() {
             let ty = match step {
                 Step::Type(ty) => ty,
                 Step::Close(definition) => {
                     self.close_definition(definition, diagnostics);
+                    continue;
+                }
+                Step::CloseScope => {
+                    self.close_scope();
                     continue;
                 }
             };
@@ -610,7 +627,31 @@ impl Resolver<'_> {
                     }
                     pending.push(Step::Type(*element));
                 }
-                Type::Function { returns, .. } => pending.push(Step::Type(*returns)),
+                Type::Function {
+                    returns,
+                    parameters,
+                } => {
+                    pending.push(Step::Type(*returns));
+                    let Parameters::Prototype(parameters) = parameters else {
+                        continue;
+                    };
+                    if skip_root_parameters && ty == root {
+                        continue;
+                    }
+                    pending.push(Step::CloseScope);
+                    self.open_scope();
+                    for parameter in parameters {
+                        if let Some(name) = parameter.name {
+                            self.declare(name, parameter.ty, false, diagnostics);
+                        }
+                    }
+                    pending.extend(
+                        parameters
+                            .iter()
+                            .rev()
+                            .map(|parameter| Step::Type(parameter.written)),
+                    );
+                }
                 // A member's array lengths are expressions too, walked once
                 // per definition, for the reason `walked` gives. Its name is
                 // not looked up: what it means is #27's. The tag is, and is
@@ -1326,11 +1367,13 @@ fn unfit_member(sources: &SourceMap, at: Span, why: String) -> Diagnostic {
         .with_note("C17 6.7.2.1 p3")
 }
 
-/// One step of [`Resolver::walk_type`]: a type to walk, or the close of a
-/// struct definition whose members are all walked.
+/// One step of [`Resolver::walk_type`]: a type to walk, the close of a
+/// struct definition whose members are all walked, or the close of a function
+/// prototype scope whose parameters are.
 enum Step {
     Type(TypeId),
     Close(TypeId),
+    CloseScope,
 }
 
 /// `name` is source text, and it reaches a terminal through this message.
@@ -1895,23 +1938,19 @@ mod tests {
         assert_ne!(untagged[0], untagged[1]);
     }
 
-    /// A struct the walk did not bind is a panic naming it, not an answer
-    /// that compares equal to another unbound struct's: the struct in `cb`'s
-    /// parameters is one such today.
+    /// A struct written in a nested parameter list is bound, to a tag of
+    /// that list's prototype scope (C17 6.7.2.3 p8), so the `struct A`
+    /// defined after `f` is another tag.
     ///
-    /// Mutation: answer `.unwrap_or(TagId(0))` in `Resolution::tag`; nothing
-    /// panics, and this fails.
+    /// Mutation: push only the return in `Resolver::walk`'s function arm, as
+    /// before; the struct in `cb`'s parameters is bound to nothing,
+    /// `Resolution::tag` panics, and this fails.
     #[test]
-    #[should_panic(expected = "was bound to no tag")]
-    fn a_struct_bound_to_no_tag_is_a_panic_and_not_an_answer() {
-        let resolved = resolved("void f(void (*cb)(struct A *));\n");
+    fn a_struct_in_a_nested_parameter_list_is_a_tag_of_that_list() {
+        let resolved = resolved("void f(void (*cb)(struct A *));\nstruct A {\n    int a;\n};\n");
 
-        let unbound = resolved
-            .ast
-            .type_ids()
-            .find(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { .. }))
-            .expect("the struct is in the tree");
-        let _ = resolved.resolution.tag(unbound);
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_ne!(resolved.tag_at("A", 0), resolved.tag_at("A", 1));
     }
 
     /// A function given a second body is reported once, at the second, and
@@ -1957,8 +1996,8 @@ mod tests {
     /// A name with no linkage declared twice in one scope is reported (C17
     /// 6.7 p3): two locals in a block, a local in a definition's body beside
     /// its parameter, and two parameters of the declared function's own
-    /// prototype. A prototype nested inside a type, a function pointer's, is
-    /// not walked yet: #409.
+    /// prototype. A prototype nested inside a type is
+    /// `a_nested_parameter_list_is_a_scope_of_its_own`'s.
     ///
     /// Mutation: drop the report in `Resolver::declare`; nothing is reported
     /// and this fails.
@@ -2457,6 +2496,37 @@ mod tests {
                 ("u", false),
                 ("s", false),
             ]
+        );
+    }
+
+    /// A parameter list nested inside a type is a function prototype scope of
+    /// its own (C17 6.2.1 p4): two parameters of one name in it are a
+    /// redeclaration, whether it is a variable's type or a parameter's, its
+    /// lengths find its own names, an undeclared one is reported, and its
+    /// names are gone after it.
+    ///
+    /// Mutation: declare no nested parameter in `Resolver::walk`; the two
+    /// `a`s go silent and `n` is undeclared. Mutation: skip the lengths; `m`
+    /// goes silent. Mutation: drop `Step::CloseScope`; the use
+    /// of `k` in `g` finds the parameter, not the file-scope `k`. Each fails
+    /// this.
+    #[test]
+    fn a_nested_parameter_list_is_a_scope_of_its_own() {
+        let resolved = resolved(
+            "void (*p)(int a, int a);\nvoid f(void (*cb)(int b, int b));\nvoid (*q)(int n, int x[n]);\nvoid (*r)(int y[m]);\nint k;\nvoid (*s)(int k);\nint g(void) {\n    return k;\n}\n",
+        );
+
+        assert_eq!(
+            resolved.messages(),
+            [
+                "redefinition of `a`",
+                "redefinition of `b`",
+                "use of undeclared identifier `m`",
+            ]
+        );
+        assert_eq!(
+            resolved.declaration_of("k", 2),
+            Some(resolved.occurrence("k", 0))
         );
     }
 }
