@@ -1,0 +1,12 @@
+Declaration a_tag_defined_twice_in_one_scope_is_a_redefinition.c:1:1 "struct V"
+  Field a_tag_defined_twice_in_one_scope_is_a_redefinition.c:1:12 "a" "int"
+Declaration a_tag_defined_twice_in_one_scope_is_a_redefinition.c:2:1 "struct V"
+  Field a_tag_defined_twice_in_one_scope_is_a_redefinition.c:2:12 "b" "int"
+Declaration a_tag_defined_twice_in_one_scope_is_a_redefinition.c:3:1 "struct W"
+  Field a_tag_defined_twice_in_one_scope_is_a_redefinition.c:3:12 "a" "int"
+Function a_tag_defined_twice_in_one_scope_is_a_redefinition.c:4:1 "g" "int (void)"
+  Compound a_tag_defined_twice_in_one_scope_is_a_redefinition.c:4:13
+    Declaration a_tag_defined_twice_in_one_scope_is_a_redefinition.c:5:5 "w" "struct W"
+      Field a_tag_defined_twice_in_one_scope_is_a_redefinition.c:5:16 "b" "int"
+    Return a_tag_defined_twice_in_one_scope_is_a_redefinition.c:6:5
+      Number a_tag_defined_twice_in_one_scope_is_a_redefinition.c:6:12 "0"

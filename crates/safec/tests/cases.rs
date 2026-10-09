@@ -2863,6 +2863,12 @@ cases! {
         // Mutation: report a member access whose base is one; three hundred
         // reports.
         a_chain_of_member_accesses_is_refused_once: ["--emit", "ast"],
+        // C17 6.7.2.3 p1: `V` given its content twice in one scope is
+        // `SC0312`, and `W` given it again in a block is a new tag, which is
+        // not. The struct gate refuses every one of them as well. Mutation:
+        // look a definition up in every visible scope; `W` is reported.
+        // Mutation: drop the report; `V`'s goes.
+        a_tag_defined_twice_in_one_scope_is_a_redefinition: ["--emit", "ast"],
         // Valid C that is not read yet, each told so with the paragraph that
         // makes it valid: an anonymous member (C17 6.7.2.1 p13) and a
         // bit-field, named or not (p9). Mutation: send a member with no
