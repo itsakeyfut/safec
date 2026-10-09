@@ -212,7 +212,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         tag_scopes: vec![Vec::new()],
         children: Vec::new(),
         walked: HashSet::new(),
-        definitions: Vec::new(),
+        definitions: HashMap::new(),
     };
 
     for item in ast.items() {
@@ -248,11 +248,15 @@ struct Resolver<'a> {
     /// undeclared length once per declarator and took time exponential in how
     /// deep such declarations nest.
     walked: HashSet<TypeId>,
-    /// The name of every function definition so far, in source order, which
+    /// Where every function defined so far was named, by its spelling, which
     /// is what a second definition of one is compared with. A declaration,
     /// `int f(void);`, is never here: 6.9 p5 counts definitions, and a
     /// prototype before or after its definition is the same function.
-    definitions: Vec<Span>,
+    ///
+    /// A map rather than a list scanned per definition, which made a file of
+    /// forty thousand distinct functions take thirty seconds in a debug
+    /// build.
+    definitions: HashMap<String, Span>,
 }
 
 impl Resolver<'_> {
@@ -754,13 +758,11 @@ impl Resolver<'_> {
     /// would be in a body nothing was wrong with.
     fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
         let spelled = self.sources.snippet(name);
-        let first = self
-            .definitions
-            .iter()
-            .find(|&&first| self.sources.snippet(first) == spelled);
-        match first {
+        match self.definitions.get(spelled) {
             Some(&first) => diagnostics.report(redefined(spelled, name, first, "C17 6.9 p5")),
-            None => self.definitions.push(name),
+            None => {
+                self.definitions.insert(spelled.to_owned(), name);
+            }
         }
     }
 }
@@ -1369,7 +1371,7 @@ mod tests {
     /// then again is reported, and an undeclared name in its second body is
     /// reported too.
     ///
-    /// Mutation: remember only the first definition, by pushing in
+    /// Mutation: remember only the first definition, by inserting in
     /// `Resolver::define` only while `definitions` is empty; `b` is not
     /// reported and this fails. Mutation: return from `Resolver::item`'s
     /// function arm after `define` when it reports; `zzz` is not reported
