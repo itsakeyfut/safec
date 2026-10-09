@@ -134,9 +134,13 @@ struct.
 
 A struct with a flexible array member is refused as a member of another
 struct (`SC0314`) and as an element of an array (`SC0309`), as C17 6.7.2.1 p3
-says. clang accepts both as an extension and refuses them only under
-`-pedantic-errors` (clang 20.1.6; gcc is unverified), so a program built with
-either today may be refused here.
+says. p3 is a constraint, and this compiler takes no constraint-violating
+extension. clang 20.1.6 refuses each only under `-pedantic-errors`: without
+it, such a struct as the last member of another, or as an array's element,
+is accepted with no warning, and as any other member with a warning
+(`-Wgnu-variable-sized-type-not-at-end`). gcc documents both as an extension
+and was not run. So a program that nests a header struct this way and
+builds with either today is refused here.
 
 `lexer.rs` keeps its own list, under *Not here yet*, and it is a different list
 on purpose rather than a copy of this one: it is what the *scan* does not do, so
