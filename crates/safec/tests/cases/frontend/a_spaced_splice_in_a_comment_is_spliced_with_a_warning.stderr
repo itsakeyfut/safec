@@ -1,0 +1,16 @@
+warning[SC0108]: a backslash and the newline it splices are separated by space
+   ╭─[ a_spaced_splice_in_a_comment_is_spliced_with_a_warning.c:2:18 ]
+   │
+ 2 │     // a comment \
+   │                  ┬  
+   │                  ╰── this joins the next line to this one
+───╯
+  = note: C17 splices only a backslash right before the newline; clang and gcc splice this too, and so does this compiler
+warning[SC0108]: a backslash and the newline it splices are separated by space
+   ╭─[ a_spaced_splice_in_a_comment_is_spliced_with_a_warning.c:4:21 ]
+   │
+ 4 │     /* closes here *\
+   │                     ┬  
+   │                     ╰── this joins the next line to this one
+───╯
+  = note: C17 splices only a backslash right before the newline; clang and gcc splice this too, and so does this compiler

@@ -1,0 +1,16 @@
+error[SC0107]: a trigraph splice in a comment is not supported
+   ╭─[ a_trigraph_splice_in_a_comment_is_refused.c:2:16 ]
+   │
+ 2 │     // another ??/
+   │                ─┬─  
+   │                 ╰─── this joins the next line to the comment in C17
+───╯
+  = note: clang's and gcc's default modes do not read trigraphs, so the comment would end here when built with them
+error[SC0107]: a trigraph splice in a comment is not supported
+   ╭─[ a_trigraph_splice_in_a_comment_is_refused.c:4:13 ]
+   │
+ 4 │     /* and *??/
+   │             ─┬─  
+   │              ╰─── this joins the next line to the comment in C17
+───╯
+  = note: clang's and gcc's default modes do not read trigraphs, so the comment would end here when built with them

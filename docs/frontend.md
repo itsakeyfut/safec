@@ -98,16 +98,24 @@ The trigraphs of 5.2.1.1 and the splice of 5.1.1.2 p1 phase 2 happen before
 any token exists. A splice the lexer does not perform compiles a different
 program where it ends a line comment, `// a \` making the line below it part
 of the comment, and where it falls between the `*` and the `/` that close a
-block comment. So a comment performs both, `??/` included, since a comment's
-text means nothing after the lexer and needs no spelling kept. Anywhere else a
-splice or a trigraph is refused as `SC0107`, valid C not read yet, rather than
-as an unexpected character, an unterminated literal or a syntax error, which
-is what each was before:
+block comment. So a comment performs a splice, since a comment's text means
+nothing after the lexer and needs no spelling kept, and so is a `\` with spaces
+or tabs before the newline, which C17 does not name but clang and gcc splice,
+with the warning `SC0108`, because reading the line below as code would
+analyse a program they do not build. A `??/` that would decide where a comment
+ends is refused as `SC0107`: it is a splice only where trigraphs are read,
+which clang's and gcc's default modes do not, so which program it makes
+depends on how the file is built. Anywhere else a splice or a trigraph is
+refused as `SC0107`, valid C not read yet, rather than as an unexpected
+character, an unterminated literal or a syntax error, which is what each was
+before:
 
 | Written | This compiler | `clang -std=c17` |
 |---|---|---|
 | `// a \` newline `return 1;` | one comment | one comment |
 | `/* a *\` newline `/` | the comment closes | the comment closes |
+| `// a \`, a space, newline `return 1;` | one comment, `warning[SC0108]` | one comment, with a warning |
+| `// a ??/` newline `return 1;` | `error[SC0107]` at the trigraph | one comment; two lines in the default mode |
 | `int na\` newline `me;` | `error[SC0107]` at the backslash | one identifier |
 | `"a\` newline `b"` | `error[SC0107]` at the backslash | one string |
 | `int t = ??-1;` | `error[SC0107]` at the trigraph | `~1`, with a warning |
@@ -683,8 +691,9 @@ where the scan met it, and stops.
 **The rule is "reported anything", not "could not read it whole",** and the
 difference is worth stating because the second is what a reader would guess.
 `char c = '';` is a complete token: nothing is lost, `SC0105` is reported, and
-the missing `;` after it is not. All five lexical codes are under the rule,
-`SC0101` to `SC0105`. The lexer knows which of its diagnostics dropped input
+the missing `;` after it is not. Every lexical error is under the rule,
+`SC0101` to `SC0105` and `SC0107`; `SC0108` is a warning, counted by nothing
+that stops the input. The lexer knows which of its diagnostics dropped input
 and the driver does not, and nothing carries that distinction today; until
 something does, the wider rule is the one that cannot be wrong in the direction
 that matters.

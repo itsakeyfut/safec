@@ -3406,21 +3406,38 @@ cases! {
         // narrows to `%`.
         a_directive_spelled_with_a_digraph_is_a_directive: ["--emit", "tokens"],
         // C17 5.1.1.2 p1 phase 2 splices `// a comment \` and the line
-        // below it into one comment, and `??/` is `\` (phase 1), so of the
-        // three `return`s only the last is code. Mutation: end a line
-        // comment at the newline, as before; three `Return`s. Mutation:
-        // take only `\` as a splice; two.
+        // below it into one comment, so of the two `return`s only the last
+        // is code. Mutation: end a line comment at the newline, as before;
+        // two `Return`s.
         a_line_comment_goes_on_across_a_splice: ["--emit", "ast"],
-        // A `*`, a splice and a `/` close a block comment, the trigraph
-        // spelling too, so `x` and `y` are declared and the last line is
-        // a comment of its own. Mutation: close a block comment only at
-        // `*/`; the first comment runs to the last line and swallows both.
-        a_block_comment_closes_across_a_splice: ["--emit", "ast"],
+        // A `*`, splices and a `/` close a block comment, one splice or two,
+        // so `x` and `y` are tokens and not comment. A splice inside one
+        // goes on the logical line, so the `#` after `*/` on line 9 follows
+        // `int z;` and begins no directive. Mutation: close a block comment
+        // only at `*/`; the first runs on and swallows both. Mutation: allow
+        // one splice between `*` and `/`; the second is unterminated.
+        // Mutation: let a splice's newline open a line; line 9 becomes a
+        // directive and `SC0104`.
+        a_block_comment_closes_across_a_splice: ["--emit", "tokens"],
+        // A `\` with a space before the newline is spliced in a comment, as
+        // clang and gcc splice it, with a warning (`SC0108`): the line
+        // comment takes `return 1;` and the block comment closes across it.
+        // Mutation: refuse spaces before the newline; `return 1;` is code
+        // and the block comment swallows `return 0;`.
+        a_spaced_splice_in_a_comment_is_spliced_with_a_warning: ["--emit", "ast"],
+        // `??/` is a splice only where trigraphs are read, which clang's and
+        // gcc's default modes do not, so in a comment, where it would decide
+        // what is code, it is refused (`SC0107`). Mutation: perform it in
+        // silence; both reports go.
+        a_trigraph_splice_in_a_comment_is_refused: ["--emit", "ast"],
         // Outside a comment a splice or a trigraph is reported as not
-        // supported yet (`SC0107`): in an identifier, in a string, and
-        // `??-` in code, each in place of the unexpected character, the
-        // unterminated literal or the syntax error it was before. Mutation:
-        // skip any of the three reports; its `SC0107` goes.
+        // supported yet (`SC0107`), at every place one can be: in an
+        // identifier, in a string, `??-` in code, `??/` as a splice in code
+        // (its caret three bytes wide), a `\\` whose second backslash
+        // splices, a trigraph in a string and one after a `\` in a
+        // character constant, and after a stray character, each in place of
+        // the unexpected character, unterminated literal or syntax error it
+        // was before. Mutation: skip any one report; its `SC0107` goes.
         a_splice_or_trigraph_outside_a_comment_is_reported: ["--emit", "tokens"],
         unterminated_block_comment: ["--emit", "tokens"],
         unterminated_character_constant: ["--emit", "tokens"],
