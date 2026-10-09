@@ -2066,14 +2066,17 @@ mod tests {
 
     /// Every declaration of a name answers the standing declaration its
     /// scope ended with, which is the prototype here, and a use written
-    /// before the prototype answers it too. A name never redeclared answers
-    /// itself, and a function declared in a block answers its block's.
+    /// before the prototype answers it too, and a function declared in a
+    /// block answers its block's. The file scope's standing type is what
+    /// `Resolution::declared` publishes, which is the prototype's even where
+    /// a declaration without one comes after it.
     ///
     /// Mutation: drop `settle` from `close_scope`; the block's `h` answers
     /// itself and this fails. Mutation: drop `settle` at the end of
     /// `resolve`; `f` answers the declaration it resolves to. Mutation:
     /// settle each binding on `latest` rather than `standing`; `f` answers
-    /// its last declaration, the third. Each fails this.
+    /// its last declaration, the third. Mutation: publish `latest` in
+    /// `declared`; `f`'s published type has no parameters. Each fails this.
     #[test]
     fn every_declaration_of_a_name_answers_its_standing_one() {
         let resolved = resolved(
@@ -2094,6 +2097,14 @@ mod tests {
             resolved.standing_of("h", 2),
             Some(resolved.occurrence("h", 0))
         );
+        let prototype = resolved
+            .resolution
+            .bindings
+            .iter()
+            .find(|binding| binding.name == resolved.occurrence("f", 2))
+            .expect("the prototype is a binding")
+            .ty;
+        assert_eq!(resolved.resolution.declared("f"), Some(prototype));
         assert_eq!(
             resolved
                 .resolution

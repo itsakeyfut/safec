@@ -1063,11 +1063,16 @@ cases! {
         // `f`'s IR function takes its parameters from the prototype, not from
         // the `int f();` before it, so `f(0)` is held to `_Nonnull`, as it is
         // with the declarations the other way round, and so is a call written
-        // before the prototype. Mutation: build the IR function from the
-        // declaration in hand in `Lowering::declare_one` rather than from
-        // `standing_signature`; both exit 0.
+        // before the prototype, and so is one after a later `int f();`.
+        // Mutation: build the IR function from the declaration in hand in
+        // `Lowering::declare_one` rather than from `standing_signature`; the
+        // first two exit 0, and the disagreement case below prints the first
+        // prototype's IR. Mutation: publish the latest declaration in
+        // `Resolution::declared` rather than the standing one; the third
+        // exits 0.
         a_nonnull_parameter_declared_after_a_declaration_without_one_is_held: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_nonnull_parameter_is_held_after_a_later_declaration_without_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `g(*pp)` asks two questions at one caret: whether `pp` is null, and
         // whether what it holds is. Mutation: skip an argument with a
         // projection in `report_arguments`; only this case fails, losing the
