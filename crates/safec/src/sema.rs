@@ -35,15 +35,16 @@ use safec_ir::source::{SourceMap, Span};
 /// toolchain should not have to learn a second phrasing for the same thing.
 const UNDECLARED: Code = Code::new("SC0301");
 
-/// A tag given its content twice in one scope, which C17 6.7.2.3 p1 forbids:
-/// "A specific type shall have its content defined at most once."
+/// Something given a definition twice: a tag given its content twice in one
+/// scope, which C17 6.7.2.3 p1 forbids ("A specific type shall have its
+/// content defined at most once"), or a function given two bodies, which 6.9
+/// p5 forbids ("there shall be no more than one" external definition).
 ///
-/// Its own code, for a redefinition rather than for tags: #77's second
-/// definition of an ordinary name is the same class of fault. The wording
-/// follows `clang`'s `redefinition of 'S'`, for the reason [`UNDECLARED`]
-/// gives, but keeps the `struct`: a tag and an ordinary name of one spelling
-/// are two names, and a message that drops the keyword reads the same for
-/// either once #77 reports the second.
+/// One code for both, because it is one class of fault, and the note names
+/// the clause that differs. The wording follows `clang`'s `redefinition of
+/// 'S'`, for the reason [`UNDECLARED`] gives, but keeps `struct` for a tag: a
+/// tag and an ordinary name of one spelling are two names, and a message that
+/// dropped the keyword would read the same for either.
 const REDEFINED: Code = Code::new("SC0312");
 
 /// One declared name, addressed by [`BindingId`].
@@ -204,6 +205,7 @@ pub fn resolve(sources: &SourceMap, ast: &Ast, diagnostics: &mut DiagnosticSink)
         tag_scopes: vec![Vec::new()],
         children: Vec::new(),
         walked: HashSet::new(),
+        definitions: Vec::new(),
     };
 
     for item in ast.items() {
@@ -239,6 +241,11 @@ struct Resolver<'a> {
     /// undeclared length once per declarator and took time exponential in how
     /// deep such declarations nest.
     walked: HashSet<TypeId>,
+    /// The name of every function definition so far, in source order, which
+    /// is what a second definition of one is compared with. A declaration,
+    /// `int f(void);`, is never here: 6.9 p5 counts definitions, and a
+    /// prototype before or after its definition is the same function.
+    definitions: Vec<Span>,
 }
 
 impl Resolver<'_> {
@@ -249,6 +256,7 @@ impl Resolver<'_> {
                     self.attribute(attribute, diagnostics);
                 }
                 self.walk_type(function.ty, diagnostics);
+                self.define(function.name, diagnostics);
                 // Declared before the body is walked, so that a function can
                 // call itself. C17 6.2.1 p7 puts the start of a file-scope
                 // name at the end of its declarator, which is before the body.
@@ -644,7 +652,8 @@ impl Resolver<'_> {
             match self.tag_here(tag) {
                 Some(id) => {
                     if let Some(first) = self.resolution.tags[id.0 as usize].defined {
-                        diagnostics.report(redefined(self.sources.snippet(tag), tag, first));
+                        let what = format!("struct {}", self.sources.snippet(tag));
+                        diagnostics.report(redefined(&what, tag, first, "C17 6.7.2.3 p1"));
                     } else {
                         self.resolution.tags[id.0 as usize].defined = Some(tag);
                     }
@@ -729,17 +738,37 @@ impl Resolver<'_> {
             .expect("the file scope is never popped")
             .push(id);
     }
+
+    /// Record the definition of the function named at `name`, or report it
+    /// as the second definition of that name (C17 6.9 p5).
+    ///
+    /// The second is still declared and its body still walked by the caller,
+    /// so that a name inside it that is undeclared is reported as well, as it
+    /// would be in a body nothing was wrong with.
+    fn define(&mut self, name: Span, diagnostics: &mut DiagnosticSink) {
+        let spelled = self.sources.snippet(name);
+        let first = self
+            .definitions
+            .iter()
+            .find(|&&first| self.sources.snippet(first) == spelled);
+        match first {
+            Some(&first) => diagnostics.report(redefined(spelled, name, first, "C17 6.9 p5")),
+            None => self.definitions.push(name),
+        }
+    }
 }
 
-/// A tag defined at `again` that was defined at `first` in the same scope.
+/// `what`, defined at `again`, which was defined at `first` where `clause`
+/// says it can be defined only once: `struct S` for a tag, and the name for a
+/// function.
 ///
-/// `name` is interpolated raw, for the reason [`undeclared`] gives.
-fn redefined(name: &str, again: Span, first: Span) -> Diagnostic {
-    Diagnostic::error(format!("redefinition of `struct {name}`"))
+/// `what` is interpolated raw, for the reason [`undeclared`] gives.
+fn redefined(what: &str, again: Span, first: Span, clause: &str) -> Diagnostic {
+    Diagnostic::error(format!("redefinition of `{what}`"))
         .with_code(REDEFINED)
         .with_label(Label::primary(again, "defined again here"))
         .with_label(Label::secondary(first, "first defined here"))
-        .with_note("C17 6.7.2.3 p1")
+        .with_note(clause)
 }
 
 /// `name` is source text, and it reaches a terminal through this message.
@@ -1308,5 +1337,23 @@ mod tests {
             .find(|&ty| matches!(resolved.ast.ty(ty), Type::Struct { .. }))
             .expect("the struct is in the tree");
         let _ = resolved.resolution.tag(unbound);
+    }
+
+    /// A function given a second body is reported once, at the second, and
+    /// only the definitions are counted (C17 6.9 p5): a prototype before and
+    /// after the definition is the same function.
+    ///
+    /// Mutation: drop the call to `define` in `Resolver::item`; nothing is
+    /// reported and the first assertion fails. Mutation: record every
+    /// declaration as a definition too, by calling `self.define(name, ..)`
+    /// in `Resolver::declaration`; the definition after the prototype is
+    /// reported and the second fails.
+    #[test]
+    fn a_function_defined_twice_is_reported_and_one_declared_twice_is_not() {
+        let twice = resolved("int f(void) {\n    return 1;\n}\nint f(void) {\n    return 2;\n}\n");
+        assert_eq!(twice.messages(), ["redefinition of `f`"]);
+
+        let declared = resolved("int g(void);\nint g(void) {\n    return 1;\n}\nint g(void);\n");
+        assert_eq!(declared.messages(), Vec::<&str>::new());
     }
 }

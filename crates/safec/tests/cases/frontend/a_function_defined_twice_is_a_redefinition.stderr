@@ -1,0 +1,12 @@
+error[SC0312]: redefinition of `f`
+   ╭─[ a_function_defined_twice_is_a_redefinition.c:5:5 ]
+   │
+ 2 │ int f(void) {
+   │     ┬  
+   │     ╰── first defined here
+   │ 
+ 5 │ int f(void) {
+   │     ┬  
+   │     ╰── defined again here
+───╯
+  = note: C17 6.9 p5
