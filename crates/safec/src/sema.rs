@@ -662,6 +662,31 @@ impl Resolver<'_> {
     fn walk(&mut self, root: TypeId, skip_root_parameters: bool, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
         let mut pending = vec![Step::Type(root)];
+        // The specifier is written before the declarator, so a struct defined
+        // there is closed before any length in the declarator is walked:
+        // `struct S { int a; } arr[(p + 1, 2)]` steps a `struct S *` that is
+        // complete. The tree holds the specifier at its leaf, below every
+        // length, so it is walked first; reached again from the root, its tag
+        // is bound and its members walked already, and nothing is repeated.
+        let mut leaf = root;
+        loop {
+            leaf = match ast.ty(leaf) {
+                Type::Pointer(next) | Type::Array { element: next, .. } => *next,
+                Type::Function { returns, .. } => *returns,
+                Type::Int | Type::Char | Type::Void | Type::Struct { .. } => break,
+            };
+        }
+        if leaf != root
+            && matches!(
+                ast.ty(leaf),
+                Type::Struct {
+                    members: Some(_),
+                    ..
+                }
+            )
+        {
+            pending.push(Step::Type(leaf));
+        }
         while let Some(step) = pending.pop() {
             let ty = match step {
                 Step::Type(ty) => ty,

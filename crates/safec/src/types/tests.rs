@@ -1956,3 +1956,19 @@ int f(struct S s, struct T t, struct S u, int c) {{
         }
     }
 }
+
+/// A struct defined in a declaration's specifier is complete in every
+/// length its declarator writes, since the specifier is written first: `p
+/// + 1` in `arr`'s length steps a complete `struct S *` (C17 6.7.2.1 p8).
+///
+/// Mutation: drop the step in `Resolver::walk` that walks the specifier's
+/// definition first; the step is refused as over an incomplete struct, and
+/// this fails.
+#[test]
+fn a_struct_defined_in_a_specifier_is_complete_in_its_declarators_lengths() {
+    let checked = checked(
+        "void f(void) {\n    struct S *p;\n    struct S {\n        int a;\n    } arr[(p + 1, 2)];\n}\n",
+    );
+
+    assert_eq!(checked.messages(), Vec::<&str>::new());
+}
