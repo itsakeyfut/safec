@@ -98,6 +98,17 @@ const MISPLACED_ANNOTATION: Code = Code::new("SC0204");
 /// text is not the parser's. See [`Attribute`].
 pub(crate) const UNREAD_ANNOTATION: Code = Code::new("SC0205");
 
+/// A declaration that declares nothing: specifiers and then its `;`.
+///
+/// C17 6.7 p2, a constraint, requires a declaration to declare a declarator, a
+/// tag, or an enumeration's members, and `int;` declares none of them. Not
+/// [`EXPECTED`], because no missing token would make it right: the fix is to
+/// name something or delete the line. The parser's, for the reason
+/// [`MISPLACED_ANNOTATION`] is, since it is the stage that knows there was no
+/// declarator. A tag is the one thing that would make this valid, and there
+/// are none until #34, which lets one through here.
+const NOTHING_DECLARED: Code = Code::new("SC0206");
+
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
 /// either stage.
 pub(crate) const UNREAD_ATTRIBUTE_LABEL: &str =
@@ -580,6 +591,21 @@ impl Parser<'_> {
     ) -> Option<Declared> {
         let start = self.peek().span;
         let base = self.specifiers(diagnostics)?;
+        // Before asking for a name, so that `int;` is told what it is rather
+        // than that a name is missing. `int *;` has a declarator and goes on,
+        // to be refused as one without a name, which is a syntax error.
+        if self.check(TokenKind::Punct(Punct::Semicolon)) {
+            // Through `report_built`, so that it is the only report: this
+            // returns before the `;` is read, and whatever is asked of it next
+            // would otherwise be refused as well.
+            let specifiers = start.to(self.previous().span);
+            let built = Diagnostic::error("this declaration declares nothing")
+                .with_code(NOTHING_DECLARED)
+                .with_label(Label::primary(specifiers, "no name and no tag"))
+                .with_note("C17 6.7 p2");
+            self.report_built(specifiers, built, diagnostics);
+            return None;
+        }
         let (name, ty, returns) = self.named_declarator(start, base, declares, diagnostics)?;
 
         Some(Declared {

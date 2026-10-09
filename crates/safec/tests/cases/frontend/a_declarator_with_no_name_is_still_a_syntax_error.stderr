@@ -1,0 +1,7 @@
+error[SC0201]: expected a name
+   ╭─[ a_declarator_with_no_name_is_still_a_syntax_error.c:1:6 ]
+   │
+ 1 │ int *;
+   │      ┬  
+   │      ╰── a name is missing here
+───╯

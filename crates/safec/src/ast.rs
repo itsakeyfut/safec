@@ -546,12 +546,14 @@ pub enum Stmt {
         /// Never empty. C17 6.7 marks the list optional, but 6.7 p2 then
         /// requires a declaration to declare a declarator, a tag, or an
         /// enumeration's members, so `int;` is a constraint violation rather
-        /// than the empty case: `clang -std=c17 -pedantic-errors` reports it
-        /// and accepts it silently only as an extension. What is valid and
+        /// than the empty case: `clang -std=c17 -pedantic-errors` reports it,
+        /// and without `-pedantic-errors` it warns and accepts it as an
+        /// extension. What is valid and
         /// empty here is `struct S { int x; };`, which declares a tag, and
         /// this parser reads no tags yet. Either way nothing downstream has to
-        /// answer for an empty list, and #125 is the change that would alter
-        /// that.
+        /// answer for an empty list: the parser refuses `int;` under
+        /// `SC0206`, and #34, which brings the first tag, is the change that
+        /// would alter that.
         declarators: Vec<InitDeclarator>,
         /// The specifiers through the `;`.
         span: Span,

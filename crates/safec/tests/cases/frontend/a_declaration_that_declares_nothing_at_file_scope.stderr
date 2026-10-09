@@ -1,0 +1,8 @@
+error[SC0206]: this declaration declares nothing
+   ╭─[ a_declaration_that_declares_nothing_at_file_scope.c:1:1 ]
+   │
+ 1 │ int;
+   │ ─┬─  
+   │  ╰─── no name and no tag
+───╯
+  = note: C17 6.7 p2
