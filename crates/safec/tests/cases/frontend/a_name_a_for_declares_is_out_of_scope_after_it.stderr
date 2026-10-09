@@ -1,0 +1,7 @@
+error[SC0301]: use of undeclared identifier `i`
+   ╭─[ a_name_a_for_declares_is_out_of_scope_after_it.c:4:12 ]
+   │
+ 4 │     return i;
+   │            ┬  
+   │            ╰── no declaration for this name is in scope
+───╯

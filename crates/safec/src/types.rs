@@ -24,8 +24,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use crate::ast::{
-    Ast, BinOp, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId, UnOp,
-    spell_type,
+    Ast, BinOp, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId, Type,
+    TypeId, UnOp, spell_type,
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::sema::Resolution;
@@ -707,8 +707,20 @@ impl Checker<'_> {
                 self.receivers_in(ast, *body, returning, diagnostics);
             }
             Stmt::For {
-                condition, body, ..
+                start,
+                condition,
+                step: _,
+                body,
+                span: _,
             } => {
+                // A declaration's initializers are received as a block's are,
+                // so `for (int *p = 1; ...)` is held to C17 6.7.9 p11.
+                match *start {
+                    Some(ForStart::Declaration(declaration)) => {
+                        self.receivers_in(ast, declaration, returning, diagnostics);
+                    }
+                    Some(ForStart::Expression(_)) | None => {}
+                }
                 if let Some(condition) = *condition {
                     self.receivers
                         .insert(condition, Receiving::Condition { keyword: "for" });

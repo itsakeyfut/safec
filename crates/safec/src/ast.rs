@@ -503,6 +503,22 @@ pub enum Expr {
     },
 }
 
+/// The first clause of a `for`. C17 6.8.5 p1.
+///
+/// **A declaration is a statement of its own, which this points at**, always
+/// a [`Stmt::Declaration`], rather than declarators held here. Every
+/// constraint on a declaration is checked by a walk over
+/// [`Ast::stmt_ids`], and a declaration that is a statement reaches all of
+/// them; declarators held inline would need an arm in each, and a missing
+/// one would accept a constraint violation only inside a `for`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ForStart {
+    /// `for (i = 0; ...)`, evaluated as a void expression.
+    Expression(ExprId),
+    /// `for (int i = 0; ...)`, whose names C17 6.8.5 p5 scopes to the loop.
+    Declaration(StmtId),
+}
+
 /// A statement.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Stmt {
@@ -582,19 +598,11 @@ pub enum Stmt {
         /// The keyword through the body.
         span: Span,
     },
-    /// `for`, in the form whose three clauses are expressions. C17 6.8.5 p1.
-    ///
-    /// The other form, `for ( declaration expression_opt ; expression_opt )`,
-    /// is not read. It used to be blocked on there being no initializer to
-    /// read; there is one now, and what is left is this type and the scope:
-    /// `initialiser` holds an `ExprId`, and C17 6.8.5 p5 gives a declaration
-    /// written here a scope that is the loop rather than the block around it.
-    /// These are three separate `Option`s rather than something that could
-    /// also hold a declaration, because an interface with no caller is
-    /// invented rather than designed and widening this one later is additive.
+    /// `for`, in either of the forms C17 6.8.5 p1 gives: a first clause that
+    /// is an expression, or one that is a declaration.
     For {
-        /// What runs once before the first turn.
-        initialiser: Option<ExprId>,
+        /// What runs once before the first turn, if anything was written.
+        start: Option<ForStart>,
         /// What is asked before each turn. Absent means it always holds.
         condition: Option<ExprId>,
         /// What runs after each turn.

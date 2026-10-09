@@ -8,8 +8,8 @@
 use std::fmt::Write as _;
 
 use crate::ast::{
-    Ast, Declaration, Expr, ExprId, InitDeclarator, Item, Parameters, Stmt, StmtId, Type, TypeId,
-    spell_type,
+    Ast, Declaration, Expr, ExprId, ForStart, InitDeclarator, Item, Parameters, Stmt, StmtId, Type,
+    TypeId, spell_type,
 };
 use crate::diagnostics::Diagnostic;
 use crate::token::Token;
@@ -305,24 +305,37 @@ fn dump_stmt(sources: &SourceMap, ast: &Ast, stmt: &Stmt, depth: usize, out: &mu
             child(*body, out);
         }
         Stmt::For {
-            initialiser,
+            start,
             condition,
             step,
             body,
             ..
         } => {
+            // `init` for an expression start, as before, and `declaration`
+            // for the other form, which is printed as the statement it is.
+            let (initialiser, declaration) = match *start {
+                Some(ForStart::Expression(initialiser)) => (Some(initialiser), None),
+                Some(ForStart::Declaration(declaration)) => (None, Some(declaration)),
+                None => (None, None),
+            };
+            if declaration.is_some() {
+                out.push_str(" declaration");
+            }
             for (clause, name) in [
                 (initialiser, "init"),
-                (condition, "condition"),
-                (step, "step"),
+                (*condition, "condition"),
+                (*step, "step"),
             ] {
                 if clause.is_some() {
                     write!(out, " {name}").expect("writing to a string cannot fail");
                 }
             }
             out.push('\n');
-            for clause in [initialiser, condition, step].into_iter().flatten() {
-                dump_expr(sources, ast, *clause, depth + 1, out);
+            if let Some(declaration) = declaration {
+                child(declaration, out);
+            }
+            for clause in [initialiser, *condition, *step].into_iter().flatten() {
+                dump_expr(sources, ast, clause, depth + 1, out);
             }
             child(*body, out);
         }

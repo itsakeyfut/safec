@@ -1,0 +1,9 @@
+Function a_name_a_for_declares_is_out_of_scope_after_it.c:1:1 "f" "int (void)"
+  Compound a_name_a_for_declares_is_out_of_scope_after_it.c:1:13
+    For a_name_a_for_declares_is_out_of_scope_after_it.c:2:5 declaration condition
+      Declaration a_name_a_for_declares_is_out_of_scope_after_it.c:2:10 "i" "int"
+        Number a_name_a_for_declares_is_out_of_scope_after_it.c:2:18 "0"
+      Number a_name_a_for_declares_is_out_of_scope_after_it.c:2:21 "0"
+      Expression a_name_a_for_declares_is_out_of_scope_after_it.c:3:9
+    Return a_name_a_for_declares_is_out_of_scope_after_it.c:4:5
+      Identifier a_name_a_for_declares_is_out_of_scope_after_it.c:4:12 "i"
