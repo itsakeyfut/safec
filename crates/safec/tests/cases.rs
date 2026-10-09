@@ -407,14 +407,17 @@ cases! {
         // Each function underlines only the operand whose value decides,
         // after a free, at every place a condition or a `&&` or `||` operand
         // is recorded: the comma under `if`, `while`, `for` and `?:`, a chain
-        // of two commas, and each side of a short circuit. `if_left` pins that
+        // of two commas both ways round, and each side of a short circuit.
+        // `c, c, *p` groups to the left and reaches `*p` in one step, so
+        // `if_nested` writes the chain to the right, which is the one that
+        // needs following. `if_left` pins that
         // a comma's left operand is underlined by its own read, since its
         // branch reads `c` and reports nothing, so no mutation of an origin
         // moves it. Mutation: take the whole controlling expression again at
         // one of the `if`, `while` or `for` sites, or the `?:` branch; that
         // function's row widens. Mutation: take a comma's left operand; the
         // comma rows move onto `c`. Mutation: unwrap one comma only, `if let`
-        // for `while let` in `decides`; `if_chain` widens to `c, *p`.
+        // for `while let` in `decides`; `if_nested` widens to `(c, *p)`.
         // Mutation: give the left or the right operand's write the whole
         // binary span again; `and_left` or `or_right` widens.
         a_condition_underlines_the_operand_that_decides: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
