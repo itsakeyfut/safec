@@ -39,8 +39,11 @@ const UNDECLARED: Code = Code::new("SC0301");
 /// "A specific type shall have its content defined at most once."
 ///
 /// Its own code, for a redefinition rather than for tags: #77's second
-/// definition of an ordinary name is the same class of fault. The wording is
-/// `clang`'s, for the reason [`UNDECLARED`] gives.
+/// definition of an ordinary name is the same class of fault. The wording
+/// follows `clang`'s `redefinition of 'S'`, for the reason [`UNDECLARED`]
+/// gives, but keeps the `struct`: a tag and an ordinary name of one spelling
+/// are two names, and a message that drops the keyword reads the same for
+/// either once #77 reports the second.
 const REDEFINED: Code = Code::new("SC0312");
 
 /// One declared name, addressed by [`BindingId`].
@@ -59,8 +62,14 @@ pub struct Tag {
     /// The name as first written, or `None` for a struct with no tag, which
     /// is a type of its own wherever it is written.
     pub name: Option<Span>,
-    /// The name as written where the content was given, or `None` while the
-    /// type is incomplete.
+    /// The name as written where the content was given, or `None` if nothing
+    /// in the translation unit gives it.
+    ///
+    /// This is the state after the whole walk, not at any one use: the tag a
+    /// use before the definition is bound to, or a member inside it, has this
+    /// set too, though C17 6.7.2.1 p8 leaves the type incomplete there until
+    /// the closing brace. Whether a type is complete where it is used is not
+    /// recorded, and #27, which is the first reader to need it, has to.
     pub defined: Option<Span>,
 }
 
@@ -443,9 +452,9 @@ impl Resolver<'_> {
                 }
                 Type::Function { returns, .. } => pending.push(*returns),
                 // A member's array lengths are expressions too, walked once
-                // per definition, for the reason `walked` gives. Its name and
-                // the tag are not looked up: what they mean is #27's.
-                // Bound before its members are walked, because C17 6.2.1 p7
+                // per definition, for the reason `walked` gives. Its name is
+                // not looked up: what it means is #27's. The tag is, and is
+                // bound before its members are walked, because C17 6.2.1 p7
                 // starts a tag's scope just after it appears: `struct L {
                 // struct L *next; }` is one type.
                 Type::Struct { tag, members } => {
@@ -1112,7 +1121,7 @@ mod tests {
     }
 
     /// A use before the definition, with nothing visible, declares the tag
-    /// the definition then completes: one type (C17 6.7.2.3 p8 and p1).
+    /// the definition then completes: one type (C17 6.7.2.3 p8 and p4).
     ///
     /// Mutation: declare a new tag at every definition, ignoring one already
     /// declared in the scope; two tags, and this fails.
