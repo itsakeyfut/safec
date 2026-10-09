@@ -149,8 +149,8 @@ pub struct Resolution {
     /// The struct types that are complete where they are written. See
     /// [`Resolution::complete`].
     complete: HashSet<TypeId>,
-    /// The step of the walk at which each struct definition closed, and the
-    /// step at which each expression was walked. See
+    /// The step of the walk at which each tag's first definition closed,
+    /// and the step at which each expression was walked. See
     /// [`Resolution::complete_at`].
     closed_at: HashMap<TagId, u32>,
     walked_at: HashMap<ExprId, u32>,
@@ -847,9 +847,13 @@ impl Resolver<'_> {
         }
         let tag = self.resolution.tag(definition);
         self.completed.insert(tag);
+        // The first definition answers both what the members are and from
+        // where they are known, so the two never come from different
+        // definitions of one tag. A second one is `SC0312`'s, and letting
+        // it move the step made an access between the two incomplete.
         self.resolution.definitions.entry(tag).or_insert(definition);
         self.resolution.complete.insert(definition);
-        self.resolution.closed_at.insert(tag, self.step);
+        self.resolution.closed_at.entry(tag).or_insert(self.step);
         self.step += 1;
     }
 

@@ -1817,6 +1817,31 @@ fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_progr
     assert_eq!(checked.codes(), ["SC0306", "SC0306", "SC0306", "SC0304"]);
 }
 
+/// A tag given two definitions, which is `SC0312`, answers every access
+/// from its first: what its members are, and from where they are known. So
+/// `p->b` is no member wherever it is written, `p->a` is one, and `f`'s
+/// access between the two definitions is not called incomplete.
+///
+/// Mutation: let the second definition be the one `Resolution::definition`
+/// answers; `p->a` is reported and `p->b` is not. Mutation: let the second
+/// move the step at which the tag closed; `f`'s access is `SC0315`. Either
+/// fails this.
+#[test]
+fn a_tag_defined_twice_answers_from_its_first_definition() {
+    let checked = checked(
+        "struct V {\n    int a;\n};\nstruct V *p;\nint f(void) {\n    return p->b;\n}\nstruct V {\n    int b;\n};\nint g(void) {\n    return p->b + p->a;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "redefinition of `struct V`",
+            "no member named `b` in `struct V`",
+            "no member named `b` in `struct V`",
+        ]
+    );
+}
+
 /// A member access names a member of the struct its base is, found by
 /// spelling among the members of the definition the base's tag names, and
 /// recorded as that definition and the member's position in it (C17
