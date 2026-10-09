@@ -1,0 +1,4 @@
+Function a_line_comment_goes_on_across_a_splice.c:1:1 "main" "int (void)"
+  Compound a_line_comment_goes_on_across_a_splice.c:1:16
+    Return a_line_comment_goes_on_across_a_splice.c:6:5
+      Number a_line_comment_goes_on_across_a_splice.c:6:12 "0"

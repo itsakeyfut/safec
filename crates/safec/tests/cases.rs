@@ -3405,6 +3405,23 @@ cases! {
         // Mutation: point the label at one byte; the caret under `%:`
         // narrows to `%`.
         a_directive_spelled_with_a_digraph_is_a_directive: ["--emit", "tokens"],
+        // C17 5.1.1.2 p1 phase 2 splices `// a comment \` and the line
+        // below it into one comment, and `??/` is `\` (phase 1), so of the
+        // three `return`s only the last is code. Mutation: end a line
+        // comment at the newline, as before; three `Return`s. Mutation:
+        // take only `\` as a splice; two.
+        a_line_comment_goes_on_across_a_splice: ["--emit", "ast"],
+        // A `*`, a splice and a `/` close a block comment, the trigraph
+        // spelling too, so `x` and `y` are declared and the last line is
+        // a comment of its own. Mutation: close a block comment only at
+        // `*/`; the first comment runs to the last line and swallows both.
+        a_block_comment_closes_across_a_splice: ["--emit", "ast"],
+        // Outside a comment a splice or a trigraph is reported as not
+        // supported yet (`SC0107`): in an identifier, in a string, and
+        // `??-` in code, each in place of the unexpected character, the
+        // unterminated literal or the syntax error it was before. Mutation:
+        // skip any of the three reports; its `SC0107` goes.
+        a_splice_or_trigraph_outside_a_comment_is_reported: ["--emit", "tokens"],
         unterminated_block_comment: ["--emit", "tokens"],
         unterminated_character_constant: ["--emit", "tokens"],
         unterminated_string_literal: ["--emit", "tokens"],

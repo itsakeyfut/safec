@@ -24,7 +24,8 @@
 //!
 //! # Not here yet
 //!
-//! Line splicing (a `\` before a newline), a universal character name in an
+//! Line splicing (a `\` before a newline) and trigraphs outside a comment,
+//! which are reported as `SC0107`, a universal character name in an
 //! identifier (`\u00e9`, which is ASCII and which 6.4.2.1 puts in
 //! `identifier-nondigit`), literal prefixes (`L"..."`, `u8'x'`), and non-ASCII
 //! identifiers. Each currently scans as something else and is reported or
@@ -48,6 +49,11 @@ const UNTERMINATED_LITERAL: Code = Code::new("SC0102");
 const UNEXPECTED_CHARACTERS: Code = Code::new("SC0103");
 const UNSUPPORTED_DIRECTIVE: Code = Code::new("SC0104");
 const EMPTY_LITERAL: Code = Code::new("SC0105");
+/// Valid C the lexer does not read yet outside a comment: a line splice, a
+/// `\` or `??/` before a newline (C17 5.1.1.2 p1 phase 2), or a trigraph
+/// (5.2.1.1, phase 1). Not `SC0103`, which says a character can begin no
+/// token, where these are C; this is `SC0104`'s kind of refusal.
+const UNSUPPORTED_SPLICE: Code = Code::new("SC0107");
 
 /// Scan `source` into tokens, reporting what it could not make sense of.
 ///
@@ -141,6 +147,10 @@ impl<'a> Lexer<'a> {
         // punctuator, and within itself longest-first, which is C's rule: the
         // scan takes the longest run of characters that could be a token even
         // when a shorter one would let the rest parse.
+        if c == '?' && trigraph(self.rest()).is_some() {
+            self.report_trigraph(diagnostics);
+            return TokenKind::Unknown;
+        }
         // By the spelling matched, which a digraph makes longer than the
         // punctuator's own: `<:` is two bytes of `[`.
         if let Some((punct, spelled)) = Punct::starting(self.rest()) {
@@ -205,6 +215,16 @@ impl<'a> Lexer<'a> {
         self.bump();
 
         loop {
+            // A splice or a trigraph in a literal is reported in place, and
+            // the literal goes on as C would read it.
+            if splice_length(self.rest()).is_some() {
+                self.report_splice(diagnostics);
+                continue;
+            }
+            if trigraph(self.rest()).is_some() {
+                self.report_trigraph(diagnostics);
+                continue;
+            }
             match self.peek() {
                 // A literal closes on the line it opens on. Reporting at the
                 // newline rather than running to the end of the file keeps one
@@ -370,10 +390,27 @@ impl<'a> Lexer<'a> {
                 Some(c) if is_whitespace(c) => {
                     self.bump();
                 }
-                Some('/') if self.rest().starts_with("//") => {
-                    while self.peek().is_some_and(|c| c != '\n') {
-                        self.bump();
+                // A line comment goes on across a splice, as C17 5.1.1.2 p1
+                // phase 2 joins the next line to it before comments are
+                // removed in phase 3: `// a \` makes the line below it part
+                // of the comment.
+                Some('/') if self.rest().starts_with("//") => loop {
+                    if let Some(length) = splice_length(self.rest()) {
+                        self.offset += length;
+                        continue;
                     }
+                    match self.peek() {
+                        Some(c) if c != '\n' => {
+                            self.bump();
+                        }
+                        _ => break,
+                    }
+                },
+                // Outside a comment a splice is reported rather than
+                // performed, and passed over so that its `\` is not also an
+                // unexpected character.
+                Some('\\' | '?') if splice_length(self.rest()).is_some() => {
+                    self.report_splice(diagnostics);
                 }
                 Some('/') if self.rest().starts_with("/*") => {
                     self.skip_block_comment(diagnostics);
@@ -388,9 +425,22 @@ impl<'a> Lexer<'a> {
         self.offset += "/*".len();
 
         loop {
-            if self.rest().starts_with("*/") {
-                self.offset += "*/".len();
-                return;
+            // A `*` closes the comment with a `/` after it, across any splice
+            // between the two: C17 phase 2 has joined them by phase 3.
+            if self.rest().starts_with('*') {
+                let mut after = 1;
+                while let Some(length) = splice_length(&self.rest()[after..]) {
+                    after += length;
+                }
+                if self.rest()[after..].starts_with('/') {
+                    self.offset += after + 1;
+                    return;
+                }
+            }
+            // A splice's newline goes on the logical line, so it opens none.
+            if let Some(length) = splice_length(self.rest()) {
+                self.offset += length;
+                continue;
             }
             match self.bump() {
                 Some('\n') => self.at_line_start = true,
@@ -411,6 +461,42 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Report the splice at the scan's position under [`UNSUPPORTED_SPLICE`]
+    /// and pass over it.
+    fn report_splice(&mut self, diagnostics: &mut DiagnosticSink) {
+        let length = splice_length(self.rest()).expect("a splice is here");
+        let start = self.offset;
+        // The `\` or `??/`, not the newline after it.
+        let backslash = if self.rest().starts_with('\\') { 1 } else { 3 };
+        diagnostics.report(
+            Diagnostic::error("a line splice outside a comment is not supported yet")
+                .with_code(UNSUPPORTED_SPLICE)
+                .with_label(Label::primary(
+                    Span::new(self.file, start as u32, (start + backslash) as u32),
+                    "this joins the next line to this one",
+                ))
+                .with_note("C17 5.1.1.2 p1 phase 2; only a comment reads one so far"),
+        );
+        self.offset += length;
+    }
+
+    /// Report the trigraph at the scan's position under [`UNSUPPORTED_SPLICE`]
+    /// and pass over its three bytes.
+    fn report_trigraph(&mut self, diagnostics: &mut DiagnosticSink) {
+        let meant = trigraph(self.rest()).expect("a trigraph is here");
+        let start = self.offset;
+        diagnostics.report(
+            Diagnostic::error("trigraphs are not supported yet")
+                .with_code(UNSUPPORTED_SPLICE)
+                .with_label(Label::primary(
+                    Span::new(self.file, start as u32, (start + 3) as u32),
+                    format!("this is `{meant}` in C17"),
+                ))
+                .with_note("C17 5.2.1.1"),
+        );
+        self.offset += 3;
+    }
+
     fn rest(&self) -> &'a str {
         &self.text[self.offset..]
     }
@@ -428,6 +514,46 @@ impl<'a> Lexer<'a> {
     fn span(&self, start: usize) -> Span {
         Span::new(self.file, start as u32, self.offset as u32)
     }
+}
+
+/// The length of the line splice `text` begins with, or `None` where it
+/// begins with none: a `\`, or the trigraph `??/` that stands for one,
+/// immediately followed by a newline, `\n` or `\r\n` (C17 5.1.1.2 p1 phases 1
+/// and 2). A `\` with a space before the newline is not one.
+fn splice_length(text: &str) -> Option<usize> {
+    let backslash = if text.starts_with('\\') {
+        1
+    } else if text.starts_with("??/") {
+        3
+    } else {
+        return None;
+    };
+    let after = &text[backslash..];
+    if after.starts_with('\n') {
+        Some(backslash + 1)
+    } else if after.starts_with("\r\n") {
+        Some(backslash + 2)
+    } else {
+        None
+    }
+}
+
+/// The character the trigraph `text` begins with stands for, or `None`
+/// where it begins with none (C17 5.2.1.1).
+fn trigraph(text: &str) -> Option<char> {
+    let rest = text.strip_prefix("??")?;
+    Some(match rest.chars().next()? {
+        '=' => '#',
+        '(' => '[',
+        '/' => '\\',
+        ')' => ']',
+        '\'' => '^',
+        '<' => '{',
+        '!' => '|',
+        '>' => '}',
+        '-' => '~',
+        _ => return None,
+    })
 }
 
 /// Whitespace as C spells it, which is ASCII and nothing else.
@@ -669,6 +795,52 @@ mod tests {
                 "U+{:04X} was skipped as though it were a space",
                 c as u32
             );
+        }
+    }
+
+    /// A splice is a `\` or `??/` immediately followed by a newline, `\n` or
+    /// `\r\n`, and its length covers both (C17 5.1.1.2 p1 phases 1 and 2); a
+    /// space before the newline makes none, and nor does a `?` too few.
+    ///
+    /// Mutation: accept spaces before the newline; the `\ ` row is one.
+    /// Mutation: count `\r\n` as one byte; its length is short. Mutation:
+    /// drop `??/`; its rows are none. Each fails this.
+    #[test]
+    fn a_splice_is_a_backslash_or_its_trigraph_right_before_a_newline() {
+        for (text, length) in [
+            ("\\\nx", Some(2)),
+            ("\\\r\nx", Some(3)),
+            ("??/\nx", Some(4)),
+            ("??/\r\nx", Some(5)),
+            ("\\ \nx", None),
+            ("\\x", None),
+            ("?/\nx", None),
+            ("\\", None),
+        ] {
+            assert_eq!(splice_length(text), length, "{text:?}");
+        }
+    }
+
+    /// The nine trigraphs of C17 5.2.1.1, written out, and two that are not.
+    ///
+    /// Mutation: map any one to another character, or drop it; its row
+    /// fails.
+    #[test]
+    fn each_trigraph_is_the_character_c_says_it_is() {
+        for (text, meant) in [
+            ("??=", Some('#')),
+            ("??(", Some('[')),
+            ("??/", Some('\\')),
+            ("??)", Some(']')),
+            ("??'", Some('^')),
+            ("??<", Some('{')),
+            ("??!", Some('|')),
+            ("??>", Some('}')),
+            ("??-", Some('~')),
+            ("??a", None),
+            ("?=", None),
+        ] {
+            assert_eq!(trigraph(text), meant, "{text:?}");
         }
     }
 

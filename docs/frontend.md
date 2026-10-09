@@ -67,7 +67,7 @@ Every line was measured against the built compiler and against
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int \u00e9 = 1;` | `error[SC0103]` at the backslash | accepts | accepts |
-| `ma\` newline `in(void)` | `error[SC0103]` at the backslash | accepts | accepts |
+| `ma\` newline `in(void)` | `error[SC0107]` at the backslash | accepts | accepts |
 | `int a$b = 1;` | `error[SC0103]` at the `$` | accepts | `error: '$' in identifier` |
 
 **The first two are C and are not implemented.** 6.4.2.1 puts
@@ -88,13 +88,29 @@ None of the three is a decision anybody has taken to refuse forever. They are
 where the lexer stopped, and this section exists so that stopping there is
 visible rather than inferred from a diagnostic.
 
-**Digraphs are read; trigraphs and line splices are not yet.** C17 6.4.6 p3
-makes `<:` `:>` `<%` `%>` `%:` `%:%:` the punctuators `[` `]` `{` `}` `#` `##`
-"in all aspects of the language", so `token.rs::DIGRAPHS` scans each to that
-punctuator and nothing after the lexer can tell them apart: `%:define` is a
-directive and `SC0104`, as `#define` is. The trigraphs of 5.2.1.1 and the
-splice of phase 2 happen before any token exists, and a splice the lexer does
-not perform compiles a different program; that is #430.
+**Digraphs are read; trigraphs and line splices are read in a comment.** C17
+6.4.6 p3 makes `<:` `:>` `<%` `%>` `%:` `%:%:` the punctuators `[` `]` `{`
+`}` `#` `##` "in all aspects of the language", so `token.rs::DIGRAPHS` scans
+each to that punctuator and nothing after the lexer can tell them apart:
+`%:define` is a directive and `SC0104`, as `#define` is.
+
+The trigraphs of 5.2.1.1 and the splice of 5.1.1.2 p1 phase 2 happen before
+any token exists. A splice the lexer does not perform compiles a different
+program where it ends a line comment, `// a \` making the line below it part
+of the comment, and where it falls between the `*` and the `/` that close a
+block comment. So a comment performs both, `??/` included, since a comment's
+text means nothing after the lexer and needs no spelling kept. Anywhere else a
+splice or a trigraph is refused as `SC0107`, valid C not read yet, rather than
+as an unexpected character, an unterminated literal or a syntax error, which
+is what each was before:
+
+| Written | This compiler | `clang -std=c17` |
+|---|---|---|
+| `// a \` newline `return 1;` | one comment | one comment |
+| `/* a *\` newline `/` | the comment closes | the comment closes |
+| `int na\` newline `me;` | `error[SC0107]` at the backslash | one identifier |
+| `"a\` newline `b"` | `error[SC0107]` at the backslash | one string |
+| `int t = ??-1;` | `error[SC0107]` at the trigraph | `~1`, with a warning |
 
 Three more are where the *parser* stopped, and belong here for the same reason.
 
