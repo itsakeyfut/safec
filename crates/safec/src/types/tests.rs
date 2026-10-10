@@ -2330,14 +2330,16 @@ fn every_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
 /// Mutation: have `push_declarator` queue the root only, dropping the step
 /// that walks the specifier's definition first; every step is refused as
 /// over an incomplete struct. Mutation: have `open_parameters` push a bare
-/// `Step::Type` for a parameter; the nested one is. Mutation: have
+/// `Step::Type` for a parameter; the nested one is refused. Mutation: have
 /// `push_declarator` stop at a pointer rather than going through it to the
-/// specifier; `ptrs`, an array of pointers to the struct, is. Each fails
-/// this.
+/// specifier; `ptrs`, an array of pointers to the struct, is refused.
+/// Mutation: have it stop at a function rather than going through to what
+/// it returns; `fs`, an array of pointers to functions returning the
+/// struct, is refused. Each fails this.
 #[test]
 fn a_struct_defined_in_a_specifier_is_complete_in_its_declarators_lengths() {
     let checked = checked(
-        "void f(void) {\n    struct S *p;\n    struct S {\n        int a;\n    } arr[(p + 1, 2)];\n}\nvoid (*g)(struct T *q, struct T {\n    int a;\n} arr[(q + 1, 2)]);\nvoid h(void) {\n    struct R *r;\n    struct R {\n        int a;\n    } *ptrs[(r + 1, 2)];\n}\n",
+        "void f(void) {\n    struct S *p;\n    struct S {\n        int a;\n    } arr[(p + 1, 2)];\n}\nvoid (*g)(struct T *q, struct T {\n    int a;\n} arr[(q + 1, 2)]);\nvoid h(void) {\n    struct R *r;\n    struct R {\n        int a;\n    } *ptrs[(r + 1, 2)];\n}\nvoid k(void) {\n    struct Q *q;\n    struct Q {\n        int a;\n    } (*fs[(q + 1, 2)])(void);\n}\n",
     );
 
     assert_eq!(checked.messages(), Vec::<&str>::new());
