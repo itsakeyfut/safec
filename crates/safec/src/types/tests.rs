@@ -1545,10 +1545,14 @@ fn a_return_is_found_wherever_it_is_written() {
 /// `Assign`'s `place` or `value`, `Conditional`'s `condition`, `then` or
 /// `otherwise`, `Call`'s `callee` or an argument, `Subscript`'s `base` or
 /// `index`. The row whose name is in that part fails. `Comma` shares
-/// `Binary`'s arm, and its rows fail with `Binary`'s. `Member` has no row
-/// because dropping its arm changes nothing today: an access whose base has
-/// no type reports `SC0304` itself, which marks it, unless its base is
-/// another access, which was marked the same way first.
+/// `Binary`'s arm, and its rows fail with `Binary`'s. `Member`'s `base` is
+/// the remaining part: `nowhere.x * 2` fails.
+///
+/// The rows with `.` and `->` also hold `Checker::member`, which says
+/// nothing beside a base with a fault reported within it. Mutation: have it
+/// report beside every untyped base, by ignoring the mark or by restoring
+/// the rule that excused only a base that is itself an access. `nowhere.x *
+/// 2` gains `cannot check` and fails.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
     for value in [
@@ -1570,6 +1574,8 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
         "nowhere[0] * 2",
         "(a[nowhere], q - q) * 2",
         "(nowhere, q - q) * 2",
+        "nowhere.x * 2",
+        "nowhere->x * 2",
     ] {
         let checked = checked(&format!(
             "int f(int);\nint main(void) {{ int *p; int *q; int a[2]; p = {value}; return 0; }}\n"
@@ -1905,8 +1911,7 @@ fn a_member_access_of_the_right_shape_is_typed_and_of_the_wrong_one_is_the_progr
         checked.codes(),
         ["SC0306", "SC0306", "SC0306", "SC0304", "SC0304"]
     );
-    let untyped =
-        "the base has no type here: either a fault reported above, or a gap in this compiler";
+    let untyped = "the base has no type here, which is a gap in this compiler: whether this access is valid C is not checked";
     assert_eq!(checked.notes()[3..], [untyped, untyped]);
     assert_eq!(
         checked.labels()[3..],
