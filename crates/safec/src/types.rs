@@ -276,6 +276,7 @@ pub fn check(
         values: vec![None; ast.expr_ids().count()],
         members: vec![None; ast.expr_ids().count()],
         undefined: vec![false; ast.expr_ids().count()],
+        reported: vec![false; ast.expr_ids().count()],
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::Int),
@@ -287,8 +288,19 @@ pub fn check(
     checker.collect_receivers(ast, diagnostics);
 
     for id in ast.expr_ids().collect::<Vec<_>>() {
+        let errors = diagnostics.error_count();
         let ty = checker.type_of(ast, id, diagnostics);
         checker.types[id.index()] = ty;
+        // An undeclared name was reported by the resolver, before this ran,
+        // so the sink's count does not show it. The arena holds a child
+        // before its parent, so every operand is marked before it is read.
+        let unresolved = matches!(ast.expr(id), Expr::Identifier { .. })
+            && checker.resolution.resolved(id).is_none();
+        checker.reported[id.index()] = diagnostics.error_count() > errors
+            || unresolved
+            || operands(ast.expr(id))
+                .iter()
+                .any(|operand| checker.reported[operand.index()]);
         // A literal's value is `constant`'s, set while it was typed; every
         // other expression's is worked out from its operands' here, before
         // anything that reads it as a null pointer constant is asked.
@@ -313,6 +325,62 @@ pub fn check(
         of: checker.types,
         value: checker.values,
         member: checker.members,
+    }
+}
+
+/// The expressions `expr` is made of, which a fault reported in any of them
+/// is in: see `Checker::reported`.
+///
+/// No `..` in any arm, so that a variant added later fails to compile here
+/// until it says which of its parts are operands, rather than carrying no
+/// mark and having an `int` answered above a fault already reported.
+fn operands(expr: &Expr) -> Vec<ExprId> {
+    match expr {
+        Expr::Number { span: _ } | Expr::Identifier { span: _ } | Expr::Error { span: _ } => {
+            Vec::new()
+        }
+        Expr::Unary {
+            op: _,
+            operand,
+            span: _,
+        } => vec![*operand],
+        Expr::Binary {
+            op: _,
+            lhs,
+            rhs,
+            span: _,
+        }
+        | Expr::Comma { lhs, rhs, span: _ } => vec![*lhs, *rhs],
+        Expr::Assign {
+            op: _,
+            place,
+            value,
+            span: _,
+        } => vec![*place, *value],
+        Expr::Conditional {
+            condition,
+            then,
+            otherwise,
+            span: _,
+        } => vec![*condition, *then, *otherwise],
+        Expr::Call {
+            callee,
+            arguments,
+            span: _,
+        } => std::iter::once(*callee)
+            .chain(arguments.iter().copied())
+            .collect(),
+        Expr::Subscript {
+            base,
+            index,
+            span: _,
+        } => vec![*base, *index],
+        Expr::Member {
+            base,
+            member: _,
+            arrow: _,
+            span: _,
+        } => vec![*base],
     }
 }
 
@@ -388,6 +456,13 @@ struct Checker<'a> {
     /// (C17 6.6 p4) from `int a[n];` (6.7.6.2 p2) when a length at file scope
     /// has no value.
     undefined: Vec<bool>,
+    /// Whether a fault was reported in each expression or below it: typing
+    /// it raised the sink's error count, it is a name the resolver could not
+    /// resolve, or one of its [`operands`] is marked. Set by `check` beside
+    /// the type. What tells an operand left untyped by a report from one
+    /// left untyped by this compiler's gap, which [`Checker::binary`] answers
+    /// differently.
+    reported: Vec<bool>,
     int: TypeId,
     /// The range of `int` on the target this run is for.
     int_range: Integer,
@@ -1898,13 +1973,15 @@ impl Checker<'_> {
     /// had `p = p * 1` reported a second time, as an `int` given to a pointer
     /// the program never had.
     ///
-    /// Beside an operand this stage could not type, every operator but `+`
-    /// and `-` is still `int`, because an operand can be untyped with
-    /// nothing reported: `p - q` is valid C, and this compiler has no type
-    /// for its `ptrdiff_t`. No type there would skip the check around it, so
-    /// `int *r = (p - q) * 2;` would lose its `SC0302`. The cost is that
-    /// `p = nowhere * 1` is reported as an undeclared name and then as an
-    /// `int` given to a pointer.
+    /// Beside an operand this stage could not type, the answer turns on why
+    /// it is untyped. An operand can be untyped with nothing reported: `p -
+    /// q` is valid C, and this compiler has no type for its `ptrdiff_t`.
+    /// Every operator but `+` and `-` is still `int` there, because no type
+    /// would skip the check around it, and `int *r = (p - q) * 2;` would
+    /// lose its `SC0302`. An operand that is untyped because a fault in it
+    /// was reported (see `reported`) gives no type, as `unary` does, because
+    /// an `int` there had `p = nowhere * 1` reported as an undeclared name
+    /// and then as an `int` given to a pointer.
     fn binary(
         &mut self,
         ast: &mut Ast,
@@ -1919,7 +1996,10 @@ impl Checker<'_> {
         };
 
         let Some((left, right)) = operands else {
-            return (!matches!(op, BinOp::Add | BinOp::Sub)).then_some(self.int);
+            let reported = [lhs, rhs].into_iter().any(|operand| {
+                self.types[operand.index()].is_none() && self.reported[operand.index()]
+            });
+            return (!reported && !matches!(op, BinOp::Add | BinOp::Sub)).then_some(self.int);
         };
         let nulls = (
             self.is_null_pointer_constant(lhs),

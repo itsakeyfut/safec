@@ -1526,9 +1526,25 @@ fn a_return_is_found_wherever_it_is_written() {
 /// operand nothing typed. The rows with an operator in them gain the same
 /// second diagnostic, which is what they are here for: the bare name alone
 /// passed against a compiler that guessed.
+///
+/// The rows with `*` hold `Checker::binary`, which answers `int` beside an
+/// operand untyped as this compiler's gap and must not beside one untyped
+/// because a fault in it was reported. Mutation: have `binary` answer `int`
+/// beside any untyped operand, as it did before #238. All three gain an
+/// `int` given to a pointer. Mutation: do not mark a name the resolver
+/// could not resolve. `nowhere * 1` fails. Mutation: do not carry a mark up
+/// from an operand. `-nowhere * 1` and `(nowhere + 1) * 2` fail.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
-    for value in ["nowhere", "nowhere + 1", "1 + nowhere", "-nowhere"] {
+    for value in [
+        "nowhere",
+        "nowhere + 1",
+        "1 + nowhere",
+        "-nowhere",
+        "nowhere * 1",
+        "-nowhere * 1",
+        "(nowhere + 1) * 2",
+    ] {
         let checked = checked(&format!(
             "int main(void) {{ int *p; p = {value}; return 0; }}\n"
         ));
