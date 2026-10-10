@@ -613,8 +613,9 @@ impl Resolver<'_> {
     /// one, and not the array being declared.
     ///
     /// The parameters get a scope that opens and closes here, which is what
-    /// C17 6.2.1 p4 gives a declarator that is not part of a definition: their
-    /// names are visible to each other and to nothing else. A definition's
+    /// C17 6.2.1 p4 gives a declarator that is not part of a definition: each
+    /// name is visible to the parameters after it and to nothing else, see
+    /// [`Resolver::parameters`]. A definition's
     /// parameters are the same names in a scope [`Resolver::item`] keeps open
     /// for the body instead.
     fn declaration(&mut self, declaration: &Declaration, diagnostics: &mut DiagnosticSink) {
@@ -632,13 +633,13 @@ impl Resolver<'_> {
     /// The names a function declarator wrote between its parentheses, and the
     /// expressions inside their types, in the scope the caller has open.
     ///
-    /// Every name goes in before any length is walked. C17 6.7.6.2 lets a
-    /// parameter's array length name another parameter, `int f(int n, int
-    /// a[n])`, which `clang` accepts and which the parser here reads, so a
-    /// length looked up before its siblings are declared would be reported as
-    /// undeclared: a false positive about valid C. Declaring first is looser
-    /// than C, which starts each name at the end of its own declarator, and
-    /// the direction to be loose in is the one that stays quiet.
+    /// Each name goes in once its own type is walked, because C17 6.2.1 p7
+    /// starts its scope just after its declarator: a length finds the
+    /// parameters before it, `int f(int n, int a[n])`, and not the one it
+    /// belongs to or any after it, so `int f(int a[m], int m)` is an
+    /// undeclared `m`, as `clang` reports it, and in `int *m; int f(int
+    /// a[m], int m)` the length is the file-scope `m`. Declaring every name
+    /// first accepted the first and bound the second to the wrong `m`.
     ///
     /// Only the outermost type, which is what
     /// `driver/dumps.rs::dump_parameters` does as well: a definition whose
@@ -658,16 +659,14 @@ impl Resolver<'_> {
         };
 
         for parameter in parameters {
+            // As written, because an array's length is in the type the
+            // declarator derived and the adjusted pointer has none: `int
+            // a[n]` is `int *` to every other reader, and `n` still has to
+            // resolve.
+            self.walk_type(parameter.written, diagnostics);
             if let Some(name) = parameter.name {
                 self.declare(name, parameter.ty, false, diagnostics);
             }
-        }
-
-        // As written, because an array's length is in the type the
-        // declarator derived and the adjusted pointer has none: `int a[n]`
-        // is `int *` to every other reader, and `n` still has to resolve.
-        for parameter in parameters {
-            self.walk_type(parameter.written, diagnostics);
         }
     }
 
@@ -683,9 +682,9 @@ impl Resolver<'_> {
     ///
     /// A function type's parameters are walked in a function prototype scope
     /// of their own (C17 6.2.1 p4), opened once the return, written first, is
-    /// walked outside it, and closed by a step below them: the names declared
-    /// first and the lengths walked after, for the reason
-    /// [`Resolver::parameters`] gives. So `void (*p)(int n, int a[n])` finds its `n`, a struct
+    /// walked outside it, and closed by a step below them: each name declared
+    /// once its own type is walked, for the reason [`Resolver::parameters`]
+    /// gives. So `void (*p)(int n, int a[n])` finds its `n`, a struct
     /// written there is a tag of that scope, and `void (*p)(int a, int a)` is
     /// a redeclaration.
     fn walk_type(&mut self, ty: TypeId, diagnostics: &mut DiagnosticSink) {
@@ -741,7 +740,11 @@ impl Resolver<'_> {
                     continue;
                 }
                 Step::Parameters(function) => {
-                    self.open_parameters(function, &mut pending, diagnostics);
+                    self.open_parameters(function, &mut pending);
+                    continue;
+                }
+                Step::Declare(name, ty) => {
+                    self.declare(name, ty, false, diagnostics);
                     continue;
                 }
             };
@@ -800,15 +803,11 @@ impl Resolver<'_> {
     }
 
     /// Open the function prototype scope of the function type `function`,
-    /// declare its parameters' names in it, and queue their types and the
-    /// step that closes it, for [`Resolver::walk`]. Every name goes in before
-    /// any length is walked, for the reason [`Resolver::parameters`] gives.
-    fn open_parameters(
-        &mut self,
-        function: TypeId,
-        pending: &mut Vec<Step>,
-        diagnostics: &mut DiagnosticSink,
-    ) {
+    /// and queue, for [`Resolver::walk`], each parameter's type followed by
+    /// the declaration of its name, and the step that closes the scope. Each
+    /// name goes in once its own type is walked, for the reason
+    /// [`Resolver::parameters`] gives.
+    fn open_parameters(&mut self, function: TypeId, pending: &mut Vec<Step>) {
         let ast = self.ast;
         let Type::Function {
             parameters: Parameters::Prototype(parameters),
@@ -819,17 +818,14 @@ impl Resolver<'_> {
         };
         self.open_scope();
         pending.push(Step::CloseScope);
-        for parameter in parameters {
+        // Pushed last to first, and each name below its type, so the stack
+        // gives them back in the order they are written.
+        for parameter in parameters.iter().rev() {
             if let Some(name) = parameter.name {
-                self.declare(name, parameter.ty, false, diagnostics);
+                pending.push(Step::Declare(name, parameter.ty));
             }
+            pending.push(Step::Type(parameter.written));
         }
-        pending.extend(
-            parameters
-                .iter()
-                .rev()
-                .map(|parameter| Step::Type(parameter.written)),
-        );
     }
 
     /// The `}` of the struct definition at `definition`: check its members
@@ -1513,13 +1509,15 @@ fn unfit_member(sources: &SourceMap, at: Span, why: String) -> Diagnostic {
 
 /// One step of [`Resolver::walk_type`]: a type to walk, the close of a
 /// struct definition whose members are all walked, the opening of a function
-/// type's prototype scope once its return is walked, or the close of that
-/// scope once its parameters are.
+/// type's prototype scope once its return is walked, the close of that scope
+/// once its parameters are, or a parameter's name and adjusted type, declared
+/// once the type it was written with is walked.
 enum Step {
     Type(TypeId),
     Close(TypeId),
     Parameters(TypeId),
     CloseScope,
+    Declare(Span, TypeId),
 }
 
 /// `name` is source text, and it reaches a terminal through this message.
@@ -1839,24 +1837,42 @@ mod tests {
         );
     }
 
-    /// C17 6.7.6.2 lets a parameter's array length name another parameter, and
-    /// `clang` accepts it, so it is not a name to report. A length that names
-    /// nothing at all is, in a definition and in a declaration alike: `clang`
-    /// rejects both, verified with `--target=x86_64-unknown-linux-gnu`.
+    /// C17 6.7.6.2 lets a parameter's array length name a parameter before
+    /// it, and `clang` accepts it, so it is not a name to report. A length
+    /// that names nothing at all is, in a definition and in a declaration
+    /// alike, and so is one that names the parameter it belongs to or one
+    /// after it, since C17 6.2.1 p7 starts a parameter's scope at the end of
+    /// its declarator: `clang` rejects all four, verified with
+    /// `--target=x86_64-unknown-linux-gnu`.
     ///
-    /// The two halves are one test because the first version of this code had
+    /// The halves are one test because the first version of this code had
     /// only the first half of the rule and skipped every parameter's type to
-    /// get it, which made the second half silent. A test for either alone
-    /// passes against that.
+    /// get it, which made the second half silent, and a later one declared
+    /// every name first to keep the first half, which made the last two
+    /// silent. A test for any one alone passes against one of those.
     ///
-    /// Mutation: walk the parameters' types before declaring their names in
-    /// `Resolver::parameters`. The sibling case starts reporting `n` and this
-    /// fails. Mutation: skip the second loop there. The two undeclared cases
-    /// stop reporting and this fails from the other side.
+    /// A name declared before the list, at file scope, is also a length's to
+    /// find, and `a_parameter_s_length_finds_the_name_before_the_list_not_the_parameter_after_it`
+    /// holds that.
+    ///
+    /// Mutation: walk every parameter's type before declaring any name in
+    /// `Resolver::parameters`. The sibling case starts reporting `n`.
+    /// Mutation: do not walk a parameter's type there. Every case that
+    /// expects a report stops reporting. Mutation: declare every name before
+    /// walking any type. The later and the self cases stop reporting.
+    /// Mutation: declare a parameter before walking its own type. The self
+    /// case stops reporting. Each fails this.
     #[test]
-    fn a_parameter_may_size_an_array_with_another_parameter_and_nothing_else() {
+    fn a_parameter_s_length_may_name_an_earlier_parameter_but_not_itself_a_later_one_or_an_undeclared_name()
+     {
         let sibling = resolved("int f(int n, int a[n]) { return 0; }\n");
         assert_eq!(sibling.messages(), Vec::<&str>::new());
+
+        let later = resolved("int f(int a[m * 2], int m) { return 0; }\n");
+        assert_eq!(later.messages(), ["use of undeclared identifier `m`"]);
+
+        let itself = resolved("int f(int a[a]);\n");
+        assert_eq!(itself.messages(), ["use of undeclared identifier `a`"]);
 
         let definition = resolved("int f(int a[nowhere]) { return 0; }\n");
         assert_eq!(
@@ -1868,6 +1884,34 @@ mod tests {
         assert_eq!(
             declaration.messages(),
             ["use of undeclared identifier `nowhere`"]
+        );
+    }
+
+    /// A name in a parameter's length that a later parameter also declares is
+    /// the one in scope before the list, as C17 6.2.1 p7 has it, in a
+    /// declaration's own list and in a nested one alike: in `int *m; int
+    /// f(int a[m], int m);` the length is the file-scope `m`. This test runs
+    /// the resolver alone, which reports nothing here; the type check that
+    /// follows it refuses an `int *` as a length, as `clang` does ("size of
+    /// array has non-integer type 'int *'", `--target=x86_64-unknown-linux-gnu`).
+    ///
+    /// Mutation: declare every name before walking any type in
+    /// `Resolver::parameters`. The first length resolves to the parameter.
+    /// Mutation: have `Resolver::open_parameters` declare every name before
+    /// queuing any type. The second does. Each fails this.
+    #[test]
+    fn a_parameter_s_length_finds_the_name_before_the_list_not_the_parameter_after_it() {
+        let resolved =
+            resolved("int *m;\nint f(int a[m], int m);\nint *n;\nvoid (*p)(int x[n], int n);\n");
+
+        assert_eq!(resolved.messages(), Vec::<&str>::new());
+        assert_eq!(
+            resolved.declaration_of("m", 1),
+            Some(resolved.occurrence("m", 0))
+        );
+        assert_eq!(
+            resolved.declaration_of("n", 1),
+            Some(resolved.occurrence("n", 0))
         );
     }
 
@@ -2616,18 +2660,21 @@ mod tests {
     /// A parameter list nested inside a type is a function prototype scope of
     /// its own (C17 6.2.1 p4): two parameters of one name in it are a
     /// redeclaration, whether it is a variable's type or a parameter's, its
-    /// lengths find its own names, an undeclared one is reported, and its
-    /// names are gone after it.
+    /// lengths find its own names written before them and not those after, an
+    /// undeclared one is reported, and its names are gone after it.
     ///
     /// Mutation: declare no nested parameter in `Resolver::walk`; the two
     /// `a`s go silent and `n` is undeclared. Mutation: skip the lengths; `m`
     /// goes silent. Mutation: drop `Step::CloseScope`; the use
-    /// of `k` in `g` finds the parameter, not the file-scope `k`. Each fails
-    /// this.
+    /// of `k` in `g` finds the parameter, not the file-scope `k`. Mutation:
+    /// have `Resolver::open_parameters` declare every name before queuing any
+    /// type; `z` and `w` go silent. Mutation: have it queue a parameter's
+    /// `Step::Declare` above its `Step::Type`, so the name is declared first;
+    /// `w` goes silent. Each fails this.
     #[test]
     fn a_nested_parameter_list_is_a_scope_of_its_own() {
         let resolved = resolved(
-            "void (*p)(int a, int a);\nvoid f(void (*cb)(int b, int b));\nvoid (*q)(int n, int x[n]);\nvoid (*r)(int y[m]);\nint k;\nvoid (*s)(int k);\nint g(void) {\n    return k;\n}\n",
+            "void (*p)(int a, int a);\nvoid f(void (*cb)(int b, int b));\nvoid (*q)(int n, int x[n]);\nvoid (*r)(int y[m]);\nvoid (*u)(int y[z], int z);\nvoid (*v)(int w[w]);\nint k;\nvoid (*s)(int k);\nint g(void) {\n    return k;\n}\n",
         );
 
         assert_eq!(
@@ -2636,6 +2683,8 @@ mod tests {
                 "redefinition of `a`",
                 "redefinition of `b`",
                 "use of undeclared identifier `m`",
+                "use of undeclared identifier `z`",
+                "use of undeclared identifier `w`",
             ]
         );
         assert_eq!(
