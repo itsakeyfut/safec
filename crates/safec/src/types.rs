@@ -276,7 +276,7 @@ pub fn check(
         values: vec![None; ast.expr_ids().count()],
         members: vec![None; ast.expr_ids().count()],
         undefined: vec![false; ast.expr_ids().count()],
-        reported: vec![false; ast.expr_ids().count()],
+        reported_within: vec![false; ast.expr_ids().count()],
         // Pushed once. A new node per constant would fill the arena with
         // copies of `int` and make nothing truer.
         int: ast.push_type(Type::Int),
@@ -296,11 +296,11 @@ pub fn check(
         // before its parent, so every operand is marked before it is read.
         let unresolved = matches!(ast.expr(id), Expr::Identifier { .. })
             && checker.resolution.resolved(id).is_none();
-        checker.reported[id.index()] = diagnostics.error_count() > errors
+        checker.reported_within[id.index()] = diagnostics.error_count() > errors
             || unresolved
-            || operands(ast.expr(id))
+            || subexpressions(ast.expr(id))
                 .iter()
-                .any(|operand| checker.reported[operand.index()]);
+                .any(|operand| checker.reported_within[operand.index()]);
         // A literal's value is `constant`'s, set while it was typed; every
         // other expression's is worked out from its operands' here, before
         // anything that reads it as a null pointer constant is asked.
@@ -328,13 +328,13 @@ pub fn check(
     }
 }
 
-/// The expressions `expr` is made of, which a fault reported in any of them
-/// is in: see `Checker::reported`.
+/// The expressions `expr` is made of, so that a fault reported in any of
+/// them is one reported within `expr`: see `Checker::reported_within`.
 ///
 /// No `..` in any arm, so that a variant added later fails to compile here
 /// until it says which of its parts are operands, rather than carrying no
 /// mark and having an `int` answered above a fault already reported.
-fn operands(expr: &Expr) -> Vec<ExprId> {
+fn subexpressions(expr: &Expr) -> Vec<ExprId> {
     match expr {
         Expr::Number { span: _ } | Expr::Identifier { span: _ } | Expr::Error { span: _ } => {
             Vec::new()
@@ -458,11 +458,11 @@ struct Checker<'a> {
     undefined: Vec<bool>,
     /// Whether a fault was reported in each expression or below it: typing
     /// it raised the sink's error count, it is a name the resolver could not
-    /// resolve, or one of its [`operands`] is marked. Set by `check` beside
+    /// resolve, or one of its [`subexpressions`] is marked. Set by `check` beside
     /// the type. What tells an operand left untyped by a report from one
     /// left untyped by this compiler's gap, which [`Checker::binary`] answers
     /// differently.
-    reported: Vec<bool>,
+    reported_within: Vec<bool>,
     int: TypeId,
     /// The range of `int` on the target this run is for.
     int_range: Integer,
@@ -1979,7 +1979,7 @@ impl Checker<'_> {
     /// Every operator but `+` and `-` is still `int` there, because no type
     /// would skip the check around it, and `int *r = (p - q) * 2;` would
     /// lose its `SC0302`. An operand that is untyped because a fault in it
-    /// was reported (see `reported`) gives no type, as `unary` does, because
+    /// was reported (see `reported_within`) gives no type, as `unary` does, because
     /// an `int` there had `p = nowhere * 1` reported as an undeclared name
     /// and then as an `int` given to a pointer.
     fn binary(
@@ -1997,7 +1997,7 @@ impl Checker<'_> {
 
         let Some((left, right)) = operands else {
             let reported = [lhs, rhs].into_iter().any(|operand| {
-                self.types[operand.index()].is_none() && self.reported[operand.index()]
+                self.types[operand.index()].is_none() && self.reported_within[operand.index()]
             });
             return (!reported && !matches!(op, BinOp::Add | BinOp::Sub)).then_some(self.int);
         };

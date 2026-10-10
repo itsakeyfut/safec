@@ -1537,7 +1537,7 @@ fn a_return_is_found_wherever_it_is_written() {
 /// resolve; `nowhere * 1`. Mutation: do not carry a mark up from an
 /// operand; `-nowhere * 1`.
 ///
-/// The rows after those hold `operands`, one part of one arm each, since
+/// The rows after those hold `subexpressions`, one part of one arm each, since
 /// `E0004` makes an arm exist and says nothing about what it lists. A part
 /// that is a gap's sibling is untyped and unmarked beside the name, as
 /// `p - q` is, or a comma carries the mark past a gap. Mutation: have an
