@@ -613,8 +613,9 @@ impl Resolver<'_> {
     /// one, and not the array being declared.
     ///
     /// The parameters get a scope that opens and closes here, which is what
-    /// C17 6.2.1 p4 gives a declarator that is not part of a definition: their
-    /// names are visible to each other and to nothing else. A definition's
+    /// C17 6.2.1 p4 gives a declarator that is not part of a definition: each
+    /// name is visible to the parameters after it and to nothing else, see
+    /// [`Resolver::parameters`]. A definition's
     /// parameters are the same names in a scope [`Resolver::item`] keeps open
     /// for the body instead.
     fn declaration(&mut self, declaration: &Declaration, diagnostics: &mut DiagnosticSink) {
@@ -1850,15 +1851,20 @@ mod tests {
     /// every name first to keep the first half, which made the last two
     /// silent. A test for any one alone passes against one of those.
     ///
+    /// A name declared before the list, at file scope, is also a length's to
+    /// find, and `a_parameter_s_length_finds_the_name_before_the_list_not_the_parameter_after_it`
+    /// holds that.
+    ///
     /// Mutation: walk every parameter's type before declaring any name in
     /// `Resolver::parameters`. The sibling case starts reporting `n`.
-    /// Mutation: do not walk a parameter's type there. The `nowhere` cases
-    /// stop reporting. Mutation: declare every name before walking any type.
-    /// The later and the self cases stop reporting. Mutation: declare a
-    /// parameter before walking its own type. The self case stops reporting.
-    /// Each fails this.
+    /// Mutation: do not walk a parameter's type there. Every case that
+    /// expects a report stops reporting. Mutation: declare every name before
+    /// walking any type. The later and the self cases stop reporting.
+    /// Mutation: declare a parameter before walking its own type. The self
+    /// case stops reporting. Each fails this.
     #[test]
-    fn a_parameter_may_size_an_array_with_an_earlier_parameter_and_nothing_else() {
+    fn a_parameter_s_length_may_name_an_earlier_parameter_but_not_itself_a_later_one_or_an_undeclared_name()
+     {
         let sibling = resolved("int f(int n, int a[n]) { return 0; }\n");
         assert_eq!(sibling.messages(), Vec::<&str>::new());
 
@@ -1882,22 +1888,30 @@ mod tests {
     }
 
     /// A name in a parameter's length that a later parameter also declares is
-    /// the one in scope before the list, as C17 6.2.1 p7 has it: in `int *m;
-    /// int f(int a[m], int m);` the length is the file-scope `m`, which the
-    /// type check then refuses as a length, as `clang` does ("size of array
-    /// has non-integer type 'int *'", `--target=x86_64-unknown-linux-gnu`).
+    /// the one in scope before the list, as C17 6.2.1 p7 has it, in a
+    /// declaration's own list and in a nested one alike: in `int *m; int
+    /// f(int a[m], int m);` the length is the file-scope `m`. This test runs
+    /// the resolver alone, which reports nothing here; the type check that
+    /// follows it refuses an `int *` as a length, as `clang` does ("size of
+    /// array has non-integer type 'int *'", `--target=x86_64-unknown-linux-gnu`).
     ///
     /// Mutation: declare every name before walking any type in
-    /// `Resolver::parameters`. The length resolves to the parameter and this
-    /// fails.
+    /// `Resolver::parameters`. The first length resolves to the parameter.
+    /// Mutation: have `Resolver::open_parameters` declare every name before
+    /// queuing any type. The second does. Each fails this.
     #[test]
     fn a_parameter_s_length_finds_the_name_before_the_list_not_the_parameter_after_it() {
-        let resolved = resolved("int *m;\nint f(int a[m], int m);\n");
+        let resolved =
+            resolved("int *m;\nint f(int a[m], int m);\nint *n;\nvoid (*p)(int x[n], int n);\n");
 
         assert_eq!(resolved.messages(), Vec::<&str>::new());
         assert_eq!(
             resolved.declaration_of("m", 1),
             Some(resolved.occurrence("m", 0))
+        );
+        assert_eq!(
+            resolved.declaration_of("n", 1),
+            Some(resolved.occurrence("n", 0))
         );
     }
 
@@ -2646,7 +2660,7 @@ mod tests {
     /// A parameter list nested inside a type is a function prototype scope of
     /// its own (C17 6.2.1 p4): two parameters of one name in it are a
     /// redeclaration, whether it is a variable's type or a parameter's, its
-    /// lengths find its own names written before them and no other, an
+    /// lengths find its own names written before them and not those after, an
     /// undeclared one is reported, and its names are gone after it.
     ///
     /// Mutation: declare no nested parameter in `Resolver::walk`; the two
