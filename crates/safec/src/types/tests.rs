@@ -1534,6 +1534,15 @@ fn a_return_is_found_wherever_it_is_written() {
 /// `int` given to a pointer. Mutation: do not mark a name the resolver
 /// could not resolve. `nowhere * 1` fails. Mutation: do not carry a mark up
 /// from an operand. `-nowhere * 1` and `(nowhere + 1) * 2` fail.
+///
+/// The rows after those hold `operands`, one arm each, since `E0004` makes
+/// an arm exist and says nothing about what it lists. Mutation: have the
+/// arm for `Binary` drop `rhs`, `Assign` drop `place`, `Conditional` drop
+/// its arms, `Call` drop `callee`, or `Subscript` drop `base`. The row
+/// whose name is in that part gains an `int` given to a pointer. `Member`
+/// has no row because dropping its arm changes nothing today: an access
+/// whose base has no type reports `SC0304` itself, which marks it, unless
+/// its base is another access, which was marked the same way first.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
     for value in [
@@ -1544,6 +1553,11 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
         "nowhere * 1",
         "-nowhere * 1",
         "(nowhere + 1) * 2",
+        "(1 + nowhere) * 2",
+        "(nowhere = 1) * 2",
+        "(1 ? nowhere : 1) * 2",
+        "nowhere() * 2",
+        "nowhere[0] * 2",
     ] {
         let checked = checked(&format!(
             "int main(void) {{ int *p; p = {value}; return 0; }}\n"
@@ -1555,6 +1569,42 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
             "{value}"
         );
     }
+}
+
+/// An operand this stage refused, and reported, gives the operator above it
+/// no type, so what holds the result is not checked against an `int` the
+/// program never had.
+///
+/// Mutation: do not mark an expression whose typing raised the sink's error
+/// count. `p * 1` is refused and left untyped with no mark, the `*`
+/// above it answers `int`, and this gains an `int` given to a pointer.
+#[test]
+fn an_operand_refused_by_its_own_operator_is_reported_once() {
+    let checked = checked("int main(void) { int *p; p = (p * 1) * 2; return 0; }\n");
+
+    assert_eq!(checked.messages(), ["`*` cannot take `int *` and `int`"]);
+}
+
+/// An operand that has a type is not why an operator gives none, however
+/// much was reported inside it, so the `int` beside a gap still stands.
+///
+/// `(nowhere, 1)` is `int` with a fault reported in it, and `p - q` is
+/// untyped with nothing reported, since this compiler has no `ptrdiff_t`.
+///
+/// Mutation: have `Checker::binary` count a marked operand whether or not it
+/// has a type. The `*` gives no type, and this loses the initializer's
+/// report.
+#[test]
+fn a_fault_inside_an_operand_with_a_type_keeps_the_int_beside_a_gap() {
+    let checked = checked("int f(int *p, int *q) { int *r = (p - q) * (nowhere, 1); return 0; }\n");
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "use of undeclared identifier `nowhere`",
+            "cannot initialize `int *` with `int`"
+        ]
+    );
 }
 
 /// Every operator an integer constant expression may hold gives its C value,
