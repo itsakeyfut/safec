@@ -459,9 +459,9 @@ struct Checker<'a> {
     /// Whether a fault was reported in each expression or below it: typing
     /// it raised the sink's error count, it is a name the resolver could not
     /// resolve, or one of its [`subexpressions`] is marked. Set by `check` beside
-    /// the type. What tells an operand left untyped by a report from one
+    /// the type. What tells an expression left untyped by a report from one
     /// left untyped by this compiler's gap, which [`Checker::binary`] answers
-    /// differently.
+    /// differently for an operand and [`Checker::member`] for a base.
     reported_within: Vec<bool>,
     int: TypeId,
     /// The range of `int` on the target this run is for.
@@ -1330,18 +1330,24 @@ impl Checker<'_> {
         let operator = if arrow { "->" } else { "." };
         let Some(base_ty) = self.types[base.index()] else {
             // A base with a fault reported within it, `nowhere.x` or `a.b.c`
-            // with no `b`, is one fault rather than two, and that fault has
-            // been said. Any other base with no type was left untyped by this
-            // compiler, `(p - q).a` among them, and may be a struct, so it is
-            // declined rather than passed over. An access that says nothing
-            // here is marked through its base, by `subexpressions`.
+            // with no `b`, says nothing more, because the run already fails
+            // and the fault is usually why the base has no type. Not always:
+            // `(nowhere, p - q).x` is untyped by `p - q`, and that gap is not
+            // said until `nowhere` is fixed, which is the trade `binary`
+            // makes beside a marked operand. Any other base with no type was
+            // left untyped by this compiler, and without its type whether the
+            // access is C cannot be told: `(*a).x` with `a` an array of
+            // structs is, and `(p - q).a` is not. So it is declined rather
+            // than passed over, and the note claims neither. An access that
+            // says nothing here is marked through its base, by
+            // `subexpressions`.
             if !self.reported_within[base.index()] {
                 diagnostics.report(
                     Diagnostic::error(format!("cannot check `{operator}` yet"))
                         .with_code(NOT_YET)
                         .with_label(Label::primary(span, "a member of something with no type"))
                         .with_note(
-                            "the base has no type here: a gap in this compiler rather than a fault in the program",
+                            "the base has no type here, which is a gap in this compiler: whether this access is valid C is not checked",
                         ),
                 );
             }
