@@ -1329,21 +1329,19 @@ impl Checker<'_> {
     ) -> Option<TypeId> {
         let operator = if arrow { "->" } else { "." };
         let Some(base_ty) = self.types[base.index()] else {
-            // A base that is itself a member access with no type was
-            // reported there, and `a.b.c` with no `b` is one fault rather
-            // than two. Any other base with no type may be a struct: not
-            // every one was reported where it was typed, `p - q` being left
-            // untyped as this compiler's gap, so it is declined rather than
-            // passed over. Whose fault it is cannot be told here, since a
-            // base reported as the program's has no type either, and the
-            // note says both.
-            if !matches!(ast.expr(base), Expr::Member { .. }) {
+            // A base with a fault reported within it, `nowhere.x` or `a.b.c`
+            // with no `b`, is one fault rather than two, and that fault has
+            // been said. Any other base with no type was left untyped by this
+            // compiler, `(p - q).a` among them, and may be a struct, so it is
+            // declined rather than passed over. An access that says nothing
+            // here is marked through its base, by `subexpressions`.
+            if !self.reported_within[base.index()] {
                 diagnostics.report(
                     Diagnostic::error(format!("cannot check `{operator}` yet"))
                         .with_code(NOT_YET)
                         .with_label(Label::primary(span, "a member of something with no type"))
                         .with_note(
-                            "the base has no type here: either a fault reported above, or a gap in this compiler",
+                            "the base has no type here: a gap in this compiler rather than a fault in the program",
                         ),
                 );
             }
