@@ -1526,11 +1526,53 @@ fn a_return_is_found_wherever_it_is_written() {
 /// operand nothing typed. The rows with an operator in them gain the same
 /// second diagnostic, which is what they are here for: the bare name alone
 /// passed against a compiler that guessed.
+///
+/// The rows with `*` hold `Checker::binary`, which answers `int` beside an
+/// operand untyped as this compiler's gap and must not beside one untyped
+/// because a fault in it was reported. Each row with a mark to carry gains
+/// an `int` given to a pointer when the mark is lost, and the loop stops at
+/// the first: below, the row named is that one. Mutation: have `binary`
+/// answer `int` beside any untyped operand, as it did before #238;
+/// `nowhere * 1`. Mutation: do not mark a name the resolver could not
+/// resolve; `nowhere * 1`. Mutation: do not carry a mark up from an
+/// operand; `-nowhere * 1`.
+///
+/// The rows after those hold `subexpressions`, one part of one arm each, since
+/// `E0004` makes an arm exist and says nothing about what it lists. A part
+/// that is a gap's sibling is untyped and unmarked beside the name, as
+/// `p - q` is, or a comma carries the mark past a gap. Mutation: have an
+/// arm list one of its parts twice in place of another: `Binary`'s `rhs`,
+/// `Assign`'s `place` or `value`, `Conditional`'s `condition`, `then` or
+/// `otherwise`, `Call`'s `callee` or an argument, `Subscript`'s `base` or
+/// `index`. The row whose name is in that part fails. `Comma` shares
+/// `Binary`'s arm, and its rows fail with `Binary`'s. `Member` has no row
+/// because dropping its arm changes nothing today: an access whose base has
+/// no type reports `SC0304` itself, which marks it, unless its base is
+/// another access, which was marked the same way first.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
-    for value in ["nowhere", "nowhere + 1", "1 + nowhere", "-nowhere"] {
+    for value in [
+        "nowhere",
+        "nowhere + 1",
+        "1 + nowhere",
+        "-nowhere",
+        "nowhere * 1",
+        "-nowhere * 1",
+        "(nowhere + 1) * 2",
+        "(1 + nowhere) * 2",
+        "(nowhere = 1) * 2",
+        "(p = nowhere, q - q) * 2",
+        "(nowhere ? p - q : p - q) * 2",
+        "(1 ? nowhere : 1) * 2",
+        "(1 ? p - q : nowhere) * 2",
+        "nowhere() * 2",
+        "(f(nowhere), q - q) * 2",
+        "nowhere[0] * 2",
+        "(a[nowhere], q - q) * 2",
+        "(nowhere, q - q) * 2",
+    ] {
         let checked = checked(&format!(
-            "int main(void) {{ int *p; p = {value}; return 0; }}\n"
+            "int f(int);\nint main(void) {{ int *p; int *q; int a[2]; p = {value}; return 0; }}\n"
         ));
 
         assert_eq!(
@@ -1539,6 +1581,42 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
             "{value}"
         );
     }
+}
+
+/// An operand this stage refused, and reported, gives the operator above it
+/// no type, so what holds the result is not checked against an `int` the
+/// program never had.
+///
+/// Mutation: do not mark an expression whose typing raised the sink's error
+/// count. `p * 1` is refused and left untyped with no mark, the `*`
+/// above it answers `int`, and this gains an `int` given to a pointer.
+#[test]
+fn an_operand_refused_by_its_own_operator_is_reported_once() {
+    let checked = checked("int main(void) { int *p; p = (p * 1) * 2; return 0; }\n");
+
+    assert_eq!(checked.messages(), ["`*` cannot take `int *` and `int`"]);
+}
+
+/// An operand that has a type is not why an operator gives none, however
+/// much was reported inside it, so the `int` beside a gap still stands.
+///
+/// `(nowhere, 1)` is `int` with a fault reported in it, and `p - q` is
+/// untyped with nothing reported, since this compiler has no `ptrdiff_t`.
+///
+/// Mutation: have `Checker::binary` count a marked operand whether or not it
+/// has a type. The `*` gives no type, and this loses the initializer's
+/// report.
+#[test]
+fn a_fault_inside_an_operand_with_a_type_keeps_the_int_beside_a_gap() {
+    let checked = checked("int f(int *p, int *q) { int *r = (p - q) * (nowhere, 1); return 0; }\n");
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "use of undeclared identifier `nowhere`",
+            "cannot initialize `int *` with `int`"
+        ]
+    );
 }
 
 /// Every operator an integer constant expression may hold gives its C value,
