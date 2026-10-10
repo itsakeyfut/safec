@@ -1529,20 +1529,26 @@ fn a_return_is_found_wherever_it_is_written() {
 ///
 /// The rows with `*` hold `Checker::binary`, which answers `int` beside an
 /// operand untyped as this compiler's gap and must not beside one untyped
-/// because a fault in it was reported. Mutation: have `binary` answer `int`
-/// beside any untyped operand, as it did before #238. All three gain an
-/// `int` given to a pointer. Mutation: do not mark a name the resolver
-/// could not resolve. `nowhere * 1` fails. Mutation: do not carry a mark up
-/// from an operand. `-nowhere * 1` and `(nowhere + 1) * 2` fail.
+/// because a fault in it was reported. Each row with a mark to carry gains
+/// an `int` given to a pointer when the mark is lost, and the loop stops at
+/// the first: below, the row named is that one. Mutation: have `binary`
+/// answer `int` beside any untyped operand, as it did before #238;
+/// `nowhere * 1`. Mutation: do not mark a name the resolver could not
+/// resolve; `nowhere * 1`. Mutation: do not carry a mark up from an
+/// operand; `-nowhere * 1`.
 ///
-/// The rows after those hold `operands`, one arm each, since `E0004` makes
-/// an arm exist and says nothing about what it lists. Mutation: have the
-/// arm for `Binary` drop `rhs`, `Assign` drop `place`, `Conditional` drop
-/// its arms, `Call` drop `callee`, or `Subscript` drop `base`. The row
-/// whose name is in that part gains an `int` given to a pointer. `Member`
-/// has no row because dropping its arm changes nothing today: an access
-/// whose base has no type reports `SC0304` itself, which marks it, unless
-/// its base is another access, which was marked the same way first.
+/// The rows after those hold `operands`, one part of one arm each, since
+/// `E0004` makes an arm exist and says nothing about what it lists. A part
+/// that is a gap's sibling is untyped and unmarked beside the name, as
+/// `p - q` is, or a comma carries the mark past a gap. Mutation: have an
+/// arm list one of its parts twice in place of another: `Binary`'s `rhs`,
+/// `Assign`'s `place` or `value`, `Conditional`'s `condition`, `then` or
+/// `otherwise`, `Call`'s `callee` or an argument, `Subscript`'s `base` or
+/// `index`. The row whose name is in that part fails. `Comma` shares
+/// `Binary`'s arm, and its rows fail with `Binary`'s. `Member` has no row
+/// because dropping its arm changes nothing today: an access whose base has
+/// no type reports `SC0304` itself, which marks it, unless its base is
+/// another access, which was marked the same way first.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
     for value in [
@@ -1555,12 +1561,18 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
         "(nowhere + 1) * 2",
         "(1 + nowhere) * 2",
         "(nowhere = 1) * 2",
+        "(p = nowhere, q - q) * 2",
+        "(nowhere ? p - q : p - q) * 2",
         "(1 ? nowhere : 1) * 2",
+        "(1 ? p - q : nowhere) * 2",
         "nowhere() * 2",
+        "(f(nowhere), q - q) * 2",
         "nowhere[0] * 2",
+        "(a[nowhere], q - q) * 2",
+        "(nowhere, q - q) * 2",
     ] {
         let checked = checked(&format!(
-            "int main(void) {{ int *p; p = {value}; return 0; }}\n"
+            "int f(int);\nint main(void) {{ int *p; int *q; int a[2]; p = {value}; return 0; }}\n"
         ));
 
         assert_eq!(
