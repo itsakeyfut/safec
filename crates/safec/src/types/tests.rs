@@ -2324,17 +2324,44 @@ fn every_step_of_a_struct_pointer_asks_completeness_where_it_is_written() {
 /// A struct defined in a declaration's specifier is complete in every
 /// length its declarator writes, since the specifier is written first: `p
 /// + 1` in `arr`'s length steps a complete `struct S *` (C17 6.7.2.1 p8).
+/// The same holds for a parameter of a nested function type, whose
+/// declarator `Resolver::open_parameters` queues rather than `walk` itself.
 ///
-/// Mutation: drop the step in `Resolver::walk` that walks the specifier's
-/// definition first; the step is refused as over an incomplete struct, and
-/// this fails.
+/// Mutation: have `push_declarator` queue the root only, dropping the step
+/// that walks the specifier's definition first; both steps are refused as
+/// over an incomplete struct. Mutation: have `open_parameters` push a bare
+/// `Step::Type` for a parameter; the nested one is. Each fails this.
 #[test]
 fn a_struct_defined_in_a_specifier_is_complete_in_its_declarators_lengths() {
     let checked = checked(
-        "void f(void) {\n    struct S *p;\n    struct S {\n        int a;\n    } arr[(p + 1, 2)];\n}\n",
+        "void f(void) {\n    struct S *p;\n    struct S {\n        int a;\n    } arr[(p + 1, 2)];\n}\nvoid (*g)(struct T *q, struct T {\n    int a;\n} arr[(q + 1, 2)]);\n",
     );
 
     assert_eq!(checked.messages(), Vec::<&str>::new());
+}
+
+/// A struct defined in a member's specifier is complete in that member's
+/// length, as in any other declarator (C17 6.7.2.1 p8), so the one report is
+/// that a member's length is not a constant (6.7.2.1 p9), at file scope and
+/// in a block alike, and not also that `p + 1` steps an incomplete struct.
+///
+/// Mutation: have the struct arm of `Resolver::walk` push a bare
+/// `Step::Type` for each member rather than calling `push_declarator`.
+/// Mutation: have `push_declarator` push the specifier below the root. Each
+/// gains a report about an incomplete `struct T` and fails this.
+#[test]
+fn a_struct_defined_in_a_member_s_specifier_is_complete_in_that_member_s_length() {
+    let checked = checked(
+        "struct T *p;\nstruct S {\n    struct T {\n        int a;\n    } m[(p + 1, 2)];\n};\nvoid f(void) {\n    struct V *q;\n    struct U {\n        struct V {\n            int a;\n        } m[(q + 1, 2)];\n    } u;\n}\n",
+    );
+
+    assert_eq!(
+        checked.messages(),
+        [
+            "a member of a struct cannot have an array length that is not a constant",
+            "a member of a struct cannot have an array length that is not a constant",
+        ]
+    );
 }
 
 /// A member's array length is a constant, in a block as at file scope,

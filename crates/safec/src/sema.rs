@@ -702,32 +702,8 @@ impl Resolver<'_> {
 
     fn walk(&mut self, root: TypeId, skip_root_parameters: bool, diagnostics: &mut DiagnosticSink) {
         let ast = self.ast;
-        let mut pending = vec![Step::Type(root)];
-        // The specifier is written before the declarator, so a struct defined
-        // there is closed before any length in the declarator is walked:
-        // `struct S { int a; } arr[(p + 1, 2)]` steps a `struct S *` that is
-        // complete. The tree holds the specifier at its leaf, below every
-        // length, so it is walked first; reached again from the root, its tag
-        // is bound and its members walked already, and nothing is repeated.
-        let mut leaf = root;
-        loop {
-            leaf = match ast.ty(leaf) {
-                Type::Pointer(next) | Type::Array { element: next, .. } => *next,
-                Type::Function { returns, .. } => *returns,
-                Type::Int | Type::Char | Type::Void | Type::Struct { .. } => break,
-            };
-        }
-        if leaf != root
-            && matches!(
-                ast.ty(leaf),
-                Type::Struct {
-                    members: Some(_),
-                    ..
-                }
-            )
-        {
-            pending.push(Step::Type(leaf));
-        }
+        let mut pending = Vec::new();
+        push_declarator(ast, root, &mut pending);
         while let Some(step) = pending.pop() {
             let ty = match step {
                 Step::Type(ty) => ty,
@@ -789,12 +765,9 @@ impl Resolver<'_> {
                             // Below the members, so it is taken after every
                             // one of them, nested definitions included.
                             pending.push(Step::Close(ty));
-                            pending.extend(
-                                members
-                                    .iter()
-                                    .rev()
-                                    .map(|member| Step::Type(member.written)),
-                            );
+                            for member in members.iter().rev() {
+                                push_declarator(ast, member.written, &mut pending);
+                            }
                         }
                     }
                 }
@@ -824,7 +797,7 @@ impl Resolver<'_> {
             if let Some(name) = parameter.name {
                 pending.push(Step::Declare(name, parameter.ty));
             }
-            pending.push(Step::Type(parameter.written));
+            push_declarator(ast, parameter.written, pending);
         }
     }
 
@@ -1505,6 +1478,42 @@ fn unfit_member(sources: &SourceMap, at: Span, why: String) -> Diagnostic {
         .with_code(INCOMPLETE_MEMBER)
         .with_label(Label::primary(at, "declared here"))
         .with_note("C17 6.7.2.1 p3")
+}
+
+/// Queue, on [`Resolver::walk`]'s stack, the steps that walk the declarator
+/// `root`: a struct its specifier defines first, and then the rest from the
+/// root.
+///
+/// The specifier is written before the declarator, so a struct defined there
+/// is closed before any length in the declarator is walked (C17 6.7.2.1 p8):
+/// `struct S { int a; } arr[(p + 1, 2)]` steps a `struct S *` that is
+/// complete. The tree holds the specifier at its leaf, below every length, so
+/// it is pushed above the root to be walked first; reached again from the
+/// root, its tag is bound and its members walked already, and nothing is
+/// repeated. Every declarator the walk meets comes through here: the one it
+/// starts from, each parameter of a nested function type, and each member of
+/// a struct, so the three cannot disagree about it.
+fn push_declarator(ast: &Ast, root: TypeId, pending: &mut Vec<Step>) {
+    pending.push(Step::Type(root));
+    let mut leaf = root;
+    loop {
+        leaf = match ast.ty(leaf) {
+            Type::Pointer(next) | Type::Array { element: next, .. } => *next,
+            Type::Function { returns, .. } => *returns,
+            Type::Int | Type::Char | Type::Void | Type::Struct { .. } => break,
+        };
+    }
+    if leaf != root
+        && matches!(
+            ast.ty(leaf),
+            Type::Struct {
+                members: Some(_),
+                ..
+            }
+        )
+    {
+        pending.push(Step::Type(leaf));
+    }
 }
 
 /// One step of [`Resolver::walk_type`]: a type to walk, the close of a
