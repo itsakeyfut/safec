@@ -663,7 +663,9 @@ impl Checker<'_> {
                             ))
                             .with_code(NOT_YET)
                             .with_label(Label::primary(span, "this compiler gave this no type"))
-                            .with_note("a gap in this compiler rather than a fault in the program"),
+                            .with_note(
+                                "a gap in this compiler: whether this initializer is valid C is not checked",
+                            ),
                         );
                     }
                     continue;
