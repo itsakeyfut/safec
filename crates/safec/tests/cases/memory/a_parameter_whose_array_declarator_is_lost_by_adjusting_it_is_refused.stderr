@@ -1,8 +1,0 @@
-error[SC0304]: cannot compile a parameter declared as this array yet
-   ╭─[ a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused.c:3:29 ]
-   │
- 3 │ int f(int * _Nonnull p, int a[(free(p), 1)]) {
-   │                             ┬  
-   │                             ╰── declared here
-───╯
-  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

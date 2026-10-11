@@ -220,11 +220,19 @@ cases! {
         // Mutation: leave a parameter's type as written; the function is
         // `SC0304`, a type the IR cannot hold, and the read goes unasked.
         a_parameter_declared_as_an_array_is_followed_as_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // But not one whose length C17 6.9.1 p10 evaluates on entry, here a
-        // free that makes the read of `*p` a use after free: refused as before
-        // parameters were adjusted, until #382 evaluates it. Mutation: lower
-        // every adjusted parameter; this exits 0 with its free gone.
-        a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // One whose length C17 6.9.1 p10 evaluates on entry, here a free, is
+        // evaluated before the body, and behind the sequence point at the end
+        // of the function's declarator, so the read of `*p` is a proved use
+        // after free. Mutation: drop the call to `Lowering::lengths`; this
+        // exits 0 with its free gone. Mutation: drop the marker after the
+        // lengths; the use is only suspected.
+        a_free_in_a_parameter_s_length_is_before_the_body: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two parameters' lengths are unsequenced against each other (6.7.6 p3:
+        // a parameter's declarator is not a full declarator), so the read in
+        // `b` written before the free in `a` is still suspected. Mutation:
+        // walk each length as a full expression, or put a marker after each;
+        // the read is taken as first, and this goes silent.
+        two_parameter_lengths_are_not_ordered_against_each_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The four constructs that do order their operands, one case each,
         // because C17 Annex C names four and a list implemented three-quarters
         // of the way leaves a reader asking which quarter. 6.5.17 p2, 6.5.13
@@ -3489,6 +3497,12 @@ cases! {
         // The shape of the Safety IR a program lowers to, where no check and no
         // frontend report is what the case is about.
         an_initializer_becomes_a_store: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // C17 6.9.1 p10: a parameter's length is evaluated on entry, so the
+        // store of `2` to `n` comes before the body, and a marker after it.
+        // Mutation: refuse a length that is not a constant again; this is
+        // `SC0304`. Mutation: drop the call to `Lowering::lengths`; the store
+        // goes and `n` returns what the caller passed.
+        a_parameter_s_length_is_evaluated_on_entry: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `i` and `j`, declared by the `for`, begin their storage once before

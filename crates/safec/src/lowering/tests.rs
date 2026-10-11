@@ -1650,19 +1650,60 @@ fn a_call_to_a_refused_function_is_not_reported_twice() {
     assert_eq!(codes(&lowered), ["SC0304"]);
 }
 
+/// A call in a parameter's length keeps its edge to what follows, even one
+/// to a function C says does not return, because a length is not a full
+/// expression and another parameter's length may be evaluated first (C17
+/// 6.7.6 p3). `exit` declared returning `int` is the only spelling that
+/// reaches it, since a `void` length is refused; 7.1.3 makes that program
+/// undefined, and this compiler accepts it, so it still has to read `*p`.
+///
+/// Mutation: have `Lowering::walk` set `root` whether or not its root is a
+/// full expression; the call to `exit` ends the entry block with nowhere
+/// to go, the read of `*p` lands where nothing reaches, and this fails.
+#[test]
+fn a_call_in_a_parameter_s_length_keeps_its_continuation() {
+    let lowered =
+        lowered("int exit(int);\nint f(int *p, int a[exit(1)], int b[*p]) {\n    return 0;\n}\n");
+    let blocks: Vec<&Block> = function(&lowered, "f").blocks().collect();
+
+    let Terminator::Call { then, .. } = &blocks[0].terminator else {
+        panic!("{:?}", blocks[0].terminator);
+    };
+    assert_eq!(then.map(|then| then.index()), Some(1));
+}
+
+/// A prototype's non-constant length is accepted and never evaluated: C17
+/// 6.7.6.2 p5 treats it as `*` at function prototype scope, and only a
+/// definition has an entry for 6.9.1 p10 to evaluate it on.
+///
+/// Mutation: have `adjusted_without_loss` refuse an outermost length that
+/// is not a constant again; `g` is `SC0304` and this fails.
+#[test]
+fn a_prototype_s_parameter_length_is_accepted_and_not_evaluated() {
+    let lowered = lowered("int g(int n, int a[n = 2]);\n");
+
+    assert_eq!(codes(&lowered), Vec::<String>::new());
+    let g = function(&lowered, "g");
+    assert!(!g.is_defined());
+    assert_eq!(g.parameters().count(), 2);
+}
+
 /// A parameter whose array declarator adjusting it would lose is refused as
 /// this compiler's gap, and the note claims nothing about the program:
-/// `int a[n]` is C, and `int a[*(p - q)]` is not (C17 6.5.3.2 p2, refused
-/// by `clang` even without `-pedantic-errors`), and the type check could
-/// not ask, because `p - q` has no type.
+/// `int a[n][n]` is C, whose adjusted pointer has a type this IR cannot
+/// hold, and `int a[*(p - q)]` is not (C17 6.5.3.2 p2, refused by `clang`
+/// even without `-pedantic-errors`), a length the type check could not
+/// ask about, because `p - q` has no type, and which a prototype never
+/// evaluates.
 ///
 /// Mutation: have the note in `Lowering::signature` say "rather than a
-/// fault in the program" again; this fails, and so does the blessed output
-/// of `a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused`.
+/// fault in the program" again. Mutation: have `adjusted_without_loss`
+/// accept an outermost length nobody typed; the second input lowers with
+/// nothing said. Each fails this.
 #[test]
 fn a_parameter_adjusting_would_lose_is_refused_without_saying_the_program_is_valid() {
     for text in [
-        "int f(int n, int a[n]);\n",
+        "int f(int n, int a[n][n]);\n",
         "int f(int *p, int *q, int a[*(p - q)]);\n",
     ] {
         let lowered = lowered(text);
