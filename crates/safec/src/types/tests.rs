@@ -740,7 +740,10 @@ fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
 /// silent. Mutation: have `*` of `void` designate an object; `*v = 0` goes
 /// silent. Mutation: have `&` refuse the result of a unary `*`; `&*v`
 /// starts reporting. Mutation: have `&` refuse a function; `&h` starts
-/// reporting. Each fails this.
+/// reporting. Mutation: have `++` or `--`, prefix or postfix, go on to its
+/// type rules after refusing its operand; `g()++` or `--g()` gains a
+/// second report about a struct. Mutation: have `->` designate what its
+/// base does, as `.` does; `gp()->m = 1` starts reporting. Each fails this.
 #[test]
 fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
     for (statement, label) in [
@@ -759,6 +762,9 @@ fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
         ("--(x = 1);", "this is a value, not an object"),
         ("a++;", "this is `int[2]`, an array"),
         ("h++;", "this is a function"),
+        ("g()++;", "this is a value, not an object"),
+        ("--g();", "this is a value, not an object"),
+        ("(*v)--;", "this is `void`, not an object"),
         ("p = &(x + 1);", "this is a value, not an object"),
         ("p = &g().m;", "this is a value, not an object"),
         ("*p = 1;", ""),
@@ -772,9 +778,10 @@ fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
         ("p = &*p;", ""),
         ("v = &*v;", ""),
         ("c = &h != 0;", ""),
+        ("gp()->m = 1;", ""),
     ] {
         let checked = checked(&format!(
-            "struct S {{\n    int m;\n}};\nstruct S g(void);\nint h(void);\nint f(int x, int y, int *p, int c, void *v) {{\n    int a[2];\n    struct S s;\n    {statement}\n    return 0;\n}}\n"
+            "struct S {{\n    int m;\n}};\nstruct S g(void);\nstruct S *gp(void);\nint h(void);\nint f(int x, int y, int *p, int c, void *v) {{\n    int a[2];\n    struct S s;\n    {statement}\n    return 0;\n}}\n"
         ));
 
         if label.is_empty() {
