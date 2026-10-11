@@ -194,8 +194,9 @@ pub struct Declaration {
     /// function type's spelling show. Anything that needs the declarator's own
     /// expressions reads it too, because an array's length is in this type and
     /// not in the adjusted pointer: `sema.rs` resolves a parameter's array
-    /// length through it, and the lowering refuses a parameter whose array
-    /// declarator the adjustment would lose.
+    /// length through it, and the lowering evaluates the outermost length on
+    /// entry to a definition from it and refuses what the adjusted pointer
+    /// cannot hold, an inner length that is not a constant among them.
     pub written: TypeId,
     /// The specifiers through the declarator, and through its initializer
     /// where it has one.

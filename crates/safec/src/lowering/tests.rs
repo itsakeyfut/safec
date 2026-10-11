@@ -1653,9 +1653,11 @@ fn a_call_to_a_refused_function_is_not_reported_twice() {
 /// A call in a parameter's length keeps its edge to what follows, even one
 /// to a function C says does not return, because a length is not a full
 /// expression and another parameter's length may be evaluated first (C17
-/// 6.7.6 p3). `exit` declared returning `int` is the only spelling that
-/// reaches it, since a `void` length is refused; 7.1.3 makes that program
-/// undefined, and this compiler accepts it, so it still has to read `*p`.
+/// 6.7.6 p3). Only one of the four names `DOES_NOT_RETURN` lists, declared
+/// returning something other than `void`, reaches it, since a `void` length
+/// is refused; `exit` returning `int` is used here. 7.1.3 makes that
+/// program undefined, and this compiler accepts it, so it still has to
+/// read `*p`.
 ///
 /// Mutation: have `Lowering::walk` set `root` whether or not its root is a
 /// full expression; the call to `exit` ends the entry block with nowhere
