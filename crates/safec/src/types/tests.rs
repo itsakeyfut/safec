@@ -793,6 +793,24 @@ fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
     }
 }
 
+/// An assignment or an `&` refused for its operand gives no type, as a
+/// refused `++` does, so nothing around it is reported again about a type
+/// the program never had: `int b[a[0] = 0]` with `a[0]` an array is not
+/// also a length of array type, `p = &g().arr` is not also a pointer of the
+/// wrong type, and `x = &(x + 1) * 2` is not also `*` taking a pointer.
+///
+/// Mutation: have a refused assignment keep its place's type; the first
+/// gains `SC0309`. Mutation: have a refused `&` keep its pointer type; the
+/// second gains `SC0302` and the third `SC0306`. Each fails this.
+#[test]
+fn an_operand_refused_as_unwritable_gives_its_expression_no_type() {
+    let checked = checked(
+        "struct S {\n    int m;\n    int arr[2];\n};\nstruct S g(void);\nint f(int a[2][2], int b[a[0] = 0]);\nint k(int x, int *p) {\n    p = &g().arr;\n    x = &(x + 1) * 2;\n    return 0;\n}\n",
+    );
+
+    assert_eq!(checked.codes(), ["SC0318", "SC0318", "SC0318"]);
+}
+
 /// A member access already refused is not refused again as unwritable: `h.m`
 /// with `h` a function is `SC0306` for the `.`, and `++` says nothing more,
 /// least of all that `h.m` is a function.

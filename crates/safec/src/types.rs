@@ -1685,7 +1685,12 @@ impl Checker<'_> {
                 }
                 // 6.5.16 p3: the type is "the type the left operand would have
                 // after lvalue conversion", which is the place's own while
-                // there are no qualifiers to drop.
+                // there are no qualifiers to drop. None for a refused place,
+                // as for a refused `++`: an array's type there had `int b[a[0]
+                // = 0]` reported again as a length of array type.
+                if refused {
+                    return None;
+                }
                 self.types[place.index()]
             }
             // 6.5.17 p2: the result of a comma is the value of the right
@@ -1730,10 +1735,13 @@ impl Checker<'_> {
         match op {
             // 6.5.3.2 p3: `&x` is a pointer to the type of `x`. The type
             // itself is one nobody wrote, so it is pushed. p1's constraint on
-            // the operand is asked first, and a refused operand still gives
-            // the pointer, since what it points at is not in doubt.
+            // the operand is asked first, and a refused operand gives no
+            // type, as a refused `++` does: a pointer there had `p =
+            // &g().arr` reported again as a pointer of the wrong type.
             UnOp::AddrOf => {
-                self.refuse_unaddressable(ast, operand, diagnostics);
+                if self.refuse_unaddressable(ast, operand, diagnostics) {
+                    return None;
+                }
                 Some(ast.push_type(Type::Pointer(operand_ty?)))
             }
             // p4: `*p` is what `p` points at.
@@ -2552,8 +2560,14 @@ impl Checker<'_> {
     /// address: C17 6.5.3.2 p1 takes a function designator, the result of
     /// `[]` or unary `*`, or an lvalue designating an object. The result of
     /// `*` is taken whatever it is, so `&*v` with `v` a `void *` stays
-    /// valid, as p3 has neither operator evaluated.
-    fn refuse_unaddressable(&self, ast: &Ast, operand: ExprId, diagnostics: &mut DiagnosticSink) {
+    /// valid, as p3 has neither operator evaluated. Answers whether it was
+    /// reported.
+    fn refuse_unaddressable(
+        &self,
+        ast: &Ast,
+        operand: ExprId,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
         if matches!(
             ast.expr(operand),
             Expr::Unary {
@@ -2562,7 +2576,7 @@ impl Checker<'_> {
             } | Expr::Subscript { .. }
         ) || self.designates(ast, operand) != Designates::Value
         {
-            return;
+            return false;
         }
         diagnostics.report(
             Diagnostic::error("`&` needs an object or a function to take the address of")
@@ -2573,6 +2587,7 @@ impl Checker<'_> {
                 ))
                 .with_note("C17 6.5.3.2 p1"),
         );
+        true
     }
 
     /// The label for an operand that designates nothing: a `void` reached
