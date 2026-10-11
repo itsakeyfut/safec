@@ -179,15 +179,19 @@ const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 /// `no member named 'b' in 'struct S'`.
 const NO_MEMBER: Code = Code::new("SC0316");
 
-/// An operand that has to designate an object and does not: the left operand
-/// of an assignment and the operand of `++` or `--`, which want a modifiable
-/// lvalue (C17 6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), and the operand of `&`,
-/// which wants an object or a function (6.5.3.2 p1).
+/// An operand an operator writes to, or takes the address of, that cannot be
+/// written to or have its address taken: the left operand of an assignment
+/// and the operand of `++` or `--`, which want a modifiable lvalue (C17
+/// 6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), not a value, a function or an array;
+/// and the operand of `&`, which wants an object or a function (6.5.3.2 p1),
+/// not a value.
 ///
 /// Not `OPERANDS`, an operand of a type its operator does not take. The fix
-/// for that is a different value; the fix for this is to name an object, and
-/// a code is the handle a reader searches with.
-const NOT_AN_OBJECT: Code = Code::new("SC0318");
+/// for that is a different value; the fix for this is a different operand,
+/// an object or one element of an array, and a code is the handle a reader
+/// searches with. Not worded as `clang`'s "expression is not assignable",
+/// which names neither what the operand is nor, under `&`, what was wanted.
+const UNWRITABLE: Code = Code::new("SC0318");
 
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
@@ -2515,7 +2519,7 @@ impl Checker<'_> {
         }
     }
 
-    /// Report `operand` under [`NOT_AN_OBJECT`] if it is not a modifiable
+    /// Report `operand` under [`UNWRITABLE`] if it is not a modifiable
     /// lvalue, which `what` (the left operand of `=`, the operand of `++`)
     /// has to be by `clause`, and answer whether it was reported.
     ///
@@ -2547,7 +2551,7 @@ impl Checker<'_> {
         };
         diagnostics.report(
             Diagnostic::error(format!("{what} cannot be written to"))
-                .with_code(NOT_AN_OBJECT)
+                .with_code(UNWRITABLE)
                 .with_label(Label::primary(ast.expr(operand).span(), label))
                 .with_note(format!(
                     "{clause} wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)"
@@ -2556,12 +2560,13 @@ impl Checker<'_> {
         true
     }
 
-    /// Report `operand` under [`NOT_AN_OBJECT`] if `&` cannot take its
+    /// Report `operand` under [`UNWRITABLE`] if `&` cannot take its
     /// address: C17 6.5.3.2 p1 takes a function designator, the result of
     /// `[]` or unary `*`, or an lvalue designating an object. The result of
     /// `*` is taken whatever it is, so `&*v` with `v` a `void *` stays
-    /// valid, as p3 has neither operator evaluated. Answers whether it was
-    /// reported.
+    /// valid, as p3 has neither operator evaluated. The result of `[]` needs
+    /// no case of its own, since [`Checker::designates`] answers an object
+    /// for every subscript. Answers whether it was reported.
     fn refuse_unaddressable(
         &self,
         ast: &Ast,
@@ -2573,19 +2578,21 @@ impl Checker<'_> {
             Expr::Unary {
                 op: UnOp::Deref,
                 ..
-            } | Expr::Subscript { .. }
+            }
         ) || self.designates(ast, operand) != Designates::Value
         {
             return false;
         }
         diagnostics.report(
             Diagnostic::error("`&` needs an object or a function to take the address of")
-                .with_code(NOT_AN_OBJECT)
+                .with_code(UNWRITABLE)
                 .with_label(Label::primary(
                     ast.expr(operand).span(),
                     self.not_an_object(ast, operand),
                 ))
-                .with_note("C17 6.5.3.2 p1"),
+                .with_note(
+                    "C17 6.5.3.2 p1 takes a function designator, the result of `[]` or unary `*`, or an lvalue designating an object",
+                ),
         );
         true
     }

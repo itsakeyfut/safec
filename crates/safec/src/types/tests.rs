@@ -722,12 +722,13 @@ fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
     assert_eq!(checked.codes(), ["SC0306", "SC0306"]);
 }
 
-/// An operand that has to designate an object is refused as `SC0318` where
-/// it does not, and nowhere else: the left operand of an assignment and the
-/// operand of `++` and `--` want a modifiable lvalue (C17 6.5.16 p2, 6.5.2.4
-/// p1, 6.5.3.1 p1), and the operand of `&` an object or a function (6.5.3.2
-/// p1). Each refused row is one `clang -std=c17 -pedantic-errors` refuses,
-/// and each silent row is one it accepts.
+/// An operand an operator writes to, or takes the address of, is refused as
+/// `SC0318` where it cannot be, with a label saying what it is, and nowhere
+/// else: the left operand of an assignment and the operand of `++` and `--`
+/// want a modifiable lvalue (C17 6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), and
+/// the operand of `&` an object or a function (6.5.3.2 p1). Each refused row
+/// is one `clang -std=c17 -pedantic-errors` refuses, and each silent row is
+/// one it accepts.
 ///
 /// A row is `(statement, label)`, and an empty label is a statement that
 /// must stay silent.
@@ -743,12 +744,15 @@ fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
 /// reporting. Mutation: have `++` or `--`, prefix or postfix, go on to its
 /// type rules after refusing its operand; `g()++` or `--g()` gains a
 /// second report about a struct. Mutation: have `->` designate what its
-/// base does, as `.` does; `gp()->m = 1` starts reporting. Each fails this.
+/// base does, as `.` does; `gp()->m = 1` starts reporting. Mutation: have
+/// `*` of a function designate an object; `(*fp)++` goes silent. Mutation:
+/// have `&` refuse an array; `&a` starts reporting. Each fails this.
 #[test]
-fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
+fn an_operand_an_operator_writes_or_takes_the_address_of_is_refused_where_it_cannot_be() {
     for (statement, label) in [
         ("a = 0;", "this is `int[2]`, an array"),
         ("h = 0;", "this is a function"),
+        ("(*fp)++;", "this is a function"),
         ("(x, y) = 1;", "this is a value, not an object"),
         ("(c ? x : y) = 1;", "this is a value, not an object"),
         ("(x = 1) = 2;", "this is a value, not an object"),
@@ -779,9 +783,10 @@ fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
         ("v = &*v;", ""),
         ("c = &h != 0;", ""),
         ("gp()->m = 1;", ""),
+        ("c = &a != 0;", ""),
     ] {
         let checked = checked(&format!(
-            "struct S {{\n    int m;\n}};\nstruct S g(void);\nstruct S *gp(void);\nint h(void);\nint f(int x, int y, int *p, int c, void *v) {{\n    int a[2];\n    struct S s;\n    {statement}\n    return 0;\n}}\n"
+            "struct S {{\n    int m;\n}};\nstruct S g(void);\nstruct S *gp(void);\nint h(void);\nint f(int x, int y, int *p, int c, void *v, int (*fp)(void)) {{\n    int a[2];\n    struct S s;\n    {statement}\n    return 0;\n}}\n"
         ));
 
         if label.is_empty() {
@@ -1662,6 +1667,11 @@ fn a_return_is_found_wherever_it_is_written() {
 /// report beside every untyped base, by ignoring the mark or by restoring
 /// the rule that excused only a base that is itself an access. `nowhere.x *
 /// 2` gains `cannot check` and fails.
+///
+/// The row `(*nowhere = 1)` holds `Checker::designates`, which answers
+/// `Unknown` for `*` of an operand with no type, so the assignment says
+/// nothing more. Mutation: have it answer a value there; that row gains
+/// `SC0318`.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
     for value in [
@@ -1685,6 +1695,7 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
         "(nowhere, q - q) * 2",
         "nowhere.x * 2",
         "nowhere->x * 2",
+        "(*nowhere = 1)",
     ] {
         let checked = checked(&format!(
             "int f(int);\nint main(void) {{ int *p; int *q; int a[2]; p = {value}; return 0; }}\n"

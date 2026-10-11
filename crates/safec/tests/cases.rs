@@ -3380,10 +3380,12 @@ cases! {
         precedence_assignment: ["--emit", "ast"],
         // A prototype's length is never lowered (C17 6.7.6.2 p5 treats it as
         // `*`), so the type check is the only stage that sees an operand there
-        // that must designate an object and does not. Mutation: stop calling
-        // `Checker::refuse_unwritable` for an assignment, or
-        // `refuse_unaddressable` for `&`; that prototype exits 0.
-        an_operand_in_a_prototype_s_length_that_must_be_an_object_is_refused: ["--emit", "ast"],
+        // that cannot be written to or have its address taken, provided it
+        // typed the operand. One prototype per place it is asked, `=`, postfix
+        // `++`, prefix `--` and `&`, each citing its own clause. Mutation: stop
+        // asking at any one of them, or cite another clause there; that
+        // prototype's report goes or changes and the blessed stderr differs.
+        an_operand_in_a_prototype_s_length_that_cannot_be_written_or_addressed_is_refused: ["--emit", "ast"],
         precedence_bitwise_and: ["--emit", "ast"],
         precedence_bitwise_or: ["--emit", "ast"],
         precedence_bitwise_xor: ["--emit", "ast"],
