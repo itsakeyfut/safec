@@ -1707,7 +1707,8 @@ fn an_offset_that_moves_the_pointer_carries_no_edge() {
 /// same member; `q + r` may be `r`'s value instead, so freeing *that* again
 /// proves nothing. ADR-0030 is why the corpus cannot hold this any more: the
 /// case that used to was `q + i` with `i` a parameter, and an integer operand
-/// no longer contributes, while `q + r` is `error[SC0304]` in this frontend.
+/// no longer contributes, while `q + r` is refused by the type check as
+/// `error[SC0306]`, the constraint C17 6.5.6 p2 puts on it.
 ///
 /// **Two allocations into two locals, joined into one, and that is the whole
 /// arrangement.** A site is named by the local a `malloc` wrote into, which is
@@ -1909,9 +1910,8 @@ fn a_pointer_subtracted_from_a_constant_is_not_proved_to_be_off_the_start() {
 /// **Not a subscript, and not C.** C17 6.5.2.1 p1 requires one operand of `[]`
 /// to have integer type, so `q[r]` over two pointers is a constraint violation
 /// rather than a spelling this check has to answer for, and so is the `q + r`
-/// below it under 6.5.6 p2. `safec` refuses both with `error[SC0304]`, whose
-/// note calls it a gap in this compiler; for these two the program is at fault
-/// instead, which is #154's shape and not this test's.
+/// below it under 6.5.6 p2. `safec`'s type check refuses both as the
+/// program's fault, `error[SC0306]`, so no corpus case can reach this shape.
 ///
 /// Mutation: in `built_from`, take the left operand rather than the ones the
 /// types say are pointers. The read reaches only the live site, nothing is
@@ -1969,11 +1969,11 @@ fn an_index_that_is_a_freed_pointer_is_still_reached() {
 /// `p[i]` one program. A rule that took the left operand would answer about the
 /// index in one of them, and the answer it would give is silence.
 ///
-/// **Hand-built because this frontend refuses valid C here.** `i[p]` is a
-/// program `clang -std=c17 -pedantic-errors` accepts and `safec` answers
-/// `error[SC0304]` for, so the corpus can hold `p[i]` and nothing else. That is
-/// a gap in this compiler rather than a fault in the program, which is what
-/// that code's note says and is true of this one.
+/// **Hand-built, though the frontend now reads `i[p]`.** It refused `i[p]`
+/// when this test was written, and `safec` now accepts it as `clang -std=c17
+/// -pedantic-errors` does. The test stays because it holds the rule in
+/// `built_from` directly, below anything the lowering decides about which
+/// operand it hands over.
 ///
 /// Mutation: in `built_from`, take the left operand rather than the ones the
 /// types say are pointers. The read below reaches no site, nothing at all is
