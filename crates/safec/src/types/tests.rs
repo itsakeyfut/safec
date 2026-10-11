@@ -2553,8 +2553,8 @@ fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
 /// An untyped initializer may be valid C, `*arr`, or not, `p - p`, which
 /// is no constant expression (C17 6.6 p7) and which `clang` refuses, so
 /// the note says the gap and claims nothing about the program. Mutation:
-/// have it say "rather than a fault in the program" again; both note
-/// assertions fail.
+/// have it say "rather than a fault in the program" again; the first note
+/// assertion fails, and the second holds the same string for `p - p`.
 #[test]
 fn an_initializer_at_file_scope_this_stage_cannot_ask_is_still_refused() {
     let unchecked = "a gap in this compiler: whether this initializer is valid C is not checked";

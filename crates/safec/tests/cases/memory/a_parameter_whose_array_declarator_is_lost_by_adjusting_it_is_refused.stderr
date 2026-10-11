@@ -5,4 +5,4 @@ error[SC0304]: cannot compile a parameter declared as this array yet
    │                             ┬  
    │                             ╰── declared here
 ───╯
-  = note: this is a gap in this compiler rather than a fault in the program
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

@@ -879,12 +879,16 @@ impl Lowering<'_> {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
                 if !self.adjusted_without_loss(parameter.written) {
+                    // The note claims nothing about the program, because a
+                    // length nobody typed can hide a fault: `int a[*(p -
+                    // q)]` is not C, and the type check could not ask,
+                    // since `p - q` has no type.
                     diagnostics.report(
                         Diagnostic::error("cannot compile a parameter declared as this array yet")
                             .with_code(LOWERING)
                             .with_label(Label::primary(at, "declared here"))
                             .with_note(
-                                "this is a gap in this compiler rather than a fault in the program",
+                                "this is a gap in this compiler: whether this parameter is valid C is not checked",
                             ),
                     );
                     return None;
