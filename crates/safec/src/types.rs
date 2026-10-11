@@ -179,6 +179,16 @@ const INCOMPLETE_OBJECT: Code = Code::new("SC0315");
 /// `no member named 'b' in 'struct S'`.
 const NO_MEMBER: Code = Code::new("SC0316");
 
+/// An operand that has to designate an object and does not: the left operand
+/// of an assignment and the operand of `++` or `--`, which want a modifiable
+/// lvalue (C17 6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), and the operand of `&`,
+/// which wants an object or a function (6.5.3.2 p1).
+///
+/// Not `OPERANDS`, an operand of a type its operator does not take. The fix
+/// for that is a different value; the fix for this is to name an object, and
+/// a code is the handle a reader searches with.
+const NOT_AN_OBJECT: Code = Code::new("SC0318");
+
 /// The type of every expression in one translation unit.
 #[derive(Clone, Debug)]
 pub struct Types {
@@ -382,6 +392,21 @@ fn subexpressions(expr: &Expr) -> Vec<ExprId> {
             span: _,
         } => vec![*base],
     }
+}
+
+/// What an expression designates, which is what C17's constraints on an
+/// lvalue ask. See [`Checker::designates`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Designates {
+    /// An object: an lvalue, 6.3.2.1 p1.
+    Object,
+    /// A function: a function designator, 6.3.2.1 p4.
+    Function,
+    /// A value that designates nothing: not an lvalue.
+    Value,
+    /// Not known, because something this depends on has no type. Whatever
+    /// left it untyped was reported there, or is this compiler's gap.
+    Unknown,
 }
 
 /// Where a declarator is, for the rules on an array's length: at file scope
@@ -1638,8 +1663,23 @@ impl Checker<'_> {
                 // Two rules, because C17 has two: a plain `=` is 6.5.16.1,
                 // and a compound assignment is 6.5.16.2, whose constraints
                 // are its own. `p += 1` is legal for a pointer and the first
-                // rule would report it.
+                // rule would report it. Both want a modifiable lvalue on the
+                // left, 6.5.16 p2, asked first and for either; a left operand
+                // that cannot be written to is one fault, and the type rules
+                // are not asked about it, as `++` and `--` do not ask theirs.
+                let spelled = match op {
+                    None => "=".to_owned(),
+                    Some(op) => format!("{}=", op.as_str()),
+                };
+                let refused = self.refuse_unwritable(
+                    ast,
+                    place,
+                    &format!("the left operand of `{spelled}`"),
+                    "C17 6.5.16 p2",
+                    diagnostics,
+                );
                 match op {
+                    _ if refused => {}
                     None => self.assignment(ast, place, value, diagnostics),
                     Some(op) => self.compound_assignment(ast, op, place, value, diagnostics),
                 }
@@ -1689,8 +1729,13 @@ impl Checker<'_> {
 
         match op {
             // 6.5.3.2 p3: `&x` is a pointer to the type of `x`. The type
-            // itself is one nobody wrote, so it is pushed.
-            UnOp::AddrOf => Some(ast.push_type(Type::Pointer(operand_ty?))),
+            // itself is one nobody wrote, so it is pushed. p1's constraint on
+            // the operand is asked first, and a refused operand still gives
+            // the pointer, since what it points at is not in doubt.
+            UnOp::AddrOf => {
+                self.refuse_unaddressable(ast, operand, diagnostics);
+                Some(ast.push_type(Type::Pointer(operand_ty?)))
+            }
             // p4: `*p` is what `p` points at.
             UnOp::Deref => match ast.ty(operand_ty?) {
                 Type::Pointer(pointee) => Some(*pointee),
@@ -1726,10 +1771,22 @@ impl Checker<'_> {
             // Each form cites its own paragraph, the one that sends it to the
             // additive operators, and the arms are split so that the clause is
             // chosen where the variant is matched.
+            //
+            // Each also wants a modifiable lvalue, p1 of the same clause,
+            // asked first: an operand that cannot be written to gives the
+            // expression no type, and its type rules are not asked.
             UnOp::PostInc | UnOp::PostDec => {
+                let what = format!("the operand of `{}`", op.as_str());
+                if self.refuse_unwritable(ast, operand, &what, "C17 6.5.2.4 p1", diagnostics) {
+                    return None;
+                }
                 self.increment(ast, op, operand, "C17 6.5.2.4 p2", diagnostics)
             }
             UnOp::PreInc | UnOp::PreDec => {
+                let what = format!("the operand of `{}`", op.as_str());
+                if self.refuse_unwritable(ast, operand, &what, "C17 6.5.3.1 p1", diagnostics) {
+                    return None;
+                }
                 self.increment(ast, op, operand, "C17 6.5.3.1 p2", diagnostics)
             }
             // 6.5.3.3: the integer promotions of 6.3.1.1 make the result of
@@ -2374,6 +2431,139 @@ impl Checker<'_> {
             }
             Type::Function { .. } => ast.push_type(Type::Pointer(ty)),
             Type::Int | Type::Char | Type::Void | Type::Pointer(_) | Type::Struct { .. } => ty,
+        }
+    }
+
+    /// What `id` designates, from its shape and its type.
+    ///
+    /// An identifier designates what its declaration declared (6.5.1 p2); `*e`
+    /// designates a function or an object, but not one of type `void`, which
+    /// is no lvalue (6.3.2.1 p1); a subscript and `->` designate an object;
+    /// `.` designates one where its base does (6.5.2.3 p3, p4). Everything
+    /// else is a value: a comma, a conditional, an assignment (6.5.16 p3),
+    /// a call, a constant and every arithmetic operator. Exhaustive over
+    /// `Expr`, so a kind added later has to say which it is.
+    fn designates(&self, ast: &Ast, id: ExprId) -> Designates {
+        let typed = |id: ExprId| self.types[id.index()].map(|ty| ast.ty(ty));
+        match ast.expr(id) {
+            Expr::Identifier { span: _ } => match typed(id) {
+                None => Designates::Unknown,
+                Some(Type::Function { .. }) => Designates::Function,
+                Some(_) => Designates::Object,
+            },
+            Expr::Unary {
+                op: UnOp::Deref, ..
+            } => match typed(id) {
+                None => Designates::Unknown,
+                Some(Type::Function { .. }) => Designates::Function,
+                Some(Type::Void) => Designates::Value,
+                Some(_) => Designates::Object,
+            },
+            Expr::Subscript {
+                base: _,
+                index: _,
+                span: _,
+            }
+            | Expr::Member {
+                arrow: true,
+                base: _,
+                member: _,
+                span: _,
+            } => match typed(id) {
+                None => Designates::Unknown,
+                Some(_) => Designates::Object,
+            },
+            Expr::Member {
+                arrow: false,
+                base,
+                member: _,
+                span: _,
+            } => self.designates(ast, *base),
+            Expr::Unary { .. }
+            | Expr::Number { span: _ }
+            | Expr::Binary { .. }
+            | Expr::Assign { .. }
+            | Expr::Comma { .. }
+            | Expr::Conditional { .. }
+            | Expr::Call { .. } => Designates::Value,
+            Expr::Error { span: _ } => Designates::Unknown,
+        }
+    }
+
+    /// Report `operand` under [`NOT_AN_OBJECT`] if it is not a modifiable
+    /// lvalue, which `what` (the left operand of `=`, the operand of `++`)
+    /// has to be by `clause`, and answer whether it was reported.
+    ///
+    /// A modifiable lvalue is an lvalue that is not an array and not of an
+    /// incomplete type (C17 6.3.2.1 p1), and there is no `const` to ask
+    /// about here. A struct not complete where it is written is `SC0315`'s,
+    /// which says it cannot be modified, and is not reported twice.
+    fn refuse_unwritable(
+        &self,
+        ast: &Ast,
+        operand: ExprId,
+        what: &str,
+        clause: &str,
+        diagnostics: &mut DiagnosticSink,
+    ) -> bool {
+        let label = match self.designates(ast, operand) {
+            Designates::Unknown => return false,
+            Designates::Object => {
+                let Some(ty) = self.types[operand.index()] else {
+                    return false;
+                };
+                if !matches!(ast.ty(ty), Type::Array { .. }) {
+                    return false;
+                }
+                format!("this is `{}`, an array", self.spelled(ast, ty))
+            }
+            Designates::Function => "this is a function".to_owned(),
+            Designates::Value => self.not_an_object(ast, operand),
+        };
+        diagnostics.report(
+            Diagnostic::error(format!("{what} cannot be written to"))
+                .with_code(NOT_AN_OBJECT)
+                .with_label(Label::primary(ast.expr(operand).span(), label))
+                .with_note(format!(
+                    "{clause} wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)"
+                )),
+        );
+        true
+    }
+
+    /// Report `operand` under [`NOT_AN_OBJECT`] if `&` cannot take its
+    /// address: C17 6.5.3.2 p1 takes a function designator, the result of
+    /// `[]` or unary `*`, or an lvalue designating an object. The result of
+    /// `*` is taken whatever it is, so `&*v` with `v` a `void *` stays
+    /// valid, as p3 has neither operator evaluated.
+    fn refuse_unaddressable(&self, ast: &Ast, operand: ExprId, diagnostics: &mut DiagnosticSink) {
+        if matches!(
+            ast.expr(operand),
+            Expr::Unary {
+                op: UnOp::Deref,
+                ..
+            } | Expr::Subscript { .. }
+        ) || self.designates(ast, operand) != Designates::Value
+        {
+            return;
+        }
+        diagnostics.report(
+            Diagnostic::error("`&` needs an object or a function to take the address of")
+                .with_code(NOT_AN_OBJECT)
+                .with_label(Label::primary(
+                    ast.expr(operand).span(),
+                    self.not_an_object(ast, operand),
+                ))
+                .with_note("C17 6.5.3.2 p1"),
+        );
+    }
+
+    /// The label for an operand that designates nothing: a `void` reached
+    /// through `*`, which 6.3.2.1 p1 makes no lvalue, or any other value.
+    fn not_an_object(&self, ast: &Ast, operand: ExprId) -> String {
+        match self.types[operand.index()].map(|ty| ast.ty(ty)) {
+            Some(Type::Void) => "this is `void`, not an object".to_owned(),
+            _ => "this is a value, not an object".to_owned(),
         }
     }
 

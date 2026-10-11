@@ -1,0 +1,8 @@
+error[SC0318]: the left operand of `=` cannot be written to
+   ╭─[ precedence_assignment.c:1:53 ]
+   │
+ 1 │ int main(void) { int a; int b; int c; int d; return a ? b : c = d; }
+   │                                                     ────┬────  
+   │                                                         ╰────── this is a value, not an object
+───╯
+  = note: C17 6.5.16 p2 wants a modifiable lvalue: an object that is not an array, not of an incomplete type and not `const` (C17 6.3.2.1 p1)

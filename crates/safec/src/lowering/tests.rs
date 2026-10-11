@@ -1496,16 +1496,17 @@ fn the_value_of_an_assignment_is_taken_before_a_call_can_change_it() {
 
 /// An expression that names no place is reported where it is written.
 ///
-/// `1 = 2` type-checks today, because `types.rs` leaves the
-/// modifiable-lvalue constraint of C17 6.5.16 p2 to a later phase, so this
-/// stage is the first thing that has to say anything about it.
+/// `types.rs` refuses `1 = 2` first, under C17 6.5.16 p2, as `SC0318`, and
+/// the driver does not lower a tree it reported about. This is the
+/// lowering's own defence for when that gate is open, so it is asked after
+/// the report.
 ///
-/// Mutation: refuse it without reporting. Nothing is said about a program
-/// nobody can compile and this fails.
+/// Mutation: refuse it without reporting. Only the type check's code comes
+/// back and this fails.
 #[test]
 fn an_expression_that_names_no_place_is_reported() {
-    let lowered = lowered("int f(void) {\n    1 = 2;\n    return 0;\n}\n");
-    assert_eq!(codes(&lowered), ["SC0304"]);
+    let lowered = lowered_after_a_report("int f(void) {\n    1 = 2;\n    return 0;\n}\n");
+    assert_eq!(codes(&lowered), ["SC0318", "SC0304"]);
     assert!(!function(&lowered, "f").is_defined());
 }
 

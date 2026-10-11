@@ -558,23 +558,34 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
 /// the precedence climb folds a left-associative chain in a loop, and postfix
 /// operators are read in a loop, so each adds a level to the *tree* without
 /// adding one to the parser. `clang` compiles both. A thousand terms is what a
-/// generated `.c` file looks like.
+/// generated `.c` file looks like. The postfix chain is a thousand `->`, not
+/// a thousand `++`: `a++++` increments the value of `a++`, which is no lvalue
+/// (C17 6.5.2.4 p1), so that program is refused, and an exit code of 1 would
+/// say nothing about the stack.
 ///
 /// Mutation: make `dump_expr` in `driver/dumps.rs` recurse into its children
 /// instead of pushing them onto its own stack. This fails, with exit 101 on the
 /// harness's own `unwrap` because the process was killed.
 #[test]
 fn a_long_flat_expression_does_not_end_the_process() {
-    for (name, tail) in [
-        ("safec_exit_code_chain.c", " + a".repeat(1000)),
-        ("safec_exit_code_postfix.c", "++".repeat(1000)),
+    for (name, source) in [
+        (
+            "safec_exit_code_chain.c",
+            format!(
+                "int main(void) {{ int a; return a{}; }}\n",
+                " + a".repeat(1000)
+            ),
+        ),
+        (
+            "safec_exit_code_postfix.c",
+            format!(
+                "struct L {{ struct L *n; int v; }};\nint main(void) {{ struct L *p = 0; return p{}->v; }}\n",
+                "->n".repeat(1000)
+            ),
+        ),
     ] {
         let path = std::env::temp_dir().join(name);
-        std::fs::write(
-            &path,
-            format!("int main(void) {{ int a; return a{tail}; }}\n"),
-        )
-        .expect("the temporary directory is writable");
+        std::fs::write(&path, source).expect("the temporary directory is writable");
 
         let output = safec(&[
             "--color",
