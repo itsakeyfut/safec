@@ -2443,8 +2443,25 @@ impl Checker<'_> {
     /// else is a value: a comma, a conditional, an assignment (6.5.16 p3),
     /// a call, a constant and every arithmetic operator. Exhaustive over
     /// `Expr`, so a kind added later has to say which it is.
+    ///
+    /// A chain of `.` is walked in a loop rather than by recursion, since
+    /// nothing bounds its length but the source and every other walk over
+    /// it here is already a loop; ten thousand of them overflowed the stack.
+    /// A `.` with no type of its own was refused where it was typed, and is
+    /// `Unknown` rather than whatever its base designates: `h.m` is not a
+    /// function because `h` is one.
     fn designates(&self, ast: &Ast, id: ExprId) -> Designates {
         let typed = |id: ExprId| self.types[id.index()].map(|ty| ast.ty(ty));
+        let mut id = id;
+        while let Expr::Member {
+            arrow: false, base, ..
+        } = ast.expr(id)
+        {
+            if typed(id).is_none() {
+                return Designates::Unknown;
+            }
+            id = *base;
+        }
         match ast.expr(id) {
             Expr::Identifier { span: _ } => match typed(id) {
                 None => Designates::Unknown,
@@ -2475,10 +2492,10 @@ impl Checker<'_> {
             },
             Expr::Member {
                 arrow: false,
-                base,
+                base: _,
                 member: _,
                 span: _,
-            } => self.designates(ast, *base),
+            } => unreachable!("the loop above walked every `.` down to its base"),
             Expr::Unary { .. }
             | Expr::Number { span: _ }
             | Expr::Binary { .. }

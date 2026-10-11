@@ -561,11 +561,15 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
 /// generated `.c` file looks like. The postfix chain is a thousand `->`, not
 /// a thousand `++`: `a++++` increments the value of `a++`, which is no lvalue
 /// (C17 6.5.2.4 p1), so that program is refused, and an exit code of 1 would
-/// say nothing about the stack.
+/// say nothing about the stack. The third is ten thousand `.` on the left of
+/// an assignment, which the type check asks what it designates, all the way
+/// down; it is valid C, and `clang` compiles it.
 ///
 /// Mutation: make `dump_expr` in `driver/dumps.rs` recurse into its children
 /// instead of pushing them onto its own stack. This fails, with exit 101 on the
-/// harness's own `unwrap` because the process was killed.
+/// harness's own `unwrap` because the process was killed. Mutation: have
+/// `Checker::designates` in `types.rs` recurse through `.` rather than loop;
+/// the third program overflows the stack and this fails.
 #[test]
 fn a_long_flat_expression_does_not_end_the_process() {
     for (name, source) in [
@@ -583,6 +587,20 @@ fn a_long_flat_expression_does_not_end_the_process() {
                 "->n".repeat(1000)
             ),
         ),
+        ("safec_exit_code_members.c", {
+            let mut source = String::from("struct S0 { int a; };\n");
+            for depth in 1..=10_000 {
+                source.push_str(&format!(
+                    "struct S{depth} {{ struct S{} a; }};\n",
+                    depth - 1
+                ));
+            }
+            source.push_str(&format!(
+                "int main(void) {{ struct S10000 s; s{} = 1; return 0; }}\n",
+                ".a".repeat(10_001)
+            ));
+            source
+        }),
     ] {
         let path = std::env::temp_dir().join(name);
         std::fs::write(&path, source).expect("the temporary directory is writable");

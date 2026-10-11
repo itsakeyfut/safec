@@ -793,6 +793,22 @@ fn an_operand_that_must_designate_an_object_is_refused_where_it_does_not() {
     }
 }
 
+/// A member access already refused is not refused again as unwritable: `h.m`
+/// with `h` a function is `SC0306` for the `.`, and `++` says nothing more,
+/// least of all that `h.m` is a function.
+///
+/// Mutation: have `Checker::designates` follow a `.` with no type of its own
+/// down to its base; `h` is a function, so `h.m++` gains an `SC0318` whose
+/// label says `h.m` is one, and this fails.
+#[test]
+fn a_member_access_already_refused_is_not_refused_again_as_unwritable() {
+    let checked = checked(
+        "struct S {\n    int m;\n};\nint h(void);\nint f(void) {\n    h.m++;\n    return 0;\n}\n",
+    );
+
+    assert_eq!(checked.codes(), ["SC0306"]);
+}
+
 /// Every operator and every pair of operand types 6.5.16.2 answers for,
 /// each in a program of its own, with the message and the primary label
 /// written out rather than worked out, so as not to compare the code with
