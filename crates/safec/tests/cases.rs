@@ -233,6 +233,13 @@ cases! {
         // walk each length as a full expression, or put a marker after each;
         // the read is taken as first, and this goes silent.
         two_parameter_lengths_are_not_ordered_against_each_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A length's value is read only once every length is lowered, as a
+        // call's arguments are read at the call, so the read of `*q` in `b`
+        // is checked against the `q` that `a` may write first, and the free
+        // of what `q` then points at reaches it. Mutation: discard each
+        // length's value where it finishes; the read is checked before the
+        // write and this exits 0.
+        a_read_in_one_length_meets_what_another_length_frees: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The four constructs that do order their operands, one case each,
         // because C17 Annex C names four and a list implemented three-quarters
         // of the way leaves a reader asking which quarter. 6.5.17 p2, 6.5.13
@@ -852,6 +859,11 @@ cases! {
         //
         // The row that proves it.
         a_null_pointer_dereferenced_is_unsafe: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two parameters' lengths are unsequenced (C17 6.7.6 p3), so `*p` in
+        // `b` may follow `p = 0` in `a`. A length's value is read only once
+        // every length is lowered, so the read meets the null. Mutation:
+        // discard each length's value where it finishes; this exits 0.
+        a_read_in_one_length_meets_a_null_another_length_writes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // **Three tests of a pointer are three cases and not one**, because the
         // shapes reach the check differently: `if (p)` hands the pointer's own
         // place to the terminator, whatever wrote it above, and `p != 0`

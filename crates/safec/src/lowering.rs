@@ -1107,11 +1107,13 @@ impl Lowering<'_> {
     /// [`Lowering::top_level`] false, so a sequence point inside one, a
     /// comma's, is not recorded as ordering it against the rest (ADR-0022),
     /// and `int b[*p], int a[(free(p), 1)]` is not read as the read coming
-    /// first. The end of the function's declarator is a full declarator's
-    /// end, so one [`Element::Sequenced`] follows them all and orders them
-    /// before the body. Lowered in the order written, which is an order C
-    /// allows and the one the backend emits; the missing markers are what
-    /// stop an analysis concluding from it.
+    /// first. Each value is held, as an argument is until its call, and read
+    /// only once every length is lowered. The end of the function's
+    /// declarator is a full declarator's end, so one [`Element::Sequenced`]
+    /// follows them all and orders them before the body. Lowered in the
+    /// order written, which is an order C allows and the one the backend
+    /// emits; the missing markers and the held values are what stop an
+    /// analysis concluding from it.
     fn lengths(
         &mut self,
         builder: &mut Builder,
@@ -1121,7 +1123,12 @@ impl Lowering<'_> {
         let Parameters::Prototype(parameters) = parameters else {
             return Some(());
         };
-        let mut last = None;
+        // Every length's value is held and discarded only once all of them
+        // are lowered, as a call's arguments are read only at the call. A
+        // value discarded where its length finishes is read there, before
+        // the next length is lowered, and `int b[*p], int a[(p = 0, 1)]`
+        // then checks `*p` against the `p` before the write C may run first.
+        let mut held = Vec::new();
         for parameter in parameters {
             let Type::Array {
                 length: Some(length),
@@ -1134,10 +1141,15 @@ impl Lowering<'_> {
             if self.types.value(length).is_some() {
                 continue;
             }
-            if let Some(value) = self.walk(builder, length, false, diagnostics)? {
-                builder.discarded(value, self.ast.expr(length).span());
+            let span = self.ast.expr(length).span();
+            let value = self.walk(builder, length, false, diagnostics)?;
+            held.push((value, span));
+        }
+        let last = held.last().map(|(_, span)| *span);
+        for (value, span) in held {
+            if let Some(value) = value {
+                builder.discarded(value, span);
             }
-            last = Some(self.ast.expr(length).span());
         }
         if let Some(span) = last {
             builder.sequenced(span);
@@ -1687,8 +1699,9 @@ impl Lowering<'_> {
     /// nobody popped panics here, rather than a read going missing.
     ///
     /// `full` is whether `root` is a full expression. Every caller but one
-    /// passes it: Annex C's list and `lower_stmt`'s arms are the same eight
-    /// places. [`Lowering::lengths`] does not, because a parameter's length
+    /// passes `true`: Annex C's list and `lower_stmt`'s arms are the same
+    /// eight places. [`Lowering::lengths`] passes `false`, because a
+    /// parameter's length
     /// is part of a declarator (C17 6.8 p4) and unsequenced against the
     /// others, and the walk then starts as it would under an operator C
     /// leaves unsequenced: no sequence point inside is recorded, and no call

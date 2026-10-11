@@ -1,0 +1,9 @@
+error[SC0403]: this dereferences a null pointer
+   ╭─[ a_read_in_one_length_meets_a_null_another_length_writes.c:1:31 ]
+   │
+ 1 │ int f(int * _Nonnull p, int b[*p], int a[(p = 0, 1)]) {
+   │                               ─┬  
+   │                                ╰── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here
