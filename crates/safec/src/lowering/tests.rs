@@ -1650,6 +1650,70 @@ fn a_call_to_a_refused_function_is_not_reported_twice() {
     assert_eq!(codes(&lowered), ["SC0304"]);
 }
 
+/// A parameter whose array declarator adjusting it would lose is refused as
+/// this compiler's gap, and the note claims nothing about the program:
+/// `int a[n]` is C, and `int a[*(p - q)]` is not (C17 6.5.3.2 p2, refused
+/// by `clang` even without `-pedantic-errors`), and the type check could
+/// not ask, because `p - q` has no type.
+///
+/// Mutation: have the note in `Lowering::signature` say "rather than a
+/// fault in the program" again; this fails, and so does the blessed output
+/// of `a_parameter_whose_array_declarator_is_lost_by_adjusting_it_is_refused`.
+#[test]
+fn a_parameter_adjusting_would_lose_is_refused_without_saying_the_program_is_valid() {
+    for text in [
+        "int f(int n, int a[n]);\n",
+        "int f(int *p, int *q, int a[*(p - q)]);\n",
+    ] {
+        let lowered = lowered(text);
+        assert_eq!(codes(&lowered), ["SC0304"], "{text}");
+        let notes: Vec<&str> = lowered
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .flat_map(Diagnostic::notes)
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            notes,
+            ["this is a gap in this compiler: whether this parameter is valid C is not checked"],
+            "{text}"
+        );
+    }
+}
+
+/// An expression the frontend left untyped, and said nothing about, is
+/// refused as this compiler's gap, and the note claims nothing about the
+/// program: `int x = p - q;` is C, and `(p - q) < p` is not (C17 6.5.8 p2,
+/// refused by `clang` under `-pedantic-errors`), and the type check could
+/// ask neither, because `p - q` has no type.
+///
+/// Mutation: have `Lowering::typed` exempt every untyped expression rather
+/// than only a constant; neither is refused. Mutation: have the note say
+/// "rather than a fault in the program" again. Each fails this.
+#[test]
+fn an_expression_nothing_typed_is_refused_without_saying_the_program_is_valid() {
+    for text in [
+        "int f(int *p, int *q) {\n    int x = p - q;\n    return x;\n}\n",
+        "int f(int *p, int *q) {\n    return (p - q) < p;\n}\n",
+    ] {
+        let lowered = lowered(text);
+        assert_eq!(codes(&lowered), ["SC0304"], "{text}");
+        let notes: Vec<&str> = lowered
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .flat_map(Diagnostic::notes)
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            notes,
+            ["this is a gap in this compiler: whether this expression is valid C is not checked"],
+            "{text}"
+        );
+    }
+}
+
 /// An expression deeper than the parser's own nesting limit still lowers.
 ///
 /// A chain folded by a loop adds a level to the tree per operator and none

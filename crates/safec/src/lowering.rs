@@ -879,12 +879,16 @@ impl Lowering<'_> {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
                 if !self.adjusted_without_loss(parameter.written) {
+                    // The note claims nothing about the program, because a
+                    // length nobody typed can hide a fault: `int a[*(p -
+                    // q)]` is not C, and the type check could not ask,
+                    // since `p - q` has no type.
                     diagnostics.report(
                         Diagnostic::error("cannot compile a parameter declared as this array yet")
                             .with_code(LOWERING)
                             .with_label(Label::primary(at, "declared here"))
                             .with_note(
-                                "this is a gap in this compiler rather than a fault in the program",
+                                "this is a gap in this compiler: whether this parameter is valid C is not checked",
                             ),
                     );
                     return None;
@@ -1148,15 +1152,18 @@ impl Lowering<'_> {
             // about itself: a constant has no type exactly when the frontend
             // could not read its spelling, and said so at this span with
             // `SC0106` or `SC0305`. A second report here would put two carets
-            // on one problem, and its note would be false for `123abc`, which
-            // is the program's fault and not this compiler's. Every
-            // expression *not* in the list is a gap nobody has reported yet,
-            // which is what the message says.
+            // on one problem, and its note, that whether the expression is
+            // valid C was not checked, would contradict the report that just
+            // checked `123abc`. Every expression *not* in the list is a gap
+            // nobody has reported yet, which is what the message says. The
+            // note does not say the program is valid, because some of those
+            // are not: `(p - q) < p` breaks C17 6.5.8 p2, and the type check
+            // could not ask, since `p - q` has no type.
             //
             // The driver does not lower a tree the type check reported
             // about, so no run reaches the list today. It is kept as the
             // defence it was: were that gate to open, a constant's error
-            // would not gain a second caret and a false note.
+            // would not gain a second caret and a note that contradicts it.
             if !matches!(self.ast.expr(id), Expr::Number { .. }) {
                 diagnostics.report(
                     Diagnostic::error("cannot compile an expression whose type is not known")
@@ -1166,7 +1173,7 @@ impl Lowering<'_> {
                             "nothing worked out what type this has",
                         ))
                         .with_note(
-                            "this is a gap in this compiler rather than a fault in the program",
+                            "this is a gap in this compiler: whether this expression is valid C is not checked",
                         ),
                 );
             }

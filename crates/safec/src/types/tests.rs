@@ -2549,14 +2549,31 @@ fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
 /// would exit 0. Mutation: ask a function's initializer too; `f2` gets a
 /// second report. Mutation: walk `address_constant` by recursion; the
 /// chain overflows the stack. Each fails one of these.
+///
+/// An untyped initializer may be valid C, `*arr`, or not, `p - p`, which
+/// is no constant expression (C17 6.6 p7) and which `clang` refuses, so
+/// the note says the gap and claims nothing about the program. Mutation:
+/// have it say "rather than a fault in the program" again; the first note
+/// assertion fails, and the second holds the same string for `p - p`.
 #[test]
 fn an_initializer_at_file_scope_this_stage_cannot_ask_is_still_refused() {
+    let unchecked = "a gap in this compiler: whether this initializer is valid C is not checked";
+
     let untyped = checked("int arr[3];\nint g = *arr;\n");
     assert_eq!(
         untyped.messages(),
         ["cannot check whether the initializer of `g` is a constant"]
     );
     assert_eq!(untyped.codes(), ["SC0304"]);
+    assert_eq!(untyped.notes(), [unchecked]);
+
+    let forbidden = checked("int *p;\nint m = p - p;\n");
+    assert_eq!(
+        forbidden.messages(),
+        ["cannot check whether the initializer of `m` is a constant"]
+    );
+    assert_eq!(forbidden.codes(), ["SC0304"]);
+    assert_eq!(forbidden.notes(), [unchecked]);
 
     let function = checked("int x;\nint f2(void) = x;\n");
     assert_eq!(function.codes(), ["SC0310"]);
