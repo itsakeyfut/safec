@@ -341,7 +341,8 @@ struct Lowering<'a> {
     /// operands C sequences. See ADR-0022, and [`sequences`] for the list.
     top_level: bool,
     /// The full expression being lowered, which is the expression
-    /// [`Lowering::value`] was last asked for.
+    /// [`Lowering::value`] was last asked for, and `None` while a parameter's
+    /// length is, which is not one.
     ///
     /// Not [`Lowering::top_level`], which stays true through operands C
     /// sequences and so through the right operand of a comma. Read by the call
@@ -920,14 +921,15 @@ impl Lowering<'_> {
     /// what this stage lowers. What the adjustment throws away is the
     /// array's own declarator: its length, which 6.9.1 p10 evaluates on entry
     /// to the function where it is not a constant, so `int a[(free(p), 1)]`
-    /// frees `p` and `int a[*p = 1]` writes through it. So only `T[]` and
-    /// `T[N]` with `N` a positive number, of an element that is neither
-    /// `void` nor a function, are lowered, and anything else is refused as
-    /// it was before parameters were adjusted, rather than lowered with its
-    /// length's effects gone. The element and a constant length are
-    /// `types.rs`'s to refuse first, under C17 6.7.6.2 p1, and this is a
-    /// defence for them; a length that is not a constant is what reaches
-    /// here, and evaluating it on entry is #382.
+    /// frees `p` and `int a[*p = 1]` writes through it. The outermost length
+    /// is the one the adjustment drops, and [`Lowering::lengths`] evaluates
+    /// it in a definition, so it may be any expression the type check typed;
+    /// one it did not type is refused, since nothing would ever check it in
+    /// a prototype, where 6.7.6.2 p5 treats it as `*` and nothing runs it.
+    /// Every inner length stays in the adjusted pointer's type, which this
+    /// IR cannot hold unless it is a positive number. The element and a
+    /// constant length are `types.rs`'s to refuse first, under C17 6.7.6.2
+    /// p1, and this is a defence for them.
     fn adjusted_without_loss(&self, written: TypeId) -> bool {
         let mut current = written;
         let mut array = false;
@@ -937,13 +939,16 @@ impl Lowering<'_> {
             written: _,
         } = self.ast.ty(current)
         {
-            array = true;
             if let Some(length) = *length {
-                let positive = self.types.value(length).is_some_and(|value| value > 0);
-                if !positive {
+                let accepted = match self.types.value(length) {
+                    Some(value) => value > 0,
+                    None => !array && self.types.of(length).is_some(),
+                };
+                if !accepted {
                     return false;
                 }
             }
+            array = true;
             current = *element;
         }
         !array || !matches!(self.ast.ty(current), Type::Void | Type::Function { .. })
@@ -1056,6 +1061,7 @@ impl Lowering<'_> {
             elements: Vec::new(),
         };
         builder.open();
+        self.lengths(&mut builder, &parameters, diagnostics)?;
 
         // C17 5.1.2.2.3 p1: reaching the `}` that terminates `main` returns
         // zero. Written at the top rather than beside the fall-off below,
@@ -1087,6 +1093,68 @@ impl Lowering<'_> {
         }
 
         Some(builder.function)
+    }
+
+    /// C17 6.9.1 p10: on entry to a definition, the length of each parameter
+    /// whose outermost array length is not a constant is evaluated, and its
+    /// value discarded, since the parameter is the adjusted pointer.
+    ///
+    /// **One unsequenced group, and one sequence point after it.** A
+    /// parameter's declarator is part of the function's, so it is not a full
+    /// declarator and its end is no sequence point (6.7.6 p3); nothing orders
+    /// one parameter's length against another's, and 6.9.1 p10 names no
+    /// order. Each is walked as a call's argument is, with
+    /// [`Lowering::top_level`] false, so a sequence point inside one, a
+    /// comma's, is not recorded as ordering it against the rest (ADR-0022),
+    /// and `int b[*p], int a[(free(p), 1)]` is not read as the read coming
+    /// first. Each value is held, as an argument is until its call, and read
+    /// only once every length is lowered. The end of the function's
+    /// declarator is a full declarator's end, so one [`Element::Sequenced`]
+    /// follows them all and orders them before the body. Lowered in the
+    /// order written, which is an order C allows and the one the backend
+    /// emits; the missing markers and the held values are what stop an
+    /// analysis concluding from it.
+    fn lengths(
+        &mut self,
+        builder: &mut Builder,
+        parameters: &Parameters,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
+        let Parameters::Prototype(parameters) = parameters else {
+            return Some(());
+        };
+        // Every length's value is held and discarded only once all of them
+        // are lowered, as a call's arguments are read only at the call. A
+        // value discarded where its length finishes is read there, before
+        // the next length is lowered, and `int b[*p], int a[(p = 0, 1)]`
+        // then checks `*p` against the `p` before the write C may run first.
+        let mut held = Vec::new();
+        for parameter in parameters {
+            let Type::Array {
+                length: Some(length),
+                ..
+            } = self.ast.ty(parameter.written)
+            else {
+                continue;
+            };
+            let length = *length;
+            if self.types.value(length).is_some() {
+                continue;
+            }
+            let span = self.ast.expr(length).span();
+            let value = self.walk(builder, length, false, diagnostics)?;
+            held.push((value, span));
+        }
+        let last = held.last().map(|(_, span)| *span);
+        for (value, span) in held {
+            if let Some(value) = value {
+                builder.discarded(value, span);
+            }
+        }
+        if let Some(span) = last {
+            builder.sequenced(span);
+        }
+        Some(())
     }
 
     /// The IR type of a type the frontend wrote.
@@ -1595,7 +1663,7 @@ impl Lowering<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Operand> {
         Some(
-            self.walk(builder, root, diagnostics)?
+            self.walk(builder, root, true, diagnostics)?
                 .expect("a value for the root, which is not `void`"),
         )
     }
@@ -1610,7 +1678,7 @@ impl Lowering<'_> {
         root: ExprId,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<()> {
-        if let Some(value) = self.walk(builder, root, diagnostics)? {
+        if let Some(value) = self.walk(builder, root, true, diagnostics)? {
             builder.discarded(value, self.ast.expr(root).span());
         }
         Some(())
@@ -1629,19 +1697,27 @@ impl Lowering<'_> {
     /// `void` too, and pushes the place it reads. A consumer that pops where
     /// nothing was pushed panics naming the stack it expected, and a value
     /// nobody popped panics here, rather than a read going missing.
+    ///
+    /// `full` is whether `root` is a full expression. Every caller but one
+    /// passes `true`: Annex C's list and `lower_stmt`'s arms are the same
+    /// eight places. [`Lowering::lengths`] passes `false`, because a
+    /// parameter's length
+    /// is part of a declarator (C17 6.8 p4) and unsequenced against the
+    /// others, and the walk then starts as it would under an operator C
+    /// leaves unsequenced: no sequence point inside is recorded, and no call
+    /// inside ends its block for good.
     fn walk(
         &mut self,
         builder: &mut Builder,
         root: ExprId,
+        full: bool,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Option<Operand>> {
         // Set here rather than restored, so that an expression abandoned
         // half-way by a type error cannot leave the next one reading a flag
-        // the walk that set it never finished with. Every caller of this is a
-        // full expression: Annex C's list and `lower_stmt`'s arms are the same
-        // eight places.
-        self.top_level = true;
-        self.root = Some(root);
+        // the walk that set it never finished with.
+        self.top_level = full;
+        self.root = full.then_some(root);
 
         let mut tasks = vec![Task::Value(root)];
         let mut values: Vec<Operand> = Vec::new();

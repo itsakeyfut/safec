@@ -1,0 +1,33 @@
+Target "x86_64-pc-windows-msvc"
+Function a_read_in_one_length_meets_what_another_length_frees.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter
+Function a_read_in_one_length_meets_what_another_length_frees.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" parameter _Nonnull
+  Local "_2" "int *" parameter _Nonnull
+  Local "_3" "int *" parameter
+  Local "_4" "int *" parameter
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation a_read_in_one_length_meets_what_another_length_frees.c:3:61 written
+      Destination "_2"
+      Use
+        Copy "_1"
+    Operation a_read_in_one_length_meets_what_another_length_frees.c:3:61 written
+      Destination "_5"
+      Use
+        Copy "_2"
+    Call a_read_in_one_length_meets_what_another_length_frees.c:3:68 "free" "bb1"
+      Copy "_1"
+  Block "bb1"
+    Evaluate a_read_in_one_length_meets_what_another_length_frees.c:3:49 written
+      Place "_2"
+        Deref
+    Sequenced a_read_in_one_length_meets_what_another_length_frees.c:3:61 generated
+    Operation a_read_in_one_length_meets_what_another_length_frees.c:4:5 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_read_in_one_length_meets_what_another_length_frees.c:4:12 generated
+    Return
