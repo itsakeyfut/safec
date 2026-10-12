@@ -395,10 +395,9 @@ fn a_missing_input_is_reported_rather_than_panicking() {
 /// wording, which is what keeps the diagnostic out of the corpus, where a
 /// case pins text that is entirely ours.
 ///
-/// Unlike `cannot read`, it does not vary by host: it is a constant in
-/// `std` rather than a message from the operating system, so the reason
-/// `docs/architecture.md` records for that one does not apply here. What
-/// this note follows is the Rust version, not the platform.
+/// It does not vary by host: it is a constant in `std` rather than a message
+/// from the operating system. What this note follows is the Rust version,
+/// not the platform.
 #[test]
 fn a_file_that_is_not_utf8_is_not_reported_as_unreadable() {
     let file = TempFile::new(
@@ -680,6 +679,89 @@ fn asking_for_tokens_is_a_run_that_can_succeed() {
     assert!(!artifact.is_empty());
 }
 
+/// A directory is called one, for a read and for a write, whatever kind the
+/// error carries.
+///
+/// The kind is not the same on every host: Windows reports a directory as
+/// `PermissionDenied` and Linux as `IsADirectory`, so both are handed in here
+/// rather than whichever this machine would produce.
+///
+/// Mutation: drop the `is_dir` check from `reason`. This fails on every host,
+/// for one kind or the other.
+#[test]
+fn a_directory_is_called_one_whatever_the_error_says() {
+    let directory = std::env::temp_dir();
+    for kind in [io::ErrorKind::PermissionDenied, io::ErrorKind::IsADirectory] {
+        let error = io::Error::from(kind);
+        assert_eq!(
+            reason(&directory, &error, Access::Read),
+            "this is a directory, and safec reads a source file"
+        );
+        assert_eq!(
+            reason(&directory, &error, Access::Write),
+            "this is a directory, and safec writes its output as a file"
+        );
+    }
+}
+
+/// A path under a file is called missing, the way Windows already reports it.
+///
+/// Windows answers `a.c/x.c`, with `a.c` a file, with `NotFound`, and Linux
+/// with `NotADirectory`, so the second kind is handed in here directly.
+///
+/// Mutation: drop `NotADirectory` from either of `reason`'s missing arms.
+/// This fails.
+#[test]
+fn a_path_under_a_file_is_called_missing() {
+    let path = missing_path("safec_driver_under_a_file.c").join("x.c");
+    let error = io::Error::from(io::ErrorKind::NotADirectory);
+
+    assert_eq!(
+        reason(&path, &error, Access::Read),
+        "nothing exists at this path"
+    );
+    assert_eq!(
+        reason(&path, &error, Access::Write),
+        "the directory it would be written in does not exist"
+    );
+}
+
+/// A refusal says which way the path was being used.
+///
+/// Mutation: delete either `PermissionDenied` arm from `reason`. This fails.
+#[test]
+fn a_refused_permission_says_what_was_refused() {
+    let path = missing_path("safec_driver_refused.c");
+    let error = io::Error::from(io::ErrorKind::PermissionDenied);
+
+    assert_eq!(
+        reason(&path, &error, Access::Read),
+        "permission to read it was refused"
+    );
+    assert_eq!(
+        reason(&path, &error, Access::Write),
+        "permission to write it was refused"
+    );
+}
+
+/// A failure this compiler has no words for keeps the operating system's, and
+/// says that they are.
+///
+/// No corpus case can reach a kind with no name of ours, so nothing else
+/// would notice if the fallback stopped reporting anything.
+///
+/// Mutations: drop the prefix, or answer an empty string. This fails.
+#[test]
+fn a_failure_with_no_words_of_ours_keeps_the_operating_system_s() {
+    let path = missing_path("safec_driver_other.c");
+    let error = io::Error::other("something else went wrong");
+
+    assert_eq!(
+        reason(&path, &error, Access::Read),
+        "the operating system said: something else went wrong"
+    );
+}
+
 /// A path that cannot be written is reported, and the run fails.
 ///
 /// The other end of `load_failure`'s question, and the reason it is
@@ -688,15 +770,14 @@ fn asking_for_tokens_is_a_run_that_can_succeed() {
 /// asked for must not exit zero.
 ///
 /// The path names a directory that does not exist, which every platform
-/// refuses and none refuses in the same words. What is asserted is this
-/// compiler's half of the sentence; the operating system's goes in a note,
-/// the way `cannot read` already carries one.
+/// refuses and none refuses in the same words. The note is this compiler's,
+/// so it is asserted whole.
 ///
 /// Mutation: ignore the `Err` from `fs::write`. The run succeeds and this
-/// fails twice over. Mutation: drop the `with_note` from `write_failure`.
-/// The path is still reported and the reason is not, which is half of what
-/// #89's second acceptance criterion asks for, and nothing else in
-/// the workspace notices.
+/// fails twice over. Mutation: drop the `with_note` from `write_failure`, or
+/// delete the arm of `reason` that names `NotFound` for a write. The path is
+/// still reported and the reason is not, or is the operating system's, and
+/// this fails.
 #[test]
 fn an_output_path_that_cannot_be_written_is_reported() {
     let file = TempFile::new("safec_driver_output_unwritable.c", "int x;\n");
@@ -709,13 +790,8 @@ fn an_output_path_that_cannot_be_written_is_reported() {
     assert_eq!(outcome, Outcome::Failed);
     assert!(report.contains("cannot write"), "{report}");
     assert!(report.contains("out.tok"), "{report}");
-    // That there is a reason, not which reason. The words are the
-    // operating system's and differ across the three platforms CI runs;
-    // `docs/architecture.md` records that divergence for `cannot read`,
-    // which carries its note the same way. Asserting the text would make
-    // this a dictionary of other people's error messages.
     assert!(
-        report.contains("= note:"),
+        report.contains("= note: the directory it would be written in does not exist"),
         "reported the path and not the reason: {report}"
     );
     assert_eq!(

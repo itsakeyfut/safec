@@ -101,27 +101,12 @@ Three, and saying so is part of the intent rather than a caveat on it.
   `#[non_exhaustive]`, so however many kinds are given words of their own, some
   failure will always fall through to what the operating system said.
 
-### Three known divergences
+### Two known divergences
 
-The first two are about the host. The third is about the target, and it is the
+The first is about the host. The second is about the target, and it is the
 table's other column.
 
-`cannot read` puts the operating system's message in a note, so it reads
-`The system cannot find the file specified. (os error 2)` on Windows and
-`No such file or directory (os error 2)` on Linux. `clang` does not do this: it
-says `no such file or directory` in its own words on every platform.
-
-This is a divergence rather than a defect. Quoting the underlying error is what
-most tools do and it carries real information. It is recorded here because the
-rule above is what this project wants, and something that contradicts it should
-be visible rather than discovered twice.
-
-The shape of the fix, when it is taken, is to name the common kinds in this
-compiler's own words and keep the operating system's string for the rest, rather
-than to drop the note: a diagnostic made testable by saying less is a worse
-diagnostic. It is tracked as issue 17, and this section goes when that lands.
-
-The second is `--emit object`, which passes `clang`'s own words through when
+The first is `--emit object`, which passes `clang`'s own words through when
 `clang` refuses a module. That text is another tool's, and it varies by version
 and by build: it is not this compiler's speech and cannot be a search key. It is
 taken on purpose, because `clang` knows what is wrong with a module and this
@@ -129,13 +114,13 @@ compiler does not, and [ADR-0015](adr/0015-make-an-object-by-spawning-clang.md)
 argues it. What follows from it is that these two diagnostics can never join the
 corpus, which compares bytes this compiler wrote.
 
-The third is `SC0305`, which says that no integer type this compiler has can
+The second is `SC0305`, which says that no integer type this compiler has can
 hold a constant. Whether it fires is decided against the range of `int`, so it
 is a diagnostic that depends on the target, which the table above says a
 diagnostic does not. See
 [frontend.md](frontend.md), *What an integer constant is worth*.
 
-This one is not taken on purpose and is not the shape of the other two: what a
+This one is not taken on purpose and is not the shape of the first: what a
 constant's type is turns on the target under C17 6.4.4.1 p5, so the dependency
 is C's rather than this compiler's, and the row above was written before
 anything read a width in the frontend. Nothing observes it yet, because `int`

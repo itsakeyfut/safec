@@ -32,12 +32,11 @@ fn missing(name: &str) -> PathBuf {
 /// written until something compiled all the way through.
 ///
 /// The substring check is deliberate and is the only one left in this
-/// directory. `cannot read` ends in a note that is the operating system's text,
-/// `The system cannot find the file specified.` on Windows and `No such file or
-/// directory` on Linux, and the suite runs on three of them. A corpus case
-/// compares byte for byte, so it would fail on two by construction. Only the
-/// part this compiler wrote is asserted here. See `docs/architecture.md`, which
-/// records the divergence, and issue 17, which closes it.
+/// directory. The path is under the temporary directory, which differs by
+/// machine, so the report cannot be compared whole; what it says about a path
+/// that names nothing is pinned byte for byte by the corpus case
+/// `a_path_that_names_nothing_is_reported_in_this_compiler_s_words`, and this
+/// pins the exit code.
 #[test]
 fn a_compilation_that_failed_exits_one() {
     let path = missing("safec_exit_code_absent.c");

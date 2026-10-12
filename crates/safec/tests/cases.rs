@@ -3082,6 +3082,13 @@ cases! {
         a_later_declarator_is_not_in_scope_in_an_earlier_initializer: ["--emit", "ast"],
         a_lexical_error_leaves_no_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_parse_error_leaves_no_ir: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A path that names nothing, and the one case whose `.c` is absent on
+        // purpose: that absence is the input. The note is this compiler's
+        // words, so the report is the same bytes on every host, where the
+        // operating system's own message is not. Mutation: delete the arm of
+        // `reason` that names `NotFound` for a read; the note becomes the
+        // operating system's and the blessed stderr differs.
+        a_path_that_names_nothing_is_reported_in_this_compiler_s_words: ["--emit", "ast"],
         a_directive_stops_the_input_it_is_in: ["--emit", "ast"],
         a_tree_deeper_than_the_indent_shows: ["--emit", "ast"],
         abstract_function_parameter: ["--emit", "ast"],
