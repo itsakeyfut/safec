@@ -787,6 +787,53 @@ fn a_write_that_failed_after_the_open_keeps_the_operating_system_s_words() {
     );
 }
 
+/// A directory given as an input is called one, through the driver.
+///
+/// `reason`'s own test hands it the path directly, so this is what holds that
+/// `load_failure` hands over the path that failed. The path differs by
+/// machine, so the note is asserted rather than the report, which is why this
+/// is here rather than in the corpus.
+///
+/// Mutation: have `load_failure` pass `Path::new("")` to `reason`. The note
+/// becomes the refusal or the operating system's, and this fails.
+#[test]
+fn a_directory_given_as_an_input_is_called_one() {
+    let compiled = compile(&options(vec![std::env::temp_dir()]));
+    let reported = &compiled.diagnostics.diagnostics()[0];
+
+    assert!(reported.message().contains("cannot read"), "{reported:?}");
+    assert_eq!(
+        reported.notes(),
+        ["this is a directory, and safec reads a source file"]
+    );
+}
+
+/// A directory given as the output is called one, through the driver.
+///
+/// The same question as the test above, asked of `write_failure`.
+///
+/// Mutation: have `write_failure` pass `Path::new("")` to `reason`. This
+/// fails.
+#[test]
+fn a_directory_given_as_the_output_is_called_one() {
+    let file = TempFile::new(
+        "safec_driver_output_directory.c",
+        "int x;
+",
+    );
+    let mut options = options(vec![file.path().to_path_buf()]);
+    options.emit = EmitKind::Tokens;
+    options.output = Some(std::env::temp_dir());
+
+    let (report, _, outcome) = run(&options);
+
+    assert_eq!(outcome, Outcome::Failed);
+    assert!(
+        report.contains("= note: this is a directory, and safec writes its output as a file"),
+        "{report}"
+    );
+}
+
 /// A path that cannot be written is reported, and the run fails.
 ///
 /// The other end of `load_failure`'s question, and the reason it is
