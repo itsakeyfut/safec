@@ -945,8 +945,9 @@ enum Access {
 /// fallback is permanent.
 ///
 /// `NotADirectory` sits with `NotFound` because they are one case on two
-/// hosts: `a.c/x.c` with `a.c` a file is `NotFound` on Windows and
-/// `NotADirectory` on Linux, and both are fairly called missing.
+/// hosts: `a.c/x.c` with `a.c` a file is `NotFound` on Windows, measured, and
+/// `NotADirectory` on Linux, read from `std`'s mapping of `ENOTDIR` rather than
+/// run. Both are fairly called missing.
 fn reason(path: &Path, error: &io::Error, access: Access) -> String {
     // The path is asked before the error, because the error does not say this
     // the same way everywhere: Windows reports a directory as

@@ -704,15 +704,17 @@ fn a_directory_is_called_one_whatever_the_error_says() {
     }
 }
 
-/// A path under a file is called missing, the way Windows already reports it.
+/// A `NotADirectory` error is called missing, the way Windows already reports
+/// the same path.
 ///
 /// Windows answers `a.c/x.c`, with `a.c` a file, with `NotFound`, and Linux
-/// with `NotADirectory`, so the second kind is handed in here directly.
+/// with `NotADirectory`. No file is made here: the second kind is handed in
+/// directly, since this host would never produce it.
 ///
 /// Mutation: drop `NotADirectory` from either of `reason`'s missing arms.
 /// This fails.
 #[test]
-fn a_path_under_a_file_is_called_missing() {
+fn a_not_a_directory_error_is_called_missing() {
     let path = missing_path("safec_driver_under_a_file.c").join("x.c");
     let error = io::Error::from(io::ErrorKind::NotADirectory);
 
