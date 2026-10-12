@@ -884,10 +884,28 @@ impl Lowering<'_> {
                     // length nobody typed can hide a fault: `int a[*(p -
                     // q)]` is not C, and the type check could not ask,
                     // since `p - q` has no type.
-                    diagnostics.report(
+                    let mut refusal =
                         Diagnostic::error("cannot compile a parameter declared as this array yet")
                             .with_code(LOWERING)
-                            .with_label(Label::primary(at, "declared here"))
+                            .with_label(Label::primary(at, "declared here"));
+                    // Which part of the length has no type, where that is
+                    // the reason, so the reader is not left to find it.
+                    if let Type::Array {
+                        length: Some(length),
+                        ..
+                    } = self.ast.ty(parameter.written)
+                    {
+                        if self.types.value(*length).is_none() {
+                            if let Some(untyped) = self.first_untyped(*length) {
+                                refusal = refusal.with_label(Label::secondary(
+                                    self.ast.expr(untyped).span(),
+                                    "nothing worked out what type this has",
+                                ));
+                            }
+                        }
+                    }
+                    diagnostics.report(
+                        refusal
                             .with_note(
                                 "this is a gap in this compiler: whether this parameter is valid C is not checked",
                             ),
@@ -923,9 +941,14 @@ impl Lowering<'_> {
     /// to the function where it is not a constant, so `int a[(free(p), 1)]`
     /// frees `p` and `int a[*p = 1]` writes through it. The outermost length
     /// is the one the adjustment drops, and [`Lowering::lengths`] evaluates
-    /// it in a definition, so it may be any expression the type check typed;
-    /// one it did not type is refused, since nothing would ever check it in
-    /// a prototype, where 6.7.6.2 p5 treats it as `*` and nothing runs it.
+    /// it in a definition, so it may be any expression the type check typed
+    /// all the way down. One with any part left untyped is refused, since
+    /// nothing would ever check it in a prototype, where 6.7.6.2 p5 treats
+    /// it as `*` and nothing runs it: the driver does not lower a tree the
+    /// type check reported about, so a part untyped here was left so without
+    /// a report, and a fault can sit behind it, as `*g2 = 0` with `g2` an
+    /// array of arrays does in `int a[(*g2 = 0, n)]`, where the comma is
+    /// typed by its right operand. See [`Lowering::typed_throughout`].
     /// Every inner length stays in the adjusted pointer's type, which this
     /// IR cannot hold unless it is a positive number. The element and a
     /// constant length are `types.rs`'s to refuse first, under C17 6.7.6.2
@@ -942,7 +965,7 @@ impl Lowering<'_> {
             if let Some(length) = *length {
                 let accepted = match self.types.value(length) {
                     Some(value) => value > 0,
-                    None => !array && self.types.of(length).is_some(),
+                    None => !array && self.typed_throughout(length),
                 };
                 if !accepted {
                     return false;
@@ -952,6 +975,27 @@ impl Lowering<'_> {
             current = *element;
         }
         !array || !matches!(self.ast.ty(current), Type::Void | Type::Function { .. })
+    }
+
+    /// Whether `root` and every expression under it has a type.
+    fn typed_throughout(&self, root: ExprId) -> bool {
+        self.first_untyped(root).is_none()
+    }
+
+    /// The first expression at or under `root` with no type, which the
+    /// refusal of a parameter's length points at.
+    ///
+    /// A loop over [`Expr::extend_children`] rather than a recursion, since a
+    /// length is as deep as its source makes it.
+    fn first_untyped(&self, root: ExprId) -> Option<ExprId> {
+        let mut work = vec![root];
+        while let Some(id) = work.pop() {
+            if self.types.of(id).is_none() {
+                return Some(id);
+            }
+            self.ast.expr(id).extend_children(&mut work);
+        }
+        None
     }
 
     /// Whether an expression is an integer constant expression, which is

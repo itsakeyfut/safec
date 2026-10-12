@@ -2659,8 +2659,9 @@ fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
     assert_eq!(checked.codes(), ["SC0317"; 13]);
 }
 
-/// An initializer at file scope this stage left untyped, `*arr` being one,
-/// is declined as this compiler's gap rather than passed over, since the
+/// An initializer at file scope this stage left untyped, a difference of
+/// pointers being one, is declined as this compiler's gap rather than
+/// passed over, since the
 /// lowering drops it unread and the program would build. A function given
 /// one is `SC0310`'s alone. A chain of `+` as long as the source makes it
 /// is walked without running out of stack.
@@ -2670,16 +2671,18 @@ fn an_initializer_at_file_scope_is_held_to_a_constant_expression() {
 /// second report. Mutation: walk `address_constant` by recursion; the
 /// chain overflows the stack. Each fails one of these.
 ///
-/// An untyped initializer may be valid C, `*arr`, or not, `p - p`, which
-/// is no constant expression (C17 6.6 p7) and which `clang` refuses, so
-/// the note says the gap and claims nothing about the program. Mutation:
-/// have it say "rather than a fault in the program" again; the first note
-/// assertion fails, and the second holds the same string for `p - p`.
+/// An untyped initializer may be one `clang` accepts, `&x[1] - &x[0]`, or
+/// one it refuses, `p - p`, which is no constant expression (C17 6.6 p7),
+/// so the note says the gap and claims nothing about the program.
+/// Mutation: have it say "rather than a fault in the program" again; the
+/// first note assertion fails, and the second holds the same string for
+/// `p - p`. `*arr` was the first example until `*` of an array was typed,
+/// and is now `SC0317`, as `clang` refuses it.
 #[test]
 fn an_initializer_at_file_scope_this_stage_cannot_ask_is_still_refused() {
     let unchecked = "a gap in this compiler: whether this initializer is valid C is not checked";
 
-    let untyped = checked("int arr[3];\nint g = *arr;\n");
+    let untyped = checked("int x[4];\nint g = &x[1] - &x[0];\n");
     assert_eq!(
         untyped.messages(),
         ["cannot check whether the initializer of `g` is a constant"]

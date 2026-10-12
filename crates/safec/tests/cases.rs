@@ -3382,9 +3382,12 @@ cases! {
         // `*`), so the type check is the only stage that sees an operand there
         // that cannot be written to or have its address taken, provided it
         // typed the operand. One prototype per place it is asked, `=`, postfix
-        // `++`, prefix `--` and `&`, each citing its own clause. Mutation: stop
-        // asking at any one of them, or cite another clause there; that
-        // prototype's report goes or changes and the blessed stderr differs.
+        // `++`, prefix `--` and `&`, each citing its own clause, and one more
+        // `=` whose left operand is `*g2`, an array, typed since `*` of an
+        // array is. Mutation: stop asking at any one of them, or cite another
+        // clause there; that prototype's report goes or changes and the
+        // blessed stderr differs. Mutation: leave `*` of an array untyped
+        // again; the last prototype's report goes.
         an_operand_in_a_prototype_s_length_that_cannot_be_written_or_addressed_is_refused: ["--emit", "ast"],
         precedence_bitwise_and: ["--emit", "ast"],
         precedence_bitwise_or: ["--emit", "ast"],
@@ -3526,6 +3529,18 @@ cases! {
         // `SC0304`. Mutation: drop the call to `Lowering::lengths`; the store
         // goes and `n` returns what the caller passed.
         a_parameter_s_length_is_evaluated_on_entry: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A prototype's length is never lowered, so a part of it the type
+        // check left untyped without a report, `p - q` today, hides a fault
+        // nothing asks about. Each is refused as `SC0304`, with a label on
+        // the untyped part. The first is untyped at its root and nowhere
+        // else; the last one's untyped assignment is two levels below the
+        // length, under a comma that is typed; the middle two are faults
+        // `clang` refuses. Mutation: ask only that the length as a whole is
+        // typed; the middle two and the last build. Mutation: look only at
+        // the length's operands, not the length itself; the first builds.
+        // Mutation: look only at the length's own operands; the last builds.
+        // Mutation: drop the label on the untyped part; every block changes.
+        an_untyped_part_of_a_prototype_s_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `i` and `j`, declared by the `for`, begin their storage once before
