@@ -1,0 +1,32 @@
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:2:18 ]
+   │
+ 2 │ int k(int n, int a[(*g2 = 0, n)]);
+   │                  ┬  
+   │                  ╰── declared here
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:3:34 ]
+   │
+ 3 │ int l(int *p, int *q, int n, int a[(*(p - q) = 0, n)]);
+   │                                  ┬  
+   │                                  ╰── declared here
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:4:34 ]
+   │
+ 4 │ int m(int *p, int *q, int n, int a[((p - q) < p, n)]);
+   │                                  ┬  
+   │                                  ╰── declared here
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_prototype_s_length_is_refused.c:5:34 ]
+   │
+ 5 │ int o(int *p, int *q, int n, int a[((*(p - q) = 0, n), n)]);
+   │                                  ┬  
+   │                                  ╰── declared here
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

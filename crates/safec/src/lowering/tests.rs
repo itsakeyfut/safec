@@ -1680,15 +1680,19 @@ fn a_call_in_a_parameter_s_length_keeps_its_continuation() {
 /// definition has an entry for 6.9.1 p10 to evaluate it on.
 ///
 /// Mutation: have `adjusted_without_loss` refuse an outermost length that
-/// is not a constant again; `g` is `SC0304` and this fails.
+/// is not a constant again; `g` is `SC0304` and this fails. Mutation: have
+/// `Lowering::typed_throughout` refuse a node that has a type, or check the
+/// root twice and its operands never; `h`, a comma whose every part is
+/// typed, is `SC0304`.
 #[test]
 fn a_prototype_s_parameter_length_is_accepted_and_not_evaluated() {
-    let lowered = lowered("int g(int n, int a[n = 2]);\n");
+    let lowered = lowered("int g(int n, int a[n = 2]);\nint h(int n, int m, int a[(n, m)]);\n");
 
     assert_eq!(codes(&lowered), Vec::<String>::new());
     let g = function(&lowered, "g");
     assert!(!g.is_defined());
     assert_eq!(g.parameters().count(), 2);
+    assert_eq!(function(&lowered, "h").parameters().count(), 3);
 }
 
 /// A parameter whose array declarator adjusting it would lose is refused as

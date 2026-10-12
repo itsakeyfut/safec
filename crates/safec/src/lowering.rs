@@ -923,9 +923,14 @@ impl Lowering<'_> {
     /// to the function where it is not a constant, so `int a[(free(p), 1)]`
     /// frees `p` and `int a[*p = 1]` writes through it. The outermost length
     /// is the one the adjustment drops, and [`Lowering::lengths`] evaluates
-    /// it in a definition, so it may be any expression the type check typed;
-    /// one it did not type is refused, since nothing would ever check it in
-    /// a prototype, where 6.7.6.2 p5 treats it as `*` and nothing runs it.
+    /// it in a definition, so it may be any expression the type check typed
+    /// all the way down. One with any part left untyped is refused, since
+    /// nothing would ever check it in a prototype, where 6.7.6.2 p5 treats
+    /// it as `*` and nothing runs it: the driver does not lower a tree the
+    /// type check reported about, so a part untyped here was left so without
+    /// a report, and a fault can sit behind it, as `*g2 = 0` with `g2` an
+    /// array of arrays does in `int a[(*g2 = 0, n)]`, where the comma is
+    /// typed by its right operand. See [`Lowering::typed_throughout`].
     /// Every inner length stays in the adjusted pointer's type, which this
     /// IR cannot hold unless it is a positive number. The element and a
     /// constant length are `types.rs`'s to refuse first, under C17 6.7.6.2
@@ -942,7 +947,7 @@ impl Lowering<'_> {
             if let Some(length) = *length {
                 let accepted = match self.types.value(length) {
                     Some(value) => value > 0,
-                    None => !array && self.types.of(length).is_some(),
+                    None => !array && self.typed_throughout(length),
                 };
                 if !accepted {
                     return false;
@@ -952,6 +957,21 @@ impl Lowering<'_> {
             current = *element;
         }
         !array || !matches!(self.ast.ty(current), Type::Void | Type::Function { .. })
+    }
+
+    /// Whether `root` and every expression under it has a type.
+    ///
+    /// A loop over [`Expr::extend_children`] rather than a recursion, since a
+    /// length is as deep as its source makes it.
+    fn typed_throughout(&self, root: ExprId) -> bool {
+        let mut work = vec![root];
+        while let Some(id) = work.pop() {
+            if self.types.of(id).is_none() {
+                return false;
+            }
+            self.ast.expr(id).extend_children(&mut work);
+        }
+        true
     }
 
     /// Whether an expression is an integer constant expression, which is
