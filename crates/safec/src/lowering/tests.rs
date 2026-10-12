@@ -1681,9 +1681,10 @@ fn a_call_in_a_parameter_s_length_keeps_its_continuation() {
 ///
 /// Mutation: have `adjusted_without_loss` refuse an outermost length that
 /// is not a constant again; `g` is `SC0304` and this fails. Mutation: have
-/// `Lowering::typed_throughout` refuse a node that has a type, or check the
-/// root twice and its operands never; `h`, a comma whose every part is
-/// typed, is `SC0304`.
+/// `Lowering::first_untyped` answer a node that has a type; `h`, a comma
+/// whose every part is typed, is `SC0304`. What it misses, rather than
+/// what it wrongly finds, is held by the corpus case
+/// `an_untyped_part_of_a_prototype_s_length_is_refused`.
 #[test]
 fn a_prototype_s_parameter_length_is_accepted_and_not_evaluated() {
     let lowered = lowered("int g(int n, int a[n = 2]);\nint h(int n, int m, int a[(n, m)]);\n");

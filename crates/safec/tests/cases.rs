@@ -3527,13 +3527,16 @@ cases! {
         // goes and `n` returns what the caller passed.
         a_parameter_s_length_is_evaluated_on_entry: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A prototype's length is never lowered, so a part of it the type
-        // check left untyped without a report, `*` of an array or `p - q`,
-        // hides a fault nothing asks about; each of these is one `clang`
-        // refuses, and each is refused here as `SC0304`. The last one's
-        // untyped assignment is two levels below the length, under a comma
-        // that is typed. Mutation: ask only that the length as a whole is
-        // typed; every prototype builds. Mutation: look only at the length's
-        // own operands; the last one builds.
+        // check left untyped without a report, `p - q` today, hides a fault
+        // nothing asks about. Each is refused as `SC0304`, with a label on
+        // the untyped part. The first is untyped at its root and nowhere
+        // else; the last one's untyped assignment is two levels below the
+        // length, under a comma that is typed; the middle two are faults
+        // `clang` refuses. Mutation: ask only that the length as a whole is
+        // typed; the middle two and the last build. Mutation: look only at
+        // the length's operands, not the length itself; the first builds.
+        // Mutation: look only at the length's own operands; the last builds.
+        // Mutation: drop the label on the untyped part; every block changes.
         an_untyped_part_of_a_prototype_s_length_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -884,10 +884,28 @@ impl Lowering<'_> {
                     // length nobody typed can hide a fault: `int a[*(p -
                     // q)]` is not C, and the type check could not ask,
                     // since `p - q` has no type.
-                    diagnostics.report(
+                    let mut refusal =
                         Diagnostic::error("cannot compile a parameter declared as this array yet")
                             .with_code(LOWERING)
-                            .with_label(Label::primary(at, "declared here"))
+                            .with_label(Label::primary(at, "declared here"));
+                    // Which part of the length has no type, where that is
+                    // the reason, so the reader is not left to find it.
+                    if let Type::Array {
+                        length: Some(length),
+                        ..
+                    } = self.ast.ty(parameter.written)
+                    {
+                        if self.types.value(*length).is_none() {
+                            if let Some(untyped) = self.first_untyped(*length) {
+                                refusal = refusal.with_label(Label::secondary(
+                                    self.ast.expr(untyped).span(),
+                                    "nothing worked out what type this has",
+                                ));
+                            }
+                        }
+                    }
+                    diagnostics.report(
+                        refusal
                             .with_note(
                                 "this is a gap in this compiler: whether this parameter is valid C is not checked",
                             ),
@@ -960,18 +978,24 @@ impl Lowering<'_> {
     }
 
     /// Whether `root` and every expression under it has a type.
+    fn typed_throughout(&self, root: ExprId) -> bool {
+        self.first_untyped(root).is_none()
+    }
+
+    /// The first expression at or under `root` with no type, which the
+    /// refusal of a parameter's length points at.
     ///
     /// A loop over [`Expr::extend_children`] rather than a recursion, since a
     /// length is as deep as its source makes it.
-    fn typed_throughout(&self, root: ExprId) -> bool {
+    fn first_untyped(&self, root: ExprId) -> Option<ExprId> {
         let mut work = vec![root];
         while let Some(id) = work.pop() {
             if self.types.of(id).is_none() {
-                return false;
+                return Some(id);
             }
             self.ast.expr(id).extend_children(&mut work);
         }
-        true
+        None
     }
 
     /// Whether an expression is an integer constant expression, which is
