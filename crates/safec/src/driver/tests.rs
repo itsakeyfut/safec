@@ -764,6 +764,29 @@ fn a_failure_with_no_words_of_ours_keeps_the_operating_system_s() {
     );
 }
 
+/// A write that failed after the file was opened keeps the operating
+/// system's words, since every sentence of ours explains a failed open.
+///
+/// `run_compiler` cannot be made to reach this from a test, for the reason
+/// #181 records: a write or a `set_permissions` on a file this process has
+/// just created does not fail on demand. So `write_failure` is asked directly,
+/// with a kind that has a sentence of ours, which an open would have used.
+///
+/// Mutation: ignore `opened` in `write_failure`. The note becomes "the
+/// directory it would be written in does not exist", and this fails.
+#[test]
+fn a_write_that_failed_after_the_open_keeps_the_operating_system_s_words() {
+    let path = missing_path("safec_driver_opened.out");
+    let error = io::Error::from(io::ErrorKind::NotFound);
+
+    let reported = write_failure(&path, &error, true);
+
+    assert_eq!(
+        reported.notes(),
+        [format!("the operating system said: {error}")]
+    );
+}
+
 /// A path that cannot be written is reported, and the run fails.
 ///
 /// The other end of `load_failure`'s question, and the reason it is

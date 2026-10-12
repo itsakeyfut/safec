@@ -970,9 +970,15 @@ fn reason(path: &Path, error: &io::Error, access: Access) -> String {
         }
         (io::ErrorKind::PermissionDenied, Access::Read) => "permission to read it was refused",
         (io::ErrorKind::PermissionDenied, Access::Write) => "permission to write it was refused",
-        _ => return format!("the operating system said: {error}"),
+        _ => return operating_system_said(error),
     }
     .to_owned()
+}
+
+/// What the operating system said, labelled as its words rather than passed
+/// off as ours, for a failure this compiler has no words of its own for.
+fn operating_system_said(error: &io::Error) -> String {
+    format!("the operating system said: {error}")
 }
 
 /// Run the compiler and write what it found to `report`.
@@ -1087,7 +1093,9 @@ pub fn run_compiler(
                     if ours {
                         let _ = fs::remove_file(path);
                     }
-                    compiled.diagnostics.report(write_failure(path, &error));
+                    compiled
+                        .diagnostics
+                        .report(write_failure(path, &error, ours));
                 }
             }
             None
@@ -1155,12 +1163,18 @@ fn make_runnable(path: &Path, program: bool) -> io::Result<()> {
 /// carrying no code for the same reason: this is the driver saying something
 /// about a path rather than about a program, and `docs/diagnostics.md`'s topics
 /// are about programs.
-fn write_failure(path: &Path, error: &io::Error) -> Diagnostic {
-    Diagnostic::error(format!("cannot write `{}`", path.display())).with_note(reason(
-        path,
-        error,
-        Access::Write,
-    ))
+///
+/// `opened` says whether the file was opened before the failure. Every
+/// sentence [`reason`] has explains why a path could not be opened, so after
+/// the open, where a write or making a program runnable failed instead, none
+/// of them is true and the note is the operating system's.
+fn write_failure(path: &Path, error: &io::Error, opened: bool) -> Diagnostic {
+    let note = if opened {
+        operating_system_said(error)
+    } else {
+        reason(path, error, Access::Write)
+    };
+    Diagnostic::error(format!("cannot write `{}`", path.display())).with_note(note)
 }
 
 #[cfg(test)]
