@@ -1758,11 +1758,11 @@ impl Checker<'_> {
                 // checked as `g(x)` is. `*fp` reaches the function through
                 // the arm above.
                 Type::Function { .. } => operand_ty,
-                // Valid C: 6.3.2.1 p3 makes `a` a pointer to its first
-                // element, and `*` does not ask `decayed` for it. Having no
-                // type here is this compiler's gap, so it is not reported as
-                // the program's.
-                Type::Array { .. } => None,
+                // 6.3.2.1 p3 makes `a` a pointer to its first element, so
+                // `*a` is that element, as `a[0]` is. Left untyped, it was a
+                // part of a prototype's length nothing could check, and `*g2
+                // = 0` with `g2` an array of arrays went unreported.
+                Type::Array { element, .. } => Some(*element),
                 // p2: the operand of `*` shall have pointer type. Reported,
                 // and `None`: there is no type `*x` would have had. Nothing
                 // after the type check reads the tree once it has reported,

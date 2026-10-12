@@ -3382,9 +3382,12 @@ cases! {
         // `*`), so the type check is the only stage that sees an operand there
         // that cannot be written to or have its address taken, provided it
         // typed the operand. One prototype per place it is asked, `=`, postfix
-        // `++`, prefix `--` and `&`, each citing its own clause. Mutation: stop
-        // asking at any one of them, or cite another clause there; that
-        // prototype's report goes or changes and the blessed stderr differs.
+        // `++`, prefix `--` and `&`, each citing its own clause, and one more
+        // `=` whose left operand is `*g2`, an array, typed since `*` of an
+        // array is. Mutation: stop asking at any one of them, or cite another
+        // clause there; that prototype's report goes or changes and the
+        // blessed stderr differs. Mutation: leave `*` of an array untyped
+        // again; the last prototype's report goes.
         an_operand_in_a_prototype_s_length_that_cannot_be_written_or_addressed_is_refused: ["--emit", "ast"],
         precedence_bitwise_and: ["--emit", "ast"],
         precedence_bitwise_or: ["--emit", "ast"],
