@@ -579,10 +579,11 @@ impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
     }
 
     fn display<'b>(&self, id: &'b FileId) -> Option<impl fmt::Display + 'b> {
-        // Mirrors `fetch`: a handle from another source map is reported as a
-        // file this renderer does not have, rather than panicking inside it.
-        (id.index() < self.cached.len())
-            .then(|| shown(&self.sources.file(*id).name().to_string()).into_owned())
+        // Through `file`, the question `write_one` asks before a label reaches
+        // `ariadne`, so that the cache has one bound check and it is the one a
+        // test holds. Nothing reaches this with a handle `file` refuses.
+        self.file(*id)
+            .map(|file| shown(&file.name().to_string()).into_owned())
     }
 }
 
