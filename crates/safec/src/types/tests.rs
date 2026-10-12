@@ -722,6 +722,116 @@ fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
     assert_eq!(checked.codes(), ["SC0306", "SC0306"]);
 }
 
+/// An operand an operator writes to, or takes the address of, is refused as
+/// `SC0318` where it cannot be, with a label saying what it is, and nowhere
+/// else: the left operand of an assignment and the operand of `++` and `--`
+/// want a modifiable lvalue (C17 6.5.16 p2, 6.5.2.4 p1, 6.5.3.1 p1), and
+/// the operand of `&` an object or a function (6.5.3.2 p1). Each refused row
+/// is one `clang -std=c17 -pedantic-errors` refuses, and each silent row is
+/// one it accepts.
+///
+/// A row is `(statement, label)`, and an empty label is a statement that
+/// must stay silent.
+///
+/// Mutation: have `Checker::designates` answer `Object` for a comma, a
+/// conditional, an assignment or a call; that row goes silent. Mutation:
+/// treat an array as modifiable; `a = 0` and `a++` go silent. Mutation:
+/// treat a function as modifiable; `h = 0` and `h++` go silent. Mutation:
+/// have `.` designate an object whatever its base is; `g().m = 1` goes
+/// silent. Mutation: have `*` of `void` designate an object; `*v = 0` goes
+/// silent. Mutation: have `&` refuse the result of a unary `*`; `&*v`
+/// starts reporting. Mutation: have `&` refuse a function; `&h` starts
+/// reporting. Mutation: have `++` or `--`, prefix or postfix, go on to its
+/// type rules after refusing its operand; `g()++` or `--g()` gains a
+/// second report about a struct. Mutation: have `->` designate what its
+/// base does, as `.` does; `gp()->m = 1` starts reporting. Mutation: have
+/// `*` of a function designate an object; `(*fp)++` goes silent. Mutation:
+/// have `&` refuse an array; `&a` starts reporting. Each fails this.
+#[test]
+fn an_operand_an_operator_writes_or_takes_the_address_of_is_refused_where_it_cannot_be() {
+    for (statement, label) in [
+        ("a = 0;", "this is `int[2]`, an array"),
+        ("h = 0;", "this is a function"),
+        ("(*fp)++;", "this is a function"),
+        ("(x, y) = 1;", "this is a value, not an object"),
+        ("(c ? x : y) = 1;", "this is a value, not an object"),
+        ("(x = 1) = 2;", "this is a value, not an object"),
+        ("x++ = 1;", "this is a value, not an object"),
+        ("1 = x;", "this is a value, not an object"),
+        ("g() = s;", "this is a value, not an object"),
+        ("g().m = 1;", "this is a value, not an object"),
+        ("*v = 0;", "this is `void`, not an object"),
+        ("a += 1;", "this is `int[2]`, an array"),
+        ("(x + 1)++;", "this is a value, not an object"),
+        ("--(x = 1);", "this is a value, not an object"),
+        ("a++;", "this is `int[2]`, an array"),
+        ("h++;", "this is a function"),
+        ("g()++;", "this is a value, not an object"),
+        ("--g();", "this is a value, not an object"),
+        ("(*v)--;", "this is `void`, not an object"),
+        ("p = &(x + 1);", "this is a value, not an object"),
+        ("p = &g().m;", "this is a value, not an object"),
+        ("*p = 1;", ""),
+        ("a[0] = 1;", ""),
+        ("s.m = 1;", ""),
+        ("s = s;", ""),
+        ("x += 1;", ""),
+        ("x++;", ""),
+        ("p = &x;", ""),
+        ("p = &a[0];", ""),
+        ("p = &*p;", ""),
+        ("v = &*v;", ""),
+        ("c = &h != 0;", ""),
+        ("gp()->m = 1;", ""),
+        ("c = &a != 0;", ""),
+    ] {
+        let checked = checked(&format!(
+            "struct S {{\n    int m;\n}};\nstruct S g(void);\nstruct S *gp(void);\nint h(void);\nint f(int x, int y, int *p, int c, void *v, int (*fp)(void)) {{\n    int a[2];\n    struct S s;\n    {statement}\n    return 0;\n}}\n"
+        ));
+
+        if label.is_empty() {
+            assert_eq!(checked.codes(), Vec::<&str>::new(), "{statement}");
+        } else {
+            assert_eq!(checked.codes(), ["SC0318"], "{statement}");
+            assert_eq!(checked.labels(), [label], "{statement}");
+        }
+    }
+}
+
+/// An assignment or an `&` refused for its operand gives no type, as a
+/// refused `++` does, so nothing around it is reported again about a type
+/// the program never had: `int b[a[0] = 0]` with `a[0]` an array is not
+/// also a length of array type, `p = &g().arr` is not also a pointer of the
+/// wrong type, and `x = &(x + 1) * 2` is not also `*` taking a pointer.
+///
+/// Mutation: have a refused assignment keep its place's type; the first
+/// gains `SC0309`. Mutation: have a refused `&` keep its pointer type; the
+/// second gains `SC0302` and the third `SC0306`. Each fails this.
+#[test]
+fn an_operand_refused_as_unwritable_gives_its_expression_no_type() {
+    let checked = checked(
+        "struct S {\n    int m;\n    int arr[2];\n};\nstruct S g(void);\nint f(int a[2][2], int b[a[0] = 0]);\nint k(int x, int *p) {\n    p = &g().arr;\n    x = &(x + 1) * 2;\n    return 0;\n}\n",
+    );
+
+    assert_eq!(checked.codes(), ["SC0318", "SC0318", "SC0318"]);
+}
+
+/// A member access already refused is not refused again as unwritable: `h.m`
+/// with `h` a function is `SC0306` for the `.`, and `++` says nothing more,
+/// least of all that `h.m` is a function.
+///
+/// Mutation: have `Checker::designates` follow a `.` with no type of its own
+/// down to its base; `h` is a function, so `h.m++` gains an `SC0318` whose
+/// label says `h.m` is one, and this fails.
+#[test]
+fn a_member_access_already_refused_is_not_refused_again_as_unwritable() {
+    let checked = checked(
+        "struct S {\n    int m;\n};\nint h(void);\nint f(void) {\n    h.m++;\n    return 0;\n}\n",
+    );
+
+    assert_eq!(checked.codes(), ["SC0306"]);
+}
+
 /// Every operator and every pair of operand types 6.5.16.2 answers for,
 /// each in a program of its own, with the message and the primary label
 /// written out rather than worked out, so as not to compare the code with
@@ -739,8 +849,12 @@ fn a_compound_assignment_refuses_a_pointer_only_where_c_does() {
 /// refuse a pointer to a pointer or to an array of known length. Their
 /// rows start reporting. Mutation: have `unsteppable` answer `None` for
 /// an array of unknown length, `void` or a function. The `q += 1`,
-/// `v -= 1` or `fp -= 1` row goes silent. Mutation: answer `None` for a `void` place or a
-/// `void`, array or function value. Those rows go silent. Mutation: pick
+/// `v -= 1` or `fp -= 1` row goes silent. Mutation: answer `None` for a
+/// `void`, array or function value. Those rows go silent. A `void` place,
+/// `*v`, is no lvalue (C17 6.3.2.1 p1) and is refused before this rule as
+/// `SC0318`, which its row now asserts; mutation: let
+/// `Checker::refuse_unwritable` pass `*v`, and the row reports this rule's
+/// message instead. Mutation: pick
 /// the primary label by whether the value is a pointer, as this did
 /// before. The `void` and array value rows name the place.
 #[test]
@@ -783,8 +897,8 @@ fn a_compound_assignment_answers_for_every_operator_and_operand() {
         ),
         (
             "*v += 1;",
-            "`+=` cannot take `void` and `int`",
-            "this is `void`",
+            "the left operand of `+=` cannot be written to",
+            "this is `void`, not an object",
         ),
         (
             "i += g();",
@@ -1553,6 +1667,11 @@ fn a_return_is_found_wherever_it_is_written() {
 /// report beside every untyped base, by ignoring the mark or by restoring
 /// the rule that excused only a base that is itself an access. `nowhere.x *
 /// 2` gains `cannot check` and fails.
+///
+/// The row `(*nowhere = 1)` holds `Checker::designates`, which answers
+/// `Unknown` for `*` of an operand with no type, so the assignment says
+/// nothing more. Mutation: have it answer a value there; that row gains
+/// `SC0318`.
 #[test]
 fn a_name_that_resolved_to_nothing_is_reported_once() {
     for value in [
@@ -1576,6 +1695,7 @@ fn a_name_that_resolved_to_nothing_is_reported_once() {
         "(nowhere, q - q) * 2",
         "nowhere.x * 2",
         "nowhere->x * 2",
+        "(*nowhere = 1)",
     ] {
         let checked = checked(&format!(
             "int f(int);\nint main(void) {{ int *p; int *q; int a[2]; p = {value}; return 0; }}\n"
