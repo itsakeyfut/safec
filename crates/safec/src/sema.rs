@@ -1567,7 +1567,7 @@ mod tests {
         let file = sources.add_virtual("test.c", text);
         let mut diagnostics = DiagnosticSink::new();
         let tokens = lex(file, sources.file(file), &mut diagnostics);
-        let ast = parse(file, &tokens, &mut diagnostics);
+        let ast = parse(&tokens, &mut diagnostics);
         assert!(
             !diagnostics.has_errors(),
             "the input did not parse: {:?}",

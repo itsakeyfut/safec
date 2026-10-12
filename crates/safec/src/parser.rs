@@ -27,7 +27,7 @@ use crate::ast::{
 };
 use crate::diagnostics::{Code, Diagnostic, DiagnosticSink, Label};
 use crate::token::{Annotation, Keyword, Punct, Token, TokenKind};
-use safec_ir::source::{FileId, Span};
+use safec_ir::source::Span;
 
 /// Something was expected and something else was there.
 ///
@@ -409,7 +409,7 @@ fn infix(punct: Punct) -> Option<Infix> {
 /// Always returns a tree. A file the parser could not read produces one holding
 /// an error node, so that everything after this can walk a tree that is there
 /// rather than answer for its absence.
-pub fn parse(file: FileId, tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
+pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
     // A directive never reaches the grammar. `TokenKind::Directive`'s own
     // comment says why the lexer keeps the line whole rather than splitting it:
     // its pieces make a parser produce an avalanche of errors about a line it
@@ -426,7 +426,6 @@ pub fn parse(file: FileId, tokens: &[Token], diagnostics: &mut DiagnosticSink) -
         .collect();
 
     Parser {
-        file,
         tokens: &tokens,
         at: 0,
         ast: Ast::new(),
@@ -438,7 +437,6 @@ pub fn parse(file: FileId, tokens: &[Token], diagnostics: &mut DiagnosticSink) -
 }
 
 struct Parser<'a> {
-    file: FileId,
     tokens: &'a [Token],
     at: usize,
     ast: Ast,
@@ -570,7 +568,7 @@ impl Parser<'_> {
                     return Item::Error { span: first };
                 }
                 self.advance();
-                let span = Span::new(self.file, start.start(), self.previous().span.end());
+                let span = start.to(self.previous().span);
                 return Item::Declaration {
                     declarators: Vec::new(),
                     specified,
@@ -586,7 +584,7 @@ impl Parser<'_> {
                 return Item::Error { span: first };
             };
 
-            let span = Span::new(self.file, start.start(), self.previous().span.end());
+            let span = start.to(self.previous().span);
             return Item::Function(Function {
                 ty: declared.ty,
                 name: declared.name,
@@ -623,7 +621,7 @@ impl Parser<'_> {
             return Item::Error { span: start };
         }
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        let span = start.to(self.previous().span);
         Item::Declaration {
             declarators,
             specified,
@@ -749,7 +747,7 @@ impl Parser<'_> {
                     // From the specifiers, which all of these share, through
                     // this one's initializer. `Declaration::span` says why they
                     // all begin at the same byte and what tells them apart.
-                    span: Span::new(self.file, start.start(), self.previous().span.end()),
+                    span: start.to(self.previous().span),
                     // The pointer a function declared at file scope returns,
                     // the one place besides a parameter `apply` allows one.
                     nullability: returns,
@@ -843,7 +841,7 @@ impl Parser<'_> {
         self.expect(TokenKind::Punct(Punct::RightParen), "`)`", diagnostics)?;
 
         Some(Attribute {
-            span: Span::new(self.file, start.start(), self.previous().span.end()),
+            span: start.to(self.previous().span),
             name,
             argument,
         })
@@ -970,7 +968,7 @@ impl Parser<'_> {
                 name: Some(name),
                 ty,
                 written: ty,
-                span: Span::new(self.file, start.start(), self.previous().span.end()),
+                span: start.to(self.previous().span),
                 nullability: return_nullability,
             });
             while self.eat(TokenKind::Punct(Punct::Comma)) {
@@ -980,7 +978,7 @@ impl Parser<'_> {
                     name: Some(name),
                     ty,
                     written: ty,
-                    span: Span::new(self.file, start.start(), self.previous().span.end()),
+                    span: start.to(self.previous().span),
                     nullability: returns,
                 });
             }
@@ -1289,7 +1287,7 @@ impl Parser<'_> {
                 }
             };
 
-            let span = Span::new(self.file, start.start(), self.previous().span.end());
+            let span = start.to(self.previous().span);
             parameters.push(Declaration {
                 name,
                 ty,
@@ -1514,7 +1512,7 @@ impl Parser<'_> {
 
         self.expect(TokenKind::Punct(Punct::RightBrace), "`}`", diagnostics)?;
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        let span = start.to(self.previous().span);
         Some(self.ast.push_stmt(Stmt::Compound { body, span }))
     }
 
@@ -1526,7 +1524,7 @@ impl Parser<'_> {
             Some(Specified::Named(declared)) => declared,
             Some(Specified::Tag(specified)) => {
                 self.advance();
-                let span = Span::new(self.file, start.start(), self.previous().span.end());
+                let span = start.to(self.previous().span);
                 return self.ast.push_stmt(Stmt::Declaration {
                     declarators: Vec::new(),
                     specified,
@@ -1548,7 +1546,7 @@ impl Parser<'_> {
             return self.ast.push_stmt(Stmt::Error { span: start });
         }
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        let span = start.to(self.previous().span);
         self.ast.push_stmt(Stmt::Declaration {
             declarators,
             specified,
@@ -1587,7 +1585,7 @@ impl Parser<'_> {
                 return self.ast.push_stmt(Stmt::Error { span: start });
             }
 
-            let span = Span::new(self.file, start.start(), self.previous().span.end());
+            let span = start.to(self.previous().span);
             return self.ast.push_stmt(Stmt::Return { value, span });
         }
 
@@ -1940,7 +1938,7 @@ impl Parser<'_> {
             diagnostics,
             |parser, diagnostics| {
                 let operand = parser.unary(diagnostics);
-                let span = Span::new(parser.file, start.start(), parser.previous().span.end());
+                let span = start.to(parser.previous().span);
                 parser.ast.push_expr(Expr::Unary { op, operand, span })
             },
             |parser, span| parser.ast.push_expr(Expr::Error { span }),
@@ -1996,7 +1994,7 @@ impl Parser<'_> {
                         UnOp::PostDec
                     };
                     let end = self.advance().span;
-                    let span = Span::new(self.file, self.ast.expr(base).span().start(), end.end());
+                    let span = self.ast.expr(base).span().to(end);
                     self.ast.push_expr(Expr::Unary {
                         op,
                         operand: base,
@@ -2035,7 +2033,7 @@ impl Parser<'_> {
             return self.ast.push_expr(Expr::Error { span: start });
         }
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        let span = start.to(self.previous().span);
         self.ast.push_expr(Expr::Call {
             callee,
             arguments,
@@ -2057,7 +2055,7 @@ impl Parser<'_> {
             return self.ast.push_expr(Expr::Error { span: start });
         }
 
-        let span = Span::new(self.file, start.start(), self.previous().span.end());
+        let span = start.to(self.previous().span);
         self.ast.push_expr(Expr::Subscript { base, index, span })
     }
 
@@ -2116,10 +2114,13 @@ impl Parser<'_> {
     ///
     /// Through [`Span::to`] rather than by building one from the two offsets,
     /// because that is where the assertion lives that the two spans are in the
-    /// same file. Reaching for `Span::new` with this parser's own `FileId`
-    /// resolves a cross-file join to one side instead of refusing it, and
-    /// `Span::to`'s own comment calls that a bug. Nothing can produce one until
-    /// `#include` lands, which is this same phase.
+    /// same file. Building one with `Span::new` takes its `FileId` from
+    /// whichever side the caller holds, so it resolves a cross-file join to
+    /// that side instead of refusing it, and `Span::to`'s own comment calls
+    /// that a bug. Every span this parser builds goes through `Span::to` for
+    /// this reason, which is also why the parser holds no `FileId` of its own.
+    /// Nothing can produce a cross-file join until `#include` lands, which is
+    /// this same phase.
     fn joined(&self, from: ExprId, to: ExprId) -> Span {
         self.ast.expr(from).span().to(self.ast.expr(to).span())
     }

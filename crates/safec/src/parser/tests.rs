@@ -14,7 +14,7 @@ fn parsed(text: &str) -> Parsed {
     let file = sources.add_virtual("test.c", text);
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let ast = parse(file, &tokens, &mut diagnostics);
+    let ast = parse(&tokens, &mut diagnostics);
 
     Parsed {
         ast,
@@ -209,11 +209,9 @@ fn only_the_first_syntax_error_is_reported() {
 /// tree rather than a panic.
 #[test]
 fn no_tokens_at_all_parse_to_nothing() {
-    let mut sources = SourceMap::new();
-    let file = sources.add_virtual("empty.c", "");
     let mut diagnostics = DiagnosticSink::new();
 
-    let ast = parse(file, &[], &mut diagnostics);
+    let ast = parse(&[], &mut diagnostics);
 
     assert!(ast.items().is_empty());
     assert_eq!(diagnostics.diagnostics().len(), 0);
@@ -473,6 +471,61 @@ fn a_node_reaches_the_end_of_what_it_covers() {
     };
     assert_eq!(&text[span.range()], "{ return 0; }");
     assert_eq!(&text[parsed.ast.stmt(body[0]).span().range()], "return 0;");
+}
+
+/// A declaration reaches the end of what it covers, wherever it is written.
+///
+/// The same claim as the two around it, for the five places a declaration's
+/// span is built that neither of them reaches: one at file scope that only
+/// declares a tag, one at file scope with declarators, a struct's first
+/// member, a member after a comma, and one in a block. A member ends at its
+/// declarator rather than at the `;`, since the `;` closes the whole list.
+///
+/// Mutation: end any one of these five spans at `start` rather than at
+/// `self.previous().span`. This fails, and nothing else in the repository
+/// does: the artifact prints a start position only.
+#[test]
+fn a_declaration_reaches_the_end_of_what_it_covers() {
+    let text = "struct S { int a; int b, c; };
+int x, y = 1;
+int main(void) { int z = 2; return z; }
+";
+    let parsed = parsed(text);
+
+    assert_eq!(parsed.diagnostics.diagnostics().len(), 0);
+
+    let [
+        Item::Declaration {
+            specified,
+            span: tag,
+            ..
+        },
+        Item::Declaration { span: objects, .. },
+        Item::Function(function),
+    ] = parsed.ast.items()
+    else {
+        panic!("{:?}", parsed.ast.items());
+    };
+    assert_eq!(&text[tag.range()], "struct S { int a; int b, c; };");
+    assert_eq!(&text[objects.range()], "int x, y = 1;");
+
+    let Type::Struct {
+        members: Some(members),
+        ..
+    } = parsed.ast.ty(*specified)
+    else {
+        panic!("{:?}", parsed.ast.ty(*specified));
+    };
+    let members: Vec<&str> = members
+        .iter()
+        .map(|member| &text[member.span.range()])
+        .collect();
+    assert_eq!(members, ["int a", "int b", "int b, c"]);
+
+    let Stmt::Compound { body, .. } = parsed.ast.stmt(function.body) else {
+        panic!("{:?}", parsed.ast.stmt(function.body));
+    };
+    assert_eq!(&text[parsed.ast.stmt(body[0]).span().range()], "int z = 2;");
 }
 
 /// A statement that holds a statement reaches the end of the one it holds.

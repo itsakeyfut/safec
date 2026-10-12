@@ -59,7 +59,7 @@ fn compiled(text: &str, must_check: bool) -> Lowered {
     let mut diagnostics = DiagnosticSink::new();
 
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let mut ast = parse(file, &tokens, &mut diagnostics);
+    let mut ast = parse(&tokens, &mut diagnostics);
     assert!(!diagnostics.has_errors(), "the input did not parse");
 
     let resolution = resolve(&sources, &ast, &mut diagnostics);

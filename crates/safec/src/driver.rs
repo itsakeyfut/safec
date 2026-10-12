@@ -48,7 +48,7 @@ use safec_ir::ir::{FuncId, TranslationUnit};
 use safec_ir::memory;
 use safec_ir::nullability;
 use safec_ir::print::dump_ir;
-use safec_ir::source::{FileId, FileName, SourceMap};
+use safec_ir::source::{FileName, SourceMap};
 use safec_ir::target::Integer;
 
 use backend::{Module, assembled, clang_failure, link_failure, linked, module};
@@ -313,7 +313,6 @@ pub fn compile(options: &Options) -> Compiled {
             Emitted::Ast(out) => {
                 let Some(analysed) = analysed(
                     &sources,
-                    file,
                     &tokens,
                     read_whole,
                     options.target.int(),
@@ -324,53 +323,33 @@ pub fn compile(options: &Options) -> Compiled {
                 dump_ast(&sources, &analysed.ast, out);
             }
             Emitted::SafetyIr(out) => {
-                let Some((unit, _)) = lowered(
-                    &sources,
-                    file,
-                    &tokens,
-                    read_whole,
-                    options,
-                    &mut diagnostics,
-                ) else {
+                let Some((unit, _)) =
+                    lowered(&sources, &tokens, read_whole, options, &mut diagnostics)
+                else {
                     continue;
                 };
                 dump_ir(&sources, &unit, out);
             }
             Emitted::Hatches(out) => {
-                let Some((unit, hatched)) = lowered(
-                    &sources,
-                    file,
-                    &tokens,
-                    read_whole,
-                    options,
-                    &mut diagnostics,
-                ) else {
+                let Some((unit, hatched)) =
+                    lowered(&sources, &tokens, read_whole, options, &mut diagnostics)
+                else {
                     continue;
                 };
                 dump_hatches(&sources, &unit, &hatched, out);
             }
             Emitted::LlvmIr(out) => {
-                let Some((unit, _)) = lowered(
-                    &sources,
-                    file,
-                    &tokens,
-                    read_whole,
-                    options,
-                    &mut diagnostics,
-                ) else {
+                let Some((unit, _)) =
+                    lowered(&sources, &tokens, read_whole, options, &mut diagnostics)
+                else {
                     continue;
                 };
                 out.push_str(&module(&sources, &unit, options.target, &mut diagnostics));
             }
             Emitted::Object(out) => {
-                let Some((unit, _)) = lowered(
-                    &sources,
-                    file,
-                    &tokens,
-                    read_whole,
-                    options,
-                    &mut diagnostics,
-                ) else {
+                let Some((unit, _)) =
+                    lowered(&sources, &tokens, read_whole, options, &mut diagnostics)
+                else {
                     continue;
                 };
                 // Nothing reaches `clang` from a run that read nothing, because
@@ -392,14 +371,9 @@ pub fn compile(options: &Options) -> Compiled {
                 }
             }
             Emitted::Program { modules, .. } => {
-                let Some((unit, _)) = lowered(
-                    &sources,
-                    file,
-                    &tokens,
-                    read_whole,
-                    options,
-                    &mut diagnostics,
-                ) else {
+                let Some((unit, _)) =
+                    lowered(&sources, &tokens, read_whole, options, &mut diagnostics)
+                else {
                     continue;
                 };
                 // **Nothing is linked here.** A program is one artifact out
@@ -529,7 +503,6 @@ struct Analysed {
 /// `int x` by an `SC0304` calling the program this compiler's gap.
 fn analysed(
     sources: &SourceMap,
-    file: FileId,
     tokens: &[Token],
     read_whole: usize,
     int_range: Integer,
@@ -539,7 +512,7 @@ fn analysed(
         return None;
     }
 
-    let mut ast = parse(file, tokens, diagnostics);
+    let mut ast = parse(tokens, diagnostics);
     if diagnostics.error_count() != read_whole {
         return Some(Analysed { ast, typed: None });
     }
@@ -564,7 +537,6 @@ fn analysed(
 /// answered by neither.
 fn lowered(
     sources: &SourceMap,
-    file: FileId,
     tokens: &[Token],
     read_whole: usize,
     options: &Options,
@@ -572,7 +544,6 @@ fn lowered(
 ) -> Option<(TranslationUnit, Vec<Hatched>)> {
     let analysed = analysed(
         sources,
-        file,
         tokens,
         read_whole,
         options.target.int(),
