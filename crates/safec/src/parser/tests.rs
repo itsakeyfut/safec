@@ -14,7 +14,7 @@ fn parsed(text: &str) -> Parsed {
     let file = sources.add_virtual("test.c", text);
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let ast = parse(file, &tokens, &mut diagnostics);
+    let ast = parse(&tokens, &mut diagnostics);
 
     Parsed {
         ast,
@@ -209,11 +209,9 @@ fn only_the_first_syntax_error_is_reported() {
 /// tree rather than a panic.
 #[test]
 fn no_tokens_at_all_parse_to_nothing() {
-    let mut sources = SourceMap::new();
-    let file = sources.add_virtual("empty.c", "");
     let mut diagnostics = DiagnosticSink::new();
 
-    let ast = parse(file, &[], &mut diagnostics);
+    let ast = parse(&[], &mut diagnostics);
 
     assert!(ast.items().is_empty());
     assert_eq!(diagnostics.diagnostics().len(), 0);

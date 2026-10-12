@@ -18,7 +18,7 @@ fn checked(text: &str) -> Checked {
     let file = sources.add_virtual("t.c", text);
     let mut diagnostics = DiagnosticSink::new();
     let tokens = lex(file, sources.file(file), &mut diagnostics);
-    let mut ast = parse(file, &tokens, &mut diagnostics);
+    let mut ast = parse(&tokens, &mut diagnostics);
     assert!(
         !diagnostics.has_errors(),
         "the input did not parse: {:?}",
