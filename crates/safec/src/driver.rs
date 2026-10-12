@@ -918,8 +918,67 @@ fn load_failure(path: &Path, error: &io::Error) -> Diagnostic {
             .with_note("safec reads source files as UTF-8")
             .with_note(error.to_string())
     } else {
-        Diagnostic::error(format!("cannot read `{}`", path.display())).with_note(error.to_string())
+        Diagnostic::error(format!("cannot read `{}`", path.display())).with_note(reason(
+            path,
+            error,
+            Access::Read,
+        ))
     }
+}
+
+/// Which way a path was being used when it failed, so that a note can say
+/// what safec wanted from it.
+#[derive(Clone, Copy)]
+enum Access {
+    Read,
+    Write,
+}
+
+/// Why a path could not be used, in this compiler's words where it has some.
+///
+/// The operating system's own message differs by host, `The system cannot find
+/// the file specified. (os error 2)` on Windows and `No such file or directory
+/// (os error 2)` on Linux for one missing file, and output depends on the
+/// target and never on the host. So the common failures are named here, and
+/// the rest keep what the operating system said, labelled as its words rather
+/// than passed off as ours. `io::ErrorKind` is `#[non_exhaustive]`, so that
+/// fallback is permanent.
+///
+/// `NotADirectory` sits with `NotFound` because they are one case on two
+/// hosts: `a.c/x.c` with `a.c` a file is `NotFound` on Windows, measured, and
+/// `NotADirectory` on Linux, read from `std`'s mapping of `ENOTDIR` rather than
+/// run. Both are fairly called missing.
+fn reason(path: &Path, error: &io::Error, access: Access) -> String {
+    // The path is asked before the error, because the error does not say this
+    // the same way everywhere: Windows reports a directory as
+    // `PermissionDenied`, for reading and for creating alike, and naming the
+    // kind alone would tell a user who typed `safec src/` that permission was
+    // refused.
+    if path.is_dir() {
+        return match access {
+            Access::Read => "this is a directory, and safec reads a source file",
+            Access::Write => "this is a directory, and safec writes its output as a file",
+        }
+        .to_owned();
+    }
+    match (error.kind(), access) {
+        (io::ErrorKind::NotFound | io::ErrorKind::NotADirectory, Access::Read) => {
+            "nothing exists at this path"
+        }
+        (io::ErrorKind::NotFound | io::ErrorKind::NotADirectory, Access::Write) => {
+            "the directory it would be written in does not exist"
+        }
+        (io::ErrorKind::PermissionDenied, Access::Read) => "permission to read it was refused",
+        (io::ErrorKind::PermissionDenied, Access::Write) => "permission to write it was refused",
+        _ => return operating_system_said(error),
+    }
+    .to_owned()
+}
+
+/// What the operating system said, labelled as its words rather than passed
+/// off as ours, for a failure this compiler has no words of its own for.
+fn operating_system_said(error: &io::Error) -> String {
+    format!("the operating system said: {error}")
 }
 
 /// Run the compiler and write what it found to `report`.
@@ -1034,7 +1093,9 @@ pub fn run_compiler(
                     if ours {
                         let _ = fs::remove_file(path);
                     }
-                    compiled.diagnostics.report(write_failure(path, &error));
+                    compiled
+                        .diagnostics
+                        .report(write_failure(path, &error, ours));
                 }
             }
             None
@@ -1102,8 +1163,18 @@ fn make_runnable(path: &Path, program: bool) -> io::Result<()> {
 /// carrying no code for the same reason: this is the driver saying something
 /// about a path rather than about a program, and `docs/diagnostics.md`'s topics
 /// are about programs.
-fn write_failure(path: &Path, error: &io::Error) -> Diagnostic {
-    Diagnostic::error(format!("cannot write `{}`", path.display())).with_note(error.to_string())
+///
+/// `opened` says whether the file was opened before the failure. Every
+/// sentence [`reason`] has explains why a path could not be opened, so after
+/// the open, where a write or making a program runnable failed instead, none
+/// of them is true and the note is the operating system's.
+fn write_failure(path: &Path, error: &io::Error, opened: bool) -> Diagnostic {
+    let note = if opened {
+        operating_system_said(error)
+    } else {
+        reason(path, error, Access::Write)
+    };
+    Diagnostic::error(format!("cannot write `{}`", path.display())).with_note(note)
 }
 
 #[cfg(test)]

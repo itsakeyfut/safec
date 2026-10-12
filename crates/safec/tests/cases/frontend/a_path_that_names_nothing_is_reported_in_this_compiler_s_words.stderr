@@ -1,0 +1,2 @@
+error: cannot read `a_path_that_names_nothing_is_reported_in_this_compiler_s_words.c`
+  = note: nothing exists at this path
