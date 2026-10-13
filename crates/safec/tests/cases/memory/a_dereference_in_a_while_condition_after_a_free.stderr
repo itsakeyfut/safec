@@ -13,7 +13,7 @@ error[SC0402]: this uses `p` after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_dereference_in_a_while_condition_after_a_free.c:6:12 ]
    │
  6 │     while (*p) { return 1; }

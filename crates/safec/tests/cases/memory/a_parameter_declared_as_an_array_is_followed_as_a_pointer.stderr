@@ -10,7 +10,7 @@ error[SC0402]: this uses `a` after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `a` while it is null
    ╭─[ a_parameter_declared_as_an_array_is_followed_as_a_pointer.c:5:5 ]
    │
  5 │     return a[0];

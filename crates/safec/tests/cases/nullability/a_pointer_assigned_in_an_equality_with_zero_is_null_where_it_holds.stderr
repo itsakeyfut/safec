@@ -1,4 +1,4 @@
-error[SC0403]: this dereferences a null pointer
+error[SC0403]: this dereferences `p`, which is null
    ╭─[ a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:4:9 ]
    │
  4 │         return *p;

@@ -209,7 +209,9 @@ free through `q` is beside a use through `p`. One named form is not the
 unnamed one's shape: an interior free that may not be at the start reads
 `` this frees `q`, which may not be the start of an allocation ``, because the
 free is certain and the offset is what is open. The nullability check's
-messages name nothing yet (#466).
+messages name a pointer by the same rule, `` this may dereference `p` while it
+is null ``, and a dereference is one diagnostic per pointer it reads through,
+so `*p + *q` with both in doubt says each.
 
 **What that third one no longer swallows is a null this check could have
 proved.** C17 7.22.3.3 p2 defines `free` of a null pointer as doing nothing, so

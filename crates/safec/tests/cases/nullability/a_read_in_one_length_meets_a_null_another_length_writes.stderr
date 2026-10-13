@@ -1,4 +1,4 @@
-error[SC0403]: this dereferences a null pointer
+error[SC0403]: this dereferences `p`, which is null
    ╭─[ a_read_in_one_length_meets_a_null_another_length_writes.c:1:31 ]
    │
  1 │ int f(int * _Nonnull p, int b[*p], int a[(p = 0, 1)]) {

@@ -1,4 +1,4 @@
-error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+error[SC0405]: this may pass `q` while it is null to a parameter declared `_Nonnull`
    ╭─[ each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 ]
    │
  1 │ void two(int * _Nonnull a, int * _Nonnull b);
@@ -12,7 +12,7 @@ error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before passing it
-error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+error[SC0405]: this may pass `q` while it is null to a parameter declared `_Nonnull`
    ╭─[ each_argument_to_a_nonnull_parameter_is_asked_about_on_its_own.c:3:5 ]
    │
  1 │ void two(int * _Nonnull a, int * _Nonnull b);

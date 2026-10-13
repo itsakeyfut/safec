@@ -44,7 +44,7 @@ use crate::sema::{Resolution, resolve};
 use crate::token::Token;
 use crate::types::{Types, check};
 use safec_ir::analysis::Conclusion;
-use safec_ir::ir::{FuncId, TranslationUnit};
+use safec_ir::ir::{FuncId, LocalId, TranslationUnit};
 use safec_ir::memory;
 use safec_ir::nullability;
 use safec_ir::print::{dump_ir, quoted};
@@ -585,12 +585,7 @@ fn lowered(
     let mut hatched = Vec::new();
     if options.safety >= SafetyLevel::Memory {
         for finding in memory::findings(sources, &unit) {
-            // The check says which local, and the IR says whether the source
-            // wrote it: a temporary has no name to give.
-            let name = finding
-                .local
-                .and_then(|local| unit.function(finding.function).name_of(local))
-                .map(|name| quoted(sources, name));
+            let name = written_name(&unit, sources, finding.function, finding.local);
             if let Some(diagnostic) = memory_finding(&finding, name) {
                 let concluded = Concluded {
                     function: finding.function,
@@ -605,7 +600,8 @@ fn lowered(
         // free one check, and whether a pointer can be null is answered by a
         // lattice that shares nothing with theirs.
         for finding in nullability::findings(&unit) {
-            if let Some(diagnostic) = nullability_finding(&finding) {
+            let name = written_name(&unit, sources, finding.function, finding.local);
+            if let Some(diagnostic) = nullability_finding(&finding, name) {
                 let concluded = Concluded {
                     function: finding.function,
                     conclusion: finding.conclusion,
@@ -617,6 +613,22 @@ fn lowered(
     }
 
     Some((unit, hatched))
+}
+
+/// The name the source wrote `local` with, in `function`, where it wrote one.
+///
+/// The check says which local a conclusion is about, and the IR says whether
+/// the source wrote it: a temporary has no name to give. One function for both
+/// checks, so that the two cannot come to answer it differently.
+fn written_name<'s>(
+    unit: &TranslationUnit,
+    sources: &'s SourceMap,
+    function: FuncId,
+    local: Option<LocalId>,
+) -> Option<&'s str> {
+    local
+        .and_then(|local| unit.function(function).name_of(local))
+        .map(|name| quoted(sources, name))
 }
 
 /// What a check concluded, as a diagnostic, and the function it was concluded

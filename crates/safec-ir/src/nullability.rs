@@ -127,6 +127,14 @@ pub struct Finding {
     pub at: Span,
     /// Which question the conclusion answers.
     pub asked: Asked,
+    /// The local whose own value this conclusion is about, temporary or not,
+    /// by the rule [`crate::memory::Finding::local`] gives.
+    ///
+    /// `None` where what may be null is no local's value: the pointer a
+    /// dereference loaded out of memory, `**pp` below `pp`'s own level, an
+    /// argument or a returned value read through a projection, `g(*pp)` or
+    /// `return *pp;`, and the end of a body, which returns nothing.
+    pub local: Option<LocalId>,
 }
 
 /// Which question a [`Finding`] answers.
@@ -208,26 +216,6 @@ impl Asked {
                 },
                 _,
             ) => false,
-        }
-    }
-
-    /// One question out of two that [`Asked::same_question`] calls the same.
-    ///
-    /// A dereference that went through memory in either keeps saying so,
-    /// because the remedy the reader is given has to settle both: the one
-    /// written for a pointer read out of memory covers the other pointer too,
-    /// and the plain one does not cover it.
-    fn joined(self, other: Self) -> Self {
-        match (self, other) {
-            (
-                Self::Dereference { through_memory },
-                Self::Dereference {
-                    through_memory: other,
-                },
-            ) => Self::Dereference {
-                through_memory: through_memory || other,
-            },
-            (asked, _) => asked,
         }
     }
 }
@@ -932,13 +920,34 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
     }
 }
 
-/// One finding for one element, naming the worst of what it dereferences.
+/// What two findings at one caret have to share to be one thing to say.
 ///
-/// Not one per place: the words a reader is given do not name the value, so
-/// two findings at one caret are two diagnostics nobody can tell apart. The
-/// IR names a local now, and whether this becomes one per place so that each
-/// can be named is #466. The worst rather than the first, because a proved null dereference
-/// beside an unproven one is still a proved null dereference.
+/// **The place for a dereference, not the local it names**, because a
+/// statement can ask one place twice and get two names for it: `**pp = x;`
+/// lowers to the write and a read of what it wrote, and the read finds `pp`
+/// established not null by the write, so only the pointer it loads is in
+/// doubt and that finding names nothing. Keyed on the name, the one statement
+/// was two diagnostics about one place. An argument and a return have no place
+/// and are told apart by their question already.
+///
+/// Kept beside a [`Finding`] until the fold in [`findings`] rather than in it,
+/// because nothing after the fold has a use for it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum About {
+    /// A dereference, by the place it read through.
+    Place(Place),
+    /// An argument or a returned value, by the local it read as itself.
+    Local(Option<LocalId>),
+}
+
+/// One finding for each place an element dereferences, naming the worst of
+/// what that place reads through.
+///
+/// **One per place, so that each is a diagnostic that names its pointer.** It
+/// was one per element while the words named no value, because two findings
+/// at one caret were two diagnostics nobody could tell apart, and the worst
+/// of them stood for all: `*q = *p;` with `p` null reported `p` and dropped
+/// the doubt about `q`, which a reader met only once `p` was fixed.
 ///
 /// **A place asks two questions where it goes through memory.** Its first
 /// dereference reads the local's own value, which is what this lattice knows.
@@ -950,7 +959,7 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
 /// two are one C program (#333).
 fn report(
     analysis: &Nullability<'_>,
-    findings: &mut Vec<Finding>,
+    findings: &mut Vec<(Finding, About)>,
     dereferenced: Option<(Span, Vec<&Place>)>,
     known: &[Nullness],
     function: FuncId,
@@ -959,25 +968,44 @@ fn report(
         return;
     };
 
-    let worst = places
-        .iter()
-        .flat_map(|place| {
-            let below = read_out_of_memory(place).then_some(Nullness::Unknown);
-            [Some(analysis.known(known, place.local)), below]
-        })
-        .flatten()
-        .filter_map(Nullness::concluded)
-        .max_by_key(|conclusion| severity(*conclusion));
+    for place in places {
+        let own = analysis.known(known, place.local).concluded();
+        let below = read_out_of_memory(place)
+            .then_some(Nullness::Unknown)
+            .and_then(Nullness::concluded);
+        let worst = [own, below]
+            .into_iter()
+            .flatten()
+            .max_by_key(|conclusion| severity(*conclusion));
 
-    if let Some(conclusion) = worst {
-        findings.push(Finding {
-            function,
-            conclusion,
-            at,
-            asked: Asked::Dereference {
-                through_memory: places.iter().any(|place| read_out_of_memory(place)),
-            },
-        });
+        if let Some(conclusion) = worst {
+            let finding = Finding {
+                function,
+                conclusion,
+                at,
+                asked: Asked::Dereference {
+                    through_memory: read_out_of_memory(place),
+                },
+                // **About the local where its own row concluded**, which is
+                // never less severe than the loaded pointer below it, since
+                // that is only ever unproven. Where only the loaded pointer
+                // is in doubt, what may be null is what `pp`'s allocation
+                // held, and naming `pp` would name a pointer this check
+                // established.
+                local: own.is_some().then_some(place.local),
+            };
+            findings.push((finding, About::Place((*place).clone())));
+        }
+    }
+}
+
+/// The local an operand is the own value of, where nothing is projected from
+/// the place it reads: `g(p)` and `return p;` are about `p`, and `g(*pp)` is
+/// about what `pp`'s allocation held, which no local holds.
+fn own_local(operand: &Operand) -> Option<LocalId> {
+    match operand {
+        Operand::Copy(place) if place.projection.is_empty() => Some(place.local),
+        Operand::Copy(_) | Operand::Constant(_) => None,
     }
 }
 
@@ -1030,7 +1058,7 @@ fn read_out_of_memory(place: &Place) -> bool {
 /// silent against a body that dereferences its parameter.
 fn report_arguments(
     analysis: &Nullability<'_>,
-    findings: &mut Vec<Finding>,
+    findings: &mut Vec<(Finding, About)>,
     terminator: &Terminator,
     known: &[Nullness],
     function: FuncId,
@@ -1070,12 +1098,15 @@ fn report_arguments(
             None => Nullness::Unknown,
         };
         if let Some(conclusion) = passed.concluded() {
-            findings.push(Finding {
+            let local = arguments.get(index).and_then(own_local);
+            let finding = Finding {
                 function,
                 conclusion,
                 at: origin.span(),
                 asked: Asked::Argument { promise },
-            });
+                local,
+            };
+            findings.push((finding, About::Local(local)));
         }
     }
 }
@@ -1097,10 +1128,10 @@ fn report_arguments(
 /// return place cannot have its address taken from C.
 fn report_return(
     analysis: &Nullability<'_>,
-    findings: &mut Vec<Finding>,
+    findings: &mut Vec<(Finding, About)>,
     terminator: &Terminator,
     known: &[Nullness],
-    returned_at: Option<Span>,
+    returned_at: Option<(Span, Option<LocalId>)>,
     function: FuncId,
 ) {
     // Every terminator written out rather than `let ... else`, for the reason
@@ -1130,11 +1161,11 @@ fn report_return(
     let Some(conclusion) = returned.concluded() else {
         return;
     };
-    let (at, reached_end) = match returned_at {
-        Some(at) => (at, false),
-        None => (analysis.function.name, true),
+    let (at, reached_end, local) = match returned_at {
+        Some((at, local)) => (at, false, local),
+        None => (analysis.function.name, true, None),
     };
-    findings.push(Finding {
+    let finding = Finding {
         function,
         conclusion,
         at,
@@ -1142,7 +1173,9 @@ fn report_return(
             promise,
             reached_end,
         },
-    });
+        local,
+    };
+    findings.push((finding, About::Local(local)));
 }
 
 /// Every dereference of a null pointer this unit contains, and every one it
@@ -1188,7 +1221,9 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
             let block = function.block(id);
             // The last `return` statement's write into the return place in
             // this block, which is where a report about what it returned
-            // points.
+            // points, and the local it read as itself, which is what it
+            // names: what is concluded is the return place, and this write
+            // is what copied the local into it.
             let mut returned_at = None;
             for element in &block.elements {
                 // Before the transfer, which is what the element does: the
@@ -1202,7 +1237,16 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
                 );
                 if let Element::Assign(operation) = element {
                     if operation.place == Place::local(function.return_place()) {
-                        returned_at = Some(operation.origin.span());
+                        let local = match &operation.value {
+                            Rvalue::Use(operand) => own_local(operand),
+                            // A value computed rather than read is no
+                            // local's own. Written out so that a new kind
+                            // of value answers here.
+                            Rvalue::Unary { .. } | Rvalue::Binary { .. } | Rvalue::Address(_) => {
+                                None
+                            }
+                        };
+                        returned_at = Some((operation.origin.span(), local));
                     }
                 }
                 analysis.element(function, element, &mut known);
@@ -1229,7 +1273,7 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
 
     // In the order a reader's eye goes rather than the order the walk reached
     // them, for the reason `crate::memory::findings` gives at its own sort.
-    findings.sort_by_key(|finding| (finding.at.file().index(), finding.at.start()));
+    findings.sort_by_key(|(finding, _)| (finding.at.file().index(), finding.at.start()));
 
     // **One statement is one thing to say, however many elements it became.**
     // `*p = 1;` lowers to the write and a read of what it wrote, both carrying
@@ -1239,41 +1283,59 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // answered nothing, so this only reaches the locals that refinement cannot
     // help, which is the escaped ones.
     //
-    // **The worst survives, not the first.** `report` takes the worst of the
-    // places one element dereferences, but two elements can share a caret and
-    // disagree: the C lowering writes both arms of `c ? *q : *p` at the whole
-    // conditional's span, as it did both operands of `*p && *q` until #147,
-    // so an unproven `*p` and a proved `*q` arrive as two findings at one
-    // caret. Keeping the first reported a proof as a suspicion, and inside a
-    // hatch, where a suspicion is listed rather than reported, a proved null
-    // dereference built and ran. `memory::report::say` answers the same shape
-    // with `supersedes`; this is the same rule.
+    // **The worst survives, not the first.** Two elements can share a caret
+    // and disagree about one place, and keeping the first reported a proof as
+    // a suspicion: inside a hatch, where a suspicion is listed rather than
+    // reported, a proved null dereference built and ran. It was reached
+    // through the two arms of `c ? *q : *p`, written at the whole
+    // conditional's span, while a dereference was one finding per element;
+    // those are two places now and are both said, so what this answers for
+    // is one place asked twice, which
+    // `a_proof_and_a_suspicion_at_one_caret_report_the_proof` builds as IR.
+    // `memory::report::say` answers the same shape with `supersedes`; this
+    // is the same rule.
     //
     // **The question is part of the key.** A call that passes two arguments
     // to two `_Nonnull` parameters has one caret and two promises, and a
     // dereference inside a call's arguments shares its caret with the call.
     // Each of those is a different thing to say. Whether a dereference went
-    // through memory is not part of it, and the survivor keeps it if either
-    // did, which `Asked::joined` says why.
+    // through memory is not part of it, and need not be: two dereferences
+    // fold only where they read through one place, and going through memory
+    // is a property of the place.
     //
     // **So is the function.** The sort above is over the whole unit, and a
     // finding is routed by the function it names: two functions sharing a
     // caret, which one `#include`d fragment would do, must not fold one into
     // the other, or a hatch's could absorb an ordinary function's.
-    findings.dedup_by(|later, earlier| {
-        let same = later.function == earlier.function
-            && later.at == earlier.at
-            && later.asked.same_question(earlier.asked);
-        if same {
-            if severity(later.conclusion) > severity(earlier.conclusion) {
-                std::mem::swap(later, earlier);
+    //
+    // **And so is what it is about**, since a dereference is one finding per
+    // place: `*p + *q` is two pointers at one caret and two things to say,
+    // each naming its own. [`About`] says why that is the place rather than
+    // the local. Which is why this is not `dedup_by`, which folds only
+    // neighbours: the sort is by caret alone, and `*p = *q;` with both escaped
+    // arrives as `p`, `q`, `p`, the pair to fold not adjacent.
+    let mut folded: Vec<(Finding, About)> = Vec::with_capacity(findings.len());
+    for (later, about) in findings {
+        let standing = folded
+            .iter_mut()
+            .rev()
+            .take_while(|(earlier, _)| earlier.at == later.at)
+            .find(|(earlier, standing)| {
+                later.function == earlier.function
+                    && about == *standing
+                    && later.asked.same_question(earlier.asked)
+            });
+        match standing {
+            Some((earlier, _)) => {
+                if severity(later.conclusion) > severity(earlier.conclusion) {
+                    *earlier = later;
+                }
             }
-            earlier.asked = earlier.asked.joined(later.asked);
+            None => folded.push((later, about)),
         }
-        same
-    });
+    }
 
-    findings
+    folded.into_iter().map(|(finding, _)| finding).collect()
 }
 
 /// Which locals this check established are null where each block's terminator

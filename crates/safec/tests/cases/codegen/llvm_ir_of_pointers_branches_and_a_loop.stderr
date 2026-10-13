@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ llvm_ir_of_pointers_branches_and_a_loop.c:2:10 ]
    │
  2 │     *p = *p + 1;

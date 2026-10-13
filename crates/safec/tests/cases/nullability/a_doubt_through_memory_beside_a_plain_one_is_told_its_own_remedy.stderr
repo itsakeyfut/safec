@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:3:16 ]
    │
  3 │         return *p && **q;

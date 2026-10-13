@@ -18,7 +18,7 @@ error[SC0401]: this may free `p`, which was freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `q` while it is null
     ╭─[ a_function_after_a_hatch_is_still_answered_for.c:11:9 ]
     │
  11 │     int x = *q;
@@ -28,7 +28,7 @@ error[SC0403]: this may dereference a null pointer
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
-error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+error[SC0405]: this may pass `p` while it is null to a parameter declared `_Nonnull`
     ╭─[ a_function_after_a_hatch_is_still_answered_for.c:14:5 ]
     │
   8 │ void take(int * _Nonnull p);

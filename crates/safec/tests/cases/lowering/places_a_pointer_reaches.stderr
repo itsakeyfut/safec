@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ places_a_pointer_reaches.c:2:5 ]
    │
  2 │     *p = i;

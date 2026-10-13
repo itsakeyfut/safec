@@ -1,4 +1,4 @@
-error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+error[SC0405]: this may pass `q` while it is null to a parameter declared `_Nonnull`
    ╭─[ a_pointer_nothing_established_passed_to_a_nonnull_parameter_is_not_proved.c:3:5 ]
    │
  1 │ void g(int * _Nonnull p);

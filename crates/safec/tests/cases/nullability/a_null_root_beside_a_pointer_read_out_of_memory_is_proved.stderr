@@ -1,4 +1,4 @@
-error[SC0403]: this dereferences a null pointer
+error[SC0403]: this dereferences `pp`, which is null
    ╭─[ a_null_root_beside_a_pointer_read_out_of_memory_is_proved.c:3:5 ]
    │
  3 │     return **pp;

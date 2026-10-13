@@ -1,4 +1,4 @@
-error[SC0403]: this dereferences a null pointer
+error[SC0403]: this dereferences `keep`, which is null
     ╭─[ a_local_given_something_fresh_forgets_what_it_lost.c:10:13 ]
     │
  10 │             *keep = 1;

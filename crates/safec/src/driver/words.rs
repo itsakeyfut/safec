@@ -562,11 +562,14 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
 /// one reason, which is that nothing established what the pointer holds. A
 /// reason enum with one variant is a field nobody reads.
 ///
-/// The value is not named yet, although the IR now holds the name: one finding
-/// here is about every place one element dereferences, so `*p + *q` has no one
-/// name to give (#466). The caret's quoted line shows the reader their own
-/// text.
-pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diagnostic> {
+/// **The message names the pointer where the source wrote it**, `name`, for
+/// `memory_finding`'s reason and by its rule: `p[2]`'s temporary and the
+/// pointer `**pp` loads out of memory have none, and keep the words that name
+/// nothing.
+pub(super) fn nullability_finding(
+    finding: &nullability::Finding,
+    name: Option<&str>,
+) -> Option<Diagnostic> {
     // The unproven row does not say "may be null" of the *pointer* and then
     // blame the dereference: what this check failed to establish is that the
     // pointer is not null, and a reader who is told the pointer may be null is
@@ -588,7 +591,9 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
     let (code, message, label, remedy) = match (finding.asked, finding.conclusion) {
         (Asked::Dereference { through_memory: _ }, Conclusion::Unsafe) => (
             NULL_DEREFERENCE,
-            "this dereferences a null pointer",
+            said(name, "this dereferences a null pointer", |name| {
+                format!("this dereferences `{name}`, which is null")
+            }),
             "this is null when it is read through",
             "give this pointer a value before reading through it, or do not read through it here",
         ),
@@ -599,7 +604,9 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             Conclusion::Unknown,
         ) => (
             NULL_DEREFERENCE,
-            "this may dereference a null pointer",
+            said(name, "this may dereference a null pointer", |name| {
+                format!("this may dereference `{name}` while it is null")
+            }),
             "this check cannot say this is not null",
             "test this pointer against null before reading through it",
         ),
@@ -617,12 +624,14 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
             Conclusion::Unknown,
         ) => (
             NULL_DEREFERENCE,
-            "this may dereference a null pointer",
+            said(name, "this may dereference a null pointer", |name| {
+                format!("this may dereference `{name}` while it is null")
+            }),
             "this check cannot say this is not null",
             "read each pointer this goes through into a local, and test that local against null before reading through it",
         ),
         (Asked::Argument { promise }, conclusion) => {
-            return passed(finding.at, conclusion, promise);
+            return passed(finding.at, conclusion, promise, name);
         }
         (
             Asked::Return {
@@ -630,9 +639,9 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
                 reached_end,
             },
             conclusion,
-        ) => return returned(finding.at, conclusion, promise, reached_end),
+        ) => return returned(finding.at, conclusion, promise, reached_end, name),
         (Asked::Dereference { through_memory: _ }, Conclusion::Safe) => {
-            (NULL_DEREFERENCE, "nothing", "nothing", "nothing")
+            (NULL_DEREFERENCE, "nothing".to_owned(), "nothing", "nothing")
         }
     };
 
@@ -660,7 +669,12 @@ pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diag
 /// The unsafe remedy offers the promise as the other way out, because a
 /// parameter promised not null that a caller has a reason to pass null to is a
 /// promise that was wrong rather than a call that was.
-fn passed(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnostic> {
+fn passed(
+    at: Span,
+    conclusion: Conclusion,
+    promise: Promise,
+    name: Option<&str>,
+) -> Option<Diagnostic> {
     let (promised_at, described, promise_label, take_back, level) = match promise {
         Promise::Declared(written) => (
             written,
@@ -679,12 +693,20 @@ fn passed(at: Span, conclusion: Conclusion, promise: Promise) -> Option<Diagnost
     };
     let (message, label, remedy) = match conclusion {
         Conclusion::Unsafe => (
-            format!("this passes a null pointer to {described}"),
+            said(
+                name,
+                &format!("this passes a null pointer to {described}"),
+                |name| format!("this passes `{name}`, which is null, to {described}"),
+            ),
             "this is null when it is passed",
             format!("pass a pointer to an object here, or {take_back}"),
         ),
         Conclusion::Unknown => (
-            format!("this may pass a null pointer to {described}"),
+            said(
+                name,
+                &format!("this may pass a null pointer to {described}"),
+                |name| format!("this may pass `{name}` while it is null to {described}"),
+            ),
             "this check cannot say this is not null",
             "test this pointer against null before passing it".to_owned(),
         ),
@@ -717,6 +739,7 @@ fn returned(
     conclusion: Conclusion,
     promise: Promise,
     reached_end: bool,
+    name: Option<&str>,
 ) -> Option<Diagnostic> {
     let (promised_at, promise_label, take_back, level) = match promise {
         Promise::Declared(written) => (
@@ -734,19 +757,36 @@ fn returned(
     };
     let (message, label, remedy) = match (reached_end, conclusion) {
         (true, Conclusion::Unsafe | Conclusion::Unknown | Conclusion::Safe) => (
-            "this function may reach the end of its body without returning a pointer",
+            // Nothing was returned, so nothing is named.
+            "this function may reach the end of its body without returning a pointer".to_owned(),
             "the end of this function's body can be reached without a `return`",
             "end every path through the body with a `return`".to_owned(),
         ),
         (false, Conclusion::Unsafe) => (
-            "this returns a null pointer from a function that promised not to",
+            said(
+                name,
+                "this returns a null pointer from a function that promised not to",
+                |name| {
+                    format!(
+                        "this returns `{name}`, which is null, from a function that promised not to"
+                    )
+                },
+            ),
             "this is null when it is returned",
             format!(
                 "return a pointer to an object here, or {take_back} in every declaration of the function"
             ),
         ),
         (false, Conclusion::Unknown) => (
-            "this may return a null pointer from a function that promised not to",
+            said(
+                name,
+                "this may return a null pointer from a function that promised not to",
+                |name| {
+                    format!(
+                        "this may return `{name}` while it is null from a function that promised not to"
+                    )
+                },
+            ),
             "this check cannot say this is not null",
             format!(
                 "return only a pointer this check can see is not null, testing it first where it came from a call, or {take_back} in every declaration of the function"
