@@ -146,7 +146,7 @@ pub struct Finding {
     /// nothing here says which local each of those went through.
     ///
     /// [`Function::name_of`]: crate::ir::Function::name_of
-    pub value: Option<LocalId>,
+    pub local: Option<LocalId>,
     /// The earliest free reaching here, where the check knows which one it was.
     ///
     /// `None` for most `Unknown`s: what usually makes one unknown is that the

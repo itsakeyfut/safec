@@ -861,7 +861,7 @@ cases! {
         // And a message about what no local holds names nothing: `p[2]`
         // reads a temporary holding `p + 2`, `free(*pp)` frees what `pp`'s
         // allocation held, and `**pp` with `pp` proved live is reported at
-        // its second level. Mutation: `own_value` answers a projection's
+        // its second level. Mutation: `own_local` answers a projection's
         // root; `free(*pp)` says `pp`. Mutation: `used` names the local for a
         // level below the first; the last says `pp`.
         a_memory_diagnostic_about_a_temporary_names_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

@@ -182,7 +182,7 @@ fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -
 /// ADR-0001 is why there is one of each.
 ///
 /// **The message names the value where the source wrote it**, `name`, which
-/// the driver looks up from [`memory::Finding::value`]: `docs/safety-model.md`
+/// the driver looks up from [`memory::Finding::local`]: `docs/safety-model.md`
 /// writes "use of freed value `p`". Where the conclusion is about a temporary
 /// or about a pointer read out of memory there is no name, and the message is
 /// the one that names nothing, since `p[2]` is not a use of `p` and `free(*pp)`

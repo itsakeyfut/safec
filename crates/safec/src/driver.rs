@@ -588,7 +588,7 @@ fn lowered(
             // The check says which local, and the IR says whether the source
             // wrote it: a temporary has no name to give.
             let name = finding
-                .value
+                .local
                 .and_then(|local| unit.function(finding.function).name_of(local))
                 .map(|name| quoted(sources, name));
             if let Some(diagnostic) = memory_finding(&finding, name) {
