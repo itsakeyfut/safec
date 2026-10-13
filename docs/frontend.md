@@ -190,7 +190,7 @@ on it. `$` is not, and that is the distinction the paragraph before this one
 draws: declining to fill a blank C offers is not something the scan fails to
 do.
 
-Twelve more are where the type checker declines what `clang` accepts.
+Eighteen more are where the type checker declines what `clang` accepts.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
@@ -206,6 +206,12 @@ Twelve more are where the type checker declines what `clang` accepts.
 | `int z[0];` | `error[SC0309]` | accepts | `error: zero size arrays are an extension` |
 | `int a[(1 << 31) < 0 ? 1 : 2];` | `error[SC0309]` | accepts | accepts |
 | `for (int i = 0, h(void); 0;)` | `error[SC0311]` | accepts | accepts |
+| `p < 0` with `int *p` | `error[SC0306]` | accepts | `error: ordered comparison between pointer and zero ('int *' and 'int') is an extension` |
+| `p == 1` with `int *p` | `error[SC0306]` | warns | `error: comparison between pointer and integer ('int *' and 'int')` |
+| `p == c` with `int *p` and `char *c` | `error[SC0306]` | warns | `error: comparison of distinct pointer types ('int *' and 'char *')` |
+| `g < g` with `void g(void)` | `error[SC0306]` | warns | `error: ordered comparison of function pointers ('void (*)(void)' and 'void (*)(void)')` |
+| `v == g` with `void *v` and `void g(void)` | `error[SC0306]` | accepts | `error: equality comparison between function pointer and void pointer ('void *' and 'void (*)(void)')` |
+| `v < q` with `void *v` and `int *q` | `error[SC0306]` | warns | `error: comparison of distinct pointer types ('void *' and 'int *')` |
 
 **The first two are constraint violations, and this compiler takes neither extension.** C17
 6.5.6 p2 lets `+` step only "a pointer to a complete object type", p3 says the
@@ -266,6 +272,18 @@ only declare identifiers for objects having storage class auto or register."
 'for' loop" and accepts the same function declared second, even when asked to
 be pedantic, so it appears to ask only a declaration with one declarator.
 `types.rs::Checker::check_for_declarations` asks every declarator.
+
+**The comparisons, the six rows that end the table, are two constraints.** C17
+6.5.8 p2 lets `<`, `<=`, `>` and `>=` take two operands of real type, or two
+pointers to compatible object types, and nothing else. So a pointer is not
+ordered against an integer, zero included, nor against a pointer to another
+type or a `void *`, and two pointers to functions are not ordered at all. 6.5.9
+p2 lets `==` and `!=` take a pointer and a null pointer constant, two pointers
+to compatible types, or a pointer to an object and a `void *`. So `1` is not
+allowed, nor is a pointer to another type, nor a `void *` beside a pointer to
+a function. `clang` accepts `p < 0` and `v == g` in silence unless asked to be
+pedantic. A project that writes either builds cleanly today and is refused
+here, for a reason that has nothing to do with the safety model.
 
 And one the resolver refuses that `clang` accepts with a warning.
 
