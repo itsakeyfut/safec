@@ -1,0 +1,154 @@
+error[SC0401]: this frees `p`, which was freed already
+   ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:5:5 ]
+   │
+ 4 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed here
+ 5 │     free(p);
+   │     ───┬───  
+   │        ╰───── freed again here
+───╯
+  = note: this check belongs to safety level 1
+  = help: remove one of the two frees, or take this one off the path that reaches the first
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:10:5 ]
+    │
+  9 │     free(q);
+    │     ───┬───  
+    │        ╰───── freed here
+ 10 │     return *p;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0401]: this may free `q`, which was freed already
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:14:5 ]
+    │
+ 14 │     free(q);
+    │     ───┬───  
+    │        ╰───── may free it again here
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:15:12 ]
+    │
+ 13 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 15 │     return *p + *q;
+    │            ───┬───  
+    │               ╰───── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses `q` after it was freed
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:15:12 ]
+    │
+ 14 │     free(q);
+    │     ───┬───  
+    │        ╰───── freed here
+ 15 │     return *p + *q;
+    │            ───┬───  
+    │               ╰───── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0402]: this uses `pp` after it was freed
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:19:5 ]
+    │
+ 18 │     free(pp);
+    │     ────┬───  
+    │         ╰───── freed here
+ 19 │     return **pp;
+    │     ──────┬─────  
+    │           ╰─────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0406]: this returns `p`, which points to an allocation that was freed
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:23:5 ]
+    │
+ 22 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 23 │     return p;
+    │     ────┬────  
+    │         ╰────── returned here
+────╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer that is still allocated, or do not free this one before returning it
+error[SC0407]: this passes `p`, which points to an allocation that was freed
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:27:5 ]
+    │
+ 26 │     free(p);
+    │     ───┬───  
+    │        ╰───── freed here
+ 27 │     g(p);
+    │     ──┬─  
+    │       ╰─── passed here
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer that is still allocated, or do not free this one before passing it
+error[SC0401]: this frees `p`, which this check stopped following
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:31:5 ]
+    │
+ 31 │     free(p);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0404]: this frees `q`, which is not the start of an allocation
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:35:5 ]
+    │
+ 35 │     free(q);
+    │     ───┬───  
+    │        ╰───── not the start of the allocation
+────╯
+  = note: this check belongs to safety level 1
+  = help: free the pointer the allocation was made with, and keep the offset in a variable of its own
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:10:5 ]
+    │
+ 10 │     return *p;
+    │     ─────┬────  
+    │          ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:15:12 ]
+    │
+ 15 │     return *p + *q;
+    │            ───┬───  
+    │               ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:19:5 ]
+    │
+ 19 │     return **pp;
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_memory_diagnostic_names_the_value_it_is_about.c:30:10 ]
+    │
+ 30 │     int *p = *pp;
+    │          ───┬───  
+    │             ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

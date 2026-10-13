@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `y` after it was freed
     ╭─[ a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:12:5 ]
     │
  12 │     return *y;

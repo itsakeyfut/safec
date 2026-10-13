@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `q`, which was freed already
    ╭─[ an_allocation_shared_with_a_local_whose_address_escaped.c:7:5 ]
    │
  7 │     free(q);

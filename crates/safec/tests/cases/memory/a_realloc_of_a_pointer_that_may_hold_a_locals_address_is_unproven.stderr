@@ -1,4 +1,4 @@
-error[SC0401]: this frees a pointer this check stopped following
+error[SC0401]: this frees `r`, which this check stopped following
     ╭─[ a_realloc_of_a_pointer_that_may_hold_a_locals_address_is_unproven.c:11:14 ]
     │
  11 │     int *q = realloc(r, 8);

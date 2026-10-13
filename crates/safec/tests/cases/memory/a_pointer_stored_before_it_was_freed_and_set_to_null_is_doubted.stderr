@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `q` after it was freed
     ╭─[ a_pointer_stored_before_it_was_freed_and_set_to_null_is_doubted.c:19:5 ]
     │
  19 │     return *q;

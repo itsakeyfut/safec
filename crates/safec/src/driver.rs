@@ -47,7 +47,7 @@ use safec_ir::analysis::Conclusion;
 use safec_ir::ir::{FuncId, TranslationUnit};
 use safec_ir::memory;
 use safec_ir::nullability;
-use safec_ir::print::dump_ir;
+use safec_ir::print::{dump_ir, quoted};
 use safec_ir::source::{FileName, SourceMap};
 use safec_ir::target::Integer;
 
@@ -585,7 +585,13 @@ fn lowered(
     let mut hatched = Vec::new();
     if options.safety >= SafetyLevel::Memory {
         for finding in memory::findings(sources, &unit) {
-            if let Some(diagnostic) = memory_finding(&finding) {
+            // The check says which local, and the IR says whether the source
+            // wrote it: a temporary has no name to give.
+            let name = finding
+                .value
+                .and_then(|local| unit.function(finding.function).name_of(local))
+                .map(|name| quoted(sources, name));
+            if let Some(diagnostic) = memory_finding(&finding, name) {
                 let concluded = Concluded {
                     function: finding.function,
                     conclusion: finding.conclusion,

@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_free_through_a_pointer_the_check_does_not_follow.c:6:5 ]
    │
  6 │     free(p);

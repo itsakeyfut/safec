@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
     ╭─[ a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:12:5 ]
     │
  12 │     free(p);
@@ -8,7 +8,7 @@ error[SC0401]: this may free a value that was freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `q` after it was freed
     ╭─[ a_write_through_a_pointer_whose_address_escaped_before_it_was_given_its_target.c:13:5 ]
     │
  13 │     *q = 1;

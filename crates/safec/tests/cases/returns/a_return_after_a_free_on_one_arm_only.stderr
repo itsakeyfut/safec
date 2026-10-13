@@ -1,4 +1,4 @@
-error[SC0406]: this may return a pointer to an allocation that was freed
+error[SC0406]: this may return `p`, which points to an allocation that was freed
    ╭─[ a_return_after_a_free_on_one_arm_only.c:9:5 ]
    │
  9 │     return p;

@@ -1,4 +1,4 @@
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_pointer_copied_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:20:5 ]
     │
  20 │     return *r;

@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_free_after_a_call_this_check_cannot_read.c:7:5 ]
    │
  7 │     free(p);

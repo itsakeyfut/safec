@@ -849,6 +849,22 @@ cases! {
         // `an_ir_shape_the_backend_cannot_write` is the case that holds the
         // refusal itself, which `pp[1]` still earns.
         a_zero_subscript_reaches_the_backend: ["--emit", "llvm-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A message names the local its conclusion is about, read as itself
+        // or read through at its first level: a double free, a free through
+        // `q` then a use through `p` that names `p`, two uses at one caret
+        // told apart, `**pp` after `free(pp)`, a return, an argument, a free
+        // this check stopped following and an interior free. Mutation: the
+        // driver passes `None` for the name; every message here loses it.
+        // Mutation: the named use row is given the double free's words; the
+        // uses fail.
+        a_memory_diagnostic_names_the_value_it_is_about: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a message about what no local holds names nothing: `p[2]`
+        // reads a temporary holding `p + 2`, `free(*pp)` frees what `pp`'s
+        // allocation held, and `**pp` with `pp` proved live is reported at
+        // its second level. Mutation: `own_value` answers a projection's
+        // root; `free(*pp)` says `pp`. Mutation: `used` names the local for a
+        // level below the first; the last says `pp`.
+        a_memory_diagnostic_about_a_temporary_names_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "nullability" => {

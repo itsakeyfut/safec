@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
     ╭─[ freeing_what_was_handed_to_a_hatch_is_not_proved.c:11:5 ]
     │
  11 │     free(p);

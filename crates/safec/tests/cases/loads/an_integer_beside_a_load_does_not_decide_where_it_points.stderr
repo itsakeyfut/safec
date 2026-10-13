@@ -1,4 +1,4 @@
-warning[SC0401]: this may free a value that was freed already
+warning[SC0401]: this may free `r`, which was freed already
     ╭─[ an_integer_beside_a_load_does_not_decide_where_it_points.c:22:5 ]
     │
  22 │     free(r);

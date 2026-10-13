@@ -1,4 +1,4 @@
-warning[SC0402]: this uses a pointer this check stopped following
+warning[SC0402]: this uses `q`, which this check stopped following
    ╭─[ a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:9:5 ]
    │
  9 │     return *q;

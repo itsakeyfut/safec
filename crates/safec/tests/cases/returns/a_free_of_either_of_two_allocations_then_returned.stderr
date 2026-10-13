@@ -1,4 +1,4 @@
-error[SC0406]: this returns a pointer to an allocation that was freed
+error[SC0406]: this returns `p`, which points to an allocation that was freed
     ╭─[ a_free_of_either_of_two_allocations_then_returned.c:12:5 ]
     │
  11 │     free(p);

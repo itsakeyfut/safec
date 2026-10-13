@@ -1,4 +1,4 @@
-error[SC0401]: this frees a value that was freed already
+error[SC0401]: this frees `p`, which was freed already
     ╭─[ a_free_proved_before_a_call_to_a_hatch_stays_proved.c:12:5 ]
     │
   9 │     int *p = malloc(4);

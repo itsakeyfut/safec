@@ -1,4 +1,4 @@
-error[SC0401]: this frees a pointer this check stopped following
+error[SC0401]: this frees `p`, which this check stopped following
    ╭─[ a_write_through_an_alias_that_carries_no_allocation.c:8:5 ]
    │
  8 │     free(p);

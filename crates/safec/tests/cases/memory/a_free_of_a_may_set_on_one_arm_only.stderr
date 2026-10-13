@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_free_of_a_may_set_on_one_arm_only.c:9:5 ]
    │
  9 │     free(p);

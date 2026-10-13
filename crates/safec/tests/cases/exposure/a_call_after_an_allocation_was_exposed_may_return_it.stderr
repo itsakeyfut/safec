@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `q` after it was freed
     ╭─[ a_call_after_an_allocation_was_exposed_may_return_it.c:14:9 ]
     │
  14 │         *q = 1;

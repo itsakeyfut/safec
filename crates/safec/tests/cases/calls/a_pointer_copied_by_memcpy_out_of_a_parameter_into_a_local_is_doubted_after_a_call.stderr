@@ -1,4 +1,4 @@
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `s`, which this check stopped following
     ╭─[ a_pointer_copied_by_memcpy_out_of_a_parameter_into_a_local_is_doubted_after_a_call.c:14:5 ]
     │
  14 │     return *s;

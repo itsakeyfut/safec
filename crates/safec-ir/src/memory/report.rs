@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 
 use crate::analysis::Conclusion;
 use crate::ir::{
-    BlockId, Element, FuncId, Function, Operand, Place, Projection, Rvalue, Terminator,
+    BlockId, Element, FuncId, Function, LocalId, Operand, Place, Projection, Rvalue, Terminator,
 };
 use crate::nullability::NullAtTerminators;
 use crate::source::Span;
@@ -53,6 +53,30 @@ pub(super) fn derefs(place: &Place) -> usize {
         place.projection.len()
     } else {
         0
+    }
+}
+
+/// The local a pointer read with no dereference is the own value of, for
+/// [`Finding::value`]: the place's local where nothing is projected from it.
+///
+/// **Not the root of a projection.** `free(*pp)` frees what was stored in
+/// `pp`'s allocation, which no local holds, and naming `pp` for it would name
+/// a pointer that was not freed. A dereference is the other case and is not
+/// asked here: `*p` reads `p`'s own value and goes through it, so [`used`]
+/// names the local for its first level whatever the projection is.
+fn own_value(place: &Place) -> Option<LocalId> {
+    place.projection.is_empty().then_some(place.local)
+}
+
+/// [`Finding::value`] for a read carried forwards, by which read it is.
+///
+/// A dereference is carried at its first level only, by `Known::met`, so it is
+/// about the local's own value whatever the projection; a pointer handed on is
+/// [`own_value`]'s, as it is where the call is met.
+fn pending_value(read: Read, place: &Place) -> Option<LocalId> {
+    match read {
+        Read::Dereference => Some(place.local),
+        Read::Argument => own_value(place),
     }
 }
 
@@ -301,11 +325,21 @@ pub(super) fn reported(
         .reduce(Offset::joined)
         .unwrap_or(Offset::Zero);
 
+    // One pointer handed to be freed, read as itself, is the value both
+    // questions are about. Every free asks one, since `free` takes one argument
+    // and `realloc` is asked about its first, so `None` here is a pointer read
+    // out of memory or a constant rather than a call naming two.
+    let value = match arguments {
+        [Operand::Copy(place)] => own_value(place),
+        [..] => None,
+    };
+
     let finding = |kind, verdict: Verdict| Finding {
         function: analysis.function,
         kind,
         conclusion: verdict.conclusion,
         at: origin.span(),
+        value,
         freed: verdict.freed,
         made: verdict.made,
         unproven: verdict.unproven,
@@ -540,16 +574,24 @@ pub(super) fn used(
         // is not visible in what is printed, measured: every such level is
         // unproven and says the same words, so only the first level's place
         // ahead of them is guarded. See ADR-0045.
-        let Some(verdict) = verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
-            .or_else(|| {
-                (1..derefs(place)).find_map(|depth| {
-                    verdict(
-                        Kind::UseAfterFree,
-                        known.reached_below(place.local, depth),
-                        known,
-                    )
+        //
+        // **Only the first level is about the local's own value**, so only
+        // it names one: below it the pointer gone through was loaded from
+        // memory, and `free(*pp); return **pp;` is about what `pp`'s
+        // allocation held rather than about `pp`.
+        let Some((verdict, value)) =
+            verdict(Kind::UseAfterFree, known.reached_by(place.local), known)
+                .map(|verdict| (verdict, Some(place.local)))
+                .or_else(|| {
+                    (1..derefs(place)).find_map(|depth| {
+                        verdict(
+                            Kind::UseAfterFree,
+                            known.reached_below(place.local, depth),
+                            known,
+                        )
+                        .map(|verdict| (verdict, None))
+                    })
                 })
-            })
         else {
             continue;
         };
@@ -563,6 +605,7 @@ pub(super) fn used(
                 kind: Kind::UseAfterFree,
                 conclusion: verdict.conclusion,
                 at,
+                value,
                 freed: verdict.freed,
                 made: verdict.made,
                 unproven: verdict.unproven,
@@ -640,6 +683,7 @@ pub(super) fn returned(
             kind: Kind::ReturnAfterFree,
             conclusion: verdict.conclusion,
             at: operation.origin.span(),
+            value: own_value(source),
             freed: verdict.freed,
             made: verdict.made,
             unproven: verdict.unproven,
@@ -710,6 +754,7 @@ pub(super) fn handed(
                 kind: Kind::ArgumentAfterFree,
                 conclusion: verdict.conclusion,
                 at: origin.span(),
+                value: own_value(place),
                 freed: verdict.freed,
                 made: verdict.made,
                 unproven: verdict.unproven,
@@ -746,6 +791,8 @@ pub(super) fn handed(
                 kind: Kind::FreedBehindArgument,
                 conclusion: verdict.conclusion,
                 at: origin.span(),
+                // What is behind the pointer handed over, which no local holds.
+                value: None,
                 freed: verdict.freed,
                 made: verdict.made,
                 unproven: verdict.unproven,
@@ -1098,6 +1145,7 @@ pub(super) fn used_before(
                 },
                 conclusion: Conclusion::Unknown,
                 at: read.at,
+                value: pending_value(read.read, place),
                 // Exactly one free, which is this one: the reads are carried
                 // to each free separately, so there is nothing folded here and
                 // nothing for the caret to be wrong about. An opaque call has
@@ -1163,6 +1211,7 @@ pub(super) fn after_a_call(
                 },
                 conclusion: Conclusion::Unknown,
                 at: read.at,
+                value: pending_value(read.read, place),
                 freed: None,
                 made,
                 unproven: Some(Unproven::Disagreement),

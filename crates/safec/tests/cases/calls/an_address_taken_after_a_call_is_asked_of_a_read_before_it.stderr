@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `a` after it was freed
     ╭─[ an_address_taken_after_a_call_is_asked_of_a_read_before_it.c:15:26 ]
     │
  15 │     r = release_all() + (x = a[0]) + (hp = &a, 0);

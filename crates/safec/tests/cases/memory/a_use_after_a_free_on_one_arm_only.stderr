@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
    ╭─[ a_use_after_a_free_on_one_arm_only.c:5:5 ]
    │
  5 │     *p = 1;

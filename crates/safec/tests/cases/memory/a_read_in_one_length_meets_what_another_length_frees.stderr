@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `q` after it was freed
    ╭─[ a_read_in_one_length_meets_what_another_length_frees.c:3:49 ]
    │
  3 │ int f(int * _Nonnull p, int * _Nonnull q, int b[*q], int a[(q = p, free(p), 1)]) {

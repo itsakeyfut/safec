@@ -1,4 +1,4 @@
-error[SC0407]: this passes a pointer to an allocation that was freed
+error[SC0407]: this passes `b`, which points to an allocation that was freed
     ╭─[ a_freed_pointer_handed_after_other_arguments_is_asked.c:15:12 ]
     │
   7 │     int *b = malloc(4);
