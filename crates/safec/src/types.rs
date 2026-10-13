@@ -111,10 +111,14 @@ const RETURN_SHAPE: Code = Code::new("SC0308");
 /// or a function, is the same kind of fault and would go here.
 const DECLARATOR: Code = Code::new("SC0309");
 
-/// Something initialized that C17 6.7.9 p3 says cannot be: a function, an
-/// object of incomplete type, or a variable length array. Only an array of
-/// unknown size or a complete object type that is not a variable length
-/// array may have an initializer.
+/// An initializer C17 6.7.9 does not allow where it is written. Something p3
+/// says cannot be initialized at all: a function, an object of incomplete
+/// type, or a variable length array, since only an array of unknown size or
+/// a complete object type that is not a variable length array may have an
+/// initializer. Or an array initialized by an expression, where p16 asks for
+/// a brace-enclosed list; p16 is Semantics rather than a constraint, and is
+/// refused for the reason an incomplete object's 6.7 p7 is, under
+/// [`INCOMPLETE_OBJECT`].
 ///
 /// Not `MISMATCH`, because no value of any type would make `int f(void) = 1;`
 /// right: what has to change is the `=` or the declaration. Not `DECLARATOR`,
@@ -860,21 +864,54 @@ impl Checker<'_> {
             let name = declaration.name.unwrap_or(declaration.span);
             let called = self.sources.snippet(name);
             // Every variant named, so that a type added later is asked here.
-            let message = match ast.ty(ty) {
-                Type::Function { .. } => {
-                    format!("`{called}` is a function, and only an object can be initialized")
-                }
-                Type::Void => format!(
-                    "`{called}` has type `void`, which is incomplete, and only a complete object can be initialized"
+            let (message, clause) = match ast.ty(ty) {
+                Type::Function { .. } => (
+                    format!("`{called}` is a function, and only an object can be initialized"),
+                    "C17 6.7.9 p3",
                 ),
-                Type::Array { .. } if self.is_variable_length(ast, ty) => {
-                    format!("`{called}` is a variable length array, which cannot be initialized")
-                }
+                Type::Void => (
+                    format!(
+                        "`{called}` has type `void`, which is incomplete, and only a complete object can be initialized"
+                    ),
+                    "C17 6.7.9 p3",
+                ),
+                Type::Array { .. } if self.is_variable_length(ast, ty) => (
+                    format!("`{called}` is a variable length array, which cannot be initialized"),
+                    "C17 6.7.9 p3",
+                ),
+                // p16: "the initializer for an object that has aggregate or
+                // union type shall be a brace-enclosed list of initializers",
+                // and p14 allows a string literal for an array of character
+                // type. A brace is refused by the parser (`SC0203`) and a
+                // string literal is not read (`SC0207`), so whatever
+                // initializer reaches here is neither. Every kind of
+                // expression is named, so that the one a string literal or a
+                // compound literal becomes stops the build here rather than
+                // being refused as this: `char s[] = "abc";` is valid C.
                 Type::Array { .. }
-                | Type::Int
-                | Type::Char
-                | Type::Pointer(_)
-                | Type::Struct { .. } => continue,
+                    if match ast.expr(init) {
+                        Expr::Number { .. }
+                        | Expr::Identifier { .. }
+                        | Expr::Unary { .. }
+                        | Expr::Binary { .. }
+                        | Expr::Assign { .. }
+                        | Expr::Conditional { .. }
+                        | Expr::Call { .. }
+                        | Expr::Subscript { .. }
+                        | Expr::Member { .. }
+                        | Expr::Comma { .. }
+                        | Expr::Error { .. } => true,
+                    } =>
+                {
+                    (
+                        format!(
+                            "`{called}` is an array, and its initializer is not a brace-enclosed list"
+                        ),
+                        "C17 6.7.9 p16",
+                    )
+                }
+                Type::Array { .. } => continue,
+                Type::Int | Type::Char | Type::Pointer(_) | Type::Struct { .. } => continue,
             };
             diagnostics.report(
                 Diagnostic::error(message)
@@ -884,7 +921,7 @@ impl Checker<'_> {
                         format!("declared as `{}`", self.spelled(ast, ty)),
                     ))
                     .with_label(Label::secondary(ast.expr(init).span(), "this initializer"))
-                    .with_note("C17 6.7.9 p3"),
+                    .with_note(clause),
             );
         }
     }

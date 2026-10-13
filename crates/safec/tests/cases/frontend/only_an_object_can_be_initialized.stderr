@@ -26,6 +26,26 @@ error[SC0310]: `v` has type `void`, which is incomplete, and only a complete obj
    │          ╰── this initializer
 ───╯
   = note: C17 6.7.9 p3
+error[SC0310]: `u` is an array, and its initializer is not a brace-enclosed list
+   ╭─[ only_an_object_can_be_initialized.c:3:5 ]
+   │
+ 3 │ int u[] = 1;
+   │     ┬     ┬  
+   │     ╰──────── declared as `int[]`
+   │           │  
+   │           ╰── this initializer
+───╯
+  = note: C17 6.7.9 p16
+error[SC0310]: `s` is an array, and its initializer is not a brace-enclosed list
+   ╭─[ only_an_object_can_be_initialized.c:4:5 ]
+   │
+ 4 │ int s[2] = 1;
+   │     ┬      ┬  
+   │     ╰───────── declared as `int[2]`
+   │            │  
+   │            ╰── this initializer
+───╯
+  = note: C17 6.7.9 p16
 error[SC0310]: `fv` is a variable length array, which cannot be initialized
    ╭─[ only_an_object_can_be_initialized.c:6:5 ]
    │
@@ -86,6 +106,26 @@ error[SC0310]: `vb` is a variable length array, which cannot be initialized
     │                    ╰── this initializer
 ────╯
   = note: C17 6.7.9 p3
+error[SC0310]: `bu` is an array, and its initializer is not a brace-enclosed list
+    ╭─[ only_an_object_can_be_initialized.c:15:9 ]
+    │
+ 15 │     int bu[] = 1;
+    │         ─┬     ┬  
+    │          ╰──────── declared as `int[]`
+    │                │  
+    │                ╰── this initializer
+────╯
+  = note: C17 6.7.9 p16
+error[SC0310]: `bs` is an array, and its initializer is not a brace-enclosed list
+    ╭─[ only_an_object_can_be_initialized.c:16:9 ]
+    │
+ 16 │     int bs[2] = 1;
+    │         ─┬      ┬  
+    │          ╰───────── declared as `int[2]`
+    │                 │  
+    │                 ╰── this initializer
+────╯
+  = note: C17 6.7.9 p16
 error[SC0310]: `bsecond` is a function, and only an object can be initialized
     ╭─[ only_an_object_can_be_initialized.c:17:17 ]
     │
