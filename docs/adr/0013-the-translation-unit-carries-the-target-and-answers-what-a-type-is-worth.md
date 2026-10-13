@@ -151,8 +151,10 @@ defaulted to the host rather than honouring `--target` differs on the two CI
 runners whose host is not that. `the_target_defaults_to_the_host_and_a_flag_overrides_it`
 holds the other half locally, and
 `the_host_this_was_built_for_is_a_target_this_compiler_knows` fails the suite on
-a machine missing from the table rather than leaving somebody a bare invocation
-that cannot parse.
+a machine missing from the table, so that a contributor measures the row rather
+than leaving somebody a bare invocation that is refused. Such an invocation is
+refused by name, with the triples it could name instead, which
+`an_unknown_host_is_refused_by_name_and_told_every_target` holds.
 
 ### Consequences
 

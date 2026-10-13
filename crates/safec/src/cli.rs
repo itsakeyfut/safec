@@ -89,8 +89,8 @@ pub struct Cli {
     // if it had been typed: on a host missing from `Target::ALL` every run was
     // refused in clap's words, blaming a flag nobody gave. `resolved_target`
     // answers the default instead. ADR-0013 says why the host picking the
-    // default is not the host reaching the output. A `//` comment for the
-    // reason `safety`'s gives.
+    // default is not the host reaching the output. `//` rather than `///`,
+    // because clap prints a doc comment into `--help`.
     #[arg(
         long,
         value_name = "TRIPLE",
@@ -186,6 +186,13 @@ impl Cli {
     /// broken. Reported as [`Self::check`] reports, through a [`clap::Error`]
     /// named the way this process was invoked, and with no code: it is about
     /// the machine, not a program, which `docs/diagnostics.md` rules out.
+    ///
+    /// **That the refusal reaches a user, and exits 2, is held by nothing a
+    /// test can build**, because no test runs on a host this compiler does not
+    /// know and this reads [`HOST_TRIPLE`]. What a test holds is the decision,
+    /// in `resolved_target`; that `main` exits with the `Err` rather than
+    /// unwrapping it is held by the `match` there and by `error[E0308]` for a
+    /// caller that takes this as an [`Options`].
     pub fn into_options(self) -> Result<Options, clap::Error> {
         // Destructured rather than read field by field, so that a field added
         // to `Cli` and forgotten here is a compile error instead of an argument
