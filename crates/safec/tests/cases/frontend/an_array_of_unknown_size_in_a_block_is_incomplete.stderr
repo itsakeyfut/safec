@@ -1,0 +1,24 @@
+error[SC0315]: `a` has incomplete type `int[]`
+   ╭─[ an_array_of_unknown_size_in_a_block_is_incomplete.c:6:9 ]
+   │
+ 6 │     int a[];
+   │         ┬  
+   │         ╰── declared here
+───╯
+  = note: an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)
+error[SC0315]: `b` has incomplete type `int[][3]`
+   ╭─[ an_array_of_unknown_size_in_a_block_is_incomplete.c:7:9 ]
+   │
+ 7 │     int b[][3];
+   │         ┬  
+   │         ╰── declared here
+───╯
+  = note: an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)
+error[SC0315]: `p` has incomplete type `int *[]`
+   ╭─[ an_array_of_unknown_size_in_a_block_is_incomplete.c:8:10 ]
+   │
+ 8 │     int *p[];
+   │          ┬  
+   │          ╰── declared here
+───╯
+  = note: an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)

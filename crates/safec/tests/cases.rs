@@ -2828,6 +2828,17 @@ cases! {
         // `struct T`. Mutation: ask a declaration's parameters too; `d` and
         // `e` gain reports.
         an_object_or_a_definition_s_parameter_of_type_void_is_incomplete: ["--emit", "ast"],
+        // An array of unknown size is incomplete (C17 6.2.5 p22), so in a block
+        // with no initializer it is `SC0315` (6.7 p7): `a`, `b` and `p`. What
+        // is not reported: `t`, a tentative definition 6.9.2 p2 completes;
+        // `q`, a parameter adjusted to a pointer (6.7.6.3 p7); and `bu`, whose
+        // fault is its initializer (6.7.9 p16), not its type. Asked of the
+        // type check alone, which is what used to let these through. Mutation:
+        // drop the `Type::Array` arm in `check_complete_objects`; the three
+        // reports go. Mutation: drop `at_file_scope` from it; `t` gains one.
+        // Mutation: drop `initialized`; `bu` gains one, and so does
+        // `only_an_object_can_be_initialized`.
+        an_array_of_unknown_size_in_a_block_is_incomplete: ["--emit", "ast"],
         // Nothing can be passed to a `void` parameter, and no `void` value can
         // be passed at all (6.5.2.2 p2, 6.3.2.2), so every call here is
         // `SC0302`, `u`'s too, which has no prototype to ask. Asked for the IR,
