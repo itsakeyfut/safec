@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:4:6 "maybe"
   Local "_0" "int *" return
-  Local "_1" "int *" parameter
-  Local "_2" "int" parameter
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int" parameter "c"
   Block "bb0" entry
     Branch a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:5:9 "bb1" "bb2"
       Copy "_2"
@@ -32,7 +32,7 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:4:6 "maybe"
     Goto "bb3"
 Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:11:5 "use"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Local "_2" "int"
   Block "bb0" entry
     Operation a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:12:9 written
@@ -63,10 +63,10 @@ Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:11:5 "use"
     Return
 Function a_parameter_freed_on_one_arm_and_handed_on_by_its_caller.c:18:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "r"
   Local "_5" "int *"
   Local "_6" "int"
   Block "bb0" entry

@@ -1,25 +1,25 @@
 Target "x86_64-pc-windows-msvc"
 Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int ***"
+  Local "_1" "int ***" "t3"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "t2"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
+  Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int *"
   Local "_12" "int **"
-  Local "_13" "int *"
+  Local "_13" "int *" "q"
   Local "_14" "int"
   Block "bb0" entry
     Operation a_use_after_free_through_a_chain_written_as_one_place_is_reported.c:4:5 generated

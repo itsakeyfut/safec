@@ -828,6 +828,9 @@ pub struct Parameter {
     /// apart from one written `_Nonnull` by the type: a report about a call
     /// names the promise it broke, and the two are taken back differently.
     pub nonnull: Option<Promise>,
+    /// The span of the name it was declared with, and `None` where it was
+    /// declared with none, as `int f(int);` may.
+    pub name: Option<Span>,
 }
 
 /// Why a pointer a function takes or returns is believed not to be null, which
@@ -852,7 +855,11 @@ pub enum Promise {
 
 /// A parameter declared with nothing but its type.
 fn unannotated(ty: TyId) -> Parameter {
-    Parameter { ty, nonnull: None }
+    Parameter {
+        ty,
+        nonnull: None,
+        name: None,
+    }
 }
 
 /// One function's IR.
@@ -862,6 +869,12 @@ pub struct Function {
     pub name: Span,
     /// Local 0 is the return place, then the parameters, then the rest.
     locals: Vec<TyId>,
+    /// The span of the name each local was written with, in step with
+    /// `locals`, and `None` for one the source never wrote: the return place
+    /// and every temporary this compiler makes. What lets a reader of the IR
+    /// say `p` rather than `_1`. Only [`Function::with_parameters`] and the
+    /// two `push_` methods add to either, so the two are pushed together.
+    names: Vec<Option<Span>>,
     /// One per parameter, in the order they were declared.
     nonnull: Vec<Option<Promise>>,
     /// Whether this is a hatch.
@@ -897,15 +910,18 @@ impl Function {
         parameters: impl IntoIterator<Item = Parameter>,
     ) -> Self {
         let mut locals = vec![returns];
+        let mut names = vec![None];
         let mut nonnull = Vec::new();
         for parameter in parameters {
             locals.push(parameter.ty);
+            names.push(parameter.name);
             nonnull.push(parameter.nonnull);
         }
 
         Self {
             name,
             locals,
+            names,
             nonnull,
             hatch: false,
             return_promise: None,
@@ -1037,10 +1053,23 @@ impl Function {
         (1..=self.nonnull.len() as u32).map(LocalId)
     }
 
-    /// Add a local, and hand back the id that names it.
+    /// Add a local the source never wrote, and hand back the id that names it.
     pub fn push_local(&mut self, ty: TyId) -> LocalId {
         let id = LocalId(self.locals.len() as u32);
         self.locals.push(ty);
+        self.names.push(None);
+        id
+    }
+
+    /// Add a local written with the name at `name`, and hand back its id.
+    ///
+    /// A method of its own rather than a parameter on [`Function::push_local`],
+    /// whose callers are nearly all the compiler's own temporaries, which have
+    /// no name to give.
+    pub fn push_named_local(&mut self, ty: TyId, name: Span) -> LocalId {
+        let id = LocalId(self.locals.len() as u32);
+        self.locals.push(ty);
+        self.names.push(Some(name));
         id
     }
 
@@ -1097,6 +1126,12 @@ impl Function {
     /// If `id` came from a different [`Function`].
     pub fn local(&self, id: LocalId) -> TyId {
         self.locals[id.index()]
+    }
+
+    /// The span of the name `id` was written with, or `None` for a local the
+    /// source never wrote.
+    pub fn name_of(&self, id: LocalId) -> Option<Span> {
+        self.names[id.index()]
     }
 
     /// Every local, in the order their ids were handed out.

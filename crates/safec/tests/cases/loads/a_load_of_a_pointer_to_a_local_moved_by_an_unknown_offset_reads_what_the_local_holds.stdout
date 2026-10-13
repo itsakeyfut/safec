@@ -1,24 +1,24 @@
 Target "x86_64-pc-windows-msvc"
 Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
-  Local "_3" "int **"
+  Local "_1" "int" parameter "k"
+  Local "_2" "int *" "slot"
+  Local "_3" "int **" "po"
   Local "_4" "int **"
-  Local "_5" "int ***"
+  Local "_5" "int ***" "ppo"
   Local "_6" "int ***"
-  Local "_7" "int *"
+  Local "_7" "int *" "a"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int *"
-  Local "_12" "int *"
+  Local "_12" "int *" "q"
   Local "_13" "int **"
   Local "_14" "int"
   Block "bb0" entry

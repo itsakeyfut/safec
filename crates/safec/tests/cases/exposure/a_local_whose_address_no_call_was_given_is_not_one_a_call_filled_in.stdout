@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:2:6 "log_line" declared
   Local "_0" "void" return
 Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:3:6 "release_all" declared
   Local "_0" "void" return
 Function a_local_whose_address_no_call_was_given_is_not_one_a_call_filled_in.c:5:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int **"
-  Local "_3" "int **"
-  Local "_4" "int **"
-  Local "_5" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "s"
+  Local "_3" "int **" "u"
+  Local "_4" "int **" "t"
+  Local "_5" "int *" "a"
   Local "_6" "void *"
   Local "_7" "int **"
   Local "_8" "int"

@@ -3,8 +3,8 @@ Function a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:1:6 "releas
   Local "_0" "void" return
 Function a_pointer_read_out_of_a_parameter_is_doubted_after_a_call.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
-  Local "_2" "int *"
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int *" "q"
   Local "_3" "int"
   Local "_4" "int *"
   Local "_5" "int"

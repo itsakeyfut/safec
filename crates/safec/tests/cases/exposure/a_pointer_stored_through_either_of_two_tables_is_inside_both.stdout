@@ -1,27 +1,27 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:3:6 "drop_inner" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "box"
 Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:4:5 "pick" declared
   Local "_0" "int" return
 Function a_pointer_stored_through_either_of_two_tables_is_inside_both.c:6:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "a"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "b"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
+  Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int **"
+  Local "_10" "int **" "t"
   Local "_11" "int"
   Local "_12" "int **"
   Local "_13" "int *"

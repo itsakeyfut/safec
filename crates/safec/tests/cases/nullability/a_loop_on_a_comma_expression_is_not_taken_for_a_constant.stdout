@@ -1,8 +1,8 @@
 Target "x86_64-pc-windows-msvc"
 Function a_loop_on_a_comma_expression_is_not_taken_for_a_constant.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int" parameter
+  Local "_1" "int *" parameter "q"
+  Local "_2" "int" parameter "x"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"

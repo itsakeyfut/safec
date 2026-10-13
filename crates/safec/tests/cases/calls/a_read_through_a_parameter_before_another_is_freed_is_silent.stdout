@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_read_through_a_parameter_before_another_is_freed_is_silent.c:3:5 "consume"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int *" parameter
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int *" parameter "q"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "int"
+  Local "_5" "int" "x"
   Block "bb0" entry
     Operation a_read_through_a_parameter_before_another_is_freed_is_silent.c:4:9 written
       Destination "_3"

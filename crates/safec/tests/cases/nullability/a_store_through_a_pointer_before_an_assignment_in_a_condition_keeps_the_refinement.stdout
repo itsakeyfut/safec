@@ -1,11 +1,11 @@
 Target "x86_64-pc-windows-msvc"
 Function a_store_through_a_pointer_before_an_assignment_in_a_condition_keeps_the_refinement.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int"
-  Local "_3" "int *"
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int" "x"
+  Local "_3" "int *" "s"
   Local "_4" "int *"
-  Local "_5" "int *"
+  Local "_5" "int *" "q"
   Local "_6" "int"
   Local "_7" "int *"
   Local "_8" "int"

@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_read_two_dereferences_down_through_a_parameter_is_doubted.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
   Block "bb0" entry
     Branch a_pointer_read_two_dereferences_down_through_a_parameter_is_doubted.c:2:9 "bb1" "bb2"
       Copy "_1"

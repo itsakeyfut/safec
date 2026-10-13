@@ -1,11 +1,11 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:1:6 "next" declared
   Local "_0" "int *" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "q"
 Function a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:2:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int"
+  Local "_1" "int *" parameter "q"
+  Local "_2" "int" "n"
   Local "_3" "int *"
   Local "_4" "int *"
   Local "_5" "int"

@@ -1,20 +1,20 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:2:6 "keep" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "q"
 Function a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "tab"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int *"
+  Local "_8" "int *" "q"
   Local "_9" "int **"
   Block "bb0" entry
     Operation a_pointer_read_into_a_local_whose_address_a_call_is_handed_is_reached_through_it.c:4:5 generated

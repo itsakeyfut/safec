@@ -5,10 +5,10 @@ Function a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_cal
   Local "_0" "int **" return
 Function a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "pp"
   Local "_2" "int **"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "q"
   Local "_5" "int"
   Block "bb0" entry
     ArgumentsEvaluated a_pointer_read_out_of_what_a_call_returned_is_doubted_after_a_later_call.c:4:16 generated

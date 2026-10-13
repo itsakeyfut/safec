@@ -3,11 +3,11 @@ Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:1:6
   Local "_0" "void" return
 Function a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5 "main"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int **" parameter
+  Local "_1" "int" parameter "argc"
+  Local "_2" "int **" parameter "argv"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "int *"
+  Local "_5" "int *" "a"
   Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_mains_arguments_is_not_doubted_after_a_call.c:3:5 generated

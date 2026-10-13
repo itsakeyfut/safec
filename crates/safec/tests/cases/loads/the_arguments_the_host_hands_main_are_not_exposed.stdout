@@ -3,11 +3,11 @@ Function the_arguments_the_host_hands_main_are_not_exposed.c:1:6 "log_line" decl
   Local "_0" "void" return
 Function the_arguments_the_host_hands_main_are_not_exposed.c:2:5 "main"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "char **" parameter
+  Local "_1" "int" parameter "argc"
+  Local "_2" "char **" parameter "argv"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "char *"
+  Local "_5" "char *" "name"
   Local "_6" "int"
   Block "bb0" entry
     Operation the_arguments_the_host_hands_main_are_not_exposed.c:2:5 generated

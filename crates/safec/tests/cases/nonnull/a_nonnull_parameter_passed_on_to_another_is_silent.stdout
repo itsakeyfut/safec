@@ -1,10 +1,10 @@
 Target "x86_64-pc-windows-msvc"
 Function a_nonnull_parameter_passed_on_to_another_is_silent.c:1:6 "g" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter _Nonnull
+  Local "_1" "int *" parameter _Nonnull "p"
 Function a_nonnull_parameter_passed_on_to_another_is_silent.c:2:6 "f"
   Local "_0" "void" return
-  Local "_1" "int *" parameter _Nonnull
+  Local "_1" "int *" parameter _Nonnull "q"
   Block "bb0" entry
     ArgumentsEvaluated a_nonnull_parameter_passed_on_to_another_is_silent.c:3:5 generated
     Call a_nonnull_parameter_passed_on_to_another_is_silent.c:3:5 "g" "bb1"

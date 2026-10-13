@@ -1,24 +1,24 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_stored_on_the_arm_that_freed_it_is_doubted.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_stored_on_the_arm_that_freed_it_is_doubted.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_stored_on_the_arm_that_freed_it_is_doubted.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int **"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "t"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int *"
-  Local "_6" "int *"
+  Local "_6" "int *" "p"
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int *"
   Local "_10" "int *"
-  Local "_11" "int *"
-  Local "_12" "int"
+  Local "_11" "int *" "q"
+  Local "_12" "int" "r"
   Local "_13" "int"
   Local "_14" "int"
   Block "bb0" entry

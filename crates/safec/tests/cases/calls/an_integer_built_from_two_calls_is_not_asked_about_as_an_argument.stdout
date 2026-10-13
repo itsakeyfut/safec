@@ -5,10 +5,10 @@ Function an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:2:5
   Local "_0" "int" return
 Function an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:3:5 "h" declared
   Local "_0" "int" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "x"
 Function an_integer_built_from_two_calls_is_not_asked_about_as_an_argument.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int"
+  Local "_1" "int" "x"
   Local "_2" "int"
   Local "_3" "int"
   Local "_4" "int"

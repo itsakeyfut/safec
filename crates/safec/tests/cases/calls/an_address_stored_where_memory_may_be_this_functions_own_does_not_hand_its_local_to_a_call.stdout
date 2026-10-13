@@ -1,27 +1,27 @@
 Target "x86_64-pc-windows-msvc"
 Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:2:6 "release_ref" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:3:5 "use2" declared
   Local "_0" "int" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function an_address_stored_where_memory_may_be_this_functions_own_does_not_hand_its_local_to_a_call.c:5:5 "f"
   Local "_0" "int" return
-  Local "_1" "int ****" parameter _Nonnull
-  Local "_2" "int" parameter
-  Local "_3" "int ***"
+  Local "_1" "int ****" parameter _Nonnull "tt"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int ***" "s"
   Local "_4" "void *"
   Local "_5" "int"
-  Local "_6" "int ***"
+  Local "_6" "int ***" "k"
   Local "_7" "int ***"
   Local "_8" "int"
-  Local "_9" "int *"
+  Local "_9" "int *" "a"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "int *"
+  Local "_12" "int *" "b"
   Local "_13" "int **"
   Local "_14" "int **"
   Local "_15" "int **"

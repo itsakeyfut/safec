@@ -1,9 +1,9 @@
 Target "x86_64-pc-windows-msvc"
 Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:1:5 "plain_first"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *" parameter
-  Local "_3" "int **" parameter
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" parameter "p"
+  Local "_3" "int **" parameter "q"
   Local "_4" "int"
   Block "bb0" entry
     Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:2:12 "bb2" "bb3"
@@ -34,9 +34,9 @@ Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.
     Goto "bb1"
 Function a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:5:5 "through_memory_first"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *" parameter
-  Local "_3" "int **" parameter
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" parameter "p"
+  Local "_3" "int **" parameter "q"
   Local "_4" "int"
   Block "bb0" entry
     Branch a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy.c:6:12 "bb2" "bb3"

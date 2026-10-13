@@ -1,24 +1,24 @@
 Target "x86_64-pc-windows-msvc"
 Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
-  Local "_4" "int *"
-  Local "_5" "int **"
+  Local "_4" "int *" "r"
+  Local "_5" "int **" "tmp"
   Local "_6" "int **"
   Local "_7" "int **"
-  Local "_8" "int *"
-  Local "_9" "int **"
+  Local "_8" "int *" "s"
+  Local "_9" "int **" "pp"
   Local "_10" "int **"
   Local "_11" "int **"
-  Local "_12" "int *"
+  Local "_12" "int *" "q"
   Local "_13" "void *"
   Local "_14" "int *"
   Local "_15" "int"

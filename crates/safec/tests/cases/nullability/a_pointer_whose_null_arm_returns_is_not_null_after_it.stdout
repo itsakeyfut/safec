@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_whose_null_arm_returns_is_not_null_after_it.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Local "_2" "int"
   Local "_3" "int"
   Block "bb0" entry

@@ -1,10 +1,10 @@
 Target "x86_64-pc-windows-msvc"
 Function a_call_whose_destination_it_dereferences.c:1:6 "g" declared
   Local "_0" "int *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "v"
 Function a_call_whose_destination_it_dereferences.c:2:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Local "_2" "int *"
   Local "_3" "int *"
   Local "_4" "int"

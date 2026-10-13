@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function an_allocation_returned_from_a_nonnull_return_is_doubted.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function an_allocation_returned_from_a_nonnull_return_is_doubted.c:3:16 "f"
   Local "_0" "int *" return _Nonnull
   Local "_1" "void *"

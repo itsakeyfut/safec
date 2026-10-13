@@ -1,23 +1,23 @@
 Target "x86_64-pc-windows-msvc"
 Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "tab"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "int *"
+  Local "_9" "int *" "q"
   Local "_10" "int"
-  Local "_11" "int"
+  Local "_11" "int" "r"
   Block "bb0" entry
     Operation a_live_pointer_read_out_of_memory_is_read_in_silence.c:4:5 generated
       Destination "_0"

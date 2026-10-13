@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_call_handed_a_locals_address_may_return_it.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_call_handed_a_locals_address_may_return_it.c:2:6 "id" declared
   Local "_0" "int *" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_call_handed_a_locals_address_may_return_it.c:4:5 "g"
   Local "_0" "int" return
-  Local "_1" "int"
-  Local "_2" "int *"
+  Local "_1" "int" "x"
+  Local "_2" "int *" "r"
   Local "_3" "int *"
   Local "_4" "int *"
   Block "bb0" entry

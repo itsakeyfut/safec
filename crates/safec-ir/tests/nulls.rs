@@ -1529,6 +1529,7 @@ fn a_nonnull_parameter_a_call_passes_no_argument_for_is_not_proved() {
         [Parameter {
             ty: pointer,
             nonnull: Some(Promise::Declared(names.at[1])),
+            name: None,
         }],
     ));
     let mut function = Function::new(names.function, int, vec![]);

@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:2:6 "release" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "t"
 Function a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
-  Local "_5" "int"
-  Local "_6" "int **"
+  Local "_4" "int **" "old"
+  Local "_5" "int" "i"
+  Local "_6" "int **" "tab"
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int"

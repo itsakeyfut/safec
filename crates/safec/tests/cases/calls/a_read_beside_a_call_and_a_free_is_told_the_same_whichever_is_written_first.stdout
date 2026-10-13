@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:2:5 "g" declared
   Local "_0" "int" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "a"
 Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:3:5 "h" declared
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "q"
 Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:5:5 "call_first"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Local "_2" "int"
-  Local "_3" "int"
+  Local "_3" "int" "x"
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int"
@@ -71,9 +71,9 @@ Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_f
     Return
 Function a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:13:5 "free_first"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Local "_2" "int"
-  Local "_3" "int"
+  Local "_3" "int" "x"
   Local "_4" "int"
   Local "_5" "int"
   Local "_6" "int"

@@ -1,24 +1,24 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:3:7 "memset" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "int" parameter
-  Local "_3" "int" parameter
+  Local "_1" "void *" parameter "s"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
 Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:4:6 "forget" declared
   Local "_0" "void" return
 Function a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:6:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int **"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "tab"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int *"
+  Local "_5" "int *" "p"
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "void *"

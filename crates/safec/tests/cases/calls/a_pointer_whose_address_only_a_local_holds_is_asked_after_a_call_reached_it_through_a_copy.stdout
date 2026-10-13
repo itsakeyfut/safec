@@ -1,21 +1,21 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy.c:2:6 "release_ref" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy.c:3:5 "use2" declared
   Local "_0" "int" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function a_pointer_whose_address_only_a_local_holds_is_asked_after_a_call_reached_it_through_a_copy.c:5:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "pa"
   Local "_5" "int **"
-  Local "_6" "int *"
+  Local "_6" "int *" "b"
   Local "_7" "int **"
   Local "_8" "int **"
   Local "_9" "int"

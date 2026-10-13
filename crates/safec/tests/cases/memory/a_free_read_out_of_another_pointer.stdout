@@ -1,10 +1,10 @@
 Target "x86_64-pc-windows-msvc"
 Function a_free_read_out_of_another_pointer.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_free_read_out_of_another_pointer.c:2:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
   Block "bb0" entry
     ArgumentsEvaluated a_free_read_out_of_another_pointer.c:3:5 generated
     Call a_free_read_out_of_another_pointer.c:3:5 "free" "bb1"

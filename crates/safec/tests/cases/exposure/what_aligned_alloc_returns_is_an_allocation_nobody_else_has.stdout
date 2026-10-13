@@ -1,20 +1,20 @@
 Target "x86_64-pc-windows-msvc"
 Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:1:7 "aligned_alloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
-  Local "_2" "int" parameter
+  Local "_1" "int" parameter "alignment"
+  Local "_2" "int" parameter "size"
 Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:3:5 "abs" declared
   Local "_0" "int" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "x"
 Function what_aligned_alloc_returns_is_an_allocation_nobody_else_has.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "q"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
+  Local "_4" "int" "a"
   Local "_5" "int"
   Local "_6" "int"
   Block "bb0" entry

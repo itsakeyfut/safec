@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_freed_and_set_to_null_on_one_arm_is_read_after_a_null_test.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int *"

@@ -1,8 +1,8 @@
 Target "x86_64-pc-windows-msvc"
 Function a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int **" parameter
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int **" parameter "q"
   Local "_3" "int"
   Block "bb0" entry
     Branch a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy.c:2:9 "bb1" "bb2"

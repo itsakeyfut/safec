@@ -1,15 +1,15 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_carried_to_a_hatch_is_reported.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_read_carried_to_a_hatch_is_reported.c:4:6 "nothing" hatch
   Local "_0" "void" return
   Block "bb0" entry
     Return
 Function a_read_carried_to_a_hatch_is_reported.c:7:5 "main"
   Local "_0" "int" return
-  Local "_1" "int"
-  Local "_2" "int *"
+  Local "_1" "int" "x"
+  Local "_2" "int *" "a"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int"

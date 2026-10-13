@@ -1,20 +1,20 @@
 Target "x86_64-pc-windows-msvc"
 Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:3:6 "get" declared
   Local "_0" "int *" return
 Function a_call_in_a_loop_may_hand_back_what_was_freed_last_turn.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int"
+  Local "_1" "int" "i"
   Local "_2" "int"
-  Local "_3" "int *"
+  Local "_3" "int *" "t"
   Local "_4" "int *"
   Local "_5" "int"
-  Local "_6" "int"
+  Local "_6" "int" "r"
   Local "_7" "int"
   Local "_8" "int"
   Block "bb0" entry

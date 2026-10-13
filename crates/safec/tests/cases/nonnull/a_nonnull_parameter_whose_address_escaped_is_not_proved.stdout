@@ -1,8 +1,8 @@
 Target "x86_64-pc-windows-msvc"
 Function a_nonnull_parameter_whose_address_escaped_is_not_proved.c:1:6 "f"
   Local "_0" "void" return
-  Local "_1" "int *" parameter _Nonnull
-  Local "_2" "int **"
+  Local "_1" "int *" parameter _Nonnull "p"
+  Local "_2" "int **" "pp"
   Local "_3" "int **"
   Local "_4" "int *"
   Local "_5" "int"

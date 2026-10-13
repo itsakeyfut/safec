@@ -1,27 +1,27 @@
 Target "x86_64-pc-windows-msvc"
 Function a_table_realloc_grew_still_holds_what_it_held.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_table_realloc_grew_still_holds_what_it_held.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_table_realloc_grew_still_holds_what_it_held.c:3:7 "realloc" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "int" parameter
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
 Function a_table_realloc_grew_still_holds_what_it_held.c:4:6 "drop_inner" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "box"
 Function a_table_realloc_grew_still_holds_what_it_held.c:6:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "p"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "tab"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"
-  Local "_8" "int **"
+  Local "_8" "int **" "bigger"
   Local "_9" "void *"
   Local "_10" "int"
   Block "bb0" entry

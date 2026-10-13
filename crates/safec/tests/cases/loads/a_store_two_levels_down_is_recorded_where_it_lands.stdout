@@ -1,22 +1,22 @@
 Target "x86_64-pc-windows-msvc"
 Function a_store_two_levels_down_is_recorded_where_it_lands.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_store_two_levels_down_is_recorded_where_it_lands.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_store_two_levels_down_is_recorded_where_it_lands.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int ***"
+  Local "_1" "int ***" "t3"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "t2"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
+  Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
-  Local "_10" "int *"
+  Local "_10" "int *" "r"
   Local "_11" "void *"
   Local "_12" "int"
   Local "_13" "int"

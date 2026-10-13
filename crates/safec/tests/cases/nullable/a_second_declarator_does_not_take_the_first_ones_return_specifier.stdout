@@ -5,7 +5,7 @@ Function a_second_declarator_does_not_take_the_first_ones_return_specifier.c:1:2
   Local "_0" "int *" return
 Function a_second_declarator_does_not_take_the_first_ones_return_specifier.c:3:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "q"
   Local "_2" "int *"
   Block "bb0" entry
     Operation a_second_declarator_does_not_take_the_first_ones_return_specifier.c:3:5 generated

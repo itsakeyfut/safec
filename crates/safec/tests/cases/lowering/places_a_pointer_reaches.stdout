@@ -1,8 +1,8 @@
 Target "x86_64-pc-windows-msvc"
 Function places_a_pointer_reaches.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int" parameter
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int" parameter "i"
   Local "_3" "int"
   Local "_4" "int *"
   Block "bb0" entry

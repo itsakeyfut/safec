@@ -1,8 +1,8 @@
 Target "x86_64-pc-windows-msvc"
 Function the_end_of_a_function_promising_a_nonnull_return_is_refused.c:1:16 "f"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int" parameter
-  Local "_2" "int"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int" "x"
   Local "_3" "int *"
   Block "bb0" entry
     Operation the_end_of_a_function_promising_a_nonnull_return_is_refused.c:2:9 written
