@@ -544,6 +544,76 @@ fn the_artifact_grows_with_the_source_rather_than_with_its_square() {
     );
 }
 
+/// Looking a name up does not grow with how far back it was declared.
+///
+/// Two inputs of one size, 16000 declarations at file scope and 16000 uses in
+/// `main`, the same in every token but the name the uses spell: the first one
+/// declared, or the last. Parsing, typing and printing are the same work in
+/// both, so what differs is the lookup alone, and what is asserted is a ratio
+/// of the two times rather than a time. Comparing every binding newest first
+/// finds the last one at once and the first one after all the others, which
+/// made the first run take about sixteen times the second in a debug build;
+/// asking each scope's map makes the two take the same.
+///
+/// The margin is wide because it is a time: three times is far from either
+/// answer, so a busy machine moves neither across it.
+///
+/// Mutation: have `Resolver::lookup` in `sema.rs` scan `scopes` again,
+/// comparing each binding's spelling. The ratio goes to about sixteen and this
+/// fails by name.
+#[test]
+fn name_lookup_does_not_grow_with_how_far_back_the_name_was_declared() {
+    const NAMES: usize = 16_000;
+    let run = |used: usize, name: &str| -> std::time::Duration {
+        let path = std::env::temp_dir().join(name);
+        let mut source = String::new();
+        for i in 0..NAMES {
+            source.push_str(&format!(
+                "int v{i};
+"
+            ));
+        }
+        source.push_str(
+            "int main(void) {
+",
+        );
+        for _ in 0..NAMES {
+            source.push_str(&format!(
+                "    v{used} = 1;
+"
+            ));
+        }
+        source.push_str(
+            "    return 0;
+}
+",
+        );
+        std::fs::write(&path, source).expect("the temporary directory is writable");
+
+        let started = std::time::Instant::now();
+        let output = safec(&[
+            "--color",
+            "never",
+            "--emit",
+            "ast",
+            &path.display().to_string(),
+        ]);
+        let took = started.elapsed();
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        took
+    };
+
+    let first = run(0, "safec_exit_code_lookup_first.c");
+    let last = run(NAMES - 1, "safec_exit_code_lookup_last.c");
+
+    assert!(
+        first < last * 3,
+        "uses of the first name took {first:?} against {last:?} for the last,          so a lookup grows with how far back its name was declared"
+    );
+}
+
 /// A long flat expression is read and printed, rather than ending the process.
 ///
 /// Not a corpus case, because the point is the exit code rather than the
