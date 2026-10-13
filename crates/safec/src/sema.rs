@@ -14,8 +14,11 @@
 //! Names are compared as source text. ADR-0006 says an interner is worth
 //! having when identifiers are compared often, which is here, and in the same
 //! record fixes the signal to add one as the *parser* asking for a
-//! `&SourceMap`. This is not that moment, and nothing here measures a cost:
-//! the program this phase targets has three names in it.
+//! `&SourceMap`. That has not happened, and a name is looked up by hashing its
+//! text into each enclosing scope's map instead, so a lookup costs one hash
+//! per scope rather than one comparison per name declared:
+//! `name_lookup_does_not_grow_with_how_far_back_the_name_was_declared` in
+//! `tests/exit_code.rs` holds it.
 
 use std::collections::{HashMap, HashSet};
 
@@ -444,8 +447,9 @@ struct Resolver<'a> {
     tag_scopes: Vec<Vec<TagId>>,
     /// The declarations of each spelling, per scope and in step with
     /// `scopes`, which is what a second declaration in one scope is compared
-    /// with. A map rather than a scan of the innermost scope, which would
-    /// make a block of many declarations quadratic to resolve.
+    /// with, and what [`Resolver::lookup`] asks for a use. A map rather than
+    /// a scan, which would make a block of many declarations, or a file of
+    /// many uses, quadratic to resolve.
     spelled: Vec<HashMap<String, Declared>>,
     /// Reused across every expression walk, so that a run allocates once.
     children: Vec<ExprId>,
@@ -1149,15 +1153,20 @@ impl Resolver<'_> {
     }
 
     /// The innermost declaration of the name written at `use_site`.
+    ///
+    /// Asked of `spelled`, whose `latest` for a spelling is the binding a scan
+    /// of that scope newest first would find, so the answer is the same and a
+    /// lookup costs a hash per enclosing scope. A scan of every binding made a
+    /// file of `n` names and `n` uses quadratic: 16000 of each took eleven
+    /// seconds when the uses named the first declaration.
     fn lookup(&self, use_site: Span) -> Option<BindingId> {
         let name = self.sources.snippet(use_site);
 
-        self.scopes
+        self.spelled
             .iter()
             .rev()
-            .flat_map(|scope| scope.iter().rev())
-            .find(|&&binding| self.sources.snippet(self.resolution.binding(binding).name) == name)
-            .copied()
+            .find_map(|scope| scope.get(name))
+            .map(|declared| declared.latest)
     }
 
     /// Add a name to the innermost scope, reporting it if that scope already
@@ -1758,11 +1767,11 @@ mod tests {
 
     /// The innermost declaration wins, and each use is answered on its own.
     ///
-    /// Mutation: drop the `rev` over `self.scopes` in `Resolver::lookup`. The
+    /// Mutation: drop the `rev` over `self.spelled` in `Resolver::lookup`. The
     /// outer `x` answers instead and this fails.
     ///
-    /// The other `rev`, over the bindings within one scope, decides which of
-    /// two declarations of one name in one scope answers, and
+    /// Which of two declarations of one name in one scope answers is that
+    /// scope's `Declared::latest`, which every declaration replaces, and
     /// `a_use_after_a_name_declared_twice_is_the_second_declaration` holds
     /// it. At file scope two compatible declarations can still differ, `int
     /// f(); int f(int *a);`, and a call after them is checked against the
