@@ -185,13 +185,21 @@ more than its arguments: once code this check cannot read may reach an
 allocation it stays exposed, every such call after it may free it, and a
 pointer any such call returns may be it.
 [ADR-0039](adr/0039-an-allocation-code-this-check-cannot-read-may-reach-stays-exposed-while-it-lives.md)
-is that rule. Those read `this may free a
-value that was freed already` and `this may use a value after it was freed`,
-and a reader is being told there is something to suspect.
+is that rule. Those read `this frees a value
+that may have been freed already` and `this uses a value that may have been
+freed`, and a reader is being told there is something to suspect without being
+told a free happened: the free, the use or the pass at the caret certainly
+did, and whether the pointer had been freed before it is what is open. Neither
+cause is known to have a free behind it, since this check keeps the two in one
+state, and neither finding carries a `freed here` label, so words that named
+"the free" named one the report never showed, in programs with no `free` in
+them as well as in programs with one.
 
 The third is this check having stopped following the pointer, and there the
-same words would assert a first free that nothing worked out. A program with
-one `free` in it, and a program with none, both used to get them. So those read
+same words would assert a suspicion that nothing worked out: the two above at
+least had a free on some path or a call that could have made one. A program
+with one `free` in it, and a program with none, both used to get the words
+those had then, which asserted a first free outright. So those read
 `this frees a pointer this check stopped following` and `this uses a pointer
 this check stopped following`, which are the only diagnostics here that name
 the analysis rather than the program, because the analysis is the whole of what
@@ -200,7 +208,7 @@ for everything this check said about freeing, and where it gave up is part of
 that.
 
 **Where the conclusion is about a local the source wrote, the message names
-it**: `` this may free `p`, which was freed already ``, `` this frees `p`, which
+it**: `` this frees `p`, which may have been freed already ``, `` this frees `p`, which
 this check stopped following ``. The words quoted above are what the message
 says where no written name holds the value: a temporary, as `p[2]` reads, or a
 pointer read out of memory, as `free(*pp)` frees. Only the message names it,

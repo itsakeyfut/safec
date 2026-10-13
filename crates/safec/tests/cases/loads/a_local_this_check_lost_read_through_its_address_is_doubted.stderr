@@ -8,12 +8,12 @@ warning[SC0402]: this uses `q`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0401]: this may free `p`, which was freed already
+warning[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_local_this_check_lost_read_through_its_address_is_doubted.c:22:9 ]
     │
  22 │         free(p);
     │         ───┬───  
-    │            ╰───── may free it again here
+    │            ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

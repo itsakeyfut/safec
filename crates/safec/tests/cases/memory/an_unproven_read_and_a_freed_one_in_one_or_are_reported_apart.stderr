@@ -1,19 +1,19 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
    ╭─[ an_unproven_read_and_a_freed_one_in_one_or_are_reported_apart.c:7:9 ]
    │
  7 │     if (*p || (free(p), *p)) { return 1; }
    │         ─┬  
-   │          ╰── used here, perhaps after the free
+   │          ╰── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
    ╭─[ an_unproven_read_and_a_freed_one_in_one_or_are_reported_apart.c:7:16 ]
    │
  7 │     if (*p || (free(p), *p)) { return 1; }
    │                ───┬───  
-   │                   ╰───── may free it again here
+   │                   ╰───── this may be its second free
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

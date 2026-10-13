@@ -11,12 +11,12 @@ error[SC0402]: this may use `a` after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0401]: this may free `a`, which was freed already
+error[SC0401]: this frees `a`, which may have been freed already
     ╭─[ a_free_in_the_same_expression_keeps_its_label_over_a_pending_call.c:20:57 ]
     │
  20 │     r = release_all() + (x = a[0]) + (holder = a, 0) + (free(a), 0);
     │                                                         ───┬───  
-    │                                                            ╰───── may free it again here
+    │                                                            ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

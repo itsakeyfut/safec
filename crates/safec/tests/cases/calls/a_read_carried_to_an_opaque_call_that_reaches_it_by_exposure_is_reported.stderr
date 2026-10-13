@@ -1,9 +1,9 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
    ╭─[ a_read_carried_to_an_opaque_call_that_reaches_it_by_exposure_is_reported.c:8:13 ]
    │
  8 │     return (x = p[0]) + (release_all(), 0);
    │             ────┬───  
-   │                 ╰───── used here, perhaps after the free
+   │                 ╰───── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

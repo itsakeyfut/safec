@@ -1,19 +1,19 @@
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:10:5 ]
     │
  10 │     free(p);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use `r` after it was freed
+error[SC0402]: this uses `r`, which may have been freed
     ╭─[ a_use_after_free_a_write_took_the_proof_of_still_fails_a_build_that_denies_unknown.c:11:5 ]
     │
  11 │     *r = 1;
     │     ───┬──  
-    │        ╰──── used here, perhaps after the free
+    │        ╰──── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

@@ -1,4 +1,4 @@
-error[SC0402]: this may use `a` after it was freed
+error[SC0402]: this uses `a`, which may have been freed
     ╭─[ a_later_call_is_asked_about_what_a_pointer_it_reads_out_of_memory_reaches.c:16:13 ]
     │
   7 │     int *a = malloc(4);
@@ -7,7 +7,7 @@ error[SC0402]: this may use `a` after it was freed
     │ 
  16 │     return (x = a[0]) + (release(*s), 0);
     │             ────┬───  
-    │                 ╰───── used here, perhaps after the free
+    │                 ╰───── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

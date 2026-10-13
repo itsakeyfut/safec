@@ -1,4 +1,4 @@
-error[SC0402]: this may use `a` after it was freed
+error[SC0402]: this uses `a`, which may have been freed
     ╭─[ a_read_is_asked_about_what_a_call_exposes_through_what_it_is_handed.c:18:10 ]
     │
   9 │     int *a = malloc(4);
@@ -7,7 +7,7 @@ error[SC0402]: this may use `a` after it was freed
     │ 
  18 │     r = (x = a[0]) + (memset(tab, 0, 8) != 0) + release_all();
     │          ────┬───  
-    │              ╰───── used here, perhaps after the free
+    │              ╰───── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

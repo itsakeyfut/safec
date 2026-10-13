@@ -1,19 +1,19 @@
-error[SC0401]: this may free `a`, which was freed already
+error[SC0401]: this frees `a`, which may have been freed already
     ╭─[ a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:15:5 ]
     │
  15 │     free(a);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this passes a pointer that may point to a freed allocation
     ╭─[ a_place_and_what_it_points_at_handed_to_one_call_are_one_report.c:16:12 ]
     │
  16 │     return two(*k, **k);
     │            ──────┬─────  
-    │                  ╰─────── passed here, perhaps after the free
+    │                  ╰─────── passed here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

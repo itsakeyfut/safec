@@ -1,19 +1,19 @@
-warning[SC0401]: this may free `p`, which was freed already
+warning[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_load_through_two_locals_addresses_reads_what_the_last_holds.c:14:5 ]
     │
  14 │     free(p);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-warning[SC0402]: this may use `q` after it was freed
+warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_load_through_two_locals_addresses_reads_what_the_last_holds.c:23:5 ]
     │
  23 │     return *q;
     │     ─────┬────  
-    │          ╰────── used here, perhaps after the free
+    │          ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

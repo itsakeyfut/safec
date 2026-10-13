@@ -1,9 +1,9 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
    ╭─[ a_call_whose_destination_it_dereferences.c:4:5 ]
    │
  4 │     *p = 1;
    │     ───┬──  
-   │        ╰──── used here, perhaps after the free
+   │        ╰──── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

@@ -1,9 +1,9 @@
-warning[SC0401]: this may free `p`, which was freed already
+warning[SC0401]: this frees `p`, which may have been freed already
    ╭─[ an_unproven_free_is_a_warning_under_allow_unknown.c:5:5 ]
    │
  5 │     free(p);
    │     ───┬───  
-   │        ╰───── may free it again here
+   │        ╰───── this may be its second free
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

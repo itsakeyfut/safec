@@ -1,9 +1,9 @@
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
    ╭─[ a_free_where_one_of_two_allocations_is_live.c:9:5 ]
    │
  9 │     free(p);
    │     ───┬───  
-   │        ╰───── may free it again here
+   │        ╰───── this may be its second free
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

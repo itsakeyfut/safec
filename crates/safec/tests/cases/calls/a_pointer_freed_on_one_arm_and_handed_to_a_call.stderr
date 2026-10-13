@@ -1,9 +1,9 @@
-error[SC0407]: this may pass `a`, which points to an allocation that was freed
+error[SC0407]: this passes `a`, which may point to a freed allocation
     ╭─[ a_pointer_freed_on_one_arm_and_handed_to_a_call.c:13:12 ]
     │
  13 │     return use(a);
     │            ───┬──  
-    │               ╰──── passed here, perhaps after the free
+    │               ╰──── passed here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

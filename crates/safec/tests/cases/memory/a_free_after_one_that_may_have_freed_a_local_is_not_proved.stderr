@@ -8,12 +8,12 @@ error[SC0401]: this frees `r`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: this check could not rule out that this holds a local's address, which free must never be handed; if it is always what an allocation function returned, nothing here says the program is wrong
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_free_after_one_that_may_have_freed_a_local_is_not_proved.c:12:5 ]
     │
  12 │     free(p);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

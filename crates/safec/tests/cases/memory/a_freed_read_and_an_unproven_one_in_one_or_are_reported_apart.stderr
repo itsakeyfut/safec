@@ -14,12 +14,12 @@ error[SC0402]: this uses `p` after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
    ╭─[ a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:24 ]
    │
  7 │     if (*p || (q = &p, *p)) { return 1; }
    │                        ─┬  
-   │                         ╰── used here, perhaps after the free
+   │                         ╰── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

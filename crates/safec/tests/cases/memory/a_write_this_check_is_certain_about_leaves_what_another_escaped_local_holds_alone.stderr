@@ -1,9 +1,9 @@
-error[SC0401]: this may free `o`, which was freed already
+error[SC0401]: this frees `o`, which may have been freed already
     ╭─[ a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:10:5 ]
     │
  10 │     free(o);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

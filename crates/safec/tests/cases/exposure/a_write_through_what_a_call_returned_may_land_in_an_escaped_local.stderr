@@ -1,9 +1,9 @@
-error[SC0402]: this may use `y` after it was freed
+error[SC0402]: this uses `y`, which may have been freed
     ╭─[ a_write_through_what_a_call_returned_may_land_in_an_escaped_local.c:12:5 ]
     │
  12 │     return *y;
     │     ─────┬────  
-    │          ╰────── used here, perhaps after the free
+    │          ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

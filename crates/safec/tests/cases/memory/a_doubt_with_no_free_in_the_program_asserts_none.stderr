@@ -1,0 +1,30 @@
+error[SC0402]: this uses `p`, which may have been freed
+   ╭─[ a_doubt_with_no_free_in_the_program_asserts_none.c:7:13 ]
+   │
+ 7 │     int x = g(*p) + h(p);
+   │             ──┬──  
+   │               ╰──── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0407]: this passes `p`, which may point to a freed allocation
+   ╭─[ a_doubt_with_no_free_in_the_program_asserts_none.c:7:21 ]
+   │
+ 7 │     int x = g(*p) + h(p);
+   │                     ──┬─  
+   │                       ╰─── passed here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0406]: this returns `p`, which may point to a freed allocation
+    ╭─[ a_doubt_with_no_free_in_the_program_asserts_none.c:12:5 ]
+    │
+ 12 │     return p;
+    │     ────┬────  
+    │         ╰────── returned here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

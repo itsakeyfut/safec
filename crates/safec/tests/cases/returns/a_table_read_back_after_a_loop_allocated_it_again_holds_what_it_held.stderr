@@ -1,9 +1,9 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_table_read_back_after_a_loop_allocated_it_again_holds_what_it_held.c:21:13 ]
     │
  21 │             return *p;
     │             ─────┬────  
-    │                  ╰────── used here, perhaps after the free
+    │                  ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

@@ -1,4 +1,4 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
     ╭─[ an_unsequenced_use_before_an_opaque_call_is_reported.c:10:13 ]
     │
   5 │     int *p = malloc(4);
@@ -7,7 +7,7 @@ error[SC0402]: this may use `p` after it was freed
     │ 
  10 │     int x = g(*p) + h(p);
     │             ──┬──  
-    │               ╰──── used here, perhaps after the free
+    │               ╰──── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

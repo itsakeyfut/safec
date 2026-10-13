@@ -1,9 +1,9 @@
-warning[SC0402]: this may use a value after it was freed
+warning[SC0402]: this uses a value that may have been freed
     ╭─[ a_locals_address_read_back_out_of_an_allocation_is_written_through.c:20:5 ]
     │
  20 │     return ***t3;
     │     ──────┬──────  
-    │           ╰──────── used here, perhaps after the free
+    │           ╰──────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

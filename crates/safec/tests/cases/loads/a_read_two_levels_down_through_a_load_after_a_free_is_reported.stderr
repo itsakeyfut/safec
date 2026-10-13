@@ -1,9 +1,9 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this uses a value that may have been freed
     ╭─[ a_read_two_levels_down_through_a_load_after_a_free_is_reported.c:25:5 ]
     │
  25 │     return **q2;
     │     ──────┬─────  
-    │           ╰─────── used here, perhaps after the free
+    │           ╰─────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

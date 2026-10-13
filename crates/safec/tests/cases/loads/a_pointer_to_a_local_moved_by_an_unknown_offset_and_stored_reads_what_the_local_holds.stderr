@@ -8,12 +8,12 @@ warning[SC0402]: this uses `q`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0401]: this may free `p`, which was freed already
+warning[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:27:9 ]
     │
  27 │         free(p);
     │         ───┬───  
-    │            ╰───── may free it again here
+    │            ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
