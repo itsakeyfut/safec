@@ -3039,7 +3039,18 @@ impl Checker<'_> {
             return;
         };
         let null = self.is_null_pointer_constant(argument);
-        if self.assignable(ast, parameter, source, null) != Some(false) {
+        // C17 6.5.2.2 p2 holds an argument to what may be assigned to its
+        // parameter, and nothing may be assigned to `void` (6.5.16.1 p1), nor
+        // may a `void` expression's value be used at all (6.3.2.2).
+        // `assignable` leaves a `void` target unanswered, for the reason its
+        // comment gives, so a `void` parameter is asked here; a declaration
+        // may still have one (6.7.6.3 p12). Before this, `f(1)` against
+        // `int f(void b);` built, and `f(g())` with `g` returning `void`
+        // reached the lowering and panicked.
+        let refused = matches!(ast.ty(parameter), Type::Void)
+            || matches!(ast.ty(source), Type::Void)
+            || self.assignable(ast, parameter, source, null) == Some(false);
+        if !refused {
             return;
         }
         let source_spelled = self.spelled(ast, source);

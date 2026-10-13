@@ -1,0 +1,22 @@
+error[SC0302]: cannot pass `int` to a parameter of type `void`
+   ╭─[ an_argument_to_a_void_parameter_is_refused.c:4:7 ]
+   │
+ 2 │ int f(void b);
+   │            ┬  
+   │            ╰── declared `void` here
+   │ 
+ 4 │     f(1);
+   │       ┬  
+   │       ╰── this is `int`
+───╯
+error[SC0302]: cannot pass `void` to a parameter of type `void`
+   ╭─[ an_argument_to_a_void_parameter_is_refused.c:5:14 ]
+   │
+ 2 │ int f(void b);
+   │            ┬  
+   │            ╰── declared `void` here
+   │ 
+ 5 │     return f(g());
+   │              ─┬─  
+   │               ╰─── this is `void`
+───╯

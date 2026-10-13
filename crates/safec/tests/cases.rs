@@ -2822,6 +2822,14 @@ cases! {
         // says `void` has type `void`. Mutation: ask a declaration's
         // parameters too; `d` and `e` gain reports.
         an_object_or_a_definition_s_parameter_of_type_void_is_incomplete: ["--emit", "ast"],
+        // Nothing can be passed to a `void` parameter, and no `void` value can
+        // be passed at all (6.5.2.2 p2, 6.3.2.2), so both calls are `SC0302`.
+        // Asked for the IR, so that a call let through reaches the lowering:
+        // `f(g())` panicked there before, and `f(1)` built. Mutation: drop
+        // the `void` parameter test in `check_argument`; `f(1)`'s report
+        // goes. Mutation: drop the `void` argument test as well; the run
+        // panics again.
+        an_argument_to_a_void_parameter_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
         // members, a declaration of a tag and nothing else, an object, a
         // parameter, a local, and `.` and `->`, each in the tree. Every
