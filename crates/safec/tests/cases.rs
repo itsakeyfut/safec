@@ -1091,6 +1091,13 @@ cases! {
         // pointer is in doubt; the first says `pp`. Mutation: `own_local`
         // answers a projection's root; `g(*pp)` and `return *pp;` say `pp`.
         a_nullability_diagnostic_about_an_unnamed_pointer_names_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p = *q;` with both pointers escaped, so neither dereference
+        // refines its pointer and the read-back asks `p` again. The places
+        // arrive at the caret as `p`, `q`, `p`, the two about `p` not
+        // adjacent, and each pointer is said once. Mutation: have the fold in
+        // `nullability::findings` look only at its neighbour; `p` is said
+        // twice in each function.
+        two_escaped_pointers_written_through_one_another_are_each_said_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "nonnull" => {
