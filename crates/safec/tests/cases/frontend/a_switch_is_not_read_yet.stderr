@@ -1,0 +1,8 @@
+error[SC0207]: `switch` is not read yet
+   ╭─[ a_switch_is_not_read_yet.c:2:5 ]
+   │
+ 2 │     switch (1) {
+   │     ───┬──  
+   │        ╰──── valid C, which this compiler does not read yet
+───╯
+  = note: C17 6.8.4.2 makes it valid; this compiler does not read it yet
