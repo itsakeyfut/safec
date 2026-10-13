@@ -134,11 +134,12 @@ single expression "optionally enclosed in braces", so it is valid with no
 designator and no nested list in it; unwrapping the braces is only correct
 where the declared type is scalar, and the parser does not know the type.
 
-The last two are `SC0207`, which is every construct of this kind: C the parser
-does not read yet, told apart from C it cannot parse where the parse failed.
-`switch`, `typedef`, a cast, a string literal and the rest the parser's module
-comment lists are reported the same way, each naming the clause that makes it
-valid. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the
+The bit-field and the anonymous member are `SC0207`, the code for valid C the
+parser does not read yet, told apart from C it cannot parse where the parse
+failed. `switch`, `typedef`, a cast, a string literal and the other constructs
+the parser does not read are reported under it too, each naming the clause
+that makes it valid; `parser.rs::unread_keyword` and the checks beside it
+decide which, at which position. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the
 code.
 
 None is a gap the lexer left, which is why they are a table of their own:

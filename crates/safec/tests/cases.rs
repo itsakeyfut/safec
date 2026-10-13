@@ -2991,8 +2991,8 @@ cases! {
         // The two kinds `SC0201` and `SC0207` tell apart, each pinned whole: a
         // `switch` is C (6.8.4.2) this parser does not read, and a `case` with
         // no `switch` around it breaks 6.8.1 p2's constraint, so it is not C.
-        // Mutation: report the `case` through `refuse_unread`, or the `switch`
-        // through `EXPECTED`; the case whose wording moved fails.
+        // Mutation: add a `Keyword::Case` row to `unread_keyword`, and the
+        // second case fails; drop the `switch` row, and the first does.
         a_switch_is_not_read_yet: ["--emit", "ast"],
         a_case_outside_a_switch_is_malformed: ["--emit", "ast"],
         // A member list has nowhere to put a tag (6.7.2.1 p2), so `struct T;`

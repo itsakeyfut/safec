@@ -327,14 +327,17 @@ statement begins is C this compiler has not been taught, and `case` with no
 `switch` around it breaks C17 6.8.1 p2's constraint. A reader who meets the
 first has nothing to fix in their file, and the code is how they can tell
 without reading the message. The lexer's `SC0107` is the same refusal one stage
-earlier, and a braced initializer keeps the `SC0203` it was given first.
+earlier.
 
 A bit-field and an anonymous member were reported as "not read yet" under
-`SC0201` before `SC0207` existed, and moved to it when it did. That is the one
-renumbering the rule below has had. It was taken because leaving them would have
-split one class across two codes, and a code exists so that a class can be
-searched for; what it costs is a suppression list that named `SC0201` for one
-of those two.
+`SC0201` before `SC0207` existed, and moved to it when it did. That breaks the
+rule that a code, once assigned, never changes, and it is the one time a
+diagnostic has moved to another `SC` code. It was taken because leaving them
+would have split one class across two codes, and a code exists so that a
+class can be searched for; what it costs is a suppression list that named
+`SC0201` for one of those two. Two refusals of valid C keep codes of their
+own: a braced initializer `SC0203`, and an annotation this compiler does not
+read `SC0205`.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from

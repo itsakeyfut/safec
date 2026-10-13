@@ -727,7 +727,7 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
     #[derive(Clone, Copy, PartialEq)]
     enum At {
         FileScope,
-        Block,
+        BlockScope,
         Statement,
         Member,
         Parameter,
@@ -736,9 +736,9 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
     }
     use At::*;
     const ALL: [At; 7] = [
-        FileScope, Block, Statement, Member, Parameter, ForInit, Expression,
+        FileScope, BlockScope, Statement, Member, Parameter, ForInit, Expression,
     ];
-    const SPECIFIER: &[At] = &[FileScope, Block, Member, Parameter, ForInit];
+    const SPECIFIER: &[At] = &[FileScope, BlockScope, Member, Parameter, ForInit];
 
     let keywords: &[(&str, &str, &[At])] = &[
         ("switch", "6.8.4.2", &[Statement]),
@@ -746,12 +746,12 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
         ("goto", "6.8.6.1", &[Statement]),
         ("continue", "6.8.6.2", &[Statement]),
         ("break", "6.8.6.3", &[Statement]),
-        ("typedef", "6.7.8", &[FileScope, Block]),
-        ("extern", "6.7.1", &[FileScope, Block]),
-        ("static", "6.7.1", &[FileScope, Block]),
+        ("typedef", "6.7.8", &[FileScope, BlockScope]),
+        ("extern", "6.7.1", &[FileScope, BlockScope]),
+        ("static", "6.7.1", &[FileScope, BlockScope]),
         ("_Thread_local", "6.7.1", &[FileScope]),
-        ("auto", "6.7.1", &[Block, ForInit]),
-        ("register", "6.7.1", &[Block, Parameter, ForInit]),
+        ("auto", "6.7.1", &[BlockScope, ForInit]),
+        ("register", "6.7.1", &[BlockScope, Parameter, ForInit]),
         ("const", "6.7.3", SPECIFIER),
         ("volatile", "6.7.3", SPECIFIER),
         ("_Atomic", "6.7.3", SPECIFIER),
@@ -765,10 +765,14 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
         ("_Complex", "6.7.2", SPECIFIER),
         ("union", "6.7.2.1", SPECIFIER),
         ("enum", "6.7.2.2", SPECIFIER),
-        ("inline", "6.7.4", &[FileScope, Block]),
-        ("_Noreturn", "6.7.4", &[FileScope, Block]),
-        ("_Alignas", "6.7.5", &[FileScope, Block, Member, ForInit]),
-        ("_Static_assert", "6.7.10", &[FileScope, Block, Member]),
+        ("inline", "6.7.4", &[FileScope, BlockScope]),
+        ("_Noreturn", "6.7.4", &[FileScope, BlockScope]),
+        (
+            "_Alignas",
+            "6.7.5",
+            &[FileScope, BlockScope, Member, ForInit],
+        ),
+        ("_Static_assert", "6.7.10", &[FileScope, BlockScope, Member]),
         ("sizeof", "6.5.3.4", &[Expression]),
         ("_Alignof", "6.5.3.4", &[Expression]),
         ("_Generic", "6.5.1.1", &[Expression]),
@@ -778,7 +782,7 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
         for at in ALL {
             let source = match at {
                 FileScope => format!("{keyword} x;\n"),
-                Block => format!("int main(void) {{ {keyword} x; }}\n"),
+                BlockScope => format!("int main(void) {{ {keyword} x; }}\n"),
                 Statement => format!("int main(void) {{ while (1) {keyword} x; }}\n"),
                 Member => format!("struct S {{ {keyword} a; }};\n"),
                 Parameter => format!("void f({keyword} a);\n"),
@@ -789,10 +793,11 @@ fn every_keyword_is_unread_exactly_where_c_allows_it() {
             // there a `break` or `continue` is outside any loop. An expression
             // can begin a statement, a block-item and a `for`'s first clause.
             let unread = allowed.contains(&at)
-                || (at == Block
+                || (at == BlockScope
                     && allowed.contains(&Statement)
                     && !matches!(keyword, "break" | "continue"))
-                || (matches!(at, Block | Statement | ForInit) && allowed.contains(&Expression));
+                || (matches!(at, BlockScope | Statement | ForInit)
+                    && allowed.contains(&Expression));
 
             let parsed = parsed(&source);
             let [reported] = parsed.diagnostics.diagnostics() else {

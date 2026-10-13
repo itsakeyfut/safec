@@ -140,7 +140,7 @@ not against what shipped before it, which is the next section.
   `pp[0]` twin exits 1. This reads the operand, not the value, and a constant
   folder that read values would be a different promise. What bounds the class is
   that the frontend refuses most of the other spellings: a hexadecimal or long
-  constant, a character constant and a cast are each `SC0304` or `SC0201`
+  constant, a character constant and a cast are each `SC0304` or `SC0207`
   today, and an array type is refused outright, so what is left is `-0`,
   `n - n` and `0 * k`. **The boundary is the operand and not the value.** Since
   #384 the type checker evaluates a constant expression and the lowering lowers

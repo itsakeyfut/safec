@@ -13,6 +13,9 @@
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
 //! rather than reshaping it. Until then each is refused as `SC0207`, valid C
 //! not read yet, rather than as `SC0201`, which says the program is not C.
+//! This list is a summary: what is refused as `SC0207`, and where, is
+//! decided by `unread_keyword` and the checks that call
+//! `Parser::report_unread`.
 //!
 //! It is handed tokens and not the source. ADR-0006 reserved a trigger, that
 //! the parser asking for a `&SourceMap` is the moment an interner is worth
@@ -117,9 +120,12 @@ const NOTHING_DECLARED: Code = Code::new("SC0206");
 /// Not [`EXPECTED`], because nothing is wrong with the program: a reader has
 /// to be able to tell a construct this compiler has not been taught from a
 /// defect in their file, and a code they can search for is how they do it.
-/// The parser's counterpart of the lexer's `SC0107`, and one code for the
-/// whole class for the same reason [`EXPECTED`] is one code. A braced
-/// initializer kept the code it was given first, [`BRACED_INITIALIZER`].
+/// The parser's counterpart of the lexer's `SC0107`, and one code for every
+/// construct of this kind for the same reason [`EXPECTED`] is one code. Two
+/// other refusals of valid C keep codes of their own: a braced initializer
+/// the one it was given first, [`BRACED_INITIALIZER`], and an annotation
+/// this compiler does not read [`UNREAD_ANNOTATION`], which is about a word
+/// rather than a construct.
 ///
 /// Which construct it is is decided where the parse failed, by
 /// [`unread_keyword`] and by the few token pairs [`Parser::refuse_unread`]
@@ -319,7 +325,7 @@ enum Position {
     /// whose specifiers this parser does not read. C17 6.8.2 allows one in a
     /// block and 6.8.4 and 6.8.5 do not allow one as a substatement, which is
     /// why this is not [`Position::Statement`].
-    Block,
+    BlockScope,
     /// Where a statement begins, in a block or as a substatement.
     Statement,
     /// Where a member declaration begins: C17 6.7.2.1's
@@ -353,16 +359,17 @@ struct Unread {
 /// [`EXPECTED`]. So do `case` and `default`, which 6.8.1 p2 allows only in a
 /// `switch` this parser never reads, and `_Imaginary`, which only Annex G
 /// gives a meaning. `restrict` has no row: 6.7.3 p2 allows it only on a
-/// pointer to an object, so leading a declaration it is not C, and after a
-/// `*` it is [`Parser::declarator`]'s to refuse.
+/// pointer to an object, so leading a declaration it is C only before a
+/// typedef name for one, which this parser does not read, and after a `*` it
+/// is [`Parser::declarator`]'s to refuse.
 fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
-    use Position::{Block, Expression, FileScope, ForInit, Member, Parameter, Statement};
+    use Position::{BlockScope, Expression, FileScope, ForInit, Member, Parameter, Statement};
 
     // Which positions each kind of keyword belongs in. A type specifier or a
     // qualifier begins a declaration anywhere one may begin.
-    const SPECIFIER: &[Position] = &[FileScope, Block, Member, Parameter, ForInit];
-    const STORAGE: &[Position] = &[FileScope, Block];
-    const AUTOMATIC: &[Position] = &[Block, ForInit];
+    const SPECIFIER: &[Position] = &[FileScope, BlockScope, Member, Parameter, ForInit];
+    const STORAGE: &[Position] = &[FileScope, BlockScope];
+    const AUTOMATIC: &[Position] = &[BlockScope, ForInit];
     const STATEMENT: &[Position] = &[Statement];
 
     let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
@@ -378,7 +385,7 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         // it in a block, which the one token asked about here cannot see.
         Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", &[FileScope]),
         Keyword::Auto => ("`auto`", "6.7.1", AUTOMATIC),
-        Keyword::Register => ("`register`", "6.7.1", &[Block, Parameter, ForInit]),
+        Keyword::Register => ("`register`", "6.7.1", &[BlockScope, Parameter, ForInit]),
         Keyword::Const => ("`const`", "6.7.3", SPECIFIER),
         Keyword::Volatile => ("`volatile`", "6.7.3", SPECIFIER),
         // The qualifier's clause. `Parser::refuse_unread` cites 6.7.2.4 instead
@@ -396,8 +403,16 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::Enum => ("`enum`", "6.7.2.2", SPECIFIER),
         Keyword::Inline => ("`inline`", "6.7.4", STORAGE),
         Keyword::Noreturn => ("`_Noreturn`", "6.7.4", STORAGE),
-        Keyword::Alignas => ("`_Alignas`", "6.7.5", &[FileScope, Block, Member, ForInit]),
-        Keyword::StaticAssert => ("`_Static_assert`", "6.7.10", &[FileScope, Block, Member]),
+        Keyword::Alignas => (
+            "`_Alignas`",
+            "6.7.5",
+            &[FileScope, BlockScope, Member, ForInit],
+        ),
+        Keyword::StaticAssert => (
+            "`_Static_assert`",
+            "6.7.10",
+            &[FileScope, BlockScope, Member],
+        ),
         Keyword::Sizeof => ("`sizeof`", "6.5.3.4", &[Expression]),
         Keyword::Alignof => ("`_Alignof`", "6.5.3.4", &[Expression]),
         Keyword::Generic => ("`_Generic`", "6.5.1.1", &[Expression]),
@@ -758,7 +773,7 @@ impl Parser<'_> {
         let start = self.peek().span;
         let at = match declares {
             Declares::FileScope => Position::FileScope,
-            Declares::BlockScope => Position::Block,
+            Declares::BlockScope => Position::BlockScope,
             Declares::Member => Position::Member,
             Declares::Parameter => Position::Parameter,
         };
@@ -1743,7 +1758,11 @@ impl Parser<'_> {
                         || parser.check(TokenKind::Annotation(Annotation::Attribute))
                     {
                         parser.declaration_statement(diagnostics)
-                    } else if parser.refuse_unread(Position::Block, diagnostics) {
+                    } else if parser.refuse_unread(Position::BlockScope, diagnostics) {
+                        // A declaration this parser does not read, asked here
+                        // rather than in `statement`, which also reads
+                        // substatements: C17 6.8.4 and 6.8.5 allow no
+                        // declaration as one, so there it is not C.
                         let span = parser.peek().span;
                         parser.ast.push_stmt(Stmt::Error { span })
                     } else {
@@ -1993,6 +2012,8 @@ impl Parser<'_> {
             }
             Some(ForStart::Declaration(declaration))
         } else if self.refuse_unread(Position::ForInit, diagnostics) {
+            // Not `BlockScope`'s question: 6.8.5 p3 allows a `for` only a
+            // declaration of an object with storage class `auto` or `register`.
             return failed(self);
         } else {
             let Some(initialiser) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics)
@@ -2527,6 +2548,7 @@ impl Parser<'_> {
 
         self.report_built(span, built, diagnostics)
     }
+
     /// The same, at the token that is there, with a note under the label.
     ///
     /// For a refusal that is about this compiler rather than about the program:
@@ -2608,7 +2630,7 @@ impl Parser<'_> {
         after == TokenKind::Punct(Punct::RightBrace)
             || begins_specifiers(after)
             || matches!(after, TokenKind::Keyword(keyword)
-                if unread_keyword(keyword, Position::Block).is_some())
+                if unread_keyword(keyword, Position::BlockScope).is_some())
     }
 
     /// The report [`UNREAD`] makes, at the token here, in one wording for
