@@ -3865,6 +3865,8 @@ fn every_way_to_be_stray_is_reported() {
 /// What under `root` belongs to no case of `cases` in the group it is in,
 /// sorted.
 fn strays(root: &Path, cases: &[(&str, &str)]) -> Vec<String> {
+    const EXPECTED: [&str; 4] = ["c", "stdout", "stderr", "exit"];
+
     let mut strays: Vec<String> = Vec::new();
     for entry in std::fs::read_dir(root).expect("the cases directory is in the repository") {
         let group_path = entry.expect("a directory entry can be read").path();
@@ -3879,40 +3881,26 @@ fn strays(root: &Path, cases: &[(&str, &str)]) -> Vec<String> {
             continue;
         }
 
-        strays.extend(strays_in(&group_path, &group, cases));
-    }
-    strays.sort();
-    strays
-}
+        for entry in std::fs::read_dir(&group_path).expect("a group's directory can be read") {
+            let path = entry.expect("a directory entry can be read").path();
+            let stem = path
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_default();
 
-/// What in one group's directory belongs to no case of `cases` in that group,
-/// as `group/name`.
-///
-/// One rule for the guard above and for [`run_case`], which asks it of the
-/// group a case ran for, so that the two cannot disagree about what a stray
-/// is.
-fn strays_in(group_path: &Path, group: &str, cases: &[(&str, &str)]) -> Vec<String> {
-    const EXPECTED: [&str; 4] = ["c", "stdout", "stderr", "exit"];
+            let belongs = path.is_file()
+                && path
+                    .extension()
+                    .is_some_and(|ext| EXPECTED.iter().any(|known| ext == *known))
+                && cases.contains(&(group.as_str(), stem.as_str()));
 
-    let mut strays = Vec::new();
-    for entry in std::fs::read_dir(group_path).expect("a group's directory can be read") {
-        let path = entry.expect("a directory entry can be read").path();
-        let stem = path
-            .file_stem()
-            .map(|stem| stem.to_string_lossy().into_owned())
-            .unwrap_or_default();
-
-        let belongs = path.is_file()
-            && path
-                .extension()
-                .is_some_and(|ext| EXPECTED.iter().any(|known| ext == *known))
-            && cases.contains(&(group, stem.as_str()));
-
-        if !belongs {
-            let name = path.file_name().unwrap_or_default().to_string_lossy();
-            strays.push(format!("{group}/{name}"));
+            if !belongs {
+                let name = path.file_name().unwrap_or_default().to_string_lossy();
+                strays.push(format!("{group}/{name}"));
+            }
         }
     }
+    strays.sort();
     strays
 }
 
@@ -3974,20 +3962,32 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
             .unwrap_or_else(|error| panic!("case `{name}`: its input cannot be read: {error}"));
     }
 
-    // **What the run left in the corpus is asked of this case**, by name, and
-    // not only of `work_dir`: a run made from the group's directory however
-    // `dir` was computed, `.current_dir(group_dir(group))` for one, wrote
-    // `out.tok` there while every test but the stray guard passed, and that
-    // guard failed under its own name on every later run until somebody
-    // deleted the file. Before and after rather than after alone, so that a
-    // stray already there is the guard's to report and not this case's.
-    let before = strays_in(&group_dir(group), group, CASES);
-
-    let output = Command::new(env!("CARGO_BIN_EXE_safec"))
+    let mut command = Command::new(env!("CARGO_BIN_EXE_safec"));
+    command
         .current_dir(&dir)
         .args(["--color", "never"])
         .args(args)
-        .arg(&input)
+        .arg(&input);
+
+    // **Asked of the command, not of `work_dir`**, because it is the directory
+    // the compiler really runs in that decides where a file it writes lands:
+    // `.current_dir(group_dir(group))` passed every test that asked
+    // `work_dir`, left `out.tok` beside the expected files, and failed only the
+    // stray guard, under its own name, on every run until somebody deleted the
+    // file. Asked here, before the run, it fails this case by name and writes
+    // nothing. A comparison of the corpus before and after the run cannot do
+    // that: cases run in parallel, so it blames whichever case of the group
+    // looked after another one wrote.
+    let runs_in = command
+        .get_current_dir()
+        .unwrap_or_else(|| panic!("case `{name}`: the compiler would run where this test does"));
+    assert!(
+        !runs_in.starts_with(cases_dir()),
+        "case `{name}`: the compiler would run in {}, inside the corpus",
+        runs_in.display()
+    );
+
+    let output = command
         .output()
         .expect("the compiler binary was built for this test");
 
@@ -3997,19 +3997,6 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
     // this runs, or the removal before the run: a directory left behind is in
     // the temporary directory, where no case reads it.
     let _ = std::fs::remove_dir_all(&dir);
-
-    let left: Vec<String> = strays_in(&group_dir(group), group, CASES)
-        .into_iter()
-        .filter(|stray| !before.contains(stray))
-        .collect();
-    // Removed before failing, so the next run is not failed by them too.
-    for stray in &left {
-        let _ = std::fs::remove_file(cases_dir().join(stray));
-    }
-    assert!(
-        left.is_empty(),
-        "case `{name}` left files in the corpus, removed now: {left:?}"
-    );
 
     let code = output
         .status
