@@ -23,7 +23,12 @@ fn main() -> ExitCode {
         error.exit();
     }
 
-    let options = cli.into_options();
+    // Refused the same way, for a run that named no target on a machine this
+    // compiler does not know. `Cli::into_options` says why that is a `Result`.
+    let options = match cli.into_options() {
+        Ok(options) => options,
+        Err(error) => error.exit(),
+    };
 
     // The driver takes both streams so that a test can read what a run said and
     // what it made. The binary is the one that decides diagnostics belong on
