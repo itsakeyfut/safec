@@ -1390,10 +1390,11 @@ fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
 /// suspicion, and inside a hatch, where a suspicion is listed rather than
 /// reported, a proved null dereference built.
 ///
-/// **Built as IR so that it holds whatever a frontend's spans are.** No C
-/// this frontend lowers asks one place twice at one caret with two answers
-/// today: the two arms of a `?:`, written at the whole conditional's span, are
-/// two places as soon as they read two pointers.
+/// **Built as IR so that it holds whatever a frontend's spans are.** The C
+/// lowering reaches it through the two arms of a `?:`, written at the whole
+/// conditional's span, where both read through one pointer:
+/// `a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported`
+/// holds that, and narrowing an arm's write to the arm would retire it.
 ///
 /// Mutation: never replace the standing finding in `nullability::findings`'
 /// fold, keeping the earlier one. The conclusion is `Unknown` and this fails.

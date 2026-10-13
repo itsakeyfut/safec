@@ -1,0 +1,4 @@
+Hatch a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported.c:2:5 "proof_first"
+  Conclusion a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported.c:3:12 "SC0403" "unsafe" "this dereferences `p`, which is null"
+Hatch a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported.c:6:5 "doubt_first"
+  Conclusion a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported.c:7:12 "SC0403" "unsafe" "this dereferences `p`, which is null"

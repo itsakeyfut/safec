@@ -215,17 +215,19 @@ use after free going silent, and
 allocation, freed ones included, fails
 `a_free_proved_before_a_call_to_a_hatch_stays_proved` alone.
 
-**One caret, one answer.** Where two dereferences share a caret, the
-nullability check folds the findings there into one. Keeping the first rather
-than the worst fails
-`a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported`,
+**One caret, one answer.** Where two dereferences of one place share a
+caret, the nullability check folds the findings there into one. Keeping the
+first rather than the worst fails
+`a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported`,
 which is a proved null dereference building, and
 `a_proof_and_a_suspicion_at_one_caret_report_the_proof` in
 `crates/safec-ir/tests/nulls.rs`. The C case reaches the fold through the two
-arms of a `?:`, written at one caret; the operands of `a && b` did until #147
-narrowed them, so
-`a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported`
-now holds only that the proof is reported. Folding across functions fails
+arms of a `?:`, written at one caret, both reading through `p`. Two places
+at one caret are two findings since #466, so
+`a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported`,
+whose arms read `q` and `p`, and
+`a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported`,
+whose operands #147 narrowed, now hold only that the proof is reported. Folding across functions fails
 `two_functions_that_share_a_caret_are_asked_about_apart` in
 `crates/safec-ir/tests/nulls.rs`, hand-built because no two functions this
 frontend lowers share a caret.

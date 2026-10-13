@@ -1290,8 +1290,10 @@ pub fn findings(unit: &TranslationUnit) -> Vec<Finding> {
     // through the two arms of `c ? *q : *p`, written at the whole
     // conditional's span, while a dereference was one finding per element;
     // those are two places now and are both said, so what this answers for
-    // is one place asked twice, which
-    // `a_proof_and_a_suspicion_at_one_caret_report_the_proof` builds as IR.
+    // is one place asked twice: `c ? (p = 0, *p) : *p`, which
+    // `a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported`
+    // holds, and `a_proof_and_a_suspicion_at_one_caret_report_the_proof`
+    // builds as IR.
     // `memory::report::say` answers the same shape with `supersedes`; this
     // is the same rule.
     //

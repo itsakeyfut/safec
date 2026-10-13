@@ -1428,6 +1428,14 @@ cases! {
         // listed, which in a hatch is the difference between building and
         // not. Narrowing an arm's write to the arm moves this case.
         a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+        // One pointer read through in both arms of a `?:`, proved null in one
+        // arm and unproven in the other, in both orders, so the two findings
+        // are about one place at one caret and the fold in
+        // `nullability::findings` keeps one of them. Mutation: never let the
+        // later replace the standing one; `proof_first` lists the proof as a
+        // suspicion and the run exits 0. Mutation: always let it; so does
+        // `doubt_first`. Narrowing an arm's write to the arm moves this case.
+        a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // An attribute `sema::resolve` refused is an error, so the run stops
         // before the lowering: no hatch is marked and no check runs, and the
         // dereference behind it is not reported until the attribute is gone.
