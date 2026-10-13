@@ -936,8 +936,10 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
 enum About {
     /// A dereference, by the place it read through.
     Place(Place),
-    /// An argument or a returned value, by the local it read as itself.
-    Local(Option<LocalId>),
+    /// An argument or a returned value, which [`Asked`] already tells apart:
+    /// an argument by the promise it is checked against, which is one per
+    /// parameter, and a return by its function.
+    Question,
 }
 
 /// One finding for each place an element dereferences, naming the worst of
@@ -1106,7 +1108,7 @@ fn report_arguments(
                 asked: Asked::Argument { promise },
                 local,
             };
-            findings.push((finding, About::Local(local)));
+            findings.push((finding, About::Question));
         }
     }
 }
@@ -1175,7 +1177,7 @@ fn report_return(
         },
         local,
     };
-    findings.push((finding, About::Local(local)));
+    findings.push((finding, About::Question));
 }
 
 /// Every dereference of a null pointer this unit contains, and every one it
