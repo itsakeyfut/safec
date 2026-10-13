@@ -82,17 +82,23 @@ pub struct Cli {
     ///
     /// Validated by clap against the triples [`Target::ALL`] holds, so an
     /// unknown one is reported with the known ones listed, the way an unknown
-    /// `--emit` is. Defaults to [`HOST_TRIPLE`]; ADR-0013 says why the host
-    /// picking the default is not the host reaching the output.
+    /// `--emit` is. Defaults to the machine this compiler was built for, and
+    /// has to be named where that is a machine it does not know.
+    ///
+    // `Option` rather than a clap default, because clap validates a default as
+    // if it had been typed: on a host missing from `Target::ALL` every run was
+    // refused in clap's words, blaming a flag nobody gave. `resolved_target`
+    // answers the default instead. ADR-0013 says why the host picking the
+    // default is not the host reaching the output. A `//` comment for the
+    // reason `safety`'s gives.
     #[arg(
         long,
         value_name = "TRIPLE",
-        default_value = HOST_TRIPLE,
         value_parser = clap::builder::PossibleValuesParser::new(
             Target::ALL.iter().map(|target| target.triple()).collect::<Vec<_>>()
         )
     )]
-    pub target: String,
+    pub target: Option<String>,
 
     /// When to colorize diagnostics.
     #[arg(
@@ -164,14 +170,23 @@ impl Cli {
         }
     }
 
-    /// Resolve the arguments into the options the compiler runs on.
+    /// Resolve the arguments into the options the compiler runs on, or refuse
+    /// a run that named no target on a machine this compiler does not know.
     ///
     /// Not a one to one mapping. It exists so that the compiler depends on
     /// [`Options`] rather than on a clap type, and it is where a default that
     /// has to be computed is worked out: `--safety` is one, because what a run
-    /// can be held to depends on which artifact it asked for. An output path
-    /// derived from the inputs would be another.
-    pub fn into_options(self) -> Options {
+    /// can be held to depends on which artifact it asked for, and `--target`
+    /// is another, because the host it defaults to may be no target at all.
+    /// An output path derived from the inputs would be a third.
+    ///
+    /// **Fallible rather than checked first**, so that a caller cannot reach
+    /// an `Options` without having answered the refusal: a precondition left
+    /// to [`Self::check`] having run would be a panic wherever the order was
+    /// broken. Reported as [`Self::check`] reports, through a [`clap::Error`]
+    /// named the way this process was invoked, and with no code: it is about
+    /// the machine, not a program, which `docs/diagnostics.md` rules out.
+    pub fn into_options(self) -> Result<Options, clap::Error> {
         // Destructured rather than read field by field, so that a field added
         // to `Cli` and forgotten here is a compile error instead of an argument
         // that silently does nothing.
@@ -185,7 +200,11 @@ impl Cli {
             color,
         } = self;
 
-        Options {
+        let target = resolved_target(target.as_deref(), HOST_TRIPLE).map_err(|message| {
+            Self::as_invoked().error(ErrorKind::MissingRequiredArgument, message)
+        })?;
+
+        Ok(Options {
             inputs,
             output,
             // Asked of the artifact rather than worked out here, so that a
@@ -196,9 +215,7 @@ impl Cli {
             // `SafetyLevel::IMPLEMENTED`.
             safety: safety.unwrap_or(emit.default_safety()),
             emit,
-            // clap answered for the spelling against `Target::ALL`, so the only
-            // way here is a triple that table holds.
-            target: Target::from_triple(&target).expect("clap accepted this triple"),
+            target,
             // Carried across unresolved. This used to resolve the strictest
             // level here as well, so that `Options::deny_unknown` read
             // truthfully to anyone who inspected it; the field is now the
@@ -206,7 +223,33 @@ impl Cli {
             // that turns the pair into what the sink does. See ADR-0004.
             allow_unknown,
             color,
-        }
+        })
+    }
+}
+
+/// The target a run compiles for: the one it named, or the host's.
+///
+/// A function of both rather than of [`HOST_TRIPLE`], so that a test built on
+/// a host this compiler knows can ask what one it does not know is told.
+///
+/// **An unknown host is refused, not defaulted.** Falling back to some row of
+/// [`Target::ALL`] would compile for a machine nobody measured and say nothing,
+/// and every byte of output would depend on that guess. The message lists the
+/// rows in their order, so that a row added there is offered here without
+/// anybody coming back.
+fn resolved_target(named: Option<&str>, host: &str) -> Result<Target, String> {
+    match named {
+        // clap answered for the spelling against `Target::ALL`, so the only way
+        // here is a triple that table holds.
+        Some(named) => Ok(Target::from_triple(named).expect("clap accepted this triple")),
+        None => Target::from_triple(host).ok_or_else(|| {
+            let known: Vec<&str> = Target::ALL.iter().map(|target| target.triple()).collect();
+            format!(
+                "this compiler does not know the machine it was built for, `{host}`, \
+                 so a run has to name one with `--target`: {}",
+                known.join(", ")
+            )
+        }),
     }
 }
 
@@ -352,7 +395,9 @@ mod tests {
 
             assert_eq!(cli.safety, None, "{kind:?}: clap supplied a level");
             assert_eq!(
-                cli.into_options().safety,
+                cli.into_options()
+                    .expect("this host is a known target")
+                    .safety,
                 if kind.reaches_the_ir() {
                     SafetyLevel::Memory
                 } else {
@@ -424,7 +469,10 @@ mod tests {
                 }
                 args.push("a.c");
 
-                let options = Cli::try_parse_from(args).unwrap().into_options();
+                let options = Cli::try_parse_from(args)
+                    .unwrap()
+                    .into_options()
+                    .expect("this host is a known target");
 
                 assert_eq!(
                     options.allow_unknown, asked,
@@ -513,7 +561,8 @@ mod tests {
             "b.c",
         ])
         .unwrap()
-        .into_options();
+        .into_options()
+        .expect("a named target needs no host");
 
         assert_eq!(
             options,
@@ -586,20 +635,24 @@ mod tests {
     fn the_target_defaults_to_the_host_and_a_flag_overrides_it() {
         let defaulted = Cli::try_parse_from(["safec", "a.c"])
             .expect("a bare invocation parses")
-            .into_options();
+            .into_options()
+            .expect("this host is a known target");
         assert_eq!(defaulted.target.triple(), HOST_TRIPLE);
 
         let named = Cli::try_parse_from(["safec", "--target", "wasm32-unknown-unknown", "a.c"])
             .expect("a known triple parses")
-            .into_options();
+            .into_options()
+            .expect("a named target needs no host");
         assert_eq!(named.target.triple(), "wasm32-unknown-unknown");
     }
 
     /// The machine this was built for is one this compiler knows.
     ///
-    /// `--target` defaults to `HOST_TRIPLE`, and clap validates it against
-    /// `Target::ALL`, so a host missing from that table makes every bare
-    /// invocation fail. Better to find that here than in somebody's terminal.
+    /// `--target` defaults to `HOST_TRIPLE`, so on a host missing from
+    /// `Target::ALL` every run that names no target is refused, by name and
+    /// with the known triples listed. That is the right answer for a user and
+    /// the wrong one for a contributor, who should measure the row instead,
+    /// and this is what tells them to.
     ///
     /// Mutation: remove this host's row from `Target::ALL`. This fails, and so
     /// does the test above.
@@ -609,6 +662,51 @@ mod tests {
             Target::from_triple(HOST_TRIPLE).is_some(),
             "{HOST_TRIPLE} is not in `Target::ALL`: measure it with              `clang --target={HOST_TRIPLE} -dM -E -x c /dev/null` and add the row"
         );
+    }
+
+    /// A run that names no target on a machine this compiler does not know is
+    /// refused, naming that machine and `--target`, and listing every triple
+    /// it could name instead.
+    ///
+    /// `x86_64-unknown-linux-musl` is the host the defect was found on, by
+    /// patching `build.rs` to report it. The test cannot be built on such a
+    /// host, which is why the host is an argument.
+    ///
+    /// Mutation: have an unknown host fall back to `Target::ALL[0]`. This
+    /// fails, and the run would have compiled for a machine nobody measured.
+    /// Mutation: list a fixed set of triples rather than `Target::ALL`. This
+    /// fails on the row the set leaves out.
+    #[test]
+    fn an_unknown_host_is_refused_by_name_and_told_every_target() {
+        let message = resolved_target(None, "x86_64-unknown-linux-musl")
+            .expect_err("an unknown host has no target to default to");
+
+        assert!(message.contains("`x86_64-unknown-linux-musl`"), "{message}");
+        assert!(message.contains("`--target`"), "{message}");
+        // One row written out, so that the loop below is not the only thing
+        // saying what the table holds.
+        assert!(message.contains("x86_64-unknown-linux-gnu"), "{message}");
+        for target in Target::ALL {
+            assert!(message.contains(target.triple()), "{message}");
+        }
+    }
+
+    /// A named target is the target, on a host this compiler knows or one it
+    /// does not, and no name is the host where the host is known.
+    ///
+    /// Mutation: refuse an unknown host before asking whether a target was
+    /// named. The first assertion fails, which is the run the issue says must
+    /// work. Mutation: ignore the host and default to `Target::ALL[0]`. The
+    /// second fails, `x86_64-unknown-linux-gnu` not being that row.
+    #[test]
+    fn a_named_target_is_used_whatever_the_host_is() {
+        let named = resolved_target(Some("wasm32-unknown-unknown"), "x86_64-unknown-linux-musl")
+            .expect("a named target needs no host");
+        assert_eq!(named.triple(), "wasm32-unknown-unknown");
+
+        let host = resolved_target(None, "x86_64-unknown-linux-gnu")
+            .expect("a known host is its own default");
+        assert_eq!(host.triple(), "x86_64-unknown-linux-gnu");
     }
 
     #[test]

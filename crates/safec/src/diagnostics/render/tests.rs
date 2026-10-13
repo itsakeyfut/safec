@@ -617,7 +617,8 @@ fn a_promoted_diagnostic_does_not_name_a_flag_the_user_may_not_have_given() {
     ] {
         let options = crate::cli::Cli::try_parse_from(args)
             .unwrap()
-            .into_options();
+            .into_options()
+            .expect("this host is a known target");
         let mut sink = DiagnosticSink::with_policy(crate::diagnostics::Policy::from(&options));
         sink.report(unproven("`p` may escape"));
 
