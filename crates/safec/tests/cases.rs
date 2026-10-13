@@ -3225,10 +3225,10 @@ cases! {
         // A case that writes a file, here the tokens `-o` names, and leaves
         // nothing in the corpus, because it runs from a directory of its own.
         // Its stdout is empty because the artifact went to the file. Mutation:
-        // run it from its group's directory; `out.tok` is left beside the
-        // expected files and the stray guard fails on a later walk, which is
-        // what `a_case_is_run_from_a_directory_outside_the_corpus` holds by
-        // name.
+        // run it from its group's directory; the refusal in `run_case` fails
+        // it by name, and `a_case_is_run_from_a_directory_outside_the_corpus`
+        // too. Without that refusal `out.tok` would be left beside the
+        // expected files and the stray guard would fail on a later walk.
         a_case_that_writes_a_file_leaves_none_in_the_corpus: ["--emit", "tokens", "-o", "out.tok"],
         a_directive_stops_the_input_it_is_in: ["--emit", "ast"],
         a_tree_deeper_than_the_indent_shows: ["--emit", "ast"],
@@ -3865,8 +3865,6 @@ fn every_way_to_be_stray_is_reported() {
 /// What under `root` belongs to no case of `cases` in the group it is in,
 /// sorted.
 fn strays(root: &Path, cases: &[(&str, &str)]) -> Vec<String> {
-    const EXPECTED: [&str; 4] = ["c", "stdout", "stderr", "exit"];
-
     let mut strays: Vec<String> = Vec::new();
     for entry in std::fs::read_dir(root).expect("the cases directory is in the repository") {
         let group_path = entry.expect("a directory entry can be read").path();
@@ -3881,26 +3879,40 @@ fn strays(root: &Path, cases: &[(&str, &str)]) -> Vec<String> {
             continue;
         }
 
-        for entry in std::fs::read_dir(&group_path).expect("a group's directory can be read") {
-            let path = entry.expect("a directory entry can be read").path();
-            let stem = path
-                .file_stem()
-                .map(|stem| stem.to_string_lossy().into_owned())
-                .unwrap_or_default();
-
-            let belongs = path.is_file()
-                && path
-                    .extension()
-                    .is_some_and(|ext| EXPECTED.iter().any(|known| ext == *known))
-                && cases.contains(&(group.as_str(), stem.as_str()));
-
-            if !belongs {
-                let name = path.file_name().unwrap_or_default().to_string_lossy();
-                strays.push(format!("{group}/{name}"));
-            }
-        }
+        strays.extend(strays_in(&group_path, &group, cases));
     }
     strays.sort();
+    strays
+}
+
+/// What in one group's directory belongs to no case of `cases` in that group,
+/// as `group/name`.
+///
+/// One rule for the guard above and for [`run_case`], which asks it of the
+/// group a case ran for, so that the two cannot disagree about what a stray
+/// is.
+fn strays_in(group_path: &Path, group: &str, cases: &[(&str, &str)]) -> Vec<String> {
+    const EXPECTED: [&str; 4] = ["c", "stdout", "stderr", "exit"];
+
+    let mut strays = Vec::new();
+    for entry in std::fs::read_dir(group_path).expect("a group's directory can be read") {
+        let path = entry.expect("a directory entry can be read").path();
+        let stem = path
+            .file_stem()
+            .map(|stem| stem.to_string_lossy().into_owned())
+            .unwrap_or_default();
+
+        let belongs = path.is_file()
+            && path
+                .extension()
+                .is_some_and(|ext| EXPECTED.iter().any(|known| ext == *known))
+            && cases.contains(&(group, stem.as_str()));
+
+        if !belongs {
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            strays.push(format!("{group}/{name}"));
+        }
+    }
     strays
 }
 
@@ -3946,7 +3958,10 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
         "case `{name}`: refusing to run from, and remove, {}, which is inside the corpus",
         dir.display()
     );
-    // A directory left by a run that was killed is this case's, and stale.
+    // One of this name can only be an earlier process's that had this pid and
+    // was killed before it removed it, so it is stale. A killed run's own
+    // directories stay in the temporary directory under its pid, which no
+    // later run looks at.
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("a case's working directory can be made");
     // Only where there is one: a case may have no input on purpose, and
@@ -3959,6 +3974,15 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
             .unwrap_or_else(|error| panic!("case `{name}`: its input cannot be read: {error}"));
     }
 
+    // **What the run left in the corpus is asked of this case**, by name, and
+    // not only of `work_dir`: a run made from the group's directory however
+    // `dir` was computed, `.current_dir(group_dir(group))` for one, wrote
+    // `out.tok` there while every test but the stray guard passed, and that
+    // guard failed under its own name on every later run until somebody
+    // deleted the file. Before and after rather than after alone, so that a
+    // stray already there is the guard's to report and not this case's.
+    let before = strays_in(&group_dir(group), group, CASES);
+
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
         .current_dir(&dir)
         .args(["--color", "never"])
@@ -3969,8 +3993,23 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
 
     // Before comparing, so that a case whose outputs differ removes it too.
     // Best effort: a directory that cannot be removed is a temporary file, and
-    // failing the case for it would report the wrong thing.
+    // failing the case for it would report the wrong thing. Nothing holds that
+    // this runs, or the removal before the run: a directory left behind is in
+    // the temporary directory, where no case reads it.
     let _ = std::fs::remove_dir_all(&dir);
+
+    let left: Vec<String> = strays_in(&group_dir(group), group, CASES)
+        .into_iter()
+        .filter(|stray| !before.contains(stray))
+        .collect();
+    // Removed before failing, so the next run is not failed by them too.
+    for stray in &left {
+        let _ = std::fs::remove_file(cases_dir().join(stray));
+    }
+    assert!(
+        left.is_empty(),
+        "case `{name}` left files in the corpus, removed now: {left:?}"
+    );
 
     let code = output
         .status
@@ -3988,13 +4027,24 @@ fn group_dir(group: &str) -> PathBuf {
 }
 
 /// Where one case is run: a directory of its own outside the corpus, named by
-/// the group, the case and this process.
+/// this process and the case's place in the table.
 ///
-/// The group and the case together, because the harness runs cases in
-/// parallel and two runs sharing a directory would read each other's files.
-/// The process too, so that two `cargo test` runs at once do not either.
+/// Its own per case, because the harness runs cases in parallel and two runs
+/// sharing a directory would read each other's files, and per process, so
+/// that two `cargo test` runs at once do not either. **The place rather than
+/// the name**, which is unique too, since one name in two groups is `E0428`:
+/// the longest name is over a hundred characters, the input inside the
+/// directory spells it again, and a working directory on Windows has to stay
+/// under about 258 characters, so a name in the path would fail a case for
+/// its length with a message about a directory. The place is also free of the
+/// separator a name could contain, where `{group}_{name}` would give group
+/// `a_b` with case `c` the directory of group `a` with case `b_c`.
 fn work_dir(group: &str, name: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("safec_case_{group}_{name}_{}", std::process::id()))
+    let place = CASES
+        .iter()
+        .position(|&case| case == (group, name))
+        .unwrap_or_else(|| panic!("case `{name}` is not in group `{group}` of the table"));
+    std::env::temp_dir().join(format!("safec-case-{}-{place}", std::process::id()))
 }
 
 /// A case is run from outside the corpus, so a file it writes cannot land
@@ -4004,7 +4054,9 @@ fn work_dir(group: &str, name: &str) -> PathBuf {
 /// directory is a function of the group and the case.
 ///
 /// Mutation: have `work_dir` return `group_dir(group)`. This fails, by name and
-/// on the first run, where the harm itself would surface only as
+/// on the first run, and so does every case, at the refusal in `run_case`,
+/// which is what keeps the mistake from removing the corpus. Without that
+/// refusal the harm would surface only as
 /// `every_file_in_the_corpus_belongs_to_a_case_in_the_table` failing on
 /// whichever run walked the directory after
 /// `a_case_that_writes_a_file_leaves_none_in_the_corpus` wrote into it.
