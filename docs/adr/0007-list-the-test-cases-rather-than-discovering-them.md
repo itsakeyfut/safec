@@ -63,6 +63,20 @@ names, a directory inside a group, and a case's files in another group are each
 reported. [#286](https://github.com/itsakeyfut/safec/issues/286) carries the
 grouping and what was rejected.
 
+**A case is one input and its expected files, and it is run from outside the
+corpus.** Its files are `<name>.c` and its `.stdout`, `.stderr` and `.exit`,
+each absent where it is empty, in its group's directory. The harness copies the
+input into a directory of its own and runs the compiler there with the same bare
+file name, so every expected file reads the same, and a file the run writes,
+which `-o` and `--emit executable` both do, never lands in the corpus. Run from
+the group's directory, such a file was reported by the stray guard as one nobody
+listed, on whichever run walked the directory after the write, and blessing
+could not clear it. [#22](https://github.com/itsakeyfut/safec/issues/22)
+carries the decision and the alternative rejected, refusing any case whose
+arguments write. A header a case includes has nowhere to live yet: this
+compiler refuses `#include`, and the change that accepts it is the one that has
+to say.
+
 ### Confirmation
 
 `every_file_in_the_corpus_belongs_to_a_case_in_the_table` in
@@ -73,7 +87,7 @@ The mutation: delete the `add:` line from the `cases!` table while leaving
 `add`, and no other test does. So does each of these, on its own: a file
 directly in `cases/`, a directory no group names, a directory inside a group,
 and one case's files moved to another group, which also fails that case,
-since it runs from its own group's directory. It is the reversal this record
+since its input is read from its own group's directory. It is the reversal this record
 exists to make expensive: whatever replaces the table has to keep answering the
 question of which files are covered.
 
@@ -81,6 +95,11 @@ The other half is confirmed by the shape of the expansion rather than by an
 assertion. Changing the separator in `driver/dumps.rs::dump_tokens` fails a test
 called `add`, rather than one test standing for the whole corpus, and that is
 only true while the macro generates one function per entry.
+
+That a case runs outside the corpus is held by
+`a_case_is_run_from_a_directory_outside_the_corpus`: having `work_dir` return
+the group's directory fails it, by name and on the first run.
+`a_case_that_writes_a_file_leaves_none_in_the_corpus` is the case that writes.
 
 ### Consequences
 

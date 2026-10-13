@@ -3222,6 +3222,14 @@ cases! {
         // `reason` that names `NotFound` for a read; the note becomes the
         // operating system's and the blessed stderr differs.
         a_path_that_names_nothing_is_reported_in_this_compiler_s_words: ["--emit", "ast"],
+        // A case that writes a file, here the tokens `-o` names, and leaves
+        // nothing in the corpus, because it runs from a directory of its own.
+        // Its stdout is empty because the artifact went to the file. Mutation:
+        // run it from its group's directory; `out.tok` is left beside the
+        // expected files and the stray guard fails on a later walk, which is
+        // what `a_case_is_run_from_a_directory_outside_the_corpus` holds by
+        // name.
+        a_case_that_writes_a_file_leaves_none_in_the_corpus: ["--emit", "tokens", "-o", "out.tok"],
         a_directive_stops_the_input_it_is_in: ["--emit", "ast"],
         a_tree_deeper_than_the_indent_shows: ["--emit", "ast"],
         abstract_function_parameter: ["--emit", "ast"],
@@ -3903,8 +3911,9 @@ fn cases_dir() -> PathBuf {
 
 /// Run one case and compare all three of its outputs.
 ///
-/// The compiler is run **from** the case's group directory and handed a bare
-/// file name, because it echoes back the path it was given: `safec --emit
+/// The compiler is run **from** a directory of its own, [`work_dir`], holding a
+/// copy of the case's input, and handed a bare file name, because it echoes
+/// back the path it was given: `safec --emit
 /// tokens crates/safec/tests/cases/frontend/add.c` prints
 /// `crates/safec/tests/cases/frontend/add.c:3:1 keyword "int"`, while the same
 /// run from inside the directory prints `add.c:3:1 keyword "int"`. That is
@@ -3912,17 +3921,45 @@ fn cases_dir() -> PathBuf {
 /// why passing a path here would silently break every case that reports a
 /// position.
 ///
+/// **Not from the corpus**, because a run may write a file: `-o` names one and
+/// `--emit executable` writes one without being asked to. Run from the group's
+/// directory, that file landed beside the expected files, where the stray
+/// guard reported it as a file nobody listed, on whichever run happened to
+/// walk the directory after the write, and `SAFEC_BLESS=1` could not clear it.
+/// The directory is removed before the outputs are compared, so a case that
+/// fails leaves nothing behind either. See ADR-0007.
+///
 /// `--color never` is passed rather than relied on. `ColorMode::Auto` resolves
 /// against whether the stream is a terminal, and a test whose meaning depends
 /// on not being one changes meaning when somebody runs it differently.
 fn run_case(group: &str, name: &str, args: &[&str]) {
+    let input = format!("{name}.c");
+    let dir = work_dir(group, name);
+    // A directory left by a run that was killed is this case's, and stale.
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a case's working directory can be made");
+    // Only where there is one: a case may have no input on purpose, and
+    // `a_path_that_names_nothing_is_reported_in_this_compiler_s_words` is the
+    // one whose absence is what it tests. Run from the group's directory,
+    // that case met a missing file too.
+    let source = group_dir(group).join(&input);
+    if source.exists() {
+        std::fs::copy(&source, dir.join(&input))
+            .unwrap_or_else(|error| panic!("case `{name}`: its input cannot be read: {error}"));
+    }
+
     let output = Command::new(env!("CARGO_BIN_EXE_safec"))
-        .current_dir(group_dir(group))
+        .current_dir(&dir)
         .args(["--color", "never"])
         .args(args)
-        .arg(format!("{name}.c"))
+        .arg(&input)
         .output()
         .expect("the compiler binary was built for this test");
+
+    // Before comparing, so that a case whose outputs differ removes it too.
+    // Best effort: a directory that cannot be removed is a temporary file, and
+    // failing the case for it would report the wrong thing.
+    let _ = std::fs::remove_dir_all(&dir);
 
     let code = output
         .status
@@ -3934,10 +3971,43 @@ fn run_case(group: &str, name: &str, args: &[&str]) {
     check(group, name, "exit", &expected_exit(code));
 }
 
-/// Where one group's cases live, and the directory the compiler is run from
-/// for them.
+/// Where one group's cases live.
 fn group_dir(group: &str) -> PathBuf {
     cases_dir().join(group)
+}
+
+/// Where one case is run: a directory of its own outside the corpus, named by
+/// the group, the case and this process.
+///
+/// The group and the case together, because the harness runs cases in
+/// parallel and two runs sharing a directory would read each other's files.
+/// The process too, so that two `cargo test` runs at once do not either.
+fn work_dir(group: &str, name: &str) -> PathBuf {
+    std::env::temp_dir().join(format!("safec_case_{group}_{name}_{}", std::process::id()))
+}
+
+/// A case is run from outside the corpus, so a file it writes cannot land
+/// beside the expected files.
+///
+/// Asked of every case the table names rather than of one, because the
+/// directory is a function of the group and the case.
+///
+/// Mutation: have `work_dir` return `group_dir(group)`. This fails, by name and
+/// on the first run, where the harm itself would surface only as
+/// `every_file_in_the_corpus_belongs_to_a_case_in_the_table` failing on
+/// whichever run walked the directory after
+/// `a_case_that_writes_a_file_leaves_none_in_the_corpus` wrote into it.
+#[test]
+fn a_case_is_run_from_a_directory_outside_the_corpus() {
+    let corpus = cases_dir();
+    for (group, name) in CASES {
+        let dir = work_dir(group, name);
+        assert!(
+            !dir.starts_with(&corpus),
+            "case `{name}` would run from {}, inside the corpus",
+            dir.display()
+        );
+    }
 }
 
 /// The exit code, as the contents of an expected-output file.
