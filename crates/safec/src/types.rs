@@ -2973,6 +2973,28 @@ impl Checker<'_> {
         }
 
         let Parameters::Prototype(parameters) = parameters else {
+            // With no prototype nothing is known of what the arguments should
+            // be, but a `void` value is no argument under any: C17 6.3.2.2
+            // lets a `void` expression's value be used in no way at all.
+            // Unasked, `f(g())` with `g` returning `void` reached the lowering
+            // and panicked there. A prototype's parameters ask the same of each
+            // argument in `check_argument`, through `assignable`.
+            for &argument in arguments {
+                let Some(ty) = self.types[argument.index()] else {
+                    continue;
+                };
+                if !matches!(ast.ty(ty), Type::Void) {
+                    continue;
+                }
+                diagnostics.report(
+                    Diagnostic::error("cannot pass `void` as an argument")
+                        .with_code(MISMATCH)
+                        .with_label(Label::primary(ast.expr(argument).span(), "this is `void`"))
+                        .with_note(
+                            "a `void` expression has no value, and its value cannot be used (C17 6.3.2.2)",
+                        ),
+                );
+            }
             return Some(returns);
         };
 
@@ -3040,15 +3062,14 @@ impl Checker<'_> {
         };
         let null = self.is_null_pointer_constant(argument);
         // C17 6.5.2.2 p2 holds an argument to what may be assigned to its
-        // parameter, and nothing may be assigned to `void` (6.5.16.1 p1), nor
-        // may a `void` expression's value be used at all (6.3.2.2).
+        // parameter, and nothing may be assigned to `void` (6.5.16.1 p1).
         // `assignable` leaves a `void` target unanswered, for the reason its
         // comment gives, so a `void` parameter is asked here; a declaration
         // may still have one (6.7.6.3 p12). Before this, `f(1)` against
         // `int f(void b);` built, and `f(g())` with `g` returning `void`
-        // reached the lowering and panicked.
+        // reached the lowering and panicked. A `void` argument to any other
+        // parameter is `assignable`'s own `false`.
         let refused = matches!(ast.ty(parameter), Type::Void)
-            || matches!(ast.ty(source), Type::Void)
             || self.assignable(ast, parameter, source, null) == Some(false);
         if !refused {
             return;
