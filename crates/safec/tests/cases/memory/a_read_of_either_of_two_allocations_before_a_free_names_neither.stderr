@@ -11,7 +11,7 @@ error[SC0402]: this may use `p` after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_read_of_either_of_two_allocations_before_a_free_names_neither.c:9:13 ]
    │
  9 │     int x = g(*p) + (free(p), 0);

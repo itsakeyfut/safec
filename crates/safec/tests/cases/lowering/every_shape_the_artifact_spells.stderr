@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `pp` while it is null
     ╭─[ every_shape_the_artifact_spells.c:29:5 ]
     │
  29 │     **pp = x;

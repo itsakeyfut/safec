@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ the_same_dereference_outside_a_hatch_is_reported.c:2:5 ]
    │
  2 │     return *p;

@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `q` while it is null
    ╭─[ a_result_of_a_function_defined_here_is_doubted_below_level_5.c:8:5 ]
    │
  8 │     return *q;

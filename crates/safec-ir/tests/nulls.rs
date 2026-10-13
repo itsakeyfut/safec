@@ -1380,26 +1380,71 @@ fn a_storage_boundary_of_the_followed_local_ends_the_walk() {
     assert_eq!(found[0].at, names.at[3]);
 }
 
-/// Where two dereferences share a caret and disagree, the proof is the one
-/// reported.
+/// Where one pointer is asked twice at one caret and the answers disagree,
+/// the proof is the one reported.
 ///
-/// `*p` through a parameter nothing tested, and `*q` through a local just
-/// given null, both at one span. The first is unproven and the second proved,
-/// and the fold in `nullability::findings` keeps one of them. Keeping the
-/// first reported a proof as a suspicion, and inside a hatch, where a
-/// suspicion is listed rather than reported, a proved null dereference built.
+/// `*p` through a parameter nothing tested, then `p` given null, then `*p`
+/// again, every dereference at one span. The first is unproven and the
+/// second proved, and the fold in `nullability::findings` keeps one of them,
+/// since they read through one place. Keeping the first reported a proof as a
+/// suspicion, and inside a hatch, where a suspicion is listed rather than
+/// reported, a proved null dereference built.
 ///
 /// **Built as IR so that it holds whatever a frontend's spans are.** The C
-/// lowering reaches it today only through the two arms of a `?:`, written at
-/// the whole conditional's span, which
-/// `a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported`
-/// holds; the operands of a `&&` reached it too until #147 narrowed them, and
-/// narrowing an arm would retire the `?:` case the same way.
+/// lowering reaches it through the two arms of a `?:`, written at the whole
+/// conditional's span, where both read through one pointer:
+/// `a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported`
+/// holds that, and narrowing an arm's write to the arm would retire it.
 ///
-/// Mutation: never swap in `nullability::findings`' `dedup_by`, keeping the
-/// earlier finding. The conclusion is `Unknown` and this fails.
+/// Mutation: never replace the standing finding in `nullability::findings`'
+/// fold, keeping the earlier one. The conclusion is `Unknown` and this fails.
 #[test]
 fn a_proof_and_a_suspicion_at_one_caret_report_the_proof() {
+    let (_sources, names) = sources();
+    let (mut unit, _, int) = a_unit(&names, &[]);
+    let pointer = unit.push_type(Ty::Pointer(int));
+    let mut function = Function::new(names.function, int, [pointer]);
+    let p = function.parameters().next().expect("one parameter");
+
+    let entry = function.reserve_block();
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![
+                write_through(p, names.at[0]),
+                Element::Assign(Operation {
+                    place: Place::local(p),
+                    value: Rvalue::Use(Operand::Constant(0)),
+                    origin: Origin::Written(names.at[1]),
+                }),
+                write_through(p, names.at[0]),
+            ],
+            terminator: Terminator::Return,
+        },
+    );
+
+    let found = concluded(unit, function);
+
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].at, names.at[0]);
+    assert_eq!(
+        found[0].conclusion,
+        Conclusion::Unsafe,
+        "the proof survives"
+    );
+}
+
+/// Two pointers dereferenced at one caret are two findings, each with its own
+/// conclusion and naming its own local, whichever is worse.
+///
+/// `*p` through a parameter nothing tested and `*q` through a local just
+/// given null, both at one span. The proof about `q` does not stand for the
+/// doubt about `p`: a reader told only of `q` meets `p` once `q` is fixed.
+///
+/// Mutation: drop what a finding is about from the key of the fold in
+/// `nullability::findings`. The two fold into one and this fails.
+#[test]
+fn two_pointers_dereferenced_at_one_caret_are_each_reported() {
     let (_sources, names) = sources();
     let (mut unit, _, int) = a_unit(&names, &[]);
     let pointer = unit.push_type(Ty::Pointer(int));
@@ -1426,32 +1471,36 @@ fn a_proof_and_a_suspicion_at_one_caret_report_the_proof() {
 
     let found = concluded(unit, function);
 
-    assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].at, names.at[0]);
+    let said: Vec<_> = found
+        .iter()
+        .map(|finding| (finding.at, finding.conclusion, finding.local))
+        .collect();
     assert_eq!(
-        found[0].conclusion,
-        Conclusion::Unsafe,
-        "the proof survives"
+        said,
+        [
+            (names.at[0], Conclusion::Unknown, Some(p)),
+            (names.at[0], Conclusion::Unsafe, Some(q)),
+        ],
+        "{found:?}"
     );
 }
 
 /// Where a plain dereference and one through a pointer read out of memory
-/// share a caret, the question kept is the one through memory, in either
-/// order.
+/// share a caret, each is reported with its own remedy, in either order.
 ///
 /// `*p` and `**pp` at one span, both unproven. The remedies differ: testing
 /// `p` settles the first, and the second needs the pointer read out of `*pp`
-/// kept in a local and tested there. One report stands for both, so it has to
-/// carry the remedy that settles both, whichever was met first.
+/// kept in a local and tested there. They are two findings, so each carries
+/// the remedy that settles its own pointer.
 ///
 /// **Built as IR** for the reason the test above gives; in C it is
 /// `a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy`.
 ///
-/// Mutation: have `Asked::joined` keep the first question as it is. The order
-/// with `*p` first fails. Mutation: have it keep the second, `through_memory:
-/// other`. The order with `**pp` first fails.
+/// Mutation: have `nullability::report` set `through_memory` from every place
+/// the element dereferences rather than from the one it reports. `*p` is told
+/// to read its pointer into a local and this fails.
 #[test]
-fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy() {
+fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_each_keep_their_remedy() {
     for through_memory_first in [false, true] {
         let (_sources, names) = sources();
         let (mut unit, _, int) = a_unit(&names, &[]);
@@ -1488,15 +1537,28 @@ fn a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy() {
 
         let found = concluded(unit, function);
 
-        assert_eq!(found.len(), 1, "{found:?}");
-        assert_eq!(found[0].at, names.at[0]);
-        assert_eq!(found[0].conclusion, Conclusion::Unknown);
+        let mut said: Vec<_> = found
+            .iter()
+            .map(|finding| (finding.local, finding.asked))
+            .collect();
+        said.sort_by_key(|(local, _)| *local);
         assert_eq!(
-            found[0].asked,
-            nullability::Asked::Dereference {
-                through_memory: true
-            },
-            "the remedy that settles both, through memory first: {through_memory_first}"
+            said,
+            [
+                (
+                    Some(p),
+                    nullability::Asked::Dereference {
+                        through_memory: false
+                    }
+                ),
+                (
+                    Some(pp),
+                    nullability::Asked::Dereference {
+                        through_memory: true
+                    }
+                ),
+            ],
+            "each keeps its own remedy, through memory first: {through_memory_first}"
         );
     }
 }

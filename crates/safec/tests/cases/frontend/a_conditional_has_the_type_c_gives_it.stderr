@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `r` while it is null
    ╭─[ a_conditional_has_the_type_c_gives_it.c:3:5 ]
    │
  3 │     return *r;

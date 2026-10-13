@@ -8,7 +8,7 @@ error[SC0401]: this frees `p`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check knows of no allocation this pointer holds here
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `q` while it is null
    ╭─[ a_write_through_an_alias_that_carries_no_allocation.c:9:5 ]
    │
  9 │     *q = 1;

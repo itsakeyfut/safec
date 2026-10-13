@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_discarded_dereference_reaches_the_backend.c:2:5 ]
    │
  2 │     *p;

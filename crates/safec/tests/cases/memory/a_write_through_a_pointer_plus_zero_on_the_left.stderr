@@ -24,7 +24,7 @@ error[SC0402]: this uses `q` after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `q` while it is null
    ╭─[ a_write_through_a_pointer_plus_zero_on_the_left.c:9:5 ]
    │
  9 │     *q = 1;

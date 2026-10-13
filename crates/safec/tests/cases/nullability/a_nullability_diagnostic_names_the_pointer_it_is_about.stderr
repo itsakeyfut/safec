@@ -1,0 +1,131 @@
+error[SC0403]: this dereferences `p`, which is null
+   ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:4:5 ]
+   │
+ 4 │     return *p;
+   │     ─────┬────  
+   │          ╰────── this is null when it is read through
+───╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here
+error[SC0403]: this may dereference `p` while it is null
+   ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:7:5 ]
+   │
+ 7 │     return *p;
+   │     ─────┬────  
+   │          ╰────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `q` while it is null
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:11:5 ]
+    │
+ 11 │     *q = *p;
+    │     ───┬───  
+    │        ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this dereferences `p`, which is null
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:11:5 ]
+    │
+ 11 │     *q = *p;
+    │     ───┬───  
+    │        ╰───── this is null when it is read through
+────╯
+  = note: this check belongs to safety level 1
+  = help: give this pointer a value before reading through it, or do not read through it here
+error[SC0403]: this may dereference `p` while it is null
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:15:12 ]
+    │
+ 15 │     return *p + *q;
+    │            ───┬───  
+    │               ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `q` while it is null
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:15:12 ]
+    │
+ 15 │     return *p + *q;
+    │            ───┬───  
+    │               ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `pp` while it is null
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:18:5 ]
+    │
+ 18 │     return **pp;
+    │     ──────┬─────  
+    │           ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0403]: this may dereference `pp` while it is null
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:21:5 ]
+    │
+ 21 │     **pp = 1;
+    │     ────┬───  
+    │         ╰───── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0405]: this passes `p`, which is null, to a parameter declared `_Nonnull`
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:26:12 ]
+    │
+  1 │ int g(int *_Nonnull p);
+    │            ────┬───  
+    │                ╰───── the parameter is declared `_Nonnull` here
+    │ 
+ 26 │     return g(p);
+    │            ──┬─  
+    │              ╰─── this is null when it is passed
+────╯
+  = note: this check belongs to safety level 1
+  = help: pass a pointer to an object here, or remove `_Nonnull` from the parameter
+error[SC0405]: this may pass `p` while it is null to a parameter declared `_Nonnull`
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:29:12 ]
+    │
+  1 │ int g(int *_Nonnull p);
+    │            ────┬───  
+    │                ╰───── the parameter is declared `_Nonnull` here
+    │ 
+ 29 │     return g(p);
+    │            ──┬─  
+    │              ╰─── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before passing it
+error[SC0408]: this returns `p`, which is null, from a function that promised not to
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:33:5 ]
+    │
+ 31 │ int *_Nonnull returned_null(void) {
+    │      ────┬───  
+    │          ╰───── the return is declared `_Nonnull` here
+    │ 
+ 33 │     return p;
+    │     ────┬────  
+    │         ╰────── this is null when it is returned
+────╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer to an object here, or remove `_Nonnull` from the return type in every declaration of the function
+error[SC0408]: this may return `p` while it is null from a function that promised not to
+    ╭─[ a_nullability_diagnostic_names_the_pointer_it_is_about.c:36:5 ]
+    │
+ 35 │ int *_Nonnull returned_unproven(int *p) {
+    │      ────┬───  
+    │          ╰───── the return is declared `_Nonnull` here
+ 36 │     return p;
+    │     ────┬────  
+    │         ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: return only a pointer this check can see is not null, testing it first where it came from a call, or remove `_Nonnull` from the return type in every declaration of the function

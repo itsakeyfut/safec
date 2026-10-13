@@ -8,7 +8,7 @@ error[SC0401]: this frees a pointer this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
-error[SC0403]: this dereferences a null pointer
+error[SC0403]: this dereferences `pp`, which is null
    ╭─[ a_free_read_out_of_a_pointer_proved_null.c:4:5 ]
    │
  4 │     free(*pp);

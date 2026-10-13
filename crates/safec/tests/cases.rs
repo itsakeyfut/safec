@@ -1031,17 +1031,16 @@ cases! {
         a_pointer_read_through_before_a_copy_of_it_is_tested_keeps_what_the_read_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*p && **q` doubts `p` plainly and `q` through memory, each at its
         // own operand since #147, so each is told the remedy that settles it.
-        // Mutation: give the operands' writes the whole `&&` span again; the
-        // two fold into one report at one caret. The fold's own rule, that the
-        // remedy through memory is the one kept, is held by
-        // `a_doubt_through_memory_beside_a_plain_one_at_one_caret_keeps_its_remedy`
+        // Mutation: give the operands' writes the whole `&&` span again; both
+        // carets move to it. That the two stay two reports with two remedies
+        // even at one caret is held by
+        // `a_doubt_through_memory_beside_a_plain_one_at_one_caret_each_keep_their_remedy`
         // in `crates/safec-ir/tests/nulls.rs`.
         a_doubt_through_memory_beside_a_plain_one_is_told_its_own_remedy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `*p` and `**q` in the two arms of a `?:` share the conditional's
-        // caret, and the remedy kept is the one through memory whichever arm
-        // holds it. Mutation: have `Asked::joined` keep the first question,
-        // or the second; one of the two functions takes the plain remedy.
-        // Narrowing an arm's write to the arm moves this case.
+        // caret, and each is a report of its own with its own remedy,
+        // whichever arm holds which. Narrowing an arm's write to the arm moves
+        // this case.
         a_doubt_through_memory_in_either_arm_of_a_conditional_keeps_its_remedy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // The root's own answer still counts, and a proof outranks the doubt
         // beside it. Mutation: answer only the deeper question whenever there
@@ -1052,13 +1051,15 @@ cases! {
         a_pointer_dereferenced_twice_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_dereferenced_on_one_arm_is_not_proved_after_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // One element that dereferences two pointers, one proved null and one
-        // nothing is known about. The words do not name the value, so the two
-        // cannot be told apart at one caret and only the worse is said.
+        // nothing is known about. Each is a diagnostic of its own that names
+        // its pointer, because a dereference is one finding per place: the
+        // doubt is not hidden behind the proof beside it. Mutation: `report`
+        // takes the worst of an element's places again; the doubt goes.
         a_proved_null_dereference_beside_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // The same pair with the worse one written second, which is what tells
-        // "the worst of them" apart from "the first of them": the places an
-        // element dereferences are collected destination first, so the case
-        // above has them agreeing and only this one does not.
+        // The same pair with the proved one written second: the places an
+        // element dereferences are collected destination first, so this is
+        // the order in which a rule keeping the first of an element's places
+        // would say only the doubt. Both are said in either order.
         a_proved_null_dereference_after_an_unproven_one: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call reading through a pointer it then assigns to. What this pins
         // is the answer rather than the rule behind it: a call's result lands
@@ -1071,6 +1072,32 @@ cases! {
         a_call_whose_destination_it_dereferences: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_null_dereference_is_silent_at_safety_off: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--safety", "off"],
         an_unproven_dereference_is_a_warning_under_allow_unknown: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A message names the pointer its conclusion is about, by the memory
+        // check's rule: a dereference proved and unproven, two pointers at one
+        // caret as `*q = *p` and `*p + *q` each saying its own, `**pp` doubted
+        // at `pp`'s own level, `**pp = 1;` said once although it is a write
+        // and a read-back that name `pp` differently, and an argument and a
+        // return, each proved and unproven. Mutation: the fold keys a
+        // dereference on its name rather than its place; `**pp = 1;` is said
+        // twice. Mutation: the driver passes `None` for the name; every
+        // message here loses it. Mutation: the fold in
+        // `nullability::findings` drops the local from its key; `*p + *q`
+        // folds into one.
+        a_nullability_diagnostic_names_the_pointer_it_is_about: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a message about a pointer no written name holds names nothing:
+        // `**pp` with `pp` established not null, so only the pointer it loads
+        // is in doubt, `g(*pp)`, `return *pp;`, and a constant returned.
+        // Mutation: `report` names the place's local where only the loaded
+        // pointer is in doubt; the first says `pp`. Mutation: `own_local`
+        // answers a projection's root; `g(*pp)` and `return *pp;` say `pp`.
+        a_nullability_diagnostic_about_an_unnamed_pointer_names_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // `*p = *q;` with both pointers escaped, so neither dereference
+        // refines its pointer and the read-back asks `p` again. The places
+        // arrive at the caret as `p`, `q`, `p`, the two about `p` not
+        // adjacent, and each pointer is said once. Mutation: have the fold in
+        // `nullability::findings` look only at its neighbour; `p` is said
+        // twice in each function.
+        two_escaped_pointers_written_through_one_another_are_each_said_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "nonnull" => {
@@ -1403,12 +1430,19 @@ cases! {
         // `crates/safec-ir/tests/nulls.rs`.
         a_proved_null_dereference_beside_an_unproven_one_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // Both arms of a `?:` are written at the whole conditional's span, so
-        // the proved `*q` and the unproven `*p` meet at one caret and the
-        // worst is kept, which in a hatch is the difference between reported
-        // and listed. Mutation: never swap in `nullability::findings`'
-        // `dedup_by`; the proof is listed as a suspicion and the run exits 0.
-        // Narrowing an arm's write to the arm moves this case.
+        // the proved `*q` and the unproven `*p` meet at one caret, and each is
+        // a finding of its own: the proof is reported and the suspicion
+        // listed, which in a hatch is the difference between building and
+        // not. Narrowing an arm's write to the arm moves this case.
         a_proved_null_dereference_in_one_arm_of_a_conditional_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
+        // One pointer read through in both arms of a `?:`, proved null in one
+        // arm and unproven in the other, in both orders, so the two findings
+        // are about one place at one caret and the fold in
+        // `nullability::findings` keeps one of them. Mutation: never let the
+        // later replace the standing one; `proof_first` lists the proof as a
+        // suspicion and the run exits 0. Mutation: always let it; so does
+        // `doubt_first`. Narrowing an arm's write to the arm moves this case.
+        a_proved_null_dereference_after_a_doubt_about_one_pointer_in_a_hatch_is_still_reported: ["--emit", "hatches", "--target", "x86_64-pc-windows-msvc"],
         // An attribute `sema::resolve` refused is an error, so the run stops
         // before the lowering: no hatch is marked and no check runs, and the
         // dereference behind it is not reported until the attribute is gone.

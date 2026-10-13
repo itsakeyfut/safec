@@ -1,0 +1,51 @@
+error[SC0403]: this may dereference a null pointer
+   ╭─[ a_nullability_diagnostic_about_an_unnamed_pointer_names_nothing.c:6:5 ]
+   │
+ 6 │     return **pp;
+   │     ──────┬─────  
+   │           ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it
+error[SC0405]: this may pass a null pointer to a parameter declared `_Nonnull`
+    ╭─[ a_nullability_diagnostic_about_an_unnamed_pointer_names_nothing.c:12:12 ]
+    │
+  1 │ int g(int *_Nonnull p);
+    │            ────┬───  
+    │                ╰───── the parameter is declared `_Nonnull` here
+    │ 
+ 12 │     return g(*pp);
+    │            ───┬──  
+    │               ╰──── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before passing it
+error[SC0408]: this returns a null pointer from a function that promised not to
+    ╭─[ a_nullability_diagnostic_about_an_unnamed_pointer_names_nothing.c:16:9 ]
+    │
+ 14 │ int *_Nonnull returned(int **pp) {
+    │      ────┬───  
+    │          ╰───── the return is declared `_Nonnull` here
+    │ 
+ 16 │         return 0;
+    │         ────┬────  
+    │             ╰────── this is null when it is returned
+────╯
+  = note: this check belongs to safety level 1
+  = help: return a pointer to an object here, or remove `_Nonnull` from the return type in every declaration of the function
+error[SC0408]: this may return a null pointer from a function that promised not to
+    ╭─[ a_nullability_diagnostic_about_an_unnamed_pointer_names_nothing.c:18:5 ]
+    │
+ 14 │ int *_Nonnull returned(int **pp) {
+    │      ────┬───  
+    │          ╰───── the return is declared `_Nonnull` here
+    │ 
+ 18 │     return *pp;
+    │     ─────┬─────  
+    │          ╰─────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: return only a pointer this check can see is not null, testing it first where it came from a call, or remove `_Nonnull` from the return type in every declaration of the function

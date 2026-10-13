@@ -1,4 +1,4 @@
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_scope_reentered_forgets_what_its_local_held.c:6:9 ]
    │
  6 │         *p = 1;

@@ -18,7 +18,7 @@ error[SC0402]: this may use `r` after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `pp` while it is null
     ╭─[ a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:14:5 ]
     │
  14 │     *pp = q;
@@ -28,7 +28,7 @@ error[SC0403]: this may dereference a null pointer
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `r` while it is null
     ╭─[ a_write_that_may_land_beside_its_target_may_have_replaced_what_an_escaped_local_holds.c:16:5 ]
     │
  16 │     *r = 1;

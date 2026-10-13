@@ -1,4 +1,4 @@
-warning[SC0403]: this may dereference a null pointer
+warning[SC0403]: this may dereference `p` while it is null
    ╭─[ an_unproven_dereference_is_a_warning_under_allow_unknown.c:2:5 ]
    │
  2 │     *p = 1;

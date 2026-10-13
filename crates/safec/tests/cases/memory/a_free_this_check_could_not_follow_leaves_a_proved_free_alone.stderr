@@ -31,7 +31,7 @@ error[SC0402]: this uses `r` after it was freed
 ────╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `r` while it is null
     ╭─[ a_free_this_check_could_not_follow_leaves_a_proved_free_alone.c:10:5 ]
     │
  10 │     *r = 1;

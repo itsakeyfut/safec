@@ -24,7 +24,7 @@ error[SC0402]: this may use `p` after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:9 ]
    │
  7 │     if (*p || (q = &p, *p)) { return 1; }
@@ -34,7 +34,7 @@ error[SC0403]: this may dereference a null pointer
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: test this pointer against null before reading through it
-error[SC0403]: this may dereference a null pointer
+error[SC0403]: this may dereference `p` while it is null
    ╭─[ a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:24 ]
    │
  7 │     if (*p || (q = &p, *p)) { return 1; }
