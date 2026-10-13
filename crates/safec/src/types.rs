@@ -1047,8 +1047,17 @@ impl Checker<'_> {
                 // only a block's uninitialized one is incomplete where 6.7 p7
                 // asks. Before this the lowering refused it as this compiler's
                 // gap, under `SC0304`.
-                Type::Array { length: None, .. } => {
-                    if at_file_scope || initialized {
+                // One whose element 6.7.6.2 p1 forbids is already refused, under
+                // `SC0309`, and a second report would be about the same fault.
+                // A block's object has no linkage only while `extern` is not
+                // read; one declared `extern` may be completed elsewhere
+                // (6.2.5 p22), and will need leaving out here.
+                Type::Array {
+                    length: None,
+                    element,
+                    ..
+                } => {
+                    if at_file_scope || initialized || self.forbidden_element(ast, *element) {
                         continue;
                     }
                     false
@@ -1227,6 +1236,26 @@ impl Checker<'_> {
         false
     }
 
+    /// Whether C17 6.7.6.2 p1 forbids `element` as an array's element: "The
+    /// element type shall not be an incomplete or function type."
+    ///
+    /// One answer for the two places that ask: `report_array`, which refuses
+    /// the array for it, and `check_complete_objects`, which leaves such an
+    /// array to that refusal rather than reporting one fault twice.
+    fn forbidden_element(&self, ast: &Ast, element: TypeId) -> bool {
+        match ast.ty(element) {
+            Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
+            // Complete where the array is written (C17 6.7.2.1 p8).
+            Type::Struct { .. } => !self.resolution.complete(ast, element),
+            Type::Int
+            | Type::Char
+            | Type::Pointer(_)
+            | Type::Array {
+                length: Some(_), ..
+            } => false,
+        }
+    }
+
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
     /// or, at file scope or as a member, whose length p2, 6.7.2.1 p9 and 6.6 p4
     /// forbid, and say
@@ -1240,21 +1269,7 @@ impl Checker<'_> {
         place: Where,
         diagnostics: &mut DiagnosticSink,
     ) -> bool {
-        // "The element type shall not be an incomplete or function type."
-        // `void` and an array of unknown length are the incomplete types this
-        // compiler has.
-        let incomplete = match ast.ty(element) {
-            Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
-            // Complete where the array is written (C17 6.7.2.1 p8).
-            Type::Struct { .. } => !self.resolution.complete(ast, element),
-            Type::Int
-            | Type::Char
-            | Type::Pointer(_)
-            | Type::Array {
-                length: Some(_), ..
-            } => false,
-        };
-        if incomplete {
+        if self.forbidden_element(ast, element) {
             let spelled = self.spelled(ast, element);
             diagnostics.report(
                 Diagnostic::error(format!("an array cannot have `{spelled}` as its element"))

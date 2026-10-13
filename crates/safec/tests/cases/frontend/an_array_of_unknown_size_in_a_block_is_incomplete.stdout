@@ -1,15 +1,19 @@
 Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:1:1 "t" "int[]"
-Function an_array_of_unknown_size_in_a_block_is_incomplete.c:2:1 "f" "int (int[])"
-  Parameter an_array_of_unknown_size_in_a_block_is_incomplete.c:2:7 "q" "int[]"
-  Compound an_array_of_unknown_size_in_a_block_is_incomplete.c:2:16
-    Return an_array_of_unknown_size_in_a_block_is_incomplete.c:3:5
-      Number an_array_of_unknown_size_in_a_block_is_incomplete.c:3:12 "0"
-Function an_array_of_unknown_size_in_a_block_is_incomplete.c:5:1 "main" "int (void)"
-  Compound an_array_of_unknown_size_in_a_block_is_incomplete.c:5:16
-    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:6:5 "a" "int[]"
-    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:7:5 "b" "int[][3]"
-    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:8:5 "p" "int *[]"
-    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:9:5 "bu" "int[]"
-      Number an_array_of_unknown_size_in_a_block_is_incomplete.c:9:16 "1"
-    Return an_array_of_unknown_size_in_a_block_is_incomplete.c:10:5
-      Number an_array_of_unknown_size_in_a_block_is_incomplete.c:10:12 "0"
+Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:2:1 "struct X"
+Function an_array_of_unknown_size_in_a_block_is_incomplete.c:3:1 "f" "int (int[])"
+  Parameter an_array_of_unknown_size_in_a_block_is_incomplete.c:3:7 "q" "int[]"
+  Compound an_array_of_unknown_size_in_a_block_is_incomplete.c:3:16
+    Return an_array_of_unknown_size_in_a_block_is_incomplete.c:4:5
+      Number an_array_of_unknown_size_in_a_block_is_incomplete.c:4:12 "0"
+Function an_array_of_unknown_size_in_a_block_is_incomplete.c:6:1 "main" "int (void)"
+  Compound an_array_of_unknown_size_in_a_block_is_incomplete.c:6:16
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:7:5 "a" "int[]"
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:8:5 "b" "int[][3]"
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:9:5 "p" "int *[]"
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:10:5 "bu" "int[]"
+      Number an_array_of_unknown_size_in_a_block_is_incomplete.c:10:16 "1"
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:11:5 "c" "int[][]"
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:12:5 "v" "void[]"
+    Declaration an_array_of_unknown_size_in_a_block_is_incomplete.c:13:5 "x" "struct X[]"
+    Return an_array_of_unknown_size_in_a_block_is_incomplete.c:14:5
+      Number an_array_of_unknown_size_in_a_block_is_incomplete.c:14:12 "0"

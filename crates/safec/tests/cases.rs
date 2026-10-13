@@ -2837,7 +2837,10 @@ cases! {
         // drop the `Type::Array` arm in `check_complete_objects`; the three
         // reports go. Mutation: drop `at_file_scope` from it; `t` gains one.
         // Mutation: drop `initialized`; `bu` gains one, and so does
-        // `only_an_object_can_be_initialized`.
+        // `only_an_object_can_be_initialized`. `c`, `v` and `x` have an
+        // element 6.7.6.2 p1 forbids, which is their `SC0309`, and get no
+        // second report. Mutation: drop `forbidden_element` from the arm;
+        // each gains an `SC0315`.
         an_array_of_unknown_size_in_a_block_is_incomplete: ["--emit", "ast"],
         // Nothing can be passed to a `void` parameter, and no `void` value can
         // be passed at all (6.5.2.2 p2, 6.3.2.2), so every call here is
