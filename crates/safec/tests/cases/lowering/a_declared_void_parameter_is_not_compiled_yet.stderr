@@ -1,0 +1,16 @@
+error[SC0304]: cannot compile a parameter of type `void` yet
+   ╭─[ a_declared_void_parameter_is_not_compiled_yet.c:1:12 ]
+   │
+ 1 │ int f(void b);
+   │            ┬  
+   │            ╰── declared here
+───╯
+  = note: C17 6.7.6.3 p12 allows one in a declaration that is not a definition, and nothing can be passed to it
+error[SC0304]: cannot compile a parameter of type `void` yet
+   ╭─[ a_declared_void_parameter_is_not_compiled_yet.c:2:12 ]
+   │
+ 2 │ int d(int, void);
+   │            ──┬─  
+   │              ╰─── declared here
+───╯
+  = note: C17 6.7.6.3 p12 allows one in a declaration that is not a definition, and nothing can be passed to it

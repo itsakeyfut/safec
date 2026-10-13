@@ -3565,6 +3565,12 @@ cases! {
         // `SC0304`. Mutation: drop the call to `Lowering::lengths`; the store
         // goes and `n` returns what the caller passed.
         a_parameter_s_length_is_evaluated_on_entry: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A declaration that is not a definition may have a `void` parameter
+        // (C17 6.7.6.3 p12), and the type check accepts `f` and `d`; no IR type
+        // holds nothing, so each is `SC0304`, the lowering's gap, where it was
+        // the backend's `SC0801` before. Mutation: drop the `void` test in
+        // `Lowering::signature`; both reports go, and the IR is printed.
+        a_declared_void_parameter_is_not_compiled_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A prototype's length is never lowered, so a part of it the type
         // check left untyped without a report, `p - q` today, hides a fault
         // nothing asks about. Each is refused as `SC0304`, with a label on
