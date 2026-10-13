@@ -1767,11 +1767,11 @@ mod tests {
 
     /// The innermost declaration wins, and each use is answered on its own.
     ///
-    /// Mutation: drop the `rev` over `self.scopes` in `Resolver::lookup`. The
+    /// Mutation: drop the `rev` over `self.spelled` in `Resolver::lookup`. The
     /// outer `x` answers instead and this fails.
     ///
-    /// The other `rev`, over the bindings within one scope, decides which of
-    /// two declarations of one name in one scope answers, and
+    /// Which of two declarations of one name in one scope answers is that
+    /// scope's `Declared::latest`, which every declaration replaces, and
     /// `a_use_after_a_name_declared_twice_is_the_second_declaration` holds
     /// it. At file scope two compatible declarations can still differ, `int
     /// f(); int f(int *a);`, and a call after them is checked against the

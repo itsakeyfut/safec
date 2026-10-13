@@ -610,7 +610,7 @@ fn name_lookup_does_not_grow_with_how_far_back_the_name_was_declared() {
 
     assert!(
         first < last * 3,
-        "uses of the first name took {first:?} against {last:?} for the last,          so a lookup grows with how far back its name was declared"
+        "uses of the first name took {first:?} against {last:?} for the last, so a lookup grows with how far back its name was declared"
     );
 }
 
