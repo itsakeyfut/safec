@@ -154,8 +154,8 @@ encloses it is not such a call, because C orders a call's arguments before it,
 so `free(memset(a, 0, 4))` is not reported
 ([ADR-0043](adr/0043-a-call-is-ordered-after-what-its-own-arguments-read-and-a-span-inside-it-says-which.md)).
 It is asked one level in as well, about an allocation that may have been
-freed: `free(a); use2(&a);` is `SC0407`, `this may pass a pointer to where a
-freed pointer is stored`, since the callee may read the freed pointer out,
+freed: `free(a); use2(&a);` is `SC0407`, `this passes a pointer to where a
+pointer that may have been freed is stored`, since the callee may read the freed pointer out,
 and it is never a proof, since the callee may only write there. The fix is at
 the call or at the free, which is why it is not `SC0402`.
 [ADR-0042](adr/0042-a-pointer-handed-to-a-call-is-asked-at-the-call-as-a-dereference-of-it-would-be.md)
@@ -189,17 +189,20 @@ is that rule. Those read `this frees a value
 that may have been freed already` and `this uses a value that may have been
 freed`, and a reader is being told there is something to suspect without being
 told a free happened: the free, the use or the pass at the caret certainly
-did, and whether the pointer had been freed before it is what is open. Neither
-cause is known to have a free behind it, since this check keeps the two in one
-state, and neither finding carries a `freed here` label, so words that named
-"the free" named one the report never showed, in programs with no `free` in
-them as well as in programs with one.
+did, and whether the pointer had been freed before it is what is open. Such a
+finding cannot say which of the two causes it came from, since this check keeps
+them in one state, and it carries no `freed here` label, so words that named
+"the free" named one the report never showed, and in a program with no `free`
+in it, one there was not. The rows unproven because C left the order open are
+the other way round: they do label the free, so they keep `perhaps after the
+free`, and that label always has a `freed here` beside it.
 
-The third is this check having stopped following the pointer, and there the
-same words would assert a suspicion that nothing worked out: the two above at
-least had a free on some path or a call that could have made one. A program
-with one `free` in it, and a program with none, both used to get the words
-those had then, which asserted a first free outright. So those read
+The third is this check having stopped following the pointer, and there even
+`may have been freed` would assert a suspicion nothing worked out: the first
+two each come from something this check saw, a free on one path or a call that
+was handed the pointer, and this one comes from the check losing track. A
+program with one `free` in it, and a program with none, both used to be told a
+first free had happened. So those read
 `this frees a pointer this check stopped following` and `this uses a pointer
 this check stopped following`, which are the only diagnostics here that name
 the analysis rather than the program, because the analysis is the whole of what

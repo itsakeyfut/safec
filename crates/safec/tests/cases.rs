@@ -148,7 +148,7 @@ cases! {
         // but `free` with the suite green.
         //
         // Its `.stderr` is where the words are pinned: `allocated here` and
-        // `used here, perhaps after the free`, and **no** `freed here` caret
+        // `used here, where it may have been freed before`, and **no** `freed here` caret
         // and no 6.5.2.2 p10 note, because nothing established a free. That is
         // the whole of what `Unproven::Disagreement` buys over
         // `Unproven::Unsequenced` here.

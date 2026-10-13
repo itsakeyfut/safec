@@ -202,13 +202,15 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     // `may free it again here` on a file with one `free` in it, and
     // `used here, perhaps after the free` on one with none.
     //
-    // **And `Disagreement` is not known to have a free behind it either**, so
-    // its words do not assert one. A site the paths disagree about was freed
-    // on one of them, and a site a call this check cannot read was handed may
-    // have been freed by it, and `SiteState::Unknown` is one variant for
-    // both, so nothing here can say which. Nor does such a finding carry a
-    // `freed` span: "perhaps after the free" named a free the report never
-    // showed, and 69 corpus programs with no `free` in them were told it.
+    // **And a `Disagreement` finding cannot say which free, or whether
+    // there was one**, so its words do not assert one. A site the paths
+    // disagree about was freed on one of them, and a site a call this check
+    // cannot read was handed may have been freed by it or by nothing, and
+    // `SiteState::Unknown` is one variant for both, so nothing here can say
+    // which cause it was. Nor does such a finding carry a `freed` span:
+    // "perhaps after the free" named a free the report never showed, and in
+    // a program with no `free` in it, one there was not.
+    // `a_doubt_with_no_free_in_the_program_asserts_none` is that program.
     // What certainly happened is the use, the pass, the return or the free
     // at the caret, so the `may` is on whether the pointer had been freed.
     // `Unsequenced` keeps its words, because its `freed here` label is the
