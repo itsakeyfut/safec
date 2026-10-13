@@ -158,7 +158,8 @@ const NOT_YET: Code = Code::new("SC0304");
 /// which makes it a definition as if initialized with zero). A parameter of
 /// a definition (6.7.6.3 p4), what a definition returns (6.9.1 p3) and what
 /// a call returns (6.5.2.2 p1) are held to the same, each where it is
-/// written.
+/// written. An object or a definition's parameter of type `void` is too,
+/// since `void` is incomplete and can never be completed (6.2.5 p19).
 ///
 /// Its own code: the type is a correct one and the declarator a correct
 /// declarator, and what is wrong is that the struct is not complete there.
@@ -965,8 +966,8 @@ impl Checker<'_> {
         }
     }
 
-    /// Report every object whose type is a struct not complete where C needs
-    /// it to be, under [`INCOMPLETE_OBJECT`]: in a block, at the end of its
+    /// Report every object whose type is `void`, or a struct not complete
+    /// where C needs it to be, under [`INCOMPLETE_OBJECT`]: in a block, at the end of its
     /// declarator (C17 6.7 p7), which is where its type was written; at file
     /// scope, by the end of the translation unit (6.9.2 p2), which is whether
     /// it is complete where written or its tag has a definition at all. A
@@ -976,14 +977,20 @@ impl Checker<'_> {
     /// A definition's parameters (6.7.6.3 p4) and what it returns (6.9.1 p3)
     /// are asked where they are written, which is before the body, so a
     /// definition of the struct inside the body completes neither. A
-    /// parameter of a declaration that is not a definition may be incomplete,
-    /// and a call to one is asked in `call`.
+    /// parameter of a declaration that is not a definition may be incomplete
+    /// (6.7.6.3 p12), `void` included, and a call to one is asked in `call`
+    /// and in `check_argument`.
     fn check_complete_objects(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
-        let mut objects: Vec<(&Declaration, bool)> = Vec::new();
+        // Each with whether it is at file scope and whether it is initialized.
+        let mut objects: Vec<(&Declaration, bool, bool)> = Vec::new();
         for item in ast.items() {
             match item {
                 Item::Declaration { declarators, .. } => {
-                    objects.extend(declarators.iter().map(|d| (&d.declaration, true)));
+                    objects.extend(
+                        declarators
+                            .iter()
+                            .map(|d| (&d.declaration, true, d.init.is_some())),
+                    );
                 }
                 Item::Function(function) => {
                     let Type::Function {
@@ -996,7 +1003,7 @@ impl Checker<'_> {
                     if let Parameters::Prototype(parameters) = parameters {
                         // `false`, since a parameter has no linkage and its
                         // type is the one written in the declarator.
-                        objects.extend(parameters.iter().map(|d| (d, false)));
+                        objects.extend(parameters.iter().map(|d| (d, false, false)));
                     }
                     self.report_incomplete_return(ast, *returns, function.name, diagnostics);
                 }
@@ -1005,33 +1012,52 @@ impl Checker<'_> {
         }
         for id in ast.stmt_ids() {
             if let Stmt::Declaration { declarators, .. } = ast.stmt(id) {
-                objects.extend(declarators.iter().map(|d| (&d.declaration, false)));
+                objects.extend(
+                    declarators
+                        .iter()
+                        .map(|d| (&d.declaration, false, d.init.is_some())),
+                );
             }
         }
-        for (declaration, at_file_scope) in objects {
+        for (declaration, at_file_scope, initialized) in objects {
             let ty = declaration.ty;
-            if !matches!(ast.ty(ty), Type::Struct { .. }) {
-                continue;
-            }
-            // Complete where it is written, which a definition and every
-            // struct with no tag is; or, at file scope, defined anywhere.
-            let complete = self.resolution.complete(ast, ty)
-                || (at_file_scope && {
-                    let tag = self.resolution.tag(ty);
-                    self.resolution.tag_declaration(tag).defined.is_some()
-                });
+            let complete = match ast.ty(ty) {
+                // C17 6.2.5 p19: "an incomplete object type that cannot be
+                // completed". Every other type this compiler reads is
+                // complete. One with an initializer is already refused, under
+                // `SC0310`, as something that cannot be initialized, and a
+                // second report would be about the same fault.
+                Type::Void if initialized => continue,
+                Type::Void => false,
+                // Complete where it is written, which a definition and every
+                // struct with no tag is; or, at file scope, defined anywhere.
+                Type::Struct { .. } => {
+                    self.resolution.complete(ast, ty)
+                        || (at_file_scope && {
+                            let tag = self.resolution.tag(ty);
+                            self.resolution.tag_declaration(tag).defined.is_some()
+                        })
+                }
+                _ => continue,
+            };
             if complete {
                 continue;
             }
-            let name = declaration.name.unwrap_or(declaration.span);
             let spelled = self.spelled(ast, ty);
-            diagnostics.report(
-                Diagnostic::error(format!(
+            // An unnamed parameter has no name to put in the message, and its
+            // span is its specifier, which would say `void` has type `void`.
+            let message = match declaration.name {
+                Some(name) => format!(
                     "`{}` has incomplete type `{spelled}`",
                     self.sources.snippet(name)
-                ))
-                .with_code(INCOMPLETE_OBJECT)
-                .with_label(Label::primary(name, "declared here"))
+                ),
+                None => format!("a parameter has incomplete type `{spelled}`"),
+            };
+            let at = declaration.name.unwrap_or(declaration.span);
+            diagnostics.report(
+                Diagnostic::error(message)
+                    .with_code(INCOMPLETE_OBJECT)
+                    .with_label(Label::primary(at, "declared here"))
                 .with_note(if at_file_scope {
                     "an object at file scope has a type completed by the end of the translation unit (C17 6.9.2 p2)"
                 } else {

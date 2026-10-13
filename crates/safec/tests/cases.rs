@@ -2811,6 +2811,17 @@ cases! {
         // declarator under `SC0309` as well, and both are reported; dropping
         // the file-scope walk's arrays loses its `SC0310`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
+        // `void` is incomplete and can never be completed (C17 6.2.5 p19), so an
+        // object of it is `SC0315` at file scope (6.9.2 p2) and in a block
+        // (6.7 p7), and so is a parameter of a definition (6.7.6.3 p4),
+        // named or not and wherever in the list. A declaration that is not a
+        // definition may have one (p12), and `(void)` is the empty prototype
+        // (p10), so `d`, `e` and `k` are not reported. Mutation: drop the
+        // `Type::Void` arm in `check_complete_objects`; every report goes.
+        // Mutation: name an unnamed parameter by its span; that report
+        // says `void` has type `void`. Mutation: ask a declaration's
+        // parameters too; `d` and `e` gain reports.
+        an_object_or_a_definition_s_parameter_of_type_void_is_incomplete: ["--emit", "ast"],
         // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
         // members, a declaration of a tag and nothing else, an object, a
         // parameter, a local, and `.` and `->`, each in the tree. Every
