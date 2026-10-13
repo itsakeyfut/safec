@@ -2793,18 +2793,17 @@ cases! {
         an_array_declarator_is_held_to_its_constraints: ["--emit", "ast"],
         // C17 6.7.9 p3: a function, `void` and a variable length array are
         // refused an initializer at file scope and in a block, each once under
-        // `SC0310`, and an array of unknown size or of a constant length is
-        // not, which p3 allows. `u`, `s`, `bu` and `bs` are still accepted in
-        // silence: 6.7.9 p16 asks for a brace-enclosed list there, which is a
-        // Semantics paragraph and not this check's. Mutation: stop asking
-        // whether the declared type is a function, or `void`; `f` and `bf`,
-        // or `v` and `bv`, go. Mutation: stop asking whether an array's
-        // length has a value; `va` goes, and asking only the outermost one
-        // lets `vb` through, whose inner length makes it a variable length
-        // array too (6.7.6.2 p4); `vp` points at one and is not one, so it
-        // may be initialized. Refusing every array with a
-        // length makes `s` and `bs` report, and every array, `u` and `bu`
-        // too. Mutation: walk only the items, or only the statements; the
+        // `SC0310`. An array of unknown size or of a constant length may have
+        // one under p3, but p16 asks for a brace-enclosed list, so `u`, `s`,
+        // `bu` and `bs`, each initialized by `1`, are `SC0310` too, citing p16.
+        // Mutation: stop asking whether the declared type is a function, or
+        // `void`; `f` and `bf`, or `v` and `bv`, go. Mutation: stop asking
+        // whether an array's length has a value; `va` takes the p16 wording,
+        // and asking only the outermost one does that to `vb`, whose inner
+        // length makes it a variable length array too (6.7.6.2 p4); `vp`
+        // points at one and is not one, so it may be initialized. Mutation:
+        // pass over an array that is not variable length again; the four
+        // p16 reports go. Mutation: walk only the items, or only the statements; the
         // block's reports, or the file's, go. Mutation: ask only a
         // declaration's first declarator; `second` and `bsecond` go. `fv` is
         // a variable length array at file scope, so 6.7.6.2 p2 refuses its
@@ -2830,9 +2829,10 @@ cases! {
         an_object_or_a_definition_s_parameter_of_type_void_is_incomplete: ["--emit", "ast"],
         // An array of unknown size is incomplete (C17 6.2.5 p22), so in a block
         // with no initializer it is `SC0315` (6.7 p7): `a`, `b` and `p`. What
-        // is not reported: `t`, a tentative definition 6.9.2 p2 completes;
+        // is not `SC0315`: `t`, a tentative definition 6.9.2 p2 completes;
         // `q`, a parameter adjusted to a pointer (6.7.6.3 p7); and `bu`, whose
-        // fault is its initializer (6.7.9 p16), not its type. Asked of the
+        // fault is its initializer (6.7.9 p16), not its type, and is reported
+        // as that, `SC0310`. Asked of the
         // type check alone, which is what used to let these through. Mutation:
         // drop the `Type::Array` arm in `check_complete_objects`; the three
         // reports go. Mutation: drop `at_file_scope` from it; `t` gains one.

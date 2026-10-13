@@ -46,3 +46,13 @@ error[SC0315]: `p` has incomplete type `int *[]`
    │          ╰── declared here
 ───╯
   = note: an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)
+error[SC0310]: `bu` is an array, and its initializer is not a brace-enclosed list
+    ╭─[ an_array_of_unknown_size_in_a_block_is_incomplete.c:10:9 ]
+    │
+ 10 │     int bu[] = 1;
+    │         ─┬     ┬  
+    │          ╰──────── declared as `int[]`
+    │                │  
+    │                ╰── this initializer
+────╯
+  = note: C17 6.7.9 p16
