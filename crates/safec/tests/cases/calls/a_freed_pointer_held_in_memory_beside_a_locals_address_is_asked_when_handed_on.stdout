@@ -1,36 +1,36 @@
 Target "x86_64-pc-windows-msvc"
 Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:3:6 "release" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:4:6 "look" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:6:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "int"
-  Local "_5" "int **"
+  Local "_5" "int **" "x"
   Local "_6" "void *"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "int *"
-  Local "_10" "int **"
+  Local "_9" "int *" "slot"
+  Local "_10" "int **" "t2"
   Local "_11" "int **"
-  Local "_12" "int ***"
+  Local "_12" "int ***" "h"
   Local "_13" "void *"
   Local "_14" "int"
   Local "_15" "int **"
   Local "_16" "int **"
   Local "_17" "int *"
-  Local "_18" "int **"
+  Local "_18" "int **" "m"
   Block "bb0" entry
     Operation a_freed_pointer_held_in_memory_beside_a_locals_address_is_asked_when_handed_on.c:6:5 generated
       Destination "_0"

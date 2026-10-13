@@ -3,11 +3,11 @@ Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_a
   Local "_0" "void" return
 Function a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:2:5 "f"
   Local "_0" "int" return
-  Local "_1" "int ***" parameter
+  Local "_1" "int ***" parameter "ppp"
   Local "_2" "int"
-  Local "_3" "int **"
+  Local "_3" "int **" "pp"
   Local "_4" "int"
-  Local "_5" "int *"
+  Local "_5" "int *" "q"
   Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call.c:3:9 written

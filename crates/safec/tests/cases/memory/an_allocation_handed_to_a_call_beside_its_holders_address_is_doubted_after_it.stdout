@@ -1,17 +1,17 @@
 Target "x86_64-pc-windows-msvc"
 Function an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it.c:2:6 "g2" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
-  Local "_2" "int **" parameter
+  Local "_1" "int *" parameter "a"
+  Local "_2" "int **" parameter "pp"
 Function an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it.c:3:6 "use2" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function an_allocation_handed_to_a_call_beside_its_holders_address_is_doubted_after_it.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "int **"

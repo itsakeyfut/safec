@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:2:7 "memset" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "int" parameter
-  Local "_3" "int" parameter
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
 Function a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:3:5 "release" declared
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_pointer_handed_to_a_call_before_an_opaque_call_is_reported.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "void *"

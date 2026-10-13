@@ -1,16 +1,16 @@
 Target "x86_64-pc-windows-msvc"
 Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_local_that_was_never_given_a_pointer_writes_nowhere.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
-  Local "_2" "int *"
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int *" "q"
   Local "_3" "void *"
-  Local "_4" "int *"
+  Local "_4" "int *" "z"
   Local "_5" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_local_that_was_never_given_a_pointer_writes_nowhere.c:4:14 generated

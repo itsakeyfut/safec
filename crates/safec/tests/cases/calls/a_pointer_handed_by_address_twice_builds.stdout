@@ -1,13 +1,13 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_handed_by_address_twice_builds.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_handed_by_address_twice_builds.c:2:5 "grow" declared
   Local "_0" "int" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function a_pointer_handed_by_address_twice_builds.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
   Local "_4" "int **"

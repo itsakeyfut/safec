@@ -1,19 +1,19 @@
 Target "x86_64-pc-windows-msvc"
 Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:2:6 "get" declared
   Local "_0" "void" return
-  Local "_1" "int ***" parameter
+  Local "_1" "int ***" parameter "out"
 Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:3:6 "release_all" declared
   Local "_0" "void" return
 Function a_store_through_a_pointer_a_call_filled_in_exposes_what_it_stores.c:5:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int **"
-  Local "_3" "int **"
-  Local "_4" "int **"
-  Local "_5" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "s"
+  Local "_3" "int **" "u"
+  Local "_4" "int **" "t"
+  Local "_5" "int *" "a"
   Local "_6" "void *"
   Local "_7" "int **"
   Local "_8" "int"

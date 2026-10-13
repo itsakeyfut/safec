@@ -264,6 +264,14 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                     None => {}
                 }
             }
+            // The name the source wrote, last so that every field before it
+            // stays where it was, and only where there is one: a temporary
+            // was never written. `_N` stays the local's identity, so two
+            // locals of one name in nested blocks are still two.
+            if let Some(name) = function.name_of(local) {
+                write!(out, " {:?}", quoted(sources, name))
+                    .expect("writing to a string cannot fail");
+            }
             out.push('\n');
         }
 

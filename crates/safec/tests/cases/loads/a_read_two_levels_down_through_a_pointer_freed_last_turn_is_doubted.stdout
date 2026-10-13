@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_read_two_levels_down_through_a_pointer_freed_last_turn_is_doubted.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "t2"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int"
+  Local "_4" "int" "k"
   Local "_5" "int"
-  Local "_6" "int *"
+  Local "_6" "int *" "p"
   Local "_7" "void *"
   Local "_8" "int"
   Local "_9" "int"

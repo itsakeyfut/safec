@@ -3,7 +3,7 @@ Function code_after_abort_is_not_asked.c:1:6 "abort" declared
   Local "_0" "void" return
 Function code_after_abort_is_not_asked.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated code_after_abort_is_not_asked.c:4:5 generated
     Call code_after_abort_is_not_asked.c:4:5 "abort" noreturn

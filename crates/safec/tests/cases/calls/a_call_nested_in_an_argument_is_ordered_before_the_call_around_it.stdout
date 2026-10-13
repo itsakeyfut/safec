@@ -1,21 +1,21 @@
 Target "x86_64-pc-windows-msvc"
 Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:2:7 "strcpy" declared
   Local "_0" "char *" return
-  Local "_1" "char *" parameter
-  Local "_2" "char *" parameter
+  Local "_1" "char *" parameter "d"
+  Local "_2" "char *" parameter "s"
 Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:3:5 "strlen" declared
   Local "_0" "int" return
-  Local "_1" "char *" parameter
+  Local "_1" "char *" parameter "s"
 Function a_call_nested_in_an_argument_is_ordered_before_the_call_around_it.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "char *"
+  Local "_1" "char *" "s"
   Local "_2" "void *"
-  Local "_3" "char *"
+  Local "_3" "char *" "t"
   Local "_4" "void *"
-  Local "_5" "int"
+  Local "_5" "int" "x"
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "char"

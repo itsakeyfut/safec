@@ -1,13 +1,13 @@
 Target "x86_64-pc-windows-msvc"
 Function a_parameter_freed_and_handed_on.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_parameter_freed_and_handed_on.c:2:6 "run" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_parameter_freed_and_handed_on.c:4:6 "finish"
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_freed_and_handed_on.c:5:5 generated
     Call a_parameter_freed_and_handed_on.c:5:5 "free" "bb1"

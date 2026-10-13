@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_free_of_a_may_set_on_one_arm_only.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_free_of_a_may_set_on_one_arm_only.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_free_of_a_may_set_on_one_arm_only.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "a"
   Local "_3" "void *"
-  Local "_4" "int *"
+  Local "_4" "int *" "b"
   Local "_5" "void *"
-  Local "_6" "int *"
+  Local "_6" "int *" "p"
   Local "_7" "int *"
   Local "_8" "int *"
   Block "bb0" entry

@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_result_of_a_function_defined_here_is_doubted_at_level_4.c:1:6 "pick"
   Local "_0" "int *" return
-  Local "_1" "int *" parameter _Nonnull
+  Local "_1" "int *" parameter _Nonnull "p"
   Block "bb0" entry
     Operation a_result_of_a_function_defined_here_is_doubted_at_level_4.c:2:5 written
       Destination "_0"
@@ -11,8 +11,8 @@ Function a_result_of_a_function_defined_here_is_doubted_at_level_4.c:1:6 "pick"
     Return
 Function a_result_of_a_function_defined_here_is_doubted_at_level_4.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int"
-  Local "_2" "int *"
+  Local "_1" "int" "x"
+  Local "_2" "int *" "q"
   Local "_3" "int *"
   Local "_4" "int *"
   Block "bb0" entry

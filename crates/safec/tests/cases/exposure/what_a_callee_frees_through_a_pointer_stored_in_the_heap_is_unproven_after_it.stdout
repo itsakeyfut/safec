@@ -1,19 +1,19 @@
 Target "x86_64-pc-windows-msvc"
 Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:3:6 "drop_inner" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "box"
 Function what_a_callee_frees_through_a_pointer_stored_in_the_heap_is_unproven_after_it.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "box"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int *"

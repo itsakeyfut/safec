@@ -1,12 +1,12 @@
 Target "x86_64-pc-windows-msvc"
 Function a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer.c:3:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "q"
   Local "_2" "void *"
-  Local "_3" "int **"
+  Local "_3" "int **" "pp"
   Local "_4" "int **"
   Local "_5" "int *"
   Local "_6" "int *"

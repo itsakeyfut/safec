@@ -5,12 +5,12 @@ Function every_shape_the_artifact_spells.c:1:6 "nothing"
     Return
 Function every_shape_the_artifact_spells.c:4:5 "every"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int" parameter
-  Local "_3" "char" parameter
-  Local "_4" "int **" parameter
-  Local "_5" "int"
-  Local "_6" "int *"
+  Local "_1" "int" parameter "a"
+  Local "_2" "int" parameter "b"
+  Local "_3" "char" parameter "c"
+  Local "_4" "int **" parameter "pp"
+  Local "_5" "int" "x"
+  Local "_6" "int *" "p"
   Local "_7" "int"
   Local "_8" "int"
   Local "_9" "int"

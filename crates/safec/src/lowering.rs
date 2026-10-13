@@ -942,6 +942,7 @@ impl Lowering<'_> {
                         })
                         | None => None,
                     },
+                    name: parameter.name,
                 });
             }
         }
@@ -1443,7 +1444,7 @@ impl Lowering<'_> {
                     // left alone until something assigns to it.
                     if let Some(name) = name {
                         let ty = self.ty(span, ty, diagnostics)?;
-                        let local = builder.function.push_local(ty);
+                        let local = builder.function.push_named_local(ty, name);
                         self.locals.insert(name, local);
 
                         // Only a scope narrower than the function's own body. The

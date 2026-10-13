@@ -10,7 +10,7 @@ Function a_nullable_return_is_tested_before_it_is_read.c:1:17 "find"
     Return
 Function a_nullable_return_is_tested_before_it_is_read.c:5:5 "tested"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "q"
   Local "_2" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_nullable_return_is_tested_before_it_is_read.c:6:14 generated
@@ -45,7 +45,7 @@ Function a_nullable_return_is_tested_before_it_is_read.c:5:5 "tested"
     Return
 Function a_nullable_return_is_tested_before_it_is_read.c:13:5 "untested"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "q"
   Local "_2" "int *"
   Block "bb0" entry
     ArgumentsEvaluated a_nullable_return_is_tested_before_it_is_read.c:14:14 generated

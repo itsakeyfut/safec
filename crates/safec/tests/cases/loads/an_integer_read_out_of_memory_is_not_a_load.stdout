@@ -1,28 +1,28 @@
 Target "x86_64-pc-windows-msvc"
 Function an_integer_read_out_of_memory_is_not_a_load.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function an_integer_read_out_of_memory_is_not_a_load.c:2:6 "log_int" declared
   Local "_0" "void" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "v"
 Function an_integer_read_out_of_memory_is_not_a_load.c:3:6 "show" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function an_integer_read_out_of_memory_is_not_a_load.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "tab"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
+  Local "_7" "int *" "w"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int"
   Local "_11" "int *"
-  Local "_12" "int"
-  Local "_13" "int *"
+  Local "_12" "int" "x"
+  Local "_13" "int *" "r"
   Local "_14" "int *"
   Block "bb0" entry
     Operation an_integer_read_out_of_memory_is_not_a_load.c:5:5 generated

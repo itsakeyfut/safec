@@ -1,28 +1,28 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:2:6 "show" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_pointer_read_out_of_memory_on_one_arm_is_still_one_after_the_join.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int ***"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int ***" "holder"
   Local "_3" "void *"
   Local "_4" "int"
-  Local "_5" "int **"
+  Local "_5" "int **" "tab"
   Local "_6" "void *"
   Local "_7" "int"
-  Local "_8" "int **"
+  Local "_8" "int **" "other"
   Local "_9" "void *"
   Local "_10" "int"
-  Local "_11" "int *"
+  Local "_11" "int *" "p"
   Local "_12" "void *"
   Local "_13" "int"
   Local "_14" "int **"
   Local "_15" "int *"
-  Local "_16" "int **"
+  Local "_16" "int **" "t"
   Local "_17" "int **"
   Local "_18" "int"
   Block "bb0" entry

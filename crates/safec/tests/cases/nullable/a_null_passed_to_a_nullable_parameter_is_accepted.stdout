@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_null_passed_to_a_nullable_parameter_is_accepted.c:1:6 "g" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_null_passed_to_a_nullable_parameter_is_accepted.c:3:5 "main"
   Local "_0" "int" return
   Block "bb0" entry

@@ -1,44 +1,44 @@
 Target "x86_64-pc-windows-msvc"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:2:7 "memset" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "int" parameter
-  Local "_3" "int" parameter
+  Local "_1" "void *" parameter "s"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:3:7 "memcpy" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "void *" parameter
-  Local "_3" "int" parameter
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:4:5 "now" declared
   Local "_0" "int" return
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:5:5 "count" declared
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:6:5 "weight" declared
   Local "_0" "int" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "v"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:7:7 "slot_of" declared
   Local "_0" "int **" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "key"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:8:6 "watch" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:9:5 "emit" declared
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int" parameter
-  Local "_3" "int" parameter
+  Local "_1" "int" parameter "a"
+  Local "_2" "int" parameter "b"
+  Local "_3" "int" parameter "c"
 Function a_call_in_a_store_s_own_operands_is_not_asked_about_the_store.c:10:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
-  Local "_2" "int *"
-  Local "_3" "int *"
-  Local "_4" "int *"
-  Local "_5" "int"
-  Local "_6" "int"
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int *" "a"
+  Local "_3" "int *" "b"
+  Local "_4" "int *" "cursor"
+  Local "_5" "int" "x"
+  Local "_6" "int" "r"
   Local "_7" "int *"
   Local "_8" "int **"
   Local "_9" "void *"

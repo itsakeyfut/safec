@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function an_allocation_returned_where_level_5_promised_a_pointer_is_doubted.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function an_allocation_returned_where_level_5_promised_a_pointer_is_doubted.c:3:6 "make"
   Local "_0" "int *" return _Nonnull defaulted
   Local "_1" "void *"

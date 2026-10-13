@@ -1,9 +1,9 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_in_one_length_meets_a_null_another_length_writes.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter _Nonnull
-  Local "_2" "int *" parameter
-  Local "_3" "int *" parameter
+  Local "_1" "int *" parameter _Nonnull "p"
+  Local "_2" "int *" parameter "b"
+  Local "_3" "int *" parameter "a"
   Local "_4" "int *"
   Block "bb0" entry
     Operation a_read_in_one_length_meets_a_null_another_length_writes.c:1:43 written

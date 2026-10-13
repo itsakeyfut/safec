@@ -1,21 +1,21 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:2:6 "release" declared
   Local "_0" "void" return
 Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:3:7 "get_slot" declared
   Local "_0" "int **" return
 Function a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int **"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "pp"
   Local "_3" "int **"
   Local "_4" "int **"
   Local "_5" "void *"
   Local "_6" "int **"
   Local "_7" "int"
-  Local "_8" "int *"
+  Local "_8" "int *" "q"
   Local "_9" "int"
   Block "bb0" entry
     Branch a_pointer_read_out_of_what_may_be_a_call_s_result_or_this_function_s_allocation_is_doubted_after_a_later_call.c:6:9 "bb1" "bb2"

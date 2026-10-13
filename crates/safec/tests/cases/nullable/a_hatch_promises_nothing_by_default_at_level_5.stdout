@@ -1,10 +1,10 @@
 Target "x86_64-pc-windows-msvc"
 Function a_hatch_promises_nothing_by_default_at_level_5.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_hatch_promises_nothing_by_default_at_level_5.c:4:6 "make" hatch
   Local "_0" "int *" return
-  Local "_1" "int *"
+  Local "_1" "int *" "p"
   Local "_2" "void *"
   Block "bb0" entry
     ArgumentsEvaluated a_hatch_promises_nothing_by_default_at_level_5.c:5:14 generated
@@ -25,7 +25,7 @@ Function a_hatch_promises_nothing_by_default_at_level_5.c:4:6 "make" hatch
     Return
 Function a_hatch_promises_nothing_by_default_at_level_5.c:9:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "q"
   Local "_2" "int *"
   Block "bb0" entry
     Operation a_hatch_promises_nothing_by_default_at_level_5.c:9:5 generated

@@ -1,16 +1,16 @@
 Target "x86_64-pc-windows-msvc"
 Function a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:2:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_void_read_on_an_arm_of_a_void_conditional_after_a_free.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "void *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "void *" "p"
   Local "_3" "void *"
-  Local "_4" "void *"
+  Local "_4" "void *" "q"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"

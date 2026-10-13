@@ -3677,6 +3677,17 @@ cases! {
         // Mutation: have `promoted` ask about `Place::local(place.local)`
         // instead of `place`. Only this case fails.
         a_compound_assignment_through_a_dereferenced_pointer_computes_into_a_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local the source wrote ends its line with the name it was written
+        // with, and only that one: `g`'s parameter in a declaration with no
+        // name has none, `p` and both `n`s have theirs, and every temporary,
+        // the call's result among them, has none. The two `n`s stay `_2` and
+        // `_4`, so the name is not the identity. Mutation: drop the name from
+        // the printer; the named lines lose it. Mutation: have the call's
+        // temporary pushed with a span; it gains a name the source never
+        // wrote. Mutation: push a block's object with `push_local`; both `n`s
+        // lose theirs. Mutation: drop a parameter's name in
+        // `Lowering::signature`; `p` loses its.
+        a_local_is_named_as_the_source_wrote_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_scope_that_opens_and_closes: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `wasm32` on purpose, and not the triple every other IR case names: no
         // CI runner and no developer machine hosts it, so this is the case that

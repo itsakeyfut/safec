@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_definition_that_disagrees_with_a_later_declaration_about_its_return_is_refused.c:1:16 "f"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int *" parameter _Nonnull
+  Local "_1" "int *" parameter _Nonnull "p"
   Block "bb0" entry
     Operation a_definition_that_disagrees_with_a_later_declaration_about_its_return_is_refused.c:2:5 written
       Destination "_0"

@@ -1,9 +1,9 @@
 Target "x86_64-pc-windows-msvc"
 Function a_subscript_whose_pointer_is_the_index_is_built_as_the_other_way_round.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter _Nonnull
-  Local "_2" "int"
-  Local "_3" "int"
+  Local "_1" "int *" parameter _Nonnull "p"
+  Local "_2" "int" "a"
+  Local "_3" "int" "b"
   Local "_4" "int *"
   Local "_5" "int"
   Local "_6" "int *"

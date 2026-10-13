@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_parameter_declared_nonnull_is_dereferenced_in_silence.c:1:6 "g"
   Local "_0" "void" return
-  Local "_1" "int *" parameter _Nonnull
+  Local "_1" "int *" parameter _Nonnull "p"
   Local "_2" "int"
   Block "bb0" entry
     Operation a_parameter_declared_nonnull_is_dereferenced_in_silence.c:2:5 written

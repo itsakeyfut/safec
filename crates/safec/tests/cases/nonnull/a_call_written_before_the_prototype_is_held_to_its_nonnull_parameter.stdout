@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:1:5 "f" declared
   Local "_0" "int" return
-  Local "_1" "int *" parameter _Nonnull
+  Local "_1" "int *" parameter _Nonnull "a"
 Function a_call_written_before_the_prototype_is_held_to_its_nonnull_parameter.c:2:5 "main"
   Local "_0" "int" return
   Local "_1" "int"

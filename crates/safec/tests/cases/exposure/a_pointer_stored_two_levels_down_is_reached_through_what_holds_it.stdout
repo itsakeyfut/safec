@@ -1,23 +1,23 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:3:6 "drop_all" declared
   Local "_0" "void" return
-  Local "_1" "int ***" parameter
+  Local "_1" "int ***" parameter "hh"
 Function a_pointer_stored_two_levels_down_is_reached_through_what_holds_it.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int ***"
+  Local "_1" "int ***" "hh"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "box"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int **"
-  Local "_8" "int *"
+  Local "_8" "int *" "p"
   Local "_9" "void *"
   Local "_10" "int"
   Local "_11" "int *"

@@ -1,27 +1,27 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:2:7 "memset" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "int" parameter
-  Local "_3" "int" parameter
+  Local "_1" "void *" parameter "s"
+  Local "_2" "int" parameter "c"
+  Local "_3" "int" parameter "n"
 Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:3:5 "release_all" declared
   Local "_0" "int" return
 Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:4:6 "stash" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
 Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:5:5 "keep" declared
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_read_in_the_next_statement_after_an_exposure_and_a_call_is_asked.c:6:5 "f"
   Local "_0" "int" return
-  Local "_1" "int"
-  Local "_2" "int"
-  Local "_3" "int *"
-  Local "_4" "int *"
-  Local "_5" "int *"
+  Local "_1" "int" "x"
+  Local "_2" "int" "r"
+  Local "_3" "int *" "a"
+  Local "_4" "int *" "b"
+  Local "_5" "int *" "holder"
   Local "_6" "int *"
   Local "_7" "int **"
   Local "_8" "void *"

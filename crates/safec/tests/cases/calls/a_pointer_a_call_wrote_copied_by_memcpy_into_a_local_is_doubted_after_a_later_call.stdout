@@ -1,23 +1,23 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:1:7 "memcpy" declared
   Local "_0" "void *" return
-  Local "_1" "void *" parameter
-  Local "_2" "void *" parameter
-  Local "_3" "int" parameter
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
 Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:2:6 "release" declared
   Local "_0" "void" return
 Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:3:6 "acquire" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "out"
 Function a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "r"
   Local "_2" "int **"
-  Local "_3" "int *"
+  Local "_3" "int *" "s"
   Local "_4" "int **"
   Local "_5" "int **"
   Local "_6" "void *"
-  Local "_7" "int *"
+  Local "_7" "int *" "t"
   Local "_8" "int"
   Block "bb0" entry
     Operation a_pointer_a_call_wrote_copied_by_memcpy_into_a_local_is_doubted_after_a_later_call.c:5:10 written

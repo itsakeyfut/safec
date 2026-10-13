@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_condition_underlines_the_operand_that_decides.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_condition_underlines_the_operand_that_decides.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_condition_underlines_the_operand_that_decides.c:4:5 "if_comma"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
@@ -69,8 +69,8 @@ Function a_condition_underlines_the_operand_that_decides.c:4:5 "if_comma"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:16:5 "if_chain"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
@@ -132,8 +132,8 @@ Function a_condition_underlines_the_operand_that_decides.c:16:5 "if_chain"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:28:5 "if_nested"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
@@ -195,8 +195,8 @@ Function a_condition_underlines_the_operand_that_decides.c:28:5 "if_nested"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:40:5 "if_left"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
@@ -259,8 +259,8 @@ Function a_condition_underlines_the_operand_that_decides.c:40:5 "if_left"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:52:5 "while_comma"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
@@ -321,8 +321,8 @@ Function a_condition_underlines_the_operand_that_decides.c:52:5 "while_comma"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:64:5 "for_comma"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Block "bb0" entry
@@ -383,8 +383,8 @@ Function a_condition_underlines_the_operand_that_decides.c:64:5 "for_comma"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:76:5 "conditional_comma"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int"
@@ -456,8 +456,8 @@ Function a_condition_underlines_the_operand_that_decides.c:76:5 "conditional_com
     Return
 Function a_condition_underlines_the_operand_that_decides.c:86:5 "and_left"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int"
@@ -527,8 +527,8 @@ Function a_condition_underlines_the_operand_that_decides.c:86:5 "and_left"
     Return
 Function a_condition_underlines_the_operand_that_decides.c:96:5 "or_right"
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int *"
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "p"
   Local "_3" "void *"
   Local "_4" "int"
   Local "_5" "int"

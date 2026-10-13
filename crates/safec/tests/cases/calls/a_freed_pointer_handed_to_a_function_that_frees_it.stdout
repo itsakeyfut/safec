@@ -1,13 +1,13 @@
 Target "x86_64-pc-windows-msvc"
 Function a_freed_pointer_handed_to_a_function_that_frees_it.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_freed_pointer_handed_to_a_function_that_frees_it.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_freed_pointer_handed_to_a_function_that_frees_it.c:4:6 "drop"
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 generated
     Call a_freed_pointer_handed_to_a_function_that_frees_it.c:5:5 "free" "bb1"
@@ -17,7 +17,7 @@ Function a_freed_pointer_handed_to_a_function_that_frees_it.c:4:6 "drop"
     Return
 Function a_freed_pointer_handed_to_a_function_that_frees_it.c:8:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
   Block "bb0" entry

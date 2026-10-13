@@ -1,13 +1,13 @@
 Target "x86_64-pc-windows-msvc"
 Function a_parameter_handed_to_a_second_call_is_doubted.c:1:6 "init" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_parameter_handed_to_a_second_call_is_doubted.c:2:6 "run" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_parameter_handed_to_a_second_call_is_doubted.c:4:6 "start"
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     ArgumentsEvaluated a_parameter_handed_to_a_second_call_is_doubted.c:5:5 generated
     Call a_parameter_handed_to_a_second_call_is_doubted.c:5:5 "init" "bb1"

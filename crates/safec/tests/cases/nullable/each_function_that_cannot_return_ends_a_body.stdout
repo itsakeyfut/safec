@@ -3,16 +3,16 @@ Function each_function_that_cannot_return_ends_a_body.c:1:6 "abort" declared
   Local "_0" "void" return
 Function each_function_that_cannot_return_ends_a_body.c:2:6 "exit" declared
   Local "_0" "void" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "status"
 Function each_function_that_cannot_return_ends_a_body.c:3:6 "_Exit" declared
   Local "_0" "void" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "status"
 Function each_function_that_cannot_return_ends_a_body.c:4:6 "quick_exit" declared
   Local "_0" "void" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "status"
 Function each_function_that_cannot_return_ends_a_body.c:6:16 "a"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     Branch each_function_that_cannot_return_ends_a_body.c:7:9 "bb1" "bb2"
       Copy "_1"
@@ -35,7 +35,7 @@ Function each_function_that_cannot_return_ends_a_body.c:6:16 "a"
     Return
 Function each_function_that_cannot_return_ends_a_body.c:13:16 "b"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     Branch each_function_that_cannot_return_ends_a_body.c:14:9 "bb1" "bb2"
       Copy "_1"
@@ -59,7 +59,7 @@ Function each_function_that_cannot_return_ends_a_body.c:13:16 "b"
     Return
 Function each_function_that_cannot_return_ends_a_body.c:20:16 "c"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     Branch each_function_that_cannot_return_ends_a_body.c:21:9 "bb1" "bb2"
       Copy "_1"
@@ -83,7 +83,7 @@ Function each_function_that_cannot_return_ends_a_body.c:20:16 "c"
     Return
 Function each_function_that_cannot_return_ends_a_body.c:27:16 "d"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     Branch each_function_that_cannot_return_ends_a_body.c:28:9 "bb1" "bb2"
       Copy "_1"

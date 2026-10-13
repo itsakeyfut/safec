@@ -3,12 +3,12 @@ Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_dou
   Local "_0" "void" return
 Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:2:6 "use" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
 Function a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "pp"
   Local "_2" "int"
-  Local "_3" "int *"
+  Local "_3" "int *" "q"
   Local "_4" "int *"
   Block "bb0" entry
     Operation a_local_given_something_else_after_a_load_out_of_a_parameter_is_not_doubted.c:5:9 written

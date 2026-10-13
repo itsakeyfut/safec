@@ -1,21 +1,21 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_the_local_holds.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "t4"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
-  Local "_5" "int **"
+  Local "_4" "int *" "o"
+  Local "_5" "int **" "po"
   Local "_6" "int **"
-  Local "_7" "int"
+  Local "_7" "int" "k"
   Local "_8" "int"
-  Local "_9" "int *"
+  Local "_9" "int *" "p"
   Local "_10" "void *"
   Local "_11" "int"
   Local "_12" "int"
@@ -23,7 +23,7 @@ Function a_pointer_to_a_local_moved_by_an_unknown_offset_and_stored_reads_what_t
   Local "_14" "int"
   Local "_15" "int **"
   Local "_16" "int *"
-  Local "_17" "int *"
+  Local "_17" "int *" "q"
   Local "_18" "int"
   Local "_19" "int *"
   Local "_20" "int"

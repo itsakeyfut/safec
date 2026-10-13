@@ -1,21 +1,21 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:2:5 "keep" declared
   Local "_0" "int" return
-  Local "_1" "int ***" parameter
+  Local "_1" "int ***" parameter "box"
 Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:3:5 "release_all" declared
   Local "_0" "int" return
 Function a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int"
-  Local "_2" "int"
-  Local "_3" "int ***"
+  Local "_1" "int" "x"
+  Local "_2" "int" "r"
+  Local "_3" "int ***" "box"
   Local "_4" "void *"
-  Local "_5" "int **"
+  Local "_5" "int **" "tab"
   Local "_6" "void *"
-  Local "_7" "int *"
+  Local "_7" "int *" "a"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int"

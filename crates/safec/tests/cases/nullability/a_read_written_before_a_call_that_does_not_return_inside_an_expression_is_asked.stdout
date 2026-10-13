@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:1:6 "exit" declared
   Local "_0" "void" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "status"
 Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:2:5 "g" declared
   Local "_0" "int" return
-  Local "_1" "int" parameter
-  Local "_2" "int" parameter
+  Local "_1" "int" parameter "a"
+  Local "_2" "int" parameter "b"
 Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Local "_2" "int"
   Block "bb0" entry
     Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:5:18 "exit" "bb1"
@@ -28,7 +28,7 @@ Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_
     Return
 Function a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:8:5 "h"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "q"
   Local "_2" "int"
   Block "bb0" entry
     Call a_read_written_before_a_call_that_does_not_return_inside_an_expression_is_asked.c:9:15 "exit" "bb1"

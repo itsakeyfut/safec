@@ -1,28 +1,28 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:3:5 "cond" declared
   Local "_0" "int" return
 Function a_pointer_to_either_of_two_locals_reads_what_both_hold.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "a"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "b"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int"
-  Local "_9" "int **"
+  Local "_9" "int **" "t2"
   Local "_10" "int **"
   Local "_11" "int"
   Local "_12" "int **"
   Local "_13" "int **"
-  Local "_14" "int *"
+  Local "_14" "int *" "q"
   Block "bb0" entry
     Operation a_pointer_to_either_of_two_locals_reads_what_both_hold.c:5:5 generated
       Destination "_0"

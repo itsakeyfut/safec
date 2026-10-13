@@ -3,14 +3,14 @@ Function a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_late
   Local "_0" "void" return
 Function a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_later_call.c:2:6 "acquire" declared
   Local "_0" "void" return
-  Local "_1" "int **" parameter
+  Local "_1" "int **" parameter "out"
 Function a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_later_call.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *"
-  Local "_2" "int **"
+  Local "_1" "int *" "r"
+  Local "_2" "int **" "pr"
   Local "_3" "int **"
   Local "_4" "int **"
-  Local "_5" "int *"
+  Local "_5" "int *" "s"
   Local "_6" "int"
   Block "bb0" entry
     Operation a_pointer_a_call_wrote_read_through_its_address_is_doubted_after_a_later_call.c:4:10 written

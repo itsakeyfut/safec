@@ -1,27 +1,27 @@
 Target "x86_64-pc-windows-msvc"
 Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:2:6 "release" declared
   Local "_0" "void" return
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "q"
 Function a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_by_arithmetic_is_reported.c:4:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "tab"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int **"
+  Local "_4" "int **" "other"
   Local "_5" "void *"
   Local "_6" "int"
-  Local "_7" "int *"
+  Local "_7" "int *" "p"
   Local "_8" "void *"
   Local "_9" "int"
   Local "_10" "int *"
-  Local "_11" "void *"
-  Local "_12" "void *"
-  Local "_13" "char *"
-  Local "_14" "char *"
-  Local "_15" "int"
+  Local "_11" "void *" "vd"
+  Local "_12" "void *" "vs"
+  Local "_13" "char *" "d"
+  Local "_14" "char *" "s"
+  Local "_15" "int" "i"
   Local "_16" "int"
   Local "_17" "int"
   Local "_18" "int"

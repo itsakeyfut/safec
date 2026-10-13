@@ -1,8 +1,8 @@
 Target "x86_64-pc-windows-msvc"
 Function a_pointer_assigned_in_an_equality_with_zero_is_null_where_it_holds.c:1:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *" parameter
-  Local "_2" "int *"
+  Local "_1" "int *" parameter "p"
+  Local "_2" "int *" "q"
   Local "_3" "int *"
   Local "_4" "int"
   Block "bb0" entry

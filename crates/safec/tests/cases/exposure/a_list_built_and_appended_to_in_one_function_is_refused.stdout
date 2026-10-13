@@ -1,18 +1,18 @@
 Target "x86_64-pc-windows-msvc"
 Function a_list_built_and_appended_to_in_one_function_is_refused.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_list_built_and_appended_to_in_one_function_is_refused.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_list_built_and_appended_to_in_one_function_is_refused.c:3:6 "log_line" declared
   Local "_0" "void" return
 Function a_list_built_and_appended_to_in_one_function_is_refused.c:5:5 "build"
   Local "_0" "int" return
-  Local "_1" "void **"
-  Local "_2" "void **"
-  Local "_3" "void **"
-  Local "_4" "void **"
+  Local "_1" "void **" "head"
+  Local "_2" "void **" "node"
+  Local "_3" "void **" "cur"
+  Local "_4" "void **" "next"
   Local "_5" "void *"
   Local "_6" "void **"
   Local "_7" "int"

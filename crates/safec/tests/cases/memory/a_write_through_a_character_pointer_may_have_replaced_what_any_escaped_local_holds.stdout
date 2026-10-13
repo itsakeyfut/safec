@@ -1,24 +1,24 @@
 Target "x86_64-pc-windows-msvc"
 Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_write_through_a_character_pointer_may_have_replaced_what_any_escaped_local_holds.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int *"
+  Local "_1" "int *" "p"
   Local "_2" "void *"
-  Local "_3" "int *"
-  Local "_4" "int *"
+  Local "_3" "int *" "r"
+  Local "_4" "int *" "q"
   Local "_5" "void *"
-  Local "_6" "void *"
+  Local "_6" "void *" "v"
   Local "_7" "int **"
-  Local "_8" "char *"
-  Local "_9" "void *"
+  Local "_8" "char *" "c"
+  Local "_9" "void *" "w"
   Local "_10" "int **"
-  Local "_11" "char *"
-  Local "_12" "int"
+  Local "_11" "char *" "d"
+  Local "_12" "int" "i"
   Local "_13" "int"
   Local "_14" "char *"
   Local "_15" "char *"

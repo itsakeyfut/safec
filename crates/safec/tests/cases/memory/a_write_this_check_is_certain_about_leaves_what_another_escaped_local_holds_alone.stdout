@@ -1,21 +1,21 @@
 Target "x86_64-pc-windows-msvc"
 Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_write_this_check_is_certain_about_leaves_what_another_escaped_local_holds_alone.c:3:5 "f"
   Local "_0" "int" return
-  Local "_1" "int ***" parameter
-  Local "_2" "int *"
+  Local "_1" "int ***" parameter "outer"
+  Local "_2" "int *" "o"
   Local "_3" "void *"
-  Local "_4" "int *"
+  Local "_4" "int *" "ro"
   Local "_5" "int **"
   Local "_6" "int **"
-  Local "_7" "int *"
+  Local "_7" "int *" "p"
   Local "_8" "void *"
-  Local "_9" "int **"
+  Local "_9" "int **" "pp"
   Local "_10" "int **"
   Local "_11" "int *"
   Block "bb0" entry

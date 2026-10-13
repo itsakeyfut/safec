@@ -1,34 +1,34 @@
 Target "x86_64-pc-windows-msvc"
 Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:2:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:3:6 "emit" declared
   Local "_0" "void" return
-  Local "_1" "char" parameter
+  Local "_1" "char" parameter "c"
 Function a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 "main"
   Local "_0" "int" return
-  Local "_1" "int **"
+  Local "_1" "int **" "tab"
   Local "_2" "void *"
   Local "_3" "int"
-  Local "_4" "int *"
+  Local "_4" "int *" "p"
   Local "_5" "void *"
   Local "_6" "int"
   Local "_7" "int"
   Local "_8" "int *"
-  Local "_9" "char **"
+  Local "_9" "char **" "lines"
   Local "_10" "void *"
   Local "_11" "int"
-  Local "_12" "char *"
+  Local "_12" "char *" "line"
   Local "_13" "void *"
   Local "_14" "int"
   Local "_15" "char"
   Local "_16" "char *"
-  Local "_17" "char *"
+  Local "_17" "char *" "first"
   Local "_18" "int"
-  Local "_19" "int"
+  Local "_19" "int" "r"
   Block "bb0" entry
     Operation a_byte_handed_straight_to_a_call_beside_a_table_builds.c:5:5 generated
       Destination "_0"

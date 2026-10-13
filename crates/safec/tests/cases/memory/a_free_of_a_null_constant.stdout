@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_free_of_a_null_constant.c:1:6 "free" declared
   Local "_0" "void" return
-  Local "_1" "void *" parameter
+  Local "_1" "void *" parameter "p"
 Function a_free_of_a_null_constant.c:2:5 "f"
   Local "_0" "int" return
   Block "bb0" entry

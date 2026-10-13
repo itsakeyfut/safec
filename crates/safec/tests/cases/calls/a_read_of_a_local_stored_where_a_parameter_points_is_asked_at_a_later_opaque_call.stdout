@@ -1,14 +1,14 @@
 Target "x86_64-pc-windows-msvc"
 Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:1:7 "malloc" declared
   Local "_0" "void *" return
-  Local "_1" "int" parameter
+  Local "_1" "int" parameter "n"
 Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:2:6 "release_all" declared
   Local "_0" "void" return
 Function a_read_of_a_local_stored_where_a_parameter_points_is_asked_at_a_later_opaque_call.c:4:5 "f"
   Local "_0" "int" return
-  Local "_1" "int **" parameter
-  Local "_2" "int"
-  Local "_3" "int *"
+  Local "_1" "int **" parameter "t"
+  Local "_2" "int" "x"
+  Local "_3" "int *" "a"
   Local "_4" "int"
   Local "_5" "void *"
   Local "_6" "int *"

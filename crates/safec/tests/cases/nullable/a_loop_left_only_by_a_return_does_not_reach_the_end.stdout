@@ -1,7 +1,7 @@
 Target "x86_64-pc-windows-msvc"
 Function a_loop_left_only_by_a_return_does_not_reach_the_end.c:1:16 "f"
   Local "_0" "int *" return _Nonnull
-  Local "_1" "int *" parameter
+  Local "_1" "int *" parameter "p"
   Block "bb0" entry
     Goto "bb1"
   Block "bb1"
