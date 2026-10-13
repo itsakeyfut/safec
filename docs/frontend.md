@@ -295,11 +295,12 @@ array of unknown length only "with more than one named member", and p3
 forbids an incomplete member otherwise. `sema.rs::Resolver::check_members`
 asks both.
 
-And one the type checker refuses that `clang` accepts with a warning.
+And two the type checker refuses that `clang` accepts with a warning.
 
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int f(); int g(void) { return f(1, 2); } int f(int a);` | `error[SC0303]` | warns | accepts, with `-Wno-strict-prototypes -Wno-deprecated-non-prototype` |
+| `int f(int) { return 0; }` | `error[SC0309]` | warns | `error: omitting the parameter name in a function definition is a C23 extension` |
 
 **A call is held to the type its function ends the translation unit with,
 not the one in scope where the call is written.** C checks the call against
@@ -320,6 +321,13 @@ pointer to a function is not held this way: `int (*fp)();` is typed by the
 declaration in scope, as C types it, because it holds whatever compatible
 function was assigned to it, and a later `int (*fp)(int);` does not change
 what a call written before it may pass.
+
+**A definition names its parameters.** C17 6.9.1 p5 is a constraint: "the
+declaration of each parameter shall include an identifier", except a lone
+`void`, and leaving one unnamed is C23's. It is refused like every other
+constraint-violating extension, by `types.rs::Checker::check_definition_parameters`,
+for the defined function's own list only: a declaration, and the parameters
+of a parameter's own function type, may still go unnamed.
 
 ### What an integer constant is worth, and what type it is not
 

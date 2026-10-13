@@ -1,0 +1,48 @@
+error[SC0315]: a parameter has incomplete type `void`
+    ╭─[ a_parameter_of_a_definition_has_a_name.c:10:7 ]
+    │
+ 10 │ int k(void, int) {
+    │       ──┬─  
+    │         ╰─── declared here
+────╯
+  = note: an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)
+error[SC0309]: a parameter of a function definition has no name
+   ╭─[ a_parameter_of_a_definition_has_a_name.c:1:7 ]
+   │
+ 1 │ int f(int) {
+   │       ─┬─  
+   │        ╰─── this parameter
+───╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
+error[SC0309]: a parameter of a function definition has no name
+   ╭─[ a_parameter_of_a_definition_has_a_name.c:4:14 ]
+   │
+ 4 │ int g(int a, int) {
+   │              ─┬─  
+   │               ╰─── this parameter
+───╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
+error[SC0309]: a parameter of a function definition has no name
+   ╭─[ a_parameter_of_a_definition_has_a_name.c:7:7 ]
+   │
+ 7 │ int h(int *) {
+   │       ──┬──  
+   │         ╰──── this parameter
+───╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
+error[SC0309]: a parameter of a function definition has no name
+    ╭─[ a_parameter_of_a_definition_has_a_name.c:10:7 ]
+    │
+ 10 │ int k(void, int) {
+    │       ──┬─  
+    │         ╰─── this parameter
+────╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
+error[SC0309]: a parameter of a function definition has no name
+    ╭─[ a_parameter_of_a_definition_has_a_name.c:10:13 ]
+    │
+ 10 │ int k(void, int) {
+    │             ─┬─  
+    │              ╰─── this parameter
+────╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
