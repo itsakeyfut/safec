@@ -1,0 +1,37 @@
+Declaration an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:1:1 "x" "void"
+Function an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:1 "f" "int (void, int)"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:7 "void"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:13 "int"
+  Compound an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:18
+    Return an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:20
+      Number an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:27 "0"
+Function an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:3:1 "g" "int (int, void)"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:3:7 "a" "int"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:3:14 "b" "void"
+  Compound an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:3:22
+    Return an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:3:24
+      Number an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:3:31 "0"
+Function an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:4:1 "h" "int (void)"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:4:7 "y" "void"
+  Compound an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:4:15
+    Return an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:4:17
+      Number an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:4:24 "0"
+Function an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:5:1 "k" "int (void)"
+  Compound an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:5:13
+    Return an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:5:15
+      Number an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:5:22 "0"
+Declaration an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:6:1 "d" "int (int, void)"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:6:7 "int"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:6:12 "void"
+Declaration an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:7:1 "e" "int (void)"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:7:7 "z" "void"
+Function an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:8:1 "n" "int (struct T)"
+  Parameter an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:8:7 "struct T"
+  Compound an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:8:17
+    Return an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:8:19
+      Number an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:8:26 "0"
+Function an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:9:1 "main" "int (void)"
+  Compound an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:9:16
+    Declaration an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:10:5 "w" "void"
+    Return an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:11:5
+      Number an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:11:12 "0"

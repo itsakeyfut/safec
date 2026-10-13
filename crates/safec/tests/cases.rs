@@ -2809,8 +2809,36 @@ cases! {
         // declaration's first declarator; `second` and `bsecond` go. `fv` is
         // a variable length array at file scope, so 6.7.6.2 p2 refuses its
         // declarator under `SC0309` as well, and both are reported; dropping
-        // the file-scope walk's arrays loses its `SC0310`.
+        // the file-scope walk's arrays loses its `SC0310`. `v` and `bv` are
+        // `void` objects, which `check_complete_objects` leaves to this code
+        // when they are initialized. Mutation: report an initialized `void`
+        // there too; each gains a second report, `SC0315`.
         only_an_object_can_be_initialized: ["--emit", "ast"],
+        // `void` is incomplete and can never be completed (C17 6.2.5 p19), so an
+        // object of it is `SC0315` at file scope (6.9.2 p2) and in a block
+        // (6.7 p7), and so is a parameter of a definition (6.7.6.3 p4),
+        // named or not and wherever in the list. A declaration that is not a
+        // definition may have one (p12), and `(void)` is the empty prototype
+        // (p10), so `d`, `e` and `k` are not reported. `n` is the struct
+        // counterpart of the unnamed `void`: any unnamed parameter is "a
+        // parameter" in the message, since its span is its specifier.
+        // Mutation: drop the `Type::Void` arm in `check_complete_objects`;
+        // every report but `n`'s goes. Mutation: name an unnamed parameter by
+        // its span; `f`'s report says `void` has type `void`, and `n`'s names
+        // `struct T`. Mutation: ask a declaration's parameters too; `d` and
+        // `e` gain reports.
+        an_object_or_a_definition_s_parameter_of_type_void_is_incomplete: ["--emit", "ast"],
+        // Nothing can be passed to a `void` parameter, and no `void` value can
+        // be passed at all (6.5.2.2 p2, 6.3.2.2), so every call here is
+        // `SC0302`, `u`'s too, which has no prototype to ask. Asked for the IR,
+        // so that a call let through reaches the lowering: `f(g())` and
+        // `u(g())` panicked there before, and `f(1)` built. Mutation: drop the
+        // `void` parameter test in `check_argument`; the reports for `f(1)`
+        // and `f(g())` go. Mutation: drop the test of an argument with no
+        // prototype in `call`; the report for `u(g())` goes. Either way the
+        // other reports keep the lowering away, so it is the stderr that
+        // fails rather than a panic.
+        an_argument_to_a_void_parameter_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // C17 6.7.2.1 and 6.5.2.3 are read: a struct definition with its
         // members, a declaration of a tag and nothing else, an object, a
         // parameter, a local, and `.` and `->`, each in the tree. Every
@@ -3543,6 +3571,12 @@ cases! {
         // `SC0304`. Mutation: drop the call to `Lowering::lengths`; the store
         // goes and `n` returns what the caller passed.
         a_parameter_s_length_is_evaluated_on_entry: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A declaration that is not a definition may have a `void` parameter
+        // (C17 6.7.6.3 p12), and the type check accepts `f` and `d`; no IR type
+        // holds nothing, so each is `SC0304`, the lowering's gap, where it was
+        // the backend's `SC0801` before. Mutation: drop the `void` test in
+        // `Lowering::signature`; both reports go, and the IR is printed.
+        a_declared_void_parameter_is_not_compiled_yet: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A prototype's length is never lowered, so a part of it the type
         // check left untyped without a report, `p - q` today, hides a fault
         // nothing asks about. Each is refused as `SC0304`, with a label on

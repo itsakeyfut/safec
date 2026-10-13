@@ -879,6 +879,23 @@ impl Lowering<'_> {
         if let Parameters::Prototype(parameters) = parameters {
             for parameter in parameters {
                 let at = parameter.name.unwrap_or(parameter.span);
+                // C17 6.7.6.3 p12 lets a declaration that is not a definition
+                // have a parameter of incomplete type, `void` included, and
+                // `types.rs` accepts one for that reason; a definition with one
+                // never gets here. But no IR type holds nothing, and left to
+                // the backend this was `SC0801`, which says a program is
+                // beyond the backend when what it is beyond is this lowering.
+                if matches!(self.ast.ty(parameter.ty), Type::Void) {
+                    diagnostics.report(
+                        Diagnostic::error("cannot compile a parameter of type `void` yet")
+                            .with_code(LOWERING)
+                            .with_label(Label::primary(at, "declared here"))
+                            .with_note(
+                                "C17 6.7.6.3 p12 allows one in a declaration that is not a definition, and nothing can be passed to it",
+                            ),
+                    );
+                    return None;
+                }
                 if !self.adjusted_without_loss(parameter.written) {
                     // The note claims nothing about the program, because a
                     // length nobody typed can hide a fault: `int a[*(p -
