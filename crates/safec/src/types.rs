@@ -967,10 +967,11 @@ impl Checker<'_> {
     }
 
     /// Report every object whose type is `void`, or a struct not complete
-    /// where C needs it to be, under [`INCOMPLETE_OBJECT`]: in a block, at the end of its
-    /// declarator (C17 6.7 p7), which is where its type was written; at file
-    /// scope, by the end of the translation unit (6.9.2 p2), which is whether
-    /// it is complete where written or its tag has a definition at all. A
+    /// where C needs it to be, under [`INCOMPLETE_OBJECT`]: in a block, at the
+    /// end of its declarator (C17 6.7 p7), which is where its type was
+    /// written; at file scope, by the end of the translation unit (6.9.2 p2),
+    /// which is whether it is complete where written or its tag has a
+    /// definition at all. A
     /// struct with no tag has no name to define and is complete where
     /// written.
     ///
@@ -1022,12 +1023,11 @@ impl Checker<'_> {
         for (declaration, at_file_scope, initialized) in objects {
             let ty = declaration.ty;
             let complete = match ast.ty(ty) {
-                // C17 6.2.5 p19: "an incomplete object type that cannot be
-                // completed". Every other type this compiler reads is
-                // complete. One with an initializer is already refused, under
-                // `SC0310`, as something that cannot be initialized, and a
-                // second report would be about the same fault.
+                // Already refused under `SC0310`, as something that cannot be
+                // initialized, and a second report would be about one fault.
                 Type::Void if initialized => continue,
+                // C17 6.2.5 p19: "an incomplete object type that cannot be
+                // completed".
                 Type::Void => false,
                 // Complete where it is written, which a definition and every
                 // struct with no tag is; or, at file scope, defined anywhere.

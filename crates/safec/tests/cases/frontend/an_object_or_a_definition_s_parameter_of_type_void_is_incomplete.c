@@ -5,6 +5,7 @@ int h(void y) { return 0; }
 int k(void) { return 0; }
 int d(int, void);
 int e(void z);
+int n(struct T) { return 0; }
 int main(void) {
     void w;
     return 0;
