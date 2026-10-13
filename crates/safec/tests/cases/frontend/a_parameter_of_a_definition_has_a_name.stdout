@@ -1,0 +1,33 @@
+Function a_parameter_of_a_definition_has_a_name.c:1:1 "f" "int (int)"
+  Parameter a_parameter_of_a_definition_has_a_name.c:1:7 "int"
+  Compound a_parameter_of_a_definition_has_a_name.c:1:12
+    Return a_parameter_of_a_definition_has_a_name.c:2:5
+      Number a_parameter_of_a_definition_has_a_name.c:2:12 "0"
+Function a_parameter_of_a_definition_has_a_name.c:4:1 "g" "int (int, int)"
+  Parameter a_parameter_of_a_definition_has_a_name.c:4:7 "a" "int"
+  Parameter a_parameter_of_a_definition_has_a_name.c:4:14 "int"
+  Compound a_parameter_of_a_definition_has_a_name.c:4:19
+    Return a_parameter_of_a_definition_has_a_name.c:5:5
+      Identifier a_parameter_of_a_definition_has_a_name.c:5:12 "a"
+Function a_parameter_of_a_definition_has_a_name.c:7:1 "h" "int (int *)"
+  Parameter a_parameter_of_a_definition_has_a_name.c:7:7 "int *"
+  Compound a_parameter_of_a_definition_has_a_name.c:7:14
+    Return a_parameter_of_a_definition_has_a_name.c:8:5
+      Number a_parameter_of_a_definition_has_a_name.c:8:12 "0"
+Function a_parameter_of_a_definition_has_a_name.c:10:1 "k" "int (void, int)"
+  Parameter a_parameter_of_a_definition_has_a_name.c:10:7 "void"
+  Parameter a_parameter_of_a_definition_has_a_name.c:10:13 "int"
+  Compound a_parameter_of_a_definition_has_a_name.c:10:18
+    Return a_parameter_of_a_definition_has_a_name.c:11:5
+      Number a_parameter_of_a_definition_has_a_name.c:11:12 "0"
+Declaration a_parameter_of_a_definition_has_a_name.c:13:1 "d" "int (int)"
+  Parameter a_parameter_of_a_definition_has_a_name.c:13:7 "int"
+Function a_parameter_of_a_definition_has_a_name.c:14:1 "e" "int (void)"
+  Compound a_parameter_of_a_definition_has_a_name.c:14:13
+    Return a_parameter_of_a_definition_has_a_name.c:15:5
+      Number a_parameter_of_a_definition_has_a_name.c:15:12 "0"
+Function a_parameter_of_a_definition_has_a_name.c:17:1 "p" "int (int (*)(int))"
+  Parameter a_parameter_of_a_definition_has_a_name.c:17:7 "q" "int (*)(int)"
+  Compound a_parameter_of_a_definition_has_a_name.c:17:22
+    Return a_parameter_of_a_definition_has_a_name.c:18:5
+      Number a_parameter_of_a_definition_has_a_name.c:18:12 "0"

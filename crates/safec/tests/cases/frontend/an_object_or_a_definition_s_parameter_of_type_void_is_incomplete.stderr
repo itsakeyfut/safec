@@ -46,3 +46,27 @@ error[SC0315]: `w` has incomplete type `void`
     │          ╰── declared here
 ────╯
   = note: an object with no linkage has a complete type by the end of its declarator (C17 6.7 p7), and so does a parameter of a definition (6.7.6.3 p4)
+error[SC0309]: a parameter of a function definition has no name
+   ╭─[ an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:7 ]
+   │
+ 2 │ int f(void, int) { return 0; }
+   │       ──┬─  
+   │         ╰─── this parameter
+───╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
+error[SC0309]: a parameter of a function definition has no name
+   ╭─[ an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:2:13 ]
+   │
+ 2 │ int f(void, int) { return 0; }
+   │             ─┬─  
+   │              ╰─── this parameter
+───╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23
+error[SC0309]: a parameter of a function definition has no name
+   ╭─[ an_object_or_a_definition_s_parameter_of_type_void_is_incomplete.c:8:7 ]
+   │
+ 8 │ int n(struct T) { return 0; }
+   │       ────┬───  
+   │           ╰───── this parameter
+───╯
+  = note: C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23

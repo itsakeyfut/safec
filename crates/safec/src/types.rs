@@ -106,6 +106,10 @@ const RETURN_SHAPE: Code = Code::new("SC0308");
 /// constant. A zero length is refused though `clang` takes it as an
 /// extension, which `docs/frontend.md` records.
 ///
+/// A parameter of a function definition with no name, C17 6.9.1 p5, is one
+/// too: the declarator of a definition C forbids, whose remedy is in the
+/// declarator.
+///
 /// Not `OPERANDS`, which is an operator's: a declarator is not an operator,
 /// and a code is never reassigned. 6.7.6.3 p1, a function returning an array
 /// or a function, is the same kind of fault and would go here.
@@ -336,6 +340,7 @@ pub fn check(
     // what two of the three questions ask.
     checker.check_declarators(ast, diagnostics);
     checker.check_complete_objects(ast, diagnostics);
+    checker.check_definition_parameters(ast, diagnostics);
     checker.check_incomplete_values(ast, diagnostics);
     checker.check_initialized(ast, diagnostics);
     checker.check_static_initializers(ast, diagnostics);
@@ -1001,6 +1006,41 @@ impl Checker<'_> {
         match self.at {
             Some(at) => self.resolution.complete_at(ast, ty, at),
             None => self.resolution.complete(ast, ty),
+        }
+    }
+
+    /// Report every parameter of a function definition that has no name, under
+    /// [`DECLARATOR`]: C17 6.9.1 p5, a constraint, says "the declaration of
+    /// each parameter shall include an identifier", the lone `void` aside.
+    ///
+    /// Only the defined function's own list is asked, since p5 is about the
+    /// definition's declarator: `g`'s parameters in `int f(int (*g)(int))`
+    /// belong to a declarator inside it and need no names. `(void)` never
+    /// arrives, because the parser makes it an empty prototype (6.7.6.3 p10).
+    /// An unnamed parameter that is also incomplete keeps its `SC0315`: they
+    /// are two faults, since naming it would not complete it.
+    fn check_definition_parameters(&self, ast: &Ast, diagnostics: &mut DiagnosticSink) {
+        for item in ast.items() {
+            let Item::Function(function) = item else {
+                continue;
+            };
+            let Type::Function {
+                parameters: Parameters::Prototype(parameters),
+                ..
+            } = ast.ty(function.ty)
+            else {
+                continue;
+            };
+            for parameter in parameters.iter().filter(|p| p.name.is_none()) {
+                diagnostics.report(
+                    Diagnostic::error("a parameter of a function definition has no name")
+                        .with_code(DECLARATOR)
+                        .with_label(Label::primary(parameter.span, "this parameter"))
+                        .with_note(
+                            "C17 6.9.1 p5: each parameter of a definition is named, except a lone `void`; leaving one unnamed is C23",
+                        ),
+                );
+            }
         }
     }
 

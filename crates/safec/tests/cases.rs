@@ -2818,7 +2818,9 @@ cases! {
         // (6.7 p7), and so is a parameter of a definition (6.7.6.3 p4),
         // named or not and wherever in the list. A declaration that is not a
         // definition may have one (p12), and `(void)` is the empty prototype
-        // (p10), so `d`, `e` and `k` are not reported. `n` is the struct
+        // (p10), so `d`, `e` and `k` are not reported. The unnamed `f` and `n`
+        // are also `SC0309`, since a definition's parameters have names
+        // (6.9.1 p5), which `a_parameter_of_a_definition_has_a_name` holds. `n` is the struct
         // counterpart of the unnamed `void`: any unnamed parameter is "a
         // parameter" in the message, since its span is its specifier.
         // Mutation: drop the `Type::Void` arm in `check_complete_objects`;
@@ -2827,6 +2829,17 @@ cases! {
         // `struct T`. Mutation: ask a declaration's parameters too; `d` and
         // `e` gain reports.
         an_object_or_a_definition_s_parameter_of_type_void_is_incomplete: ["--emit", "ast"],
+        // C17 6.9.1 p5, a constraint: each parameter of a definition is named,
+        // a lone `void` aside, so `f`, `g`, `h` and `k` are `SC0309` once per
+        // unnamed parameter, `k` beside its `void`'s `SC0315`. Not reported:
+        // `d`, a declaration; `e`, the empty prototype; and `p`, whose
+        // parameter is named and whose parameter's own parameter need not be.
+        // `clang` only warns without `-pedantic-errors`, calling it C23.
+        // Mutation: drop `check_definition_parameters` from `check`; every
+        // `SC0309` goes. Mutation: ask a declaration's parameters too; `d`
+        // gains one. Mutation: walk parameters' own function types; `p`
+        // gains one.
+        a_parameter_of_a_definition_has_a_name: ["--emit", "ast"],
         // An array of unknown size is incomplete (C17 6.2.5 p22), so in a block
         // with no initializer it is `SC0315` (6.7 p7): `a`, `b` and `p`. What
         // is not `SC0315`: `t`, a tentative definition 6.9.2 p2 completes;
