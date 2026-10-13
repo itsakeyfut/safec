@@ -423,10 +423,11 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 /// Valid C this parser does not read is told so under `SC0207`, naming the
 /// construct; what is not C at the same position keeps `SC0201`.
 ///
-/// One row per keyword in `unread_keyword`, in a position C allows it, and
-/// one per position each kind of keyword is allowed in; then the token pairs
-/// `refuse_unread` and its callers ask about. The second list is the other
-/// side: the same tokens where C forbids them.
+/// One row per keyword in `unread_keyword`, in a position C allows it, then
+/// the token pairs `refuse_unread` and its callers ask about, each with the
+/// clause its note cites. The second list is the other side: the same tokens
+/// where C forbids them. Which positions each keyword is allowed in is
+/// `every_keyword_is_unread_exactly_where_c_allows_it`'s to hold.
 ///
 /// The controls include what is C17's to forbid only one token later, or
 /// only outside a loop: `static` in an inner array's brackets, a label
@@ -434,111 +435,204 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 /// or after a lone `void`, `goto` without a name, and `break` or `continue`
 /// outside a loop. Mutation: drop any of those checks; its control fails.
 ///
-/// Mutations: delete any row of `unread_keyword`, drop a position from one,
-/// or drop any of the label, character, string, cast, `...`, bracket,
-/// `[*]` or pointer-qualifier checks. A row in the first list fails. Add a position a keyword is
-/// not allowed in, or let a `...` come first, or `static` into brackets
-/// outside a parameter; a row in the second list fails.
+/// Mutations: delete any row of `unread_keyword`, change the clause of any
+/// token pair, or drop any of the label, character, string, cast, `...`,
+/// bracket, `[*]` or pointer-qualifier checks, or any one qualifier from
+/// either qualifier check. A row in the first list fails. Let a `...` come
+/// first, `static` into brackets outside a parameter, or a label, character
+/// constant or string literal be asked about anywhere but its own position;
+/// a row in the second list fails.
 #[test]
 fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
     let unread = [
-        ("int main(void) { switch (1) { } }\n", "`switch`"),
-        ("int main(void) { do ; while (0); }\n", "`do`"),
-        ("int main(void) { goto l; }\n", "`goto`"),
-        ("int main(void) { while (1) continue; }\n", "`continue`"),
-        ("int main(void) { while (1) break; }\n", "`break`"),
-        ("typedef int T;\n", "`typedef`"),
-        ("extern int x;\n", "`extern`"),
-        ("static int x;\n", "`static`"),
-        ("_Thread_local int x;\n", "`_Thread_local`"),
-        ("int main(void) { auto int x; }\n", "`auto`"),
-        ("int main(void) { register int x; }\n", "`register`"),
-        ("const int x;\n", "`const`"),
-        ("volatile int x;\n", "`volatile`"),
-        ("int *restrict p;\n", "a qualifier after `*`"),
-        ("int *const p;\n", "a qualifier after `*`"),
-        ("_Atomic int x;\n", "`_Atomic`"),
-        ("short x;\n", "`short`"),
-        ("long x;\n", "`long`"),
-        ("signed x;\n", "`signed`"),
-        ("unsigned x;\n", "`unsigned`"),
-        ("float x;\n", "`float`"),
-        ("double x;\n", "`double`"),
-        ("_Bool x;\n", "`_Bool`"),
-        ("_Complex double x;\n", "`_Complex`"),
-        ("union U { int a; };\n", "`union`"),
-        ("enum E { A };\n", "`enum`"),
-        ("inline int f(void);\n", "`inline`"),
-        ("_Noreturn void f(void);\n", "`_Noreturn`"),
-        ("_Alignas(4) int x;\n", "`_Alignas`"),
-        ("_Static_assert(1, \"x\");\n", "`_Static_assert`"),
-        ("int main(void) { return sizeof(int); }\n", "`sizeof`"),
-        ("int main(void) { return _Alignof(int); }\n", "`_Alignof`"),
+        ("int main(void) { switch (1) { } }\n", "`switch`", "6.8.4.2"),
+        ("int main(void) { do ; while (0); }\n", "`do`", "6.8.5.2"),
+        (
+            "int main(void) { goto l; l: return 0; }\n",
+            "`goto`",
+            "6.8.6.1",
+        ),
+        (
+            "int main(void) { while (1) continue; }\n",
+            "`continue`",
+            "6.8.6.2",
+        ),
+        (
+            "int main(void) { while (1) break; }\n",
+            "`break`",
+            "6.8.6.3",
+        ),
+        ("typedef int T;\n", "`typedef`", "6.7.8"),
+        ("extern int x;\n", "`extern`", "6.7.1"),
+        ("static int x;\n", "`static`", "6.7.1"),
+        ("_Thread_local int x;\n", "`_Thread_local`", "6.7.1"),
+        ("int main(void) { auto int x; }\n", "`auto`", "6.7.1"),
+        (
+            "int main(void) { register int x; }\n",
+            "`register`",
+            "6.7.1",
+        ),
+        ("const int x;\n", "`const`", "6.7.3"),
+        ("volatile int x;\n", "`volatile`", "6.7.3"),
+        ("int *restrict p;\n", "a qualifier after `*`", "6.7.6.1"),
+        ("int *const p;\n", "a qualifier after `*`", "6.7.6.1"),
+        ("int *volatile p;\n", "a qualifier after `*`", "6.7.6.1"),
+        ("int *_Atomic p;\n", "a qualifier after `*`", "6.7.6.1"),
+        (
+            "void f(int a[volatile 2]);\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
+        (
+            "void f(int a[restrict 2]);\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
+        (
+            "void f(int a[_Atomic 2]);\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
+        ("_Atomic(int) x;\n", "`_Atomic`", "6.7.2.4"),
+        ("_Atomic int x;\n", "`_Atomic`", "6.7.3"),
+        ("short x;\n", "`short`", "6.7.2"),
+        ("long x;\n", "`long`", "6.7.2"),
+        ("signed x;\n", "`signed`", "6.7.2"),
+        ("unsigned x;\n", "`unsigned`", "6.7.2"),
+        ("float x;\n", "`float`", "6.7.2"),
+        ("double x;\n", "`double`", "6.7.2"),
+        ("_Bool x;\n", "`_Bool`", "6.7.2"),
+        ("_Complex double x;\n", "`_Complex`", "6.7.2"),
+        ("union U { int a; };\n", "`union`", "6.7.2.1"),
+        ("enum E { A };\n", "`enum`", "6.7.2.2"),
+        ("inline int f(void);\n", "`inline`", "6.7.4"),
+        ("_Noreturn void f(void);\n", "`_Noreturn`", "6.7.4"),
+        ("_Alignas(4) int x;\n", "`_Alignas`", "6.7.5"),
+        ("_Static_assert(1, \"x\");\n", "`_Static_assert`", "6.7.10"),
+        (
+            "int main(void) { return sizeof(int); }\n",
+            "`sizeof`",
+            "6.5.3.4",
+        ),
+        (
+            "int main(void) { return _Alignof(int); }\n",
+            "`_Alignof`",
+            "6.5.3.4",
+        ),
         (
             "int main(void) { return _Generic(0, int: 1); }\n",
             "`_Generic`",
+            "6.5.1.1",
         ),
         // Each kind of keyword in each other position it is allowed in.
-        ("int main(void) { typedef int T; }\n", "`typedef`"),
-        ("int main(void) { static int x; }\n", "`static`"),
-        ("int main(void) { inline int f(void); }\n", "`inline`"),
-        ("int main(void) { const int x = 0; }\n", "`const`"),
-        ("int main(void) { _Alignas(4) int x; }\n", "`_Alignas`"),
+        ("int main(void) { typedef int T; }\n", "`typedef`", "6.7.8"),
+        ("int main(void) { static int x; }\n", "`static`", "6.7.1"),
+        (
+            "int main(void) { inline int f(void); }\n",
+            "`inline`",
+            "6.7.4",
+        ),
+        ("int main(void) { const int x = 0; }\n", "`const`", "6.7.3"),
+        (
+            "int main(void) { _Alignas(4) int x; }\n",
+            "`_Alignas`",
+            "6.7.5",
+        ),
         (
             "int main(void) { _Static_assert(1, \"x\"); }\n",
             "`_Static_assert`",
+            "6.7.10",
         ),
-        ("struct S { const int a; };\n", "`const`"),
-        ("struct S { _Alignas(4) int a; };\n", "`_Alignas`"),
+        ("struct S { const int a; };\n", "`const`", "6.7.3"),
+        ("struct S { _Alignas(4) int a; };\n", "`_Alignas`", "6.7.5"),
         (
             "struct S { _Static_assert(1, \"x\"); int a; };\n",
             "`_Static_assert`",
+            "6.7.10",
         ),
-        ("void f(const int a);\n", "`const`"),
-        ("void f(register int a);\n", "`register`"),
+        ("void f(const int a);\n", "`const`", "6.7.3"),
+        ("void f(register int a);\n", "`register`", "6.7.1"),
         (
             "int main(void) { for (const int i = 0; i; ) ; }\n",
             "`const`",
+            "6.7.3",
         ),
-        ("int main(void) { for (auto int i = 0; i; ) ; }\n", "`auto`"),
+        (
+            "int main(void) { for (auto int i = 0; i; ) ; }\n",
+            "`auto`",
+            "6.7.1",
+        ),
         (
             "int main(void) { for (register int i = 0; i; ) ; }\n",
             "`register`",
+            "6.7.1",
         ),
         (
             "int main(void) { for (_Alignas(4) int i = 0; i; ) ; }\n",
             "`_Alignas`",
+            "6.7.5",
         ),
         // A second specifier, after one this parser reads.
-        ("int const x;\n", "`const`"),
-        ("int unsigned x;\n", "`unsigned`"),
-        ("struct S { int a; } const s;\n", "`const`"),
-        ("void f(int const a);\n", "`const`"),
-        ("int main(void) { int static x; }\n", "`static`"),
+        ("int const x;\n", "`const`", "6.7.3"),
+        ("int unsigned x;\n", "`unsigned`", "6.7.2"),
+        ("struct S { int a; } const s;\n", "`const`", "6.7.3"),
+        ("void f(int const a);\n", "`const`", "6.7.3"),
+        ("int main(void) { int static x; }\n", "`static`", "6.7.1"),
         // The token pairs.
-        ("int main(void) { l: return 0; }\n", "a label"),
-        ("int main(void) { return 'a'; }\n", "a character constant"),
-        ("int main(void) { return \"a\"[0]; }\n", "a string literal"),
+        ("int main(void) { l: return 0; }\n", "a label", "6.8.1"),
+        (
+            "int main(void) { return 'a'; }\n",
+            "a character constant",
+            "6.4.4.4",
+        ),
+        (
+            "int main(void) { return \"a\"[0]; }\n",
+            "a string literal",
+            "6.4.5",
+        ),
         (
             "int main(void) { return (int)0; }\n",
             "a cast or a compound literal",
+            "6.5.4 or 6.5.2.5",
         ),
         (
             "int main(void) { return (long)0; }\n",
             "a cast or a compound literal",
+            "6.5.4 or 6.5.2.5",
         ),
-        ("int f(int, ...);\n", "a variadic function's `...`"),
-        ("void f(int a[static 2]);\n", "`static` or a qualifier"),
-        ("void f(int a[const 2]);\n", "`static` or a qualifier"),
-        ("void f(int a[*]);\n", "`[*]`"),
-        ("void f(int a[2][*]);\n", "`[*]`"),
-        ("void f(int (a)[static 3]);\n", "`static` or a qualifier"),
-        ("void f(int (*p[static 3]));\n", "`static` or a qualifier"),
+        (
+            "int f(int, ...);\n",
+            "a variadic function's `...`",
+            "6.7.6.3",
+        ),
+        (
+            "void f(int a[static 2]);\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
+        (
+            "void f(int a[const 2]);\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
+        ("void f(int a[*]);\n", "`[*]`", "6.7.6.2"),
+        ("void f(int a[2][*]);\n", "`[*]`", "6.7.6.2"),
+        (
+            "void f(int (a)[static 3]);\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
+        (
+            "void f(int (*p[static 3]));\n",
+            "`static` or a qualifier",
+            "6.7.6.3 p7",
+        ),
         (
             "int main(void) { while (1) { if (1) continue; } }\n",
             "`continue`",
+            "6.8.6.2",
         ),
-        ("int main(void) { for (;;) break; }\n", "`break`"),
+        ("int main(void) { for (;;) break; }\n", "`break`", "6.8.6.3"),
     ];
     let malformed = [
         "int main(void) { case 1: return 0; }\n",
@@ -565,10 +659,16 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         "int f(int, ..., int);\n",
         "int f(void, ...);\n",
         "int main(void) { goto 1; }\n",
+        // A label, a character constant and a string literal anywhere
+        // but their own positions.
+        "l: int x;\n",
+        "struct S { a : 3; };\n",
+        "'a';\n",
+        "void f(\"x\");\n",
         "int main(void) { return (register int)0; }\n",
     ];
 
-    for (source, what) in unread {
+    for (source, what, clause) in unread {
         let parsed = parsed(source);
         let [reported] = parsed.diagnostics.diagnostics() else {
             panic!("{source:?}: {:?}", parsed.diagnostics.diagnostics());
@@ -583,6 +683,13 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "{source:?}: {:?}",
             reported.message()
         );
+        assert_eq!(
+            reported.notes(),
+            [format!(
+                "C17 {clause} makes it valid; this compiler does not read it yet"
+            )],
+            "{source:?}"
+        );
     }
     for source in malformed {
         let parsed = parsed(source);
@@ -594,6 +701,117 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             .map(|code| code.to_string())
             .collect::<Vec<_>>();
         assert_eq!(codes, ["SC0201"], "{source:?}");
+    }
+}
+
+/// Every keyword `unread_keyword` names, at each of the seven positions, is
+/// `SC0207` exactly where C17 allows it and `SC0201` everywhere else.
+///
+/// The positions below are written out from C17 rather than read from the
+/// table, so that the table is checked against something it did not write:
+/// 6.7.1 for the storage classes, 6.7.2.1 p1 for what a member may begin
+/// with, 6.7.6.3 p2 for a parameter, 6.8.5 p3 for a `for`'s declaration,
+/// and 6.8.6 for the jumps. Only the first token matters, since the parser
+/// stops at it, so each source is that keyword where the position begins.
+///
+/// A block's position also reaches a statement's, because a block-item that
+/// is not a declaration is read as one, and an expression may begin a
+/// statement, a block-item or a `for`'s first clause (6.8.3, 6.8.5 p1). `break` and `continue` are written
+/// inside a loop where a statement is asked about, and outside one in a
+/// block, where 6.8.6.2 p1 and 6.8.6.3 p1 forbid them.
+///
+/// Mutation: add or remove any position in `unread_keyword`, or give a row
+/// another clause. A cell here fails, named by keyword and position.
+#[test]
+fn every_keyword_is_unread_exactly_where_c_allows_it() {
+    #[derive(Clone, Copy, PartialEq)]
+    enum At {
+        FileScope,
+        Block,
+        Statement,
+        Member,
+        Parameter,
+        ForInit,
+        Expression,
+    }
+    use At::*;
+    const ALL: [At; 7] = [
+        FileScope, Block, Statement, Member, Parameter, ForInit, Expression,
+    ];
+    const SPECIFIER: &[At] = &[FileScope, Block, Member, Parameter, ForInit];
+
+    let keywords: &[(&str, &str, &[At])] = &[
+        ("switch", "6.8.4.2", &[Statement]),
+        ("do", "6.8.5.2", &[Statement]),
+        ("goto", "6.8.6.1", &[Statement]),
+        ("continue", "6.8.6.2", &[Statement]),
+        ("break", "6.8.6.3", &[Statement]),
+        ("typedef", "6.7.8", &[FileScope, Block]),
+        ("extern", "6.7.1", &[FileScope, Block]),
+        ("static", "6.7.1", &[FileScope, Block]),
+        ("_Thread_local", "6.7.1", &[FileScope]),
+        ("auto", "6.7.1", &[Block, ForInit]),
+        ("register", "6.7.1", &[Block, Parameter, ForInit]),
+        ("const", "6.7.3", SPECIFIER),
+        ("volatile", "6.7.3", SPECIFIER),
+        ("_Atomic", "6.7.3", SPECIFIER),
+        ("short", "6.7.2", SPECIFIER),
+        ("long", "6.7.2", SPECIFIER),
+        ("signed", "6.7.2", SPECIFIER),
+        ("unsigned", "6.7.2", SPECIFIER),
+        ("float", "6.7.2", SPECIFIER),
+        ("double", "6.7.2", SPECIFIER),
+        ("_Bool", "6.7.2", SPECIFIER),
+        ("_Complex", "6.7.2", SPECIFIER),
+        ("union", "6.7.2.1", SPECIFIER),
+        ("enum", "6.7.2.2", SPECIFIER),
+        ("inline", "6.7.4", &[FileScope, Block]),
+        ("_Noreturn", "6.7.4", &[FileScope, Block]),
+        ("_Alignas", "6.7.5", &[FileScope, Block, Member, ForInit]),
+        ("_Static_assert", "6.7.10", &[FileScope, Block, Member]),
+        ("sizeof", "6.5.3.4", &[Expression]),
+        ("_Alignof", "6.5.3.4", &[Expression]),
+        ("_Generic", "6.5.1.1", &[Expression]),
+    ];
+
+    for &(keyword, clause, allowed) in keywords {
+        for at in ALL {
+            let source = match at {
+                FileScope => format!("{keyword} x;\n"),
+                Block => format!("int main(void) {{ {keyword} x; }}\n"),
+                Statement => format!("int main(void) {{ while (1) {keyword} x; }}\n"),
+                Member => format!("struct S {{ {keyword} a; }};\n"),
+                Parameter => format!("void f({keyword} a);\n"),
+                ForInit => format!("int main(void) {{ for ({keyword} i;;) ; }}\n"),
+                Expression => format!("int main(void) {{ return {keyword} x; }}\n"),
+            };
+            // A block-item that is no declaration is read as a statement, and
+            // there a `break` or `continue` is outside any loop. An expression
+            // can begin a statement, a block-item and a `for`'s first clause.
+            let unread = allowed.contains(&at)
+                || (at == Block
+                    && allowed.contains(&Statement)
+                    && !matches!(keyword, "break" | "continue"))
+                || (matches!(at, Block | Statement | ForInit) && allowed.contains(&Expression));
+
+            let parsed = parsed(&source);
+            let [reported] = parsed.diagnostics.diagnostics() else {
+                panic!("{source:?}: {:?}", parsed.diagnostics.diagnostics());
+            };
+            let code = reported.code().map(|code| code.to_string());
+            if unread {
+                assert_eq!(code.as_deref(), Some("SC0207"), "{source:?}: {reported:?}");
+                assert_eq!(
+                    reported.notes(),
+                    [format!(
+                        "C17 {clause} makes it valid; this compiler does not read it yet"
+                    )],
+                    "{source:?}"
+                );
+            } else {
+                assert_eq!(code.as_deref(), Some("SC0201"), "{source:?}: {reported:?}");
+            }
+        }
     }
 }
 
