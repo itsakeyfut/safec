@@ -159,7 +159,8 @@ const NOT_YET: Code = Code::new("SC0304");
 /// a definition (6.7.6.3 p4), what a definition returns (6.9.1 p3) and what
 /// a call returns (6.5.2.2 p1) are held to the same, each where it is
 /// written. An object or a definition's parameter of type `void` is too,
-/// since `void` is incomplete and can never be completed (6.2.5 p19).
+/// since `void` is incomplete and can never be completed (6.2.5 p19), and
+/// so is an array of unknown size in a block with no initializer.
 ///
 /// Its own code: the type is a correct one and the declarator a correct
 /// declarator, and what is wrong is that the struct is not complete there.
@@ -966,8 +967,9 @@ impl Checker<'_> {
         }
     }
 
-    /// Report every object whose type is `void`, or a struct not complete
-    /// where C needs it to be, under [`INCOMPLETE_OBJECT`]: in a block, at the
+    /// Report every object whose type is `void`, an array of unknown size in a
+    /// block with no initializer, or a struct not complete where C needs it to
+    /// be, under [`INCOMPLETE_OBJECT`]: in a block, at the
     /// end of its declarator (C17 6.7 p7), which is where its type was
     /// written; at file scope, by the end of the translation unit (6.9.2 p2),
     /// which is whether it is complete where written or its tag has a
@@ -1037,6 +1039,28 @@ impl Checker<'_> {
                             let tag = self.resolution.tag(ty);
                             self.resolution.tag_declaration(tag).defined.is_some()
                         })
+                }
+                // An array of unknown size (C17 6.2.5 p22). At file scope,
+                // with no initializer, it is a tentative definition that
+                // 6.9.2 p2 completes, as p5's `int i[];` shows, and one with
+                // an initializer has its own rules (6.7.9 p16 and p22), so
+                // only a block's uninitialized one is incomplete where 6.7 p7
+                // asks. Before this the lowering refused it as this compiler's
+                // gap, under `SC0304`.
+                // One whose element 6.7.6.2 p1 forbids is already refused, under
+                // `SC0309`, and a second report would be about the same fault.
+                // A block's object has no linkage only while `extern` is not
+                // read; one declared `extern` may be completed elsewhere
+                // (6.2.5 p22), and will need leaving out here.
+                Type::Array {
+                    length: None,
+                    element,
+                    ..
+                } => {
+                    if at_file_scope || initialized || self.forbidden_element(ast, *element) {
+                        continue;
+                    }
+                    false
                 }
                 _ => continue,
             };
@@ -1212,6 +1236,26 @@ impl Checker<'_> {
         false
     }
 
+    /// Whether C17 6.7.6.2 p1 forbids `element` as an array's element: "The
+    /// element type shall not be an incomplete or function type."
+    ///
+    /// One answer for the two places that ask: `report_array`, which refuses
+    /// the array for it, and `check_complete_objects`, which leaves such an
+    /// array to that refusal rather than reporting one fault twice.
+    fn forbidden_element(&self, ast: &Ast, element: TypeId) -> bool {
+        match ast.ty(element) {
+            Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
+            // Complete where the array is written (C17 6.7.2.1 p8).
+            Type::Struct { .. } => !self.resolution.complete(ast, element),
+            Type::Int
+            | Type::Char
+            | Type::Pointer(_)
+            | Type::Array {
+                length: Some(_), ..
+            } => false,
+        }
+    }
+
     /// Report one array of a declarator at `at` that C17 6.7.6.2 p1 forbids,
     /// or, at file scope or as a member, whose length p2, 6.7.2.1 p9 and 6.6 p4
     /// forbid, and say
@@ -1225,21 +1269,7 @@ impl Checker<'_> {
         place: Where,
         diagnostics: &mut DiagnosticSink,
     ) -> bool {
-        // "The element type shall not be an incomplete or function type."
-        // `void` and an array of unknown length are the incomplete types this
-        // compiler has.
-        let incomplete = match ast.ty(element) {
-            Type::Void | Type::Array { length: None, .. } | Type::Function { .. } => true,
-            // Complete where the array is written (C17 6.7.2.1 p8).
-            Type::Struct { .. } => !self.resolution.complete(ast, element),
-            Type::Int
-            | Type::Char
-            | Type::Pointer(_)
-            | Type::Array {
-                length: Some(_), ..
-            } => false,
-        };
-        if incomplete {
+        if self.forbidden_element(ast, element) {
             let spelled = self.spelled(ast, element);
             diagnostics.report(
                 Diagnostic::error(format!("an array cannot have `{spelled}` as its element"))
