@@ -1,19 +1,19 @@
-warning[SC0401]: this may free `a`, which was freed already
+warning[SC0401]: this frees `a`, which may have been freed already
     ╭─[ a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:13:5 ]
     │
  13 │     free(a);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-warning[SC0402]: this may use `q` after it was freed
+warning[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_load_of_a_pointer_to_a_local_moved_by_an_unknown_offset_reads_what_the_local_holds.c:18:5 ]
     │
  18 │     return *q;
     │     ─────┬────  
-    │          ╰────── used here, perhaps after the free
+    │          ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

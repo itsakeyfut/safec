@@ -1,9 +1,9 @@
-error[SC0401]: this may free `q`, which was freed already
+error[SC0401]: this frees `q`, which may have been freed already
     ╭─[ a_call_may_return_what_an_earlier_call_was_handed.c:15:5 ]
     │
  15 │     free(q);
     │     ───┬───  
-    │        ╰───── may free it again here
+    │        ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

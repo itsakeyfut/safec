@@ -1,14 +1,14 @@
-error[SC0407]: this may pass `a`, which points to an allocation that was freed
+error[SC0407]: this passes `a`, which may point to a freed allocation
     ╭─[ a_later_call_is_asked_about_what_it_reaches_through_what_it_is_handed.c:17:9 ]
     │
  17 │     r = keep(a) + release(tab);
     │         ───┬───  
-    │            ╰───── passed here, perhaps after the free
+    │            ╰───── passed here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0407]: this may pass a pointer to where a freed pointer is stored
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_later_call_is_asked_about_what_it_reaches_through_what_it_is_handed.c:17:19 ]
     │
  17 │     r = keep(a) + release(tab);

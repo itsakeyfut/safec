@@ -8,12 +8,12 @@ error[SC0407]: this passes `old`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_table_allocated_again_by_a_loop_still_holds_what_it_held.c:18:13 ]
     │
  18 │             return *p;
     │             ─────┬────  
-    │                  ╰────── used here, perhaps after the free
+    │                  ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

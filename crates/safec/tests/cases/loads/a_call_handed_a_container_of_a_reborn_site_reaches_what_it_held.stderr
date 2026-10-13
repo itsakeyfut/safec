@@ -1,9 +1,9 @@
-warning[SC0402]: this may use `r` after it was freed
+warning[SC0402]: this uses `r`, which may have been freed
     ╭─[ a_call_handed_a_container_of_a_reborn_site_reaches_what_it_held.c:24:13 ]
     │
  24 │             return *r;
     │             ─────┬────  
-    │                  ╰────── used here, perhaps after the free
+    │                  ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

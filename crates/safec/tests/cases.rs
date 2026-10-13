@@ -148,7 +148,7 @@ cases! {
         // but `free` with the suite green.
         //
         // Its `.stderr` is where the words are pinned: `allocated here` and
-        // `used here, perhaps after the free`, and **no** `freed here` caret
+        // `used here, where it may have been freed before`, and **no** `freed here` caret
         // and no 6.5.2.2 p10 note, because nothing established a free. That is
         // the whole of what `Unproven::Disagreement` buys over
         // `Unproven::Unsequenced` here.
@@ -180,6 +180,15 @@ cases! {
         //   fail: the second gains an `SC0402` about `g(*p)` a statement
         //   earlier, and the first gains a second one about `*p = 1`.
         an_unsequenced_use_before_an_opaque_call_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A program with no `free` in it, whose pointer is doubted only
+        // because calls this check cannot read were handed it, and whose
+        // words assert no free: a use, a pass and a return, each certain, of
+        // a pointer that may have been freed. Mutation: give the
+        // `Disagreement` rows in `memory_finding` their old words back; every
+        // line here says a free happened. The double free's row is held by
+        // `a_memory_diagnostic_names_the_value_it_is_about`, which needs a
+        // `free` to reach it.
+        a_doubt_with_no_free_in_the_program_asserts_none: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_an_opaque_call_is_sequenced_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A controlling expression that is exactly a dereference is read by the
         // branch itself, because it needs no temporary, so the sequence point

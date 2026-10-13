@@ -1,9 +1,9 @@
-warning[SC0402]: this may use `slot` after it was freed
+warning[SC0402]: this uses `slot`, which may have been freed
     ╭─[ a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:22:5 ]
     │
  22 │     return *slot;
     │     ──────┬──────  
-    │           ╰──────── used here, perhaps after the free
+    │           ╰──────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

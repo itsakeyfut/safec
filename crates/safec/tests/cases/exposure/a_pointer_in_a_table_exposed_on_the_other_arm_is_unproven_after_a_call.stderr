@@ -1,9 +1,9 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
     ╭─[ a_pointer_in_a_table_exposed_on_the_other_arm_is_unproven_after_a_call.c:21:5 ]
     │
  21 │     return *p;
     │     ─────┬────  
-    │          ╰────── used here, perhaps after the free
+    │          ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

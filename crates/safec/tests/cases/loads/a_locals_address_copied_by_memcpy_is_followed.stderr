@@ -1,9 +1,9 @@
-warning[SC0402]: this may use a value after it was freed
+warning[SC0402]: this uses a value that may have been freed
     ╭─[ a_locals_address_copied_by_memcpy_is_followed.c:25:5 ]
     │
  25 │     return ***t4;
     │     ──────┬──────  
-    │           ╰──────── used here, perhaps after the free
+    │           ╰──────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

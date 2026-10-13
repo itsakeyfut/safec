@@ -1,4 +1,4 @@
-error[SC0407]: this may pass a pointer to where a freed pointer is stored
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_pointer_handed_to_a_call_and_then_by_address_is_asked.c:11:12 ]
     │
  11 │     return use2(&a);

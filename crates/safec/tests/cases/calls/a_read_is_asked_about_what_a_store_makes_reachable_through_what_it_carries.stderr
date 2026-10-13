@@ -1,4 +1,4 @@
-error[SC0402]: this may use `a` after it was freed
+error[SC0402]: this uses `a`, which may have been freed
     ╭─[ a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:10 ]
     │
  10 │     int *a = malloc(4);
@@ -7,17 +7,17 @@ error[SC0402]: this may use `a` after it was freed
     │ 
  23 │     r = (x = a[0]) + (*box = tab, 0) + release_all();
     │          ────┬───  
-    │              ╰───── used here, perhaps after the free
+    │              ╰───── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use `box` after it was freed
+error[SC0402]: this uses `box`, which may have been freed
     ╭─[ a_read_is_asked_about_what_a_store_makes_reachable_through_what_it_carries.c:23:23 ]
     │
  23 │     r = (x = a[0]) + (*box = tab, 0) + release_all();
     │                       ─────┬────  
-    │                            ╰────── used here, perhaps after the free
+    │                            ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

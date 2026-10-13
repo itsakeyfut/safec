@@ -1,19 +1,19 @@
-error[SC0407]: this may pass `q`, which points to an allocation that was freed
+error[SC0407]: this passes `q`, which may point to a freed allocation
    ╭─[ a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:4:17 ]
    │
  4 │     while ((q = next(q))) {
    │                 ───┬───  
-   │                    ╰───── passed here, perhaps after the free
+   │                    ╰───── passed here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use `q` after it was freed
+error[SC0402]: this uses `q`, which may have been freed
    ╭─[ a_pointer_a_loop_assigns_from_a_call_and_tests_is_not_null_inside.c:5:13 ]
    │
  5 │         n = n + *q;
    │             ───┬──  
-   │                ╰──── used here, perhaps after the free
+   │                ╰──── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

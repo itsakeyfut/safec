@@ -1,9 +1,9 @@
-error[SC0406]: this may return `p`, which points to an allocation that was freed
+error[SC0406]: this returns `p`, which may point to a freed allocation
     ╭─[ an_allocation_handed_to_a_call_and_returned.c:10:5 ]
     │
  10 │     return p;
     │     ────┬────  
-    │         ╰────── returned here, perhaps after the free
+    │         ╰────── returned here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

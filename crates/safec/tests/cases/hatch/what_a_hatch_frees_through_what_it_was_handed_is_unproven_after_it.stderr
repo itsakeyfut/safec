@@ -1,9 +1,9 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
     ╭─[ what_a_hatch_frees_through_what_it_was_handed_is_unproven_after_it.c:20:9 ]
     │
  20 │     int r = *p;
     │         ───┬──  
-    │            ╰──── used here, perhaps after the free
+    │            ╰──── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

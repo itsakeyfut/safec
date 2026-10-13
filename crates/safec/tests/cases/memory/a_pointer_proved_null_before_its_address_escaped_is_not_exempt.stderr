@@ -8,12 +8,12 @@ error[SC0401]: this frees `p`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
    ╭─[ a_pointer_proved_null_before_its_address_escaped_is_not_exempt.c:8:5 ]
    │
  8 │     free(p);
    │     ───┬───  
-   │        ╰───── may free it again here
+   │        ╰───── this may be its second free
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

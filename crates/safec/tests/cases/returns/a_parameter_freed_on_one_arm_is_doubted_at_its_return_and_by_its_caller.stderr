@@ -1,19 +1,19 @@
-error[SC0406]: this may return `p`, which points to an allocation that was freed
+error[SC0406]: this returns `p`, which may point to a freed allocation
    ╭─[ a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:8:5 ]
    │
  8 │     return p;
    │     ────┬────  
-   │         ╰────── returned here, perhaps after the free
+   │         ╰────── returned here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use `q` after it was freed
+error[SC0402]: this uses `q`, which may have been freed
     ╭─[ a_parameter_freed_on_one_arm_is_doubted_at_its_return_and_by_its_caller.c:20:5 ]
     │
  20 │     return *q;
     │     ─────┬────  
-    │          ╰────── used here, perhaps after the free
+    │          ╰────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

@@ -20,12 +20,12 @@ error[SC0401]: this frees a pointer this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this uses a value that may have been freed
     ╭─[ a_memory_diagnostic_about_an_unnamed_pointer_names_nothing.c:18:5 ]
     │
  18 │     return **pp;
     │     ──────┬─────  
-    │           ╰─────── used here, perhaps after the free
+    │           ╰─────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

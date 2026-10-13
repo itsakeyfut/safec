@@ -1,9 +1,9 @@
-error[SC0402]: this may use `tab` after it was freed
+error[SC0402]: this uses `tab`, which may have been freed
     ╭─[ a_doubted_read_of_a_table_is_kept_over_what_it_returns.c:21:5 ]
     │
  21 │     return *tab;
     │     ──────┬─────  
-    │           ╰─────── used here, perhaps after the free
+    │           ╰─────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

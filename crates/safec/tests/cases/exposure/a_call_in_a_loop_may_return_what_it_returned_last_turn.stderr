@@ -1,19 +1,19 @@
-error[SC0402]: this may use `t` after it was freed
+error[SC0402]: this uses `t`, which may have been freed
     ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:16:15 ]
     │
  16 │         sum = sum + *t;
     │               ────┬───  
-    │                   ╰───── used here, perhaps after the free
+    │                   ╰───── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0401]: this may free `t`, which was freed already
+error[SC0401]: this frees `t`, which may have been freed already
     ╭─[ a_call_in_a_loop_may_return_what_it_returned_last_turn.c:20:9 ]
     │
  20 │         free(t);
     │         ───┬───  
-    │            ╰───── may free it again here
+    │            ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

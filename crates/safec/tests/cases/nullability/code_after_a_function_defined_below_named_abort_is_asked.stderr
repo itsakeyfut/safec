@@ -1,9 +1,9 @@
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
    ╭─[ code_after_a_function_defined_below_named_abort_is_asked.c:5:5 ]
    │
  5 │     return *p;
    │     ─────┬────  
-   │          ╰────── used here, perhaps after the free
+   │          ╰────── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

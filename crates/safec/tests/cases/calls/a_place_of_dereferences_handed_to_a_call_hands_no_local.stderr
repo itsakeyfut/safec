@@ -1,14 +1,14 @@
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this passes a pointer that may point to a freed allocation
     ╭─[ a_place_of_dereferences_handed_to_a_call_hands_no_local.c:11:5 ]
     │
  11 │     drop(*k);
     │     ────┬───  
-    │         ╰───── passed here, perhaps after the free
+    │         ╰───── passed here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0407]: this may pass a pointer to where a freed pointer is stored
+error[SC0407]: this passes a pointer to where a pointer that may have been freed is stored
     ╭─[ a_place_of_dereferences_handed_to_a_call_hands_no_local.c:12:12 ]
     │
  12 │     return use2(&a);

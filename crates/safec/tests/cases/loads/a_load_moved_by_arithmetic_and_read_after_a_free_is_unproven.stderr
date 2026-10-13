@@ -1,9 +1,9 @@
-warning[SC0402]: this may use a value after it was freed
+warning[SC0402]: this uses a value that may have been freed
     ╭─[ a_load_moved_by_arithmetic_and_read_after_a_free_is_unproven.c:23:5 ]
     │
  23 │     return *(**t3 + i);
     │     ─────────┬─────────  
-    │              ╰─────────── used here, perhaps after the free
+    │              ╰─────────── used here, where it may have been freed before
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`

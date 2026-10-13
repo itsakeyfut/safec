@@ -1,9 +1,9 @@
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
     ╭─[ a_free_on_a_branch_testing_more_than_reallocs_result_is_not_proved.c:17:9 ]
     │
  17 │         free(p);
     │         ───┬───  
-    │            ╰───── may free it again here
+    │            ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

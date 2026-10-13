@@ -1,19 +1,19 @@
-error[SC0401]: this may free `p`, which was freed already
+error[SC0401]: this frees `p`, which may have been freed already
    ╭─[ a_subscript_of_an_escaped_pointer_is_suspected_not_proved.c:6:5 ]
    │
  6 │     free(p);
    │     ───┬───  
-   │        ╰───── may free it again here
+   │        ╰───── this may be its second free
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use `p` after it was freed
+error[SC0402]: this uses `p`, which may have been freed
    ╭─[ a_subscript_of_an_escaped_pointer_is_suspected_not_proved.c:7:5 ]
    │
  7 │     p[0] = 42;
    │     ────┬────  
-   │         ╰────── used here, perhaps after the free
+   │         ╰────── used here, where it may have been freed before
 ───╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation

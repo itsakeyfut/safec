@@ -200,10 +200,21 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     // pointer, so nothing about the *program* was established and there is
     // nothing about the program to say. Giving those the words below put
     // `may free it again here` on a file with one `free` in it, and
-    // `used here, perhaps after the free` on one with none. The other two
-    // reasons each have a free behind them: a site the paths disagree about
-    // was freed on one of them, and a site an opaque call was handed may have
-    // been freed by it.
+    // `used here, perhaps after the free` on one with none.
+    //
+    // **And a `Disagreement` finding cannot say which free, or whether
+    // there was one**, so its words do not assert one. A site the paths
+    // disagree about was freed on one of them, and a site a call this check
+    // cannot read was handed may have been freed by it or by nothing, and
+    // `SiteState::Unknown` is one variant for both, so nothing here can say
+    // which cause it was. Nor does such a finding carry a `freed` span:
+    // "perhaps after the free" named a free the report never showed, and in
+    // a program with no `free` in it, one there was not.
+    // `a_doubt_with_no_free_in_the_program_asserts_none` is that program.
+    // What certainly happened is the use, the pass, the return or the free
+    // at the caret, so the `may` is on whether the pointer had been freed.
+    // `Unsequenced` keeps its words, because its `freed here` label is the
+    // free they mean.
     //
     // The reason is not read beside `Unsafe`, where there is nothing
     // unproven, and each `Unknown` row names every reason rather than taking
@@ -276,10 +287,10 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             DOUBLE_FREE,
             said(
                 name,
-                "this may free a value that was freed already",
-                |name| format!("this may free `{name}`, which was freed already"),
+                "this frees a value that may have been freed already",
+                |name| format!("this frees `{name}`, which may have been freed already"),
             ),
-            "may free it again here",
+            "this may be its second free",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::UseAfterFree, Conclusion::Unsafe, _) => (
@@ -317,10 +328,10 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             Some(Unproven::Disagreement | Unproven::Offset) | None,
         ) => (
             USE_AFTER_FREE,
-            said(name, "this may use a value after it was freed", |name| {
-                format!("this may use `{name}` after it was freed")
+            said(name, "this uses a value that may have been freed", |name| {
+                format!("this uses `{name}`, which may have been freed")
             }),
-            "used here, perhaps after the free",
+            "used here, where it may have been freed before",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::ReturnAfterFree, Conclusion::Unsafe, _) => (
@@ -361,14 +372,10 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             RETURN_AFTER_FREE,
             said(
                 name,
-                "this may return a pointer to an allocation that was freed",
-                |name| {
-                    format!(
-                        "this may return `{name}`, which points to an allocation that was freed"
-                    )
-                },
+                "this returns a pointer that may point to a freed allocation",
+                |name| format!("this returns `{name}`, which may point to a freed allocation"),
             ),
-            "returned here, perhaps after the free",
+            "returned here, where it may have been freed before",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::ArgumentAfterFree, Conclusion::Unsafe, _) => (
@@ -419,12 +426,10 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             ARGUMENT_AFTER_FREE,
             said(
                 name,
-                "this may pass a pointer to an allocation that was freed",
-                |name| {
-                    format!("this may pass `{name}`, which points to an allocation that was freed")
-                },
+                "this passes a pointer that may point to a freed allocation",
+                |name| format!("this passes `{name}`, which may point to a freed allocation"),
             ),
-            "passed here, perhaps after the free",
+            "passed here, where it may have been freed before",
             DISAGREEMENT_REMEDY,
         ),
         // **Words of its own, under the same code**: what is passed is live,
@@ -449,7 +454,8 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
             | None,
         ) => (
             ARGUMENT_AFTER_FREE,
-            "this may pass a pointer to where a freed pointer is stored".to_owned(),
+            "this passes a pointer to where a pointer that may have been freed is stored"
+                .to_owned(),
             "passed here, perhaps holding a freed pointer behind it",
             "set a pointer stored there to null once it is freed, free it on every path or on \
              none, and keep it out of a call this check cannot read before this one",

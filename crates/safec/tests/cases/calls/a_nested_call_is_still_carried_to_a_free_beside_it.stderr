@@ -24,12 +24,12 @@ error[SC0407]: this may pass `s`, which points to an allocation that was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0401]: this may free `s`, which was freed already
+error[SC0401]: this frees `s`, which may have been freed already
     ╭─[ a_nested_call_is_still_carried_to_a_free_beside_it.c:16:36 ]
     │
  16 │     return strlen(strcpy(s, t)) + (free(s), 0);
     │                                    ───┬───  
-    │                                       ╰───── may free it again here
+    │                                       ╰───── this may be its second free
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
