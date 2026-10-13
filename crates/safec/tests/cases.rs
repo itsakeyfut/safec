@@ -1075,8 +1075,11 @@ cases! {
         // A message names the pointer its conclusion is about, by the memory
         // check's rule: a dereference proved and unproven, two pointers at one
         // caret as `*q = *p` and `*p + *q` each saying its own, `**pp` doubted
-        // at `pp`'s own level, and an argument and a return, each proved and
-        // unproven. Mutation: the driver passes `None` for the name; every
+        // at `pp`'s own level, `**pp = 1;` said once although it is a write
+        // and a read-back that name `pp` differently, and an argument and a
+        // return, each proved and unproven. Mutation: the fold keys a
+        // dereference on its name rather than its place; `**pp = 1;` is said
+        // twice. Mutation: the driver passes `None` for the name; every
         // message here loses it. Mutation: the fold in
         // `nullability::findings` drops the local from its key; `*p + *q`
         // folds into one.

@@ -17,6 +17,10 @@ int beside(int *p, int *q) {
 int first_level(int **pp) {
     return **pp;
 }
+int written_back(int **pp) {
+    **pp = 1;
+    return 0;
+}
 int passed_null(void) {
     int *p = 0;
     return g(p);
