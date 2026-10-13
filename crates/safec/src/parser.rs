@@ -374,7 +374,9 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
         Keyword::Extern => ("`extern`", "6.7.1", STORAGE),
         Keyword::Static => ("`static`", "6.7.1", STORAGE),
-        Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", STORAGE),
+        // At file scope only: C17 6.7.1 p3 wants `static` or `extern` beside
+        // it in a block, which the one token asked about here cannot see.
+        Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", &[FileScope]),
         Keyword::Auto => ("`auto`", "6.7.1", AUTOMATIC),
         Keyword::Register => ("`register`", "6.7.1", &[Block, Parameter, ForInit]),
         Keyword::Const => ("`const`", "6.7.3", SPECIFIER),
@@ -539,6 +541,7 @@ pub fn parse(tokens: &[Token], diagnostics: &mut DiagnosticSink) -> Ast {
         failed: false,
         budget: tokens.len() + 1,
         depth: 0,
+        loops: 0,
     }
     .run(diagnostics)
 }
@@ -568,6 +571,13 @@ struct Parser<'a> {
     /// is what stops any of this file's recursions reaching the end of the
     /// native stack.
     depth: usize,
+    /// How many `while` and `for` bodies are being read right now.
+    ///
+    /// C17 6.8.6.2 p1 and 6.8.6.3 p1 allow `continue` only in a loop body and
+    /// `break` only in a loop or `switch` body, and this parser reads no
+    /// `switch`. So outside a loop either one is not C, and is not reported as
+    /// C this parser does not read.
+    loops: usize,
 }
 
 impl Parser<'_> {
@@ -1205,8 +1215,11 @@ impl Parser<'_> {
         // 6.7.6.2 p3 reads `D [ ... ]` by handing "array of T" to `D`. That is
         // what makes `int a[3][5]` three arrays of five and not five of three.
         // An abstract declarator is allowed only for a parameter, so `named`
-        // being false is what says this declarator declares one.
-        let mut suffixes = self.suffixes(!named, diagnostics)?;
+        // being false is what says this declarator declares one. C17 6.7.6.2 p1
+        // lets `static` and qualifiers into the brackets of its outermost array
+        // derivation only, and a parenthesised declarator with derivations of
+        // its own puts the array inside them.
+        let mut suffixes = self.suffixes(!named, !named && inner.is_empty(), diagnostics)?;
         suffixes.reverse();
         derivations.append(&mut suffixes);
 
@@ -1347,11 +1360,14 @@ impl Parser<'_> {
 
     /// The `[...]` and `(...)` that follow a direct-declarator, in source order.
     ///
-    /// `parameter` says the declarator declares a parameter, the one place
-    /// C17 6.7.6.3 p7 lets `static` and qualifiers into an array's brackets.
+    /// `parameter` says the declarator declares a parameter, whose prototype
+    /// scope is where C17 6.7.6.2 p4 allows `[*]`. `outermost` says the first
+    /// of these is its outermost array derivation, the one place 6.7.6.2 p1
+    /// and 6.7.6.3 p7 let `static` and qualifiers into an array's brackets.
     fn suffixes(
         &mut self,
         parameter: bool,
+        outermost: bool,
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Vec<Derivation>> {
         let mut suffixes = Vec::new();
@@ -1372,7 +1388,7 @@ impl Parser<'_> {
                                 | Keyword::Atomic
                         )
                     );
-                    if qualified {
+                    if qualified && outermost && suffixes.is_empty() {
                         self.report_unread(
                             Unread {
                                 what: "`static` or a qualifier in an array parameter's brackets",
@@ -1441,13 +1457,22 @@ impl Parser<'_> {
     }
 
     fn parameter_list(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Parameters> {
-        let mut parameters = Vec::new();
+        let mut parameters: Vec<Declaration> = Vec::new();
 
         loop {
             // C17 6.7.6.3's `parameter-type-list` puts `, ...` after at least
             // one parameter, so a `...` first is not C and is left to
             // `specifiers` to call a missing declaration.
-            if !parameters.is_empty() && self.check(TokenKind::Punct(Punct::Ellipsis)) {
+            // It has to close the list, and 6.7.6.3 p10 makes a lone `void`
+            // the whole of one, so `(void, ...)` is not C either.
+            let only_void = parameters.len() == 1
+                && parameters[0].name.is_none()
+                && matches!(self.ast.ty(parameters[0].ty), Type::Void);
+            if !parameters.is_empty()
+                && !only_void
+                && self.check(TokenKind::Punct(Punct::Ellipsis))
+                && self.peek_at(1).kind == TokenKind::Punct(Punct::RightParen)
+            {
                 self.report_unread(
                     Unread {
                         what: "a variadic function's `...`",
@@ -1897,7 +1922,9 @@ impl Parser<'_> {
         self.deeper(
             diagnostics,
             |parser, diagnostics| {
+                parser.loops += 1;
                 let body = parser.statement(diagnostics);
+                parser.loops -= 1;
                 let span = start.to(parser.previous().span);
                 parser.ast.push_stmt(Stmt::While {
                     condition,
@@ -1961,7 +1988,9 @@ impl Parser<'_> {
         self.deeper(
             diagnostics,
             |parser, diagnostics| {
+                parser.loops += 1;
                 let body = parser.statement(diagnostics);
+                parser.loops -= 1;
                 let span = start.to(parser.previous().span);
                 parser.ast.push_stmt(Stmt::For {
                     start: first,
@@ -2506,11 +2535,20 @@ impl Parser<'_> {
     /// character constant or a string literal (6.4.4.4, 6.4.5) begins an
     /// expression this parser does not read.
     fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
+        let next = self.peek_at(1).kind;
         let unread = match self.peek().kind {
+            // Outside a loop, C17 6.8.6.2 p1 and 6.8.6.3 p1 forbid them; see
+            // `loops`.
+            TokenKind::Keyword(Keyword::Break | Keyword::Continue) if self.loops == 0 => None,
+            // 6.8.6.1's `goto identifier ;`: anything else after it is not C.
+            TokenKind::Keyword(Keyword::Goto) if next != TokenKind::Identifier => None,
             TokenKind::Keyword(keyword) => unread_keyword(keyword, at),
+            // 6.8.1's `identifier : statement`. A label with nothing after it
+            // in its block, or with a declaration after it, is C23 and not C17.
             TokenKind::Identifier
                 if at == Position::Statement
-                    && self.peek_at(1).kind == TokenKind::Punct(Punct::Colon) =>
+                    && next == TokenKind::Punct(Punct::Colon)
+                    && !self.ends_a_label_c17_forbids() =>
             {
                 Some(Unread {
                     what: "a label",
@@ -2532,6 +2570,16 @@ impl Parser<'_> {
         };
         self.report_unread(unread, diagnostics);
         true
+    }
+
+    /// Whether the token after a label's `:` is one C17 does not allow there:
+    /// the `}` that closes its block, or the start of a declaration.
+    fn ends_a_label_c17_forbids(&self) -> bool {
+        let after = self.peek_at(2).kind;
+        after == TokenKind::Punct(Punct::RightBrace)
+            || begins_specifiers(after)
+            || matches!(after, TokenKind::Keyword(keyword)
+                if unread_keyword(keyword, Position::Block).is_some())
     }
 
     /// The report [`UNREAD`] makes, at the token here, in one wording for

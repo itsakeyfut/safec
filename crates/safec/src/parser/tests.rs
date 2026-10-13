@@ -428,6 +428,12 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
 /// `refuse_unread` and its callers ask about. The second list is the other
 /// side: the same tokens where C forbids them.
 ///
+/// The controls include what is C17's to forbid only one token later, or
+/// only outside a loop: `static` in an inner array's brackets, a label
+/// ending its block or followed by a declaration, `...` not closing the list
+/// or after a lone `void`, `goto` without a name, and `break` or `continue`
+/// outside a loop. Mutation: drop any of those checks; its control fails.
+///
 /// Mutations: delete any row of `unread_keyword`, drop a position from one,
 /// or drop any of the label, character, string, cast, `...`, bracket,
 /// `[*]` or pointer-qualifier checks. A row in the first list fails. Add a position a keyword is
@@ -515,6 +521,14 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         ("void f(int a[static 2]);\n", "`static` or a qualifier"),
         ("void f(int a[const 2]);\n", "`static` or a qualifier"),
         ("void f(int a[*]);\n", "`[*]`"),
+        ("void f(int a[2][*]);\n", "`[*]`"),
+        ("void f(int (a)[static 3]);\n", "`static` or a qualifier"),
+        ("void f(int (*p[static 3]));\n", "`static` or a qualifier"),
+        (
+            "int main(void) { while (1) { if (1) continue; } }\n",
+            "`continue`",
+        ),
+        ("int main(void) { for (;;) break; }\n", "`break`"),
     ];
     let malformed = [
         "int main(void) { case 1: return 0; }\n",
@@ -530,6 +544,17 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
         "int f(...);\n",
         "int a[static 2];\n",
         "restrict int *p;\n",
+        // What C17 forbids that one more token, or the loop around it, shows.
+        "void f(int a[2][static 3]);\n",
+        "void f(int (*p)[static 3]);\n",
+        "int main(void) { _Thread_local int x; }\n",
+        "int main(void) { break; }\n",
+        "int main(void) { continue; }\n",
+        "int main(void) { l: }\n",
+        "int main(void) { l: int x; }\n",
+        "int f(int, ..., int);\n",
+        "int f(void, ...);\n",
+        "int main(void) { goto 1; }\n",
         "int main(void) { return (register int)0; }\n",
     ];
 
