@@ -72,7 +72,10 @@ fn own_value(place: &Place) -> Option<LocalId> {
 ///
 /// A dereference is carried at its first level only, by `Known::met`, so it is
 /// about the local's own value whatever the projection; a pointer handed on is
-/// [`own_value`]'s, as it is where the call is met.
+/// [`own_value`]'s, as it is where the call is met. Naming the root for a
+/// pointer handed on fails
+/// `a_pointer_read_out_of_memory_and_handed_on_is_carried_to_a_later_free`,
+/// which hands `*tab` to a call beside a free.
 fn pending_value(read: Read, place: &Place) -> Option<LocalId> {
     match read {
         Read::Dereference => Some(place.local),
@@ -792,6 +795,9 @@ pub(super) fn handed(
                 conclusion: verdict.conclusion,
                 at: origin.span(),
                 // What is behind the pointer handed over, which no local holds.
+                // Nothing reads it for this kind, whose words name nothing
+                // because what is passed is live, so no case moves if this
+                // names the place's local instead.
                 value: None,
                 freed: verdict.freed,
                 made: verdict.made,
