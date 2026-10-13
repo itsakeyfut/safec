@@ -828,8 +828,12 @@ pub struct Parameter {
     /// apart from one written `_Nonnull` by the type: a report about a call
     /// names the promise it broke, and the two are taken back differently.
     pub nonnull: Option<Promise>,
-    /// The span of the name it was declared with, and `None` where it was
-    /// declared with none, as `int f(int);` may.
+    /// The span of the name it was declared with, in the declaration the
+    /// function's type is taken from, and `None` where that declaration names
+    /// none, as `int f(int);` may. For a definition that is the definition;
+    /// for a function only declared it is the standing declaration, the one
+    /// its `_Nonnull` promises come from too, so `int g(int a); int g(int b);`
+    /// names it `b` while [`Function::name`] is the first `g`.
     pub name: Option<Span>,
 }
 
