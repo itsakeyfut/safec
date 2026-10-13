@@ -189,6 +189,17 @@ cases! {
         // `a_memory_diagnostic_names_the_value_it_is_about`, which needs a
         // `free` to reach it.
         a_doubt_with_no_free_in_the_program_asserts_none: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A pointer whose address was taken is doubted, and not told of a free
+        // nothing made: an allocation and a parameter with no free, which get
+        // one set of words, and a read after `free(*pp)`, which is a use after
+        // free on every execution and has to stay a doubt rather than be told
+        // this check merely stopped following. Saying the address was taken
+        // needs the lattice to know why a site is reachable, which is #471.
+        // Mutation: count a `SiteState::Reachable` site as lost in
+        // `memory::report::verdict`; the third is told nothing says the
+        // program is wrong. Mutation: give the `Disagreement` return row its
+        // old label; the first two say a free happened.
+        a_pointer_whose_address_was_taken_is_doubted_without_being_told_of_a_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_use_an_opaque_call_is_sequenced_after_is_not_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A controlling expression that is exactly a dereference is read by the
         // branch itself, because it needs no temporary, so the sequence point
