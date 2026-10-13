@@ -505,6 +505,16 @@ fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
             "int main(void) { for (register int i = 0; i; ) ; }\n",
             "`register`",
         ),
+        (
+            "int main(void) { for (_Alignas(4) int i = 0; i; ) ; }\n",
+            "`_Alignas`",
+        ),
+        // A second specifier, after one this parser reads.
+        ("int const x;\n", "`const`"),
+        ("int unsigned x;\n", "`unsigned`"),
+        ("struct S { int a; } const s;\n", "`const`"),
+        ("void f(int const a);\n", "`const`"),
+        ("int main(void) { int static x; }\n", "`static`"),
         // The token pairs.
         ("int main(void) { l: return 0; }\n", "a label"),
         ("int main(void) { return 'a'; }\n", "a character constant"),

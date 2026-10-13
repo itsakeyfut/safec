@@ -381,7 +381,9 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::Register => ("`register`", "6.7.1", &[Block, Parameter, ForInit]),
         Keyword::Const => ("`const`", "6.7.3", SPECIFIER),
         Keyword::Volatile => ("`volatile`", "6.7.3", SPECIFIER),
-        Keyword::Atomic => ("`_Atomic`", "6.7.2.4", SPECIFIER),
+        // The qualifier's clause. `Parser::refuse_unread` cites 6.7.2.4 instead
+        // where a `(` follows, which C17 6.7.2.4 p4 makes the type specifier.
+        Keyword::Atomic => ("`_Atomic`", "6.7.3", SPECIFIER),
         Keyword::Short => ("`short`", "6.7.2", SPECIFIER),
         Keyword::Long => ("`long`", "6.7.2", SPECIFIER),
         Keyword::Signed => ("`signed`", "6.7.2", SPECIFIER),
@@ -394,7 +396,7 @@ fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
         Keyword::Enum => ("`enum`", "6.7.2.2", SPECIFIER),
         Keyword::Inline => ("`inline`", "6.7.4", STORAGE),
         Keyword::Noreturn => ("`_Noreturn`", "6.7.4", STORAGE),
-        Keyword::Alignas => ("`_Alignas`", "6.7.5", &[FileScope, Block, Member]),
+        Keyword::Alignas => ("`_Alignas`", "6.7.5", &[FileScope, Block, Member, ForInit]),
         Keyword::StaticAssert => ("`_Static_assert`", "6.7.10", &[FileScope, Block, Member]),
         Keyword::Sizeof => ("`sizeof`", "6.5.3.4", &[Expression]),
         Keyword::Alignof => ("`_Alignof`", "6.5.3.4", &[Expression]),
@@ -997,7 +999,8 @@ impl Parser<'_> {
         }
 
         if self.check(TokenKind::Keyword(Keyword::Struct)) {
-            return self.struct_specifier(diagnostics);
+            let ty = self.struct_specifier(diagnostics)?;
+            return self.no_unread_specifier_after(ty, at, diagnostics);
         }
 
         let Some(ty) = specifier(self.peek().kind) else {
@@ -1013,7 +1016,27 @@ impl Parser<'_> {
         };
 
         self.advance();
-        Some(self.ast.push_type(ty))
+        let ty = self.ast.push_type(ty);
+        self.no_unread_specifier_after(ty, at, diagnostics)
+    }
+
+    /// `ty`, unless what follows it is a second specifier C allows here and this
+    /// parser does not read, which is refused as one.
+    ///
+    /// C17 6.7 p2 lets declaration specifiers come in any order, so `int const`
+    /// and `int unsigned` are as valid as `const int` and `unsigned int`, and
+    /// the second word is what this parser does not read. Without this it is
+    /// read as the declarator, which then says a name is missing.
+    fn no_unread_specifier_after(
+        &mut self,
+        ty: TypeId,
+        at: Position,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<TypeId> {
+        if self.refuse_unread(at, diagnostics) {
+            return None;
+        }
+        Some(ty)
     }
 
     /// `struct`, an optional tag, and an optional member list. C17 6.7.2.1.
@@ -2542,6 +2565,12 @@ impl Parser<'_> {
             TokenKind::Keyword(Keyword::Break | Keyword::Continue) if self.loops == 0 => None,
             // 6.8.6.1's `goto identifier ;`: anything else after it is not C.
             TokenKind::Keyword(Keyword::Goto) if next != TokenKind::Identifier => None,
+            TokenKind::Keyword(Keyword::Atomic) if next == TokenKind::Punct(Punct::LeftParen) => {
+                unread_keyword(Keyword::Atomic, at).map(|unread| Unread {
+                    clause: "6.7.2.4",
+                    ..unread
+                })
+            }
             TokenKind::Keyword(keyword) => unread_keyword(keyword, at),
             // 6.8.1's `identifier : statement`. A label with nothing after it
             // in its block, or with a declaration after it, is C23 and not C17.
