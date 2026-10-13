@@ -187,13 +187,22 @@ impl Cli {
     /// named the way this process was invoked, and with no code: it is about
     /// the machine, not a program, which `docs/diagnostics.md` rules out.
     ///
-    /// **That the refusal reaches a user, and exits 2, is held by nothing a
-    /// test can build**, because no test runs on a host this compiler does not
-    /// know and this reads [`HOST_TRIPLE`]. What a test holds is the decision,
-    /// in `resolved_target`; that `main` exits with the `Err` rather than
-    /// unwrapping it is held by the `match` there and by `error[E0308]` for a
-    /// caller that takes this as an [`Options`].
+    /// The host is [`HOST_TRIPLE`]; `into_options_on` is the same with the
+    /// host an argument, which is what lets a test ask about an unknown one.
     pub fn into_options(self) -> Result<Options, clap::Error> {
+        self.into_options_on(HOST_TRIPLE)
+    }
+
+    /// [`Self::into_options`], on a named host.
+    ///
+    /// **The kind of the error is the exit code**, and that is why a test
+    /// asks for it here rather than only for the message: `clap::Error::exit`
+    /// writes `DisplayHelp` and `DisplayVersion` to stdout and exits 0, so the
+    /// wrong kind is a refused run that reports success with nothing made.
+    /// What no test can build is `main` exiting with the `Err` rather than
+    /// discarding it: the `match` there is read rather than held, and a caller
+    /// that takes the result as an [`Options`] is `error[E0308]`.
+    fn into_options_on(self, host: &str) -> Result<Options, clap::Error> {
         // Destructured rather than read field by field, so that a field added
         // to `Cli` and forgotten here is a compile error instead of an argument
         // that silently does nothing.
@@ -207,7 +216,7 @@ impl Cli {
             color,
         } = self;
 
-        let target = resolved_target(target.as_deref(), HOST_TRIPLE).map_err(|message| {
+        let target = resolved_target(target.as_deref(), host).map_err(|message| {
             Self::as_invoked().error(ErrorKind::MissingRequiredArgument, message)
         })?;
 
@@ -696,6 +705,25 @@ mod tests {
         for target in Target::ALL {
             assert!(message.contains(target.triple()), "{message}");
         }
+    }
+
+    /// The refusal of an unknown host fails the run: it is not help or a
+    /// version, which clap prints to stdout and exits 0 for, and it goes to
+    /// stderr with an exit code that says something went wrong.
+    ///
+    /// Mutation: refuse with `ErrorKind::DisplayVersion`. This fails, and the
+    /// run would have printed its refusal to stdout and exited 0 having made
+    /// nothing.
+    #[test]
+    fn an_unknown_host_fails_the_run_rather_than_reporting_success() {
+        let refused = Cli::try_parse_from(["safec", "a.c"])
+            .expect("a bare invocation parses")
+            .into_options_on("x86_64-unknown-linux-musl")
+            .expect_err("an unknown host has no target to default to");
+
+        assert_eq!(refused.kind(), ErrorKind::MissingRequiredArgument);
+        assert!(refused.use_stderr(), "the refusal goes to stdout");
+        assert_ne!(refused.exit_code(), 0, "the refusal exits 0");
     }
 
     /// A named target is the target, on a host this compiler knows or one it
