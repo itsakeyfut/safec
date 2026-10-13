@@ -3935,6 +3935,17 @@ fn cases_dir() -> PathBuf {
 fn run_case(group: &str, name: &str, args: &[&str]) {
     let input = format!("{name}.c");
     let dir = work_dir(group, name);
+    // **Refused before anything is removed**, because this function removes
+    // `dir` twice and a `dir` inside the corpus would be the corpus: having
+    // `work_dir` return the group's directory deleted every group of it, while
+    // `a_case_is_run_from_a_directory_outside_the_corpus`, which reports the
+    // same mistake, ran in parallel and too late to stop it. A panic naming
+    // the path is what that mistake has to cost instead.
+    assert!(
+        !dir.starts_with(cases_dir()),
+        "case `{name}`: refusing to run from, and remove, {}, which is inside the corpus",
+        dir.display()
+    );
     // A directory left by a run that was killed is this case's, and stale.
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("a case's working directory can be made");
