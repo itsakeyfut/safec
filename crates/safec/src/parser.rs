@@ -11,7 +11,8 @@
 //! `[static N]` and `[*]`, and the two primary expressions the lexer already
 //! hands it: a character constant and a string literal. Each arrives in a
 //! sibling of the issues that built this, and each adds to [`crate::ast`]
-//! rather than reshaping it.
+//! rather than reshaping it. Until then each is refused as `SC0207`, valid C
+//! not read yet, rather than as `SC0201`, which says the program is not C.
 //!
 //! It is handed tokens and not the source. ADR-0006 reserved a trigger, that
 //! the parser asking for a `&SourceMap` is the moment an interner is worth
@@ -110,6 +111,20 @@ pub(crate) const UNREAD_ANNOTATION: Code = Code::new("SC0205");
 /// [`Parser::declared`] lets a struct with one through. In a member list it is
 /// C17 6.7.2.1 p2's constraint instead, and the same code.
 const NOTHING_DECLARED: Code = Code::new("SC0206");
+
+/// Valid C this parser does not read yet.
+///
+/// Not [`EXPECTED`], because nothing is wrong with the program: a reader has
+/// to be able to tell a construct this compiler has not been taught from a
+/// defect in their file, and a code they can search for is how they do it.
+/// The parser's counterpart of the lexer's `SC0107`, and one code for the
+/// whole class for the same reason [`EXPECTED`] is one code. A braced
+/// initializer kept the code it was given first, [`BRACED_INITIALIZER`].
+///
+/// Which construct it is is decided where the parse failed, by
+/// [`unread_keyword`] and by the few token pairs [`Parser::refuse_unread`]
+/// asks about. What is not C at that position keeps [`EXPECTED`].
+const UNREAD: Code = Code::new("SC0207");
 
 /// What [`UNREAD_ANNOTATION`] says under its caret about an attribute, from
 /// either stage.
@@ -293,6 +308,98 @@ fn specifier(kind: TokenKind) -> Option<Type> {
 /// parameter list or a `for`'s declaration begins.
 fn begins_specifiers(kind: TokenKind) -> bool {
     specifier(kind).is_some() || kind == TokenKind::Keyword(Keyword::Struct)
+}
+
+/// Where a parse failed, which decides what C would have allowed there.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Position {
+    /// Where a declaration begins at file scope.
+    FileScope,
+    /// Where a block-item begins and is not a statement: a declaration
+    /// whose specifiers this parser does not read. C17 6.8.2 allows one in a
+    /// block and 6.8.4 and 6.8.5 do not allow one as a substatement, which is
+    /// why this is not [`Position::Statement`].
+    Block,
+    /// Where a statement begins, in a block or as a substatement.
+    Statement,
+    /// Where a member declaration begins: C17 6.7.2.1's
+    /// `specifier-qualifier-list`, or a static assertion.
+    Member,
+    /// Where a parameter declaration begins.
+    Parameter,
+    /// Where a `for`'s first clause begins, which may be a declaration, but
+    /// only of an object with storage class `auto` or `register` (C17 6.8.5
+    /// p3).
+    ForInit,
+    /// Where a primary expression begins.
+    Expression,
+}
+
+/// A construct C allows where the parse failed and this parser does not read,
+/// and the C17 clause that allows it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Unread {
+    what: &'static str,
+    clause: &'static str,
+}
+
+/// What this keyword would have begun at this position, if it is valid C there
+/// that this parser does not read.
+///
+/// One table, so every position asks the same question. Each row says which
+/// positions C allows the keyword in, because one that is C in one place is a
+/// constraint violation in another: `typedef` in a parameter list breaks
+/// C17 6.7.6.3 p2, and `static` in a `for` breaks 6.8.5 p3. Those keep
+/// [`EXPECTED`]. So do `case` and `default`, which 6.8.1 p2 allows only in a
+/// `switch` this parser never reads, and `_Imaginary`, which only Annex G
+/// gives a meaning. `restrict` has no row: 6.7.3 p2 allows it only on a
+/// pointer to an object, so leading a declaration it is not C, and after a
+/// `*` it is [`Parser::declarator`]'s to refuse.
+fn unread_keyword(keyword: Keyword, at: Position) -> Option<Unread> {
+    use Position::{Block, Expression, FileScope, ForInit, Member, Parameter, Statement};
+
+    // Which positions each kind of keyword belongs in. A type specifier or a
+    // qualifier begins a declaration anywhere one may begin.
+    const SPECIFIER: &[Position] = &[FileScope, Block, Member, Parameter, ForInit];
+    const STORAGE: &[Position] = &[FileScope, Block];
+    const AUTOMATIC: &[Position] = &[Block, ForInit];
+    const STATEMENT: &[Position] = &[Statement];
+
+    let (what, clause, allowed): (&str, &str, &[Position]) = match keyword {
+        Keyword::Switch => ("`switch`", "6.8.4.2", STATEMENT),
+        Keyword::Do => ("`do`", "6.8.5.2", STATEMENT),
+        Keyword::Goto => ("`goto`", "6.8.6.1", STATEMENT),
+        Keyword::Continue => ("`continue`", "6.8.6.2", STATEMENT),
+        Keyword::Break => ("`break`", "6.8.6.3", STATEMENT),
+        Keyword::Typedef => ("`typedef`", "6.7.8", STORAGE),
+        Keyword::Extern => ("`extern`", "6.7.1", STORAGE),
+        Keyword::Static => ("`static`", "6.7.1", STORAGE),
+        Keyword::ThreadLocal => ("`_Thread_local`", "6.7.1", STORAGE),
+        Keyword::Auto => ("`auto`", "6.7.1", AUTOMATIC),
+        Keyword::Register => ("`register`", "6.7.1", &[Block, Parameter, ForInit]),
+        Keyword::Const => ("`const`", "6.7.3", SPECIFIER),
+        Keyword::Volatile => ("`volatile`", "6.7.3", SPECIFIER),
+        Keyword::Atomic => ("`_Atomic`", "6.7.2.4", SPECIFIER),
+        Keyword::Short => ("`short`", "6.7.2", SPECIFIER),
+        Keyword::Long => ("`long`", "6.7.2", SPECIFIER),
+        Keyword::Signed => ("`signed`", "6.7.2", SPECIFIER),
+        Keyword::Unsigned => ("`unsigned`", "6.7.2", SPECIFIER),
+        Keyword::Float => ("`float`", "6.7.2", SPECIFIER),
+        Keyword::Double => ("`double`", "6.7.2", SPECIFIER),
+        Keyword::Bool => ("`_Bool`", "6.7.2", SPECIFIER),
+        Keyword::Complex => ("`_Complex`", "6.7.2", SPECIFIER),
+        Keyword::Union => ("`union`", "6.7.2.1", SPECIFIER),
+        Keyword::Enum => ("`enum`", "6.7.2.2", SPECIFIER),
+        Keyword::Inline => ("`inline`", "6.7.4", STORAGE),
+        Keyword::Noreturn => ("`_Noreturn`", "6.7.4", STORAGE),
+        Keyword::Alignas => ("`_Alignas`", "6.7.5", &[FileScope, Block, Member]),
+        Keyword::StaticAssert => ("`_Static_assert`", "6.7.10", &[FileScope, Block, Member]),
+        Keyword::Sizeof => ("`sizeof`", "6.5.3.4", &[Expression]),
+        Keyword::Alignof => ("`_Alignof`", "6.5.3.4", &[Expression]),
+        Keyword::Generic => ("`_Generic`", "6.5.1.1", &[Expression]),
+        _ => return None,
+    };
+    allowed.contains(&at).then_some(Unread { what, clause })
 }
 
 /// The nullability specifier this token is, if it is one this compiler reads.
@@ -637,7 +744,13 @@ impl Parser<'_> {
         diagnostics: &mut DiagnosticSink,
     ) -> Option<Specified> {
         let start = self.peek().span;
-        let base = self.specifiers(diagnostics)?;
+        let at = match declares {
+            Declares::FileScope => Position::FileScope,
+            Declares::BlockScope => Position::Block,
+            Declares::Member => Position::Member,
+            Declares::Parameter => Position::Parameter,
+        };
+        let base = self.specifiers(at, diagnostics)?;
         // C17 6.7 p2: a declaration may declare a tag and nothing else, and a
         // struct with a tag is the one this compiler reads. In a member list
         // any struct goes back to `members`, which tells an anonymous member
@@ -864,7 +977,10 @@ impl Parser<'_> {
     /// `__attribute__` arrives here wherever a declaration begins with it
     /// other than at file scope, and a second one after the first arrives here
     /// too: [`Parser::item`] reads one and hands the rest to this.
-    fn specifiers(&mut self, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
+    ///
+    /// `at` is where this declaration began, which decides what else C would
+    /// have allowed in place of a specifier this parser reads.
+    fn specifiers(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> Option<TypeId> {
         if self.check(TokenKind::Annotation(Annotation::Attribute)) {
             self.misplaced_attribute(diagnostics);
             return None;
@@ -875,6 +991,9 @@ impl Parser<'_> {
         }
 
         let Some(ty) = specifier(self.peek().kind) else {
+            if self.refuse_unread(at, diagnostics) {
+                return None;
+            }
             self.report(
                 "expected a declaration",
                 "this cannot begin one",
@@ -1009,7 +1128,7 @@ impl Parser<'_> {
         );
         if anonymous {
             let built = Diagnostic::error("an anonymous member is not read yet")
-                .with_code(EXPECTED)
+                .with_code(UNREAD)
                 .with_label(Label::primary(at, "a struct with no name of its own"))
                 .with_note("C17 6.7.2.1 p13 makes it valid; this compiler does not read one yet");
             self.report_built(at, built, diagnostics);
@@ -1025,7 +1144,7 @@ impl Parser<'_> {
     /// Refuse a bit-field, at its `:`: valid C, not read yet.
     fn unread_bit_field(&mut self, diagnostics: &mut DiagnosticSink) {
         self.report_noted(
-            EXPECTED,
+            UNREAD,
             "a bit-field is not read yet",
             "a bit-field's width",
             "C17 6.7.2.1 p9 makes it valid; this compiler does not read one yet",
@@ -1058,6 +1177,25 @@ impl Parser<'_> {
             // One, and only directly after the `*`, which is where `clang`
             // reads it. A second is left for `core`, which refuses it.
             let nullability = self.nullability(diagnostics)?;
+            // C17 6.7.6.1 lets a pointer carry qualifiers after its `*`, and
+            // this parser reads none. Asked once, after the nullability, which
+            // is enough: a qualifier before it leaves the nullability unread
+            // and is the token here, and one after it is the token here too.
+            if matches!(
+                self.peek().kind,
+                TokenKind::Keyword(
+                    Keyword::Const | Keyword::Volatile | Keyword::Restrict | Keyword::Atomic
+                )
+            ) {
+                self.report_unread(
+                    Unread {
+                        what: "a qualifier after `*`",
+                        clause: "6.7.6.1",
+                    },
+                    diagnostics,
+                );
+                return None;
+            }
             derivations.push(Derivation::Pointer { nullability });
         }
 
@@ -1066,7 +1204,9 @@ impl Parser<'_> {
         // The suffix written last is the first to wrap the base, because
         // 6.7.6.2 p3 reads `D [ ... ]` by handing "array of T" to `D`. That is
         // what makes `int a[3][5]` three arrays of five and not five of three.
-        let mut suffixes = self.suffixes(diagnostics)?;
+        // An abstract declarator is allowed only for a parameter, so `named`
+        // being false is what says this declarator declares one.
+        let mut suffixes = self.suffixes(!named, diagnostics)?;
         suffixes.reverse();
         derivations.append(&mut suffixes);
 
@@ -1206,13 +1346,55 @@ impl Parser<'_> {
     }
 
     /// The `[...]` and `(...)` that follow a direct-declarator, in source order.
-    fn suffixes(&mut self, diagnostics: &mut DiagnosticSink) -> Option<Vec<Derivation>> {
+    ///
+    /// `parameter` says the declarator declares a parameter, the one place
+    /// C17 6.7.6.3 p7 lets `static` and qualifiers into an array's brackets.
+    fn suffixes(
+        &mut self,
+        parameter: bool,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<Vec<Derivation>> {
         let mut suffixes = Vec::new();
 
         loop {
             if self.check(TokenKind::Punct(Punct::LeftBracket)) {
                 self.spend();
                 self.advance();
+
+                if parameter {
+                    let qualified = matches!(
+                        self.peek().kind,
+                        TokenKind::Keyword(
+                            Keyword::Static
+                                | Keyword::Const
+                                | Keyword::Volatile
+                                | Keyword::Restrict
+                                | Keyword::Atomic
+                        )
+                    );
+                    if qualified {
+                        self.report_unread(
+                            Unread {
+                                what: "`static` or a qualifier in an array parameter's brackets",
+                                clause: "6.7.6.3 p7",
+                            },
+                            diagnostics,
+                        );
+                        return None;
+                    }
+                    if self.check(TokenKind::Punct(Punct::Star))
+                        && self.peek_at(1).kind == TokenKind::Punct(Punct::RightBracket)
+                    {
+                        self.report_unread(
+                            Unread {
+                                what: "`[*]`",
+                                clause: "6.7.6.2",
+                            },
+                            diagnostics,
+                        );
+                        return None;
+                    }
+                }
 
                 // 6.7.6 spells what goes here `assignment-expression` and not
                 // `expression`, so a comma ends the subscript rather than being
@@ -1262,8 +1444,21 @@ impl Parser<'_> {
         let mut parameters = Vec::new();
 
         loop {
+            // C17 6.7.6.3's `parameter-type-list` puts `, ...` after at least
+            // one parameter, so a `...` first is not C and is left to
+            // `specifiers` to call a missing declaration.
+            if !parameters.is_empty() && self.check(TokenKind::Punct(Punct::Ellipsis)) {
+                self.report_unread(
+                    Unread {
+                        what: "a variadic function's `...`",
+                        clause: "6.7.6.3",
+                    },
+                    diagnostics,
+                );
+                return None;
+            }
             let start = self.peek().span;
-            let base = self.specifiers(diagnostics)?;
+            let base = self.specifiers(Position::Parameter, diagnostics)?;
             let (name, derivations) = self.declarator(false, diagnostics)?;
             // The parameter's own pointer is the last derivation, the one that
             // makes the parameter's type. `apply` refuses one written anywhere
@@ -1500,6 +1695,9 @@ impl Parser<'_> {
                         || parser.check(TokenKind::Annotation(Annotation::Attribute))
                     {
                         parser.declaration_statement(diagnostics)
+                    } else if parser.refuse_unread(Position::Block, diagnostics) {
+                        let span = parser.peek().span;
+                        parser.ast.push_stmt(Stmt::Error { span })
                     } else {
                         parser.statement(diagnostics)
                     };
@@ -1599,6 +1797,12 @@ impl Parser<'_> {
 
         if self.check(TokenKind::Keyword(Keyword::For)) {
             return self.for_statement(start, diagnostics);
+        }
+
+        // A statement C allows here that this parser does not read: a keyword
+        // that begins one, or a label.
+        if self.refuse_unread(Position::Statement, diagnostics) {
+            return self.ast.push_stmt(Stmt::Error { span: start });
         }
 
         // What is left is C17 6.8.3's `expression_opt ;`, which is also where a
@@ -1738,6 +1942,8 @@ impl Parser<'_> {
                 return failed(self);
             }
             Some(ForStart::Declaration(declaration))
+        } else if self.refuse_unread(Position::ForInit, diagnostics) {
+            return failed(self);
         } else {
             let Some(initialiser) = self.clause(TokenKind::Punct(Punct::Semicolon), diagnostics)
             else {
@@ -2078,6 +2284,26 @@ impl Parser<'_> {
         }
 
         if self.eat(TokenKind::Punct(Punct::LeftParen)) {
+            // A type name here begins a cast or a compound literal, neither of
+            // which is read yet. What may begin one is what may begin a
+            // parameter's specifiers, less `register`, which is a storage
+            // class and no part of a type name (C17 6.7.7).
+            let kind = self.peek().kind;
+            let type_name = begins_specifiers(kind)
+                || matches!(kind, TokenKind::Keyword(keyword)
+                    if keyword != Keyword::Register
+                        && unread_keyword(keyword, Position::Parameter).is_some());
+            if type_name {
+                self.report_unread(
+                    Unread {
+                        what: "a cast or a compound literal",
+                        clause: "6.5.4 or 6.5.2.5",
+                    },
+                    diagnostics,
+                );
+                return self.ast.push_expr(Expr::Error { span });
+            }
+
             // Parentheses make no node. The grouping is already the shape of
             // the tree, and a node for them is one every later phase would have
             // to see through.
@@ -2100,6 +2326,10 @@ impl Parser<'_> {
             }
 
             return inner;
+        }
+
+        if self.refuse_unread(Position::Expression, diagnostics) {
+            return self.ast.push_expr(Expr::Error { span });
         }
 
         let span = self.report(
@@ -2245,7 +2475,6 @@ impl Parser<'_> {
 
         self.report_built(span, built, diagnostics)
     }
-
     /// The same, at the token that is there, with a note under the label.
     ///
     /// For a refusal that is about this compiler rather than about the program:
@@ -2267,6 +2496,57 @@ impl Parser<'_> {
             .with_note(note);
 
         self.report_built(span, built, diagnostics)
+    }
+
+    /// Report valid C this parser does not read yet, if the token here begins
+    /// some at `at`, and say whether it did.
+    ///
+    /// A keyword asks [`unread_keyword`]. Two more need a second token or a
+    /// token kind: an identifier and a `:` begin a label (C17 6.8.1), and a
+    /// character constant or a string literal (6.4.4.4, 6.4.5) begins an
+    /// expression this parser does not read.
+    fn refuse_unread(&mut self, at: Position, diagnostics: &mut DiagnosticSink) -> bool {
+        let unread = match self.peek().kind {
+            TokenKind::Keyword(keyword) => unread_keyword(keyword, at),
+            TokenKind::Identifier
+                if at == Position::Statement
+                    && self.peek_at(1).kind == TokenKind::Punct(Punct::Colon) =>
+            {
+                Some(Unread {
+                    what: "a label",
+                    clause: "6.8.1",
+                })
+            }
+            TokenKind::Character if at == Position::Expression => Some(Unread {
+                what: "a character constant",
+                clause: "6.4.4.4",
+            }),
+            TokenKind::String if at == Position::Expression => Some(Unread {
+                what: "a string literal",
+                clause: "6.4.5",
+            }),
+            _ => None,
+        };
+        let Some(unread) = unread else {
+            return false;
+        };
+        self.report_unread(unread, diagnostics);
+        true
+    }
+
+    /// The report [`UNREAD`] makes, at the token here, in one wording for
+    /// every construct.
+    fn report_unread(&mut self, unread: Unread, diagnostics: &mut DiagnosticSink) -> Span {
+        self.report_noted(
+            UNREAD,
+            format!("{} is not read yet", unread.what),
+            "valid C, which this compiler does not read yet",
+            format!(
+                "C17 {} makes it valid; this compiler does not read it yet",
+                unread.clause
+            ),
+            diagnostics,
+        )
     }
 
     /// Report one, unless something already has.

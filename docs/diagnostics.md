@@ -47,7 +47,7 @@ records why the prefix is this one and what was rejected.
 |---|---|---|
 | `SC00xx` | not a topic: examples and tests, never emitted by the compiler | `SC0001` |
 | `SC01xx` | lexical, what a character or a token is | `SC0101`, `SC0102`, `SC0103`, `SC0104`, `SC0105`, `SC0106`, `SC0107`, `SC0108` |
-| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206` |
+| `SC02xx` | syntax, what a sequence of tokens is | `SC0201`, `SC0202`, `SC0203`, `SC0204`, `SC0205`, `SC0206`, `SC0207` |
 | `SC03xx` | names and types | `SC0301`, `SC0302`, `SC0303`, `SC0304`, `SC0305`, `SC0306`, `SC0307`, `SC0308`, `SC0309`, `SC0310`, `SC0311`, `SC0312`, `SC0313`, `SC0314`, `SC0315`, `SC0316`, `SC0317`, `SC0318` |
 | `SC04xx` | memory | `SC0401`, `SC0402`, `SC0403`, `SC0404`, `SC0405`, `SC0406`, `SC0407`, `SC0408` |
 | `SC05xx` | lifetime | none yet |
@@ -319,6 +319,22 @@ This is written here rather than only beside the code because a boundary a user
 cannot find is one they will discover by being wrong about it, and
 [`safety-model.md`](safety-model.md#safe-unsafe-unknown) is clear that silence
 is the most expensive answer this compiler gives.
+
+**`SC0207` is valid C the parser does not read yet, and `SC0201` is a
+sequence of tokens that is not C.** The two are told apart where the parse
+failed, from the token there and at most the one after it: `switch` where a
+statement begins is C this compiler has not been taught, and `case` with no
+`switch` around it breaks C17 6.8.1 p2's constraint. A reader who meets the
+first has nothing to fix in their file, and the code is how they can tell
+without reading the message. The lexer's `SC0107` is the same refusal one stage
+earlier, and a braced initializer keeps the `SC0203` it was given first.
+
+A bit-field and an anonymous member were reported as "not read yet" under
+`SC0201` before `SC0207` existed, and moved to it when it did. That is the one
+renumbering the rule below has had. It was taken because leaving them would have
+split one class across two codes, and a code exists so that a class can be
+searched for; what it costs is a suppression list that named `SC0201` for one
+of those two.
 
 `SC00xx` is the exception that keeps the rest honest. A renderer test needs a
 code that means nothing, and a code that means nothing has to come from

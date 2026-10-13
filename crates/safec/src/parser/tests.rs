@@ -405,6 +405,7 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
         ("int x\n", "SC0201"),
         (too_deep.as_str(), "SC0202"),
         ("int x = {1};\n", "SC0203"),
+        ("typedef int T;\n", "SC0207"),
     ] {
         let parsed = parsed(source);
         let reported = parsed
@@ -416,6 +417,148 @@ fn each_syntax_diagnostic_keeps_the_code_it_was_assigned() {
             .collect::<Vec<_>>();
 
         assert_eq!(reported, [code], "{source:?}");
+    }
+}
+
+/// Valid C this parser does not read is told so under `SC0207`, naming the
+/// construct; what is not C at the same position keeps `SC0201`.
+///
+/// One row per keyword in `unread_keyword`, in a position C allows it, and
+/// one per position each kind of keyword is allowed in; then the token pairs
+/// `refuse_unread` and its callers ask about. The second list is the other
+/// side: the same tokens where C forbids them.
+///
+/// Mutations: delete any row of `unread_keyword`, drop a position from one,
+/// or drop any of the label, character, string, cast, `...`, bracket,
+/// `[*]` or pointer-qualifier checks. A row in the first list fails. Add a position a keyword is
+/// not allowed in, or let a `...` come first, or `static` into brackets
+/// outside a parameter; a row in the second list fails.
+#[test]
+fn valid_c_this_parser_does_not_read_is_told_so_and_malformed_c_is_not() {
+    let unread = [
+        ("int main(void) { switch (1) { } }\n", "`switch`"),
+        ("int main(void) { do ; while (0); }\n", "`do`"),
+        ("int main(void) { goto l; }\n", "`goto`"),
+        ("int main(void) { while (1) continue; }\n", "`continue`"),
+        ("int main(void) { while (1) break; }\n", "`break`"),
+        ("typedef int T;\n", "`typedef`"),
+        ("extern int x;\n", "`extern`"),
+        ("static int x;\n", "`static`"),
+        ("_Thread_local int x;\n", "`_Thread_local`"),
+        ("int main(void) { auto int x; }\n", "`auto`"),
+        ("int main(void) { register int x; }\n", "`register`"),
+        ("const int x;\n", "`const`"),
+        ("volatile int x;\n", "`volatile`"),
+        ("int *restrict p;\n", "a qualifier after `*`"),
+        ("int *const p;\n", "a qualifier after `*`"),
+        ("_Atomic int x;\n", "`_Atomic`"),
+        ("short x;\n", "`short`"),
+        ("long x;\n", "`long`"),
+        ("signed x;\n", "`signed`"),
+        ("unsigned x;\n", "`unsigned`"),
+        ("float x;\n", "`float`"),
+        ("double x;\n", "`double`"),
+        ("_Bool x;\n", "`_Bool`"),
+        ("_Complex double x;\n", "`_Complex`"),
+        ("union U { int a; };\n", "`union`"),
+        ("enum E { A };\n", "`enum`"),
+        ("inline int f(void);\n", "`inline`"),
+        ("_Noreturn void f(void);\n", "`_Noreturn`"),
+        ("_Alignas(4) int x;\n", "`_Alignas`"),
+        ("_Static_assert(1, \"x\");\n", "`_Static_assert`"),
+        ("int main(void) { return sizeof(int); }\n", "`sizeof`"),
+        ("int main(void) { return _Alignof(int); }\n", "`_Alignof`"),
+        (
+            "int main(void) { return _Generic(0, int: 1); }\n",
+            "`_Generic`",
+        ),
+        // Each kind of keyword in each other position it is allowed in.
+        ("int main(void) { typedef int T; }\n", "`typedef`"),
+        ("int main(void) { static int x; }\n", "`static`"),
+        ("int main(void) { inline int f(void); }\n", "`inline`"),
+        ("int main(void) { const int x = 0; }\n", "`const`"),
+        ("int main(void) { _Alignas(4) int x; }\n", "`_Alignas`"),
+        (
+            "int main(void) { _Static_assert(1, \"x\"); }\n",
+            "`_Static_assert`",
+        ),
+        ("struct S { const int a; };\n", "`const`"),
+        ("struct S { _Alignas(4) int a; };\n", "`_Alignas`"),
+        (
+            "struct S { _Static_assert(1, \"x\"); int a; };\n",
+            "`_Static_assert`",
+        ),
+        ("void f(const int a);\n", "`const`"),
+        ("void f(register int a);\n", "`register`"),
+        (
+            "int main(void) { for (const int i = 0; i; ) ; }\n",
+            "`const`",
+        ),
+        ("int main(void) { for (auto int i = 0; i; ) ; }\n", "`auto`"),
+        (
+            "int main(void) { for (register int i = 0; i; ) ; }\n",
+            "`register`",
+        ),
+        // The token pairs.
+        ("int main(void) { l: return 0; }\n", "a label"),
+        ("int main(void) { return 'a'; }\n", "a character constant"),
+        ("int main(void) { return \"a\"[0]; }\n", "a string literal"),
+        (
+            "int main(void) { return (int)0; }\n",
+            "a cast or a compound literal",
+        ),
+        (
+            "int main(void) { return (long)0; }\n",
+            "a cast or a compound literal",
+        ),
+        ("int f(int, ...);\n", "a variadic function's `...`"),
+        ("void f(int a[static 2]);\n", "`static` or a qualifier"),
+        ("void f(int a[const 2]);\n", "`static` or a qualifier"),
+        ("void f(int a[*]);\n", "`[*]`"),
+    ];
+    let malformed = [
+        "int main(void) { case 1: return 0; }\n",
+        "int main(void) { default: return 0; }\n",
+        "int main(void) { int x = else; }\n",
+        "int main(void) { if (1) const int y = 0; }\n",
+        "int main(void) { for (static int i = 0; i; ) ; }\n",
+        "void f(typedef int a);\n",
+        "void f(static int a);\n",
+        "struct S { static int a; };\n",
+        "auto int x;\n",
+        "register int x;\n",
+        "int f(...);\n",
+        "int a[static 2];\n",
+        "restrict int *p;\n",
+        "int main(void) { return (register int)0; }\n",
+    ];
+
+    for (source, what) in unread {
+        let parsed = parsed(source);
+        let [reported] = parsed.diagnostics.diagnostics() else {
+            panic!("{source:?}: {:?}", parsed.diagnostics.diagnostics());
+        };
+        assert_eq!(
+            reported.code().map(|code| code.to_string()).as_deref(),
+            Some("SC0207"),
+            "{source:?}: {reported:?}"
+        );
+        assert!(
+            reported.message().starts_with(what),
+            "{source:?}: {:?}",
+            reported.message()
+        );
+    }
+    for source in malformed {
+        let parsed = parsed(source);
+        let codes = parsed
+            .diagnostics
+            .diagnostics()
+            .iter()
+            .filter_map(|diagnostic| diagnostic.code())
+            .map(|code| code.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(codes, ["SC0201"], "{source:?}");
     }
 }
 

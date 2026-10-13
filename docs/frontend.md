@@ -125,14 +125,21 @@ Three more are where the *parser* stopped, and belong here for the same reason.
 | Written | This compiler | `clang` | `clang -pedantic-errors` |
 |---|---|---|---|
 | `int x = {1};` | `error[SC0203]` at the `{` | accepts | accepts |
-| `struct B { int x : 3; };` | `error[SC0201]` at the `:` | accepts | accepts |
-| `struct S { struct { int a; }; };` | `error[SC0201]` at the inner `struct` | accepts | accepts |
+| `struct B { int x : 3; };` | `error[SC0207]` at the `:` | accepts | accepts |
+| `struct S { struct { int a; }; };` | `error[SC0207]` at the inner `struct` | accepts | accepts |
 
 **Each is C and is not implemented.** C17 6.7.2.1 p9 makes a bit-field valid
 and p13 an anonymous member, and neither is read yet. 6.7.9 p11 lets a scalar's initializer be a
 single expression "optionally enclosed in braces", so it is valid with no
 designator and no nested list in it; unwrapping the braces is only correct
 where the declared type is scalar, and the parser does not know the type.
+
+The last two are `SC0207`, which is every construct of this kind: C the parser
+does not read yet, told apart from C it cannot parse where the parse failed.
+`switch`, `typedef`, a cast, a string literal and the rest the parser's module
+comment lists are reported the same way, each naming the clause that makes it
+valid. [`diagnostics.md`](diagnostics.md#what-each-range-holds) records the
+code.
 
 None is a gap the lexer left, which is why they are a table of their own:
 the first three rows are about what a token is, and these are about what a
