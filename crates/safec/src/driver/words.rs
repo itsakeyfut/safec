@@ -474,6 +474,14 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
         // Every reason named, although only `Offset` arrives: the other three
         // come out of `verdict`, which `memory::report::interior` does not
         // call.
+        //
+        // **The named message moves the `may` onto the offset**, the one row
+        // whose named form is not the unnamed one's shape, for the same
+        // reason: the free certainly happens, and what is open is whether
+        // `q` is at the start, which is what the label says too. Kept where
+        // the unnamed form puts it, `` this may free `q`, which is not the
+        // start ``, it would say flatly that `q` is not the start, which is
+        // false wherever the offset is zero.
         (
             Kind::InteriorFree,
             Conclusion::Unknown,
