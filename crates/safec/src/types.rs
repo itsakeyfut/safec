@@ -884,13 +884,33 @@ impl Checker<'_> {
                 // and p14 allows a string literal for an array of character
                 // type. A brace is refused by the parser (`SC0203`) and a
                 // string literal is not read (`SC0207`), so whatever
-                // initializer reaches here is neither.
-                Type::Array { .. } => (
-                    format!(
-                        "`{called}` is an array, and its initializer is not a brace-enclosed list"
-                    ),
-                    "C17 6.7.9 p16",
-                ),
+                // initializer reaches here is neither. Every kind of
+                // expression is named, so that the one a string literal or a
+                // compound literal becomes stops the build here rather than
+                // being refused as this: `char s[] = "abc";` is valid C.
+                Type::Array { .. }
+                    if match ast.expr(init) {
+                        Expr::Number { .. }
+                        | Expr::Identifier { .. }
+                        | Expr::Unary { .. }
+                        | Expr::Binary { .. }
+                        | Expr::Assign { .. }
+                        | Expr::Conditional { .. }
+                        | Expr::Call { .. }
+                        | Expr::Subscript { .. }
+                        | Expr::Member { .. }
+                        | Expr::Comma { .. }
+                        | Expr::Error { .. } => true,
+                    } =>
+                {
+                    (
+                        format!(
+                            "`{called}` is an array, and its initializer is not a brace-enclosed list"
+                        ),
+                        "C17 6.7.9 p16",
+                    )
+                }
+                Type::Array { .. } => continue,
                 Type::Int | Type::Char | Type::Pointer(_) | Type::Struct { .. } => continue,
             };
             diagnostics.report(
