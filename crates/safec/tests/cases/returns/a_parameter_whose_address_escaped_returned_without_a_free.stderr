@@ -1,4 +1,4 @@
-error[SC0406]: this may return a pointer to an allocation that was freed
+error[SC0406]: this may return `p`, which points to an allocation that was freed
    ╭─[ a_parameter_whose_address_escaped_returned_without_a_free.c:3:5 ]
    │
  3 │     return p;

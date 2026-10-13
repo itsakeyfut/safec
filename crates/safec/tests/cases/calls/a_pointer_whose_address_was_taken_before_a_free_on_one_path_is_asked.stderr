@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `a`, which was freed already
     ╭─[ a_pointer_whose_address_was_taken_before_a_free_on_one_path_is_asked.c:13:9 ]
     │
  13 │         free(a);

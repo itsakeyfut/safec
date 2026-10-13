@@ -1,4 +1,4 @@
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this may pass `a`, which points to an allocation that was freed
     ╭─[ a_pointer_handed_to_a_call_the_check_meets_first_is_reported.c:10:13 ]
     │
   6 │     int *a = malloc(4);

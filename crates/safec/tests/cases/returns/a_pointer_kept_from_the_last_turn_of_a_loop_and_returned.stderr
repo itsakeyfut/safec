@@ -1,4 +1,4 @@
-error[SC0406]: this returns a pointer this check stopped following
+error[SC0406]: this returns `prev`, which this check stopped following
     ╭─[ a_pointer_kept_from_the_last_turn_of_a_loop_and_returned.c:12:5 ]
     │
  12 │     return prev;

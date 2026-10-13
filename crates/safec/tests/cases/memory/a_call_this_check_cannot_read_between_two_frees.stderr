@@ -1,4 +1,4 @@
-error[SC0407]: this passes a pointer to an allocation that was freed
+error[SC0407]: this passes `p`, which points to an allocation that was freed
    ╭─[ a_call_this_check_cannot_read_between_two_frees.c:6:5 ]
    │
  5 │     free(p);
@@ -10,7 +10,7 @@ error[SC0407]: this passes a pointer to an allocation that was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: pass a pointer that is still allocated, or do not free this one before passing it
-error[SC0401]: this frees a value that was freed already
+error[SC0401]: this frees `p`, which was freed already
    ╭─[ a_call_this_check_cannot_read_between_two_frees.c:7:5 ]
    │
  5 │     free(p);

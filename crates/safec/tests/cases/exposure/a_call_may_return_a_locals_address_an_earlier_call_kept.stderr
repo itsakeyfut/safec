@@ -1,4 +1,4 @@
-error[SC0401]: this frees a pointer this check stopped following
+error[SC0401]: this frees `r`, which this check stopped following
    ╭─[ a_call_may_return_a_locals_address_an_earlier_call_kept.c:9:5 ]
    │
  9 │     free(r);

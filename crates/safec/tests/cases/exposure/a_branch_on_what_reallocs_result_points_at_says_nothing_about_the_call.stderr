@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_branch_on_what_reallocs_result_points_at_says_nothing_about_the_call.c:9:5 ]
    │
  9 │     free(p);

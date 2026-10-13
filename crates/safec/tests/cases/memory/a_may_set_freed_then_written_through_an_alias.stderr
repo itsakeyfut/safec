@@ -8,7 +8,7 @@ error[SC0407]: this may pass a pointer to where a freed pointer is stored
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: set a pointer stored there to null once it is freed, free it on every path or on none, and keep it out of a call this check cannot read before this one
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
     ╭─[ a_may_set_freed_then_written_through_an_alias.c:12:5 ]
     │
  12 │     free(p);

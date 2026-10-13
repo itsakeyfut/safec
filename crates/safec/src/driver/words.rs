@@ -163,6 +163,17 @@ const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, 
 const DISAGREEMENT_REMEDY: &str = "if it is freed, free it on every path or on none, and keep it \
                                    out of a call this check cannot read in between";
 
+/// A message that names the value it is about, where there is a name, and
+/// the one that names nothing where there is not.
+///
+/// Both written at each row rather than one built from the other, because
+/// the named one is not the other with a word replaced: `` this returns `p`,
+/// which points to an allocation that was freed `` has a clause the unnamed
+/// one does not need.
+fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -> String {
+    name.map_or_else(|| unnamed.to_owned(), named)
+}
+
 /// What a memory check concluded, as what a user reads.
 ///
 /// The check names a conclusion and never reads the policy, so this does not
@@ -170,11 +181,14 @@ const DISAGREEMENT_REMEDY: &str = "if it is freed, free it on every path or on n
 /// severity and `DiagnosticSink` is the one place the policy is applied.
 /// ADR-0001 is why there is one of each.
 ///
-/// The value is not named. `docs/safety-model.md` writes "use of freed value
-/// `p`" and the IR holds no `p`: a local is a type and an index, which is #136.
-/// The caret goes on the call or the use, so the quoted line above it shows
-/// `free(p)` or `*p` and the reader finds the name in their own text.
-pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
+/// **The message names the value where the source wrote it**, `name`, which
+/// the driver looks up from [`memory::Finding::local`]: `docs/safety-model.md`
+/// writes "use of freed value `p`". Where the conclusion is about a temporary
+/// or about a pointer read out of memory there is no name, and the message is
+/// the one that names nothing, since `p[2]` is not a use of `p` and `free(*pp)`
+/// is not a free of `pp`. Only the message: the labels are about other reads,
+/// which the finding does not say the local of.
+pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> Option<Diagnostic> {
     // The label says only as much as the conclusion does, and says it in words
     // nothing else here uses. "freed again" asserts there was a first time,
     // which an unproven result does not know, and reusing the word the other
@@ -216,7 +230,9 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
     {
         (Kind::DoubleFree, Conclusion::Unsafe, _) => (
             DOUBLE_FREE,
-            "this frees a value that was freed already",
+            said(name, "this frees a value that was freed already", |name| {
+                format!("this frees `{name}`, which was freed already")
+            }),
             "freed again here",
             "remove one of the two frees, or take this one off the path that reaches the first",
         ),
@@ -224,7 +240,11 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             let (label, remedy) = lost_words(reason);
             (
                 DOUBLE_FREE,
-                "this frees a pointer this check stopped following",
+                said(
+                    name,
+                    "this frees a pointer this check stopped following",
+                    |name| format!("this frees `{name}`, which this check stopped following"),
+                ),
                 label,
                 remedy,
             )
@@ -254,13 +274,19 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             Some(Unproven::Disagreement | Unproven::Unsequenced | Unproven::Offset) | None,
         ) => (
             DOUBLE_FREE,
-            "this may free a value that was freed already",
+            said(
+                name,
+                "this may free a value that was freed already",
+                |name| format!("this may free `{name}`, which was freed already"),
+            ),
             "may free it again here",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::UseAfterFree, Conclusion::Unsafe, _) => (
             USE_AFTER_FREE,
-            "this uses a value after it was freed",
+            said(name, "this uses a value after it was freed", |name| {
+                format!("this uses `{name}` after it was freed")
+            }),
             "used here",
             "move the free after this use, or do not free here",
         ),
@@ -268,14 +294,20 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             let (label, remedy) = lost_words(reason);
             (
                 USE_AFTER_FREE,
-                "this uses a pointer this check stopped following",
+                said(
+                    name,
+                    "this uses a pointer this check stopped following",
+                    |name| format!("this uses `{name}`, which this check stopped following"),
+                ),
                 label,
                 remedy,
             )
         }
         (Kind::UseAfterFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
             USE_AFTER_FREE,
-            "this may use a value after it was freed",
+            said(name, "this may use a value after it was freed", |name| {
+                format!("this may use `{name}` after it was freed")
+            }),
             "used here, perhaps after the free",
             UNSEQUENCED_REMEDY,
         ),
@@ -285,13 +317,21 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             Some(Unproven::Disagreement | Unproven::Offset) | None,
         ) => (
             USE_AFTER_FREE,
-            "this may use a value after it was freed",
+            said(name, "this may use a value after it was freed", |name| {
+                format!("this may use `{name}` after it was freed")
+            }),
             "used here, perhaps after the free",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::ReturnAfterFree, Conclusion::Unsafe, _) => (
             RETURN_AFTER_FREE,
-            "this returns a pointer to an allocation that was freed",
+            said(
+                name,
+                "this returns a pointer to an allocation that was freed",
+                |name| {
+                    format!("this returns `{name}`, which points to an allocation that was freed")
+                },
+            ),
             "returned here",
             "return a pointer that is still allocated, or do not free this one before returning it",
         ),
@@ -299,7 +339,11 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             let (label, remedy) = lost_words(reason);
             (
                 RETURN_AFTER_FREE,
-                "this returns a pointer this check stopped following",
+                said(
+                    name,
+                    "this returns a pointer this check stopped following",
+                    |name| format!("this returns `{name}`, which this check stopped following"),
+                ),
                 label,
                 remedy,
             )
@@ -315,13 +359,27 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             Some(Unproven::Disagreement | Unproven::Unsequenced | Unproven::Offset) | None,
         ) => (
             RETURN_AFTER_FREE,
-            "this may return a pointer to an allocation that was freed",
+            said(
+                name,
+                "this may return a pointer to an allocation that was freed",
+                |name| {
+                    format!(
+                        "this may return `{name}`, which points to an allocation that was freed"
+                    )
+                },
+            ),
             "returned here, perhaps after the free",
             DISAGREEMENT_REMEDY,
         ),
         (Kind::ArgumentAfterFree, Conclusion::Unsafe, _) => (
             ARGUMENT_AFTER_FREE,
-            "this passes a pointer to an allocation that was freed",
+            said(
+                name,
+                "this passes a pointer to an allocation that was freed",
+                |name| {
+                    format!("this passes `{name}`, which points to an allocation that was freed")
+                },
+            ),
             "passed here",
             "pass a pointer that is still allocated, or do not free this one before passing it",
         ),
@@ -329,14 +387,24 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             let (label, remedy) = lost_words(reason);
             (
                 ARGUMENT_AFTER_FREE,
-                "this passes a pointer this check stopped following",
+                said(
+                    name,
+                    "this passes a pointer this check stopped following",
+                    |name| format!("this passes `{name}`, which this check stopped following"),
+                ),
                 label,
                 remedy,
             )
         }
         (Kind::ArgumentAfterFree, Conclusion::Unknown, Some(Unproven::Unsequenced)) => (
             ARGUMENT_AFTER_FREE,
-            "this may pass a pointer to an allocation that was freed",
+            said(
+                name,
+                "this may pass a pointer to an allocation that was freed",
+                |name| {
+                    format!("this may pass `{name}`, which points to an allocation that was freed")
+                },
+            ),
             "passed here, perhaps after the free",
             UNSEQUENCED_REMEDY,
         ),
@@ -349,7 +417,13 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             Some(Unproven::Disagreement | Unproven::Offset) | None,
         ) => (
             ARGUMENT_AFTER_FREE,
-            "this may pass a pointer to an allocation that was freed",
+            said(
+                name,
+                "this may pass a pointer to an allocation that was freed",
+                |name| {
+                    format!("this may pass `{name}`, which points to an allocation that was freed")
+                },
+            ),
             "passed here, perhaps after the free",
             DISAGREEMENT_REMEDY,
         ),
@@ -375,14 +449,18 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             | None,
         ) => (
             ARGUMENT_AFTER_FREE,
-            "this may pass a pointer to where a freed pointer is stored",
+            "this may pass a pointer to where a freed pointer is stored".to_owned(),
             "passed here, perhaps holding a freed pointer behind it",
             "set a pointer stored there to null once it is freed, free it on every path or on \
              none, and keep it out of a call this check cannot read before this one",
         ),
         (Kind::InteriorFree, Conclusion::Unsafe, _) => (
             INTERIOR_FREE,
-            "this frees a pointer that is not the start of an allocation",
+            said(
+                name,
+                "this frees a pointer that is not the start of an allocation",
+                |name| format!("this frees `{name}`, which is not the start of an allocation"),
+            ),
             "not the start of the allocation",
             "free the pointer the allocation was made with, and keep the offset in a variable \
              of its own",
@@ -396,6 +474,14 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
         // Every reason named, although only `Offset` arrives: the other three
         // come out of `verdict`, which `memory::report::interior` does not
         // call.
+        //
+        // **The named message moves the `may` onto the offset**, the one row
+        // whose named form is not the unnamed one's shape, for the same
+        // reason: the free certainly happens, and what is open is whether
+        // `q` is at the start, which is what the label says too. Kept where
+        // the unnamed form puts it, `` this may free `q`, which is not the
+        // start ``, it would say flatly that `q` is not the start, which is
+        // false wherever the offset is zero.
         (
             Kind::InteriorFree,
             Conclusion::Unknown,
@@ -408,14 +494,18 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
             | None,
         ) => (
             INTERIOR_FREE,
-            "this may free a pointer that is not the start of an allocation",
+            said(
+                name,
+                "this may free a pointer that is not the start of an allocation",
+                |name| format!("this frees `{name}`, which may not be the start of an allocation"),
+            ),
             "this offset may not be zero",
             "free the pointer the allocation was made with if this offset can be non-zero",
         ),
         // Neither check answers this and `Diagnostic::concluded` gives `None`
         // for it, so none of the four is read. Written out rather than `_` so
         // that a fourth conclusion has to be answered for here.
-        (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing", "nothing", "nothing"),
+        (_, Conclusion::Safe, _) => (DOUBLE_FREE, "nothing".to_owned(), "nothing", "nothing"),
     };
 
     let mut diagnostic = Diagnostic::concluded(finding.conclusion, message, Remedy::new(remedy))?
@@ -472,8 +562,10 @@ pub(super) fn memory_finding(finding: &memory::Finding) -> Option<Diagnostic> {
 /// one reason, which is that nothing established what the pointer holds. A
 /// reason enum with one variant is a field nobody reads.
 ///
-/// The value is not named, for `memory_finding`'s reason: the IR holds no `p`,
-/// which is #136, and the caret's quoted line shows the reader their own text.
+/// The value is not named yet, although the IR now holds the name: one finding
+/// here is about every place one element dereferences, so `*p + *q` has no one
+/// name to give (#466). The caret's quoted line shows the reader their own
+/// text.
 pub(super) fn nullability_finding(finding: &nullability::Finding) -> Option<Diagnostic> {
     // The unproven row does not say "may be null" of the *pointer* and then
     // blame the dereference: what this check failed to establish is that the

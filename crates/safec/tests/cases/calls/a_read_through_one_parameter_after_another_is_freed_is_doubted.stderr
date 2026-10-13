@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `a` after it was freed
    ╭─[ a_read_through_one_parameter_after_another_is_freed_is_doubted.c:8:5 ]
    │
  8 │     return *a;

@@ -199,6 +199,18 @@ happened. The code does not change: the reader who greps `SC0401` is looking
 for everything this check said about freeing, and where it gave up is part of
 that.
 
+**Where the conclusion is about a local the source wrote, the message names
+it**: `` this may free `p`, which was freed already ``, `` this frees `p`, which
+this check stopped following ``. The words quoted above are what the message
+says where no written name holds the value: a temporary, as `p[2]` reads, or a
+pointer read out of memory, as `free(*pp)` frees. Only the message names it,
+because the labels beside it may be about a read through another local, as a
+free through `q` is beside a use through `p`. One named form is not the
+unnamed one's shape: an interior free that may not be at the start reads
+`` this frees `q`, which may not be the start of an allocation ``, because the
+free is certain and the offset is what is open. The nullability check's
+messages name nothing yet (#466).
+
 **What that third one no longer swallows is a null this check could have
 proved.** C17 7.22.3.3 p2 defines `free` of a null pointer as doing nothing, so
 these two programs are the same program:

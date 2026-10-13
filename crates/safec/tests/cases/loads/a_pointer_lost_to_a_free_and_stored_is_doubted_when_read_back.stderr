@@ -1,4 +1,4 @@
-warning[SC0402]: this uses a pointer this check stopped following
+warning[SC0402]: this uses `q`, which this check stopped following
     ╭─[ a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back.c:23:13 ]
     │
  23 │             return *q;

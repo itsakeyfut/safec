@@ -1,4 +1,4 @@
-error[SC0401]: this frees a value that was freed already
+error[SC0401]: this frees `p`, which was freed already
    ╭─[ a_double_free_in_one_expression_does_not_turn_on_the_order.c:5:29 ]
    │
  4 │     int *p = malloc(4);

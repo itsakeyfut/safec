@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
    ╭─[ two_parameter_lengths_are_not_ordered_against_each_other.c:3:31 ]
    │
  3 │ int f(int * _Nonnull p, int b[*p], int a[(free(p), 1)]) {

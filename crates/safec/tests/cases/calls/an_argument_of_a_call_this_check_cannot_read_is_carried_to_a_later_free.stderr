@@ -1,4 +1,4 @@
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this may pass `a`, which points to an allocation that was freed
     ╭─[ an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:12 ]
     │
  10 │     return g(a) + (free(a), 0);
@@ -11,7 +11,7 @@ error[SC0407]: this may pass a pointer to an allocation that was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `a`, which was freed already
     ╭─[ an_argument_of_a_call_this_check_cannot_read_is_carried_to_a_later_free.c:10:20 ]
     │
  10 │     return g(a) + (free(a), 0);

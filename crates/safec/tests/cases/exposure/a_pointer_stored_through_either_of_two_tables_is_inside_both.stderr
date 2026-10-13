@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
     ╭─[ a_pointer_stored_through_either_of_two_tables_is_inside_both.c:25:5 ]
     │
  25 │     return *p;

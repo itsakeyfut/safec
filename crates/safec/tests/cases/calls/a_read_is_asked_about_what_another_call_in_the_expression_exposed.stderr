@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `a` after it was freed
     ╭─[ a_read_is_asked_about_what_another_call_in_the_expression_exposed.c:13:10 ]
     │
   8 │     int *a = malloc(4);

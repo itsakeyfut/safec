@@ -1,4 +1,4 @@
-error[SC0401]: this frees a pointer this check stopped following
+error[SC0401]: this frees `node`, which this check stopped following
    ╭─[ a_constructor_handed_a_locals_address_is_doubted.c:7:5 ]
    │
  7 │     free(node);

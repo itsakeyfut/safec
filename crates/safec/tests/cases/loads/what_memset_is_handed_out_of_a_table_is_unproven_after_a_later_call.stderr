@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
     ╭─[ what_memset_is_handed_out_of_a_table_is_unproven_after_a_later_call.c:17:5 ]
     │
  17 │     return *p;

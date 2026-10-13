@@ -8,7 +8,7 @@ warning[SC0407]: this passes a pointer this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0401]: this may free a value that was freed already
+warning[SC0401]: this may free `p`, which was freed already
     ╭─[ a_pointer_to_a_local_this_check_lost_handed_on_through_it_is_doubted.c:19:9 ]
     │
  19 │         free(p);

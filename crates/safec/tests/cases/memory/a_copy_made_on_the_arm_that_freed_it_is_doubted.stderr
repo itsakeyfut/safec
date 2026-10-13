@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `q` after it was freed
     ╭─[ a_copy_made_on_the_arm_that_freed_it_is_doubted.c:24:9 ]
     │
  24 │         return *q;

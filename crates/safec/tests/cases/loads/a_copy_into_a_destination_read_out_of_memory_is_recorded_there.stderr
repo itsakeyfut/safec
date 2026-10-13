@@ -1,4 +1,4 @@
-warning[SC0402]: this may use a value after it was freed
+warning[SC0402]: this may use `q` after it was freed
     ╭─[ a_copy_into_a_destination_read_out_of_memory_is_recorded_there.c:39:5 ]
     │
  39 │     return *q;

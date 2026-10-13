@@ -1,4 +1,4 @@
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `old`, which this check stopped following
     ╭─[ a_pointer_stored_last_turn_that_a_call_may_have_freed_is_doubted_after_the_loop_allocates_again.c:19:17 ]
     │
  19 │                 return *old;

@@ -1,4 +1,4 @@
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `keep`, which this check stopped following
    ╭─[ a_pointer_saved_across_a_loop_that_allocates_again.c:9:13 ]
    │
  9 │             *keep = 1;

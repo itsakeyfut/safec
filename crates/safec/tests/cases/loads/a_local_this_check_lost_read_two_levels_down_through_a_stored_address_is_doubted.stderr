@@ -1,4 +1,4 @@
-warning[SC0402]: this uses a pointer this check stopped following
+warning[SC0402]: this uses `q`, which this check stopped following
     ╭─[ a_local_this_check_lost_read_two_levels_down_through_a_stored_address_is_doubted.c:24:13 ]
     │
  24 │             return *q;

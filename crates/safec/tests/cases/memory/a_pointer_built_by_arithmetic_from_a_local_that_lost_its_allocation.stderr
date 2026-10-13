@@ -1,4 +1,4 @@
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `made`, which this check stopped following
     ╭─[ a_pointer_built_by_arithmetic_from_a_local_that_lost_its_allocation.c:11:5 ]
     │
  11 │     *made = 1;

@@ -1,4 +1,4 @@
-error[SC0402]: this uses a value after it was freed
+error[SC0402]: this uses `p` after it was freed
    ╭─[ a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:9 ]
    │
  4 │     int *p = malloc(4);
@@ -14,7 +14,7 @@ error[SC0402]: this uses a value after it was freed
 ───╯
   = note: this check belongs to safety level 1
   = help: move the free after this use, or do not free here
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
    ╭─[ a_freed_read_and_an_unproven_one_in_one_or_are_reported_apart.c:7:24 ]
    │
  7 │     if (*p || (q = &p, *p)) { return 1; }

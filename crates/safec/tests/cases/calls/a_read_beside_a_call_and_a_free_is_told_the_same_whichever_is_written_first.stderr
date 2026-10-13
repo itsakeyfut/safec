@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
    ╭─[ a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:13 ]
    │
  9 │     int x = g(*p) + h(p) + (free(p), 0);
@@ -11,7 +11,7 @@ error[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this may pass `p`, which points to an allocation that was freed
    ╭─[ a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:21 ]
    │
  9 │     int x = g(*p) + h(p) + (free(p), 0);
@@ -24,7 +24,7 @@ error[SC0407]: this may pass a pointer to an allocation that was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:9:29 ]
    │
  9 │     int x = g(*p) + h(p) + (free(p), 0);
@@ -34,7 +34,7 @@ error[SC0401]: this may free a value that was freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
     ╭─[ a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:13 ]
     │
  17 │     int x = g(*p) + (free(p), 0) + h(p);
@@ -47,7 +47,7 @@ error[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: put the free and this in separate statements, so that C orders one before the other
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
     ╭─[ a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:22 ]
     │
  17 │     int x = g(*p) + (free(p), 0) + h(p);
@@ -57,7 +57,7 @@ error[SC0401]: this may free a value that was freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this may pass `p`, which points to an allocation that was freed
     ╭─[ a_read_beside_a_call_and_a_free_is_told_the_same_whichever_is_written_first.c:17:36 ]
     │
  17 │     int x = g(*p) + (free(p), 0) + h(p);

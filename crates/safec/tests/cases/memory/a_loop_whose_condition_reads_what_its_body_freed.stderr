@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
    ╭─[ a_loop_whose_condition_reads_what_its_body_freed.c:5:12 ]
    │
  5 │     while (*p) { free(p); }
@@ -8,7 +8,7 @@ error[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_loop_whose_condition_reads_what_its_body_freed.c:5:18 ]
    │
  5 │     while (*p) { free(p); }

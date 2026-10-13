@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
     ╭─[ a_pointer_freed_on_one_arm_and_read_back_through_its_address_is_doubted.c:11:9 ]
     │
  11 │         free(p);

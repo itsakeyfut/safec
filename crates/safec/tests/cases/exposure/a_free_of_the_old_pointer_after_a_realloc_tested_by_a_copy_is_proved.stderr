@@ -1,4 +1,4 @@
-error[SC0401]: this frees a value that was freed already
+error[SC0401]: this frees `p`, which was freed already
     ╭─[ a_free_of_the_old_pointer_after_a_realloc_tested_by_a_copy_is_proved.c:12:9 ]
     │
   6 │     int *p = malloc(4);

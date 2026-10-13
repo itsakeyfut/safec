@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
    ╭─[ a_pointer_replaced_through_its_alias_after_a_free.c:7:5 ]
    │
  7 │     free(p);
@@ -8,7 +8,7 @@ error[SC0401]: this may free a value that was freed already
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `p`, which this check stopped following
    ╭─[ a_pointer_replaced_through_its_alias_after_a_free.c:9:5 ]
    │
  9 │     *p = 1;

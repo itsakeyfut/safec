@@ -1,4 +1,4 @@
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `q`, which was freed already
    ╭─[ an_allocation_given_to_an_escaped_local_after_the_escape.c:8:5 ]
    │
  8 │     free(q);

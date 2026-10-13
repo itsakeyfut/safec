@@ -1,4 +1,4 @@
-error[SC0402]: this uses a pointer this check stopped following
+error[SC0402]: this uses `p`, which this check stopped following
    ╭─[ a_pointer_written_through_an_alias_this_check_follows.c:7:5 ]
    │
  7 │     *p = 1;

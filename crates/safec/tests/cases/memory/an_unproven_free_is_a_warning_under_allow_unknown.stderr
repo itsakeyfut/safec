@@ -1,4 +1,4 @@
-warning[SC0401]: this may free a value that was freed already
+warning[SC0401]: this may free `p`, which was freed already
    ╭─[ an_unproven_free_is_a_warning_under_allow_unknown.c:5:5 ]
    │
  5 │     free(p);

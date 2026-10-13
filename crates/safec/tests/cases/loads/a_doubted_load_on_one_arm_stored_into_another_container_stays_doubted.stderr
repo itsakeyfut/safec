@@ -1,4 +1,4 @@
-warning[SC0402]: this uses a pointer this check stopped following
+warning[SC0402]: this uses `q`, which this check stopped following
     ╭─[ a_doubted_load_on_one_arm_stored_into_another_container_stays_doubted.c:38:13 ]
     │
  38 │             return *q;

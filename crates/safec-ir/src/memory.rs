@@ -54,7 +54,9 @@ mod transfer;
 use crate::analysis::Conclusion;
 use crate::cfg::Cfg;
 use crate::dataflow::{Analysis, solve};
-use crate::ir::{Element, FuncId, Operand, Place, Rvalue, Terminator, TranslationUnit, Ty};
+use crate::ir::{
+    Element, FuncId, LocalId, Operand, Place, Rvalue, Terminator, TranslationUnit, Ty,
+};
 use crate::nullability::{self};
 use crate::source::{SourceMap, Span};
 
@@ -129,6 +131,22 @@ pub struct Finding {
     /// Not the place's own span, which a [`Place`] does not have: the element's
     /// or the terminator's.
     pub at: Span,
+    /// The local whose own value this conclusion is about, temporary or not.
+    ///
+    /// `None` where it is about something no local holds: a pointer read out
+    /// of memory, at a deeper level of a dereference or as `free(*pp)`'s
+    /// argument, and what [`Kind::FreedBehindArgument`] finds behind the
+    /// pointer it was handed. Whether the source wrote the local is
+    /// [`Function::name_of`]'s to answer and not this check's, so a temporary
+    /// is `Some` here and unnamed there.
+    ///
+    /// **About the caret and nothing else.** `int *q = p; free(q); return *p;`
+    /// is about `p`, read through at the caret, while its `freed here` is a
+    /// free through `q`: the labels beside it are about other reads, and
+    /// nothing here says which local each of those went through.
+    ///
+    /// [`Function::name_of`]: crate::ir::Function::name_of
+    pub local: Option<LocalId>,
     /// The earliest free reaching here, where the check knows which one it was.
     ///
     /// `None` for most `Unknown`s: what usually makes one unknown is that the

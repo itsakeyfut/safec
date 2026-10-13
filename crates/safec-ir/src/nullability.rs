@@ -934,9 +934,10 @@ fn met(dereferenced: Option<(Span, Vec<&Place>)>, value: &mut [Nullness]) {
 
 /// One finding for one element, naming the worst of what it dereferences.
 ///
-/// Not one per place: the words a reader is given do not name the value, which
-/// is #136, so two findings at one caret are two diagnostics nobody can tell
-/// apart. The worst rather than the first, because a proved null dereference
+/// Not one per place: the words a reader is given do not name the value, so
+/// two findings at one caret are two diagnostics nobody can tell apart. The
+/// IR names a local now, and whether this becomes one per place so that each
+/// can be named is #466. The worst rather than the first, because a proved null dereference
 /// beside an unproven one is still a proved null dereference.
 ///
 /// **A place asks two questions where it goes through memory.** Its first

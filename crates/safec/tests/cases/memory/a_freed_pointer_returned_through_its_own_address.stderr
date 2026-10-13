@@ -1,4 +1,4 @@
-error[SC0406]: this returns a pointer to an allocation that was freed
+error[SC0406]: this returns `p`, which points to an allocation that was freed
    ╭─[ a_freed_pointer_returned_through_its_own_address.c:7:5 ]
    │
  5 │     int *p = malloc(4);

@@ -1,4 +1,4 @@
-warning[SC0402]: this may use a value after it was freed
+warning[SC0402]: this may use `slot` after it was freed
     ╭─[ a_write_through_a_locals_address_stored_in_an_allocation_lands_in_the_local.c:22:5 ]
     │
  22 │     return *slot;

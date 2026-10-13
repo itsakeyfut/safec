@@ -1,4 +1,4 @@
-error[SC0407]: this may pass a pointer to an allocation that was freed
+error[SC0407]: this may pass `slot`, which points to an allocation that was freed
     ╭─[ a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:30:5 ]
     │
  30 │     release(slot);
@@ -8,7 +8,7 @@ error[SC0407]: this may pass a pointer to an allocation that was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `p` after it was freed
     ╭─[ a_use_after_free_through_a_pointer_copied_a_byte_at_a_time_into_a_local_is_reported.c:31:5 ]
     │
  31 │     return *p;

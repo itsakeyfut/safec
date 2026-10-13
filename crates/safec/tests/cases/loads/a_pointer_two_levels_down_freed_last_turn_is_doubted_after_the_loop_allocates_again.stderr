@@ -1,4 +1,4 @@
-warning[SC0402]: this uses a pointer this check stopped following
+warning[SC0402]: this uses `q`, which this check stopped following
     ╭─[ a_pointer_two_levels_down_freed_last_turn_is_doubted_after_the_loop_allocates_again.c:25:13 ]
     │
  25 │             return *q;

@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `q` after it was freed
     ╭─[ a_pointer_stored_on_the_arm_that_freed_it_is_doubted.c:22:9 ]
     │
  22 │         r = *q;
@@ -8,7 +8,7 @@ error[SC0402]: this may use a value after it was freed
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
-error[SC0401]: this may free a value that was freed already
+error[SC0401]: this may free `p`, which was freed already
     ╭─[ a_pointer_stored_on_the_arm_that_freed_it_is_doubted.c:24:5 ]
     │
  24 │     free(p);

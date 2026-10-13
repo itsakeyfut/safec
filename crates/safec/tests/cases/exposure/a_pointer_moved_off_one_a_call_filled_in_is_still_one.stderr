@@ -1,4 +1,4 @@
-error[SC0402]: this may use a value after it was freed
+error[SC0402]: this may use `a` after it was freed
     ╭─[ a_pointer_moved_off_one_a_call_filled_in_is_still_one.c:30:5 ]
     │
  30 │     return a[0];
