@@ -472,14 +472,21 @@ fn replacing_a_control_character_does_not_move_the_caret() {
     );
 }
 
-/// `\r` is a line separator to `ariadne`, which breaks on it and never
-/// emits it, so it does not reach a terminal and must not be replaced.
+/// A lone `\r` is shown and does not break the line, and a CRLF ending is
+/// left as it was.
 ///
-/// Two things would break if it were. A lone `\r` would stop separating,
-/// putting both statements onto one line, and every file written on Windows
-/// would carry a stray replacement at the end of every line.
+/// The source map breaks lines on `\n` alone, and the token artifact reads
+/// it, so a lone `\r` breaking a line in the rendered copy gave one byte two
+/// positions: this byte is `1:11` to the source map, and was `2:4` in a
+/// header. A `\r` before a `\n` is half of a line ending the source map
+/// breaks on the `\n`, and replacing it would put a stray character at the
+/// end of every line of a file written on Windows.
+///
+/// Mutation: leave a lone `\r` alone in `echoed`. The header says `2:` and
+/// this fails. Mutation: replace every `\r`. The CRLF file shows a stand-in
+/// and this fails.
 #[test]
-fn a_carriage_return_still_separates_lines() {
+fn a_lone_carriage_return_is_shown_and_a_crlf_ending_is_not() {
     let mut sources = SourceMap::new();
     let lone = sources.add_virtual("lone.c", "int a;\rint b;\n");
     let crlf = sources.add_virtual("crlf.c", "int a;\r\nint b;\r\n");
@@ -489,8 +496,8 @@ fn a_carriage_return_still_separates_lines() {
     };
 
     let rendered = render(&sources, &at(lone));
-    assert!(rendered.contains("<lone.c>:2:"), "{rendered:?}");
-    assert!(!rendered.contains(replacement('\r')), "{rendered:?}");
+    assert!(rendered.contains("<lone.c>:1:11"), "{rendered:?}");
+    assert!(rendered.contains(replacement('\r')), "{rendered:?}");
 
     let rendered = render(&sources, &at(crlf));
     assert!(!rendered.contains(replacement('\r')), "{rendered:?}");
@@ -741,4 +748,23 @@ fn both_rendering_paths_colour_the_header_the_same_way() {
         assert!(first_line(&bare).contains('\u{1b}'), "{bare:?}");
         assert_eq!(first_line(&bare), first_line(&anchored), "{severity:?}");
     }
+}
+
+/// A file is copied to be rendered only where its text would otherwise give a
+/// byte a second position, so an ordinary one is not.
+///
+/// ADR-0003 is that a compiler should not copy the source it is compiling to
+/// report on it. A file ending in `\n` is given an empty last line only where
+/// a label sits at its end, and a CRLF file keeps its endings as they are.
+///
+/// Mutation: extend the end of every file that ends in `\n`, whatever `ends`
+/// says. The first assertion fails.
+#[test]
+fn an_ordinary_file_is_not_copied_to_be_rendered() {
+    assert!(matches!(echoed("int a;\n", false), Cow::Borrowed(_)));
+    assert!(matches!(
+        echoed("int a;\r\nint b;\r\n", false),
+        Cow::Borrowed(_)
+    ));
+    assert_eq!(echoed("int a;\n", true), "int a;\n ");
 }

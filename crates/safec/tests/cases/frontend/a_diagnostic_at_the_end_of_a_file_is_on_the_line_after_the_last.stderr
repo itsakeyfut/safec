@@ -1,0 +1,7 @@
+error[SC0201]: expected `;`
+   ╭─[ a_diagnostic_at_the_end_of_a_file_is_on_the_line_after_the_last.c:2:1 ]
+   │
+ 2 │ 
+   │ │ 
+   │ ╰─ `;` is missing here
+───╯
