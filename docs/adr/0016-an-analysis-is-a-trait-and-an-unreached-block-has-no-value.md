@@ -188,17 +188,23 @@ later loop could be walked before an earlier one had settled, and was walked
 again for every step the earlier one took: measured on the memory check, twenty
 loops in sequence took 4698 walks of 81 blocks, and forty took 34598 of 161.
 Draining a set by reverse postorder position alone left those counts exactly
-where they were, measured. `Cfg::drain` is the order now: every strongly
-connected component contiguous, the components in topological order, reverse
-postorder within one. The worklist is a set of positions in it, taken from the
-front, so a component is empty before the next is started. The same forty
-loops take 241 walks.
+where they were, measured. `Cfg::drain` is the order now: the strongly
+connected components in topological order, each starting with its head, the
+block of it first in reverse postorder, and the rest of it ordered the same way
+again with the head left out. The worklist is a set of positions in it, taken
+from the front, so a loop is empty before anything after it is started, and a
+loop inside another is empty before what follows it inside that one. The same
+forty loops take 241 walks.
 
-What it costs is one more walk of the graph per function, Tarjan's, and a set
-where a stack was. What it does not do is settle a loop nested inside another
-before the outer one's body goes on: within a component the order is still
-reverse postorder. Nothing measured has needed that, and the example
-`crates/safec/examples/growth.rs` is where it would show.
+The second half, ordering a component's inside again, was not in the first
+version, and review measured what that cost: forty loops in sequence inside one
+outer loop are one component, and in reverse postorder took 78883 walks of 164
+blocks and a minute, as many as before any of this. Ordered again inside, the
+same function takes about a third of a second.
+
+What it costs is Tarjan's walk once per loop, over that loop's blocks, and a
+set where a stack was. The example `crates/safec/examples/growth.rs` measures
+four shapes, nested loops among them.
 
 **The order changes how many walks an analysis takes, and for a monotone one
 nothing else.** The memory check's join is not monotone, so this moved its

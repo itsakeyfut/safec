@@ -8,13 +8,14 @@
 //!
 //! - **one loop**, every write in its body;
 //! - **loops in sequence**, one loop per write;
-//! - **branches in a loop**, every write behind its own `if`.
+//! - **branches in a loop**, every write behind its own `if`;
+//! - **loops in sequence in a loop**, the second shape inside one more loop.
 //!
 //! Each shape stands for a way the walk can grow. The first visits each block
 //! about once, so what it measures is the cost of one visit, which grows with
-//! the value. The other two are the shapes whose visits grew faster than the
+//! the value. The other three are the shapes whose visits grew faster than the
 //! blocks did while the solver could walk a later loop before an earlier one
-//! had settled. See ADR-0016.
+//! had settled, the last of them inside a loop of its own. See ADR-0016.
 //!
 //! **It asserts nothing.** A time is a property of the machine it was taken
 //! on, so this is a measurement to repeat rather than a test, and the guard on
@@ -39,16 +40,23 @@ enum Shape {
     OneLoop,
     Sequence,
     Branches,
+    NestedSequence,
 }
 
 impl Shape {
-    const ALL: [Shape; 3] = [Shape::OneLoop, Shape::Sequence, Shape::Branches];
+    const ALL: [Shape; 4] = [
+        Shape::OneLoop,
+        Shape::Sequence,
+        Shape::Branches,
+        Shape::NestedSequence,
+    ];
 
     fn name(self) -> &'static str {
         match self {
             Shape::OneLoop => "one loop",
             Shape::Sequence => "loops in sequence",
             Shape::Branches => "branches in a loop",
+            Shape::NestedSequence => "loops in sequence in a loop",
         }
     }
 
@@ -79,6 +87,14 @@ impl Shape {
                 c.push_str("    while (c) {\n");
                 for k in 0..n {
                     writeln!(c, "        if (c) {{ *q{k} = p{k}; }}").expect("writing to a string");
+                }
+                c.push_str("        c = c - 1;\n    }\n");
+            }
+            Shape::NestedSequence => {
+                c.push_str("    while (c) {\n");
+                for k in 0..n {
+                    writeln!(c, "        while (c) {{ *q{k} = p{k}; c = c - 1; }}")
+                        .expect("writing to a string");
                 }
                 c.push_str("        c = c - 1;\n    }\n");
             }

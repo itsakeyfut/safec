@@ -1687,3 +1687,68 @@ fn a_sequence_of_loops_is_walked_a_bounded_number_of_times_per_block() {
         function.blocks().len(),
     );
 }
+
+/// The same twenty loops inside one outer loop, which makes all of them one
+/// strongly connected component.
+///
+/// Draining a component in reverse postorder would leave the inner loops to
+/// interleave just as the loops of the test above did before the drain order
+/// existed. Inside a component the order starts again with its head left out,
+/// so each inner loop settles before the next, and the walk stays linear.
+/// Measured: 53 walks of 44 blocks.
+///
+/// Mutation: have `components` put a component's blocks into the drain in
+/// reverse postorder rather than ordering what follows its head again.
+/// Measured at 136 walks, and this fails.
+#[test]
+fn loops_in_sequence_inside_a_loop_are_walked_a_bounded_number_of_times_per_block() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let outer = function.reserve_block();
+    let loops: Vec<(BlockId, BlockId)> = (0..20)
+        .map(|_| (function.reserve_block(), function.reserve_block()))
+        .collect();
+    let latch = function.reserve_block();
+    let exit = function.reserve_block();
+
+    let branch = |then, otherwise| Block {
+        elements: vec![],
+        terminator: Terminator::Branch {
+            condition: Operand::Constant(1),
+            then,
+            otherwise,
+            origin,
+        },
+    };
+    function.fill_block(entry, goto(outer, vec![]));
+    function.fill_block(outer, branch(loops[0].0, exit));
+    for (k, &(header, body)) in loops.iter().enumerate() {
+        let after = loops.get(k + 1).map_or(latch, |&(next, _)| next);
+        function.fill_block(header, branch(body, after));
+        function.fill_block(
+            body,
+            goto(header, vec![Element::StorageDead { origin, local: a }]),
+        );
+    }
+    function.fill_block(latch, goto(outer, vec![]));
+    function.fill_block(exit, returns());
+
+    let cfg = Cfg::of(&function);
+    let tallied = Tallied {
+        counting: Counting(function.locals().len()),
+        walks: std::cell::Cell::new(0),
+    };
+    let solution = solve(&tallied, &function, &cfg);
+
+    assert_eq!(solution.value(exit), Some(&vec![4, 0]));
+    assert!(
+        tallied.walks.get() <= 2 * function.blocks().len(),
+        "{} walks of {} blocks",
+        tallied.walks.get(),
+        function.blocks().len(),
+    );
+}

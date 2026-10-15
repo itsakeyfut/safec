@@ -47,11 +47,13 @@ pub struct Cfg {
     /// would make every caller filter, and the first that forgot would join a
     /// bottom into a fixpoint and answer that nothing is known anywhere.
     predecessors: Vec<Vec<BlockId>>,
-    /// The order [`crate::dataflow::solve`] drains its worklist in: every loop
-    /// before anything after it, and within one, the order of `order`.
+    /// The order [`crate::dataflow::solve`] drains its worklist in: every loop,
+    /// nested ones included, before anything after it.
     ///
-    /// Each strongly connected component's blocks are contiguous, and the
-    /// components come in topological order. `order` alone does not give that:
+    /// Each loop's blocks are contiguous and start with its head, the loops and
+    /// the blocks outside them come in topological order, and inside a loop the
+    /// same holds for what is left once its head is taken out. `order` alone
+    /// does not give that:
     /// a reverse postorder puts a loop's head before its body and before its
     /// exit, and says nothing about which of those two comes first, so a later
     /// loop can come before an earlier loop's body. A walk taking blocks in
@@ -194,14 +196,20 @@ impl Cfg {
     }
 }
 
-/// The reachable blocks with every strongly connected component contiguous,
-/// the components in topological order, and the blocks of one in the order
-/// `order` gives them.
+/// The reachable blocks in an order where every loop, nested ones included,
+/// has its blocks together and comes before anything after it.
 ///
-/// Tarjan's algorithm, and iteratively for the reason [`Cfg::of`] gives for its
-/// own walk: how deep the graph goes is bounded by nothing. Tarjan finishes a
-/// component only after every component it reaches, so they come out last
-/// first and are reversed at the end.
+/// The strongly connected components come in topological order. A component
+/// that is a loop starts with its head, the block of it that comes first in
+/// `order`, and the rest of it is ordered the same way again with the head
+/// left out, so a loop inside it is a component of that rest and comes before
+/// what follows it inside the outer loop. Without that second step, a loop
+/// holding loops in sequence was one component taken in reverse postorder,
+/// and was walked as often as before this order existed.
+///
+/// What is left to order is kept on a stack rather than recursed into, for the
+/// reason [`Cfg::of`] gives for its own walk: how deeply loops nest is bounded
+/// by nothing. See ADR-0016.
 fn components(function: &Function, order: &[BlockId]) -> Vec<BlockId> {
     let count = function.blocks().len();
     let mut position = vec![usize::MAX; count];
@@ -209,64 +217,139 @@ fn components(function: &Function, order: &[BlockId]) -> Vec<BlockId> {
         position[block.index()] = at;
     }
 
-    // `index` is when the walk first reached a block, and `low` the earliest
-    // block still on `open` that it reaches back to. A block whose `low` is
-    // its own `index` closes a component: itself and everything above it on
-    // `open`.
-    let mut index = vec![usize::MAX; count];
-    let mut low = vec![0usize; count];
-    let mut on_open = vec![false; count];
-    let mut open = Vec::new();
-    let mut reached = 0;
-    let mut found: Vec<Vec<BlockId>> = Vec::new();
+    let mut drain = Vec::with_capacity(order.len());
+    let mut tarjan = Tarjan::new(count);
+    // Sets of blocks still to be ordered. The top is the one whose blocks come
+    // next in `drain`.
+    let mut pending: Vec<Vec<BlockId>> = vec![order.to_vec()];
 
-    let mut successors = Vec::new();
-    let mut walk = vec![(function.entry(), 0usize)];
-    index[function.entry().index()] = reached;
-    low[function.entry().index()] = reached;
-    reached += 1;
-    open.push(function.entry());
-    on_open[function.entry().index()] = true;
+    while let Some(members) = pending.pop() {
+        let mut found = tarjan.components(function, &members);
 
-    while let Some((block, next)) = walk.pop() {
-        successors.clear();
-        function.block(block).terminator.successors(&mut successors);
-
-        if let Some(&successor) = successors.get(next) {
-            walk.push((block, next + 1));
-            if index[successor.index()] == usize::MAX {
-                index[successor.index()] = reached;
-                low[successor.index()] = reached;
-                reached += 1;
-                open.push(successor);
-                on_open[successor.index()] = true;
-                walk.push((successor, 0));
-            } else if on_open[successor.index()] {
-                low[block.index()] = low[block.index()].min(index[successor.index()]);
-            }
-            continue;
-        }
-
-        // Every way out of `block` has been walked.
-        if let Some(&(parent, _)) = walk.last() {
-            low[parent.index()] = low[parent.index()].min(low[block.index()]);
-        }
-        if low[block.index()] == index[block.index()] {
-            let mut component = Vec::new();
-            loop {
-                let member = open.pop().expect("the block closing a component is open");
-                on_open[member.index()] = false;
-                component.push(member);
-                if member == block {
-                    break;
-                }
-            }
+        if found.len() == 1 {
+            // One component: its head, then the rest of it ordered again.
+            let mut component = found.pop().expect("one component was found");
             component.sort_by_key(|member| position[member.index()]);
-            found.push(component);
+            drain.push(component[0]);
+            if component.len() > 1 {
+                pending.push(component.split_off(1));
+            }
+        } else {
+            // Tarjan finishes a component only after every component it
+            // reaches, so `found` is last first, and pushing it in that order
+            // leaves the first on top.
+            pending.extend(found);
         }
     }
 
-    found.into_iter().rev().flatten().collect()
+    drain
+}
+
+/// Tarjan's algorithm over a subset of a function's blocks, kept between calls
+/// so that ordering the inside of each loop does not allocate a table the size
+/// of the function again.
+struct Tarjan {
+    /// When the walk first reached a block, or `usize::MAX` if it has not.
+    index: Vec<usize>,
+    /// The earliest block still on `open` that a block reaches back to.
+    low: Vec<usize>,
+    /// Whether a block is one of the subset being ordered.
+    inside: Vec<bool>,
+    on_open: Vec<bool>,
+}
+
+impl Tarjan {
+    fn new(count: usize) -> Self {
+        Self {
+            index: vec![usize::MAX; count],
+            low: vec![0; count],
+            inside: vec![false; count],
+            on_open: vec![false; count],
+        }
+    }
+
+    /// The strongly connected components of the graph `members` make, using
+    /// only the edges between two of them, last first.
+    ///
+    /// Every member is a root in turn, in the order given, because once a
+    /// loop's head is left out what remains need not be reachable from any
+    /// one block of it. Iterative, for the reason [`components`] gives.
+    fn components(&mut self, function: &Function, members: &[BlockId]) -> Vec<Vec<BlockId>> {
+        for &member in members {
+            self.index[member.index()] = usize::MAX;
+            self.inside[member.index()] = true;
+        }
+
+        let mut reached = 0;
+        let mut open = Vec::new();
+        let mut found = Vec::new();
+        let mut successors = Vec::new();
+        let mut walk = Vec::new();
+
+        for &root in members {
+            if self.index[root.index()] != usize::MAX {
+                continue;
+            }
+            self.reach(root, &mut reached, &mut open);
+            walk.push((root, 0usize));
+
+            while let Some((block, next)) = walk.pop() {
+                successors.clear();
+                function.block(block).terminator.successors(&mut successors);
+
+                if let Some(&successor) = successors.get(next) {
+                    walk.push((block, next + 1));
+                    if !self.inside[successor.index()] {
+                        // An edge out of the subset: the block it reaches
+                        // has been ordered already, or is ordered later.
+                    } else if self.index[successor.index()] == usize::MAX {
+                        self.reach(successor, &mut reached, &mut open);
+                        walk.push((successor, 0));
+                    } else if self.on_open[successor.index()] {
+                        // Only a block still open shares a component with
+                        // this one. One that is closed is in a component
+                        // already finished, which says nothing about where
+                        // this block belongs.
+                        self.low[block.index()] =
+                            self.low[block.index()].min(self.index[successor.index()]);
+                    }
+                    continue;
+                }
+
+                // Every way out of `block` has been walked, so what it reaches
+                // back to is also what the block that reached it does.
+                if let Some(&(parent, _)) = walk.last() {
+                    self.low[parent.index()] =
+                        self.low[parent.index()].min(self.low[block.index()]);
+                }
+                if self.low[block.index()] == self.index[block.index()] {
+                    let mut component = Vec::new();
+                    loop {
+                        let member = open.pop().expect("the block closing a component is open");
+                        self.on_open[member.index()] = false;
+                        component.push(member);
+                        if member == block {
+                            break;
+                        }
+                    }
+                    found.push(component);
+                }
+            }
+        }
+
+        for &member in members {
+            self.inside[member.index()] = false;
+        }
+        found
+    }
+
+    fn reach(&mut self, block: BlockId, reached: &mut usize, open: &mut Vec<BlockId>) {
+        self.index[block.index()] = *reached;
+        self.low[block.index()] = *reached;
+        *reached += 1;
+        open.push(block);
+        self.on_open[block.index()] = true;
+    }
 }
 
 #[cfg(test)]
@@ -451,6 +534,74 @@ mod tests {
 
         assert!(cfg.drained_at(b2) < cfg.drained_at(b1), "{:?}", cfg.drain());
         assert!(cfg.drained_at(b1) < cfg.drained_at(b3), "{:?}", cfg.drain());
+    }
+
+    /// Inside a loop, a loop drains before what follows it, as it does outside
+    /// one.
+    ///
+    /// Two loops in sequence inside an outer one are all one strongly
+    /// connected component, so ordering components alone would take them in
+    /// reverse postorder, which may put the second inner loop's header before
+    /// the first one's body. The first assertion says it does here, so that
+    /// this keeps meaning something if the walk changes.
+    ///
+    /// Mutation: have `components` put a component's blocks into the drain in
+    /// reverse postorder rather than ordering what follows its head again. The
+    /// second assertion fails.
+    #[test]
+    fn a_loop_inside_a_loop_drains_before_what_follows_it_inside() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        let entry = function.reserve_block();
+        let outer = function.reserve_block();
+        let (first, first_body) = (function.reserve_block(), function.reserve_block());
+        let (second, second_body) = (function.reserve_block(), function.reserve_block());
+        let latch = function.reserve_block();
+        let exit = function.reserve_block();
+
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        function.fill_block(entry, go(outer));
+        function.fill_block(outer, branch(first, exit));
+        function.fill_block(first, branch(first_body, second));
+        function.fill_block(first_body, go(first));
+        function.fill_block(second, branch(second_body, latch));
+        function.fill_block(second_body, go(second));
+        function.fill_block(latch, go(outer));
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+
+        assert!(at(&cfg, second) < at(&cfg, first_body), "{:?}", cfg.order());
+        assert!(
+            cfg.drained_at(first_body) < cfg.drained_at(second),
+            "{:?}",
+            cfg.drain()
+        );
+        assert_eq!(cfg.drained_at(outer), 1, "{:?}", cfg.drain());
+        assert!(
+            cfg.drained_at(second_body) < cfg.drained_at(latch),
+            "{:?}",
+            cfg.drain()
+        );
     }
 
     /// A loop whose back edge leaves from two blocks into its body is one
