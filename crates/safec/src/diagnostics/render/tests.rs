@@ -768,3 +768,25 @@ fn an_ordinary_file_is_not_copied_to_be_rendered() {
     ));
     assert_eq!(echoed("int a;\n", true), "int a;\n ");
 }
+
+/// The end a label sits at is the end of the file its own span names, not of
+/// whichever file was added first.
+///
+/// With two files, a label at the end of the second is on the second's empty
+/// last line, `2:1`, where the source map puts that byte. Asked of the wrong
+/// file, the second is not given that line and the header says `1:7`.
+///
+/// Mutation: record every label's end against the first file in
+/// `SourceMapCache::new`. This fails.
+#[test]
+fn a_label_at_the_end_is_asked_of_the_file_it_names() {
+    let mut sources = SourceMap::new();
+    sources.add_virtual("a.c", "int a;\n");
+    let second = sources.add_virtual("b.c", "int x\n");
+
+    let at_end =
+        Diagnostic::error("boom").with_label(Label::primary(Span::new(second, 6, 6), "here"));
+
+    let rendered = render(&sources, &at_end);
+    assert!(rendered.contains("<b.c>:2:1"), "{rendered:?}");
+}
