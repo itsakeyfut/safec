@@ -284,7 +284,10 @@ programs, rather than something this record decides.
   `a_sequence_of_loops_is_walked_a_bounded_number_of_times_per_block`, which
   counts the walks, and `a_loop_drains_before_what_comes_after_it`, which reads
   the order. Keeping Tarjan's components in the order it finishes them fails
-  the same two.
+  the same two. Putting a component's blocks into the drain in reverse
+  postorder, rather than ordering what follows its head again, fails
+  `loops_in_sequence_inside_a_loop_are_walked_a_bounded_number_of_times_per_block`
+  and `a_loop_inside_a_loop_drains_before_what_follows_it_inside`.
 
 Each of the first four was applied and the named tests observed to fail, and
 so was the last.
