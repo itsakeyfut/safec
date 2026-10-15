@@ -106,7 +106,7 @@ call ([#276](https://github.com/itsakeyfut/safec/issues/276), ADR-0044). The rec
 already has, which is the condition `Held::sites` names for a packed bitset:
 measured on a 456-line function, peak memory went from 485 MB to 711 MB and time
 from 0.49 s to 0.71 s. The bitset is left to
-[#173](https://github.com/itsakeyfut/safec/issues/173), and the number is
+[#479](https://github.com/itsakeyfut/safec/issues/479), and the number is
 written where the table is.
 
 **The library, by name.** `calloc` and `aligned_alloc` are read as `malloc` is,
@@ -302,7 +302,7 @@ transfer, which no C program can show since its size holds no allocation; and `A
   next call: a false report the reader can see, and the one a user will meet
   most.
 * Bad, because the memory check costs about half again in memory and time,
-  until #173.
+  until #479.
 * Bad, because a callee returning what it freed itself is believed (#252,
   reported at the callee's `return` since ADR-0041), so is a call returning
   what an earlier call freed (#379), and

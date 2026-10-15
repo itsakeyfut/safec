@@ -370,7 +370,7 @@ pub(super) struct Held {
     /// **The third square field has arrived**: [`Known::inside`](super::known::Known::inside). Measured on
     /// a 456-line function with 150 allocations, release build, peak memory
     /// went from 485 MB to 711 MB and time from 0.49 s to 0.71 s. The bitset is
-    /// #173's; the number is here so that it is a decision rather than a
+    /// #479's; the number is here so that it is a decision rather than a
     /// discovery. See ADR-0039.
     pub(super) sites: Vec<bool>,
     /// Whether this local may hold an allocation this check can no longer

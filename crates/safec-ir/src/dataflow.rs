@@ -55,6 +55,8 @@
 //!
 //! [ADR-0016]: https://github.com/itsakeyfut/safec/blob/main/docs/adr/0016-an-analysis-is-a-trait-and-an-unreached-block-has-no-value.md
 
+use std::collections::BTreeSet;
+
 use crate::cfg::Cfg;
 use crate::ir::{BlockId, Element, Function, Terminator};
 
@@ -372,11 +374,18 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let mut values: Vec<Option<A::Value>> = (0..function.blocks().len()).map(|_| None).collect();
     values[function.entry().index()] = Some(analysis.on_entry());
 
-    // Reversed, because this is popped from the back: the first pass then comes
-    // out in the order `Cfg` produced, which visits a block after the blocks
-    // that reach it wherever the graph allows one. That is not needed for the
-    // answer to be right, only for it to be reached in fewer passes.
-    let mut worklist: Vec<BlockId> = cfg.order().iter().rev().copied().collect();
+    // Positions in `Cfg::drain`, and the first is always taken next, so a loop
+    // has settled before anything after it is walked. A value that has not
+    // settled is carried into every block after it, each of which is walked
+    // again when it moves. In `Cfg::order`'s order instead, the twenty loops
+    // in sequence of `a_sequence_of_loops_is_walked_a_bounded_number_of_times_per_block`
+    // take 206 walks of 42 blocks rather than 50. A set rather than a stack
+    // also needs no test for a block already waiting.
+    //
+    // For an analysis whose join is monotone the order changes how many walks
+    // it takes and not what it answers. The memory check's is not, which is
+    // #478. See ADR-0016.
+    let mut worklist: BTreeSet<usize> = (0..cfg.drain().len()).collect();
     let mut successors = Vec::new();
 
     // One more than the analysis said it needs, because a block is walked
@@ -389,7 +398,8 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let budget = height.saturating_add(1);
     let mut visits = vec![0usize; function.blocks().len()];
 
-    while let Some(block) = worklist.pop() {
+    while let Some(at) = worklist.pop_first() {
+        let block = cfg.drain()[at];
         // A block can be taken off the list before anything has reached it:
         // the list starts as every reachable block, and the order only puts a
         // block after the blocks that reach it where the graph allows one. It
@@ -485,11 +495,10 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
                 }
             };
 
-            // Already on the list is already going to be walked again, and a
-            // block walked twice for one change is a pass wasted rather than a
-            // wrong answer. The list is one function wide.
-            if changed && !worklist.contains(&successor) {
-                worklist.push(successor);
+            // Already on the list is already going to be walked again, which
+            // a set answers by holding it once.
+            if changed {
+                worklist.insert(cfg.drained_at(successor));
             }
         }
     }
