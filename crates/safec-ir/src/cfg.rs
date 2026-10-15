@@ -398,6 +398,61 @@ mod tests {
         assert!(at(&cfg, header) < at(&cfg, exit), "{:?}", cfg.order());
     }
 
+    /// A block outside a loop that the walk reaches first, through a side exit,
+    /// still drains after the loop.
+    ///
+    /// `b0` and `b2` are a loop, and `b0` also leaves for `b1`, which goes on
+    /// to the exit the loop reaches too. The walk takes `b1` and the exit
+    /// before `b2`, so by the time `b2` reaches the exit, the exit is a
+    /// component already closed. An edge into a closed component says nothing
+    /// about where the block it leaves belongs, which is what Tarjan's test of
+    /// whether the target is still open is for.
+    ///
+    /// Mutation: lower a block's `low` through any edge to a block already
+    /// reached, open or not. `b1` joins the loop's component, drains before
+    /// `b2`, and this fails.
+    #[test]
+    fn a_block_reached_first_through_a_side_exit_drains_after_the_loop() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        let b0 = function.reserve_block();
+        let b1 = function.reserve_block();
+        let b2 = function.reserve_block();
+        let b3 = function.reserve_block();
+
+        let branch = |then, otherwise| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(0),
+                then,
+                otherwise,
+                origin: Origin::Written(span),
+            },
+        };
+        function.fill_block(b0, branch(b2, b1));
+        function.fill_block(
+            b1,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Goto(b3),
+            },
+        );
+        function.fill_block(b2, branch(b3, b0));
+        function.fill_block(
+            b3,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+
+        assert!(cfg.drained_at(b2) < cfg.drained_at(b1), "{:?}", cfg.drain());
+        assert!(cfg.drained_at(b1) < cfg.drained_at(b3), "{:?}", cfg.drain());
+    }
+
     /// A loop whose back edge leaves from two blocks into its body is one
     /// component, and drains before its exit.
     ///
@@ -631,7 +686,9 @@ mod tests {
     /// be a join over a value that never exists.
     ///
     /// Mutation: answer `true` from `reaches`. The two negative assertions
-    /// fail. Seeding the walk from every block, which is the mutation the
+    /// fail. Mutation: start every block's position in `drain` at zero rather
+    /// than past its end. The last assertion fails, and that is what keeps a
+    /// position nothing runs from naming the entry. Seeding the walk from every block, which is the mutation the
     /// design named, cannot be written: this module cannot name a block that
     /// `Function` did not hand it, and `Function` hands out one entry.
     #[test]
@@ -672,6 +729,9 @@ mod tests {
         assert!(!cfg.reaches(stranded));
         assert!(!cfg.reaches(after));
         assert_eq!(cfg.predecessors(after), &[]);
+        assert_eq!(cfg.drain(), &[entry]);
+        assert_eq!(cfg.drained_at(entry), 0);
+        assert_eq!(cfg.drained_at(stranded), usize::MAX);
     }
 
     /// A graph deeper than the stack is still walked.
