@@ -757,8 +757,12 @@ fn both_rendering_paths_colour_the_header_the_same_way() {
 /// report on it. A file ending in `\n` is given an empty last line only where
 /// a label sits at its end, and a CRLF file keeps its endings as they are.
 ///
+/// A file that does not end in `\n` has no line after its last, so a label at
+/// its end is on that last line already and the file is not copied for it.
+///
 /// Mutation: extend the end of every file that ends in `\n`, whatever `ends`
-/// says. The first assertion fails.
+/// says. The first assertion fails. Mutation: extend wherever `ends` says,
+/// whatever the file ends in. The last assertion fails.
 #[test]
 fn an_ordinary_file_is_not_copied_to_be_rendered() {
     assert!(matches!(echoed("int a;\n", false), Cow::Borrowed(_)));
@@ -767,6 +771,7 @@ fn an_ordinary_file_is_not_copied_to_be_rendered() {
         Cow::Borrowed(_)
     ));
     assert_eq!(echoed("int a;\n", true), "int a;\n ");
+    assert!(matches!(echoed("int a;", true), Cow::Borrowed(_)));
 }
 
 /// The end a label sits at is the end of the file its own span names, not of
@@ -822,4 +827,51 @@ fn a_character_with_no_width_is_shown_as_one_with_a_width() {
 
     let rendered = render(&sources, &diagnostic);
     assert!(rendered.contains('┬'), "{rendered:?}");
+}
+
+/// A file is asked to end in an empty line when any label in the call sits at
+/// its end, wherever that label comes and whatever kind it is, and only then.
+///
+/// A label after the one at the end does not take the answer back, a label
+/// whose span runs past the end counts as at it, because it is drawn there,
+/// and one that only finishes at the end starts on a line that exists.
+///
+/// Mutation: assign rather than accumulate into `ends`. The first assertion
+/// fails, and the header of that diagnostic goes back to `1:7`. Mutation: ask
+/// the span unclamped. The second fails. Mutation: ask where the range ends
+/// rather than where it starts. The third fails. Mutation: count primary
+/// labels only. The fourth fails.
+#[test]
+fn which_files_end_in_a_label_is_asked_of_every_label_in_the_call() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("p.c", "int x\n");
+    let ends = |labels: Vec<Label>| {
+        let diagnostic = labels
+            .into_iter()
+            .fold(Diagnostic::error("boom"), Diagnostic::with_label);
+        SourceMapCache::new(&sources, &[diagnostic]).ends
+    };
+
+    assert_eq!(
+        ends(vec![
+            Label::primary(Span::new(file, 6, 6), "end"),
+            Label::secondary(Span::new(file, 0, 3), "start"),
+        ]),
+        [true]
+    );
+    assert_eq!(
+        ends(vec![Label::primary(Span::new(file, 50, 50), "past")]),
+        [true]
+    );
+    assert_eq!(
+        ends(vec![Label::primary(Span::new(file, 0, 6), "whole")]),
+        [false]
+    );
+    assert_eq!(
+        ends(vec![
+            Label::primary(Span::new(file, 0, 3), "start"),
+            Label::secondary(Span::new(file, 6, 6), "end"),
+        ]),
+        [true]
+    );
 }
