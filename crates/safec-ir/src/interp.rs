@@ -23,6 +23,12 @@
 //! told apart either way. `a_pointer_built_from_a_dereference_holds_where_it_pointed`
 //! builds the shape by hand, which is the only side that still can.
 //!
+//! **A pointer to an object whose lifetime has ended is not used, let alone
+//! followed.** C17 6.2.4 p2 makes its value indeterminate, and Annex J.2 lists
+//! using it as undefined, so a copy of one, a test of it and a comparison stop
+//! as a read through it does. The questions are the ones an access asks, asked
+//! once in `operand`, which every use of a value goes through.
+//!
 //! **A frame that returns is gone, and a pointer into it says so.** The stack
 //! is a stack: frames are popped, so the depth is what it costs and a run of
 //! ten million calls costs one frame. What tells a stale pointer from a live
@@ -120,12 +126,10 @@ pub enum Value {
 /// reused, the number is not. The instance does the same for a block entered
 /// again inside one call: the slot is reused, the stamp is not.
 ///
-/// Two pointers to two instances of one local are unequal. That is not a
-/// promise about a C program: one of them points to an object whose lifetime
-/// has ended, C17 6.2.4 p2 makes its value indeterminate, and comparing it is
-/// undefined. This interpreter answers it rather than stopping, because only
-/// an access *through* a pointer asks about the object; a copy, a test and a
-/// comparison of the pointer itself do not, which is #474.
+/// Two pointers to two instances of one local are unequal, and no program
+/// this runs gets to ask: one of them points to an object whose lifetime has
+/// ended, C17 6.2.4 p2 makes its value indeterminate, and `operand` stops a
+/// comparison of it, as it stops every use of one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Location {
     /// How deep in the stack the frame sits.
@@ -320,13 +324,15 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 condition,
                 then,
                 otherwise,
-                origin: _,
+                origin,
             } => {
                 // C17 6.8.4.1 p2: the substatement runs if the expression
                 // compares unequal to zero. A pointer here is a place, and a
                 // place is an object, so it is never the null pointer 6.3.2.3
                 // p3 makes a zero constant into: `if (p)` holds.
-                let taken = match operand(&frames, current, &condition)? {
+                let taken = match operand(&frames, current, &condition)
+                    .map_err(|trap| trap.at(origin.span()))?
+                {
                     Value::Int(0) => otherwise,
                     Value::Int(_) | Value::Pointer(_) => then,
                 };
@@ -659,13 +665,30 @@ fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, 
     fits(computed, ty)
 }
 
-/// What an operand reads.
+/// What an operand reads, or a stop where what it reads is a pointer whose
+/// object's lifetime has ended.
+///
+/// **Every use of a value the IR carries comes through here**: a copy, a
+/// branch's condition, an argument, both operands of a comparison, the operand
+/// of `!`, and a `return` statement's write into the return place, which is a
+/// copy. The hand-off of the return place to the caller is not a use and is
+/// not asked. A bare name evaluated for nothing, `p;` or the left of
+/// `(p, 0)`, is a use C makes undefined for a dead pointer and one the IR does
+/// not carry: the lowering gives it no element, so nothing here sees it. So
+/// this is the one place a pointer's own value is asked about, with the questions [`reached`] asks of a location about to be
+/// accessed, by calling it, so that the rule is written once. A dereference
+/// does not come through here: [`resolve`] follows a pointer by [`load`], and
+/// an access through one is `load`'s and `reached`'s to name.
 fn operand(frames: &[Frame], current: usize, operand: &Operand) -> Result<Value, Trap> {
     match operand {
         Operand::Constant(value) => Ok(Value::Int(*value)),
         Operand::Copy(place) => {
             let at = resolve(frames, current, place)?;
-            load(frames, at)
+            let value = load(frames, at)?;
+            if let Value::Pointer(to) = value {
+                reached(frames, to, "a use of a pointer to")?;
+            }
+            Ok(value)
         }
     }
 }

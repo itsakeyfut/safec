@@ -776,6 +776,213 @@ fn a_pointer_to_an_earlier_entry_of_a_closed_block_is_told_which() {
     }
 }
 
+/// A pointer to a local whose scope has ended is not compared.
+///
+/// C17 6.2.4 p2 makes its value indeterminate once the scope closes, and
+/// Annex J.2 lists using it as undefined, so the comparison stops rather than
+/// answering whether two pointers to two dead locals are the same.
+///
+/// Mutation: have `operand` hand back a pointer without asking `reached` about
+/// it. The run answers 0 and this fails.
+#[test]
+fn a_pointer_to_a_closed_scope_is_not_compared() {
+    let dangling = ran(concat!(
+        "int main(void) {\n",
+        "  int *p; int *q; int t;\n",
+        "  { int x; x = 0; p = &x; }\n",
+        "  { int y; y = 0; q = &y; }\n",
+        "  t = (p == q);\n",
+        "  return t;\n",
+        "}\n",
+    ));
+    let Err(trap) = dangling else {
+        panic!("a comparison of a pointer to a closed scope: {dangling:?}");
+    };
+    assert!(trap.why.starts_with("a use of a pointer to"), "{trap:?}");
+    assert!(trap.why.contains("scope has ended"), "{trap:?}");
+}
+
+/// A pointer to an earlier entry of a block is not copied, even where nothing
+/// is done with the copy.
+///
+/// A copy is a use, so it stops at the copy itself. Nothing after it reads the
+/// copy, so this is the test that holds the copy alone, where the others stop
+/// at a later test or comparison.
+///
+/// Mutation: have `operand` ask `live` alone, not `reached`. The frame is the
+/// same, so the run answers 0 and this fails.
+#[test]
+fn a_pointer_to_an_earlier_entry_is_not_copied() {
+    let stale = ran(concat!(
+        "int main(void) {\n",
+        "  int i; int t; int *p; int *q;\n",
+        "  i = 0; t = 0;\n",
+        "  while (i < 2) {\n",
+        "    { int x; x = 0; if (i) { q = p; } p = &x; }\n",
+        "    i = i + 1;\n",
+        "  }\n",
+        "  return t;\n",
+        "}\n",
+    ));
+    let Err(trap) = stale else {
+        panic!("a copy of a pointer to an earlier entry: {stale:?}");
+    };
+    assert!(trap.why.starts_with("a use of a pointer to"), "{trap:?}");
+    assert!(
+        trap.why.contains("an earlier entry to its block"),
+        "{trap:?}"
+    );
+}
+
+/// A pointer to an earlier entry of a block is not compared with one to the
+/// entry there is now.
+///
+/// Before #86 this answered 1, and after it 0: two answers to a comparison C
+/// leaves undefined. It stops.
+///
+/// Mutation: have `operand` hand back a pointer without asking `reached` about
+/// it. The run answers 0 and this fails.
+#[test]
+fn a_pointer_to_an_earlier_entry_is_not_compared() {
+    let stale = ran(concat!(
+        "int main(void) {\n",
+        "  int i; int t; int *p; int *q;\n",
+        "  i = 0; t = 0;\n",
+        "  while (i < 2) {\n",
+        "    { int x; x = 0; if (i) { q = &x; t = (p == q); } p = &x; }\n",
+        "    i = i + 1;\n",
+        "  }\n",
+        "  return t;\n",
+        "}\n",
+    ));
+    let Err(trap) = stale else {
+        panic!("a comparison with a pointer to an earlier entry: {stale:?}");
+    };
+    assert!(
+        trap.why.contains("an earlier entry to its block"),
+        "{trap:?}"
+    );
+}
+
+/// A pointer whose object is alive is copied, tested and compared.
+///
+/// The guard on the tests above from the other side: a check that refused
+/// every pointer value would stop this as well, and it is defined.
+///
+/// Mutation: have `operand` refuse every pointer. This fails.
+#[test]
+fn a_live_pointer_is_copied_tested_and_compared() {
+    assert_eq!(
+        ran(concat!(
+            "int main(void) {\n",
+            "  int x; int *p; int *q; int t;\n",
+            "  x = 1; p = &x; q = p; t = 0;\n",
+            "  if (q) { t = (p == q); }\n",
+            "  return t;\n",
+            "}\n",
+        )),
+        Ok(Value::Int(1)),
+    );
+}
+
+/// A pointer into a function that has returned is not used, only held.
+///
+/// The frame check reached through a use rather than through an access: the
+/// pointer is compared with zero and never followed.
+///
+/// Mutation: have `operand` hand back a pointer without asking `reached` about
+/// it. The run answers 0 and this fails.
+#[test]
+fn a_pointer_into_a_returned_function_is_not_used() {
+    let dangling = ran(concat!(
+        "int *f(void) { int x; x = 0; return &x; }\n",
+        "int main(void) {\n",
+        "  int *p;\n",
+        "  p = f();\n",
+        "  return p == 0;\n",
+        "}\n",
+    ));
+    let Err(trap) = dangling else {
+        panic!("a use of a pointer into a returned function: {dangling:?}");
+    };
+    assert!(
+        trap.why.contains("a function that has returned"),
+        "{trap:?}"
+    );
+}
+
+/// Every kind of use of a pointer to a closed scope stops, each on its own.
+///
+/// One program per place the interpreter reads a value without following it,
+/// so that each of those places is held by name rather than by a check they
+/// happen to share today: the check is asked once, in `operand`, and any one
+/// of them reading by `load` directly would answer here while the others
+/// still stopped.
+///
+/// Mutation: read the value at any one of the call sites of `operand` without
+/// the check, the branch, an argument, a copy, `!`, or either side of a
+/// comparison. The program for that site answers and this fails, naming it.
+#[test]
+fn every_use_of_a_pointer_to_a_closed_scope_stops() {
+    let uses = [
+        ("a copy", "q = p;"),
+        ("a branch", "if (p) { t = 1; }"),
+        ("a loop's test", "while (p) { t = 1; }"),
+        ("an argument", "t = g(p);"),
+        ("a `!`", "t = !p;"),
+        ("a comparison's left operand", "t = (p != 0);"),
+        ("a comparison's right operand", "t = (0 == p);"),
+        ("a conditional's test", "t = p ? 1 : 2;"),
+    ];
+    for (what, statement) in uses {
+        let program = [
+            "int g(int *a) { return 1; }\n",
+            "int main(void) {\n",
+            "  int *p; int *q; int t;\n",
+            "  t = 0;\n",
+            "  { int x; x = 0; p = &x; }\n",
+            "  ",
+            statement,
+            "\n",
+            "  return t;\n",
+            "}\n",
+        ]
+        .concat();
+        let dangling = ran(&program);
+        let Err(trap) = dangling else {
+            panic!("{what} of a pointer to a closed scope: {dangling:?}");
+        };
+        assert!(
+            trap.why.starts_with("a use of a pointer to"),
+            "{what}: {trap:?}"
+        );
+    }
+}
+
+/// A stop at a branch's condition says where the branch is.
+///
+/// `Trap::at` is documented as set for a branch, and the arm dropped its span:
+/// a run that stopped on `if (p)` said why and not where.
+///
+/// Mutation: drop the `map_err` that attaches the span in the `Branch` arm.
+/// This fails.
+#[test]
+fn a_stop_at_a_branch_says_where_the_branch_is() {
+    let dangling = ran(concat!(
+        "int main(void) {\n",
+        "  int *p; int t;\n",
+        "  t = 0;\n",
+        "  { int x; x = 0; p = &x; }\n",
+        "  if (p) { t = 1; }\n",
+        "  return t;\n",
+        "}\n",
+    ));
+    let Err(trap) = dangling else {
+        panic!("a branch on a pointer to a closed scope: {dangling:?}");
+    };
+    assert!(trap.at.is_some(), "{trap:?}");
+}
+
 /// Storage that is gone and storage nothing has written are two sentences.
 ///
 /// A compiler that exists to say what a program did wrong should not describe
