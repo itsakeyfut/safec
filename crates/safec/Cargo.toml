@@ -17,6 +17,7 @@ safec-ir = { path = "../safec-ir" }
 safec-llvm = { path = "../safec-llvm" }
 clap.workspace = true
 ariadne.workspace = true
+unicode-width.workspace = true
 
 [lints]
 workspace = true

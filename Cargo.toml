@@ -17,6 +17,10 @@ clap = { version = "4.6.6", features = ["derive"] }
 # who followed that link and found it stopped has not found an abandoned crate:
 # 0.6.0 is the newest release, and work has continued on Codeberg since.
 ariadne = "0.6.0"
+# The width `ariadne` measures a character with, so that the renderer can ask
+# the same question of the same table. Kept at the version `ariadne` resolves,
+# which is what makes it the same table rather than a second opinion.
+unicode-width = "0.2.2"
 thiserror = "2.0.20"
 
 [profile.release]

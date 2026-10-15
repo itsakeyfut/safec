@@ -790,3 +790,36 @@ fn a_label_at_the_end_is_asked_of_the_file_it_names() {
     let rendered = render(&sources, &at_end);
     assert!(rendered.contains("<b.c>:2:1"), "{rendered:?}");
 }
+
+/// Every character `ariadne` would give no column is shown as one that has
+/// one, of the same length in bytes, and a marker is drawn under it.
+///
+/// One of each kind a list of invisible characters missed: a soft hyphen, a
+/// combining mark, an invisible operator, a variation selector, and a tag,
+/// which at four bytes is longer than any replacement character. Under the
+/// soft hyphen, `ariadne` drew no `┬` at all.
+///
+/// Mutation: test only U+200B to U+200D, U+2060 and U+FEFF in
+/// `is_zero_width`. The first assertion fails on the soft hyphen, and so does
+/// the last, which asks `ariadne` rather than this module. Mutation: have
+/// `replacement` refuse a four-byte character, as it did. This panics on the
+/// tag.
+#[test]
+fn a_character_with_no_width_is_shown_as_one_with_a_width() {
+    for invisible in ['\u{ad}', '\u{301}', '\u{2061}', '\u{fe0f}', '\u{e0001}'] {
+        let text = format!("int a{invisible}= @;\n");
+        let shown = echoed(&text, false);
+
+        assert!(!shown.contains(invisible), "{invisible:?}: {shown:?}");
+        assert_eq!(shown.len(), text.len(), "{invisible:?}");
+        assert_eq!(shown.chars().count(), text.chars().count(), "{invisible:?}");
+    }
+
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("shy.c", "int a\u{ad}= @;\n");
+    let diagnostic =
+        Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 5, 7), "here"));
+
+    let rendered = render(&sources, &diagnostic);
+    assert!(rendered.contains('┬'), "{rendered:?}");
+}

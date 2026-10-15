@@ -21,6 +21,7 @@ use std::io;
 use std::ops::Range;
 
 use ariadne::{Color, Config, Fmt, IndexType, Label as AriadneLabel, Report, ReportKind, Source};
+use unicode_width::UnicodeWidthChar as _;
 
 use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Remedy, Severity};
 use crate::options::ColorMode;
@@ -466,12 +467,23 @@ fn echoed(text: &str, ends: bool) -> Cow<'_, str> {
 /// Whether `ch` takes no width on a terminal, so that a marker drawn under it
 /// lands under whatever follows.
 ///
+/// Asked exactly as `ariadne` 0.6 asks it when it lays out a line: whitespace
+/// is one column, and anything else is as wide as `unicode-width` says, a
+/// control being one because that crate gives it no width at all. A list of
+/// the characters known to be invisible misses some, a soft hyphen, the
+/// combining marks and the variation selectors among them, and each one it
+/// misses draws no marker; the table `ariadne` reads cannot miss one.
+///
+/// A combining mark is therefore shown as a stand-in rather than combined
+/// with the character before it, which is the price of a marker that is
+/// always under something.
+///
 /// Replaced by [`echoed`] for that reason alone. Not in [`is_obeyed`], which
 /// other echoes share and which is about characters that reorder or break
 /// text; these do neither. A U+FEFF at the start of a file never reaches here,
 /// because the source map strips it.
 fn is_zero_width(ch: char) -> bool {
-    matches!(ch, '\u{200b}'..='\u{200d}' | '\u{2060}' | '\u{feff}')
+    !ch.is_whitespace() && ch.width() == Some(0)
 }
 
 /// What a character [`echoed`] replaces is shown as: one printable character
@@ -483,14 +495,16 @@ fn is_zero_width(ch: char) -> bool {
 /// header by counting characters in the echoed line, as `SourceFile` counts
 /// them in the text: three `?` for a three-byte right-to-left override put
 /// the header two columns past the one `--emit tokens` names for the same
-/// byte. Every character replaced is one to three bytes long, a control at
-/// most two and a bidirectional control or a separator at most three.
+/// byte. A control is at most two bytes and a bidirectional control or a
+/// separator at most three; only a zero-width character can be four, a tag or
+/// a variation selector past U+FFFF, and it is shown as U+1F5F5, a cross one
+/// column wide, because no replacement character is that long.
 fn replacement(ch: char) -> char {
     match ch.len_utf8() {
         1 => '?',
         2 => '\u{bf}',
         3 => '\u{fffd}',
-        length => unreachable!("{ch:?} is {length} bytes, and `is_obeyed` takes none that long"),
+        _ => '\u{1f5f5}',
     }
 }
 

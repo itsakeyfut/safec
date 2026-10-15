@@ -152,6 +152,7 @@ dependencies = [
  "clap",
  "safec-ir",
  "safec-llvm",
+ "unicode-width",
 ]
 
 [[package]]
