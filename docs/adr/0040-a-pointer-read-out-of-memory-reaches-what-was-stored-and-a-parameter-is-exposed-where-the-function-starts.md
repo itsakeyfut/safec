@@ -345,7 +345,7 @@ it is used). `Analysis::height`, as for every other term in it.
 
 * Good, because only what that allocation held is exposed.
 * Bad, because the third one cost half again in memory and time (ADR-0039), and
-  #173's bitset would be needed first.
+  #479's bitset would be needed first.
 
 ### A parameter exposed at entry
 

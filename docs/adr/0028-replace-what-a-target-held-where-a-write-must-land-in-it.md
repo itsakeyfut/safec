@@ -253,7 +253,7 @@ as ADR-0018, ADR-0019 and ADR-0020 say of the last three fields added.
   differently are the ones where the union already names two targets, and
   neither rule may replace there.
 * Bad, because it is a second square table on a value ADR-0019 already measured
-  at 2.8 GB on a 489-line function, which is issue #173.
+  at 2.8 GB on a 489-line function, which is issue #479.
 
 ## More Information
 

@@ -221,7 +221,7 @@ it rather than none.
 
 * Good, because it proves the constant case and suspects the rest.
 * Good, because it adds no square table to `Held`, which is the condition its
-  own doc comment names for a packed bitset, and #173 would otherwise have to
+  own doc comment names for a packed bitset, and #479 would otherwise have to
   be paid.
 * Bad, because of the `Zero` join above.
 
