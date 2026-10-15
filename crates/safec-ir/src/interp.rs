@@ -324,13 +324,15 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 condition,
                 then,
                 otherwise,
-                origin: _,
+                origin,
             } => {
                 // C17 6.8.4.1 p2: the substatement runs if the expression
                 // compares unequal to zero. A pointer here is a place, and a
                 // place is an object, so it is never the null pointer 6.3.2.3
                 // p3 makes a zero constant into: `if (p)` holds.
-                let taken = match operand(&frames, current, &condition)? {
+                let taken = match operand(&frames, current, &condition)
+                    .map_err(|trap| trap.at(origin.span()))?
+                {
                     Value::Int(0) => otherwise,
                     Value::Int(_) | Value::Pointer(_) => then,
                 };
@@ -666,10 +668,14 @@ fn binary(op: BinOp, lhs: i128, rhs: i128, ty: Option<Integer>) -> Result<i128, 
 /// What an operand reads, or a stop where what it reads is a pointer whose
 /// object's lifetime has ended.
 ///
-/// **Every use of a value comes through here**: a copy, a branch's condition,
-/// an argument, both operands of a comparison, the operand of `!` and what a
-/// `return` writes. So this is the one place a pointer's own value is asked
-/// about, with the questions [`reached`] asks of a location about to be
+/// **Every use of a value the IR carries comes through here**: a copy, a
+/// branch's condition, an argument, both operands of a comparison, the operand
+/// of `!`, and a `return` statement's write into the return place, which is a
+/// copy. The hand-off of the return place to the caller is not a use and is
+/// not asked. A bare name evaluated for nothing, `p;` or the left of
+/// `(p, 0)`, is a use C makes undefined for a dead pointer and one the IR does
+/// not carry: the lowering gives it no element, so nothing here sees it. So
+/// this is the one place a pointer's own value is asked about, with the questions [`reached`] asks of a location about to be
 /// accessed, by calling it, so that the rule is written once. A dereference
 /// does not come through here: [`resolve`] follows a pointer by [`load`], and
 /// an access through one is `load`'s and `reached`'s to name.
