@@ -12,13 +12,6 @@
 //! for the first would make this compiler the one that decided what `1 / 0`
 //! means; skipping the second would make a wrong answer look like a right one.
 //!
-//! **One shape escapes that and is known.** A pointer taken in one iteration of
-//! a loop and read in the next is answered, not stopped: identity here is a
-//! frame's generation, and a frame does not change when a block inside it is
-//! entered again. C17 6.2.4 p6 makes each entry a new object, so that read is
-//! undefined and this says a number for it. Telling the two instances apart
-//! needs an identity per entry rather than per call, which #86 is.
-//!
 //! **A pointer is a local in a frame, resolved where the address was taken.**
 //! Every place in this IR is rooted at a local, so there is nothing else for a
 //! pointer to point at until #74, and no heap and no addresses-as-numbers are
@@ -43,6 +36,14 @@
 //! the run stops there. See ADR-0012. Reading storage that is gone and reading
 //! storage nothing has written are two sentences, because they are two things a
 //! C program did.
+//!
+//! **A scope entered again is a new object too**, and is caught by a stamp
+//! rather than by the slot's state. C17 6.2.4 p6 makes each entry to a block a
+//! new instance of its objects, so a pointer taken to `x` in one iteration of a
+//! loop and read in the next reaches storage the frame still holds and that is
+//! not the object it pointed to. Each `StorageLive` stamps the slot from the
+//! counter calls are numbered by, a pointer carries the stamp it was taken
+//! with, and a read or a write whose stamp is not the slot's stops.
 //!
 //! Nothing but tests calls this. `docs/roadmap.md` asks for no flag, and a
 //! `--run` would be a second way to execute a program that Phase 3's backend
@@ -112,11 +113,17 @@ pub enum Value {
     Pointer(Location),
 }
 
-/// Which local, in which frame, and of which call.
+/// Which local, in which frame, of which call, and of which entry to its block.
 ///
 /// The generation is what makes a pointer into a frame that has returned
 /// recognisable after the slot has been taken by another call: the depth is
-/// reused, the number is not.
+/// reused, the number is not. The instance does the same for a block entered
+/// again inside one call: the slot is reused, the stamp is not.
+///
+/// Two pointers to two instances of one local are unequal, which is what C
+/// says, since they point to two objects. One of them points to an object
+/// whose lifetime has ended, and C17 6.2.4 p2 makes its value indeterminate,
+/// so comparing it is undefined either way.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Location {
     /// How deep in the stack the frame sits.
@@ -125,6 +132,9 @@ pub struct Location {
     generation: u64,
     /// Which local of it.
     local: LocalId,
+    /// Which entry to the local's block made the storage this names, as the
+    /// stamp `Element::StorageLive` gave the slot then.
+    instance: u64,
 }
 
 /// Why a run stopped.
@@ -192,6 +202,12 @@ struct Frame {
     generation: u64,
     /// One slot per local.
     locals: Vec<Slot>,
+    /// One stamp per local, saying which entry to its block its storage is.
+    ///
+    /// The call's generation at [`enter`], and a fresh number from the same
+    /// counter at every `StorageLive`, so a stamp is unique over the whole run
+    /// and two entries of one block are never the same number.
+    instances: Vec<u64>,
     /// Which block is running.
     block: BlockId,
     /// Where this frame's callee writes its answer.
@@ -283,8 +299,12 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
                 // not a check: whatever the last iteration left is gone.
+                // And a new instance: the counter calls are numbered by gives
+                // it a stamp no pointer taken before this holds.
                 Element::StorageLive { local, origin: _ } => {
+                    generation += 1;
                     frames[current].locals[local.index()] = Slot::Unwritten;
+                    frames[current].instances[local.index()] = generation;
                 }
                 Element::StorageDead { local, origin: _ } => {
                     frames[current].locals[local.index()] = Slot::Dead;
@@ -455,10 +475,13 @@ fn enter(
         locals[parameter.index()] = Slot::Held(converted);
     }
 
+    let instances = vec![generation; locals.len()];
+
     Ok(Frame {
         function: id,
         generation,
         locals,
+        instances,
         block: function.entry(),
         destination: None,
         resume: None,
@@ -661,6 +684,7 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
         depth: current,
         generation: frames[current].generation,
         local: place.local,
+        instance: frames[current].instances[place.local.index()],
     };
 
     for projection in &place.projection {
@@ -697,6 +721,7 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
 /// and the three are one `match` the compiler checks.
 fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
     let frame = live(frames, at)?;
+    same_entry(frames, frame, at, "a read of")?;
     match frames[frame].locals[at.local.index()].clone() {
         Slot::Held(value) => Ok(value),
         Slot::Unwritten => Err(Trap::new("a read of a local nothing has written")),
@@ -735,6 +760,7 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
 /// is stated here and `load` says it is following it.
 fn reached(frames: &[Frame], at: Location, what: &str) -> Result<usize, Trap> {
     let frame = live(frames, at)?;
+    same_entry(frames, frame, at, what)?;
     if matches!(frames[frame].locals[at.local.index()], Slot::Dead) {
         return Err(Trap::new(format!(
             "{what} a local whose scope has ended, through a pointer that outlived it"
@@ -750,6 +776,28 @@ fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
     let frame = reached(frames, at, "a write to")?;
     frames[frame].locals[at.local.index()] = Slot::Held(value);
     Ok(())
+}
+
+/// Whether a location names the instance of its local that is there now, or a
+/// stop saying it names an earlier one.
+///
+/// **One function for [`load`] and [`reached`]**, which ask their other
+/// questions each in their own words: the rule is about the location rather
+/// than about what is done with it, and a copy in each would be a rule that a
+/// change to one leaves out of the other. A stale pointer read is the program
+/// that showed this was missing, and a stale write is the same mistake.
+///
+/// Asked after [`live`], so a pointer into a returned call keeps its own
+/// sentence, and before the slot's state, which a closed block left `Dead`
+/// with the stamp the pointer holds, so that case keeps its sentence too.
+fn same_entry(frames: &[Frame], frame: usize, at: Location, what: &str) -> Result<(), Trap> {
+    if frames[frame].instances[at.local.index()] == at.instance {
+        return Ok(());
+    }
+    Err(Trap::new(format!(
+        "{what} an object from an earlier entry to its block, through a pointer that outlived \
+         that entry: C17 6.2.4 p6 makes each entry a new object"
+    )))
 }
 
 /// Which frame a location names, or a stop saying it names none.

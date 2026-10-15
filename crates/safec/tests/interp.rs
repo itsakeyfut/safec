@@ -586,6 +586,125 @@ fn a_read_through_a_pointer_to_dead_storage_stops_the_run() {
     );
 }
 
+/// A pointer taken in one entry of a block and read in the next stops the run.
+///
+/// C17 6.2.4 p6 makes each entry to a block a new object, so `x` in the second
+/// iteration is not the `x` the first took the address of, and reading through
+/// that address is undefined. The frame is the same and the slot holds a value,
+/// so neither the generation nor the slot's state could say so, and the run
+/// answered 2.
+///
+/// Mutation: have `Element::StorageLive` leave the slot's stamp alone in
+/// `interp::run`. The run answers 2 and this fails. Mutation: have
+/// `same_entry` answer `Ok` without comparing; the same. Mutation: call
+/// `same_entry` from `reached` and not from `load`; the same, since this is a
+/// read.
+#[test]
+fn a_pointer_to_an_earlier_entry_of_a_block_is_not_read() {
+    let stale = ran(concat!(
+        "int main(void) {
+",
+        "  int i; int t; int *p;
+",
+        "  i = 0; t = 0;
+",
+        "  while (i < 2) {
+",
+        "    { int x; x = i + 1; if (i) { t = *p; } p = &x; }
+",
+        "    i = i + 1;
+",
+        "  }
+",
+        "  return t;
+",
+        "}
+",
+    ));
+    let Err(trap) = stale else {
+        panic!("a read through a pointer to an earlier entry of a block: {stale:?}");
+    };
+    assert!(trap.why.starts_with("a read of"), "{trap:?}");
+    assert!(
+        trap.why.contains("an earlier entry to its block"),
+        "{trap:?}"
+    );
+}
+
+/// A pointer taken in this entry of a block is read, however often the block
+/// has been entered before.
+///
+/// The guard on the test above from the other side: a check that refused every
+/// pointer into a block entered more than once would stop this as well, and it
+/// is defined.
+///
+/// Mutation: have `same_entry` refuse whenever the slot's stamp is not the
+/// call's, which is every block entered at all. This fails.
+#[test]
+fn a_pointer_taken_in_the_same_entry_of_a_block_is_read() {
+    assert_eq!(
+        ran(concat!(
+            "int main(void) {
+",
+            "  int i; int t; int *p;
+",
+            "  i = 0; t = 0;
+",
+            "  while (i < 2) {
+",
+            "    { int x; x = i + 1; p = &x; t = t + *p; }
+",
+            "    i = i + 1;
+",
+            "  }
+",
+            "  return t;
+",
+            "}
+",
+        )),
+        Ok(Value::Int(3)),
+    );
+}
+
+/// A write through a pointer to an earlier entry of a block stops too.
+///
+/// The write side of the test before last, which reaches the check through
+/// `store` and `reached` rather than through `load`.
+///
+/// Mutation: call `same_entry` from `load` and not from `reached`. This fails.
+#[test]
+fn a_write_through_a_pointer_to_an_earlier_entry_of_a_block_stops() {
+    let stale = ran(concat!(
+        "int main(void) {
+",
+        "  int i; int *p;
+",
+        "  i = 0;
+",
+        "  while (i < 2) {
+",
+        "    { int x; x = 0; if (i) { *p = 1; } p = &x; }
+",
+        "    i = i + 1;
+",
+        "  }
+",
+        "  return 0;
+",
+        "}
+",
+    ));
+    let Err(trap) = stale else {
+        panic!("a write through a pointer to an earlier entry of a block: {stale:?}");
+    };
+    assert!(trap.why.starts_with("a write to"), "{trap:?}");
+    assert!(
+        trap.why.contains("an earlier entry to its block"),
+        "{trap:?}"
+    );
+}
+
 /// Storage that is gone and storage nothing has written are two sentences.
 ///
 /// A compiler that exists to say what a program did wrong should not describe
