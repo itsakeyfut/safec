@@ -398,6 +398,66 @@ mod tests {
         assert!(at(&cfg, header) < at(&cfg, exit), "{:?}", cfg.order());
     }
 
+    /// A loop whose back edge leaves from two blocks into its body is one
+    /// component, and drains before its exit.
+    ///
+    /// The loops above have a body of one block, whose back edge reaches the
+    /// header directly, so a block learns it is inside a loop from its own
+    /// edge. Here the first block of the body learns it only from the second,
+    /// which is what Tarjan's passing of `low` up to the block that reached it
+    /// is for.
+    ///
+    /// Mutation: do not pass a finished block's `low` to its parent. The body
+    /// becomes a component of its own, drains after the exit, and this fails.
+    #[test]
+    fn a_loop_whose_back_edge_leaves_from_deeper_in_is_one_component() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        let entry = function.reserve_block();
+        let header = function.reserve_block();
+        let first = function.reserve_block();
+        let second = function.reserve_block();
+        let exit = function.reserve_block();
+
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        function.fill_block(entry, go(header));
+        function.fill_block(
+            header,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Branch {
+                    condition: Operand::Constant(0),
+                    then: first,
+                    otherwise: exit,
+                    origin: Origin::Written(span),
+                },
+            },
+        );
+        function.fill_block(first, go(second));
+        function.fill_block(second, go(header));
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+
+        for block in [header, first, second] {
+            assert!(
+                cfg.drained_at(block) < cfg.drained_at(exit),
+                "{:?}",
+                cfg.drain()
+            );
+        }
+    }
+
     /// Every block of a loop drains before every block after it, and a loop's
     /// header before its body.
     ///
