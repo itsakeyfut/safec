@@ -201,10 +201,12 @@ reverse postorder. Nothing measured has needed that, and the example
 `crates/safec/examples/growth.rs` is where it would show.
 
 **The order changes how many walks an analysis takes, and for a monotone one
-nothing else.** The memory check's join is not monotone, so this changed one of
-its answers, a false report gone, and that is
-[#478](https://github.com/itsakeyfut/safec/issues/478) rather than something
-this record decides.
+nothing else.** The memory check's join is not monotone, so this moved its
+answers, in both directions. In the corpus one false report went; outside it,
+review found programs where the new order adds a doubt the old one did not,
+also false. None was found where it goes silent about a defect. That is
+[#478](https://github.com/itsakeyfut/safec/issues/478), which holds the
+programs, rather than something this record decides.
 
 ### Confirmation
 
