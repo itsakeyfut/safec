@@ -1,0 +1,7 @@
+error[SC0103]: unexpected character
+   ╭─[ a_zero_width_character_is_shown_where_it_is.c:1:9 ]
+   │
+ 1 │ int x = �1;
+   │         ┬  
+   │         ╰── not part of any token
+───╯

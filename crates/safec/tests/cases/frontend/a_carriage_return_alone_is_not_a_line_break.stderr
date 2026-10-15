@@ -1,0 +1,7 @@
+error[SC0103]: unexpected character
+   ╭─[ a_carriage_return_alone_is_not_a_line_break.c:1:16 ]
+   │
+ 1 │ int a;?int b = @;
+   │                ┬  
+   │                ╰── not part of any token
+───╯

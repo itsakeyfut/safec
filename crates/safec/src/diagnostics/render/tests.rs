@@ -472,14 +472,21 @@ fn replacing_a_control_character_does_not_move_the_caret() {
     );
 }
 
-/// `\r` is a line separator to `ariadne`, which breaks on it and never
-/// emits it, so it does not reach a terminal and must not be replaced.
+/// A lone `\r` is shown and does not break the line, and a CRLF ending is
+/// left as it was.
 ///
-/// Two things would break if it were. A lone `\r` would stop separating,
-/// putting both statements onto one line, and every file written on Windows
-/// would carry a stray replacement at the end of every line.
+/// The source map breaks lines on `\n` alone, and the token artifact reads
+/// it, so a lone `\r` breaking a line in the rendered copy gave one byte two
+/// positions: this byte is `1:11` to the source map, and was `2:4` in a
+/// header. A `\r` before a `\n` is half of a line ending the source map
+/// breaks on the `\n`, and replacing it would put a stray character at the
+/// end of every line of a file written on Windows.
+///
+/// Mutation: leave a lone `\r` alone in `echoed`. The header says `2:` and
+/// this fails. Mutation: replace every `\r`. The CRLF file shows a stand-in
+/// and this fails.
 #[test]
-fn a_carriage_return_still_separates_lines() {
+fn a_lone_carriage_return_is_shown_and_a_crlf_ending_is_not() {
     let mut sources = SourceMap::new();
     let lone = sources.add_virtual("lone.c", "int a;\rint b;\n");
     let crlf = sources.add_virtual("crlf.c", "int a;\r\nint b;\r\n");
@@ -489,8 +496,8 @@ fn a_carriage_return_still_separates_lines() {
     };
 
     let rendered = render(&sources, &at(lone));
-    assert!(rendered.contains("<lone.c>:2:"), "{rendered:?}");
-    assert!(!rendered.contains(replacement('\r')), "{rendered:?}");
+    assert!(rendered.contains("<lone.c>:1:11"), "{rendered:?}");
+    assert!(rendered.contains(replacement('\r')), "{rendered:?}");
 
     let rendered = render(&sources, &at(crlf));
     assert!(!rendered.contains(replacement('\r')), "{rendered:?}");
@@ -741,4 +748,130 @@ fn both_rendering_paths_colour_the_header_the_same_way() {
         assert!(first_line(&bare).contains('\u{1b}'), "{bare:?}");
         assert_eq!(first_line(&bare), first_line(&anchored), "{severity:?}");
     }
+}
+
+/// A file is copied to be rendered only where its text would otherwise give a
+/// byte a second position, so an ordinary one is not.
+///
+/// ADR-0003 is that a compiler should not copy the source it is compiling to
+/// report on it. A file ending in `\n` is given an empty last line only where
+/// a label sits at its end, and a CRLF file keeps its endings as they are.
+///
+/// A file that does not end in `\n` has no line after its last, so a label at
+/// its end is on that last line already and the file is not copied for it.
+///
+/// Mutation: extend the end of every file that ends in `\n`, whatever `ends`
+/// says. The first assertion fails. Mutation: extend wherever `ends` says,
+/// whatever the file ends in. The last assertion fails.
+#[test]
+fn an_ordinary_file_is_not_copied_to_be_rendered() {
+    assert!(matches!(echoed("int a;\n", false), Cow::Borrowed(_)));
+    assert!(matches!(
+        echoed("int a;\r\nint b;\r\n", false),
+        Cow::Borrowed(_)
+    ));
+    assert_eq!(echoed("int a;\n", true), "int a;\n ");
+    assert!(matches!(echoed("int a;", true), Cow::Borrowed(_)));
+}
+
+/// The end a label sits at is the end of the file its own span names, not of
+/// whichever file was added first.
+///
+/// With two files, a label at the end of the second is on the second's empty
+/// last line, `2:1`, where the source map puts that byte. Asked of the wrong
+/// file, the second is not given that line and the header says `1:7`.
+///
+/// Mutation: record every label's end against the first file in
+/// `SourceMapCache::new`. This fails.
+#[test]
+fn a_label_at_the_end_is_asked_of_the_file_it_names() {
+    let mut sources = SourceMap::new();
+    sources.add_virtual("a.c", "int a;\n");
+    let second = sources.add_virtual("b.c", "int x\n");
+
+    let at_end =
+        Diagnostic::error("boom").with_label(Label::primary(Span::new(second, 6, 6), "here"));
+
+    let rendered = render(&sources, &at_end);
+    assert!(rendered.contains("<b.c>:2:1"), "{rendered:?}");
+}
+
+/// Every character `ariadne` would give no column is shown as one that has
+/// one, of the same length in bytes, and a marker is drawn under it.
+///
+/// One of each kind a list of invisible characters missed: a soft hyphen, a
+/// combining mark, an invisible operator, a variation selector, and a tag,
+/// which at four bytes is longer than any replacement character. Under the
+/// soft hyphen, `ariadne` drew no `┬` at all.
+///
+/// Mutation: test only U+200B to U+200D, U+2060 and U+FEFF in
+/// `is_zero_width`. The first assertion fails on the soft hyphen, and so does
+/// the last, which asks `ariadne` rather than this module. Mutation: have
+/// `replacement` refuse a four-byte character, as it did. This panics on the
+/// tag.
+#[test]
+fn a_character_with_no_width_is_shown_as_one_with_a_width() {
+    for invisible in ['\u{ad}', '\u{301}', '\u{2061}', '\u{fe0f}', '\u{e0001}'] {
+        let text = format!("int a{invisible}= @;\n");
+        let shown = echoed(&text, false);
+
+        assert!(!shown.contains(invisible), "{invisible:?}: {shown:?}");
+        assert_eq!(shown.len(), text.len(), "{invisible:?}");
+        assert_eq!(shown.chars().count(), text.chars().count(), "{invisible:?}");
+    }
+
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("shy.c", "int a\u{ad}= @;\n");
+    let diagnostic =
+        Diagnostic::error("boom").with_label(Label::primary(Span::new(file, 5, 7), "here"));
+
+    let rendered = render(&sources, &diagnostic);
+    assert!(rendered.contains('┬'), "{rendered:?}");
+}
+
+/// A file is asked to end in an empty line when any label in the call sits at
+/// its end, wherever that label comes and whatever kind it is, and only then.
+///
+/// A label after the one at the end does not take the answer back, a label
+/// whose span runs past the end counts as at it, because it is drawn there,
+/// and one that only finishes at the end starts on a line that exists.
+///
+/// Mutation: assign rather than accumulate into `ends`. The first assertion
+/// fails, and the header of that diagnostic goes back to `1:7`. Mutation: ask
+/// the span unclamped. The second fails. Mutation: ask where the range ends
+/// rather than where it starts. The third fails. Mutation: count primary
+/// labels only. The fourth fails.
+#[test]
+fn which_files_end_in_a_label_is_asked_of_every_label_in_the_call() {
+    let mut sources = SourceMap::new();
+    let file = sources.add_virtual("p.c", "int x\n");
+    let ends = |labels: Vec<Label>| {
+        let diagnostic = labels
+            .into_iter()
+            .fold(Diagnostic::error("boom"), Diagnostic::with_label);
+        SourceMapCache::new(&sources, &[diagnostic]).ends
+    };
+
+    assert_eq!(
+        ends(vec![
+            Label::primary(Span::new(file, 6, 6), "end"),
+            Label::secondary(Span::new(file, 0, 3), "start"),
+        ]),
+        [true]
+    );
+    assert_eq!(
+        ends(vec![Label::primary(Span::new(file, 50, 50), "past")]),
+        [true]
+    );
+    assert_eq!(
+        ends(vec![Label::primary(Span::new(file, 0, 6), "whole")]),
+        [false]
+    );
+    assert_eq!(
+        ends(vec![
+            Label::primary(Span::new(file, 0, 3), "start"),
+            Label::secondary(Span::new(file, 6, 6), "end"),
+        ]),
+        [true]
+    );
 }

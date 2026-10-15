@@ -3622,6 +3622,22 @@ cases! {
         // was before. Mutation: skip any one report; its `SC0107` goes.
         a_splice_or_trigraph_outside_a_comment_is_reported: ["--emit", "tokens"],
         unterminated_block_comment: ["--emit", "tokens"],
+        // One byte, one position, in the header and in the token artifact of
+        // one run. A lone carriage return breaks no line to the source map, so
+        // it breaks none in a header either and is shown as `?`: the `@` is
+        // `1:16` in the `.stdout` and in the `.stderr`. Mutation: leave a lone
+        // `\r` alone in `echoed`; the header says `2:9`.
+        a_carriage_return_alone_is_not_a_line_break: ["--emit", "tokens"],
+        // A byte-order mark in mid-line is three bytes of nothing on a
+        // terminal, so its marker was drawn under the `1;` after it. It is
+        // drawn as U+FFFD with the marker under that. Mutation: drop
+        // `is_zero_width` from `echoed`; the marker lands under `1;`.
+        a_zero_width_character_is_shown_where_it_is: ["--emit", "tokens"],
+        // The byte after a file's last `\n` is `2:1` to the source map, where
+        // the token artifact puts `eof`, and the header says so rather than
+        // putting it at the end of line 1. Mutation: never give the rendered
+        // copy its last empty line; the header says `1:7`.
+        a_diagnostic_at_the_end_of_a_file_is_on_the_line_after_the_last: ["--emit", "ast"],
         unterminated_character_constant: ["--emit", "tokens"],
         unterminated_string_literal: ["--emit", "tokens"],
         void_is_not_the_only_parameter: ["--emit", "ast"],

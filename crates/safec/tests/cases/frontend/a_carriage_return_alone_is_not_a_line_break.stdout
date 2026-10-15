@@ -1,0 +1,9 @@
+a_carriage_return_alone_is_not_a_line_break.c:1:1 keyword "int"
+a_carriage_return_alone_is_not_a_line_break.c:1:5 identifier "a"
+a_carriage_return_alone_is_not_a_line_break.c:1:6 punct ";"
+a_carriage_return_alone_is_not_a_line_break.c:1:8 keyword "int"
+a_carriage_return_alone_is_not_a_line_break.c:1:12 identifier "b"
+a_carriage_return_alone_is_not_a_line_break.c:1:14 punct "="
+a_carriage_return_alone_is_not_a_line_break.c:1:16 unknown "@"
+a_carriage_return_alone_is_not_a_line_break.c:1:17 punct ";"
+a_carriage_return_alone_is_not_a_line_break.c:2:1 eof

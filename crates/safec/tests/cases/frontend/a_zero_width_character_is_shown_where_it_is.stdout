@@ -1,0 +1,7 @@
+a_zero_width_character_is_shown_where_it_is.c:1:1 keyword "int"
+a_zero_width_character_is_shown_where_it_is.c:1:5 identifier "x"
+a_zero_width_character_is_shown_where_it_is.c:1:7 punct "="
+a_zero_width_character_is_shown_where_it_is.c:1:9 unknown "\u{feff}"
+a_zero_width_character_is_shown_where_it_is.c:1:10 number "1"
+a_zero_width_character_is_shown_where_it_is.c:1:11 punct ";"
+a_zero_width_character_is_shown_where_it_is.c:2:1 eof

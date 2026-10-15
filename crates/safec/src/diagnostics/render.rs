@@ -5,30 +5,23 @@
 //! `--error-format=json` mode, or a different rendering library, a change
 //! confined to this file.
 //!
-//! Two divergences from [`SourceFile`] are worth
-//! knowing about, because both make a rendered gutter disagree with a
-//! [`LineCol`](safec_ir::source::LineCol).
+//! **Every byte has one position, the one [`SourceFile`] gives it**, so a
+//! rendered header names the line and column `--emit tokens` names for the
+//! same byte. `ariadne` counts positions in the text it is handed, and that
+//! text is `echoed`'s copy rather than the file, shaped so that the two
+//! agree: every separator `ariadne` would break a line on but the source map
+//! does not is replaced, a lone `\r` among them, and a file ending in `\n` is
+//! given the empty last line the source map numbers there, where a label sits
+//! at its end. The source map is not reshaped instead, because the token
+//! artifact reads it and is a stable interface.
 //!
-//! `ariadne` breaks lines on seven separators, among them a lone `\r` and a
-//! vertical tab; the source map breaks only on `\n`. `echoed` replaces every
-//! one of them but `\r` before `ariadne` sees it, the vertical tab as a
-//! control character and U+2028 and U+2029 as characters that break a line
-//! (`is_obeyed`), so a lone `\r` is the separator still counted differently.
-//! And a file ending in `\n` has a final empty line for the source map,
-//! deliberately, so that it is
-//! numbered the way an editor numbers it. `ariadne` has no such line, so an
-//! offset at end of file is numbered differently by the two. That last one is
-//! the ordinary case for `error: unexpected end of file`, not an exotic one.
-//!
-//! Reconciling them would mean either teaching the source map about separators
-//! it does not otherwise care about or giving up `ariadne`'s renderer.
-
 use std::borrow::Cow;
 use std::fmt;
 use std::io;
 use std::ops::Range;
 
 use ariadne::{Color, Config, Fmt, IndexType, Label as AriadneLabel, Report, ReportKind, Source};
+use unicode_width::UnicodeWidthChar as _;
 
 use crate::diagnostics::{Certainty, Diagnostic, DiagnosticSink, Label, Remedy, Severity};
 use crate::options::ColorMode;
@@ -173,7 +166,11 @@ impl Renderer {
         diagnostic: &Diagnostic,
         out: &mut impl io::Write,
     ) -> io::Result<()> {
-        self.write_one(&mut SourceMapCache::new(sources), diagnostic, out)
+        self.write_one(
+            &mut SourceMapCache::new(sources, std::slice::from_ref(diagnostic)),
+            diagnostic,
+            out,
+        )
     }
 
     /// Write every diagnostic in a sink, in the order they were reported.
@@ -185,7 +182,7 @@ impl Renderer {
         sink: &DiagnosticSink,
         out: &mut impl io::Write,
     ) -> io::Result<()> {
-        let mut cache = SourceMapCache::new(sources);
+        let mut cache = SourceMapCache::new(sources, sink.diagnostics());
         for diagnostic in sink.diagnostics() {
             self.write_one(&mut cache, diagnostic, out)?;
         }
@@ -423,30 +420,70 @@ fn write_remedies(remedies: &[Remedy], out: &mut impl io::Write) -> io::Result<(
 /// the spans were measured against and the length in characters a header's
 /// column is counted in.
 ///
-/// `\r` is left alone, unlike in a message. `ariadne` breaks lines on it and
-/// never emits it, so it does not reach a terminal on this path, and replacing
-/// it would stop it separating lines: a file with CRLF endings would render as
-/// one long line.
+/// **A lone `\r` is replaced, and one before a `\n` is not.** `ariadne`
+/// breaks lines on a lone `\r` and the source map does not, so leaving it gave
+/// one byte two positions, `cr.c:2:9` in a header and `cr.c:1:16` in the token
+/// artifact. Replacing every `\r` would put a stray character at the end of
+/// every line of a CRLF file instead.
+///
+/// `ends` says a label in this rendering call sits at the end of this file,
+/// which is when the copy is given its last empty line. Only then, so that
+/// every other file is not copied to report on it, which is ADR-0003's driver.
 ///
 /// Borrowed unless there is something to replace, so an ordinary file is still
 /// not copied and ADR-0003's reason for storing borrowed text holds for every
 /// input that is not trying something.
-fn echoed(text: &str) -> Cow<'_, str> {
-    let replaced = |ch: char| is_obeyed(ch) && ch != '\r';
+fn echoed(text: &str, ends: bool) -> Cow<'_, str> {
+    // A `\r` before a `\n` is half of a CRLF ending and is left, so that the
+    // pair breaks one line as the source map breaks it on the `\n`.
+    let lone_return = |at: usize| text.as_bytes().get(at + 1) != Some(&b'\n');
+    let replaced = |at: usize, ch: char| {
+        (is_obeyed(ch) && ch != '\r') || is_zero_width(ch) || (ch == '\r' && lone_return(at))
+    };
+    let extended = ends && text.ends_with('\n');
 
-    if !text.chars().any(replaced) {
+    if !extended && !text.char_indices().any(|(at, ch)| replaced(at, ch)) {
         return Cow::Borrowed(text);
     }
 
-    let mut safe = String::with_capacity(text.len());
-    for ch in text.chars() {
-        if replaced(ch) {
+    let mut safe = String::with_capacity(text.len() + 1);
+    for (at, ch) in text.char_indices() {
+        if replaced(at, ch) {
             safe.push(replacement(ch));
         } else {
             safe.push(ch);
         }
     }
+    // The line `SourceFile` numbers after a final `\n`, which `ariadne` has no
+    // line for: without it a label there was placed at the end of the line
+    // before, a second position for one byte. One space, so that the line is
+    // there and empty.
+    if extended {
+        safe.push(' ');
+    }
     Cow::Owned(safe)
+}
+
+/// Whether `ch` takes no width on a terminal, so that a marker drawn under it
+/// lands under whatever follows.
+///
+/// Asked exactly as `ariadne` 0.6 asks it when it lays out a line: whitespace
+/// is one column, and anything else is as wide as `unicode-width` says, a
+/// control being one because that crate gives it no width at all. A list of
+/// the characters known to be invisible misses some, a soft hyphen, the
+/// combining marks and the variation selectors among them, and each one it
+/// misses draws no marker; the table `ariadne` reads cannot miss one.
+///
+/// A combining mark is therefore shown as a stand-in rather than combined
+/// with the character before it, which is the price of a marker that is
+/// always under something.
+///
+/// Replaced by [`echoed`] for that reason alone. Not in [`is_obeyed`], which
+/// other echoes share and which is about characters that reorder or break
+/// text; these do neither. A U+FEFF at the start of a file never reaches here,
+/// because the source map strips it.
+fn is_zero_width(ch: char) -> bool {
+    !ch.is_whitespace() && ch.width() == Some(0)
 }
 
 /// What a character [`echoed`] replaces is shown as: one printable character
@@ -458,14 +495,16 @@ fn echoed(text: &str) -> Cow<'_, str> {
 /// header by counting characters in the echoed line, as `SourceFile` counts
 /// them in the text: three `?` for a three-byte right-to-left override put
 /// the header two columns past the one `--emit tokens` names for the same
-/// byte. Every character replaced is one to three bytes long, a control at
-/// most two and a bidirectional control or a separator at most three.
+/// byte. A control is at most two bytes and a bidirectional control or a
+/// separator at most three; only a zero-width character can be four, a tag or
+/// a variation selector past U+FFFF, and it is shown as U+1F5F5, a cross one
+/// column wide, because no replacement character is that long.
 fn replacement(ch: char) -> char {
     match ch.len_utf8() {
         1 => '?',
         2 => '\u{bf}',
         3 => '\u{fffd}',
-        length => unreachable!("{ch:?} is {length} bytes, and `is_obeyed` takes none that long"),
+        _ => '\u{1f5f5}',
     }
 }
 
@@ -530,6 +569,9 @@ struct SourceMapCache<'a> {
     sources: &'a SourceMap,
     /// Indexed by [`FileId::index`], filled on first use of each file.
     cached: Vec<Option<Source<Cow<'a, str>>>>,
+    /// Indexed the same way: whether a label of a diagnostic in this call sits
+    /// at the end of that file, once clamped, which is what [`echoed`] is told.
+    ends: Vec<bool>,
 }
 
 impl<'a> SourceMapCache<'a> {
@@ -541,10 +583,25 @@ impl<'a> SourceMapCache<'a> {
     /// [`ariadne::Cache::fetch`] instead, which is the one accessor that takes
     /// `&mut self`, and forgetting that would report every file added
     /// afterwards as one this renderer does not have.
-    fn new(sources: &'a SourceMap) -> Self {
+    ///
+    /// The diagnostics are the ones the call renders, so that which files are
+    /// asked to end in an empty line is known before the first is fetched. A
+    /// label is asked of the file its own span names, and through [`clamp`], so
+    /// that a span past the end counts as at the end, as it is drawn.
+    fn new(sources: &'a SourceMap, diagnostics: &[Diagnostic]) -> Self {
+        let mut ends = vec![false; sources.len()];
+        for label in diagnostics.iter().flat_map(Diagnostic::labels) {
+            let id = label.span().file();
+            if id.index() < sources.len() {
+                let file = sources.file(id);
+                let (range, _) = clamp(file, label.span());
+                ends[id.index()] |= range.start == file.contents().len();
+            }
+        }
         Self {
             sources,
             cached: (0..sources.len()).map(|_| None).collect(),
+            ends,
         }
     }
 
@@ -569,10 +626,12 @@ impl<'a> ariadne::Cache<FileId> for SourceMapCache<'a> {
         // does not hold a second borrow of `self`.
         let sources = self.sources;
         let id = *id;
+        let ends = self.ends.get(id.index()).copied().unwrap_or(false);
 
         match self.cached.get_mut(id.index()) {
             Some(slot) => {
-                Ok(slot.get_or_insert_with(|| Source::from(echoed(sources.file(id).contents()))))
+                Ok(slot
+                    .get_or_insert_with(|| Source::from(echoed(sources.file(id).contents(), ends))))
             }
             None => Err(UnknownFile(id)),
         }
