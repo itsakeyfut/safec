@@ -596,9 +596,8 @@ fn a_read_through_a_pointer_to_dead_storage_stops_the_run() {
 ///
 /// Mutation: have `Element::StorageLive` leave the slot's stamp alone in
 /// `interp::run`. The run answers 2 and this fails. Mutation: have
-/// `same_entry` answer `Ok` without comparing; the same. Mutation: call
-/// `same_entry` from `reached` and not from `load`; the same, since this is a
-/// read.
+/// `same_entry` answer `Ok` without comparing; the same. Mutation: remove the
+/// call to `same_entry` from `load`; the same, since this is a read.
 #[test]
 fn a_pointer_to_an_earlier_entry_of_a_block_is_not_read() {
     let stale = ran(concat!(
@@ -625,6 +624,11 @@ fn a_pointer_to_an_earlier_entry_of_a_block_is_not_read() {
         panic!("a read through a pointer to an earlier entry of a block: {stale:?}");
     };
     assert!(trap.why.starts_with("a read of"), "{trap:?}");
+    assert!(
+        trap.why
+            .ends_with("C17 6.2.4 p6 makes each entry a new object"),
+        "{trap:?}"
+    );
     assert!(
         trap.why.contains("an earlier entry to its block"),
         "{trap:?}"
@@ -669,10 +673,11 @@ fn a_pointer_taken_in_the_same_entry_of_a_block_is_read() {
 
 /// A write through a pointer to an earlier entry of a block stops too.
 ///
-/// The write side of the test before last, which reaches the check through
-/// `store` and `reached` rather than through `load`.
+/// The write side of `a_pointer_to_an_earlier_entry_of_a_block_is_not_read`,
+/// which reaches the check through `store` and `reached` rather than through
+/// `load`.
 ///
-/// Mutation: call `same_entry` from `load` and not from `reached`. This fails.
+/// Mutation: remove the call to `same_entry` from `reached`. This fails.
 #[test]
 fn a_write_through_a_pointer_to_an_earlier_entry_of_a_block_stops() {
     let stale = ran(concat!(
@@ -703,6 +708,72 @@ fn a_write_through_a_pointer_to_an_earlier_entry_of_a_block_stops() {
         trap.why.contains("an earlier entry to its block"),
         "{trap:?}"
     );
+}
+
+/// Entering a block again makes its own objects new and leaves every other
+/// local alone, so a pointer to a local outside the block is still read.
+///
+/// The false stop the stamp could make: a `StorageLive` that restamped the
+/// frame's locals rather than its own would stop this defined program as a
+/// read of an earlier entry, and every other test here would pass.
+///
+/// Mutation: have `Element::StorageLive` stamp every local of the frame. This
+/// fails.
+#[test]
+fn a_block_entered_again_leaves_a_pointer_to_another_local_alone() {
+    assert_eq!(
+        ran(concat!(
+            "int main(void) {\n",
+            "  int i; int t; int o; int *p;\n",
+            "  i = 0; t = 0; o = 5; p = &o;\n",
+            "  while (i < 2) {\n",
+            "    { int x; x = 1; t = t + *p + x; }\n",
+            "    i = i + 1;\n",
+            "  }\n",
+            "  return t;\n",
+            "}\n",
+        )),
+        Ok(Value::Int(12)),
+    );
+}
+
+/// A pointer to an earlier entry of a block that has since closed is told it
+/// reached an earlier entry, not that the scope ended.
+///
+/// Both are true of it. The stamp is asked before the slot's state, so the
+/// earlier entry is the sentence a reader is given, on the read side and the
+/// write side, because `load` and `reached` each place the question.
+///
+/// Mutation: ask `same_entry` after the `Slot::Dead` check in `reached`, or
+/// only when the slot holds a value in `load`. This fails on that side.
+#[test]
+fn a_pointer_to_an_earlier_entry_of_a_closed_block_is_told_which() {
+    for (access, starts) in [("t = *p;", "a read of"), ("*p = 1;", "a write to")] {
+        let program = [
+            "int main(void) {\n",
+            "  int i; int t; int *p;\n",
+            "  i = 0; t = 0;\n",
+            "  while (i < 2) {\n",
+            "    { int x; x = 0; if (!i) { p = &x; } }\n",
+            "    if (i) { ",
+            access,
+            " }\n",
+            "    i = i + 1;\n",
+            "  }\n",
+            "  return t;\n",
+            "}\n",
+        ]
+        .concat();
+        let stale = ran(&program);
+        let Err(trap) = stale else {
+            panic!("`{access}` through a pointer to an earlier entry: {stale:?}");
+        };
+        assert!(trap.why.starts_with(starts), "`{access}`: {trap:?}");
+        assert!(
+            trap.why.contains("an earlier entry to its block"),
+            "`{access}`: {trap:?}"
+        );
+    }
 }
 
 /// Storage that is gone and storage nothing has written are two sentences.

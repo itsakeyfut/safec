@@ -120,10 +120,12 @@ pub enum Value {
 /// reused, the number is not. The instance does the same for a block entered
 /// again inside one call: the slot is reused, the stamp is not.
 ///
-/// Two pointers to two instances of one local are unequal, which is what C
-/// says, since they point to two objects. One of them points to an object
-/// whose lifetime has ended, and C17 6.2.4 p2 makes its value indeterminate,
-/// so comparing it is undefined either way.
+/// Two pointers to two instances of one local are unequal. That is not a
+/// promise about a C program: one of them points to an object whose lifetime
+/// has ended, C17 6.2.4 p2 makes its value indeterminate, and comparing it is
+/// undefined. This interpreter answers it rather than stopping, because only
+/// an access *through* a pointer asks about the object; a copy, a test and a
+/// comparison of the pointer itself do not, which is #474.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Location {
     /// How deep in the stack the frame sits.
@@ -716,9 +718,10 @@ fn resolve(frames: &[Frame], current: usize, place: &Place) -> Result<Location, 
 /// another call is using now holds somebody else's value, and answering it
 /// would be the worst kind of right-looking answer.
 ///
-/// The same two questions [`reached`] names, in the same order, and written out
-/// here rather than called because this answers a third thing about the slot
-/// and the three are one `match` the compiler checks.
+/// The same questions [`reached`] names, in the same order, and written out
+/// here rather than called because this answers one more thing about the slot,
+/// what it holds, and the slot's three states are one `match` the compiler
+/// checks.
 fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
     let frame = live(frames, at)?;
     same_entry(frames, frame, at, "a read of")?;
@@ -737,11 +740,12 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
 
 /// Whether a location can be reached at all, whatever is to be done with it.
 ///
-/// **The two questions [`resolve`] does not answer.** It checks a frame on each
-/// step it loads *through* and hands back the location it reached unchecked, so
-/// whoever wants that location asks both itself: whether the frame the pointer
-/// was taken in is still the frame at that depth, and whether the local still
-/// has storage.
+/// **The three questions [`resolve`] does not answer.** It checks a frame on
+/// each step it loads *through* and hands back the location it reached
+/// unchecked, so whoever wants that location asks them itself: whether the
+/// frame the pointer was taken in is still the frame at that depth, whether
+/// the storage there is the instance the pointer was taken to, which
+/// [`same_entry`] asks, and whether the local still has storage.
 ///
 /// Neither is hypothetical. `int *leak(void) { int x; int *q; q = &x; return
 /// q; } ... *p = 5;` names a depth the stack no longer has, and before this
@@ -754,8 +758,8 @@ fn load(frames: &[Frame], at: Location) -> Result<Value, Trap> {
 /// reaching one are three sentences about one location and a reader with a stop
 /// in front of them wants to know which they did.
 ///
-/// [`load`] asks the same two and does not call this, which is deliberate: it
-/// answers a third thing about the slot as well, and folding it in would trade
+/// [`load`] asks the same three and does not call this, which is deliberate: it
+/// answers one more thing about the slot as well, what it holds, and folding it in would trade
 /// a match arm the compiler checks for a branch nothing could reach. The rule
 /// is stated here and `load` says it is following it.
 fn reached(frames: &[Frame], at: Location, what: &str) -> Result<usize, Trap> {
@@ -784,8 +788,10 @@ fn store(frames: &mut [Frame], at: Location, value: Value) -> Result<(), Trap> {
 /// **One function for [`load`] and [`reached`]**, which ask their other
 /// questions each in their own words: the rule is about the location rather
 /// than about what is done with it, and a copy in each would be a rule that a
-/// change to one leaves out of the other. A stale pointer read is the program
-/// that showed this was missing, and a stale write is the same mistake.
+/// change to one leaves out of the other.
+/// `a_pointer_to_an_earlier_entry_of_a_block_is_not_read` and
+/// `a_write_through_a_pointer_to_an_earlier_entry_of_a_block_stops` are the
+/// two sides.
 ///
 /// Asked after [`live`], so a pointer into a returned call keeps its own
 /// sentence, and before the slot's state, which a closed block left `Dead`

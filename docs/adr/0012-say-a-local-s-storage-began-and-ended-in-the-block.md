@@ -154,6 +154,10 @@ storage would otherwise revive it, and then nothing anywhere would notice
 `a_loop_body_that_declares_something_runs_more_than_once` is for.
 `dead_storage_and_uninitialised_storage_are_not_one_sentence` is what keeps the
 two states from collapsing back into an `Option`.
+`a_pointer_to_an_earlier_entry_of_a_block_is_not_read` fails if `StorageLive`
+leaves a slot's stamp alone, and
+`a_write_through_a_pointer_to_an_earlier_entry_of_a_block_stops` if only the
+read asks about it.
 
 The order a scope closes in is held by the corpus, byte for byte:
 `a_scope_that_opens_and_closes` declares two locals in its nested block, so
@@ -175,10 +179,15 @@ and fails.
   call, and ADR-0010 put a call in the terminator, so a scope end in C++ is a
   chain of blocks each ended by `Terminator::Call`, with the markers among
   them. That is expressible and is not what this record first claimed.
-* Bad, because the IR can now say each entry to a block is a fresh lifetime and
-  the interpreter cannot act on it: its identity is a frame's generation, so a
-  pointer taken in one iteration of a loop still reads in the next. #86 is that
-  work, and nothing here forecloses it.
+* Good, because the IR says each entry to a block is a fresh lifetime, and the
+  interpreter acts on it: each `StorageLive` stamps the slot, a pointer carries
+  the stamp it was taken with, and a read or a write through a pointer to an
+  earlier entry stops (#86). That makes where `StorageLive` sits a precondition
+  of the check rather than an approximation of it: once `goto` can jump back
+  to before a declaration inside its own block, a marker at the declaration
+  would restamp what C17 6.2.4 p6 says is still the same object, and a jump
+  past the declaration would skip the restamp. Moving `StorageLive` to the top
+  of the scope, which `goto` already forces above, is what keeps it right.
 * Bad, because the lowering emits `StorageDead` at three places only: where a
   compound statement falls off its end, where a `for` whose first clause is a
   declaration is left (#127), and at a `return`, which ends every scope it
