@@ -47,6 +47,22 @@ pub struct Cfg {
     /// would make every caller filter, and the first that forgot would join a
     /// bottom into a fixpoint and answer that nothing is known anywhere.
     predecessors: Vec<Vec<BlockId>>,
+    /// The order [`crate::dataflow::solve`] drains its worklist in: every loop
+    /// before anything after it, and within one, the order of `order`.
+    ///
+    /// Each strongly connected component's blocks are contiguous, and the
+    /// components come in topological order. `order` alone does not give that:
+    /// a reverse postorder puts a loop's head before its body and before its
+    /// exit, and says nothing about which of those two comes first, so a later
+    /// loop can come before an earlier loop's body. A walk taking blocks in
+    /// that order walks the later loop again for every step the earlier one
+    /// takes. See ADR-0016.
+    drain: Vec<BlockId>,
+    /// Where each block sits in `drain`, indexed by [`BlockId::index`].
+    ///
+    /// Read by the solver to keep its worklist in drain order. A block the
+    /// entry does not reach has no position and its entry is never read.
+    drained_at: Vec<usize>,
 }
 
 impl Cfg {
@@ -126,16 +142,40 @@ impl Cfg {
             }
         }
 
+        let drain = components(function, &order);
+        let mut drained_at = vec![usize::MAX; count];
+        for (at, &block) in drain.iter().enumerate() {
+            drained_at[block.index()] = at;
+        }
+
         Self {
             order,
             reachable,
             predecessors,
+            drain,
+            drained_at,
         }
     }
 
     /// The order to take the blocks in, which holds exactly the reachable ones.
     pub fn order(&self) -> &[BlockId] {
         &self.order
+    }
+
+    /// The reachable blocks in the order a forward walk should settle them:
+    /// a loop before anything after it, and otherwise as [`Cfg::order`] has
+    /// them.
+    pub fn drain(&self) -> &[BlockId] {
+        &self.drain
+    }
+
+    /// Where a reachable block sits in [`Cfg::drain`].
+    ///
+    /// A block the entry does not reach answers `usize::MAX`, which indexes
+    /// nothing in `drain`, so asking about one is a panic where the answer is
+    /// used rather than a position somebody else's block holds.
+    pub fn drained_at(&self, block: BlockId) -> usize {
+        self.drained_at[block.index()]
     }
 
     /// Where control can arrive at this block from.
@@ -152,6 +192,81 @@ impl Cfg {
     pub fn reaches(&self, block: BlockId) -> bool {
         self.reachable[block.index()]
     }
+}
+
+/// The reachable blocks with every strongly connected component contiguous,
+/// the components in topological order, and the blocks of one in the order
+/// `order` gives them.
+///
+/// Tarjan's algorithm, and iteratively for the reason [`Cfg::of`] gives for its
+/// own walk: how deep the graph goes is bounded by nothing. Tarjan finishes a
+/// component only after every component it reaches, so they come out last
+/// first and are reversed at the end.
+fn components(function: &Function, order: &[BlockId]) -> Vec<BlockId> {
+    let count = function.blocks().len();
+    let mut position = vec![usize::MAX; count];
+    for (at, &block) in order.iter().enumerate() {
+        position[block.index()] = at;
+    }
+
+    // `index` is when the walk first reached a block, and `low` the earliest
+    // block still on `open` that it reaches back to. A block whose `low` is
+    // its own `index` closes a component: itself and everything above it on
+    // `open`.
+    let mut index = vec![usize::MAX; count];
+    let mut low = vec![0usize; count];
+    let mut on_open = vec![false; count];
+    let mut open = Vec::new();
+    let mut reached = 0;
+    let mut found: Vec<Vec<BlockId>> = Vec::new();
+
+    let mut successors = Vec::new();
+    let mut walk = vec![(function.entry(), 0usize)];
+    index[function.entry().index()] = reached;
+    low[function.entry().index()] = reached;
+    reached += 1;
+    open.push(function.entry());
+    on_open[function.entry().index()] = true;
+
+    while let Some((block, next)) = walk.pop() {
+        successors.clear();
+        function.block(block).terminator.successors(&mut successors);
+
+        if let Some(&successor) = successors.get(next) {
+            walk.push((block, next + 1));
+            if index[successor.index()] == usize::MAX {
+                index[successor.index()] = reached;
+                low[successor.index()] = reached;
+                reached += 1;
+                open.push(successor);
+                on_open[successor.index()] = true;
+                walk.push((successor, 0));
+            } else if on_open[successor.index()] {
+                low[block.index()] = low[block.index()].min(index[successor.index()]);
+            }
+            continue;
+        }
+
+        // Every way out of `block` has been walked.
+        if let Some(&(parent, _)) = walk.last() {
+            low[parent.index()] = low[parent.index()].min(low[block.index()]);
+        }
+        if low[block.index()] == index[block.index()] {
+            let mut component = Vec::new();
+            loop {
+                let member = open.pop().expect("the block closing a component is open");
+                on_open[member.index()] = false;
+                component.push(member);
+                if member == block {
+                    break;
+                }
+            }
+            component.sort_by_key(|member| position[member.index()]);
+            found.push(component);
+        }
+    }
+
+    found.into_iter().rev().flatten().collect()
 }
 
 #[cfg(test)]
@@ -281,6 +396,89 @@ mod tests {
         // edge back to `header` exists.
         assert!(at(&cfg, header) < at(&cfg, body), "{:?}", cfg.order());
         assert!(at(&cfg, header) < at(&cfg, exit), "{:?}", cfg.order());
+    }
+
+    /// Every block of a loop drains before every block after it, and a loop's
+    /// header before its body.
+    ///
+    /// Three loops in sequence, which is the shape `Cfg::order` leaves open: a
+    /// reverse postorder may put the second loop's header before the first
+    /// loop's body, and here it does, which the first assertion says so that
+    /// this test keeps meaning something if the walk changes.
+    ///
+    /// Mutation: keep the components in the order Tarjan finishes them,
+    /// rather than reversed. Mutation: answer `order` for `drain`. The second
+    /// assertion fails under either.
+    #[test]
+    fn a_loop_drains_before_what_comes_after_it() {
+        let (_sources, span) = spans();
+        let (_unit, mut function) = a_function(span);
+
+        let entry = function.reserve_block();
+        let loops: Vec<(BlockId, BlockId)> = (0..3)
+            .map(|_| (function.reserve_block(), function.reserve_block()))
+            .collect();
+        let exit = function.reserve_block();
+
+        let go = |to| Block {
+            elements: Vec::new(),
+            terminator: Terminator::Goto(to),
+        };
+        function.fill_block(entry, go(loops[0].0));
+        for (k, &(header, body)) in loops.iter().enumerate() {
+            let after = loops.get(k + 1).map_or(exit, |&(next, _)| next);
+            function.fill_block(
+                header,
+                Block {
+                    elements: Vec::new(),
+                    terminator: Terminator::Branch {
+                        condition: Operand::Constant(0),
+                        then: body,
+                        otherwise: after,
+                        origin: Origin::Written(span),
+                    },
+                },
+            );
+            function.fill_block(body, go(header));
+        }
+        function.fill_block(
+            exit,
+            Block {
+                elements: Vec::new(),
+                terminator: Terminator::Return,
+            },
+        );
+
+        let cfg = Cfg::of(&function);
+        let (first, second) = (loops[0], loops[1]);
+
+        assert!(at(&cfg, second.0) < at(&cfg, first.1), "{:?}", cfg.order());
+        assert!(
+            cfg.drained_at(first.1) < cfg.drained_at(second.0),
+            "{:?}",
+            cfg.drain()
+        );
+        for window in loops.windows(2) {
+            let (earlier, later) = (window[0], window[1]);
+            for block in [earlier.0, earlier.1] {
+                for after in [later.0, later.1, exit] {
+                    assert!(
+                        cfg.drained_at(block) < cfg.drained_at(after),
+                        "{:?}",
+                        cfg.drain()
+                    );
+                }
+            }
+        }
+        for &(header, body) in &loops {
+            assert!(
+                cfg.drained_at(header) < cfg.drained_at(body),
+                "{:?}",
+                cfg.drain()
+            );
+        }
+        assert_eq!(cfg.drain().len(), cfg.order().len());
+        assert_eq!(cfg.drained_at(entry), 0);
     }
 
     /// Every way into a block is a predecessor of it.

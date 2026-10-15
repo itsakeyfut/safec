@@ -180,6 +180,32 @@ inside a block replays that block's elements from its entry value, which is what
 the transfer does anyway. Storing every point would store a value per element
 and rewrite all of them on each pass, for a reader that does not exist.
 
+**A loop settles before anything after it is walked**, added by
+[#173](https://github.com/itsakeyfut/safec/issues/173). The worklist was a stack
+seeded in `Cfg::order`'s reverse postorder, which puts a loop's head before its
+body and its exit and says nothing about which of those two comes first. So a
+later loop could be walked before an earlier one had settled, and was walked
+again for every step the earlier one took: measured on the memory check, twenty
+loops in sequence took 4698 walks of 81 blocks, and forty took 34598 of 161.
+Draining a set by reverse postorder position alone left those counts exactly
+where they were, measured. `Cfg::drain` is the order now: every strongly
+connected component contiguous, the components in topological order, reverse
+postorder within one. The worklist is a set of positions in it, taken from the
+front, so a component is empty before the next is started. The same forty
+loops take 241 walks.
+
+What it costs is one more walk of the graph per function, Tarjan's, and a set
+where a stack was. What it does not do is settle a loop nested inside another
+before the outer one's body goes on: within a component the order is still
+reverse postorder. Nothing measured has needed that, and the example
+`crates/safec/examples/growth.rs` is where it would show.
+
+**The order changes how many walks an analysis takes, and for a monotone one
+nothing else.** The memory check's join is not monotone, so this changed one of
+its answers, a false report gone, and that is
+[#478](https://github.com/itsakeyfut/safec/issues/478) rather than something
+this record decides.
+
 ### Confirmation
 
 * Cutting the solver to one visit per block, by dropping the re-push of a
@@ -246,8 +272,14 @@ and rewrite all of them on each pass, for a reader that does not exist.
   is `error[E0596]`, because what a block sends is bound again before the loop
   that reads it. Both are things a test could not hold: the first is a hang
   and the second passed the whole suite.
+* Having `Cfg::of` answer `order` for `drain` fails
+  `a_sequence_of_loops_is_walked_a_bounded_number_of_times_per_block`, which
+  counts the walks, and `a_loop_drains_before_what_comes_after_it`, which reads
+  the order. Keeping Tarjan's components in the order it finishes them fails
+  the same two.
 
-Each of the first four was applied and the named tests observed to fail.
+Each of the first four was applied and the named tests observed to fail, and
+so was the last.
 
 ### Consequences
 
@@ -365,5 +397,5 @@ Each of the first four was applied and the named tests observed to fail.
 * [`docs/safety-model.md`](../safety-model.md): what those analyses conclude.
 * [ADR-0010](0010-give-the-graph-an-edge-no-statement-produced.md): the edges
   this walks, and why a call is a terminator.
-* `crates/safec-ir/src/cfg.rs`: the order, the predecessors, and why an
-  unreachable block is nobody's predecessor.
+* `crates/safec-ir/src/cfg.rs`: the order, the predecessors, the order a walk
+  drains in, and why an unreachable block is nobody's predecessor.
