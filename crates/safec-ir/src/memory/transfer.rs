@@ -1187,9 +1187,14 @@ impl Analysis for Allocations<'_> {
                     // way**, since another parameter may name that memory:
                     // `*w = m; free(m); q = *pp; return *q;` with `f(&x, &x)`
                     // read back nothing at `*pp` and was believed (#489).
+                    // Reachable to code this check cannot read, which is what
+                    // another parameter can name, and not `Known::from_caller`,
+                    // which a buffer of this function's own gains by holding
+                    // a caller's pointer. Found by review.
+                    let reachable = value.reachable_now();
                     let handed_over = containers
                         .iter()
-                        .any(|&container| value.from_caller[container]);
+                        .any(|container| reachable.contains(container));
                     if (unplaced || unnamed || handed_over)
                         && self.may_be_pointer(function, &operation.place)
                     {
@@ -1834,8 +1839,9 @@ impl Analysis for Allocations<'_> {
                             let unnamed = to.loaded || to.lost || to.foreign || into_depth > 1;
                             // And into handed-over memory, as for a store
                             // (#489).
+                            let reachable = value.reachable_now();
                             let handed_over =
-                                into.iter().any(|&container| value.from_caller[container]);
+                                into.iter().any(|container| reachable.contains(container));
                             if unnamed || handed_over || (into.is_empty() && targets.is_empty()) {
                                 let copied: Vec<usize> = copied.iter().copied().collect();
                                 value.landed_where_unknown_code_points(&copied);

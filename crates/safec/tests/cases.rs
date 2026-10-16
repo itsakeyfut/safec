@@ -2897,14 +2897,32 @@ cases! {
         a_pointer_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory a parameter can name is memory reachable to code this check
+        // cannot read, not memory that holds a caller's pointer: a buffer
+        // this function allocated and stored `*pp` in is no parameter's, and
+        // asking `Known::from_caller` landed `m` stored there in every
+        // parameter's memory and reported a use at `*q` that cannot happen.
+        // Found by review. Mutation: ask `from_caller` of the containers; this
+        // reports.
+        a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what that costs, which was nothing measured: five idioms with
         // two pointer parameters answer as they did before the store and the
-        // load were told the two may alias.
+        // load were told the two may alias. A record of that, not a guard: no
+        // mutation of this rule moves them, since landing a site changes
+        // none of their verdicts. The two after them are the guards on what
+        // the rule must not reach.
         two_pointer_parameters_swapped_are_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_output_parameter_beside_an_input_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_list_appended_through_a_head_and_a_tail_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_between_two_slots_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy between this function's own allocations lands in no
+        // parameter's memory, and neither does an integer stored through
+        // one. Mutation: land every copy; the first reports a use at `*q`
+        // that cannot happen. Mutation: let a store into handed-over memory
+        // land whatever its type; the second does.
+        a_copy_between_this_function_s_own_allocations_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_integer_stored_through_a_parameter_lands_in_no_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {
