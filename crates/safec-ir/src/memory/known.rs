@@ -1252,22 +1252,28 @@ impl Known {
         // with a case pinning that cost and an issue removing it. This early
         // return is told apart in both.
         //
-        // **This early return keeps a double free reported, and costs a
-        // false report.** `r = c ? u : q;` with `u` written by `get(&u)`
-        // and `q` freed and nulled on the first arm: on that arm nothing
-        // holds `q`'s site, so without this it is `Unheld`, takes the other
-        // arm's `Live`, and `free(r)` reads as proved, though `u` may be a
-        // pointer freed before the call. Since #497 a free of a pointer a
-        // call wrote is a doubt however it was joined, so the free is still
-        // reported without this, as one this check stopped following rather
-        // than one that may have been freed already. Mutation: leave this
-        // out; the report in
+        // **This early return keeps uses after free reported, for each of
+        // the three kinds, and costs a false report.** A use is read from the
+        // site's state, and on the arm that freed and nulled `q` nothing
+        // holds `q`'s site, so without this it is `Unheld` and takes the
+        // other arm's `Live`. Neither a load's `Reached::Partial`, which only
+        // stops a proof, nor a value this check lost and then stored, which
+        // is read back as naming nothing (#501), carries a doubt of its own
+        // past that. Each kind is held by a case, and narrowing this to any
+        // one of them silences the others' (#495): a pointer a call wrote,
+        // `a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted`; a
+        // load beside the join,
+        // `a_use_after_free_through_a_box_beside_a_load_is_doubted`; and a
+        // local lost to a rebirth,
+        // `a_use_after_free_through_a_box_beside_a_lost_local_is_doubted`.
+        // Mutation: leave out that kind; its case goes quiet. A free of a
+        // pointer a call wrote is a doubt without this since #497, so
         // `a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted`
-        // changes its words. The cost: one such local anywhere holds every
+        // only changes its words. The cost: one such local anywhere holds every
         // site, so `if (c) { free(p); p = 0; }` is doubted beside it though no
         // such local can name `p`;
         // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load`
-        // pins that, and #495 is removing it.
+        // pins that, and #495 removes it once #501 is closed.
         if self
             .points_to
             .iter()
