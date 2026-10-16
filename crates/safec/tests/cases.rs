@@ -1551,6 +1551,15 @@ cases! {
         // arm free nothing; this goes back to a doubt.
         the_old_pointer_used_after_a_successful_realloc_is_proved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_freed_pointer_handed_to_realloc_is_freed_twice: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The buffer that grows with `realloc` in a loop, which C programs
+        // write everywhere, is answered rather than walked until the budget
+        // stops it. The `realloc` fact is recorded only while every old site
+        // is `Live`, so its transfer is not monotone, and a header worked out
+        // again from what comes back alternated between `Live` and `Unknown`
+        // for good. The three doubts are false: the old buffer is freed only
+        // where the call failed, and nothing reads it after that. See
+        // ADR-0016. Mutation: fold at no block in `solve`; this panics.
+        a_buffer_grown_by_realloc_in_a_loop_is_answered: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local whose address a call kept earlier is reached by every call
         // after it, handed anything or nothing.
         a_pointer_in_a_local_whose_address_an_earlier_call_kept_is_unproven_after_a_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],

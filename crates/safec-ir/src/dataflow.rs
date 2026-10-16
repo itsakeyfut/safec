@@ -342,15 +342,15 @@ impl<V> Solution<V> {
 ///
 /// The `Cfg` is taken rather than built, so that a caller holding one does not
 /// walk the graph twice and so that the graph this runs over is visibly the one
-/// the caller asked about. Only its order is read: this pushes a value forward
-/// along the edges rather than pulling one back from each predecessor, and a
-/// successor of a reachable block is reachable, so there is nothing here to
-/// filter.
+/// the caller asked about. Its drain order and its predecessors are read, and
+/// `Cfg` lists only reachable blocks as predecessors, so there is nothing here
+/// to filter.
 ///
 /// A block is walked from its entry value: every element in the order it is
 /// written, then the terminator, and then [`Analysis::edge`] once per outgoing
 /// edge, each on its own copy of what the block sends. What that leaves is
-/// joined into that one successor.
+/// kept as what that edge last sent, and the successor's value is worked out
+/// again from what every edge into it last sent.
 /// A successor whose value moved goes back on the list, which is what makes a
 /// loop converge rather than being answered from whatever reached it first.
 ///
@@ -382,9 +382,10 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     // take 206 walks of 42 blocks rather than 50. A set rather than a stack
     // also needs no test for a block already waiting.
     //
-    // For an analysis whose join is monotone the order changes how many walks
-    // it takes and not what it answers. The memory check's is not, which is
-    // #478. See ADR-0016.
+    // The order changes how many walks an analysis takes. A block's value is
+    // worked out from what its predecessors send now rather than from
+    // everything they ever sent, so a monotone analysis answers the same in
+    // any order. ADR-0016 has what was measured for one that is not.
     let mut worklist: BTreeSet<usize> = (0..cfg.drain().len()).collect();
     let mut successors = Vec::new();
 
@@ -397,6 +398,34 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
     let height = analysis.height(function);
     let budget = height.saturating_add(1);
     let mut visits = vec![0usize; function.blocks().len()];
+
+    // What each block last sent along each of its edges, indexed by the block
+    // and then by the edge's index into `Terminator::successors`. A block's
+    // value is worked out again from these whenever one of them moves, rather
+    // than each arrival being folded into what was stored: a transfer that is
+    // not monotone can send a value early that the settled one does not cover,
+    // and folding kept it. See ADR-0016.
+    let mut sent: Vec<Vec<Option<A::Value>>> =
+        (0..function.blocks().len()).map(|_| Vec::new()).collect();
+    let mut targets = Vec::new();
+
+    // **Except at a loop's head, which keeps what it had and joins the rest
+    // in.** A head is a block with a predecessor at or after it in the drain
+    // order, which is a back edge, and every cycle passes through one. Worked
+    // out again everywhere, a transfer that is not monotone has no fixpoint to
+    // reach: the memory check's `realloc` fact is recorded only while every
+    // old site is `Live`, so `x = realloc(x, n);` in a loop sent `Unknown`
+    // back for a `Live` header and `Live` back for an `Unknown` one, and the
+    // walk alternated until the budget stopped it. A head's value only climbs,
+    // so every cycle climbs, and the walk ends within the height. See
+    // ADR-0016.
+    let mut heads = vec![false; function.blocks().len()];
+    for &block in cfg.drain() {
+        heads[block.index()] = cfg
+            .predecessors(block)
+            .iter()
+            .any(|&from| cfg.drained_at(from) >= cfg.drained_at(block));
+    }
 
     while let Some(at) = worklist.pop_first() {
         let block = cfg.drain()[at];
@@ -452,8 +481,7 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
             // This clone is what the edge is allowed to write to, and it is
             // per edge rather than per block because that is the whole of what
             // this buys: two arms of one branch are told different things. It
-            // is not the clone the comparison below makes, which is of what
-            // had already arrived at the successor.
+            // is kept in `sent` afterwards, as what this edge last said.
             //
             // The index is the position in `successors`, which is the order
             // `Terminator::successors` pushed, and `Analysis::edge` is written
@@ -461,39 +489,74 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
             // `successor`: both are in scope here, and the one whose elements
             // an analysis reads to resolve the condition is the one being
             // left.
-            let mut sent = value.clone();
+            let mut sent_value = value.clone();
             analysis.edge(
                 function,
                 block,
                 &function.block(block).terminator,
                 index,
-                &mut sent,
+                &mut sent_value,
             );
-            let value = sent;
+            let along = &mut sent[block.index()];
+            along.resize(successors.len(), None);
+            along[index] = Some(sent_value);
+            let just_sent = along[index].as_ref().expect("stored on the line above");
 
-            let changed = match &mut values[successor.index()] {
-                Some(arrived) => {
-                    // Compared rather than asked. What a clone per edge buys
-                    // is that the join has no answer to be wrong about. See
-                    // ADR-0016.
-                    //
-                    // Inverting this comparison pushes a block whose value did
-                    // not move, so the walk does not end on its own. It used to
-                    // hang for that reason and no longer does: the budget above
-                    // stops it, and the mutation now fails four tests and hangs
-                    // none. Measured, after the budget landed and made the
-                    // sentence that used to be here false.
-                    let before = arrived.clone();
-                    analysis.join(arrived, &value);
-                    *arrived != before
+            let arrived = if heads[successor.index()] {
+                // A head keeps what it had and joins this in. What every other
+                // edge into it sent is in what it had already, because each
+                // was joined in when it arrived, so this is the head's value
+                // joined with all of them, at the cost of one join. The entry
+                // is a head wherever a back edge reaches it, since nothing
+                // drains before it, and what it had is `on_entry`.
+                match &values[successor.index()] {
+                    Some(stored) => {
+                        let mut folded = stored.clone();
+                        analysis.join(&mut folded, just_sent);
+                        Some(folded)
+                    }
+                    None => Some(just_sent.clone()),
                 }
-                // The first answer to arrive is kept rather than joined, which
-                // is what lets an analysis have no bottom. See ADR-0016.
-                nothing @ None => {
-                    *nothing = Some(value.clone());
-                    true
+            } else {
+                // Anywhere else, the join of what every edge into it last
+                // sent. An edge that has sent nothing yet adds nothing, and
+                // the first that has is kept rather than joined into anything,
+                // which is what lets an analysis have no bottom. See ADR-0016.
+                let mut arrived: Option<A::Value> = None;
+                let mut asked: Vec<BlockId> = Vec::new();
+                for &from in cfg.predecessors(successor) {
+                    // A block with two edges into this one is its predecessor
+                    // twice, and both edges are read below the first time.
+                    if asked.contains(&from) {
+                        continue;
+                    }
+                    asked.push(from);
+                    targets.clear();
+                    function.block(from).terminator.successors(&mut targets);
+                    for (edge, &target) in targets.iter().enumerate() {
+                        let Some(Some(value)) = (target == successor)
+                            .then(|| sent[from.index()].get(edge))
+                            .flatten()
+                        else {
+                            continue;
+                        };
+                        match &mut arrived {
+                            Some(arrived) => analysis.join(arrived, value),
+                            nothing @ None => *nothing = Some(value.clone()),
+                        }
+                    }
                 }
+                arrived
             };
+
+            // Compared rather than asked. What a clone per edge buys is that
+            // the join has no answer to be wrong about. See ADR-0016.
+            //
+            // Inverting this comparison pushes a block whose value did not
+            // move, so the walk does not end on its own, and the budget above
+            // stops it.
+            let changed = values[successor.index()] != arrived;
+            values[successor.index()] = arrived;
 
             // Already on the list is already going to be walked again, which
             // a set answers by holding it once.

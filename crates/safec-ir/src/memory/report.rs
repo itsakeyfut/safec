@@ -171,7 +171,7 @@ fn verdict(
                     None => before,
                 });
             }
-            SiteState::Unknown | SiteState::Reachable => unknown = true,
+            SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => unknown = true,
         }
     }
 
@@ -424,7 +424,7 @@ fn interior(reached: &[Reached], offset: Offset, known: &Known) -> Option<Verdic
     // may not hold.
     let made_of = |site: usize| match known.state[site] {
         SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-        SiteState::Unknown | SiteState::Reachable => None,
+        SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
     };
     let made = rest
         .iter()
@@ -1131,7 +1131,7 @@ pub(super) fn used_before(
         for (index, site) in both.iter().enumerate() {
             let from = match known.state[*site] {
                 SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-                SiteState::Unknown | SiteState::Reachable => None,
+                SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
             };
             made = if index == 0 { from } else { same(made, from) };
         }
@@ -1201,7 +1201,7 @@ pub(super) fn after_a_call(
         for (index, site) in read.sites.iter().enumerate() {
             let from = match known.state[*site] {
                 SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-                SiteState::Unknown | SiteState::Reachable => None,
+                SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
             };
             made = if index == 0 { from } else { same(made, from) };
         }
