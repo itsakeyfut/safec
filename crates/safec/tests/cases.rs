@@ -1975,6 +1975,11 @@ cases! {
         // function with no free reported a use of freed memory at both reads
         // of `**pp`. Mutation: drop the `may_be_pointer` filter; this reports.
         an_integer_stored_through_a_load_lands_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And the same store written as `memcpy`, which copies without going
+        // through the store: `memcpy(w, s, 8)` was believed where `*w = *s;`
+        // was doubted. Mutation: have the copy land nowhere when its
+        // destination cannot be placed; this goes silent at the use.
+        an_allocation_copied_through_a_load_by_memcpy_may_land_in_memory_handed_to_the_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a copy whose destination or source is itself read out of memory,
         // `memcpy(*pp, src, 8)` and `memcpy(tab, *ps, 8)`. Mutation: have

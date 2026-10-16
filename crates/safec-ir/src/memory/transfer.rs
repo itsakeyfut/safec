@@ -1183,14 +1183,7 @@ impl Analysis for Allocations<'_> {
                     // function with no free reported a use of freed memory.
                     // See ADR-0044.
                     if (unplaced || unnamed) && self.may_be_pointer(function, &operation.place) {
-                        let exposed: Vec<usize> = (0..value.exposed.len())
-                            .filter(|&site| value.exposed[site])
-                            .collect();
-                        for landing in value.closure(exposed) {
-                            for &site in &carried {
-                                value.inside[landing][site] = true;
-                            }
-                        }
+                        value.landed_where_unknown_code_points(&carried);
                     }
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
@@ -1819,9 +1812,19 @@ impl Analysis for Allocations<'_> {
                                 held.stale_read = marked;
                                 held.unreplaced_read = unreplaced;
                                 held.from_caller = caller;
-                                for target in targets {
+                                for &target in &targets {
                                     value.points_to[target].accumulated(&held);
                                 }
+                            }
+                            // **A copy into memory this check cannot place lands
+                            // where a store there would**: `memcpy(w, s, 8)`
+                            // with `w` a load was believed where `*w = *s;`
+                            // was doubted. Found by review. See ADR-0044.
+                            let to = &value.points_to[dest.local.index()];
+                            let unnamed = to.loaded || to.lost || to.foreign || into_depth > 1;
+                            if unnamed || (into.is_empty() && targets.is_empty()) {
+                                let copied: Vec<usize> = copied.iter().copied().collect();
+                                value.landed_where_unknown_code_points(&copied);
                             }
                             for container in into {
                                 for &site in &copied {
