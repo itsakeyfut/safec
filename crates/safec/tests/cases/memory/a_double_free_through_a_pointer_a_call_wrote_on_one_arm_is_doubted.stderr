@@ -1,0 +1,10 @@
+error[SC0401]: this frees `r`, which may have been freed already
+    ╭─[ a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:5 ]
+    │
+ 16 │     free(r);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

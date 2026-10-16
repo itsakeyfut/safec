@@ -1247,21 +1247,25 @@ impl Known {
         // fail no case when left out, measured on the whole workspace, and
         // each says below what is believed to cover it and which programs
         // were tried: `exposed_after_call`, and a pending read's `sites` and
-        // `reachable`. Two are told apart only in the other direction, a
-        // report on a program defined on every path, and each has a case
-        // pinning that cost and an issue removing it: this early return and
-        // a `realloc` fact's `old`.
+        // `reachable`. A `realloc` fact's `old` is told apart only in the
+        // other direction, a report on a program defined on every path,
+        // with a case pinning that cost and an issue removing it. This early
+        // return is told apart in both.
         //
-        // **This early return costs a false report, and #495 is removing
-        // it.** One lost, loaded or foreign local anywhere holds every site,
-        // so `if (c) { free(p); p = 0; }` is doubted after it, though `p` is
-        // nothing such a local can name. What such a local may name without
-        // listing it is stored in some allocation or reachable to code this
-        // check cannot read, which `inside` and `exposed` count; an alias of
-        // `p` handed to a call first stays doubted without it. Mutation:
-        // leave this out;
+        // **This early return keeps a double free reported, and costs a
+        // false report.** `r = c ? u : q;` with `u` written by `get(&u)`
+        // and `q` freed and nulled on the first arm: on that arm nothing
+        // holds `q`'s site, so without this it is `Unheld`, takes the other
+        // arm's `Live`, and `free(r)` reads as proved, though `u` may be a
+        // pointer freed before the call. A join that drops the foreign side's
+        // doubt is the hole, #497, and this return is what covers it here.
+        // Mutation: leave this out;
+        // `a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted`
+        // goes quiet. The cost: one such local anywhere holds every site, so
+        // `if (c) { free(p); p = 0; }` is doubted beside it though no such
+        // local can name `p`;
         // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load`
-        // goes quiet.
+        // pins that, and #495 removes it once #497 is closed.
         if self
             .points_to
             .iter()

@@ -397,6 +397,13 @@ cases! {
         // Mutation: leave the early return for a lost, loaded or foreign
         // local out of `held_sites`; the use and the free go quiet.
         a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And what that same rule holds in the safety direction: `u` written
+        // by a call this check cannot read may be `p`, freed before the call,
+        // and `r` is `u` on the arm that freed and nulled `q`, so `free(r)`
+        // may free `p` twice. Found by review of #495. Mutation: leave the
+        // early return for a lost, loaded or foreign local out of
+        // `Known::held_sites`; this exits 0 with nothing said (#497).
+        a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer that is a freed allocation on one path and a local's
         // address on the other is doubted, not proved: the path through `&x`
         // reads `x`. Under `--allow-unknown`, so a proof would be exit 1 and a
