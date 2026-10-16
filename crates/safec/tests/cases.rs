@@ -2902,9 +2902,11 @@ cases! {
         // this function allocated and stored `*pp` in is no parameter's, and
         // asking `Known::from_caller` landed `m` stored there in every
         // parameter's memory and reported a use at `*q` that cannot happen.
-        // Found by review. Mutation: ask `from_caller` of the containers; this
-        // reports.
+        // Found by review. Mutation: ask `from_caller` of the containers of
+        // the store; the first reports. Of the copy `memcpy` makes; the
+        // second does.
         a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_this_function_s_own_buffer_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A local's address lands too, in what the memory may contain rather
         // than in what is exposed: `*ppp = &x;` then a write through `*r`
         // left `x` the null it started as, and the use behind `if (!q)` was
