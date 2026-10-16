@@ -655,6 +655,14 @@ impl Analysis for Allocations<'_> {
                 value.clear(local);
             }
         }
+        // After the clearing, so that a site only a dead local held is one
+        // nothing holds. See ADR-0048.
+        let held = value.held_sites();
+        for (site, state) in value.state.iter_mut().enumerate() {
+            if !held[site] {
+                *state = SiteState::Unheld;
+            }
+        }
     }
 
     type Value = Known;
@@ -712,25 +720,25 @@ impl Analysis for Allocations<'_> {
         //
         // **The bit is not monotone in the transfer, and does not have to be.**
         // `Held::clear` puts it back at every fresh assignment. What this
-        // number bounds is how often a *block's entry value* can move, and an
-        // entry value moves only through `join`, which unions. A transfer that
-        // takes facts away inside a block cannot make the entry value descend,
-        // so it cannot make the solver oscillate. Generous
+        // number bounds is how often a *block's entry value* can move, and a
+        // transfer that takes a fact away inside a block takes it away from
+        // every input alike, so it does not make the entry value descend; the
+        // paragraph after next is the field that does. Generous
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
-        // **One join does not union: a site's state where the entry did not
-        // hold the site and the arriving value does.** It is replaced rather
-        // than joined (ADR-0048), so it can move down, `Freed` to `Live`, which
-        // review measured once in the corpus. That happens at most once per
-        // site at each block, because what holds a site at an entry only
-        // accumulates there, and after it the state can climb its two steps
-        // again, its `made` span fall once more and its `freed` span move once
-        // more: five more steps per site, counted below. The exception is a
-        // site held only by a `realloc` fact, which a join drops where the
-        // arms disagree; on the arm carrying the fact the site is `Unknown` or
-        // `Freed` already, so the only move it allows is to `Freed`, and
-        // review found no program where it moves twice.
+        // **An entry value can move down as well, since ADR-0016's solver
+        // works it out again from what its predecessors send now.** The
+        // transfer is not monotone in every field: `Held::freed` is a proof a
+        // set of two sites carries and a set of one does not, so a predecessor
+        // sent less once its input grew. The five steps per site counted below
+        // were for the one join that did not union, ADR-0048's replacement of
+        // a state where one side did not hold the site; that is
+        // `SiteState::Unheld` joining as the identity now, one step up from it
+        // per site, and the rest is kept as room for a descent, which nothing
+        // here bounds. A walk that needs more is stopped by the solver's
+        // budget, which names this analysis rather than settling on whatever
+        // it last folded. Measured: no function in the corpus reaches it.
         //
         // **What has been read since the last sequence point is a set of
         // positions, so it is counted in positions rather than in locals.** A
@@ -806,9 +814,6 @@ impl Analysis for Allocations<'_> {
     }
 
     fn join(&self, into: &mut Self::Value, from: &Self::Value) {
-        // Before anything below changes either side. See ADR-0048.
-        let held_here = into.held_sites();
-        let held_there = from.held_sites();
         // **Every field named, never `..`.** A lattice value whose join
         // forgets a field reaches a fixpoint over a value nobody is joining,
         // and nothing else in the build says so: the field is read, the walk
@@ -871,17 +876,13 @@ impl Analysis for Allocations<'_> {
         }
 
         // **A site nothing on one side can still name takes the other side's
-        // state.** On the arm of `if (c) { free(p); p = 0; }` that freed it,
-        // nothing read again holds the allocation, so whether it was freed
-        // there is about no execution's next use of it, and joining it in
-        // made the other arm's live `p` unproven. Held on both sides, or on
-        // neither, the states join as they always did. See ADR-0048.
-        for (site, (here, there)) in state.iter_mut().zip(&from.state).enumerate() {
-            *here = match (held_here[site], held_there[site]) {
-                (true, false) => *here,
-                (false, true) => *there,
-                (true, true) | (false, false) => here.joined(*there),
-            };
+        // state**, because `edge` made it `SiteState::Unheld` there, which is
+        // the join's identity. On the arm of `if (c) { free(p); p = 0; }` that
+        // freed it, nothing read again holds the allocation, so whether it was
+        // freed there is about no execution's next use of it, and joining it
+        // in made the other arm's live `p` unproven. See ADR-0048.
+        for (here, there) in state.iter_mut().zip(&from.state) {
+            *here = here.joined(*there);
         }
 
         // A local whose address escaped on one arm has escaped where the arms
@@ -1544,6 +1545,7 @@ impl Analysis for Allocations<'_> {
                     .sites()
                     .filter_map(|site| match value.state[site] {
                         SiteState::Live(made) => Some((site, made)),
+                        SiteState::Unheld => Some((site, None)),
                         SiteState::Freed { .. } | SiteState::Unknown | SiteState::Reachable => None,
                     })
                     .collect();
@@ -1662,7 +1664,7 @@ impl Analysis for Allocations<'_> {
                     // the free: the diagnostic wants to name it.
                     let made = match value.state[site] {
                         SiteState::Live(made) | SiteState::Freed { made, .. } => made,
-                        SiteState::Unknown | SiteState::Reachable => None,
+                        SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => None,
                     };
                     // **A free already ordered before here is the one to
                     // keep.** It is what proves anything about what follows,

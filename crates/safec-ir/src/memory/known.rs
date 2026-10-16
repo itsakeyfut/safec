@@ -321,7 +321,7 @@ impl Known {
                 SiteState::Freed { .. } => true,
                 SiteState::Unknown => true,
                 SiteState::Reachable => !through_address.contains(&site) || read_unreplaced,
-                SiteState::Live(_) => false,
+                SiteState::Live(_) | SiteState::Unheld => false,
             })
             .map(Reached::Site)
             .collect();

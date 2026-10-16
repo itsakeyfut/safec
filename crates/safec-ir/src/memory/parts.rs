@@ -148,6 +148,22 @@ pub(super) enum SiteState {
     /// Freed on one path and not on another, or handed to a call this check
     /// cannot read: something this check saw may have freed it.
     Unknown,
+    /// Named by nothing on this path: no local, allocation, pending read or
+    /// call can reach it, so no execution's next use of it starts here.
+    ///
+    /// **The join's identity**, so that a path on which nothing holds a site
+    /// says nothing about it where paths meet. ADR-0048's rule was that such a
+    /// side takes the other side's state, and it was a special case in the join
+    /// that asked whether each side held the site; as a state, it holds
+    /// whatever arrived before, which the special case did not. `Live(None)`
+    /// cannot be this, because a site that is live and was allocated where this
+    /// check did not see is a fact, and it joins a span away. See ADR-0048.
+    ///
+    /// Set where a value crosses an edge, after liveness has cleared what the
+    /// successor does not read. A reader reaches a site through something that
+    /// holds it, so no report asks about one in this state, and every reader
+    /// takes it as [`Self::Live`] with no span would be taken.
+    Unheld,
     /// Live as far as this check saw, and within reach of code it cannot read:
     /// a local holding it had its address taken, or it was exposed to a call,
     /// or a call reached it only through an address. Nothing that may have
@@ -169,6 +185,7 @@ impl SiteState {
     /// The two together, which is `Unknown` unless they agree.
     pub(super) fn joined(self, other: Self) -> Self {
         match (self, other) {
+            (Self::Unheld, other) | (other, Self::Unheld) => other,
             (Self::Live(here), Self::Live(there)) => Self::Live(same(here, there)),
             (
                 Self::Freed {
@@ -203,7 +220,7 @@ impl SiteState {
     pub(super) fn may_be_freed(&mut self) {
         match self {
             Self::Live(_) | Self::Reachable => *self = Self::Unknown,
-            Self::Freed { .. } | Self::Unknown => {}
+            Self::Freed { .. } | Self::Unknown | Self::Unheld => {}
         }
     }
 
@@ -213,7 +230,7 @@ impl SiteState {
     pub(super) fn doubted(&mut self) {
         match self {
             Self::Live(_) => *self = Self::Reachable,
-            Self::Freed { .. } | Self::Unknown | Self::Reachable => {}
+            Self::Freed { .. } | Self::Unknown | Self::Reachable | Self::Unheld => {}
         }
     }
 }
@@ -949,4 +966,42 @@ pub(super) struct Realloced {
     pub(super) at: Span,
     /// Each allocation it was handed, with where it was made.
     pub(super) old: Vec<(usize, Option<Span>)>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Freeing, SiteState};
+    use crate::source::{SourceMap, Span};
+
+    /// `SiteState::Unheld` joined with any state, from either side, is that
+    /// state.
+    ///
+    /// That is what makes a path on which nothing holds a site say nothing
+    /// about it where paths meet, whichever path arrived first, which is the
+    /// whole of what ADR-0048's rule asks of the join.
+    ///
+    /// Mutation: answer `Unknown` for `Unheld` joined with anything. This
+    /// fails, and so do the free-and-null cases in the corpus.
+    #[test]
+    fn a_site_nothing_holds_is_the_identity_of_the_join() {
+        let mut sources = SourceMap::new();
+        let file = sources.add_virtual("t.c", "int f(void) { return 0; }\n");
+        let made = Span::new(file, 0, 3);
+        let freed = Span::new(file, 4, 5);
+
+        for state in [
+            SiteState::Live(None),
+            SiteState::Live(Some(made)),
+            SiteState::Freed {
+                made: Some(made),
+                freed: Freeing::new(freed),
+            },
+            SiteState::Unknown,
+            SiteState::Reachable,
+            SiteState::Unheld,
+        ] {
+            assert!(SiteState::Unheld.joined(state) == state);
+            assert!(state.joined(SiteState::Unheld) == state);
+        }
+    }
 }
