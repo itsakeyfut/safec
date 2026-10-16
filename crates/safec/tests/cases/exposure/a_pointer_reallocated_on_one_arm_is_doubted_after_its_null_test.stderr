@@ -1,0 +1,20 @@
+warning[SC0402]: this uses `p`, which may have been freed
+    ╭─[ a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test.c:10:9 ]
+    │
+ 10 │     int r = *p;
+    │         ───┬──  
+    │            ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0401]: this frees `p`, which may have been freed already
+    ╭─[ a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test.c:11:5 ]
+    │
+ 11 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

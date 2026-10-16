@@ -391,6 +391,12 @@ cases! {
         // the second builds.
         a_pointer_stored_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_made_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What `Known::held_sites` counting every site beside one load costs:
+        // `if (c) { free(p); p = 0; }` is doubted after it, though the load
+        // cannot name `p` and every path is defined. #495 is removing that.
+        // Mutation: leave the early return for a lost, loaded or foreign
+        // local out of `held_sites`; the use and the free go quiet.
+        a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer that is a freed allocation on one path and a local's
         // address on the other is doubted, not proved: the path through `&x`
         // reads `x`. Under `--allow-unknown`, so a proof would be exit 1 and a
@@ -1632,6 +1638,13 @@ cases! {
         the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a `realloc` fact's holder costs: `if (c) p = realloc(p, 8);
+        // if (!p) return 0;` is followed by a use and a free of `p` that are
+        // defined on every path, and both are doubted, because the fact holds
+        // the old block on the arm that overwrote `p`. #494 is removing that
+        // holder. Mutation: leave the fact out of `Known::held_sites`; both
+        // reports go.
+        a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // `if (*q)` tests what `realloc` returned points at, not whether it
         // returned null, so neither arm says what became of `p`, and the free
         // of it after a call that succeeded is still asked about. Mutation:
