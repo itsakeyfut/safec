@@ -18,20 +18,3 @@ error[SC0401]: this frees `r`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven, and unproven results are errors in this compilation
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-error[SC0401]: this frees `q`, which was freed already
-    ╭─[ a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:12 ]
-    │
- 13 │     int *q = malloc(4);
-    │              ────┬────  
-    │                  ╰────── allocated here
-    │ 
- 17 │     int *s = realloc(r, 8);
-    │              ──────┬──────  
-    │                    ╰──────── freed here
-    │ 
- 19 │     if (c) free(q);
-    │            ───┬───  
-    │               ╰───── freed again here
-────╯
-  = note: this check belongs to safety level 1
-  = help: remove one of the two frees, or take this one off the path that reaches the first

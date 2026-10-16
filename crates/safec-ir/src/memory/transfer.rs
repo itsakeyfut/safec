@@ -506,10 +506,12 @@ impl Allocations<'_> {
             //
             // **Nor is a pointer a call this check cannot read wrote**, which
             // may be any pointer. Alone it names no site and the first row
-            // doubts it; joined with an arm that named `q`, it names `q`'s
-            // site and nothing else said so, and `get(&u); if (c) r = u; else
-            // r = q; free(r);` was read as a free of `q` while `u` may be one
-            // already freed (#497). See ADR-0044.
+            // doubts it, in that row's words; joined with an arm that named
+            // `q`, it names `q`'s site and nothing else said so, and
+            // `get(&u); if (c) r = u; else r = q; free(r);` was read as a free
+            // of `q` while `u` may be one already freed (#497). Asked only
+            // where it names a site, so that the first row's words stand for
+            // an output parameter alone. See ADR-0044.
             let held = &known.points_to[place.local.index()];
             // Which of the four it is, as far as this can tell: one alone
             // names its reason, and more than one is `Other` unless one is
@@ -518,7 +520,7 @@ impl Allocations<'_> {
                 (reached.len() == before, LostReason::NoSiteKnown),
                 (held.loaded, LostReason::ReadOutOfMemory),
                 (held.may_be_a_locals_address(), LostReason::MayBeALocal),
-                (held.foreign, LostReason::Other),
+                (held.foreign && reached.len() > before, LostReason::Other),
             ];
             if let Some(reason) = reasons
                 .iter()

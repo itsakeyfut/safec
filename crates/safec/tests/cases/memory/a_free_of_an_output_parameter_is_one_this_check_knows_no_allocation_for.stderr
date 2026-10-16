@@ -1,0 +1,10 @@
+error[SC0401]: this frees `u`, which this check stopped following
+   ╭─[ a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for.c:6:5 ]
+   │
+ 6 │     free(u);
+   │     ───┬───  
+   │        ╰───── this check knows of no allocation this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check knows of no allocation this pointer holds here

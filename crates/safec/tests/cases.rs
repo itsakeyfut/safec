@@ -402,17 +402,25 @@ cases! {
         // and `r` is `u` on the arm that freed and nulled `q`, so `free(r)`
         // may free `p` twice. Found by review of #495. Mutation: leave the
         // early return for a lost, loaded or foreign local out of
-        // `Known::held_sites`; this exits 0 with nothing said (#497).
+        // `Known::held_sites`; until #497 this exited 0 with nothing said,
+        // and now the report at `free(r)` changes its words.
         a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A free of a pointer a call this check cannot read wrote is a doubt
         // whatever else it was joined with: `r` is `u` on one arm and `q` on
         // the other, so it names `q`'s site, and `free(r)` was read as a free
         // of `q` alone, though `u` may be `p`, freed before the call (#497).
         // Mutation: drop the `Held::foreign` row from
-        // `Allocations::touching`'s reasons; the report at `free(r)` goes, and
-        // in the second, the same handed to `realloc`, the report at it.
+        // `Allocations::touching`'s reasons; the report at `free(r)` goes, in
+        // the second, with the arms the other way round, the same, and in the
+        // third, the same handed to `realloc`, the report at it. Mutation:
+        // keep only the foreign side of a `Held` join; the second goes.
+        // Mutation: ask the row whether or not the pointer names a site; the
+        // fourth, an output parameter freed alone, changes its words to
+        // "cannot say what this points at".
         a_free_of_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_free_of_an_output_parameter_is_one_this_check_knows_no_allocation_for: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer that is a freed allocation on one path and a local's
         // address on the other is doubted, not proved: the path through `&x`
         // reads `x`. Under `--allow-unknown`, so a proof would be exit 1 and a

@@ -164,28 +164,14 @@ Function a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:5 "f"
     Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:9 generated
     Goto "bb18"
   Block "bb18"
-    Branch a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:9 "bb19" "bb20"
-      Copy "_1"
-  Block "bb19"
-    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:9 generated
-    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:12 generated
-    Call a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:12 "free" "bb22"
-      Copy "_7"
-  Block "bb20"
-    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:9 generated
-    Goto "bb21"
-  Block "bb21"
-    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:20:5 generated
-    Call a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:20:5 "free" "bb23"
+    ArgumentsEvaluated a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 generated
+    Call a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 "free" "bb19"
       Copy "_13"
-  Block "bb22"
-    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:12 generated
-    Goto "bb21"
-  Block "bb23"
-    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:20:5 generated
-    Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:21:5 written
+  Block "bb19"
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 generated
+    Operation a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:20:5 written
       Destination "_0"
       Use
         Constant 0
-    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:21:12 generated
+    Sequenced a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:20:12 generated
     Return

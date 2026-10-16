@@ -1257,15 +1257,17 @@ impl Known {
         // and `q` freed and nulled on the first arm: on that arm nothing
         // holds `q`'s site, so without this it is `Unheld`, takes the other
         // arm's `Live`, and `free(r)` reads as proved, though `u` may be a
-        // pointer freed before the call. A join that drops the foreign side's
-        // doubt is the hole, #497, and this return is what covers it here.
-        // Mutation: leave this out;
+        // pointer freed before the call. Since #497 a free of a pointer a
+        // call wrote is a doubt however it was joined, so the free is still
+        // reported without this, as one this check stopped following rather
+        // than one that may have been freed already. Mutation: leave this
+        // out; the report in
         // `a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted`
-        // goes quiet. The cost: one such local anywhere holds every site, so
-        // `if (c) { free(p); p = 0; }` is doubted beside it though no such
-        // local can name `p`;
+        // changes its words. The cost: one such local anywhere holds every
+        // site, so `if (c) { free(p); p = 0; }` is doubted beside it though no
+        // such local can name `p`;
         // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load`
-        // pins that, and #495 removes it once #497 is closed.
+        // pins that, and #495 is removing it.
         if self
             .points_to
             .iter()

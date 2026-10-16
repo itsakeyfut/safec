@@ -16,7 +16,6 @@ int f(int c) {
     if (c) { r = u; } else { r = q; }
     int *s = realloc(r, 8);
     if (!s) return 0;
-    if (c) free(q);
     free(s);
     return 0;
 }
