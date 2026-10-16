@@ -1169,6 +1169,29 @@ impl Analysis for Allocations<'_> {
                     // memory on another path, so the address being out there
                     // is a may-fact and would exempt a holder from being
                     // asked. See ADR-0047.
+                    //
+                    // **What it carries may land in any memory code this check
+                    // cannot read can name**, which is every exposed
+                    // allocation and every allocation one holds, since a
+                    // pointer this check cannot place may be any of them: `*a
+                    // = t; w = *b; *w = m; free(m); q = *t; return *q;` with
+                    // `a == b` read back nothing at `*t` and was believed
+                    // (#487). Reachable rather than exposed, because `*a = t;`
+                    // records `t` in `a`'s memory and does not mark it. Only a
+                    // pointer stored: `**pp = x;` with `x` an `int` copied out
+                    // of a parameter carried that parameter's site, and a
+                    // function with no free reported a use of freed memory.
+                    // See ADR-0044.
+                    if (unplaced || unnamed) && self.may_be_pointer(function, &operation.place) {
+                        let exposed: Vec<usize> = (0..value.exposed.len())
+                            .filter(|&site| value.exposed[site])
+                            .collect();
+                        for landing in value.closure(exposed) {
+                            for &site in &carried {
+                                value.inside[landing][site] = true;
+                            }
+                        }
+                    }
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
                     } else {

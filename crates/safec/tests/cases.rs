@@ -1941,7 +1941,9 @@ cases! {
         // silent at the use. Mutation: ask only `foreign`; the first four do.
         // Mutation: ask only `loaded`; the fifth does, its pointer written by
         // a call. Mutation: follow a lost local no further, as before; the
-        // fourth does, its `t` lost to the call it was handed to.
+        // fourth does, its `t` lost to the call it was handed to. The
+        // second and third also doubt `u = *ppp`, since #487 lands `*t = m`
+        // in `ppp`'s memory too, a false report the reader can see.
         an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back_one_level_further: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
@@ -1954,6 +1956,15 @@ cases! {
         // silences both.
         an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back_in_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // The other direction: a store through a pointer this check cannot
+        // place may land in memory a later load names, if code this check
+        // cannot read can name it, so what it carries is recorded in every
+        // exposed allocation and every one reachable from one (#487). See
+        // ADR-0044. Mutation: record nothing there; both go silent at the use.
+        // Mutation: record in the exposed allocations only; the first does,
+        // since `*a = t;` records `t` in `a`'s memory without marking it.
+        an_allocation_stored_through_a_load_may_land_in_memory_handed_to_the_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a copy whose destination or source is itself read out of memory,
         // `memcpy(*pp, src, 8)` and `memcpy(tab, *ps, 8)`. Mutation: have
