@@ -206,13 +206,30 @@ What it costs is Tarjan's walk once per loop, over that loop's blocks, and a
 set where a stack was. The example `crates/safec/examples/growth.rs` measures
 four shapes, nested loops among them.
 
-**The order changes how many walks an analysis takes, and for a monotone one
-nothing else.** The memory check's join is not monotone, so this moved its
-answers, in both directions. In the corpus one false report went; outside it,
-review found programs where the new order adds a doubt the old one did not,
-also false. None was found where it goes silent about a defect. That is
-[#478](https://github.com/itsakeyfut/safec/issues/478), which holds the
-programs, rather than something this record decides.
+**The order changes how many walks an analysis takes, and since
+[#478](https://github.com/itsakeyfut/safec/issues/478) nothing else measured.**
+When the drain order landed, it moved the memory check's answers in both
+directions, because the solver folded every arrival at a block into what was
+stored there, and that analysis's transfer is not monotone: `Held::freed` is a
+proof a set of two sites carries and a set of one does not, so a predecessor
+could send a value early that the one it sent once settled did not cover, and
+folding kept it. Solving each function in the corpus with the drain taken from
+the front and from the back, 26 of the 976 files differed, one of them a graph
+with no loop at all.
+
+So a block's value is now worked out again, whenever an edge into it moves,
+from what every edge into it last sent: the join of those, and `on_entry` for
+the entry. `solve` keeps what each block last sent along each edge. The answer
+is then a solution of the equations, whatever order reached it, and with the
+memory check's own fix in ADR-0048 no file in the corpus differs between the
+two orders. Two corpus answers moved, each a false `SC0403` gone.
+
+What it costs is a value kept per edge rather than per block, and the
+predecessors joined again on every change: the example's four shapes took
+between 1.7 and 2.5 times as long when measured. What it gives up is the
+argument that an entry value only climbs: a transfer that is not monotone can
+now move one down, and one that oscillates is stopped by the budget, which
+names the analysis. No function in the corpus does.
 
 ### Confirmation
 
@@ -289,8 +306,15 @@ programs, rather than something this record decides.
   `loops_in_sequence_inside_a_loop_are_walked_a_bounded_number_of_times_per_block`
   and `a_loop_inside_a_loop_drains_before_what_follows_it_inside`.
 
+* Folding each arrival into a block's stored value, rather than working it
+  out again from what every edge into it last sent, fails
+  `a_block_is_answered_from_what_its_predecessors_send_now`, whose analysis
+  is not monotone, and the corpus cases
+  `a_pointer_saved_across_a_loop_that_allocates_again` and
+  `a_copy_of_a_local_that_lost_its_allocation_lost_it_too`.
+
 Each of the first four was applied and the named tests observed to fail, and
-so was the last.
+so were the last two.
 
 ### Consequences
 
