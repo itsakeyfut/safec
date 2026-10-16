@@ -1,0 +1,38 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:3:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int *" "q"
+  Local "_3" "int *"
+  Block "bb0" entry
+    Operation a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:4:10 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:4:14 generated
+    ArgumentsEvaluated a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:5:5 generated
+    Call a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:5:5 "free" "bb1"
+      Copy "_2"
+  Block "bb1"
+    Sequenced a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:5:5 generated
+    Operation a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:6:5 written
+      Destination "_2"
+      Use
+        Copy "_1"
+          Deref
+    Operation a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:6:5 written
+      Destination "_3"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:6:5 generated
+    Operation a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:7:5 written
+      Destination "_0"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted.c:7:12 generated
+    Return

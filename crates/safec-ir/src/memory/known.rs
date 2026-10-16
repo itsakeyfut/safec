@@ -105,6 +105,11 @@ pub(super) struct Known {
     /// a marked allocation reads caller memory, and a call this check cannot
     /// read makes it [`Self::stale`]. Nothing clears it, for `stale`'s
     /// reason. See ADR-0040.
+    ///
+    /// **A store is not the only producer.** A pointer parameter's site is
+    /// marked where the function starts, since what it points at is the
+    /// caller's memory, and a call this check cannot read marks its result's
+    /// site once it returns, since that is the callee's (#482).
     pub(super) from_caller: Vec<bool>,
     /// What has been read through a pointer since the last sequence point.
     ///

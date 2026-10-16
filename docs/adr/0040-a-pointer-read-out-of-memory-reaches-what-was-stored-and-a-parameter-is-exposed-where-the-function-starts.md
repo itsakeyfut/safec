@@ -156,6 +156,29 @@ transfer, which returns early for a pointer read out of memory, the very free
 this is for. A free of an allocation this function made does not, since the
 caller cannot have handed it (#303).
 
+**And what is read out of that memory afterwards.** The rule above made the
+pointers read out of caller memory before such a free or call lost, and said
+nothing about one read after it: `q = *pp; free(q); q = *pp; return *q;`
+reads `*pp` again, gets the pointer it just freed, and that load was a fresh
+value the use was believed for, on every execution a use after free
+([#482](https://github.com/itsakeyfut/safec/issues/482)). So the memory itself
+is marked, `Known::from_caller` on a pointer parameter's site where the function
+starts and on an opaque call's result once the call returns, and the free or
+call makes it `Known::stale` as it does an allocation such a pointer was stored
+in; a load out of it afterwards is one this check stopped following. The
+result is marked after its call rather than from the start, because the call
+that returns it cannot have freed through it, and marked from the start it
+staled its own result. The cost is the one this record already pays one level
+in, at one level less: what a parameter points at, read after any call this
+check cannot read, is doubted, `release(); q = *pp; return *q;`. And in a loop
+a call's result is doubted from the second turn, since its site still carries
+the mark from the turn before and is staled by this turn's call: `for (...) {
+r = get(); q = *r; *q; }` reports at `*q`, falsely, in a function `main` already
+refused at `*r`. What this does not reach is an allocation this function stores
+through a pointer read out of memory, frees and reads back: that free is not of
+the caller's, and the store records nothing a later load reads
+([#484](https://github.com/itsakeyfut/safec/issues/484)).
+
 ### Confirmation
 
 Every mutation below was applied on its own to the tree as committed, the whole
@@ -223,6 +246,17 @@ every parameter fails `a_pointer_read_out_of_mains_arguments_is_not_doubted_afte
 fail a case named for them; and `Allocations::reads_caller_memory` reading only
 the parameters' sites fails
 `a_pointer_read_out_of_a_parameter_through_a_chain_of_loads_is_doubted_after_a_call`.
+Read again afterwards: leaving a parameter's site unmarked in `on_entry` fails
+`a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted` and
+`a_pointer_read_out_of_a_parameter_after_a_call_is_doubted`; leaving an opaque
+call's result unmarked fails
+`a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted`; and
+marking the result before the call's own `callers_memory_may_be_freed` fails
+`a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call`.
+Marking only the first of several parameters fails
+`a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted`, and
+joining the mark as an intersection fails
+`a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted`.
 Through a store: the store never marking `Known::from_caller` fails
 `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call`
 and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call`; the call never making a marked

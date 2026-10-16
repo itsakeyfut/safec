@@ -811,6 +811,15 @@ impl Analysis for Allocations<'_> {
             None,
         );
 
+        // **And what it points at may hold a pointer the caller kept**, so a
+        // free of the caller's pointer or a call this check cannot read makes
+        // it stale, and a load out of it afterwards is one this check stopped
+        // following. Unmarked, `q = *pp; free(q); q = *pp; return *q;` read
+        // `*pp` again as a fresh value and was believed (#482). See ADR-0040.
+        for parameter in &self.exposed_parameters {
+            known.from_caller[parameter.index()] = true;
+        }
+
         known
     }
 
@@ -2073,6 +2082,19 @@ impl Analysis for Allocations<'_> {
         // say less. See ADR-0039.
         match kind {
             Callee::Opaque => {
+                // **What it returned may hold a pointer the callee kept**, the
+                // same fact as a parameter's memory from the other side of a
+                // call, so the next free of the caller's or call this check
+                // cannot read stales it. Here rather than where the function
+                // starts, because the call that returns it cannot have freed
+                // through it: marked from the start, this very call staled its
+                // own result. **In a loop it does anyway**, from the second
+                // turn: the site names last turn's result as well, the mark
+                // from then is still on it, and `reborn` keeps `stale`
+                // because a site's allocations are not told apart. So a load
+                // out of each turn's result is doubted, a false report the
+                // reader can see. See ADR-0040.
+                value.from_caller[site] = true;
                 let exposed: Vec<usize> = (0..value.exposed.len())
                     .filter(|&other| other != site && value.exposed[other])
                     .collect();
