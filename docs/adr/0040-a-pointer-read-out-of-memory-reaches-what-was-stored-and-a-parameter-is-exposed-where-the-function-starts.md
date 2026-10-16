@@ -265,9 +265,14 @@ marked site fails the second; the store marking `Known::stale` at once fails
 `a_pointer_read_out_of_a_parameter_and_stored_with_no_call_is_read_back_in_silence`;
 the join dropping the mark fails `a_pointer_read_out_of_a_parameter_and_stored_on_one_arm_is_doubted_after_a_call`;
 and `realloc` dropping it fails `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call`.
-`reads_caller_memory` asking the local's own allocations only fails
+`reads_caller_memory` asking the local's own allocations only failed
 `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call`
-and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved`;
+and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved`
+until #486, when ADR-0045's walk began reading what is reachable below the
+first level and doubting both on its own; it fails
+`a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter`,
+a free two levels down that makes a pointer read out of another parameter
+one this check stopped following;
 `memcpy` carrying no mark fails
 `a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call`
 and `what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call`.

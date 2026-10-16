@@ -1,0 +1,27 @@
+error[SC0402]: this uses `q` after it was freed
+    ╭─[ a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:16:5 ]
+    │
+  8 │     int *m = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 13 │     free(m);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 16 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here
+error[SC0403]: this may dereference a null pointer
+    ╭─[ a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through.c:10:11 ]
+    │
+ 10 │     int **t = **rrrr;
+    │           ─────┬────  
+    │                ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

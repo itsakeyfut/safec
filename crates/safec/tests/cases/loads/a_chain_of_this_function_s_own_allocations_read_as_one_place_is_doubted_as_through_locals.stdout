@@ -1,0 +1,236 @@
+Target "x86_64-pc-windows-msvc"
+Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:3:6 "stash" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:4:5 "g"
+  Local "_0" "int" return
+  Local "_1" "int *" "u"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *" "m"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *" "k"
+  Local "_8" "void *"
+  Local "_9" "int"
+  Local "_10" "int **" "b"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int ***" "c"
+  Local "_14" "void *"
+  Local "_15" "int"
+  Local "_16" "int **"
+  Local "_17" "int *"
+  Local "_18" "int *" "q"
+  Local "_19" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:5:14 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:5:14 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:6:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:6:9 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:6:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:6:20 generated
+    Return
+  Block "bb3"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:7:5 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:7:5 "stash" "bb5"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:7:5 generated
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:8:14 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:8:14 "malloc" "bb6"
+      Destination "_5"
+      Constant 4
+  Block "bb6"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:8:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:8:14 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:9:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:9:9 "bb7" "bb8"
+      Copy "_6"
+  Block "bb7"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:9:9 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:9:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:9:20 generated
+    Return
+  Block "bb8"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:9:9 generated
+    Goto "bb9"
+  Block "bb9"
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:10:14 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:10:14 "malloc" "bb10"
+      Destination "_8"
+      Constant 4
+  Block "bb10"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:10:10 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:10:14 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:11:9 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_7"
+    Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:11:9 "bb11" "bb12"
+      Copy "_9"
+  Block "bb11"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:11:9 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:11:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:11:20 generated
+    Return
+  Block "bb12"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:11:9 generated
+    Goto "bb13"
+  Block "bb13"
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:12:15 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:12:15 "malloc" "bb14"
+      Destination "_11"
+      Constant 8
+  Block "bb14"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:12:11 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:12:15 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:13:9 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_10"
+    Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:13:9 "bb15" "bb16"
+      Copy "_12"
+  Block "bb15"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:13:9 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:13:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:13:20 generated
+    Return
+  Block "bb16"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:13:9 generated
+    Goto "bb17"
+  Block "bb17"
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:14:16 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:14:16 "malloc" "bb18"
+      Destination "_14"
+      Constant 8
+  Block "bb18"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:14:12 written
+      Destination "_13"
+      Use
+        Copy "_14"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:14:16 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:15:9 written
+      Destination "_15"
+      Unary "Not"
+        Copy "_13"
+    Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:15:9 "bb19" "bb20"
+      Copy "_15"
+  Block "bb19"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:15:9 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:15:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:15:20 generated
+    Return
+  Block "bb20"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:15:9 generated
+    Goto "bb21"
+  Block "bb21"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:16:5 written
+      Destination "_13"
+        Deref
+      Use
+        Copy "_10"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:16:5 written
+      Destination "_16"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:16:5 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:17:5 written
+      Destination "_10"
+        Deref
+      Use
+        Copy "_7"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:17:5 written
+      Destination "_17"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:17:5 generated
+    ArgumentsEvaluated a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:18:5 generated
+    Call a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:18:5 "free" "bb22"
+      Copy "_4"
+  Block "bb22"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:18:5 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:19:10 written
+      Destination "_18"
+      Use
+        Copy "_13"
+          Deref
+            Deref
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:19:14 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 written
+      Destination "_19"
+      Unary "Not"
+        Copy "_18"
+    Branch a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 "bb23" "bb24"
+      Copy "_19"
+  Block "bb23"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 generated
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:20 generated
+    Return
+  Block "bb24"
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:20:9 generated
+    Goto "bb25"
+  Block "bb25"
+    Operation a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:21:5 written
+      Destination "_0"
+      Use
+        Copy "_18"
+          Deref
+    Sequenced a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals.c:21:12 generated
+    Return

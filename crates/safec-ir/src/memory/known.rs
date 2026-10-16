@@ -549,7 +549,9 @@ impl Known {
 
     /// What a pointer read `depth` dereferences below `local` may be, and the
     /// locals whose address it may be: the walk [`Self::level_below`] takes,
-    /// `depth` times from [`Self::level_zero`]. See ADR-0045.
+    /// `depth` times from [`Self::level_zero`], with what memory this check
+    /// cannot place may hold added at each step, as a load reads it. See
+    /// ADR-0045.
     pub(super) fn levels_below(
         &self,
         local: LocalId,
@@ -567,21 +569,34 @@ impl Known {
         };
         for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
-            if level == 0 {
-                let reached = self.exposed_through(local);
-                // And the locals whose address that memory may hold, which a
-                // store there recorded: `*a = &x;` through a load `a` puts
-                // `x` where `t = *b;` through another load may read it.
-                for &site in &reached {
-                    locals.extend(
-                        self.inside_locals[site]
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(local, &in_it)| in_it.then_some(local)),
-                    );
-                }
-                sites.extend(reached);
+            // **What memory this check cannot place may hold**, beside what
+            // `Known::inside` recorded. At the first dereference, `level ==
+            // 0`, only when `local` is a load or a pointer a call wrote. At
+            // every later one whatever `local` is, because the pointer
+            // dereferenced there was read out of memory and is a load: `q =
+            // **ppp;` reads what `t = *ppp; q = *t;` reads through `t`.
+            // Through `Known::inside` alone, `**ppp = m; free(m); q = **ppp;
+            // return *q;` was believed at `*q` (#486). It reads more than a
+            // chain of this function's own allocations can hold, a doubt the
+            // reader sees, and the same one the chain written through locals
+            // already gave. See ADR-0045.
+            let reached: Vec<usize> = if level == 0 {
+                self.exposed_through(local)
+            } else {
+                self.reachable_now().into_iter().collect()
+            };
+            // And the locals whose address that memory may hold, which a
+            // store there recorded: `*a = &x;` through a load `a` puts
+            // `x` where `t = *b;` through another load may read it.
+            for &site in &reached {
+                locals.extend(
+                    self.inside_locals[site]
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(local, &in_it)| in_it.then_some(local)),
+                );
             }
+            sites.extend(reached);
         }
         (sites, locals)
     }
