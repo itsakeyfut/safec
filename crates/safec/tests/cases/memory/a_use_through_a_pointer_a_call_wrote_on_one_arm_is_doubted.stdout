@@ -1,0 +1,213 @@
+Target "x86_64-pc-windows-msvc"
+Function a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:3:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+Function a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" parameter "t"
+  Local "_3" "int"
+  Local "_4" "int *" "p"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "int *"
+  Local "_8" "int *" "u"
+  Local "_9" "int **"
+  Local "_10" "int *" "q"
+  Local "_11" "void *"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int *" "r"
+  Local "_15" "int *"
+  Local "_16" "int *"
+  Local "_17" "int *"
+  Local "_18" "int"
+  Local "_19" "int" "v"
+  Block "bb0" entry
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_2"
+    Branch a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:20 generated
+    Return
+  Block "bb2"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    ArgumentsEvaluated a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:14 generated
+    Call a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:14 "malloc" "bb4"
+      Destination "_5"
+      Constant 4
+  Block "bb4"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:10 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:6:14 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 written
+      Destination "_6"
+      Unary "Not"
+        Copy "_4"
+    Branch a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:20 generated
+    Return
+  Block "bb6"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:7:9 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:8:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:8:5 written
+      Destination "_7"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:8:5 generated
+    ArgumentsEvaluated a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 generated
+    Call a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 "free" "bb8"
+      Copy "_4"
+  Block "bb8"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:9:5 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:9 written
+      Destination "_9"
+      Address
+        Place "_8"
+    ArgumentsEvaluated a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 generated
+    Call a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 "get" "bb9"
+      Copy "_9"
+  Block "bb9"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:11:5 generated
+    ArgumentsEvaluated a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:14 generated
+    Call a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:14 "malloc" "bb10"
+      Destination "_11"
+      Constant 4
+  Block "bb10"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:10 written
+      Destination "_10"
+      Use
+        Copy "_11"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:12:14 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_10"
+    Branch a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 "bb11" "bb12"
+      Copy "_12"
+  Block "bb11"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:20 generated
+    Return
+  Block "bb12"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:13:9 generated
+    Goto "bb13"
+  Block "bb13"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:14:5 written
+      Destination "_10"
+        Deref
+      Use
+        Constant 1
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:14:5 written
+      Destination "_13"
+      Use
+        Copy "_10"
+          Deref
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:14:5 generated
+    Branch a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:9 "bb14" "bb15"
+      Copy "_1"
+  Block "bb14"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:9 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:14 written
+      Destination "_14"
+      Use
+        Copy "_8"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:14 written
+      Destination "_15"
+      Use
+        Copy "_14"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:14 generated
+    ArgumentsEvaluated a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:21 generated
+    Call a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:21 "free" "bb17"
+      Copy "_10"
+  Block "bb15"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:9 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:46 written
+      Destination "_14"
+      Use
+        Copy "_10"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:46 written
+      Destination "_17"
+      Use
+        Copy "_14"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:46 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:9 written
+      Destination "_18"
+      Unary "Not"
+        Copy "_14"
+    Branch a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:9 "bb18" "bb19"
+      Copy "_18"
+  Block "bb17"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:21 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:30 written
+      Destination "_10"
+      Use
+        Constant 0
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:30 written
+      Destination "_16"
+      Use
+        Copy "_10"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:16:30 generated
+    Goto "bb16"
+  Block "bb18"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:9 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:20 generated
+    Return
+  Block "bb19"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:9 generated
+    Goto "bb20"
+  Block "bb20"
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:9 written
+      Destination "_19"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:18:13 generated
+    Operation a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:5 written
+      Destination "_0"
+      Use
+        Copy "_19"
+    Sequenced a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:19:12 generated
+    Return

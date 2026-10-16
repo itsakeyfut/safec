@@ -405,6 +405,17 @@ cases! {
         // `Known::held_sites`; until #497 this exited 0 with nothing said,
         // and now the report at `free(r)` changes its words.
         a_double_free_through_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And a use, through each kind of value the early return in
+        // `Known::held_sites` stands for, on the arm that freed and nulled
+        // what the other arm names: a pointer a call wrote, read after the
+        // join; and a box holding a pointer freed two turns of a loop ago,
+        // read back beside an unrelated load, and beside an unrelated local
+        // lost to the same loop. Each is a use after free on that arm. Found
+        // by review of #495. Mutation: have the early return ask every kind
+        // but the one a case stands for; that case goes quiet.
+        a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_use_after_free_through_a_box_beside_a_load_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_use_after_free_through_a_box_beside_a_lost_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A free of a pointer a call this check cannot read wrote is a doubt
         // whatever else it was joined with: `r` is `u` on one arm and `q` on
         // the other, so it names `q`'s site, and `free(r)` was read as a free
