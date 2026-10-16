@@ -1965,6 +1965,16 @@ cases! {
         // since `*a = t;` records `t` in `a`'s memory without marking it.
         an_allocation_stored_through_a_load_may_land_in_memory_handed_to_the_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_allocation_stored_through_a_load_may_land_in_another_parameter_s_memory: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And for the part of a store that is unplaced: `w` holds its own
+        // allocation and, on one arm, a load, so the store is placed in the
+        // first and unnamed for the rest. Mutation: ask only whether the store
+        // is unplaced as a whole; this goes silent at the use.
+        an_allocation_stored_through_a_pointer_that_may_also_be_a_load_may_land_in_memory_handed_to_the_caller: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Only a pointer lands: `x = +a;` copies the integer parameter's
+        // site into `x`, and `**pp = x;` carried it into `pp`'s memory, so a
+        // function with no free reported a use of freed memory at both reads
+        // of `**pp`. Mutation: drop the `may_be_pointer` filter; this reports.
+        an_integer_stored_through_a_load_lands_nowhere: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a copy whose destination or source is itself read out of memory,
         // `memcpy(*pp, src, 8)` and `memcpy(tab, *ps, 8)`. Mutation: have
