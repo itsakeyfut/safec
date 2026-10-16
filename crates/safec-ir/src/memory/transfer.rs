@@ -1182,8 +1182,29 @@ impl Analysis for Allocations<'_> {
                     // of a parameter carried that parameter's site, and a
                     // function with no free reported a use of freed memory.
                     // See ADR-0044.
-                    if (unplaced || unnamed) && self.may_be_pointer(function, &operation.place) {
-                        value.landed_where_unknown_code_points(&carried);
+                    //
+                    // **And a store into handed-over memory lands the same
+                    // way**, since another parameter may name that memory:
+                    // `*w = m; free(m); q = *pp; return *q;` with `f(&x, &x)`
+                    // read back nothing at `*pp` and was believed (#489).
+                    // Reachable to code this check cannot read, which is what
+                    // another parameter can name, and not `Known::from_caller`,
+                    // which a buffer of this function's own gains by holding
+                    // a caller's pointer. Found by review.
+                    let reachable = value.reachable_now();
+                    let handed_over = containers
+                        .iter()
+                        .any(|container| reachable.contains(container));
+                    if (unplaced || unnamed || handed_over)
+                        && self.may_be_pointer(function, &operation.place)
+                    {
+                        let locals: Vec<usize> = written
+                            .writes_to
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(local, &edge)| edge.then_some(local))
+                            .collect();
+                        value.landed_where_unknown_code_points(&carried, &locals);
                     }
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
@@ -1822,9 +1843,15 @@ impl Analysis for Allocations<'_> {
                             // was doubted. Found by review. See ADR-0044.
                             let to = &value.points_to[dest.local.index()];
                             let unnamed = to.loaded || to.lost || to.foreign || into_depth > 1;
-                            if unnamed || (into.is_empty() && targets.is_empty()) {
+                            // And into handed-over memory, as for a store
+                            // (#489).
+                            let reachable = value.reachable_now();
+                            let handed_over =
+                                into.iter().any(|container| reachable.contains(container));
+                            if unnamed || handed_over || (into.is_empty() && targets.is_empty()) {
                                 let copied: Vec<usize> = copied.iter().copied().collect();
-                                value.landed_where_unknown_code_points(&copied);
+                                let locals: Vec<usize> = copied_locals.iter().copied().collect();
+                                value.landed_where_unknown_code_points(&copied, &locals);
                             }
                             for container in into {
                                 for &site in &copied {

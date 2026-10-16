@@ -1,0 +1,10 @@
+error[SC0402]: this uses `q`, which may have been freed
+    ╭─[ a_pointer_stored_through_one_parameter_may_be_read_through_another.c:13:5 ]
+    │
+ 13 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

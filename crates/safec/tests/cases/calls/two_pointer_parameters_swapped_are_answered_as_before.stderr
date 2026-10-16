@@ -1,0 +1,20 @@
+error[SC0403]: this may dereference `a` while it is null
+   ╭─[ two_pointer_parameters_swapped_are_answered_as_before.c:2:10 ]
+   │
+ 2 │     int *t = *a;
+   │          ───┬──  
+   │             ╰──── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it
+error[SC0403]: this may dereference `b` while it is null
+   ╭─[ two_pointer_parameters_swapped_are_answered_as_before.c:3:5 ]
+   │
+ 3 │     *a = *b;
+   │     ───┬───  
+   │        ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: test this pointer against null before reading through it

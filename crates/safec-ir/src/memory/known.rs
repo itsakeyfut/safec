@@ -568,7 +568,19 @@ impl Known {
         for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
             if level == 0 {
-                sites.extend(self.exposed_through(local));
+                let reached = self.exposed_through(local);
+                // And the locals whose address that memory may hold, which a
+                // store there recorded: `*a = &x;` through a load `a` puts
+                // `x` where `t = *b;` through another load may read it.
+                for &site in &reached {
+                    locals.extend(
+                        self.inside_locals[site]
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(local, &in_it)| in_it.then_some(local)),
+                    );
+                }
+                sites.extend(reached);
             }
         }
         (sites, locals)
@@ -591,12 +603,16 @@ impl Known {
     /// dereferences, `return **t;`. Asked only of the load and the copy, the
     /// first two were reported and the third was believed, found by review.
     /// See ADR-0045.
+    ///
+    /// **What is reachable, not only what is marked**: a store into exposed
+    /// memory records what it stores and marks nothing until the next call,
+    /// so what a parameter's memory holds was not read, and `t = *ppp; *w =
+    /// m; free(m); q = *t; return *q;` with `f(&px, &x)` was believed (#489).
+    /// See [`Self::reachable_now`].
     fn exposed_through(&self, local: LocalId) -> Vec<usize> {
         let from = &self.points_to[local.index()];
         if from.loaded || from.foreign {
-            (0..self.exposed.len())
-                .filter(|&site| self.exposed[site])
-                .collect()
+            self.reachable_now().into_iter().collect()
         } else {
             Vec::new()
         }
@@ -740,13 +756,21 @@ impl Known {
     /// `t` unmarked. One function for the store and for the copy `memcpy`
     /// makes, so the two spellings cannot land in different places. See
     /// ADR-0044.
-    pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize]) {
-        let exposed: Vec<usize> = (0..self.exposed.len())
-            .filter(|&site| self.exposed[site])
-            .collect();
-        for landing in self.closure(exposed) {
+    ///
+    /// **And the locals whose address it carries**, in what each landing may
+    /// contain, which is not exposing them: a load out of that memory reaches
+    /// the local, and a write through the load lands in it. `*ppp = &x; t =
+    /// *r; *t = m; free(m); q = x; return *q;` under `f(&a, &a)` read `x` as
+    /// the null it started as and was believed, found by review. ADR-0047
+    /// keeps a local's address out of what is exposed, so that a holder is
+    /// still asked; this records where it may be and exempts nobody.
+    pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize], locals: &[usize]) {
+        for landing in self.reachable_now() {
             for &site in carried {
                 self.inside[landing][site] = true;
+            }
+            for &local in locals {
+                self.inside_locals[landing][local] = true;
             }
         }
     }

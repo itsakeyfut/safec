@@ -2885,6 +2885,55 @@ cases! {
         // does, since each call's result is marked on its own arm only.
         a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two pointer parameters may point at the same memory, so a store
+        // into one's memory lands where a store this check cannot place
+        // would, and a load through memory it cannot place reads what is
+        // reachable, not only what is marked. Each was silent at a use after
+        // free under `f(&x, &x)` (#489). See ADR-0044 and ADR-0045. Mutation:
+        // drop the handed-over container from the store's condition; the
+        // first goes silent. Mutation: have `exposed_through` read the exposed
+        // sites only; the second does. Mutation: drop it from the copy's
+        // condition; the third does.
+        a_pointer_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Memory a parameter can name is memory reachable to code this check
+        // cannot read, not memory that holds a caller's pointer: a buffer
+        // this function allocated and stored `*pp` in is no parameter's, and
+        // asking `Known::from_caller` landed `m` stored there in every
+        // parameter's memory and reported a use at `*q` that cannot happen.
+        // Found by review. Mutation: ask `from_caller` of the containers of
+        // the store; the first reports. Of the copy `memcpy` makes; the
+        // second does.
+        a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_into_this_function_s_own_buffer_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local's address lands too, in what the memory may contain rather
+        // than in what is exposed: `*ppp = &x;` then a write through `*r`
+        // left `x` the null it started as, and the use behind `if (!q)` was
+        // never asked. Found by review. Mutation: land the sites only; all
+        // three go silent at the use. Mutation: have a load through memory
+        // this check cannot place reach no local; the third does.
+        a_local_s_address_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_stored_through_a_load_may_be_read_through_another_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And what that costs, which was nothing measured: five idioms with
+        // two pointer parameters answer as they did before the store and the
+        // load were told the two may alias. A record of that, not a guard: no
+        // mutation of this rule moves them, since landing a site changes
+        // none of their verdicts. The two after them are the guards on what
+        // the rule must not reach.
+        two_pointer_parameters_swapped_are_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_output_parameter_beside_an_input_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_list_appended_through_a_head_and_a_tail_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_between_two_slots_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A copy between this function's own allocations lands in no
+        // parameter's memory, and neither does an integer stored through
+        // one. Mutation: land every copy; the first reports a use at `*q`
+        // that cannot happen. Mutation: let a store into handed-over memory
+        // land whatever its type; the second does.
+        a_copy_between_this_function_s_own_allocations_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_integer_stored_through_a_parameter_lands_in_no_other: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {
