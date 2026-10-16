@@ -591,12 +591,16 @@ impl Known {
     /// dereferences, `return **t;`. Asked only of the load and the copy, the
     /// first two were reported and the third was believed, found by review.
     /// See ADR-0045.
+    ///
+    /// **What is reachable, not only what is marked**: a store into exposed
+    /// memory records what it stores and marks nothing until the next call,
+    /// so what a parameter's memory holds was not read, and `t = *ppp; *w =
+    /// m; free(m); q = *t; return *q;` with `f(&px, &x)` was believed (#489).
+    /// See [`Self::reachable_now`].
     fn exposed_through(&self, local: LocalId) -> Vec<usize> {
         let from = &self.points_to[local.index()];
         if from.loaded || from.foreign {
-            (0..self.exposed.len())
-                .filter(|&site| self.exposed[site])
-                .collect()
+            self.reachable_now().into_iter().collect()
         } else {
             Vec::new()
         }

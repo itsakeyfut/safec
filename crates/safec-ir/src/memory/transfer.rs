@@ -1182,7 +1182,17 @@ impl Analysis for Allocations<'_> {
                     // of a parameter carried that parameter's site, and a
                     // function with no free reported a use of freed memory.
                     // See ADR-0044.
-                    if (unplaced || unnamed) && self.may_be_pointer(function, &operation.place) {
+                    //
+                    // **And a store into handed-over memory lands the same
+                    // way**, since another parameter may name that memory:
+                    // `*w = m; free(m); q = *pp; return *q;` with `f(&x, &x)`
+                    // read back nothing at `*pp` and was believed (#489).
+                    let handed_over = containers
+                        .iter()
+                        .any(|&container| value.from_caller[container]);
+                    if (unplaced || unnamed || handed_over)
+                        && self.may_be_pointer(function, &operation.place)
+                    {
                         value.landed_where_unknown_code_points(&carried);
                     }
                     if unplaced {
@@ -1822,7 +1832,11 @@ impl Analysis for Allocations<'_> {
                             // was doubted. Found by review. See ADR-0044.
                             let to = &value.points_to[dest.local.index()];
                             let unnamed = to.loaded || to.lost || to.foreign || into_depth > 1;
-                            if unnamed || (into.is_empty() && targets.is_empty()) {
+                            // And into handed-over memory, as for a store
+                            // (#489).
+                            let handed_over =
+                                into.iter().any(|&container| value.from_caller[container]);
+                            if unnamed || handed_over || (into.is_empty() && targets.is_empty()) {
                                 let copied: Vec<usize> = copied.iter().copied().collect();
                                 value.landed_where_unknown_code_points(&copied);
                             }

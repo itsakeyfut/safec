@@ -1,0 +1,193 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int **" parameter "pp"
+  Local "_2" "int **" parameter "w"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int"
+  Local "_9" "int **" "s"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "void *"
+  Local "_14" "int *" "q"
+  Local "_15" "int"
+  Block "bb0" entry
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:5:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:5:9 "bb1" "bb2"
+      Copy "_3"
+  Block "bb1"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:5:9 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:5:14 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:5:21 generated
+    Return
+  Block "bb2"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:6:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:6:9 "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:6:9 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:6:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:6:20 generated
+    Return
+  Block "bb5"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:6:9 generated
+    Goto "bb6"
+  Block "bb6"
+    ArgumentsEvaluated a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:7:14 generated
+    Call a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:7:14 "malloc" "bb7"
+      Destination "_6"
+      Constant 4
+  Block "bb7"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:7:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:7:14 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:8:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:8:9 "bb8" "bb9"
+      Copy "_7"
+  Block "bb8"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:8:9 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:8:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:8:20 generated
+    Return
+  Block "bb9"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:8:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:9:5 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:9:5 written
+      Destination "_8"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:9:5 generated
+    ArgumentsEvaluated a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:10:15 generated
+    Call a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:10:15 "malloc" "bb11"
+      Destination "_10"
+      Constant 8
+  Block "bb11"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:10:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:10:15 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:11:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_9"
+    Branch a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:11:9 "bb12" "bb13"
+      Copy "_11"
+  Block "bb12"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:11:9 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:11:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:11:20 generated
+    Return
+  Block "bb13"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:11:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:12:5 written
+      Destination "_9"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:12:5 written
+      Destination "_12"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:12:5 generated
+    ArgumentsEvaluated a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:13:5 generated
+    Call a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:13:5 "memcpy" "bb15"
+      Destination "_13"
+      Copy "_2"
+      Copy "_9"
+      Constant 8
+  Block "bb15"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:13:5 generated
+    ArgumentsEvaluated a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:14:5 generated
+    Call a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:14:5 "free" "bb16"
+      Copy "_9"
+  Block "bb16"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:14:5 generated
+    ArgumentsEvaluated a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:15:5 generated
+    Call a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:15:5 "free" "bb17"
+      Copy "_5"
+  Block "bb17"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:15:5 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:16:10 written
+      Destination "_14"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:16:14 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:17:9 written
+      Destination "_15"
+      Unary "Not"
+        Copy "_14"
+    Branch a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:17:9 "bb18" "bb19"
+      Copy "_15"
+  Block "bb18"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:17:9 generated
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:17:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:17:20 generated
+    Return
+  Block "bb19"
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:17:9 generated
+    Goto "bb20"
+  Block "bb20"
+    Operation a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:18:5 written
+      Destination "_0"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another.c:18:12 generated
+    Return

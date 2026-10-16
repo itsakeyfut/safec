@@ -2885,6 +2885,26 @@ cases! {
         // does, since each call's result is marked on its own arm only.
         a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Two pointer parameters may point at the same memory, so a store
+        // into one's memory lands where a store this check cannot place
+        // would, and a load through memory it cannot place reads what is
+        // reachable, not only what is marked. Each was silent at a use after
+        // free under `f(&x, &x)` (#489). See ADR-0044 and ADR-0045. Mutation:
+        // drop the handed-over container from the store's condition; the
+        // first goes silent. Mutation: have `exposed_through` read the exposed
+        // sites only; the second does. Mutation: drop it from the copy's
+        // condition; the third does.
+        a_pointer_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And what that costs, which was nothing measured: five idioms with
+        // two pointer parameters answer as they did before the store and the
+        // load were told the two may alias.
+        two_pointer_parameters_swapped_are_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_output_parameter_beside_an_input_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_list_appended_through_a_head_and_a_tail_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_copy_between_two_slots_is_answered_as_before: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {

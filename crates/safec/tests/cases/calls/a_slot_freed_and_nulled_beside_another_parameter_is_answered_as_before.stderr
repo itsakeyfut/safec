@@ -1,0 +1,40 @@
+error[SC0401]: this frees a pointer this check stopped following
+   ╭─[ a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:4:5 ]
+   │
+ 4 │     free(*slot);
+   │     ─────┬─────  
+   │          ╰─────── this was read out of memory, which this check does not follow
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
+error[SC0402]: this uses `slot`, which may have been freed
+   ╭─[ a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:5:5 ]
+   │
+ 5 │     *slot = 0;
+   │     ────┬────  
+   │         ╰────── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `other`, which may have been freed
+   ╭─[ a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:7:10 ]
+   │
+ 7 │     int *o = *other;
+   │          ─────┬────  
+   │               ╰────── used here, where it may have been freed before
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0402]: this uses `o`, which this check stopped following
+   ╭─[ a_slot_freed_and_nulled_beside_another_parameter_is_answered_as_before.c:9:5 ]
+   │
+ 9 │     *o = 1;
+   │     ───┬──  
+   │        ╰──── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

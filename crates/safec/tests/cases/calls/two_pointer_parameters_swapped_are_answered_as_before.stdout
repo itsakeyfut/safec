@@ -1,0 +1,39 @@
+Target "x86_64-pc-windows-msvc"
+Function two_pointer_parameters_swapped_are_answered_as_before.c:1:6 "swap"
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "a"
+  Local "_2" "int **" parameter "b"
+  Local "_3" "int *" "t"
+  Local "_4" "int *"
+  Local "_5" "int *"
+  Block "bb0" entry
+    Operation two_pointer_parameters_swapped_are_answered_as_before.c:2:10 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced two_pointer_parameters_swapped_are_answered_as_before.c:2:14 generated
+    Operation two_pointer_parameters_swapped_are_answered_as_before.c:3:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_2"
+          Deref
+    Operation two_pointer_parameters_swapped_are_answered_as_before.c:3:5 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced two_pointer_parameters_swapped_are_answered_as_before.c:3:5 generated
+    Operation two_pointer_parameters_swapped_are_answered_as_before.c:4:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_3"
+    Operation two_pointer_parameters_swapped_are_answered_as_before.c:4:5 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced two_pointer_parameters_swapped_are_answered_as_before.c:4:5 generated
+    Return
