@@ -2035,6 +2035,14 @@ cases! {
         // carry no `Known::from_caller`; the last two go silent.
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A chain written as one place reads what the chain written through
+        // locals reads, below the first level as a load does: `q = **ppp;`
+        // after `**ppp = m; free(m);` read nothing of `m`, and the use at
+        // `return *q;` was believed (#486). The report at the reload is a
+        // different rule's, the unplaced store's landing, and #492 may move
+        // it. Mutation: have `Known::levels_below` add nothing below the
+        // first level; the report at `return *q;` goes.
+        a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer that lost an allocation that may be gone, stored and read
@@ -2916,6 +2924,12 @@ cases! {
         a_local_s_address_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_s_address_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_local_s_address_stored_through_a_load_may_be_read_through_another_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And below the first level of a chain written as one place, the
+        // locals whose address that memory may hold: `t = **rrrr;` may be
+        // `&x` that `*ppp = &x;` landed, so `*t = m;` writes `x` (#486).
+        // Mutation: extend the locals at the first level only; the use at
+        // `return *q;` goes silent.
+        a_local_s_address_read_out_two_levels_down_another_parameter_is_written_through: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what that costs, which was nothing measured: five idioms with
         // two pointer parameters answer as they did before the store and the
         // load were told the two may alias. A record of that, not a guard: no

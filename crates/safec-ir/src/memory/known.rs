@@ -567,21 +567,28 @@ impl Known {
         };
         for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
-            if level == 0 {
-                let reached = self.exposed_through(local);
-                // And the locals whose address that memory may hold, which a
-                // store there recorded: `*a = &x;` through a load `a` puts
-                // `x` where `t = *b;` through another load may read it.
-                for &site in &reached {
-                    locals.extend(
-                        self.inside_locals[site]
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(local, &in_it)| in_it.then_some(local)),
-                    );
-                }
-                sites.extend(reached);
+            // **Below the first level, what a load reads**: a pointer
+            // found there was read out of memory, whatever `local` is, so
+            // `q = **ppp;` reads what `t = *ppp; q = *t;` reads through
+            // `t`. Read only as recorded, `**ppp = m; free(m); q = **ppp;
+            // return *q;` was believed at `*q` (#486). See ADR-0045.
+            let reached: Vec<usize> = if level == 0 {
+                self.exposed_through(local)
+            } else {
+                self.reachable_now().into_iter().collect()
+            };
+            // And the locals whose address that memory may hold, which a
+            // store there recorded: `*a = &x;` through a load `a` puts
+            // `x` where `t = *b;` through another load may read it.
+            for &site in &reached {
+                locals.extend(
+                    self.inside_locals[site]
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(local, &in_it)| in_it.then_some(local)),
+                );
             }
+            sites.extend(reached);
         }
         (sites, locals)
     }
