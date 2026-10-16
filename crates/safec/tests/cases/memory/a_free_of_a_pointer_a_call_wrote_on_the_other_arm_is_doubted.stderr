@@ -1,0 +1,30 @@
+error[SC0401]: this frees `p`, which may have been freed already
+   ╭─[ a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:9:5 ]
+   │
+ 9 │     free(p);
+   │     ───┬───  
+   │        ╰───── this may be its second free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees `r`, which this check stopped following
+    ╭─[ a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:16:5 ]
+    │
+ 16 │     free(r);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0401]: this frees `q`, which may have been freed already
+    ╭─[ a_free_of_a_pointer_a_call_wrote_on_the_other_arm_is_doubted.c:17:12 ]
+    │
+ 17 │     if (c) free(q);
+    │            ───┬───  
+    │               ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

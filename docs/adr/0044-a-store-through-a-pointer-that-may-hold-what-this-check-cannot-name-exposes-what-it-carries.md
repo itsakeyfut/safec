@@ -29,7 +29,7 @@ A write through a pointer records what it stores inside the allocations the poin
 
 Chosen option: **expose for the part a pointer cannot name**, with one new bit for the third door.
 
-**`Held::foreign`**, set by `Known::replaced` on every local a call this check cannot read may write whose address escaped, whatever it holds. It is unioned at a join and through arithmetic, and `Held::clear` resets it, as `Held::loaded` is. The report never reads it, so an output parameter is still not reported.
+**`Held::foreign`**, set by `Known::replaced` on every local a call this check cannot read may write whose address escaped, whatever it holds. It is unioned at a join and through arithmetic, and `Held::clear` resets it, as `Held::loaded` is. Of the reports, only a free or a `realloc` reads it, in `Allocations::touching`, as a pointer this check cannot say what it points at, and only where it names a site, so that an output parameter freed alone keeps the words of a local that names none: joined with an arm that names a site it would otherwise read as a free of that site alone, and `get(&u); if (c) r = u; else r = q; free(r);` was believed ([#497](https://github.com/itsakeyfut/safec/issues/497)). A use of an output parameter is still not reported.
 
 **A store through a pointer** that holds sites and is `loaded`, `lost` or `foreign` records what it carries in the sites, as before, and exposes it as well. That is ADR-0039's unplaced write, for that part.
 

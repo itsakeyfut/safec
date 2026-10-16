@@ -1,0 +1,20 @@
+error[SC0401]: this frees `p`, which may have been freed already
+    ╭─[ a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:10:5 ]
+    │
+ 10 │     free(p);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees `r`, which this check stopped following
+    ╭─[ a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted.c:17:14 ]
+    │
+ 17 │     int *s = realloc(r, 8);
+    │              ──────┬──────  
+    │                    ╰──────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
