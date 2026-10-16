@@ -2030,9 +2030,12 @@ cases! {
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_after_realloc_and_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And read back through more than one level, as one place or moved by
         // arithmetic, and copied by `memcpy` rather than stored. Found by
-        // review. Mutation: have `reads_caller_memory` ask the local's own
-        // allocations only; the first two go silent. Mutation: have `memcpy`
-        // carry no `Known::from_caller`; the last two go silent.
+        // review. Mutation: have `memcpy` carry no `Known::from_caller`; the
+        // last two go silent. Having `reads_caller_memory` ask the local's
+        // own allocations only silenced the first two until #486; the walk
+        // now reads what is reachable below the first level and doubts them
+        // as well, and no case tells that half of `reads_caller_memory`
+        // apart from its absence, measured.
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A chain written as one place reads what the chain written through
