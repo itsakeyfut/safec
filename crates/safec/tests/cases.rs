@@ -2121,6 +2121,12 @@ cases! {
         // gone; `a_list_built_in_a_loop_with_nothing_freed_is_walked_without_a_doubt`
         // is doubted.
         a_pointer_lost_to_a_free_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a pointer lost to a rebirth while its allocation was live, then
+        // freed, then stored: the free is what makes it a value that may be
+        // gone, and `*r` read back out of the box is a use after free that was
+        // read in silence (#501). Mutation: leave the local a free this check
+        // cannot name unmarked; the report at `*r` goes.
+        a_lost_pointer_freed_then_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

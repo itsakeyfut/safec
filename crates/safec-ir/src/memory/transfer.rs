@@ -1660,6 +1660,18 @@ impl Analysis for Allocations<'_> {
                 // the clear back inside this branch leaves the whole workspace
                 // green.
                 if Self::holds_something_unnameable(arguments, value) {
+                    // **What it holds may be what went**, so it is marked as a
+                    // value that may be gone, and a store of it afterwards
+                    // marks where it lands: `free(u); *box = u; r = *box;`
+                    // with `u` lost to a rebirth read `*r` in silence (#501).
+                    // See ADR-0045.
+                    for argument in arguments {
+                        if let Operand::Copy(place) = argument {
+                            if place.projection.is_empty() {
+                                value.points_to[place.local.index()].stale_read = true;
+                            }
+                        }
+                    }
                     for site in reached {
                         // **A free cannot un-free an allocation.** A site an
                         // earlier free this check *could* follow has already
