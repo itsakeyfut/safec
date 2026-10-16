@@ -1169,6 +1169,22 @@ impl Analysis for Allocations<'_> {
                     // memory on another path, so the address being out there
                     // is a may-fact and would exempt a holder from being
                     // asked. See ADR-0047.
+                    //
+                    // **What it carries may land in any memory code this check
+                    // cannot read can name**, which is every exposed
+                    // allocation and every allocation one holds, since a
+                    // pointer this check cannot place may be any of them: `*a
+                    // = t; w = *b; *w = m; free(m); q = *t; return *q;` with
+                    // `a == b` read back nothing at `*t` and was believed
+                    // (#487). Reachable rather than exposed, because `*a = t;`
+                    // records `t` in `a`'s memory and does not mark it. Only a
+                    // pointer stored: `**pp = x;` with `x` an `int` copied out
+                    // of a parameter carried that parameter's site, and a
+                    // function with no free reported a use of freed memory.
+                    // See ADR-0044.
+                    if (unplaced || unnamed) && self.may_be_pointer(function, &operation.place) {
+                        value.landed_where_unknown_code_points(&carried);
+                    }
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
                     } else {
@@ -1796,9 +1812,19 @@ impl Analysis for Allocations<'_> {
                                 held.stale_read = marked;
                                 held.unreplaced_read = unreplaced;
                                 held.from_caller = caller;
-                                for target in targets {
+                                for &target in &targets {
                                     value.points_to[target].accumulated(&held);
                                 }
+                            }
+                            // **A copy into memory this check cannot place lands
+                            // where a store there would**: `memcpy(w, s, 8)`
+                            // with `w` a load was believed where `*w = *s;`
+                            // was doubted. Found by review. See ADR-0044.
+                            let to = &value.points_to[dest.local.index()];
+                            let unnamed = to.loaded || to.lost || to.foreign || into_depth > 1;
+                            if unnamed || (into.is_empty() && targets.is_empty()) {
+                                let copied: Vec<usize> = copied.iter().copied().collect();
+                                value.landed_where_unknown_code_points(&copied);
                             }
                             for container in into {
                                 for &site in &copied {

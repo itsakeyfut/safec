@@ -730,6 +730,27 @@ impl Known {
         closed
     }
 
+    /// Record that a store this check cannot place may have put `carried`
+    /// in any memory code it cannot read can name: every exposed allocation
+    /// and every allocation reachable from one, since a pointer this check
+    /// cannot place may point at any of them.
+    ///
+    /// Reachable rather than exposed, because a store into exposed memory
+    /// records what it stores there and does not mark it: `*a = t;` leaves
+    /// `t` unmarked. One function for the store and for the copy `memcpy`
+    /// makes, so the two spellings cannot land in different places. See
+    /// ADR-0044.
+    pub(super) fn landed_where_unknown_code_points(&mut self, carried: &[usize]) {
+        let exposed: Vec<usize> = (0..self.exposed.len())
+            .filter(|&site| self.exposed[site])
+            .collect();
+        for landing in self.closure(exposed) {
+            for &site in carried {
+                self.inside[landing][site] = true;
+            }
+        }
+    }
+
     /// Tell every pending read that `by` did not make that `routes` are now
     /// reachable to code this check cannot read.
     ///
