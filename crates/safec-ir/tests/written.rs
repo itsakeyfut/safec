@@ -1752,3 +1752,87 @@ fn loops_in_sequence_inside_a_loop_are_walked_a_bounded_number_of_times_per_bloc
         function.blocks().len(),
     );
 }
+
+/// An analysis whose transfer is not monotone: a value of `0` becomes `5`
+/// at a block that ends a local's storage, and anything else becomes `1`,
+/// with the larger of two kept where paths meet.
+///
+/// Small enough to work out by hand, and shaped like the memory check's
+/// `Held::freed`, a proof that a larger input can carry and a smaller one
+/// cannot, so that a smaller input sends a larger output.
+struct Reset;
+
+impl Analysis for Reset {
+    type Value = u8;
+
+    fn height(&self, _function: &Function) -> usize {
+        8
+    }
+
+    fn on_entry(&self) -> Self::Value {
+        0
+    }
+
+    fn join(&self, into: &mut Self::Value, from: &Self::Value) {
+        *into = (*into).max(*from);
+    }
+
+    fn element(&self, _function: &Function, element: &Element, value: &mut Self::Value) {
+        if let Element::StorageDead { .. } = element {
+            *value = if *value == 0 { 5 } else { 1 };
+        }
+    }
+
+    fn terminator(&self, _function: &Function, _terminator: &Terminator, _value: &mut Self::Value) {
+    }
+}
+
+/// A block's answer is the join of what its predecessors send once the walk
+/// has settled, not of everything they sent on the way.
+///
+/// The loop's body first sends `5`, from the `0` the entry gave the header,
+/// and then `1`, from that `5`. What the header is told now is `0` from the
+/// entry and `1` from the body, so its answer is `1`. Folding every arrival
+/// into what was stored kept the `5`, an answer no path gives once the walk
+/// has settled, and one that depended on the order arrivals came in.
+///
+/// Mutation: fold each arrival into the successor's stored value, rather
+/// than working it out again from what every edge into it last sent. The
+/// header is answered `5` and this fails.
+#[test]
+fn a_block_is_answered_from_what_its_predecessors_send_now() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let header = function.reserve_block();
+    let body = function.reserve_block();
+    let exit = function.reserve_block();
+
+    function.fill_block(entry, goto(header, vec![]));
+    function.fill_block(
+        header,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: body,
+                otherwise: exit,
+                origin,
+            },
+        },
+    );
+    function.fill_block(
+        body,
+        goto(header, vec![Element::StorageDead { origin, local: a }]),
+    );
+    function.fill_block(exit, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Reset, &function, &cfg);
+
+    assert_eq!(solution.value(header), Some(&1));
+    assert_eq!(solution.value(exit), Some(&1));
+}
