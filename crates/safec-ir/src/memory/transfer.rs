@@ -1660,15 +1660,21 @@ impl Analysis for Allocations<'_> {
                 // the clear back inside this branch leaves the whole workspace
                 // green.
                 if Self::holds_something_unnameable(arguments, value) {
-                    // **What it holds may be what went**, so it is marked as a
-                    // value that may be gone, and a store of it afterwards
-                    // marks where it lands: `free(u); *box = u; r = *box;`
-                    // with `u` lost to a rebirth read `*r` in silence (#501).
+                    // **A local this check lost may hold what went**, so it is
+                    // marked as a value that may be gone, and a store of it
+                    // afterwards marks where it lands: `free(u); *box = u; r =
+                    // *box;` with `u` lost to a rebirth read `*r` in silence
+                    // (#501). Only one that is `lost`: a load read out of
+                    // memory may be null, and marking it doubted a read behind
+                    // `if (r)` of a pointer that `free(NULL)` left alone, found
+                    // by review. A store before the free, a copy made before
+                    // it, `free(*box)` and a `realloc` are not reached; #503.
                     // See ADR-0045.
                     for argument in arguments {
                         if let Operand::Copy(place) = argument {
-                            if place.projection.is_empty() {
-                                value.points_to[place.local.index()].stale_read = true;
+                            let held = &mut value.points_to[place.local.index()];
+                            if place.projection.is_empty() && held.lost {
+                                held.stale_read = true;
                             }
                         }
                     }

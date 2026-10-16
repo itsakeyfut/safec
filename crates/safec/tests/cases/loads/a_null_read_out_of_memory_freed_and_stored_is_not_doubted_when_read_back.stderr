@@ -1,0 +1,10 @@
+warning[SC0401]: this frees `p`, which this check stopped following
+    ╭─[ a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back.c:10:5 ]
+    │
+ 10 │     free(p);             /* free(NULL): defined */
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

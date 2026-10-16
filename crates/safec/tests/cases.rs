@@ -2127,6 +2127,11 @@ cases! {
         // read in silence (#501). Mutation: leave the local a free this check
         // cannot name unmarked; the report at `*r` goes.
         a_lost_pointer_freed_then_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Only a lost local is marked: a pointer read out of memory may be the
+        // null `free(NULL)` leaves alone, and a read of it behind `if (r)` is
+        // read in no new doubt. Found by review. Mutation: mark every local a
+        // free this check cannot follow is handed; this reports at `*r`.
+        a_null_read_out_of_memory_freed_and_stored_is_not_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

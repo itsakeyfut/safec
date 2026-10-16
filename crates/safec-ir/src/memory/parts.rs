@@ -494,7 +494,7 @@ pub(super) struct Held {
     /// Set too where a local loses a site whose allocation is not live
     /// ([`Known::reborn`](super::known::Known::reborn)), by a load through a pointer to such a local, and
     /// by a call this check cannot read for what it makes lost of the
-    /// caller's, and on a local this check cannot name when it is freed. A
+    /// caller's, and on a local this check lost when it is freed. A
     /// store of any of them was recorded as nothing and read back
     /// in silence, where read directly it was doubted. See ADR-0045.
     ///
