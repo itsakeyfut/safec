@@ -1932,6 +1932,28 @@ cases! {
         // is doubted, since `*t3` may be `*pp`, read after `cond()` staled
         // what a parameter points at (#482).
         a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A load out of memory this check cannot place reads what is exposed,
+        // which is what code it cannot read may hold and what an unplaced
+        // store put there. Stored through a load, freed and read back, the
+        // allocation was read back as nothing and its use believed (#484); so
+        // was one a call may have stashed. See ADR-0045. Mutation: have
+        // `Known::levels_below` add no exposed site; every one of these goes
+        // silent at the use. Mutation: ask only `foreign`; the first four do.
+        // Mutation: ask only `loaded`; the fifth does, its pointer written by
+        // a call. Mutation: follow a lost local no further, as before; the
+        // fourth does, its `t` lost to the call it was handed to.
+        an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back_one_level_further: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_stored_through_what_a_call_returned_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_handed_to_a_call_and_freed_is_doubted_when_read_back_through_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_stored_through_a_pointer_a_call_wrote_and_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // And read back by `memcpy`, or as one place, `return **t;`: the
+        // copy and the report each walk the levels themselves, and asked of
+        // the load alone, `memcpy(d, t, 8)` and `**t` were believed where
+        // `*d = *t;` and `q = *t; *q` were doubted. The same mutation as above
+        // silences both.
+        an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_allocation_stored_through_a_load_and_freed_is_doubted_when_read_back_in_one_place: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a copy whose destination or source is itself read out of memory,
         // `memcpy(*pp, src, 8)` and `memcpy(tab, *ps, 8)`. Mutation: have

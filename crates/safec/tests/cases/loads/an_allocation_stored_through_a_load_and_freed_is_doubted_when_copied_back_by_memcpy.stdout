@@ -1,0 +1,182 @@
+Target "x86_64-pc-windows-msvc"
+Function an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:1:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:2:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int ***" parameter "ppp"
+  Local "_2" "int"
+  Local "_3" "int **" "t"
+  Local "_4" "int"
+  Local "_5" "int *" "m"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "int **" "d"
+  Local "_10" "void *"
+  Local "_11" "int"
+  Local "_12" "void *"
+  Local "_13" "int *" "q"
+  Local "_14" "int"
+  Block "bb0" entry
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:5:9 written
+      Destination "_2"
+      Unary "Not"
+        Copy "_1"
+    Branch an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:5:9 "bb1" "bb2"
+      Copy "_2"
+  Block "bb1"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:5:9 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:5:15 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:5:22 generated
+    Return
+  Block "bb2"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:5:9 generated
+    Goto "bb3"
+  Block "bb3"
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:6:11 written
+      Destination "_3"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:6:15 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:7:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_3"
+    Branch an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:7:9 "bb4" "bb5"
+      Copy "_4"
+  Block "bb4"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:7:9 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:7:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:7:20 generated
+    Return
+  Block "bb5"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:7:9 generated
+    Goto "bb6"
+  Block "bb6"
+    ArgumentsEvaluated an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:8:14 generated
+    Call an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:8:14 "malloc" "bb7"
+      Destination "_6"
+      Constant 4
+  Block "bb7"
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:8:10 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:8:14 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:9:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:9:9 "bb8" "bb9"
+      Copy "_7"
+  Block "bb8"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:9:9 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:9:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:9:20 generated
+    Return
+  Block "bb9"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:9:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:10:5 written
+      Destination "_3"
+        Deref
+      Use
+        Copy "_5"
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:10:5 written
+      Destination "_8"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:10:5 generated
+    ArgumentsEvaluated an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:11:5 generated
+    Call an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:11:5 "free" "bb11"
+      Copy "_5"
+  Block "bb11"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:11:5 generated
+    ArgumentsEvaluated an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:12:15 generated
+    Call an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:12:15 "malloc" "bb12"
+      Destination "_10"
+      Constant 8
+  Block "bb12"
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:12:11 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:12:15 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:13:9 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_9"
+    Branch an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:13:9 "bb13" "bb14"
+      Copy "_11"
+  Block "bb13"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:13:9 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:13:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:13:20 generated
+    Return
+  Block "bb14"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:13:9 generated
+    Goto "bb15"
+  Block "bb15"
+    ArgumentsEvaluated an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:14:5 generated
+    Call an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:14:5 "memcpy" "bb16"
+      Destination "_12"
+      Copy "_9"
+      Copy "_3"
+      Constant 8
+  Block "bb16"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:14:5 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:15:10 written
+      Destination "_13"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:15:14 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:16:9 written
+      Destination "_14"
+      Unary "Not"
+        Copy "_13"
+    Branch an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:16:9 "bb17" "bb18"
+      Copy "_14"
+  Block "bb17"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:16:9 generated
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:16:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:16:20 generated
+    Return
+  Block "bb18"
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:16:9 generated
+    Goto "bb19"
+  Block "bb19"
+    Operation an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:17:5 written
+      Destination "_0"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced an_allocation_stored_through_a_load_and_freed_is_doubted_when_copied_back_by_memcpy.c:17:12 generated
+    Return

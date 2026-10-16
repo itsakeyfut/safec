@@ -555,13 +555,51 @@ impl Known {
         local: LocalId,
         depth: usize,
     ) -> (BTreeSet<usize>, BTreeSet<usize>) {
-        let Some((mut sites, mut locals)) = self.level_zero(local) else {
-            return (BTreeSet::new(), BTreeSet::new());
+        // A lost local is followed no further, except into memory this check
+        // cannot place: it names no site, and what such memory holds is still
+        // what is exposed.
+        let (mut sites, mut locals) = match self.level_zero(local) {
+            Some(level) => level,
+            None if depth > 0 && !self.exposed_through(local).is_empty() => {
+                (BTreeSet::new(), BTreeSet::new())
+            }
+            None => return (BTreeSet::new(), BTreeSet::new()),
         };
-        for _ in 0..depth {
+        for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
+            if level == 0 {
+                sites.extend(self.exposed_through(local));
+            }
         }
         (sites, locals)
+    }
+
+    /// What a dereference of `local` may read beyond what was recorded: every
+    /// exposed site, where `local` is itself a load or a pointer a call wrote,
+    /// and so points into memory this check cannot place.
+    ///
+    /// Such memory holds anything code this check cannot read may have put
+    /// there, which is what exposed says, and anything an unplaced store put
+    /// there, which exposes what it carries. Without it, `*t = m; free(m); q =
+    /// *t; return *q;` with `t` a load read back nothing, and the use of freed
+    /// memory was believed (#484). `Held::from_caller` is not asked as well,
+    /// because every producer of it sets one of these beside it.
+    ///
+    /// **Asked in [`Self::levels_below`], the one walk every reader of a load
+    /// takes**, so that the spellings of one read cannot answer differently:
+    /// a load assigned, the copy `memcpy` makes, and a place of several
+    /// dereferences, `return **t;`. Asked only of the load and the copy, the
+    /// first two were reported and the third was believed, found by review.
+    /// See ADR-0045.
+    fn exposed_through(&self, local: LocalId) -> Vec<usize> {
+        let from = &self.points_to[local.index()];
+        if from.loaded || from.foreign {
+            (0..self.exposed.len())
+                .filter(|&site| self.exposed[site])
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 
     /// What a pointer read `depth` dereferences below `local` may be: each
@@ -1182,7 +1220,9 @@ impl Known {
     ///
     /// What a pointer read out of memory this check cannot say which may be:
     /// wherever it was read from, it was stored there, and a store into an
-    /// allocation is recorded in [`Self::inside`] or exposed at once. One read
+    /// allocation is recorded in [`Self::inside`] or exposed at once, and the
+    /// exposed half is read by [`Self::levels_below`] rather than here, for a
+    /// load through memory this check cannot place (#484). One read
     /// out of a local through its address is not here and need not be: that
     /// local escaped, so what it holds is in every call's reach already. See
     /// ADR-0040.
