@@ -166,7 +166,10 @@ pub(super) enum SiteState {
     /// and every reader takes it as it takes [`Self::Unknown`]. Taken as
     /// `Live`, that miss would be a proof that the allocation is live and a
     /// silence; taken as a doubt, it is a report the reader can see. No case
-    /// in the corpus meets one, measured: answering either way moves nothing.
+    /// in the corpus meets one, measured by panicking in every reader's arm
+    /// for it, so **no test holds how a reader answers here**: these arms are
+    /// where a miss in `held_sites` would land, and no program that makes one
+    /// is known.
     Unheld,
     /// Live as far as this check saw, and within reach of code it cannot read:
     /// a local holding it had its address taken, or it was exposed to a call,

@@ -1836,3 +1836,48 @@ fn a_block_is_answered_from_what_its_predecessors_send_now() {
     assert_eq!(solution.value(header), Some(&1));
     assert_eq!(solution.value(exit), Some(&1));
 }
+
+/// An entry that a back edge reaches is answered with what the function
+/// starts with as well as with what comes back to it.
+///
+/// The lowering always gives a function an entry nothing jumps back to, so
+/// only a graph built by hand has one, and this is that graph: the entry is
+/// the loop's header, and the body writes `a`. Every path to the exit either
+/// skips the body or comes back through the entry, and the one that skips it
+/// never writes `a`, so `a` is not written there. Answered from the back edge
+/// alone, it would be.
+///
+/// Mutation: leave `on_entry` out of the entry's recomputed value. The exit
+/// is answered with `a` written, and this fails.
+#[test]
+fn an_entry_a_back_edge_reaches_still_starts_from_on_entry() {
+    let (_sources, at) = spans();
+    let (_unit, mut function, int) = a_function(at);
+    let origin = Origin::Written(at);
+    let a = function.push_local(int);
+
+    let entry = function.reserve_block();
+    let body = function.reserve_block();
+    let exit = function.reserve_block();
+    assert_eq!(entry, function.entry());
+
+    function.fill_block(
+        entry,
+        Block {
+            elements: vec![],
+            terminator: Terminator::Branch {
+                condition: Operand::Constant(1),
+                then: body,
+                otherwise: exit,
+                origin,
+            },
+        },
+    );
+    function.fill_block(body, goto(entry, vec![write(a, origin)]));
+    function.fill_block(exit, returns());
+
+    let cfg = Cfg::of(&function);
+    let solution = solve(&Written(function.locals().len()), &function, &cfg);
+
+    assert_eq!(solution.value(exit), Some(&vec![false, false]));
+}

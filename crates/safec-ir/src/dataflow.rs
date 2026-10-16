@@ -342,15 +342,15 @@ impl<V> Solution<V> {
 ///
 /// The `Cfg` is taken rather than built, so that a caller holding one does not
 /// walk the graph twice and so that the graph this runs over is visibly the one
-/// the caller asked about. Only its order is read: this pushes a value forward
-/// along the edges rather than pulling one back from each predecessor, and a
-/// successor of a reachable block is reachable, so there is nothing here to
-/// filter.
+/// the caller asked about. Its drain order and its predecessors are read, and
+/// `Cfg` lists only reachable blocks as predecessors, so there is nothing here
+/// to filter.
 ///
 /// A block is walked from its entry value: every element in the order it is
 /// written, then the terminator, and then [`Analysis::edge`] once per outgoing
 /// edge, each on its own copy of what the block sends. What that leaves is
-/// joined into that one successor.
+/// kept as what that edge last sent, and the successor's value is worked out
+/// again from what every edge into it last sent.
 /// A successor whose value moved goes back on the list, which is what makes a
 /// loop converge rather than being answered from whatever reached it first.
 ///
