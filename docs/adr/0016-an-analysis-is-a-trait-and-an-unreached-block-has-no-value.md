@@ -322,8 +322,10 @@ on every change; the frontend has no `switch` yet to build one.
   than only at a loop's head, fails
   `a_block_inside_a_loop_is_answered_from_what_its_predecessors_send_now`,
   whose analysis is not monotone, and the corpus cases
-  `a_pointer_saved_across_a_loop_that_allocates_again` and
-  `a_copy_of_a_local_that_lost_its_allocation_lost_it_too`. Folding at no
+  `a_pointer_saved_across_a_loop_that_allocates_again`,
+  `a_copy_of_a_local_that_lost_its_allocation_lost_it_too` and
+  `a_buffer_grown_by_realloc_in_a_loop_is_answered`, which goes back to
+  `main`'s one doubt. Folding at no
   block fails `a_loop_whose_transfer_would_alternate_still_ends` and
   `a_buffer_grown_by_realloc_in_a_loop_is_answered`, both by the budget's
   panic, and `an_entry_a_back_edge_reaches_still_starts_from_on_entry`.
