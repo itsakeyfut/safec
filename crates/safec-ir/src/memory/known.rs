@@ -1182,7 +1182,9 @@ impl Known {
     ///
     /// What a pointer read out of memory this check cannot say which may be:
     /// wherever it was read from, it was stored there, and a store into an
-    /// allocation is recorded in [`Self::inside`] or exposed at once. One read
+    /// allocation is recorded in [`Self::inside`] or exposed at once, and the
+    /// exposed half is read by `Allocations::read_through` rather than here,
+    /// for a load through memory this check cannot place (#484). One read
     /// out of a local through its address is not here and need not be: that
     /// local escaped, so what it holds is in every call's reach already. See
     /// ADR-0040.
