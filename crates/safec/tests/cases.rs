@@ -1928,7 +1928,9 @@ cases! {
         // have a deep store not count as `unnamed`; the first goes silent at
         // `return *r`. And a copy out of an allocation a loop's rebirth marked
         // marks the destination. Mutation: have `Callee::Copies` mark nothing;
-        // the second goes silent.
+        // the second goes silent. And the write through `*t3` at `**t3 = r;`
+        // is doubted, since `*t3` may be `*pp`, read after `cond()` staled
+        // what a parameter points at (#482).
         a_store_two_levels_down_through_a_set_this_check_may_not_know_whole_is_exposed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_copy_out_of_an_allocation_a_loop_allocated_again_stays_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And a copy whose destination or source is itself read out of memory,
@@ -2817,6 +2819,17 @@ cases! {
         // call, through either route; the control for that route fails.
         a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_a_call_wrote_through_an_address_is_not_doubted_freed_with_no_later_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a pointer parameter points at, and what a call this check
+        // cannot read returned, may hold a pointer the other side kept, so a
+        // free of it or a later such call leaves what is read out of them
+        // afterwards one this check stopped following. Read again after the
+        // free, it was a fresh value and believed (#482). Mutation: leave the
+        // parameter's site unmarked in `on_entry`; the first and third lose
+        // the report at the use. Mutation: leave the result's site unmarked
+        // in the `Callee::Opaque` arm; the second does. See ADR-0040.
+        a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_out_of_a_parameter_after_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {
