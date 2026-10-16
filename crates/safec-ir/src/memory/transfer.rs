@@ -220,21 +220,6 @@ impl Allocations<'_> {
             for site in sites {
                 held.hold(site, Offset::Unknown);
             }
-            // **And what is exposed, read through memory this check cannot
-            // place**: a source that is itself a load, or a pointer a call
-            // wrote. `Held::from_caller` is not asked as well, because every
-            // producer of it sets one of these beside it. What such memory holds is
-            // anything code this check cannot read may have put there, which
-            // is what exposed says, and anything an unplaced store put there,
-            // which exposes what it carries. Without it, `*t = m; free(m); q =
-            // *t; return *q;` with `t` a load read back nothing, and the use
-            // of freed memory was believed (#484). See ADR-0045.
-            let from = &value.points_to[source.local.index()];
-            if from.loaded || from.foreign {
-                for site in (0..value.exposed.len()).filter(|&site| value.exposed[site]) {
-                    held.hold(site, Offset::Unknown);
-                }
-            }
             // **And the locals whose address it may be**, as edges, so a
             // write through it lands there: `m = *t3; *m = r;` with `*t3 =
             // &slot`. Not all of them, since the set is a lower bound.
