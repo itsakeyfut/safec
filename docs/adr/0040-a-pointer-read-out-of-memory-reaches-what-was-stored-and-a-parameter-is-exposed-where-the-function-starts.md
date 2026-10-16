@@ -170,7 +170,14 @@ result is marked after its call rather than from the start, because the call
 that returns it cannot have freed through it, and marked from the start it
 staled its own result. The cost is the one this record already pays one level
 in, at one level less: what a parameter points at, read after any call this
-check cannot read, is doubted, `release(); q = *pp; return *q;`.
+check cannot read, is doubted, `release(); q = *pp; return *q;`. And in a loop
+a call's result is doubted from the second turn, since its site still carries
+the mark from the turn before and is staled by this turn's call: `for (...) {
+r = get(); q = *r; *q; }` reports at `*q`, falsely, in a function `main` already
+refused at `*r`. What this does not reach is an allocation this function stores
+through a pointer read out of memory, frees and reads back: that free is not of
+the caller's, and the store records nothing a later load reads
+([#484](https://github.com/itsakeyfut/safec/issues/484)).
 
 ### Confirmation
 
@@ -244,8 +251,12 @@ Read again afterwards: leaving a parameter's site unmarked in `on_entry` fails
 `a_pointer_read_out_of_a_parameter_after_a_call_is_doubted`; leaving an opaque
 call's result unmarked fails
 `a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted`; and
-marking the result from the start fails
+marking the result before the call's own `callers_memory_may_be_freed` fails
 `a_pointer_read_out_of_what_a_call_returned_is_read_in_silence_with_no_later_call`.
+Marking only the first of several parameters fails
+`a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted`, and
+joining the mark as an intersection fails
+`a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted`.
 Through a store: the store never marking `Known::from_caller` fails
 `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_after_a_call`
 and `a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_before_a_call`; the call never making a marked

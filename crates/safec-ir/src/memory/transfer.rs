@@ -2088,7 +2088,12 @@ impl Analysis for Allocations<'_> {
                 // cannot read stales it. Here rather than where the function
                 // starts, because the call that returns it cannot have freed
                 // through it: marked from the start, this very call staled its
-                // own result. See ADR-0040.
+                // own result. **In a loop it does anyway**, from the second
+                // turn: the site names last turn's result as well, the mark
+                // from then is still on it, and `reborn` keeps `stale`
+                // because a site's allocations are not told apart. So a load
+                // out of each turn's result is doubted, a false report the
+                // reader can see. See ADR-0040.
                 value.from_caller[site] = true;
                 let exposed: Vec<usize> = (0..value.exposed.len())
                     .filter(|&other| other != site && value.exposed[other])
