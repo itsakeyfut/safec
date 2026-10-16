@@ -1,0 +1,17 @@
+error[SC0402]: this uses `q` after it was freed
+    ╭─[ a_local_s_address_stored_through_one_parameter_may_be_read_through_another.c:17:5 ]
+    │
+  6 │     int *m = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+ 14 │     free(m);
+    │     ───┬───  
+    │        ╰───── freed here
+    │ 
+ 17 │     return *q;
+    │     ─────┬────  
+    │          ╰────── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

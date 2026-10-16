@@ -1198,7 +1198,13 @@ impl Analysis for Allocations<'_> {
                     if (unplaced || unnamed || handed_over)
                         && self.may_be_pointer(function, &operation.place)
                     {
-                        value.landed_where_unknown_code_points(&carried);
+                        let locals: Vec<usize> = written
+                            .writes_to
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(local, &edge)| edge.then_some(local))
+                            .collect();
+                        value.landed_where_unknown_code_points(&carried, &locals);
                     }
                     if unplaced {
                         value.expose(carried, Some(operation.origin.span()));
@@ -1844,7 +1850,8 @@ impl Analysis for Allocations<'_> {
                                 into.iter().any(|container| reachable.contains(container));
                             if unnamed || handed_over || (into.is_empty() && targets.is_empty()) {
                                 let copied: Vec<usize> = copied.iter().copied().collect();
-                                value.landed_where_unknown_code_points(&copied);
+                                let locals: Vec<usize> = copied_locals.iter().copied().collect();
+                                value.landed_where_unknown_code_points(&copied, &locals);
                             }
                             for container in into {
                                 for &site in &copied {

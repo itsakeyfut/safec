@@ -2905,6 +2905,15 @@ cases! {
         // Found by review. Mutation: ask `from_caller` of the containers; this
         // reports.
         a_pointer_stored_in_this_function_s_own_buffer_lands_in_no_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A local's address lands too, in what the memory may contain rather
+        // than in what is exposed: `*ppp = &x;` then a write through `*r`
+        // left `x` the null it started as, and the use behind `if (!q)` was
+        // never asked. Found by review. Mutation: land the sites only; all
+        // three go silent at the use. Mutation: have a load through memory
+        // this check cannot place reach no local; the third does.
+        a_local_s_address_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_local_s_address_stored_through_a_load_may_be_read_through_another_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // And what that costs, which was nothing measured: five idioms with
         // two pointer parameters answer as they did before the store and the
         // load were told the two may alias. A record of that, not a guard: no
