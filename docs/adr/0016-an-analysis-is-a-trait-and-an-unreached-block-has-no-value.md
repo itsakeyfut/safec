@@ -225,8 +225,8 @@ memory check's own fix in ADR-0048 no file in the corpus differs between the
 two orders. Two corpus answers moved, each a false `SC0403` gone.
 
 What it costs is a value kept per edge rather than per block, and the
-predecessors joined again on every change: the example's four shapes took
-between 1.7 and 2.5 times as long when measured. What it gives up is the
+predecessors joined again on every change: at 200 locals the example's four
+shapes took between 1.6 and 2.6 times as long as before. What it gives up is the
 argument that an entry value only climbs: a transfer that is not monotone can
 now move one down, and one that oscillates is stopped by the budget, which
 names the analysis. No function in the corpus does.
