@@ -264,10 +264,13 @@ impl Allocations<'_> {
     /// one level further in, `q = **ppp` spelled `pp = *ppp; q = *pp;`, and
     /// without it `q` held nothing a call could make lost; the third is the
     /// same read after a store, `*box = q; r = *box;` or `r = **bb;`, which
-    /// [`Known::from_caller`] marks. Below the first level the walk
-    /// [`Known::levels_below`] takes now reads what is reachable too (#486),
-    /// which doubts `r = **bb;` without the third, so no case holds it there,
-    /// measured. Only the parameters `exposed_parameters` names,
+    /// [`Known::from_caller`] marks. Below the first level a load also reads
+    /// what is reachable to code this check cannot read, in
+    /// [`Known::levels_below`] (#486), which doubts `r = **bb;` without the
+    /// third; the third still decides whether `free(**bb)` frees what a
+    /// caller handed over, and so whether a pointer read out of another
+    /// parameter is doubted after it. Found by review. Only the parameters
+    /// `exposed_parameters` names,
     /// so what the host hands `main` is not this, as it is not exposed. One
     /// answer for a load assigned and a load as an operand, so that the two
     /// cannot disagree. See ADR-0040.

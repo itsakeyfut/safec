@@ -2033,7 +2033,11 @@ cases! {
         // review. Mutation: have `memcpy` carry no `Known::from_caller`; the
         // last two go silent. Having `reads_caller_memory` ask the local's
         // own allocations only silenced the first two until #486, and no
-        // longer does: see that function's doc.
+        // longer does: see that function's doc. It silences the use at
+        // `return *s;` in
+        // `a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter`
+        // below, a free of a caller's pointer two levels down read through
+        // another parameter that may name it. Found by review.
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
@@ -2056,6 +2060,7 @@ cases! {
         // the same doubt before #486. Mutation: add nothing below the first
         // level; this goes quiet.
         a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_caller_s_pointer_freed_two_levels_down_is_doubted_through_another_parameter: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer that lost an allocation that may be gone, stored and read
         // back, is doubted as it is read directly: lost to a rebirth of a
         // freed allocation, read through its address, or made lost by a call
