@@ -409,8 +409,10 @@ cases! {
         // the other, so it names `q`'s site, and `free(r)` was read as a free
         // of `q` alone, though `u` may be `p`, freed before the call (#497).
         // Mutation: drop the `Held::foreign` row from
-        // `Allocations::touching`'s reasons; the report at `free(r)` goes.
+        // `Allocations::touching`'s reasons; the report at `free(r)` goes, and
+        // in the second, the same handed to `realloc`, the report at it.
         a_free_of_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_realloc_of_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer that is a freed allocation on one path and a local's
         // address on the other is doubted, not proved: the path through `&x`
         // reads `x`. Under `--allow-unknown`, so a proof would be exit 1 and a
