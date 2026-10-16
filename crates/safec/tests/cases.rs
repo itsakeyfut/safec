@@ -2830,6 +2830,13 @@ cases! {
         a_pointer_read_again_out_of_a_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_again_out_of_what_a_call_returned_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_read_out_of_a_parameter_after_a_call_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // Every exposed parameter is marked, not the first, and a mark made on
+        // one arm survives the join. Mutation: mark only the first of
+        // `exposed_parameters`; the first of these goes silent at the use.
+        // Mutation: join `Known::from_caller` as an intersection; the second
+        // does, since each call's result is marked on its own arm only.
+        a_pointer_read_again_out_of_a_second_parameter_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        a_pointer_read_again_out_of_either_of_two_calls_results_after_a_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
     }
 
     "frontend" => {
