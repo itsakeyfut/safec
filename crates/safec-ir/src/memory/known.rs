@@ -319,9 +319,9 @@ impl Known {
             .into_iter()
             .filter(|&site| match self.state[site] {
                 SiteState::Freed { .. } => true,
-                SiteState::Unknown => true,
+                SiteState::Unknown | SiteState::Unheld => true,
                 SiteState::Reachable => !through_address.contains(&site) || read_unreplaced,
-                SiteState::Live(_) | SiteState::Unheld => false,
+                SiteState::Live(_) => false,
             })
             .map(Reached::Site)
             .collect();

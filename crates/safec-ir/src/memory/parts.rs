@@ -161,8 +161,12 @@ pub(super) enum SiteState {
     ///
     /// Set where a value crosses an edge, after liveness has cleared what the
     /// successor does not read. A reader reaches a site through something that
-    /// holds it, so no report asks about one in this state, and every reader
-    /// takes it as [`Self::Live`] with no span would be taken.
+    /// holds it, so a reader meeting one means
+    /// [`Known::held_sites`](super::known::Known::held_sites) missed a holder,
+    /// and every reader takes it as it takes [`Self::Unknown`]. Taken as
+    /// `Live`, that miss would be a proof that the allocation is live and a
+    /// silence; taken as a doubt, it is a report the reader can see. No case
+    /// in the corpus meets one, measured: answering either way moves nothing.
     Unheld,
     /// Live as far as this check saw, and within reach of code it cannot read:
     /// a local holding it had its address taken, or it was exposed to a call,

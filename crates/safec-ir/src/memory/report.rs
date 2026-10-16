@@ -158,7 +158,7 @@ fn verdict(
         };
 
         match known.state[site] {
-            SiteState::Live(_) | SiteState::Unheld => live = true,
+            SiteState::Live(_) => live = true,
             SiteState::Freed {
                 made: from,
                 freed: before,
@@ -171,7 +171,7 @@ fn verdict(
                     None => before,
                 });
             }
-            SiteState::Unknown | SiteState::Reachable => unknown = true,
+            SiteState::Unknown | SiteState::Reachable | SiteState::Unheld => unknown = true,
         }
     }
 

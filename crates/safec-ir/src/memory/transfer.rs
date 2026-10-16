@@ -1545,8 +1545,10 @@ impl Analysis for Allocations<'_> {
                     .sites()
                     .filter_map(|site| match value.state[site] {
                         SiteState::Live(made) => Some((site, made)),
-                        SiteState::Unheld => Some((site, None)),
-                        SiteState::Freed { .. } | SiteState::Unknown | SiteState::Reachable => None,
+                        SiteState::Freed { .. }
+                        | SiteState::Unknown
+                        | SiteState::Reachable
+                        | SiteState::Unheld => None,
                     })
                     .collect();
                 (!held.lost && !old.is_empty() && old.len() == held.sites().count()).then_some(old)
