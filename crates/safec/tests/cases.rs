@@ -391,6 +391,12 @@ cases! {
         // the second builds.
         a_pointer_stored_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_made_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What `Known::held_sites` counting every site beside one load costs:
+        // `if (c) { free(p); p = 0; }` is doubted after it, though the load
+        // cannot name `p` and every path is defined. #495 is removing that.
+        // Mutation: leave the early return for a lost, loaded or foreign
+        // local out of `held_sites`; the use and the free go quiet.
+        a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A pointer that is a freed allocation on one path and a local's
         // address on the other is doubted, not proved: the path through `&x`
         // reads `x`. Under `--allow-unknown`, so a proof would be exit 1 and a

@@ -1242,20 +1242,26 @@ impl Known {
     /// missed here is one whose free could be forgotten. See ADR-0048.
     pub(super) fn held_sites(&self) -> Vec<bool> {
         let sites = self.state.len();
-        // **Five of these holders no case tells apart from their absence**,
-        // measured on the whole workspace (#481): this early return,
-        // `exposed_after_call`, a pending read's `sites` and its
-        // `reachable`, and a `realloc` fact's `old`. They stay, because a
-        // holder left out that some program needs is a free forgotten in
-        // silence, and one kept that none needs costs a line. Each says
-        // below what is believed to cover it and what was tried.
+        // **Every holder stays, whatever a search found** (#481): one left
+        // out that some program needs is a free forgotten in silence. Three
+        // fail no case when left out, measured on the whole workspace, and
+        // each says below what is believed to cover it and which programs
+        // were tried: `exposed_after_call`, and a pending read's `sites` and
+        // `reachable`. Two are told apart only in the other direction, a
+        // report on a program defined on every path, and each has a case
+        // pinning that cost and an issue removing it: this early return and
+        // a `realloc` fact's `old`.
         //
-        // What such a local lists is counted by the loop over what locals
-        // hold, and what it may name without listing it, a pointer stored
-        // somewhere or reachable to code this check cannot read, is counted
-        // by `inside` and `exposed`. Tried: a local a call wrote naming a
-        // site freed and nulled on one arm, and a load out of a parameter's
-        // memory.
+        // **This early return costs a false report, and #495 is removing
+        // it.** One lost, loaded or foreign local anywhere holds every site,
+        // so `if (c) { free(p); p = 0; }` is doubted after it, though `p` is
+        // nothing such a local can name. What such a local may name without
+        // listing it is stored in some allocation or reachable to code this
+        // check cannot read, which `inside` and `exposed` count; an alias of
+        // `p` handed to a call first stays doubted without it. Mutation:
+        // leave this out;
+        // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load`
+        // goes quiet.
         if self
             .points_to
             .iter()
@@ -1274,18 +1280,23 @@ impl Known {
                 held[site] |= inside;
             }
         }
-        // Every event that adds a site here also leaves it exposed, inside
-        // an allocation, or held by a local whose address escaped, which
-        // liveness never clears, so each of those holds it too. Tried:
-        // `*a + (c ? keep(a) : 0) + release_all()`.
+        // `exposed_after_call` can be all that holds a site at an edge: in
+        // `release_all() + (c ? (e = a, e = 0, 1) : 0)` with `e`'s address
+        // taken, the arm stores `a` in `e` and overwrites it before the join.
+        // Then nothing that can name the site after the join holds it on that
+        // arm, so its state there decides no answer. Tried, with no answer
+        // changing: that program, and the same with `&&` in place of `?:`.
         for (site, held) in held.iter_mut().enumerate() {
             *held |= self.exposed[site] || self.exposed_after_call.contains(&site);
         }
-        // A free or a call that crosses a pending read tells the read when
-        // it runs, so the read's answer does not wait for the site's state at
-        // a later join. Tried: `*a + (c ? consume(a) : 0)` with `a` dead
-        // after it, where only the read names the site at the join, and
-        // `release_all() + (c ? keep(a) : 0)` before a read of `a`.
+        // A pending read's `sites` can be all that holds a site at an edge:
+        // `(x = *a) + (c ? consume(a) : 0)`, with the read lowered before the
+        // branch and `a` read no more. A free or a call that crosses the read
+        // tells it when it runs, which is believed to leave nothing for the
+        // site's state at the join to decide. Tried, with no answer
+        // changing: that program, and the same with `free(a)` in the arm.
+        // Its `reachable` was never all that held a site in any program
+        // tried.
         for read in self.pending.values() {
             for &site in read.sites.iter().chain(&read.reachable) {
                 held[site] = true;
@@ -1296,8 +1307,9 @@ impl Known {
         // the old block, so it is held there and its doubt joins into the
         // other arm's `p`, which a later `*p` and `free(p)` read. Left out,
         // those two go quiet, which is correct on every execution, and a
-        // variant that reads the old block through an alias stays doubted,
-        // since the alias holds it. Mutation: leave this loop out;
+        // variant that reads the old block through an alias, or through a
+        // box it was stored in, stays doubted, measured: the alias or the box
+        // holds it. Mutation: leave this loop out;
         // `a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test`
         // goes quiet.
         for fact in self.realloced.iter().flatten() {
