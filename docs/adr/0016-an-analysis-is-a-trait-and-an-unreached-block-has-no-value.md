@@ -218,18 +218,30 @@ the front and from the back, 26 of the 976 files differed, one of them a graph
 with no loop at all.
 
 So a block's value is now worked out again, whenever an edge into it moves,
-from what every edge into it last sent: the join of those, and `on_entry` for
-the entry. `solve` keeps what each block last sent along each edge. The answer
-is then a solution of the equations, whatever order reached it, and with the
-memory check's own fix in ADR-0048 no file in the corpus differs between the
-two orders. Two corpus answers moved, each a false `SC0403` gone.
+from what every edge into it last sent, **except at a loop's head**, a block
+with a predecessor at or after it in the drain order, which keeps what it had
+and joins in what arrives, as every block used to. `solve` keeps what each
+block last sent along each edge.
+
+Recomputing at the heads as well was the first version, and review found that
+it does not end: the memory check records a `realloc` fact only while every old
+site is `Live`, so `x = realloc(x, n);` in a loop sent `Unknown` back for a
+`Live` header and `Live` back for an `Unknown` one. That equation has no
+solution, the walk alternated until the budget's panic, and on a larger
+function that took most of a minute. Folding at a head is a widening: every
+cycle passes through a head, a head's value only climbs, and so the walk ends
+within the height whatever the transfer does. Inside a loop, a block that is
+not its head is still answered from what its predecessors send now. With the
+memory check's own fix in ADR-0048, no file in the corpus differs between the
+two orders, and neither do the `realloc` programs review wrote. Two corpus
+answers moved, each a false `SC0403` gone; and the smallest of those programs,
+which `main` builds, now has a false `SC0401`.
 
 What it costs is a value kept per edge rather than per block, and the
-predecessors joined again on every change: at 200 locals the example's four
-shapes took between 1.6 and 2.6 times as long as before. What it gives up is the
-argument that an entry value only climbs: a transfer that is not monotone can
-now move one down, and one that oscillates is stopped by the budget, which
-names the analysis. No function in the corpus does.
+predecessors of a block that is not a head joined again on every change: at 200
+locals the example's four shapes took between 1.2 and 2.1 times as long as
+before. A block with many predecessors that is not a head pays for each of them
+on every change; the frontend has no `switch` yet to build one.
 
 ### Confirmation
 
@@ -306,12 +318,15 @@ names the analysis. No function in the corpus does.
   `loops_in_sequence_inside_a_loop_are_walked_a_bounded_number_of_times_per_block`
   and `a_loop_inside_a_loop_drains_before_what_follows_it_inside`.
 
-* Folding each arrival into a block's stored value, rather than working it
-  out again from what every edge into it last sent, fails
-  `a_block_is_answered_from_what_its_predecessors_send_now`, whose analysis
-  is not monotone, and the corpus cases
+* Folding each arrival into a block's stored value at every block, rather
+  than only at a loop's head, fails
+  `a_block_inside_a_loop_is_answered_from_what_its_predecessors_send_now`,
+  whose analysis is not monotone, and the corpus cases
   `a_pointer_saved_across_a_loop_that_allocates_again` and
-  `a_copy_of_a_local_that_lost_its_allocation_lost_it_too`.
+  `a_copy_of_a_local_that_lost_its_allocation_lost_it_too`. Folding at no
+  block fails `a_loop_whose_transfer_would_alternate_still_ends` and
+  `a_buffer_grown_by_realloc_in_a_loop_is_answered`, both by the budget's
+  panic, and `an_entry_a_back_edge_reaches_still_starts_from_on_entry`.
 
 Each of the first four was applied and the named tests observed to fail, and
 so were the last two.

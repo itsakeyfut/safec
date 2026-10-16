@@ -409,6 +409,24 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
         (0..function.blocks().len()).map(|_| Vec::new()).collect();
     let mut targets = Vec::new();
 
+    // **Except at a loop's head, which keeps what it had and joins the rest
+    // in.** A head is a block with a predecessor at or after it in the drain
+    // order, which is a back edge, and every cycle passes through one. Worked
+    // out again everywhere, a transfer that is not monotone has no fixpoint to
+    // reach: the memory check's `realloc` fact is recorded only while every
+    // old site is `Live`, so `x = realloc(x, n);` in a loop sent `Unknown`
+    // back for a `Live` header and `Live` back for an `Unknown` one, and the
+    // walk alternated until the budget stopped it. A head's value only climbs,
+    // so every cycle climbs, and the walk ends within the height. See
+    // ADR-0016.
+    let mut heads = vec![false; function.blocks().len()];
+    for &block in cfg.drain() {
+        heads[block.index()] = cfg
+            .predecessors(block)
+            .iter()
+            .any(|&from| cfg.drained_at(from) >= cfg.drained_at(block));
+    }
+
     while let Some(at) = worklist.pop_first() {
         let block = cfg.drain()[at];
         // A block can be taken off the list before anything has reached it:
@@ -482,36 +500,54 @@ pub fn solve<A: Analysis>(analysis: &A, function: &Function, cfg: &Cfg) -> Solut
             let along = &mut sent[block.index()];
             along.resize(successors.len(), None);
             along[index] = Some(sent_value);
+            let just_sent = along[index].as_ref().expect("stored on the line above");
 
-            // The successor's value is the join of what every edge into it
-            // last sent, and of `on_entry` for the entry, which a back edge
-            // can reach too. An edge that has sent nothing yet adds nothing,
-            // and the first that has is kept rather than joined into anything,
-            // which is what lets an analysis have no bottom. See ADR-0016.
-            let mut arrived = (successor == function.entry()).then(|| analysis.on_entry());
-            let mut asked: Vec<BlockId> = Vec::new();
-            for &from in cfg.predecessors(successor) {
-                // A block with two edges into this one is its predecessor
-                // twice, and both edges are read below the first time.
-                if asked.contains(&from) {
-                    continue;
+            let arrived = if heads[successor.index()] {
+                // A head keeps what it had and joins this in. What every other
+                // edge into it sent is in what it had already, because each
+                // was joined in when it arrived, so this is the head's value
+                // joined with all of them, at the cost of one join. The entry
+                // is a head wherever a back edge reaches it, since nothing
+                // drains before it, and what it had is `on_entry`.
+                match &values[successor.index()] {
+                    Some(stored) => {
+                        let mut folded = stored.clone();
+                        analysis.join(&mut folded, just_sent);
+                        Some(folded)
+                    }
+                    None => Some(just_sent.clone()),
                 }
-                asked.push(from);
-                targets.clear();
-                function.block(from).terminator.successors(&mut targets);
-                for (edge, &target) in targets.iter().enumerate() {
-                    let Some(Some(value)) = (target == successor)
-                        .then(|| sent[from.index()].get(edge))
-                        .flatten()
-                    else {
+            } else {
+                // Anywhere else, the join of what every edge into it last
+                // sent. An edge that has sent nothing yet adds nothing, and
+                // the first that has is kept rather than joined into anything,
+                // which is what lets an analysis have no bottom. See ADR-0016.
+                let mut arrived: Option<A::Value> = None;
+                let mut asked: Vec<BlockId> = Vec::new();
+                for &from in cfg.predecessors(successor) {
+                    // A block with two edges into this one is its predecessor
+                    // twice, and both edges are read below the first time.
+                    if asked.contains(&from) {
                         continue;
-                    };
-                    match &mut arrived {
-                        Some(arrived) => analysis.join(arrived, value),
-                        nothing @ None => *nothing = Some(value.clone()),
+                    }
+                    asked.push(from);
+                    targets.clear();
+                    function.block(from).terminator.successors(&mut targets);
+                    for (edge, &target) in targets.iter().enumerate() {
+                        let Some(Some(value)) = (target == successor)
+                            .then(|| sent[from.index()].get(edge))
+                            .flatten()
+                        else {
+                            continue;
+                        };
+                        match &mut arrived {
+                            Some(arrived) => analysis.join(arrived, value),
+                            nothing @ None => *nothing = Some(value.clone()),
+                        }
                     }
                 }
-            }
+                arrived
+            };
 
             // Compared rather than asked. What a clone per edge buys is that
             // the join has no answer to be wrong about. See ADR-0016.

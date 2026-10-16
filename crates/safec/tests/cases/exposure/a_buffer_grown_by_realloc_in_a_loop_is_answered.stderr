@@ -1,0 +1,30 @@
+error[SC0401]: this frees `buf`, which may have been freed already
+   ╭─[ a_buffer_grown_by_realloc_in_a_loop_is_answered.c:7:15 ]
+   │
+ 7 │         tmp = realloc(buf, 16);
+   │               ────────┬───────  
+   │                       ╰───────── this may be its second free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+error[SC0401]: this frees `buf`, which this check stopped following
+   ╭─[ a_buffer_grown_by_realloc_in_a_loop_is_answered.c:9:13 ]
+   │
+ 9 │             free(buf);
+   │             ────┬────  
+   │                 ╰────── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+error[SC0401]: this frees `buf`, which may have been freed already
+    ╭─[ a_buffer_grown_by_realloc_in_a_loop_is_answered.c:15:5 ]
+    │
+ 15 │     free(buf);
+    │     ────┬────  
+    │         ╰────── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

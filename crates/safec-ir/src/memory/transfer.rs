@@ -727,18 +727,19 @@ impl Analysis for Allocations<'_> {
         // rather than tight, which is the direction `Analysis::height` says to
         // err in: answering too low stops a correct analysis.
         //
-        // **An entry value can move down as well, since ADR-0016's solver
-        // works it out again from what its predecessors send now.** The
-        // transfer is not monotone in every field: `Held::freed` is a proof a
-        // set of two sites carries and a set of one does not, so a predecessor
-        // sent less once its input grew. The five steps per site counted below
+        // **An entry value inside a loop can move down as well, since
+        // ADR-0016's solver works a block that is not a loop's head out again
+        // from what its predecessors send now.** The transfer is not monotone
+        // in every field: `Held::freed` is a proof a set of two sites carries
+        // and a set of one does not, and a `realloc` fact is recorded only
+        // while every old site is `Live`. A head keeps what it had and joins
+        // the rest in, so its value only climbs, and every cycle passes
+        // through one, which is what bounds the walk; the blocks between two
+        // heads are answered from them. The five steps per site counted below
         // were for the one join that did not union, ADR-0048's replacement of
         // a state where one side did not hold the site; that is
         // `SiteState::Unheld` joining as the identity now, one step up from it
-        // per site, and the rest is kept as room for a descent, which nothing
-        // here bounds. A walk that needs more is stopped by the solver's
-        // budget, which names this analysis rather than settling on whatever
-        // it last folded. Measured: no function in the corpus reaches it.
+        // per site, and the rest is kept as slack.
         //
         // **What has been read since the last sequence point is a set of
         // positions, so it is counted in positions rather than in locals.** A
