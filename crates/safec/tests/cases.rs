@@ -2032,22 +2032,30 @@ cases! {
         // arithmetic, and copied by `memcpy` rather than stored. Found by
         // review. Mutation: have `memcpy` carry no `Known::from_caller`; the
         // last two go silent. Having `reads_caller_memory` ask the local's
-        // own allocations only silenced the first two until #486; the walk
-        // now reads what is reachable below the first level and doubts them
-        // as well, and no case tells that half of `reads_caller_memory`
-        // apart from its absence, measured.
+        // own allocations only silenced the first two until #486, and no
+        // longer does: see that function's doc.
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_is_doubted_when_read_back_two_levels_down_and_moved: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // A chain written as one place reads what the chain written through
         // locals reads, below the first level as a load does: `q = **ppp;`
         // after `**ppp = m; free(m);` read nothing of `m`, and the use at
-        // `return *q;` was believed (#486). The report at the reload is a
-        // different rule's, the unplaced store's landing, and #492 may move
-        // it. Mutation: have `Known::levels_below` add nothing below the
-        // first level; the report at `return *q;` goes.
+        // `return *q;` was believed (#486). The report at the reload is
+        // ADR-0044's: the unplaced store records `m` wherever a pointer this
+        // check cannot place may point, `ppp`'s own memory among them, and
+        // #492 is narrowing that. Mutation: have `Known::levels_below` add
+        // nothing below the first level; the report at `return *q;` goes.
+        // Only the second level is told apart: adding nothing from the third
+        // on, for sites or for locals, fails no case, measured.
         a_pointer_stored_and_read_back_two_levels_down_a_parameter_as_one_place_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        a_pointer_read_out_of_a_parameter_and_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        what_a_parameter_points_at_copied_by_memcpy_is_doubted_when_read_back_before_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What that costs: a chain of this function's own allocations, read
+        // as one place after an unrelated allocation was handed to a call,
+        // reads what is reachable too, and `return *q;` is doubted though
+        // `q` can only be `k`, live. The chain written through locals gave
+        // the same doubt before #486. Mutation: add nothing below the first
+        // level; this goes quiet.
+        a_chain_of_this_function_s_own_allocations_read_as_one_place_is_doubted_as_through_locals: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A pointer that lost an allocation that may be gone, stored and read
         // back, is doubted as it is read directly: lost to a rebirth of a
         // freed allocation, read through its address, or made lost by a call

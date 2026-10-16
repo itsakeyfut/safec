@@ -549,7 +549,9 @@ impl Known {
 
     /// What a pointer read `depth` dereferences below `local` may be, and the
     /// locals whose address it may be: the walk [`Self::level_below`] takes,
-    /// `depth` times from [`Self::level_zero`]. See ADR-0045.
+    /// `depth` times from [`Self::level_zero`], with what memory this check
+    /// cannot place may hold added at each step, as a load reads it. See
+    /// ADR-0045.
     pub(super) fn levels_below(
         &self,
         local: LocalId,
@@ -567,11 +569,17 @@ impl Known {
         };
         for level in 0..depth {
             (sites, locals) = self.level_below(&sites, &locals);
-            // **Below the first level, what a load reads**: a pointer
-            // found there was read out of memory, whatever `local` is, so
-            // `q = **ppp;` reads what `t = *ppp; q = *t;` reads through
-            // `t`. Read only as recorded, `**ppp = m; free(m); q = **ppp;
-            // return *q;` was believed at `*q` (#486). See ADR-0045.
+            // **What memory this check cannot place may hold**, beside what
+            // `Known::inside` recorded. At the first dereference, `level ==
+            // 0`, only when `local` is a load or a pointer a call wrote. At
+            // every later one whatever `local` is, because the pointer
+            // dereferenced there was read out of memory and is a load: `q =
+            // **ppp;` reads what `t = *ppp; q = *t;` reads through `t`.
+            // Through `Known::inside` alone, `**ppp = m; free(m); q = **ppp;
+            // return *q;` was believed at `*q` (#486). It reads more than a
+            // chain of this function's own allocations can hold, a doubt the
+            // reader sees, and the same one the chain written through locals
+            // already gave. See ADR-0045.
             let reached: Vec<usize> = if level == 0 {
                 self.exposed_through(local)
             } else {
