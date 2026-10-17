@@ -2267,7 +2267,10 @@ cases! {
         // of it, and two levels of address down, `pa = &a;` with `a` lost
         // (#515). Mutation: leave escaped locals out of `hands_a_lost_value`;
         // all three go quiet at the use. Mutation: ask an escaped local only
-        // `Held::lost`, not `Held::lost_read`; the second does.
+        // `Held::lost`, not `Held::lost_read`; the second does. Mutation:
+        // ask every local, escaped or not;
+        // `a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing`
+        // reports.
         a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
