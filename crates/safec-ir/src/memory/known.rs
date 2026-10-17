@@ -96,6 +96,15 @@ pub(super) struct Known {
     /// [`Held::unreplaced_read`] by [`Self::handed_below`] alone. Nothing
     /// clears it, since slots are not told apart. See ADR-0047.
     pub(super) unreplaced: Vec<bool>,
+    /// Per site, whether a value this check lost may have been stored in it.
+    ///
+    /// **A lost value names no site**, so the free that releases it cannot
+    /// say which allocation went, and nothing links it to where it was
+    /// stored before: `*box = u; free(u); r = *box;` with `u` lost to a
+    /// rebirth read `*r` in silence (#503). [`Self::lost_may_be_gone`] reads
+    /// this to mark every such allocation `stale`. Nothing clears it, as
+    /// nothing clears `stale`. See ADR-0045.
+    pub(super) holds_lost: Vec<bool>,
     /// Per site, whether what it contains may include a pointer a caller or
     /// a callee handed over: one [`Held::from_caller`] marks, stored here.
     ///
@@ -897,6 +906,9 @@ impl Known {
             // Kept, as `stale` is: the slots of the new allocation are not
             // told apart from the old one's.
             unreplaced: _,
+            // Kept, as `stale` is: the slots of the new allocation are not
+            // told apart from the old one's.
+            holds_lost: _,
             // Kept, as the entry and `stale` are: the slots of the new
             // allocation are not told apart from the old one's. No case
             // tells this from clearing it, measured: every other local
@@ -1174,6 +1186,32 @@ impl Known {
                 .is_some_and(|fact| fact.old.iter().any(|&(old, _)| touched(old)))
             {
                 *fact = None;
+            }
+        }
+    }
+
+    /// What a free of a value this check lost does to every other lost
+    /// value: any of them may be the one that went.
+    ///
+    /// **Every one, because none can be told from another.** A lost value
+    /// names no site, so a copy of it made before the free, `w = u; free(u);
+    /// *box = w;`, and an allocation it was stored in before the free,
+    /// `*box = u; free(u);`, are no more or less likely to be what went than
+    /// the local handed to `free`. So every lost local carries
+    /// [`Held::stale_read`] from here, and a store of it marks where it
+    /// lands, and every allocation [`Self::holds_lost`] marks is `stale`, so
+    /// a load out of it is one this check stopped following. Marking too much
+    /// is a doubt; marking only the local handed over left the other three
+    /// spellings read in silence (#503). See ADR-0045.
+    pub(super) fn lost_may_be_gone(&mut self) {
+        for held in self.points_to.iter_mut() {
+            if held.lost {
+                held.stale_read = true;
+            }
+        }
+        for (stale, &holds) in self.stale.iter_mut().zip(&self.holds_lost) {
+            if holds {
+                *stale = true;
             }
         }
     }

@@ -1,0 +1,20 @@
+warning[SC0401]: this frees a pointer this check stopped following
+    ╭─[ a_lost_pointer_freed_through_memory_is_doubted_when_read_back.c:18:5 ]
+    │
+ 18 │     free(*box);
+    │     ─────┬────  
+    │          ╰────── this was read out of memory, which this check does not follow
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check follows the local an allocation was made into, not what memory holds
+warning[SC0402]: this uses `r`, which this check stopped following
+    ╭─[ a_lost_pointer_freed_through_memory_is_doubted_when_read_back.c:21:9 ]
+    │
+ 21 │     int v = *r;
+    │         ───┬──  
+    │            ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
