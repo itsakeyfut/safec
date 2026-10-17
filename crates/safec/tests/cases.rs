@@ -3086,6 +3086,21 @@ cases! {
         // sites only; the second does. Mutation: drop it from the copy's
         // condition; the third does.
         a_pointer_stored_through_one_parameter_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What a call this check cannot read may store of what it was handed:
+        // through an out-parameter, `get(&r, u)`, and into memory it was
+        // handed, `put(box, u)`, each then read after `free(u)`, for a named
+        // allocation and for a lost one (#510). Mutation: have the escaped
+        // locals hold no new site after the call; the first goes quiet.
+        // Mutation: leave them without `Held::lost_read` when a lost value was
+        // handed; the second. Mutation: have the handed memory contain nothing
+        // new; the third and fourth. Mutation: hold everything reachable rather than what was
+        // handed; the fifth, the output-parameter idiom beside an exposed
+        // allocation, which ADR-0017 declines to report, reports at `*p`.
+        a_pointer_written_through_an_out_parameter_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        an_output_parameter_beside_an_exposed_allocation_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Memory a parameter can name is memory reachable to code this check

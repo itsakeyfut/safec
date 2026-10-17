@@ -1,0 +1,60 @@
+warning[SC0407]: this passes `u`, which this check stopped following
+    ╭─[ a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:10:5 ]
+    │
+ 10 │     get(&r, u);
+    │     ─────┬────  
+    │          ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0401]: this frees `u`, which this check stopped following
+    ╭─[ a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:12:5 ]
+    │
+ 12 │     free(u);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0402]: this uses `s`, which this check stopped following
+    ╭─[ a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:14:9 ]
+    │
+ 14 │     int v = *s;
+    │         ───┬──  
+    │            ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0403]: this may dereference `out` while it is null
+   ╭─[ a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:3:31 ]
+   │
+ 3 │ void get(int **out, int *p) { *out = p; }
+   │                               ────┬───  
+   │                                   ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it
+warning[SC0403]: this may dereference `box` while it is null
+   ╭─[ a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:4:31 ]
+   │
+ 4 │ void put(int **box, int *p) { *box = p; }
+   │                               ────┬───  
+   │                                   ╰───── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it
+warning[SC0403]: this may dereference `box` while it is null
+   ╭─[ a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free.c:5:24 ]
+   │
+ 5 │ int *take(int **box) { return *box; }
+   │                        ──────┬─────  
+   │                              ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it
