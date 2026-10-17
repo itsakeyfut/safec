@@ -519,7 +519,8 @@ pub(super) struct Held {
     pub(super) unreplaced_read: bool,
     /// Whether this was read out of an allocation
     /// [`Known::holds_lost`](super::known::Known::holds_lost) marks, which
-    /// may hold a value this check lost, or built from such a value.
+    /// may hold a value this check lost, or built from such a value, or
+    /// returned by a call this check cannot read that was handed one (#508).
     ///
     /// **Not [`Held::lost`] at the read**, which would doubt every walk of a
     /// list whose nodes hold a lost head. It is made lost only when a lost

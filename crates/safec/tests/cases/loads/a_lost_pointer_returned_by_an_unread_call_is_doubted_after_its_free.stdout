@@ -1,0 +1,245 @@
+Target "x86_64-pc-windows-msvc"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:3:7 "memcpy" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "d"
+  Local "_2" "void *" parameter "s"
+  Local "_3" "int" parameter "n"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:4:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:5:6 "release_pp" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "pp"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:6:6 "store" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "b"
+  Local "_2" "int *" parameter "p"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:7:6 "id" declared
+  Local "_0" "int *" return
+  Local "_1" "int *" parameter "p"
+Function a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:8:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "box"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int **" "box2"
+  Local "_6" "void *"
+  Local "_7" "int"
+  Local "_8" "int *" "u"
+  Local "_9" "int *" "q"
+  Local "_10" "int" "i"
+  Local "_11" "int"
+  Local "_12" "int *"
+  Local "_13" "void *"
+  Local "_14" "int *"
+  Local "_15" "int"
+  Local "_16" "int"
+  Local "_17" "int"
+  Local "_18" "int"
+  Local "_19" "int *" "r"
+  Local "_20" "int *"
+  Local "_21" "int"
+  Local "_22" "int" "v"
+  Block "bb0" entry
+    ArgumentsEvaluated a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:9:17 generated
+    Call a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:9:17 "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:9:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:9:17 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:10:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:10:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:10:9 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:10:15 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:10:22 generated
+    Return
+  Block "bb3"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:10:9 generated
+    Goto "bb4"
+  Block "bb4"
+    ArgumentsEvaluated a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:11:18 generated
+    Call a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:11:18 "malloc" "bb5"
+      Destination "_6"
+      Constant 8
+  Block "bb5"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:11:11 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:11:18 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:12:9 written
+      Destination "_7"
+      Unary "Not"
+        Copy "_5"
+    Branch a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:12:9 "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:12:9 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:12:16 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:12:23 generated
+    Return
+  Block "bb7"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:12:9 generated
+    Goto "bb8"
+  Block "bb8"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:13:10 written
+      Destination "_8"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:13:14 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:14:10 written
+      Destination "_9"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:14:14 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:15:9 written
+      Destination "_10"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:15:13 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:16:12 written
+      Destination "_11"
+      Binary "Lt"
+        Copy "_10"
+        Constant 2
+    Branch a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:16:12 "bb10" "bb11"
+      Copy "_11"
+  Block "bb10"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:16:12 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:17:9 written
+      Destination "_8"
+      Use
+        Copy "_9"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:17:9 written
+      Destination "_12"
+      Use
+        Copy "_8"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:17:9 generated
+    Call a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:18:13 "malloc" "bb12"
+      Destination "_13"
+      Constant 4
+  Block "bb11"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:16:12 generated
+    ArgumentsEvaluated a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:23:14 generated
+    Call a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:23:14 "id" "bb16"
+      Destination "_20"
+      Copy "_8"
+  Block "bb12"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:18:9 written
+      Destination "_9"
+      Use
+        Copy "_13"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:18:9 written
+      Destination "_14"
+      Use
+        Copy "_9"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:18:9 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:19:13 written
+      Destination "_15"
+      Unary "Not"
+        Copy "_9"
+    Branch a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:19:13 "bb13" "bb14"
+      Copy "_15"
+  Block "bb13"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:19:13 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:19:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:19:24 generated
+    Return
+  Block "bb14"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:19:13 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:20:9 written
+      Destination "_9"
+        Deref
+      Use
+        Constant 1
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:20:9 written
+      Destination "_16"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:20:9 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:21:13 written
+      Destination "_17"
+      Binary "Add"
+        Copy "_10"
+        Constant 1
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:21:9 written
+      Destination "_10"
+      Use
+        Copy "_17"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:21:9 written
+      Destination "_18"
+      Use
+        Copy "_10"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:21:9 generated
+    Goto "bb9"
+  Block "bb16"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:23:10 written
+      Destination "_19"
+      Use
+        Copy "_20"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:23:14 generated
+    ArgumentsEvaluated a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:24:5 generated
+    Call a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:24:5 "free" "bb17"
+      Copy "_8"
+  Block "bb17"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:24:5 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:25:9 written
+      Destination "_21"
+      Unary "Not"
+        Copy "_19"
+    Branch a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:25:9 "bb18" "bb19"
+      Copy "_21"
+  Block "bb18"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:25:9 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:25:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:25:20 generated
+    Return
+  Block "bb19"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:25:9 generated
+    Goto "bb20"
+  Block "bb20"
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:26:9 written
+      Destination "_22"
+      Use
+        Copy "_19"
+          Deref
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:26:13 generated
+    Operation a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:27:5 written
+      Destination "_0"
+      Use
+        Copy "_22"
+    Sequenced a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:27:12 generated
+    Return
