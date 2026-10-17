@@ -1,0 +1,238 @@
+Target "x86_64-pc-windows-msvc"
+Function a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:3:6 "stash_ppp" declared
+  Local "_0" "void" return
+  Local "_1" "int ***" parameter "pp"
+Function a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:4:6 "release_all" declared
+  Local "_0" "void" return
+Function a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int **" "box"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int *" "u"
+  Local "_6" "int *" "q"
+  Local "_7" "int" "i"
+  Local "_8" "int"
+  Local "_9" "int *"
+  Local "_10" "void *"
+  Local "_11" "int *"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int"
+  Local "_16" "int *"
+  Local "_17" "int **" "w"
+  Local "_18" "int ***"
+  Local "_19" "int *" "s"
+  Local "_20" "int **"
+  Local "_21" "int"
+  Local "_22" "int" "v"
+  Block "bb0" entry
+    ArgumentsEvaluated a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:6:17 generated
+    Call a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:6:17 "malloc" "bb1"
+      Destination "_3"
+      Constant 8
+  Block "bb1"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:6:11 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:6:17 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:7:9 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:7:9 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:7:9 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:7:15 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:7:22 generated
+    Return
+  Block "bb3"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:7:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:8:10 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:8:14 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:9:10 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:9:14 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:10:9 written
+      Destination "_7"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:10:13 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:11:12 written
+      Destination "_8"
+      Binary "Lt"
+        Copy "_7"
+        Constant 2
+    Branch a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:11:12 "bb6" "bb7"
+      Copy "_8"
+  Block "bb6"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:11:12 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:12:9 written
+      Destination "_5"
+      Use
+        Copy "_6"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:12:9 written
+      Destination "_9"
+      Use
+        Copy "_5"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:12:9 generated
+    Call a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:13:13 "malloc" "bb8"
+      Destination "_10"
+      Constant 4
+  Block "bb7"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:11:12 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:18:5 written
+      Destination "_2"
+        Deref
+      Use
+        Copy "_5"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:18:5 written
+      Destination "_16"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:18:5 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:19:11 written
+      Destination "_17"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:19:15 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:20:15 written
+      Destination "_18"
+      Address
+        Place "_17"
+    ArgumentsEvaluated a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:20:5 generated
+    Call a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:20:5 "stash_ppp" "bb12"
+      Copy "_18"
+  Block "bb8"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:13:9 written
+      Destination "_6"
+      Use
+        Copy "_10"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:13:9 written
+      Destination "_11"
+      Use
+        Copy "_6"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:13:9 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:14:13 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_6"
+    Branch a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:14:13 "bb9" "bb10"
+      Copy "_12"
+  Block "bb9"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:14:13 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:14:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:14:24 generated
+    Return
+  Block "bb10"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:14:13 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:15:9 written
+      Destination "_6"
+        Deref
+      Use
+        Constant 1
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:15:9 written
+      Destination "_13"
+      Use
+        Copy "_6"
+          Deref
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:15:9 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:16:13 written
+      Destination "_14"
+      Binary "Add"
+        Copy "_7"
+        Constant 1
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:16:9 written
+      Destination "_7"
+      Use
+        Copy "_14"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:16:9 written
+      Destination "_15"
+      Use
+        Copy "_7"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:16:9 generated
+    Goto "bb5"
+  Block "bb12"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:20:5 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:21:10 written
+      Destination "_19"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:21:14 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:22:5 written
+      Destination "_17"
+      Use
+        Copy "_2"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:22:5 written
+      Destination "_20"
+      Use
+        Copy "_17"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:22:5 generated
+    ArgumentsEvaluated a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:23:5 generated
+    Call a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:23:5 "release_all" "bb13"
+  Block "bb13"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:23:5 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:24:9 written
+      Destination "_21"
+      Unary "Not"
+        Copy "_19"
+    Branch a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:24:9 "bb14" "bb15"
+      Copy "_21"
+  Block "bb14"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:24:9 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:24:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:24:20 generated
+    Return
+  Block "bb15"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:24:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:25:9 written
+      Destination "_22"
+      Use
+        Copy "_19"
+          Deref
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:25:13 generated
+    ArgumentsEvaluated a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:26:5 generated
+    Call a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:26:5 "free" "bb17"
+      Copy "_6"
+  Block "bb17"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:26:5 generated
+    Operation a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:27:5 written
+      Destination "_0"
+      Use
+        Copy "_22"
+    Sequenced a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:27:12 generated
+    Return

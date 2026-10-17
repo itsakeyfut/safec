@@ -1,0 +1,10 @@
+warning[SC0402]: this uses `s`, which this check stopped following
+    ╭─[ a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it.c:25:9 ]
+    │
+ 25 │     int v = *s;
+    │         ───┬──  
+    │            ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
