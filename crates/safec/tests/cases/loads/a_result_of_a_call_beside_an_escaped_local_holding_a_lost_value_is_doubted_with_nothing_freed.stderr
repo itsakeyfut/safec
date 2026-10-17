@@ -1,0 +1,10 @@
+warning[SC0402]: this uses `b`, which this check stopped following
+    ╭─[ a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed.c:19:9 ]
+    │
+ 19 │     int v = *b;
+    │         ───┬──  
+    │            ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

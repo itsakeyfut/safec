@@ -2279,6 +2279,16 @@ cases! {
         // by review. Mutation: leave out the sites escaped locals hold from
         // what the trigger reaches; this goes quiet at the use.
         a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What the trigger does besides the result: a value read out of a box
+        // of the lost value before the call, `r = *box;`, is lost once a call
+        // handed nothing reaches `u` through `w`, since it may free `u`.
+        // Found by review. Mutation: skip `Known::lost_may_be_gone` when only
+        // an escaped local reaches the lost value; the first goes quiet. And
+        // what it costs, as a named value does: the result of any later such
+        // call is doubted with nothing freed, `init(&p);` with `p` then lost
+        // to a loop, and `b = get(); *b`.
+        a_pointer_read_out_of_a_box_of_a_lost_value_is_doubted_after_a_call_reaching_it_through_a_local: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_result_of_a_call_beside_an_escaped_local_holding_a_lost_value_is_doubted_with_nothing_freed: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads
