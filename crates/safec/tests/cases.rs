@@ -2193,6 +2193,32 @@ cases! {
         a_lost_pointer_released_by_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_released_by_a_defined_function_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Found by review: each place `Held::lost_read` is carried, and each
+        // spelling of a call handed a lost value. Mutation, one per case in
+        // order: drop it from a value built by arithmetic out of a load
+        // (`built_from`); from the copy `memcpy` makes into a local; from the
+        // join of two `Held`; from `Held::accumulated`; have the trigger for
+        // an opaque call ignore a `lost_read` argument; ignore a load handed as
+        // an operand, `release(*box)`; ignore a local's address, `&u`; leave
+        // the allocations behind a local's address out of what it reaches.
+        // Each goes quiet at the use.
+        a_lost_pointer_read_back_and_moved_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_read_back_on_one_arm_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_of_a_lost_pointer_moved_by_arithmetic_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_released_by_a_call_through_its_box_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_released_by_a_call_through_its_address_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_box_of_a_lost_pointer_released_through_a_local_s_address_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What the call trigger costs, and what it does not: a node read out of
+        // a list built in a loop is doubted after the head is handed to a call
+        // this check cannot read, which may free the node; and a call handed
+        // nothing, `release_all()`, marks nothing. Found by review. Mutation:
+        // ignore what a call's handed memory reaches; the first goes quiet.
+        // Mutation: let every call this check cannot read trigger; the second
+        // reports.
+        a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

@@ -1661,15 +1661,34 @@ impl Analysis for Allocations<'_> {
         // `u` and left `r = *box; v = *r;` read in silence (#505). The same
         // memory the `Callee::Opaque` arm treats as possibly freed, and
         // nothing a call is not handed: `release_all()` is not a trigger.
+        //
+        // **Spelled any way it can be handed.** A load handed as an operand,
+        // `release(*box)`, names nothing and is read out of `box`, which is
+        // marked rather than anything in it; and a local's address,
+        // `release_pp(&u)`, hands what the local holds, so the locals it
+        // points at are asked as the argument is, and their allocations are
+        // in what it reaches. Each read `*r` in silence. Found by review.
         if matches!(kind, Callee::Opaque) && {
             let mut handed_memory: Vec<usize> = sites().collect();
             for argument in handed {
                 handed_memory.extend(self.read_out(function, argument, value));
+                if let Operand::Copy(place) = argument {
+                    let pointed: Vec<usize> = value.written_through(place.local);
+                    for target in pointed {
+                        handed_memory.extend(value.points_to[target].sites());
+                    }
+                }
             }
+            let may_hold_lost = |held: &Held| held.lost || held.lost_read;
             handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
-                    let held = &value.points_to[place.local.index()];
-                    held.lost || held.lost_read
+                    may_hold_lost(&value.points_to[place.local.index()])
+                        || (!place.projection.is_empty()
+                            && value.marked_below(place.local, derefs(place), &value.holds_lost))
+                        || value
+                            .written_through(place.local)
+                            .into_iter()
+                            .any(|target| may_hold_lost(&value.points_to[target]))
                 }
                 Operand::Constant(_) => false,
             }) || value
