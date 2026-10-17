@@ -2134,13 +2134,11 @@ impl Analysis for Allocations<'_> {
                 // for the trigger above: `w = u; get(&r, &w);` may store `u`
                 // in `r`, and `Known::closure` does not follow a local, so
                 // `*r` after `free(u)` was read in silence. Found by review.
-                // One level only, as for the trigger: following the chain of
-                // addresses further gave `pp`, in `pp = &p; opaque(&pp);`, the
-                // allocation `p` holds, and doubted `*pp = q`, the
-                // output-parameter idiom ADR-0017 declines to report (#513).
+                // At any depth, since `pa = &a; get(&r, &pa);` hands `a`'s
+                // too and read `*r` in silence the same way (#513).
                 for argument in handed {
                     if let Operand::Copy(place) = argument {
-                        for target in value.written_through(place.local) {
+                        for target in value.beneath(value.written_through(place.local)) {
                             handed_memory.extend(value.points_to[target].sites());
                         }
                     }
@@ -2150,9 +2148,27 @@ impl Analysis for Allocations<'_> {
                     if !value.escaped[local] {
                         continue;
                     }
+                    // **Not what a local it points at holds**, which is a
+                    // level below it: `pp`, in `pp = &p; opaque(&pp);`, points
+                    // at `p` and not at the allocation `p` holds, and giving it
+                    // that allocation doubted `*pp = q`, the output-parameter
+                    // idiom ADR-0017 declines to report. Read from `writes_to`
+                    // rather than from a declared type, which nothing here
+                    // enforces. A callee that stores a deeper pointer into a
+                    // shallower local by changing its type is missed, and needs
+                    // a cast this frontend does not read yet. See ADR-0044.
+                    let own = value.points_to[local].writes_to.clone();
+                    let mut below = vec![false; value.state.len()];
+                    for under in value.beneath((0..own.len()).filter(|&next| own[next])) {
+                        for site in value.points_to[under].sites() {
+                            below[site] = true;
+                        }
+                    }
                     let held = &mut value.points_to[local];
                     for &site in &stored {
-                        held.hold(site, Offset::Unknown);
+                        if !below[site] {
+                            held.hold(site, Offset::Unknown);
+                        }
                     }
                     if !stored.is_empty() {
                         held.loaded = true;

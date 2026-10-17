@@ -886,6 +886,26 @@ impl Known {
             .collect()
     }
 
+    /// Every local reachable from `from` through [`Held::writes_to`], at any
+    /// depth, `from` included: what a callee handed the address of one of
+    /// them can reach by following addresses. A visited bit per local, so a
+    /// cycle of addresses or a dense graph of them is walked once each,
+    /// rather than once per path. See ADR-0044.
+    pub(super) fn beneath(&self, from: impl IntoIterator<Item = usize>) -> Vec<usize> {
+        let mut seen = vec![false; self.points_to.len()];
+        let mut todo: Vec<usize> = from.into_iter().collect();
+        let mut found = Vec::new();
+        while let Some(local) = todo.pop() {
+            if std::mem::replace(&mut seen[local], true) {
+                continue;
+            }
+            found.push(local);
+            let held = &self.points_to[local];
+            todo.extend((0..held.writes_to.len()).filter(|&next| held.writes_to[next]));
+        }
+        found
+    }
+
     /// Hand this site to a new allocation.
     ///
     /// **A site names one allocation at a time, and this is where it stops
