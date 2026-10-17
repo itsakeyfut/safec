@@ -391,12 +391,14 @@ cases! {
         // the second builds.
         a_pointer_stored_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_copy_made_on_the_arm_that_freed_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What `Known::held_sites` counting every site beside one load costs:
-        // `if (c) { free(p); p = 0; }` is doubted after it, though the load
-        // cannot name `p` and every path is defined. #495 is removing that.
-        // Mutation: leave the early return for a lost, loaded or foreign
-        // local out of `held_sites`; the use and the free go quiet.
-        a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // A load beside the free-and-null idiom holds only what it lists, so
+        // `p`, which it cannot name, is not doubted after `if (c) { free(p);
+        // p = 0; }` (#495), and neither is a free of `p` in a loop beside a
+        // local lost to that loop's rebirth. Mutation: have the early return
+        // in `Known::held_sites` ask `loaded` again; the first reports. Ask
+        // `lost` again; the second reports at `free(p)`.
+        a_pointer_freed_and_nulled_on_one_arm_builds_beside_a_load: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_free_in_a_loop_is_not_doubted_beside_a_local_lost_to_its_rebirth: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And what that same rule holds in the safety direction: `u` written
         // by a call this check cannot read may be `p`, freed before the call,
         // and `r` is `u` on the arm that freed and nulled `q`, so `free(r)`
@@ -411,8 +413,10 @@ cases! {
         // join; and a box holding a pointer freed two turns of a loop ago,
         // read back beside an unrelated load, and beside an unrelated local
         // lost to the same loop. Each is a use after free on that arm. Found
-        // by review of #495. Mutation: have the early return ask every kind
-        // but the one a case stands for; that case goes quiet.
+        // by review of #495. Mutation: leave a pointer a call wrote out of the
+        // early return; the first goes quiet. The other two are doubted since
+        // #503 by the free of the lost value, not by that return, so they keep
+        // their report with lost and loaded locals out of it (#495).
         a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_use_after_free_through_a_box_beside_a_load_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_use_after_free_through_a_box_beside_a_lost_local_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],

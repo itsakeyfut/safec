@@ -8,13 +8,13 @@ warning[SC0401]: this frees `u`, which this check stopped following
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
-warning[SC0402]: this uses `r`, which may have been freed
+warning[SC0402]: this uses `r`, which this check stopped following
     ╭─[ a_use_after_free_through_a_box_beside_a_load_is_doubted.c:21:9 ]
     │
  21 │     int v = *r;
     │         ───┬──  
-    │            ╰──── used here, where it may have been freed before
+    │            ╰──── this check cannot say what this points at
 ────╯
   = note: this check belongs to safety level 1
   = note: this could not be proven; it is an error without `--allow-unknown`
-  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds

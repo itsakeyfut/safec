@@ -1,0 +1,10 @@
+warning[SC0402]: this uses `l`, which this check stopped following
+   ╭─[ a_free_in_a_loop_is_not_doubted_beside_a_local_lost_to_its_rebirth.c:9:18 ]
+   │
+ 9 │         if (l) { *l = 2; }
+   │                  ───┬──  
+   │                     ╰──── this check cannot say what this points at
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
