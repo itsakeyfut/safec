@@ -2175,6 +2175,24 @@ cases! {
         a_lost_pointer_freed_through_a_load_of_its_box_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And what a lost value read back before its free, or released by a
+        // call this check cannot read, still left read in silence (#505): a
+        // load out of the box made before `free(u)`; that load stored into a
+        // second box; `u` handed to a call only declared, and to one defined
+        // in the same file, which this check reads no better; and the box
+        // itself handed to a call. Mutation: never set `Held::lost_read` at a
+        // read; the first two go quiet. Mutation: do not carry it into a
+        // container at a store; the second. Mutation: have
+        // `Known::lost_may_be_gone` leave a `lost_read` local unmarked; the
+        // first, while the second is still doubted through the second box,
+        // which the free makes stale. Mutation: no trigger for an opaque call handed a lost
+        // local; the third and fourth. Mutation: no trigger for one whose
+        // handed memory reaches an allocation holding a lost value; the fifth.
+        a_lost_pointer_read_back_before_its_free_is_doubted_when_used: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_load_of_a_lost_pointer_stored_again_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_released_by_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_released_by_a_defined_function_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_box_of_a_lost_pointer_released_by_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

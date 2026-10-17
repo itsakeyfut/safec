@@ -140,6 +140,11 @@ pub(super) fn built_from(
         if value.marked_below(load.local, derefs(load), &value.unreplaced) {
             reached.unreplaced_read = true;
         }
+        // And read out of memory a lost value may be in, as `read_through`
+        // says. See `Held::lost_read`.
+        if value.marked_below(load.local, derefs(load), &value.holds_lost) {
+            reached.lost_read = true;
+        }
         if value.lost_through(load.local, derefs(load)) {
             reached.lost = true;
             reached.stale_read |= value.stale_through(load.local, derefs(load));
