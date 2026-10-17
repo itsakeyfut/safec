@@ -1,0 +1,248 @@
+Target "x86_64-pc-windows-msvc"
+Function a_lost_pointer_reallocated_is_doubted_when_read_back.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_lost_pointer_reallocated_is_doubted_when_read_back.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_lost_pointer_reallocated_is_doubted_when_read_back.c:3:7 "realloc" declared
+  Local "_0" "void *" return
+  Local "_1" "void *" parameter "p"
+  Local "_2" "int" parameter "n"
+Function a_lost_pointer_reallocated_is_doubted_when_read_back.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int **" "box"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int *" "u"
+  Local "_5" "int *" "q"
+  Local "_6" "int" "i"
+  Local "_7" "int"
+  Local "_8" "int *"
+  Local "_9" "void *"
+  Local "_10" "int *"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int"
+  Local "_14" "int"
+  Local "_15" "int *" "n"
+  Local "_16" "void *"
+  Local "_17" "int"
+  Local "_18" "int *"
+  Local "_19" "int *" "r"
+  Local "_20" "int"
+  Local "_21" "int" "v"
+  Block "bb0" entry
+    ArgumentsEvaluated a_lost_pointer_reallocated_is_doubted_when_read_back.c:5:17 generated
+    Call a_lost_pointer_reallocated_is_doubted_when_read_back.c:5:17 "malloc" "bb1"
+      Destination "_2"
+      Constant 8
+  Block "bb1"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:5:11 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:5:17 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:6:9 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_lost_pointer_reallocated_is_doubted_when_read_back.c:6:9 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:6:9 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:6:15 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:6:22 generated
+    Return
+  Block "bb3"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:6:9 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:7:10 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:7:14 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:8:10 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:8:14 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:9:9 written
+      Destination "_6"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:9:13 generated
+    Goto "bb5"
+  Block "bb5"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:10:12 written
+      Destination "_7"
+      Binary "Lt"
+        Copy "_6"
+        Constant 2
+    Branch a_lost_pointer_reallocated_is_doubted_when_read_back.c:10:12 "bb6" "bb7"
+      Copy "_7"
+  Block "bb6"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:10:12 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:11:9 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:11:9 written
+      Destination "_8"
+      Use
+        Copy "_4"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:11:9 generated
+    Call a_lost_pointer_reallocated_is_doubted_when_read_back.c:12:13 "malloc" "bb8"
+      Destination "_9"
+      Constant 4
+  Block "bb7"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:10:12 generated
+    ArgumentsEvaluated a_lost_pointer_reallocated_is_doubted_when_read_back.c:17:14 generated
+    Call a_lost_pointer_reallocated_is_doubted_when_read_back.c:17:14 "realloc" "bb12"
+      Destination "_16"
+      Copy "_4"
+      Constant 8
+  Block "bb8"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:12:9 written
+      Destination "_5"
+      Use
+        Copy "_9"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:12:9 written
+      Destination "_10"
+      Use
+        Copy "_5"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:12:9 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:13:13 written
+      Destination "_11"
+      Unary "Not"
+        Copy "_5"
+    Branch a_lost_pointer_reallocated_is_doubted_when_read_back.c:13:13 "bb9" "bb10"
+      Copy "_11"
+  Block "bb9"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:13:13 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:13:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:13:24 generated
+    Return
+  Block "bb10"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:13:13 generated
+    Goto "bb11"
+  Block "bb11"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:14:9 written
+      Destination "_5"
+        Deref
+      Use
+        Constant 1
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:14:9 written
+      Destination "_12"
+      Use
+        Copy "_5"
+          Deref
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:14:9 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:15:13 written
+      Destination "_13"
+      Binary "Add"
+        Copy "_6"
+        Constant 1
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:15:9 written
+      Destination "_6"
+      Use
+        Copy "_13"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:15:9 written
+      Destination "_14"
+      Use
+        Copy "_6"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:15:9 generated
+    Goto "bb5"
+  Block "bb12"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:17:10 written
+      Destination "_15"
+      Use
+        Copy "_16"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:17:14 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:18:9 written
+      Destination "_17"
+      Unary "Not"
+        Copy "_15"
+    Branch a_lost_pointer_reallocated_is_doubted_when_read_back.c:18:9 "bb13" "bb14"
+      Copy "_17"
+  Block "bb13"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:18:9 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:18:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:18:20 generated
+    Return
+  Block "bb14"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:18:9 generated
+    Goto "bb15"
+  Block "bb15"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:19:5 written
+      Destination "_1"
+        Deref
+      Use
+        Copy "_4"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:19:5 written
+      Destination "_18"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:19:5 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:20:10 written
+      Destination "_19"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:20:14 generated
+    ArgumentsEvaluated a_lost_pointer_reallocated_is_doubted_when_read_back.c:21:5 generated
+    Call a_lost_pointer_reallocated_is_doubted_when_read_back.c:21:5 "free" "bb16"
+      Copy "_15"
+  Block "bb16"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:21:5 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:22:9 written
+      Destination "_20"
+      Unary "Not"
+        Copy "_19"
+    Branch a_lost_pointer_reallocated_is_doubted_when_read_back.c:22:9 "bb17" "bb18"
+      Copy "_20"
+  Block "bb17"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:22:9 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:22:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:22:20 generated
+    Return
+  Block "bb18"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:22:9 generated
+    Goto "bb19"
+  Block "bb19"
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:23:9 written
+      Destination "_21"
+      Use
+        Copy "_19"
+          Deref
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:23:13 generated
+    ArgumentsEvaluated a_lost_pointer_reallocated_is_doubted_when_read_back.c:24:5 generated
+    Call a_lost_pointer_reallocated_is_doubted_when_read_back.c:24:5 "free" "bb20"
+      Copy "_5"
+  Block "bb20"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:24:5 generated
+    ArgumentsEvaluated a_lost_pointer_reallocated_is_doubted_when_read_back.c:25:5 generated
+    Call a_lost_pointer_reallocated_is_doubted_when_read_back.c:25:5 "free" "bb21"
+      Copy "_1"
+  Block "bb21"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:25:5 generated
+    Operation a_lost_pointer_reallocated_is_doubted_when_read_back.c:26:5 written
+      Destination "_0"
+      Use
+        Copy "_21"
+    Sequenced a_lost_pointer_reallocated_is_doubted_when_read_back.c:26:12 generated
+    Return
