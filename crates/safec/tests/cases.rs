@@ -3096,11 +3096,14 @@ cases! {
         // new; the third and fourth. Mutation: hold everything reachable rather than what was
         // handed; the fifth, the output-parameter idiom beside an exposed
         // allocation, which ADR-0017 declines to report, reports at `*p`.
+        // Mutation: leave out what a local handed by address holds; the sixth,
+        // `get(&r, &w)` with `w = u`, goes quiet. Two levels are #513.
         a_pointer_written_through_an_out_parameter_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         an_output_parameter_beside_an_exposed_allocation_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Memory a parameter can name is memory reachable to code this check

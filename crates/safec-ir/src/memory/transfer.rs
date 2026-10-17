@@ -2109,6 +2109,22 @@ impl Analysis for Allocations<'_> {
                 // of it is a doubt and never a proof; one that gains none is
                 // left as it was, so `get(&u); free(u);` keeps its words. See
                 // ADR-0044.
+                //
+                // **A local's address hands what the local holds**, as it does
+                // for the trigger above: `w = u; get(&r, &w);` may store `u`
+                // in `r`, and `Known::closure` does not follow a local, so
+                // `*r` after `free(u)` was read in silence. Found by review.
+                // One level only, as for the trigger: following the chain of
+                // addresses further gave `pp`, in `pp = &p; opaque(&pp);`, the
+                // allocation `p` holds, and doubted `*pp = q`, the
+                // output-parameter idiom ADR-0017 declines to report (#513).
+                for argument in handed {
+                    if let Operand::Copy(place) = argument {
+                        for target in value.written_through(place.local) {
+                            handed_memory.extend(value.points_to[target].sites());
+                        }
+                    }
+                }
                 let stored: Vec<usize> = value.closure(handed_memory).into_iter().collect();
                 for local in 0..value.escaped.len() {
                     if !value.escaped[local] {
