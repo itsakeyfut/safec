@@ -1678,12 +1678,18 @@ impl Analysis for Allocations<'_> {
         // named value's call reach it: the call may have been handed the
         // local's address now, earlier or by another route. `stash_pp(&w);
         // w = u; r = fetch(); free(u);` read `*r` in silence where a named
-        // `u` was reported (#515).
+        // `u` was reported (#515). **And what it points at**, whose closure
+        // `reach_of` adds too: `*box = u; s = *box; stash_ppp(&w); w = box;
+        // release_all();` freed what `s` holds, read after in silence.
+        // Found by review.
         //
         // Computed once, for the trigger here and for the call's result
         // below, so that the two cannot disagree about what it was handed.
         let hands_a_lost_value = matches!(kind, Callee::Opaque) && {
             let mut handed_memory: Vec<usize> = sites().collect();
+            for local in (0..value.escaped.len()).filter(|&local| value.escaped[local]) {
+                handed_memory.extend(value.points_to[local].sites());
+            }
             for argument in handed {
                 handed_memory.extend(self.read_out(function, argument, value));
                 if let Operand::Copy(place) = argument {

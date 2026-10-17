@@ -2274,6 +2274,11 @@ cases! {
         a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a lost value in memory such a local points at, `w = box;` with
+        // `*box = u;`, read out before a call handed nothing frees it. Found
+        // by review. Mutation: leave out the sites escaped locals hold from
+        // what the trigger reaches; this goes quiet at the use.
+        a_lost_pointer_in_memory_an_escaped_local_points_at_is_doubted_after_a_call_reaches_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads
