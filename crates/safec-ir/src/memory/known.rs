@@ -149,6 +149,20 @@ pub(super) struct Known {
     /// call, then the read, and [`Self::noticed`] cannot tell a read that is
     /// not pending yet. [`Self::meeting`] asks this instead. See ADR-0042.
     pub(super) exposed_after_call: BTreeSet<usize>,
+    /// Whether a value this check lost has been handed to a call it cannot
+    /// read, which may have kept it: the lost counterpart of
+    /// [`Self::exposed`].
+    ///
+    /// **A lost value names no site**, so nothing of it is exposed, and the
+    /// result of a later such call, which holds every exposed site, carried
+    /// nothing of it: `stash(u); r = fetch(); free(u); v = *r;` read `*r` in
+    /// silence where a named `u` was reported (#511). Set where such a call
+    /// is a trigger for [`Self::lost_may_be_gone`], and read by the result of
+    /// that call and every later one, which is lost. A union at a join, and
+    /// never cleared, as `exposed` is not: nothing takes back what a callee
+    /// was handed. Only a call handed one sets it, not a store of one into
+    /// a local such a call holds the address of (#515). See ADR-0045.
+    pub(super) lost_exposed: bool,
 }
 
 impl Known {
@@ -918,6 +932,8 @@ impl Known {
             pending,
             calls: _,
             exposed_after_call,
+            // About no site.
+            lost_exposed: _,
         } = self;
 
         // **A local that loses an allocation that is gone may hold one**, so
