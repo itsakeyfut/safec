@@ -1273,7 +1273,7 @@ impl Known {
     /// sites, what an allocation contains, an exposure, a call left pending
     /// beside one, a read carried forwards, and a `realloc`'s remembered fact.
     /// Every site, where a local was written by a call this check cannot
-    /// read.
+    /// read, or is lost.
     ///
     /// **It over-counts, and must**: a site answered as held by nothing takes
     /// its state from the other side of a join, so one held by something
@@ -1290,25 +1290,30 @@ impl Known {
         // with a case pinning that cost and an issue removing it. This early
         // return is told apart in both.
         //
-        // **This early return is for a pointer a call wrote, and only that
-        // one** (#495). A use is read from the site's state, and on the arm
-        // that freed and nulled `q` nothing holds `q`'s site, so without this
-        // it is `Unheld` and takes the other arm's `Live`. No reader of a use
-        // asks `foreign` (ADR-0017), so for a pointer a call wrote this is
-        // where the doubt comes from. Mutation: leave it out;
+        // **This early return is for a pointer a call wrote and for a lost
+        // local, not for a load** (#495). A use is read from the site's state,
+        // and on the arm that freed and nulled `q` nothing holds `q`'s site,
+        // so without this it is `Unheld` and takes the other arm's `Live`.
+        // For a pointer a call wrote this is where the doubt comes from: the
+        // first level of a use never asks `foreign` (ADR-0017). Mutation:
+        // leave it out;
         // `a_use_through_a_pointer_a_call_wrote_on_one_arm_is_doubted` goes
-        // quiet. A lost value read back out of memory carries its own doubt
-        // since #501 and #503, which mark it gone when a lost value is freed,
-        // and a load is no lost value. Holding every site beside those as well
+        // quiet. For a lost value read back out of memory, #501 and #503 mark
+        // it gone when `free` or `realloc` releases a lost value, and nothing
+        // does when a call this check cannot read releases one (#505), so this
+        // return still covers that. Mutation: leave `lost` out;
+        // `a_use_after_free_through_a_box_after_a_call_released_a_lost_value_is_doubted`
+        // goes quiet. A load is neither, and holding every site beside one
         // doubted `if (c) { free(p); p = 0; }` beside any unrelated load.
         // Mutation: ask `loaded` again;
-        // `a_pointer_freed_and_nulled_on_one_arm_builds_beside_a_load`
-        // reports. Ask `lost` again;
-        // `a_free_in_a_loop_is_not_doubted_beside_a_local_lost_to_its_rebirth`
-        // reports at its free. The cost that stays: one written local anywhere
-        // holds every site, so the same idiom beside `get(&u)` is doubted.
+        // `a_pointer_freed_and_nulled_on_one_arm_is_not_doubted_beside_a_load`
+        // reports. The cost that stays: one written or lost local anywhere
+        // holds every site, so the same idiom is doubted beside `get(&u)`,
+        // `a_pointer_freed_and_nulled_on_one_arm_is_doubted_beside_a_pointer_a_call_wrote`,
+        // and a free in a loop beside a local lost to its rebirth,
+        // `a_free_in_a_loop_is_doubted_beside_a_local_lost_to_its_rebirth`.
         // See ADR-0048.
-        if self.points_to.iter().any(|held| held.foreign) {
+        if self.points_to.iter().any(|held| held.lost || held.foreign) {
             return vec![true; sites];
         }
         let mut held = vec![false; sites];
