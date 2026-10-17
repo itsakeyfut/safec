@@ -2240,6 +2240,21 @@ cases! {
         // `lost_read`; the first reports at `*r`.
         a_result_of_a_call_handed_a_lost_value_is_not_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And what a later such call returns, once a lost value was handed to
+        // one that may have kept it: `stash(u); r = fetch(); free(u);` and
+        // `*r`, on every path and with the call on one arm only (#511).
+        // Mutation: have the result read whether its own call was handed a
+        // lost value rather than `Known::lost_exposed`; the first goes quiet
+        // at `*r`. Mutation: join `Known::lost_exposed` as an intersection;
+        // the second does. What it costs and does not: with no free of a
+        // lost value after the call, the result is not doubted, and a fresh
+        // allocation a later call returns is doubted once that value is
+        // freed, since the call may have returned it. Mutation: make the
+        // result lost at once; the third reports at `*r` and its free.
+        a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_result_of_a_call_after_a_lost_value_was_handed_away_is_not_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

@@ -1,0 +1,188 @@
+Target "x86_64-pc-windows-msvc"
+Function a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:3:6 "stash" declared
+  Local "_0" "void" return
+  Local "_1" "int *" parameter "p"
+Function a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:4:6 "fetch" declared
+  Local "_0" "int *" return
+Function a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:5:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "u"
+  Local "_3" "int *" "q"
+  Local "_4" "int" "i"
+  Local "_5" "int"
+  Local "_6" "int *"
+  Local "_7" "void *"
+  Local "_8" "int *"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "int"
+  Local "_12" "int"
+  Local "_13" "int *" "r"
+  Local "_14" "int *"
+  Local "_15" "int"
+  Local "_16" "int" "v"
+  Block "bb0" entry
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:6:10 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:6:14 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:7:10 written
+      Destination "_3"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:7:14 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:8:9 written
+      Destination "_4"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:8:13 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:9:12 written
+      Destination "_5"
+      Binary "Lt"
+        Copy "_4"
+        Constant 2
+    Branch a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:9:12 "bb2" "bb3"
+      Copy "_5"
+  Block "bb2"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:9:12 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:10:9 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:10:9 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:10:9 generated
+    Call a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:11:13 "malloc" "bb4"
+      Destination "_7"
+      Constant 4
+  Block "bb3"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:9:12 generated
+    Branch a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:16:9 "bb8" "bb9"
+      Copy "_1"
+  Block "bb4"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:11:9 written
+      Destination "_3"
+      Use
+        Copy "_7"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:11:9 written
+      Destination "_8"
+      Use
+        Copy "_3"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:11:9 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:12:13 written
+      Destination "_9"
+      Unary "Not"
+        Copy "_3"
+    Branch a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:12:13 "bb5" "bb6"
+      Copy "_9"
+  Block "bb5"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:12:13 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:12:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:12:24 generated
+    Return
+  Block "bb6"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:12:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:13:9 written
+      Destination "_3"
+        Deref
+      Use
+        Constant 1
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:13:9 written
+      Destination "_10"
+      Use
+        Copy "_3"
+          Deref
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:13:9 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:14:13 written
+      Destination "_11"
+      Binary "Add"
+        Copy "_4"
+        Constant 1
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:14:9 written
+      Destination "_4"
+      Use
+        Copy "_11"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:14:9 written
+      Destination "_12"
+      Use
+        Copy "_4"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:14:9 generated
+    Goto "bb1"
+  Block "bb8"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:16:9 generated
+    ArgumentsEvaluated a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:16:12 generated
+    Call a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:16:12 "stash" "bb11"
+      Copy "_2"
+  Block "bb9"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:16:9 generated
+    Goto "bb10"
+  Block "bb10"
+    ArgumentsEvaluated a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:17:14 generated
+    Call a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:17:14 "fetch" "bb12"
+      Destination "_14"
+  Block "bb11"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:16:12 generated
+    Goto "bb10"
+  Block "bb12"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:17:10 written
+      Destination "_13"
+      Use
+        Copy "_14"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:17:14 generated
+    ArgumentsEvaluated a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:18:5 generated
+    Call a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:18:5 "free" "bb13"
+      Copy "_2"
+  Block "bb13"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:18:5 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:19:9 written
+      Destination "_15"
+      Unary "Not"
+        Copy "_13"
+    Branch a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:19:9 "bb14" "bb15"
+      Copy "_15"
+  Block "bb14"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:19:9 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:19:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:19:20 generated
+    Return
+  Block "bb15"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:19:9 generated
+    Goto "bb16"
+  Block "bb16"
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:20:9 written
+      Destination "_16"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:20:13 generated
+    ArgumentsEvaluated a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:21:5 generated
+    Call a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:21:5 "free" "bb17"
+      Copy "_3"
+  Block "bb17"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:21:5 generated
+    Operation a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:22:5 written
+      Destination "_0"
+      Use
+        Copy "_16"
+    Sequenced a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free.c:22:12 generated
+    Return
