@@ -240,6 +240,11 @@ impl Allocations<'_> {
             if value.marked_below(source.local, depth, &value.unreplaced) {
                 held.unreplaced_read = true;
             }
+            // Read out of an allocation that may hold a lost value, which is
+            // made lost if a lost value goes. See `Held::lost_read`.
+            if value.marked_below(source.local, depth, &value.holds_lost) {
+                held.lost_read = true;
+            }
             // Read through a pointer to a local this check lost, carrying
             // whether what it lost may be gone, as the local does. See
             // ADR-0045.
@@ -1265,7 +1270,7 @@ impl Analysis for Allocations<'_> {
                             // **And a lost value**, which records nothing in
                             // the container, so that a later free of a lost
                             // value can find it (#503). See ADR-0045.
-                            if written.lost {
+                            if written.lost || written.lost_read {
                                 value.holds_lost[*container] = true;
                             }
                             // And a pointer read out of caller memory keeps
@@ -1649,6 +1654,51 @@ impl Analysis for Allocations<'_> {
         // only what is lost, not the load: a load may be null, and marking it
         // doubted a read behind `if (r)` of a pointer `free(NULL)` left alone,
         // found by review of #501. See `Known::lost_may_be_gone`.
+        // **And a call this check cannot read may release one**, since what
+        // it is handed it may free: a lost local or one read out of memory a
+        // lost value may be in, or memory that reaches an allocation holding
+        // one. `release(u)`, and `*holder = u; release(holder);`, both freed
+        // `u` and left `r = *box; v = *r;` read in silence (#505). The same
+        // memory the `Callee::Opaque` arm treats as possibly freed, and
+        // nothing a call is not handed: `release_all()` is not a trigger.
+        //
+        // **Spelled any way it can be handed.** A load handed as an operand,
+        // `release(*box)`, names nothing and is read out of `box`, which is
+        // marked rather than anything in it; and a local's address,
+        // `release_pp(&u)`, hands what the local holds, so the locals it
+        // points at are asked as the argument is, and their allocations are
+        // in what it reaches. Each read `*r` in silence. Found by review.
+        if matches!(kind, Callee::Opaque) && {
+            let mut handed_memory: Vec<usize> = sites().collect();
+            for argument in handed {
+                handed_memory.extend(self.read_out(function, argument, value));
+                if let Operand::Copy(place) = argument {
+                    let pointed: Vec<usize> = value.written_through(place.local);
+                    for target in pointed {
+                        handed_memory.extend(value.points_to[target].sites());
+                    }
+                }
+            }
+            let may_hold_lost = |held: &Held| held.lost || held.lost_read;
+            handed.iter().any(|argument| match argument {
+                Operand::Copy(place) => {
+                    may_hold_lost(&value.points_to[place.local.index()])
+                        || (!place.projection.is_empty()
+                            && value.marked_below(place.local, derefs(place), &value.holds_lost))
+                        || value
+                            .written_through(place.local)
+                            .into_iter()
+                            .any(|target| may_hold_lost(&value.points_to[target]))
+                }
+                Operand::Constant(_) => false,
+            }) || value
+                .closure(handed_memory)
+                .into_iter()
+                .any(|site| value.holds_lost[site])
+        } {
+            value.lost_may_be_gone();
+        }
+
         if matches!(kind, Callee::Frees | Callee::Reallocates)
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
@@ -1890,6 +1940,7 @@ impl Analysis for Allocations<'_> {
                                 held.lost = marked;
                                 held.stale_read = marked;
                                 held.unreplaced_read = unreplaced;
+                                held.lost_read = holds_lost;
                                 held.from_caller = caller;
                                 for &target in &targets {
                                     value.points_to[target].accumulated(&held);

@@ -1205,6 +1205,11 @@ impl Known {
     /// spellings read in silence (#503). See ADR-0045.
     pub(super) fn lost_may_be_gone(&mut self) {
         for held in self.points_to.iter_mut() {
+            // A value read out of memory a lost value may be in may be it.
+            // See `Held::lost_read`.
+            if held.lost_read {
+                held.lost = true;
+            }
             if held.lost {
                 held.stale_read = true;
             }

@@ -1,0 +1,193 @@
+Target "x86_64-pc-windows-msvc"
+Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:3:6 "log_ptr" declared
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "n"
+Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:4:6 "release" declared
+  Local "_0" "void" return
+  Local "_1" "void **" parameter "n"
+Function a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:6:5 "f"
+  Local "_0" "int" return
+  Local "_1" "void **" "head"
+  Local "_2" "int" "i"
+  Local "_3" "int"
+  Local "_4" "void **" "node"
+  Local "_5" "void *"
+  Local "_6" "int"
+  Local "_7" "void *"
+  Local "_8" "void **"
+  Local "_9" "int"
+  Local "_10" "int"
+  Local "_11" "void **" "first"
+  Local "_12" "int"
+  Local "_13" "void **" "n"
+  Local "_14" "int" "c"
+  Local "_15" "void *" "z"
+  Local "_16" "int"
+  Block "bb0" entry
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:7:12 written
+      Destination "_1"
+      Use
+        Constant 0
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:7:19 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:8:9 written
+      Destination "_2"
+      Use
+        Constant 0
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:8:13 generated
+    Goto "bb1"
+  Block "bb1"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:9:12 written
+      Destination "_3"
+      Binary "Lt"
+        Copy "_2"
+        Constant 3
+    Branch a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:9:12 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:9:12 generated
+    StorageLive a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:10:9 generated "_4"
+    ArgumentsEvaluated a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:10:23 generated
+    Call a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:10:23 "malloc" "bb4"
+      Destination "_5"
+      Constant 8
+  Block "bb3"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:9:12 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:16:12 written
+      Destination "_11"
+      Use
+        Copy "_1"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:16:20 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:9 written
+      Destination "_12"
+      Unary "Not"
+        Copy "_11"
+    Branch a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:9 "bb8" "bb9"
+      Copy "_12"
+  Block "bb4"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:10:16 written
+      Destination "_4"
+      Use
+        Copy "_5"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:10:23 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:13 written
+      Destination "_6"
+      Binary "Eq"
+        Copy "_4"
+        Constant 0
+    Branch a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:13 "bb5" "bb6"
+      Copy "_6"
+  Block "bb5"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:13 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:24 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:31 generated
+    StorageDead a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:24 generated "_4"
+    Return
+  Block "bb6"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:11:13 generated
+    Goto "bb7"
+  Block "bb7"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:12:9 written
+      Destination "_4"
+        Deref
+      Use
+        Copy "_1"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:12:9 written
+      Destination "_7"
+      Use
+        Copy "_4"
+          Deref
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:12:9 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:13:9 written
+      Destination "_1"
+      Use
+        Copy "_4"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:13:9 written
+      Destination "_8"
+      Use
+        Copy "_1"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:13:9 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:13 written
+      Destination "_9"
+      Binary "Add"
+        Copy "_2"
+        Constant 1
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:9 written
+      Destination "_2"
+      Use
+        Copy "_9"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:9 written
+      Destination "_10"
+      Use
+        Copy "_2"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:14:9 generated
+    StorageDead a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:15:5 generated "_4"
+    Goto "bb1"
+  Block "bb8"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:9 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:17 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:24 generated
+    Return
+  Block "bb9"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:9 generated
+    Goto "bb10"
+  Block "bb10"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:34 written
+      Destination "_13"
+      Use
+        Copy "_11"
+          Deref
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:17:38 generated
+    ArgumentsEvaluated a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:18:5 generated
+    Call a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:18:5 "log_ptr" "bb11"
+      Copy "_11"
+  Block "bb11"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:18:5 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:19:9 written
+      Destination "_14"
+      Use
+        Constant 0
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:19:13 generated
+    Branch a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:9 "bb12" "bb13"
+      Copy "_13"
+  Block "bb12"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:9 generated
+    StorageLive a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:14 generated "_15"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:20 written
+      Destination "_15"
+      Use
+        Copy "_13"
+          Deref
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:24 generated
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:28 written
+      Destination "_14"
+      Use
+        Constant 1
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:28 written
+      Destination "_16"
+      Use
+        Copy "_14"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:28 generated
+    StorageDead a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:35 generated "_15"
+    Goto "bb14"
+  Block "bb13"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:20:9 generated
+    Goto "bb14"
+  Block "bb14"
+    Operation a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:21:5 written
+      Destination "_0"
+      Use
+        Copy "_14"
+    Sequenced a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call.c:21:12 generated
+    Return

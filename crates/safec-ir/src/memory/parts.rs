@@ -517,6 +517,19 @@ pub(super) struct Held {
     /// by [`Known::handed_below`](super::known::Known::handed_below) alone.
     /// See ADR-0047.
     pub(super) unreplaced_read: bool,
+    /// Whether this was read out of an allocation
+    /// [`Known::holds_lost`](super::known::Known::holds_lost) marks, which
+    /// may hold a value this check lost, or built from such a value.
+    ///
+    /// **Not [`Held::lost`] at the read**, which would doubt every walk of a
+    /// list whose nodes hold a lost head. It is made lost only when a lost
+    /// value may have gone, by
+    /// [`Known::lost_may_be_gone`](super::known::Known::lost_may_be_gone):
+    /// `*box = u; r = *box; free(u); v = *r;` with `u` lost to a rebirth read
+    /// `*r` in silence, since `r` was read out before the free (#505). A
+    /// store of it marks where it lands, as a store of a lost value does, so
+    /// a copy into another allocation carries it. See ADR-0045.
+    pub(super) lost_read: bool,
     /// Whether this was read out of memory a pointer parameter points at, so
     /// may be what the caller stored there.
     ///
@@ -576,6 +589,7 @@ impl Held {
             foreign: false,
             stale_read: false,
             unreplaced_read: false,
+            lost_read: false,
             from_caller: false,
             returned_by: None,
         }
@@ -655,6 +669,7 @@ impl Held {
             foreign,
             stale_read,
             unreplaced_read,
+            lost_read,
             from_caller,
             returned_by,
         } = self;
@@ -666,6 +681,7 @@ impl Held {
         *foreign = false;
         *stale_read = false;
         *unreplaced_read = false;
+        *lost_read = false;
         *freed = None;
         writes_to.fill(false);
         // What a local is given ends the claim that this check knew where a
@@ -699,6 +715,7 @@ impl Held {
             foreign,
             stale_read,
             unreplaced_read,
+            lost_read,
             from_caller,
             returned_by,
         } = self;
@@ -711,6 +728,7 @@ impl Held {
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
         *unreplaced_read = *unreplaced_read || other.unreplaced_read;
+        *lost_read = *lost_read || other.lost_read;
         // **A path that knows where a write through this local lands and a
         // path that does not is a path that does not.** This is what keeps a
         // strong update out of `if (c) { pp = &p; } *pp = q;`, where the
@@ -761,6 +779,7 @@ impl Held {
             foreign,
             stale_read,
             unreplaced_read,
+            lost_read,
             from_caller,
             returned_by,
         } = self;
@@ -774,6 +793,7 @@ impl Held {
         *foreign = *foreign || other.foreign;
         *stale_read = *stale_read || other.stale_read;
         *unreplaced_read = *unreplaced_read || other.unreplaced_read;
+        *lost_read = *lost_read || other.lost_read;
 
         // **Where the result points is the fold's to say, and not this
         // method's**, for the reason the line below gives about the proof:

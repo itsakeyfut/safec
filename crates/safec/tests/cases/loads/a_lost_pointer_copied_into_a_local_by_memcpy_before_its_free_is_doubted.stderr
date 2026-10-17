@@ -1,0 +1,30 @@
+warning[SC0401]: this frees `u`, which this check stopped following
+    ╭─[ a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted.c:20:5 ]
+    │
+ 20 │     free(u);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0402]: this uses `slot`, which this check stopped following
+    ╭─[ a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted.c:22:9 ]
+    │
+ 22 │     int v = *slot;
+    │         ────┬────  
+    │             ╰────── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0403]: this may dereference `slot` while it is null
+    ╭─[ a_lost_pointer_copied_into_a_local_by_memcpy_before_its_free_is_doubted.c:22:9 ]
+    │
+ 22 │     int v = *slot;
+    │         ────┬────  
+    │             ╰────── this check cannot say this is not null
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it
