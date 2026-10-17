@@ -2275,8 +2275,8 @@ impl Analysis for Allocations<'_> {
                 // returning `u`, so a later free of a lost value makes it
                 // lost, as it does a load out of the box: `r = id(*box);
                 // free(u); v = *r;` read `*r` in silence (#508). Not lost at
-                // once, which would doubt every result in a function holding a
-                // lost value. See `Held::lost_read`.
+                // once, which would doubt the result of any call handed a lost
+                // value even where none is ever freed. See `Held::lost_read`.
                 if hands_a_lost_value {
                     value.points_to[site].lost_read = true;
                 }

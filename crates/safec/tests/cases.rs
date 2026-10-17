@@ -2226,6 +2226,20 @@ cases! {
         // `Held::lost_read`; both go quiet at `*r`.
         a_lost_pointer_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And the result of such a call handed the lost value copied, `id(t)`,
+        // or moved, `id(u + 1)`; each goes quiet at `*r` under the same
+        // mutation. Found by review.
+        a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What the result's mark costs and does not: with no free of a lost
+        // value after the call, `*r` is not doubted, since the mark only makes
+        // the result lost when one goes; and a call that returns a fresh
+        // allocation, ignoring the lost value it was handed, is doubted at its
+        // result's use and free once that lost value is freed. Found by
+        // review. Mutation: make the result `lost` at once rather than
+        // `lost_read`; the first reports at `*r`.
+        a_result_of_a_call_handed_a_lost_value_is_not_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads
