@@ -2219,6 +2219,13 @@ cases! {
         // reports.
         a_node_read_out_of_a_list_is_doubted_after_its_head_is_handed_to_a_call: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_box_of_a_lost_pointer_is_not_doubted_after_a_call_handed_nothing: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And what a call this check cannot read returns when it was handed
+        // a lost value, which may be that value: `r = id(*box);` with `id`
+        // defined, and `r = id(u);` with it only declared, then `free(u);`
+        // and `*r` (#508). Mutation: leave the result without
+        // `Held::lost_read`; both go quiet at `*r`.
+        a_lost_pointer_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

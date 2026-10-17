@@ -1,0 +1,30 @@
+warning[SC0407]: this passes `u`, which this check stopped following
+    ╭─[ a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:23:14 ]
+    │
+ 23 │     int *r = id(u);
+    │              ──┬──  
+    │                ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0401]: this frees `u`, which this check stopped following
+    ╭─[ a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:24:5 ]
+    │
+ 24 │     free(u);
+    │     ───┬───  
+    │        ╰───── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
+warning[SC0402]: this uses `r`, which this check stopped following
+    ╭─[ a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free.c:26:9 ]
+    │
+ 26 │     int v = *r;
+    │         ───┬──  
+    │            ╰──── this check cannot say what this points at
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: nothing here says the program is wrong: this check could no longer say which allocation this pointer holds
