@@ -2246,13 +2246,15 @@ cases! {
         // nothing, before the later call returns it, where nothing after the
         // call frees one. Found by review. Mutation: have the result read
         // whether its own call was handed a lost value rather than
-        // `Known::lost_exposed`; all but the third go quiet at `*r`.
+        // `Known::lost_exposed`; all six go quiet at `*r`.
         // Mutation: join `Known::lost_exposed` as an intersection; the
         // second alone does. Mutation: mark the result `Held::lost_read`
-        // rather than lost; the fifth and sixth go quiet, and the third does.
-        // What it costs: the result is doubted with no free after it, and so
-        // is a fresh allocation a later call returns, since the call may have
-        // returned the lost value instead.
+        // rather than lost; the third, fifth and sixth go quiet. Mutation:
+        // clear `Known::lost_exposed` at a free; the fifth goes quiet, which
+        // is what holds that the fact is never cleared. What it costs: the
+        // result is doubted with no free after it, and so is a fresh
+        // allocation a later call returns, since the call may have returned
+        // the lost value instead.
         a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_result_of_a_call_after_a_lost_value_was_handed_away_is_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
