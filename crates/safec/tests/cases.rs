@@ -3097,13 +3097,21 @@ cases! {
         // handed; the fifth, the output-parameter idiom beside an exposed
         // allocation, which ADR-0017 declines to report, reports at `*p`.
         // Mutation: leave out what a local handed by address holds; the sixth,
-        // `get(&r, &w)` with `w = u`, goes quiet. Two levels are #513.
+        // `get(&r, &w)` with `w = u`, goes quiet. Two levels are #513. The
+        // seventh pins the cost: an end pointer set by a call handed a string
+        // is doubted, as the string already is. Two choices no case holds,
+        // measured: holding only the first site of what was handed, and
+        // setting `Held::lost_read` whether or not a lost value was handed.
+        // Every site the call was handed is already doubted after it, so a
+        // local that gained one is doubted either way, and one that gained
+        // none is the shape of #511.
         a_pointer_written_through_an_out_parameter_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_written_through_an_out_parameter_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_stored_into_memory_a_call_was_handed_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         an_output_parameter_beside_an_exposed_allocation_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_handed_by_the_address_of_its_holder_is_doubted_through_an_out_parameter_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        an_end_pointer_set_by_a_call_handed_an_allocation_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_stored_through_a_parameter_may_be_read_through_a_load_of_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_pointer_copied_through_one_parameter_by_memcpy_may_be_read_through_another: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // Memory a parameter can name is memory reachable to code this check
