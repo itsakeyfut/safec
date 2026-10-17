@@ -157,10 +157,11 @@ pub(super) struct Known {
     /// result of a later such call, which holds every exposed site, carried
     /// nothing of it: `stash(u); r = fetch(); free(u); v = *r;` read `*r` in
     /// silence where a named `u` was reported (#511). Set where such a call
-    /// is a trigger for [`Self::lost_may_be_gone`], and read by every later
-    /// such call's result, which carries [`Held::lost_read`]. A union at a
-    /// join, and never cleared, as `exposed` is not: nothing takes back what
-    /// a callee was handed. See ADR-0045.
+    /// is a trigger for [`Self::lost_may_be_gone`], and read by the result of
+    /// that call and every later one, which is lost. A union at a join, and
+    /// never cleared, as `exposed` is not: nothing takes back what a callee
+    /// was handed. Only a call handed one sets it, not a store of one into
+    /// a local such a call holds the address of (#515). See ADR-0045.
     pub(super) lost_exposed: bool,
 }
 

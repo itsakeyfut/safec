@@ -2222,8 +2222,8 @@ cases! {
         // And what a call this check cannot read returns when it was handed
         // a lost value, which may be that value: `r = id(*box);` with `id`
         // defined, and `r = id(u);` with it only declared, then `free(u);`
-        // and `*r` (#508). Mutation: leave the result without
-        // `Held::lost_read`; both go quiet at `*r`.
+        // and `*r` (#508). Mutation: leave the result not lost; both go
+        // quiet at `*r`.
         a_lost_pointer_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_returned_by_an_unread_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the result of such a call handed the lost value copied, `id(t)`,
@@ -2231,30 +2231,34 @@ cases! {
         // mutation. Found by review.
         a_lost_pointer_copied_and_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_moved_and_returned_by_a_call_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        // What the result's mark costs and does not: with no free of a lost
-        // value after the call, `*r` is not doubted, since the mark only makes
-        // the result lost when one goes; and a call that returns a fresh
-        // allocation, ignoring the lost value it was handed, is doubted at its
-        // result's use and free once that lost value is freed. Found by
-        // review. Mutation: make the result `lost` at once rather than
-        // `lost_read`; the first reports at `*r`.
-        a_result_of_a_call_handed_a_lost_value_is_not_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // What the result's mark costs: it is lost at once, as a named value
+        // the call may have freed is doubted at once, so `*r` is doubted with
+        // no free after the call, and a call that returns a fresh allocation,
+        // ignoring the lost value it was handed, is doubted at its result's
+        // use and free. Mutation: mark the result `Held::lost_read` rather
+        // than lost, waiting for a later free; the first goes quiet (#511).
+        a_result_of_a_call_handed_a_lost_value_is_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_fresh_allocation_returned_by_a_call_handed_a_lost_value_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And what a later such call returns, once a lost value was handed to
         // one that may have kept it: `stash(u); r = fetch(); free(u);` and
         // `*r`, on every path and with the call on one arm only (#511).
-        // Mutation: have the result read whether its own call was handed a
-        // lost value rather than `Known::lost_exposed`; the first, second
-        // and fourth go quiet at `*r`. Mutation: join `Known::lost_exposed`
-        // as an intersection; the second alone does. What it costs and does
-        // not: with no free of a lost value after the call, the result is
-        // not doubted, and a fresh allocation a later call returns is doubted
-        // once that value is freed, since the call may have returned it.
-        // Mutation: make the result lost at once; the third reports.
+        // And with the lost value freed, or released by a call handed
+        // nothing, before the later call returns it, where nothing after the
+        // call frees one. Found by review. Mutation: have the result read
+        // whether its own call was handed a lost value rather than
+        // `Known::lost_exposed`; all but the third go quiet at `*r`.
+        // Mutation: join `Known::lost_exposed` as an intersection; the
+        // second alone does. Mutation: mark the result `Held::lost_read`
+        // rather than lost; the fifth and sixth go quiet, and the third does.
+        // What it costs: the result is doubted with no free after it, and so
+        // is a fresh allocation a later call returns, since the call may have
+        // returned the lost value instead.
         a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
-        a_result_of_a_call_after_a_lost_value_was_handed_away_is_not_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_result_of_a_call_after_a_lost_value_was_handed_away_is_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_handed_to_a_call_and_freed_before_another_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

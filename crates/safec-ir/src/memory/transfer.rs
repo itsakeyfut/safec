@@ -2328,16 +2328,17 @@ impl Analysis for Allocations<'_> {
                 // reader can see. See ADR-0040.
                 value.from_caller[site] = true;
                 // **And it may be the lost value it was handed**, `id(*box)`
-                // returning `u`, so a later free of a lost value makes it
-                // lost, as it does a load out of the box: `r = id(*box);
-                // free(u); v = *r;` read `*r` in silence (#508). Not lost at
-                // once, which would doubt the result of any call handed a lost
-                // value even where none is ever freed. See `Held::lost_read`.
-                // **Or one an earlier call was handed**, as it holds every
-                // exposed site: `stash(u); r = fetch();` (#511). The trigger
-                // above has already set the fact if this call was handed one.
+                // returning `u` (#508), **or one an earlier call was handed**,
+                // as it holds every exposed site: `stash(u); r = fetch();`
+                // (#511). The trigger above has already set the fact if this
+                // call was handed one. **Lost at once**, as a named value the
+                // call may have freed is doubted at once. A mark that waited
+                // for a later free of a lost value, `Held::lost_read`, left
+                // `stash(u); free(u); r = fetch(); *r` and `release_all()` in
+                // place of the free read in silence, since nothing after the
+                // call made it lost. Found by review. See ADR-0045.
                 if value.lost_exposed {
-                    value.points_to[site].lost_read = true;
+                    value.points_to[site].lost = true;
                 }
                 let exposed: Vec<usize> = (0..value.exposed.len())
                     .filter(|&other| other != site && value.exposed[other])
