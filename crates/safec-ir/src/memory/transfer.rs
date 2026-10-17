@@ -2026,7 +2026,7 @@ impl Analysis for Allocations<'_> {
                 for argument in handed {
                     handed_memory.extend(self.read_out(function, argument, value));
                 }
-                for site in value.closure(handed_memory) {
+                for site in value.closure(handed_memory.clone()) {
                     value.state[site].may_be_freed();
                 }
 
@@ -2095,6 +2095,57 @@ impl Analysis for Allocations<'_> {
                 // one would need an annotation saying what a callee writes,
                 // and `_Nonnull` is not one.
                 value.replaced(|_| true);
+                // **And what it wrote there, or into memory it was handed, may
+                // be what it was handed**: `get(&r, u)` and `put(box, u)` may
+                // store `u`, and `free(u)` then made `*r` a use of freed
+                // memory read in silence, for a named allocation as for a
+                // lost one (#510). So every escaped local may hold, and every
+                // allocation the call was handed may contain, what it was
+                // handed. Only that, not everything reachable to code this
+                // check cannot read: the reachable set doubted `keep(a);
+                // get(&p); *p = 1;`, the output-parameter idiom ADR-0017
+                // declines to report, wherever any allocation was exposed. A
+                // local that gains a site is a load for its readers, so a use
+                // of it is a doubt and never a proof; one that gains none is
+                // left as it was, so `get(&u); free(u);` keeps its words. See
+                // ADR-0044.
+                //
+                // **A local's address hands what the local holds**, as it does
+                // for the trigger above: `w = u; get(&r, &w);` may store `u`
+                // in `r`, and `Known::closure` does not follow a local, so
+                // `*r` after `free(u)` was read in silence. Found by review.
+                // One level only, as for the trigger: following the chain of
+                // addresses further gave `pp`, in `pp = &p; opaque(&pp);`, the
+                // allocation `p` holds, and doubted `*pp = q`, the
+                // output-parameter idiom ADR-0017 declines to report (#513).
+                for argument in handed {
+                    if let Operand::Copy(place) = argument {
+                        for target in value.written_through(place.local) {
+                            handed_memory.extend(value.points_to[target].sites());
+                        }
+                    }
+                }
+                let stored: Vec<usize> = value.closure(handed_memory).into_iter().collect();
+                for local in 0..value.escaped.len() {
+                    if !value.escaped[local] {
+                        continue;
+                    }
+                    let held = &mut value.points_to[local];
+                    for &site in &stored {
+                        held.hold(site, Offset::Unknown);
+                    }
+                    if !stored.is_empty() {
+                        held.loaded = true;
+                    }
+                    if hands_a_lost_value {
+                        held.lost_read = true;
+                    }
+                }
+                for &container in &stored {
+                    for &site in &stored {
+                        value.inside[container][site] = true;
+                    }
+                }
                 // **What it wrote there it handed over**, as a callee's
                 // result or what a parameter points at is, so the next call
                 // this check cannot read may free it: `acquire(&r);
