@@ -1643,15 +1643,17 @@ impl Analysis for Allocations<'_> {
         // **A free or a `realloc` of a value this check lost may release any
         // lost value**, so every one is marked as one that may be gone, before
         // the `match` for the reason the caller's rule below gives. A lost
-        // local, or a place read through memory, which may hold one. Only a
-        // lost local and not any local the free's own arm cannot name: a load
-        // may be null, and marking it doubted a read behind `if (r)` of a
-        // pointer `free(NULL)` left alone, found by review of #501. See
-        // `Known::lost_may_be_gone`.
+        // local, a load, or a place read through memory, each of which may
+        // hold one: `t = *box; free(t);` frees what `free(*box)` frees, and
+        // was read in silence after, found by review. What is marked is still
+        // only what is lost, not the load: a load may be null, and marking it
+        // doubted a read behind `if (r)` of a pointer `free(NULL)` left alone,
+        // found by review of #501. See `Known::lost_may_be_gone`.
         if matches!(kind, Callee::Frees | Callee::Reallocates)
             && handed.iter().any(|argument| match argument {
                 Operand::Copy(place) => {
-                    !place.projection.is_empty() || value.points_to[place.local.index()].lost
+                    let held = &value.points_to[place.local.index()];
+                    !place.projection.is_empty() || held.lost || held.loaded
                 }
                 Operand::Constant(_) => false,
             })
@@ -1833,6 +1835,13 @@ impl Analysis for Allocations<'_> {
                             // review. See ADR-0040.
                             let caller =
                                 self.reads_caller_memory(source.local, from_depth + 1, value);
+                            // And whether what it copies may be a lost value,
+                            // as a store of a load of the source would carry
+                            // it: `*box = u; memcpy(box2, box, 8); free(u);
+                            // r = *box2;` read `*r` in silence. Found by review.
+                            // See `Known::holds_lost`.
+                            let holds_lost =
+                                value.marked_below(source.local, from_depth + 1, &value.holds_lost);
                             let into: Vec<usize> = if into_depth == 0 {
                                 value.sites_of(dest.local).collect()
                             } else {
@@ -1919,6 +1928,9 @@ impl Analysis for Allocations<'_> {
                                 }
                                 if caller {
                                     value.from_caller[container] = true;
+                                }
+                                if holds_lost {
+                                    value.holds_lost[container] = true;
                                 }
                             }
                         }
@@ -2159,6 +2171,13 @@ impl Analysis for Allocations<'_> {
                     // ADR-0040.
                     if value.from_caller[old] {
                         value.from_caller[site] = true;
+                    }
+                    // And whether a lost value was stored in it, or a free of
+                    // one after `box = realloc(box, 16);` finds nothing in the
+                    // new allocation to mark. Found by review. See
+                    // `Known::holds_lost`.
+                    if value.holds_lost[old] {
+                        value.holds_lost[site] = true;
                     }
                 }
                 if let Some(old) = realloced {

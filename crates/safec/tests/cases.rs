@@ -2145,6 +2145,19 @@ cases! {
         a_copy_of_a_lost_pointer_made_before_its_free_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_freed_through_memory_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_reallocated_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // Found by review: the store on one arm of a join, which holds the
+        // mark only if the join unions `Known::holds_lost`; the free spelled
+        // through a load of the box, `t = *box; free(t);`, which triggers as
+        // `free(*box)` does; and the box copied by `memcpy` or grown by
+        // `realloc` before the free, which carry the mark as they carry
+        // `stale`. Mutation: drop the union at the join; the first goes quiet.
+        // Mutation: no trigger for a load; the second. Mutation: drop the mark
+        // from the `memcpy` copy; the third. From the `realloc` copy; the
+        // fourth.
+        a_lost_pointer_stored_on_one_arm_then_freed_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_freed_through_a_load_of_its_box_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_box_of_a_lost_pointer_copied_by_memcpy_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_box_of_a_lost_pointer_reallocated_before_its_free_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads

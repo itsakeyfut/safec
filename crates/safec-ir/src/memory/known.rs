@@ -1190,19 +1190,6 @@ impl Known {
         }
     }
 
-    /// What a call that may free the caller's memory does to it: a call this
-    /// check cannot read, or a free of a pointer that may be the caller's.
-    ///
-    /// **What the caller stored is out of sight from here on.** A pointer
-    /// read out of memory a parameter points at may be one the caller stashed
-    /// where this call frees it, and no site names it for the call to reach,
-    /// so it is one this check stopped following, and may be gone (ADR-0045).
-    /// **And so is what this function stored of it**, so a load out of such
-    /// an allocation afterwards is one too, whether or not the call can reach
-    /// the allocation: what it may free is the caller's. **And every exposed
-    /// allocation still live is unproven**, since the caller can see it. One
-    /// function for both callers, so the two cannot answer differently. See
-    /// ADR-0040.
     /// What a free of a value this check lost does to every other lost
     /// value: any of them may be the one that went.
     ///
@@ -1229,6 +1216,19 @@ impl Known {
         }
     }
 
+    /// What a call that may free the caller's memory does to it: a call this
+    /// check cannot read, or a free of a pointer that may be the caller's.
+    ///
+    /// **What the caller stored is out of sight from here on.** A pointer
+    /// read out of memory a parameter points at may be one the caller stashed
+    /// where this call frees it, and no site names it for the call to reach,
+    /// so it is one this check stopped following, and may be gone (ADR-0045).
+    /// **And so is what this function stored of it**, so a load out of such
+    /// an allocation afterwards is one too, whether or not the call can reach
+    /// the allocation: what it may free is the caller's. **And every exposed
+    /// allocation still live is unproven**, since the caller can see it. One
+    /// function for both callers, so the two cannot answer differently. See
+    /// ADR-0040.
     pub(super) fn callers_memory_may_be_freed(&mut self) {
         for held in self.points_to.iter_mut() {
             if held.from_caller {
