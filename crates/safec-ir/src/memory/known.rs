@@ -160,8 +160,9 @@ pub(super) struct Known {
     /// is a trigger for [`Self::lost_may_be_gone`], and read by the result of
     /// that call and every later one, which is lost. A union at a join, and
     /// never cleared, as `exposed` is not: nothing takes back what a callee
-    /// was handed. Only a call handed one sets it, not a store of one into
-    /// a local such a call holds the address of (#515). See ADR-0045.
+    /// was handed. A lost value an escaped local may hold counts as handed
+    /// to every such call, as `reach_of` has it for a named one (#515). See
+    /// ADR-0045.
     pub(super) lost_exposed: bool,
 }
 

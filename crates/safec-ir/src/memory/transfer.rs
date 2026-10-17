@@ -1664,7 +1664,8 @@ impl Analysis for Allocations<'_> {
         // one. `release(u)`, and `*holder = u; release(holder);`, both freed
         // `u` and left `r = *box; v = *r;` read in silence (#505). The same
         // memory the `Callee::Opaque` arm treats as possibly freed, and
-        // nothing a call is not handed: `release_all()` is not a trigger.
+        // nothing a call is not handed: `release_all()` is not a trigger,
+        // unless an escaped local may hold a lost value, below.
         //
         // **Spelled any way it can be handed.** A load handed as an operand,
         // `release(*box)`, names nothing and is read out of `box`, which is
@@ -1672,6 +1673,12 @@ impl Analysis for Allocations<'_> {
         // `release_pp(&u)`, hands what the local holds, so the locals it
         // points at are asked as the argument is, and their allocations are
         // in what it reaches. Each read `*r` in silence. Found by review.
+        //
+        // **And what an escaped local may hold**, as `Known::reach_of` has a
+        // named value's call reach it: the call may have been handed the
+        // local's address now, earlier or by another route. `stash_pp(&w);
+        // w = u; r = fetch(); free(u);` read `*r` in silence where a named
+        // `u` was reported (#515).
         //
         // Computed once, for the trigger here and for the call's result
         // below, so that the two cannot disagree about what it was handed.
@@ -1702,6 +1709,8 @@ impl Analysis for Allocations<'_> {
                 .closure(handed_memory)
                 .into_iter()
                 .any(|site| value.holds_lost[site])
+                || (0..value.escaped.len())
+                    .any(|local| value.escaped[local] && may_hold_lost(&value.points_to[local]))
         };
         if hands_a_lost_value {
             value.lost_may_be_gone();

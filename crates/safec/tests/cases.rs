@@ -2261,6 +2261,16 @@ cases! {
         a_fresh_allocation_returned_after_a_lost_value_was_handed_away_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_to_a_call_and_freed_before_another_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_to_a_call_and_released_before_another_returns_it_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // And a lost value an escaped local holds, which a call this check
+        // cannot read reaches as it does a named value's site: assigned to a
+        // local whose address an earlier call kept, read there out of a box
+        // of it, and two levels of address down, `pa = &a;` with `a` lost
+        // (#515). Mutation: leave escaped locals out of `hands_a_lost_value`;
+        // all three go quiet at the use. Mutation: ask an escaped local only
+        // `Held::lost`, not `Held::lost_read`; the second does.
+        a_lost_pointer_stored_into_a_local_a_call_holds_the_address_of_is_doubted_when_a_later_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_value_read_from_a_box_of_a_lost_pointer_into_an_escaped_local_is_doubted_when_a_call_returns_it: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_lost_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_lost_to_a_free_read_through_its_address_and_stored_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_pointer_read_out_of_a_parameter_and_stored_after_a_call_is_doubted_when_read_back: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // And the same load moved by arithmetic, which `built_from` reads
