@@ -2244,13 +2244,13 @@ cases! {
         // one that may have kept it: `stash(u); r = fetch(); free(u);` and
         // `*r`, on every path and with the call on one arm only (#511).
         // Mutation: have the result read whether its own call was handed a
-        // lost value rather than `Known::lost_exposed`; the first goes quiet
-        // at `*r`. Mutation: join `Known::lost_exposed` as an intersection;
-        // the second does. What it costs and does not: with no free of a
-        // lost value after the call, the result is not doubted, and a fresh
-        // allocation a later call returns is doubted once that value is
-        // freed, since the call may have returned it. Mutation: make the
-        // result lost at once; the third reports at `*r` and its free.
+        // lost value rather than `Known::lost_exposed`; the first, second
+        // and fourth go quiet at `*r`. Mutation: join `Known::lost_exposed`
+        // as an intersection; the second alone does. What it costs and does
+        // not: with no free of a lost value after the call, the result is
+        // not doubted, and a fresh allocation a later call returns is doubted
+        // once that value is freed, since the call may have returned it.
+        // Mutation: make the result lost at once; the third reports.
         a_lost_pointer_handed_to_one_call_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_lost_pointer_handed_to_a_call_on_one_arm_and_returned_by_another_is_doubted_after_its_free: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         a_result_of_a_call_after_a_lost_value_was_handed_away_is_not_doubted_with_no_free_after: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
