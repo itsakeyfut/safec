@@ -100,7 +100,9 @@ an implementation holding the other three is what found it:
   which C17 6.5 p2 makes undefined outright rather than undefined on one of the
   orders; exempting it is this compiler going silent about a program C does not
   define. What says whether C ordered it is `Element::ArgumentsEvaluated`, which
-  ADR-0026 emits only where no unsequenced operator encloses the call. **What
+  ADR-0026 emits only where ADR-0022's enclosure rule reaches the call: through
+  nodes that sequence, or whose other operands cannot act (#178), and the write
+  of the null above is an operand that acts. **What
   that marker answers is narrower than the condition**, and the Consequences say
   what the difference costs;
 * the exemption skips the report, rather than clearing the local's sites. A

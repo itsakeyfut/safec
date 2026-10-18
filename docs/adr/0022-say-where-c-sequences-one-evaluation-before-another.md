@@ -91,19 +91,31 @@ put a marker between the free and the read of `*p` and make the program proved
 again, which is the bug this record is about. The comma sequences its own two
 operands and says nothing about the other operand of the `+`. So a sequence
 point counts only where the path from the full expression's root to it passes
-through sequencing constructs alone.
+through sequencing constructs, or through nodes whose other operands cannot act.
+
+**What a sibling has to be not to matter**, since
+[#178](https://github.com/itsakeyfut/safec/issues/178): something that puts
+nothing in the block a marker could misorder. A constant, a local read by value,
+`&` of a local, and arithmetic over those are that; a dereference, a subscript,
+a call, an assignment, an increment and a member are not. An assignment's place
+is the same question about the operands it is computed from, because C17 6.5.16
+p3 puts the store after both operands. So `x = (free(p), *p);` keeps the
+comma's marker and is the proof `int x = (free(p), *p);` is, and `*r + ((free(p),
+1) && *p)` drops it. Counting an operand inert that acts is the silence this
+record is about, so the list is short on purpose.
 
 The lowering holds that as one flag while it walks. Descending into the operand
-of anything else pushes a task that puts the flag back, before the node's own
-tasks, so it is popped after all of them.
+of any other node with two operands that may act pushes a task that puts the
+flag back, before the node's own tasks, so it is popped after all of them.
 
 **A node with one operand is on the false side of that list**, even though a
 sequence point inside `-(free(p), *p)` really does order those two: there is
-nothing else in the expression for them to be unordered against. Answering false
-there costs a proof, which is a false report the reader can see. What it buys is
+nothing else in the expression for them to be unordered against. What it buys is
 that `sequences` is C17 Annex C's list and nothing beside it, so a reader checks
 it against the standard rather than against an argument, and every addition to
-it is a chance to say `true` once too often.
+it is a chance to say `true` once too often. Since #178 the proof is not lost
+for it: such a node keeps the flag through the sibling test above, which is a
+second question asked beside `sequences` rather than a widening of it.
 
 **A new `Element` kind rather than a field.** `error[E0004]` makes every reader
 of `Element` answer for a kind, and a field is what `..` walks past without a
@@ -154,8 +166,8 @@ sequenced while the note says the order is open. Where more than one was folded
 the span is dropped and the report is the ordinary spanless `Unknown`.
 
 **The note says what this check found, not what C decided.** They are not the
-same: in `x = (free(p), *p)` C17 6.5.17 p2 settles the order and this check
-still records nothing, which is #178. It cites 6.5.2.2 p10 rather than 6.5 p3,
+same: in `*r + ((free(p), 1) && *p)` C17 6.5.13 p4 settles the order and this
+check still records nothing, because `*r` beside it may act. It cites 6.5.2.2 p10 rather than 6.5 p3,
 because p3 leaves subexpressions unsequenced and unsequenced evaluations may
 interleave; what gives a call one order or the other is p10's indeterminate
 sequencing, and a free is a call.
@@ -228,10 +240,13 @@ before changed its answer: every one of them frees in a statement of its own.
   expression and an assignment's operands are unsequenced by 6.5.16 p3. Two
   spellings of one statement, two answers, which is the thing
   `docs/c-family.md` asks a frontend to normalise one section above where this
-  is written down. `a_logical_and_inside_an_unsequenced_operand_orders_nothing`
-  and the two cases beside it hold the current answer, and #178 is the issue.
-  Every one of these is a false report the reader can see, and `--deny-unknown`
-  reports all of them.
+  is written down. Every one of these is a false report the reader can see,
+  and `--deny-unknown` reports all of them. Since #178 the cost is narrower: a
+  node keeps the root where its other operands cannot act, so that pair and
+  `-(free(p), *p)` answer alike, and what is left is a sequencing operator
+  beside an operand that may act, which
+  `a_logical_and_inside_an_unsequenced_operand_orders_nothing` and the two
+  cases beside it hold.
 * This answers the forward half of the question and the record should not be
   read as answering the whole of it. A marker says that what came before it is
   sequenced before what comes after; it cannot say that two things are

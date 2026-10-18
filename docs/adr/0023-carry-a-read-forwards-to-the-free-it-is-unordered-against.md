@@ -272,7 +272,9 @@ and ADR-0022 each say. Answering too low is a panic naming the method.
   which is one expression written two ways and answered two ways, and C17
   6.5.17 p2 settles the order in both. Every one of these is a false report the
   reader can see. The record that owns the rule is ADR-0022 and the issue is
-  #178; what is new is the surface, not the rule.
+  #178; what is new is the surface, not the rule. Since #178 an assignment to a
+  local keeps the root, so both of those spellings answer alike; what is left is
+  a sequencing operator beside an operand that may act.
 * **Bad, because the sequence point between a call's arguments and the call is
   not expressed to this direction at all.** C17 6.5.2.2 p10's first sentence
   orders a call's own argument evaluation before the call, and ADR-0022 says

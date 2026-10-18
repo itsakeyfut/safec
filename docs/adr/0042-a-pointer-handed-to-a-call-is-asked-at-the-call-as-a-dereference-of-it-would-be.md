@@ -529,8 +529,11 @@ much as by the `match`, and nothing tells the two apart.
   p[0];`), so what is new is a read before the next opaque call, in one
   expression, in that shape. `return p[0] && g();` and `int y = (p[0] != 0) &&
   g();` put the operator at the root and build.
-  `a_read_sequenced_before_an_opaque_call_under_an_assignment_is_still_asked`
-  holds today's answer, so closing #178 moves a named case. Since #275 the same
+  Since #178 an assignment to a local, a call whose other arguments cannot act
+  and `!` keep the root, so the read in those spellings is no longer asked at
+  the call, measured, and
+  `a_read_sequenced_before_an_opaque_call_under_an_assignment_is_not_asked`
+  is the case that moved. Since #275 the same
   surface reaches what a sequenced operand makes reachable after a call:
   `r = (x = a[0]) + (now(), cursor = a, 0);`, `r = (x = a[0]) && (now() +
   (cursor = a, 0));` and `r = a[0] != 0 && now() && (cursor = a) != 0;` with
