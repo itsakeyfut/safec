@@ -1,0 +1,23 @@
+error[SC0407]: this may pass `p`, which points to an allocation that was freed
+   ╭─[ a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:31 ]
+   │
+ 4 │ int f(int * _Nonnull p, int b[g(p)], int a[(free(p), 1)]) {
+   │                               ──┬─          ───┬───  
+   │                                 ╰──────────────────── passed here, perhaps after the free
+   │                                                │     
+   │                                                ╰───── freed here
+───╯
+  = note: C17 6.7.6 p3 puts a sequence point only at the end of a full declarator, and a parameter's declarator is not one, so nothing orders one parameter's length against another's, and this check found nothing here that orders the free before this
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: free it in the body instead, where every parameter's length has already been evaluated
+error[SC0401]: this frees `p`, which may have been freed already
+   ╭─[ a_pointer_passed_in_one_length_and_freed_in_another_is_told_why.c:4:45 ]
+   │
+ 4 │ int f(int * _Nonnull p, int b[g(p)], int a[(free(p), 1)]) {
+   │                                             ───┬───  
+   │                                                ╰───── this may be its second free
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven, and unproven results are errors in this compilation
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between

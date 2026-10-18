@@ -32,7 +32,7 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use crate::ast::Ast;
+use crate::ast::{Ast, Item, Parameters, Type};
 use crate::diagnostics::render::Renderer;
 use crate::diagnostics::{Diagnostic, DiagnosticSink, Policy, Remedy};
 use crate::lexer::lex;
@@ -48,7 +48,7 @@ use safec_ir::ir::{FuncId, LocalId, TranslationUnit};
 use safec_ir::memory;
 use safec_ir::nullability;
 use safec_ir::print::{dump_ir, quoted};
-use safec_ir::source::{FileName, SourceMap};
+use safec_ir::source::{FileName, SourceMap, Span};
 use safec_ir::target::Integer;
 
 use backend::{Module, assembled, clang_failure, link_failure, linked, module};
@@ -584,9 +584,10 @@ fn lowered(
     // `Ord` at all.
     let mut hatched = Vec::new();
     if options.safety >= SafetyLevel::Memory {
+        let lengths = parameter_lengths(&analysed.ast);
         for finding in memory::findings(sources, &unit) {
             let name = written_name(&unit, sources, finding.function, finding.local);
-            if let Some(diagnostic) = memory_finding(&finding, name) {
+            if let Some(diagnostic) = memory_finding(&finding, name, &lengths) {
                 let concluded = Concluded {
                     function: finding.function,
                     conclusion: finding.conclusion,
@@ -629,6 +630,38 @@ fn written_name<'s>(
     local
         .and_then(|local| unit.function(function).name_of(local))
         .map(|name| quoted(sources, name))
+}
+
+/// The span of every parameter length a definition in `ast` evaluates on
+/// entry, so a finding's words can say what C left unordered (#444).
+///
+/// The outermost length of each prototype parameter, which is what
+/// `Lowering::lengths` evaluates. A constant one is included, harmlessly,
+/// since nothing in it is a free.
+fn parameter_lengths(ast: &Ast) -> Vec<Span> {
+    let mut lengths = Vec::new();
+    for item in ast.items() {
+        let Item::Function(function) = item else {
+            continue;
+        };
+        let Type::Function {
+            parameters: Parameters::Prototype(parameters),
+            ..
+        } = ast.ty(function.ty)
+        else {
+            continue;
+        };
+        for parameter in parameters {
+            if let Type::Array {
+                length: Some(length),
+                ..
+            } = ast.ty(parameter.written)
+            {
+                lengths.push(ast.expr(*length).span());
+            }
+        }
+    }
+    lengths
 }
 
 /// What a check concluded, as a diagnostic, and the function it was concluded

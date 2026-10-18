@@ -146,6 +146,54 @@ fn lost_words(reason: LostReason) -> (&'static str, &'static str) {
 const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, so that C orders \
                                   one before the other";
 
+/// What to change where the free C has not ordered is in a parameter's
+/// length, where no statement can be written: every length is evaluated on
+/// entry, before the body (C17 6.9.1 p10), so a free there is ordered.
+const LENGTH_REMEDY: &str =
+    "free it in the body instead, where every parameter's length has already been evaluated";
+
+/// Where the free and the use an [`Unproven::Unsequenced`] finding names were
+/// written, which decides what C left unordered between them (#444).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Unordered {
+    /// In the body, in one expression: the call is indeterminately sequenced
+    /// with the rest of it (C17 6.5.2.2 p10).
+    InTheBody,
+    /// Both in one parameter's length, which is one expression too, so the
+    /// same clause holds, but no statement can be written there.
+    InOneLength,
+    /// In two parameters' lengths, which nothing orders against each other:
+    /// a parameter's declarator is not a full declarator, so its end is no
+    /// sequence point (C17 6.7.6 p3).
+    AcrossLengths,
+}
+
+/// Which of the three a finding is, given the span of every parameter length
+/// a definition in this unit evaluates on entry.
+///
+/// **The free's span alone says whether it is about the lengths.** A free in a
+/// length is ordered before the whole body by the marker after the lengths,
+/// so a use in the body is proved rather than left open, and a free in the
+/// body can never be open against a length, which ran first. Lengths of two
+/// definitions never overlap, so no function has to be looked up. A free
+/// outside every length is [`Unordered::InTheBody`], which is also the answer
+/// for a finding that names no free, where none of the three is read.
+pub(super) fn unordered(finding: &memory::Finding, lengths: &[Span]) -> Unordered {
+    // The file as well as the offsets: a span names its own file, and two
+    // files' offsets say nothing about each other.
+    let within = |outer: Span, inner: Span| {
+        outer.file() == inner.file() && outer.start() <= inner.start() && inner.end() <= outer.end()
+    };
+    let Some(freed) = finding.freed else {
+        return Unordered::InTheBody;
+    };
+    match lengths.iter().find(|length| within(**length, freed)) {
+        None => Unordered::InTheBody,
+        Some(length) if within(*length, finding.at) => Unordered::InOneLength,
+        Some(_) => Unordered::AcrossLengths,
+    }
+}
+
 /// What to change where this check could not tell whether the free reached.
 ///
 /// **The free is conditional because this check does not know there is one.**
@@ -196,7 +244,21 @@ fn said(name: Option<&str>, unnamed: &str, named: impl FnOnce(&str) -> String) -
 /// the one that names nothing, since `p[2]` is not a use of `p` and `free(*pp)`
 /// is not a free of `pp`. Only the message: the labels are about other reads,
 /// which the finding does not say the local of.
-pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> Option<Diagnostic> {
+///
+/// `lengths` is every parameter length a definition evaluates on entry, for
+/// [`unordered`].
+pub(super) fn memory_finding(
+    finding: &memory::Finding,
+    name: Option<&str>,
+    lengths: &[Span],
+) -> Option<Diagnostic> {
+    let unordered = unordered(finding, lengths);
+    // Nowhere in a declarator can a statement be written, whichever clause
+    // left the two unordered there.
+    let unsequenced_remedy = match unordered {
+        Unordered::InTheBody => UNSEQUENCED_REMEDY,
+        Unordered::InOneLength | Unordered::AcrossLengths => LENGTH_REMEDY,
+    };
     // The label says only as much as the conclusion does, and says it in words
     // nothing else here uses. "freed again" asserts there was a first time,
     // which an unproven result does not know, and reusing the word the other
@@ -328,7 +390,7 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
                 format!("this may use `{name}` after it was freed")
             }),
             "used here, perhaps after the free",
-            UNSEQUENCED_REMEDY,
+            unsequenced_remedy,
         ),
         (
             Kind::UseAfterFree,
@@ -421,7 +483,7 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
                 },
             ),
             "passed here, perhaps after the free",
-            UNSEQUENCED_REMEDY,
+            unsequenced_remedy,
         ),
         // `Offset` cannot arrive, because only `memory::report::interior`
         // builds it. Named rather than taken by `_`, for the reason the
@@ -606,11 +668,24 @@ pub(super) fn memory_finding(finding: &memory::Finding, name: Option<&str>) -> O
     // leaves subexpressions *unsequenced*, and unsequenced evaluations may
     // interleave. What makes a call one order or the other is p10's
     // indeterminate sequencing, and a free is a call.
+    //
+    // **Not across two parameters' lengths**, where the use is not in the
+    // rest of the free's expression at all and what leaves the two unordered
+    // is 6.7.6 p3 (#444).
     if finding.unproven == Some(Unproven::Unsequenced) {
-        diagnostic = diagnostic.with_note(
-            "C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its \
-             expression, and this check found nothing here that orders the free before this",
-        );
+        let note = match unordered {
+            Unordered::InTheBody | Unordered::InOneLength => {
+                "C17 6.5.2.2 p10 leaves a call indeterminately sequenced with the rest of its \
+                 expression, and this check found nothing here that orders the free before this"
+            }
+            Unordered::AcrossLengths => {
+                "C17 6.7.6 p3 puts a sequence point only at the end of a full declarator, and a \
+                 parameter's declarator is not one, so nothing orders one parameter's length \
+                 against another's, and this check found nothing here that orders the free \
+                 before this"
+            }
+        };
+        diagnostic = diagnostic.with_note(note);
     }
     if let Some(made) = finding.made {
         diagnostic = diagnostic.with_label(Label::secondary(made, "allocated here"));
