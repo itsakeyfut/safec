@@ -1314,7 +1314,7 @@ impl Known {
 
     /// Per site, whether anything in this value may still name it: a local's
     /// sites, what an allocation contains, an exposure, a call left pending
-    /// beside one, a read carried forwards, and a `realloc`'s remembered fact.
+    /// beside one, and a read carried forwards.
     /// Every site, where a local was written by a call this check cannot
     /// read, or is lost.
     ///
@@ -1328,10 +1328,15 @@ impl Known {
         // fail no case when left out, measured on the whole workspace, and
         // each says below what is believed to cover it and which programs
         // were tried: `exposed_after_call`, and a pending read's `sites` and
-        // `reachable`. A `realloc` fact's `old` is told apart only in the
-        // other direction, a report on a program defined on every path,
-        // with a case pinning that cost and an issue removing it. This early
-        // return is told apart in both.
+        // `reachable`. This early return is told apart in both directions.
+        // A `realloc` fact's `old` is not a holder, by argument rather than
+        // by search (#494): the fact acts on a site only at a branch on what
+        // the `realloc` returned, and a site nothing here holds can never be
+        // named again, so its state on that arm decides no answer. Holding
+        // it doubted a use and a free of `p` after `if (c) p = realloc(p,
+        // 8);`. Mutation: hold it again;
+        // `a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test`
+        // reports. What that asks of the join is in `Allocations::join`.
         //
         // **This early return is for a pointer a call wrote, not for a load
         // or a lost local** (#495). A use is read from the site's state,
@@ -1389,21 +1394,6 @@ impl Known {
         for read in self.pending.values() {
             for &site in read.sites.iter().chain(&read.reachable) {
                 held[site] = true;
-            }
-        }
-        // **This one costs a false report, and #494 is removing it.** On
-        // the arm of `if (c) p = realloc(p, 8);` nothing but the fact names
-        // the old block, so it is held there and its doubt joins into the
-        // other arm's `p`, which a later `*p` and `free(p)` read. Left out,
-        // those two go quiet, which is correct on every execution, and a
-        // variant that reads the old block through an alias, or through a
-        // box it was stored in, stays doubted, measured: the alias or the box
-        // holds it. Mutation: leave this loop out;
-        // `a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test`
-        // goes quiet.
-        for fact in self.realloced.iter().flatten() {
-            for &(old, _) in &fact.old {
-                held[old] = true;
             }
         }
         held

@@ -1690,13 +1690,29 @@ cases! {
         the_old_pointer_freed_on_one_arm_before_the_branch_is_reported_again: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_second_realloc_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         the_old_pointer_freed_after_a_call_was_handed_it_before_the_branch_is_reported: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // What a `realloc` fact's holder costs: `if (c) p = realloc(p, 8);
+        // A `realloc` fact holds nothing (#494): `if (c) p = realloc(p, 8);
         // if (!p) return 0;` is followed by a use and a free of `p` that are
-        // defined on every path, and both are doubted, because the fact holds
-        // the old block on the arm that overwrote `p`. #494 is removing that
-        // holder. Mutation: leave the fact out of `Known::held_sites`; both
-        // reports go.
-        a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // defined on every path, and so is a free of `q` that is either the
+        // result or `p`. Nothing names the old block on the arm that
+        // overwrote it, so the other arm's `Live` is its state after the
+        // join. Mutation: hold the fact's `old` in `Known::held_sites`
+        // again; the first two report. Read through an alias, the old block
+        // stays doubted, since the alias holds it. And where only one arm
+        // dropped the old pointer after the `realloc`, the fact survives the
+        // join: the null arm frees it once, and a use on the success arm is
+        // proved. Mutation: count an `Unheld` side as disagreeing at the
+        // join; the fourth reports at the free and the fifth is a doubt.
+        a_pointer_reallocated_on_one_arm_is_not_doubted_after_its_null_test: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_pointer_reallocated_on_one_arm_and_copied_on_the_other_is_not_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_realloc_fact_survives_a_join_where_one_arm_dropped_the_old_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        a_use_after_a_realloc_is_proved_where_one_arm_dropped_the_old_pointer: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
+        // The same with the arms the other way round, so the arm that left
+        // the old block `Unheld` is the one the join keeps rather than the
+        // one it takes in. The two cases above hold only the side taken in.
+        // Mutation: count an `Unheld` side as disagreeing only where it is
+        // the side kept; this reports at the free on the null arm.
+        a_realloc_fact_survives_a_conditional_that_drops_the_old_pointer_on_its_second_arm: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc", "--allow-unknown"],
         // `if (*q)` tests what `realloc` returned points at, not whether it
         // returned null, so neither arm says what became of `p`, and the free
         // of it after a call that succeeded is still asked about. Mutation:

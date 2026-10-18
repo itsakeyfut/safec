@@ -258,7 +258,12 @@ and letting a place with a projection through fails
 keeping the fact for an old pointer a call this check cannot read wrote fails
 `a_realloc_of_a_pointer_a_call_wrote_joined_with_a_named_one_does_not_prove_a_free`
 ([#499](https://github.com/itsakeyfut/safec/issues/499)), at the cost
-`the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with` pins: the null arm no longer restores what it was handed. Five
+`the_null_arm_of_a_realloc_of_a_pointer_a_call_wrote_doubts_the_one_it_was_joined_with` pins: the null arm no longer restores what it was handed. A join counting an arm that left an old
+allocation `Unheld` as disagreeing fails
+`a_realloc_fact_survives_a_join_where_one_arm_dropped_the_old_pointer` and
+`a_use_after_a_realloc_is_proved_where_one_arm_dropped_the_old_pointer`
+([#494](https://github.com/itsakeyfut/safec/issues/494)), since the fact no
+longer holds what it was handed. Five
 parts fail nothing, measured: a join keeping a fact one arm lacks, a rebirth
 leaving it, a fact kept for old allocations not all live, one kept for an old
 pointer this check stopped following, and the null arm restoring an old
