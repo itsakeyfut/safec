@@ -631,7 +631,20 @@ impl Lowering<'_> {
                         (function.name, function.ty, function.return_nullability);
                     self.declare_one(name, ty, written, true, diagnostics);
                 }
-                Item::Declaration { declarators, .. } => {
+                Item::Declaration {
+                    declarators,
+                    specified,
+                    ..
+                } => {
+                    // **A declaration that declares nothing still defines**:
+                    // `struct S { int (*fp)(...); };` writes a prototype that
+                    // no declarator's type carries, and a later `struct S s;`
+                    // names the tag without its members. So its specifiers are
+                    // walked where there is no declarator to walk them through
+                    // (#448). Found by review.
+                    if declarators.is_empty() {
+                        let _ = self.prototypes_lose_nothing(*specified, diagnostics);
+                    }
                     for declarator in declarators {
                         // A declaration of an object rather than a function is
                         // not in the IR at all: every place is rooted at a
@@ -907,7 +920,10 @@ impl Lowering<'_> {
                     );
                     return None;
                 }
-                self.parameter_loses_nothing(parameter, diagnostics)?;
+                if !self.adjusted_without_loss(parameter.written) {
+                    self.refuse_parameter(parameter, diagnostics);
+                    return None;
+                }
                 lowered.push(Parameter {
                     ty: self.ty(at, parameter.ty, diagnostics)?,
                     nonnull: match parameter.nullability {
@@ -929,21 +945,16 @@ impl Lowering<'_> {
         Some((returns, lowered))
     }
 
-    /// Refuse a parameter whose written array [`Self::adjusted_without_loss`]
-    /// says the adjustment to a pointer would lose something, naming the part
-    /// of its length nothing typed.
+    /// Refuse a parameter declared as an array this stage cannot take,
+    /// naming the part of its length nothing typed where that is the reason.
     ///
-    /// One refusal for both doors: a function's own prototype, through
-    /// [`Self::signature`], and a prototype inside the type of a file-scope
-    /// object, through [`Self::prototypes_lose_nothing`] (#448).
-    fn parameter_loses_nothing(
-        &self,
-        parameter: &Declaration,
-        diagnostics: &mut DiagnosticSink,
-    ) -> Option<()> {
-        if self.adjusted_without_loss(parameter.written) {
-            return Some(());
-        }
+    /// One refusal for both doors, each asking its own question first: a
+    /// function's own prototype, through [`Self::signature`], which lowers
+    /// the parameter and so asks [`Self::adjusted_without_loss`]; and a
+    /// prototype inside the type of a file-scope object, through
+    /// [`Self::prototypes_lose_nothing`], which lowers nothing and so asks
+    /// only [`Self::lengths_typed_throughout`] (#448).
+    fn refuse_parameter(&self, parameter: &Declaration, diagnostics: &mut DiagnosticSink) {
         let at = parameter.name.unwrap_or(parameter.span);
         // The note claims nothing about the program, because a length nobody
         // typed can hide a fault: `int a[*(p - q)]` is not C, and the type
@@ -971,11 +982,36 @@ impl Lowering<'_> {
         diagnostics.report(refusal.with_note(
             "this is a gap in this compiler: whether this parameter is valid C is not checked",
         ));
-        None
+    }
+
+    /// Whether every length in a parameter's written array type that is not
+    /// a constant was typed all the way down.
+    ///
+    /// The one question a prototype inside a file-scope object's type is
+    /// asked. Not [`Self::adjusted_without_loss`]'s whole answer, whose rule
+    /// against an inner variable length is about what the IR can hold, and
+    /// nothing lowers an object's type: `int (*fp)(int n, int a[][n]);` is C
+    /// (C17 6.7.6.2 p2 and p5) and builds. What is left is #446's reason, a
+    /// part nobody typed can hide a fault nothing will check, which holds at
+    /// any depth since 6.7.6.2 p5 runs none of them. Found by review.
+    fn lengths_typed_throughout(&self, written: TypeId) -> bool {
+        let mut current = written;
+        while let Type::Array {
+            element, length, ..
+        } = self.ast.ty(current)
+        {
+            if let Some(length) = *length {
+                if self.types.value(length).is_none() && !self.typed_throughout(length) {
+                    return false;
+                }
+            }
+            current = *element;
+        }
+        true
     }
 
     /// Every prototype a type holds, each parameter asked
-    /// [`Self::parameter_loses_nothing`], and `None` at the first refusal.
+    /// [`Self::lengths_typed_throughout`], and `None` at the first refusal.
     ///
     /// For the type of a file-scope object, which nothing else lowers while
     /// nothing uses it, so `int (*fp)(int *p, int *q, int n, int a[(*(p - q)
@@ -999,7 +1035,10 @@ impl Lowering<'_> {
                 } => {
                     if let Parameters::Prototype(parameters) = parameters {
                         for parameter in parameters {
-                            self.parameter_loses_nothing(parameter, diagnostics)?;
+                            if !self.lengths_typed_throughout(parameter.written) {
+                                self.refuse_parameter(parameter, diagnostics);
+                                return None;
+                            }
                             work.push(parameter.written);
                         }
                     }

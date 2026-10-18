@@ -4301,6 +4301,18 @@ cases! {
         a_file_scope_function_pointer_s_length_typed_throughout_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_untyped_part_of_a_length_in_a_prototype_nested_in_a_function_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_untyped_part_of_a_length_in_an_array_of_function_pointers_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // What the walk asks is only whether a length was typed, at any
+        // depth, since nothing lowers an object's type: an inner variable
+        // length is C (C17 6.7.6.2 p2, p5) and builds, and an inner one with
+        // an untyped part is refused like an outer one. Mutation: ask
+        // `adjusted_without_loss` instead; the first is refused. Mutation:
+        // ask only the outermost length; the second builds. And a
+        // declaration that declares nothing but defines a struct is walked
+        // through its specifiers. Mutation: walk only declarators; the third
+        // builds. Found by review.
+        an_inner_variable_length_in_a_file_scope_function_pointer_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_an_inner_length_in_a_file_scope_function_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `i` and `j`, declared by the `for`, begin their storage once before
