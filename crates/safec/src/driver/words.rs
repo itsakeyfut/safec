@@ -148,7 +148,8 @@ const UNSEQUENCED_REMEDY: &str = "put the free and this in separate statements, 
 
 /// What to change where the free C has not ordered is in a parameter's
 /// length, where no statement can be written: every length is evaluated on
-/// entry, before the body (C17 6.9.1 p10), so a free there is ordered.
+/// entry (C17 6.9.1 p10), and the body is executed after that (p11), so a
+/// free there is ordered.
 const LENGTH_REMEDY: &str =
     "free it in the body instead, where every parameter's length has already been evaluated";
 
