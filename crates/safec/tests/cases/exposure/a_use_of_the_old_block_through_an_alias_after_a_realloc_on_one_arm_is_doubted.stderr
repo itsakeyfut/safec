@@ -1,7 +1,7 @@
-warning[SC0402]: this uses `p`, which may have been freed
-    ╭─[ a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test.c:10:9 ]
+warning[SC0402]: this uses `a`, which may have been freed
+    ╭─[ a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:11:9 ]
     │
- 10 │     int r = *p;
+ 11 │     int r = *a;
     │         ───┬──  
     │            ╰──── used here, where it may have been freed before
 ────╯
@@ -9,9 +9,9 @@ warning[SC0402]: this uses `p`, which may have been freed
   = note: this could not be proven; it is an error without `--allow-unknown`
   = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
 warning[SC0401]: this frees `p`, which may have been freed already
-    ╭─[ a_pointer_reallocated_on_one_arm_is_doubted_after_its_null_test.c:11:5 ]
+    ╭─[ a_use_of_the_old_block_through_an_alias_after_a_realloc_on_one_arm_is_doubted.c:12:5 ]
     │
- 11 │     free(p);
+ 12 │     free(p);
     │     ───┬───  
     │        ╰───── this may be its second free
 ────╯

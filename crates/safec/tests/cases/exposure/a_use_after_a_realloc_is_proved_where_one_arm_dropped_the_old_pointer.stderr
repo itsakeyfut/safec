@@ -1,0 +1,17 @@
+error[SC0402]: this uses `p` after it was freed
+    ╭─[ a_use_after_a_realloc_is_proved_where_one_arm_dropped_the_old_pointer.c:13:12 ]
+    │
+  5 │     int *p = malloc(4);
+    │              ────┬────  
+    │                  ╰────── allocated here
+    │ 
+  7 │     int *n = realloc(p, 8);
+    │              ──────┬──────  
+    │                    ╰──────── freed here
+    │ 
+ 13 │     if (p) *p = 1;
+    │            ───┬──  
+    │               ╰──── used here
+────╯
+  = note: this check belongs to safety level 1
+  = help: move the free after this use, or do not free here

@@ -884,11 +884,20 @@ impl Analysis for Allocations<'_> {
         for (here, there) in realloced.iter_mut().zip(&from.realloced) {
             // And where one arm left an old allocation in another state: a
             // free on one arm leaves it `Unknown` after the join, which the
-            // null arm would read as the `realloc`'s. Found by review.
+            // null arm would read as the `realloc`'s. Found by review. Not
+            // where one arm left it `Unheld`: nothing names it there, so the
+            // join gives it the other arm's state, which is what the fact
+            // then acts on. `n = realloc(p, 8); if (c) p = 0;` reaches the
+            // branch that way, since the fact holds nothing (#494). Mutation:
+            // count `Unheld` as disagreeing;
+            // `a_realloc_fact_survives_a_join_where_one_arm_dropped_the_old_pointer`
+            // reports at the free on the null arm.
             let disagree = here.as_ref().is_some_and(|fact| {
-                fact.old
-                    .iter()
-                    .any(|&(old, _)| state[old] != from.state[old])
+                fact.old.iter().any(|&(old, _)| {
+                    state[old] != from.state[old]
+                        && !matches!(state[old], SiteState::Unheld)
+                        && !matches!(from.state[old], SiteState::Unheld)
+                })
             });
             if here != there || disagree {
                 *here = None;
