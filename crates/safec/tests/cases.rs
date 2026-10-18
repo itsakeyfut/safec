@@ -1134,8 +1134,10 @@ cases! {
         code_after_abort_is_not_asked: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_here_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         a_function_defined_below_its_call_named_abort_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
-        // A local or a parameter of the name has no linkage, so 7.1.3 does not
-        // reserve it there, and names never asks. Mutation: ask every
+        // A local or a parameter named `abort` or `exit` has no linkage, so
+        // 7.1.3 p1 does not reserve it there, and names never asks. (`_Exit`
+        // is reserved for any use, by p1's first bullet, and is accepted
+        // there all the same, as `clang` accepts it.) Mutation: ask every
         // declaration rather than function definitions; this is refused.
         a_local_named_exit_is_not_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // A call inside a larger full expression keeps its edge, because a

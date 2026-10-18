@@ -1385,7 +1385,9 @@ impl Resolver<'_> {
         // Every function this frontend reads is at file scope and has external
         // linkage, since there is no `static`, so a definition of one of these
         // is one C17 7.1.3 p1 reserves. A local or a parameter of the name has
-        // no linkage and never reaches here. See [`DOES_NOT_RETURN`].
+        // no linkage and never reaches here. When `static` is read, this has
+        // to ask linkage, and the lowering's belief with it: see ADR-0051.
+        // See [`DOES_NOT_RETURN`].
         if let Some(&(_, clause)) = DOES_NOT_RETURN
             .iter()
             .find(|&&(reserved, _)| reserved == spelled)

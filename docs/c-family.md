@@ -401,9 +401,9 @@ without a `return` where it wrote one.
 A `Terminator::Call` whose `then` is `None` has no edge out of it, so every
 analysis reads what follows it as reached by no execution, and **a call is
 given no continuation only where its callee cannot return**. The C frontend
-gives none to a call of `abort`, `exit`, `_Exit` or `quick_exit` that this
-translation unit does not define and that is the whole of its full
-expression, and keeps one for every other call.
+gives none to a call of `abort`, `exit`, `_Exit` or `quick_exit` that is the
+whole of its full expression, and keeps one for every other call; a definition
+of one of those names is refused (`SC0319`).
 
 Two things that look like the answer are not. A callee whose body is in the
 unit keeps its edge whatever it is declared as, because the body is what the
