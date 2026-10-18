@@ -1,0 +1,40 @@
+warning[SC0401]: this frees `u`, which may have been freed already
+    ╭─[ a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:11:5 ]
+    │
+ 11 │     free(u);
+    │     ───┬───  
+    │        ╰───── this may be its second free
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0402]: this uses `s`, which may have been freed
+    ╭─[ a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:13:9 ]
+    │
+ 13 │     int v = *s;
+    │         ───┬──  
+    │            ╰──── used here, where it may have been freed before
+────╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: if it is freed, free it on every path or on none, and keep it out of a call this check cannot read in between
+warning[SC0403]: this may dereference `out` while it is null
+   ╭─[ a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:3:37 ]
+   │
+ 3 │ void copy2(int **out, int ***src) { *out = **src; }
+   │                                     ──────┬─────  
+   │                                           ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: test this pointer against null before reading through it
+warning[SC0403]: this may dereference `src` while it is null
+   ╭─[ a_pointer_handed_through_two_levels_of_a_locals_address_is_doubted_after_its_free.c:3:37 ]
+   │
+ 3 │ void copy2(int **out, int ***src) { *out = **src; }
+   │                                     ──────┬─────  
+   │                                           ╰─────── this check cannot say this is not null
+───╯
+  = note: this check belongs to safety level 1
+  = note: this could not be proven; it is an error without `--allow-unknown`
+  = help: read each pointer this goes through into a local, and test that local against null before reading through it

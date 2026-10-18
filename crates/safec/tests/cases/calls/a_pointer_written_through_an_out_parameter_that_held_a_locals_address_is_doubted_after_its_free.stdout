@@ -1,0 +1,122 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:3:6 "get" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int *" parameter "v"
+Function a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int *" "u"
+  Local "_2" "void *"
+  Local "_3" "int"
+  Local "_4" "int"
+  Local "_5" "int" "k"
+  Local "_6" "int *" "r"
+  Local "_7" "int *"
+  Local "_8" "int **"
+  Local "_9" "int *" "s"
+  Local "_10" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:14 generated
+    Call a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:14 "malloc" "bb1"
+      Destination "_2"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:10 written
+      Destination "_1"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:14 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:29 written
+      Destination "_3"
+      Unary "Not"
+        Copy "_1"
+    Branch a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:29 "bb2" "bb3"
+      Copy "_3"
+  Block "bb2"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:29 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:33 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:40 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:29 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:43 written
+      Destination "_1"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:43 written
+      Destination "_4"
+      Use
+        Copy "_1"
+          Deref
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:5:43 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:6:9 written
+      Destination "_5"
+      Use
+        Constant 0
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:6:13 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:7:14 written
+      Destination "_7"
+      Address
+        Place "_5"
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:7:10 written
+      Destination "_6"
+      Use
+        Copy "_7"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:7:14 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:8:9 written
+      Destination "_8"
+      Address
+        Place "_6"
+    ArgumentsEvaluated a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:8:5 generated
+    Call a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:8:5 "get" "bb5"
+      Copy "_8"
+      Copy "_1"
+  Block "bb5"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:8:5 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:9:10 written
+      Destination "_9"
+      Use
+        Copy "_6"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:9:14 generated
+    ArgumentsEvaluated a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:10:5 generated
+    Call a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:10:5 "free" "bb6"
+      Copy "_1"
+  Block "bb6"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:10:5 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:11:9 written
+      Destination "_10"
+      Unary "Not"
+        Copy "_9"
+    Branch a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:11:9 "bb7" "bb8"
+      Copy "_10"
+  Block "bb7"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:11:9 generated
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:11:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:11:20 generated
+    Return
+  Block "bb8"
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:11:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:12:5 written
+      Destination "_0"
+      Use
+        Copy "_9"
+          Deref
+    Sequenced a_pointer_written_through_an_out_parameter_that_held_a_locals_address_is_doubted_after_its_free.c:12:12 generated
+    Return

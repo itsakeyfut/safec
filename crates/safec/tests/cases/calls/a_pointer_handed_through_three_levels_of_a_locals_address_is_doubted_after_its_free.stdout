@@ -1,0 +1,145 @@
+Target "x86_64-pc-windows-msvc"
+Function a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:1:7 "malloc" declared
+  Local "_0" "void *" return
+  Local "_1" "int" parameter "n"
+Function a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:2:6 "free" declared
+  Local "_0" "void" return
+  Local "_1" "void *" parameter "p"
+Function a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:3:6 "copy3" declared
+  Local "_0" "void" return
+  Local "_1" "int **" parameter "out"
+  Local "_2" "int ****" parameter "src"
+Function a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:4:5 "f"
+  Local "_0" "int" return
+  Local "_1" "int" parameter "c"
+  Local "_2" "int *" "u"
+  Local "_3" "void *"
+  Local "_4" "int"
+  Local "_5" "int"
+  Local "_6" "int *" "a"
+  Local "_7" "int **" "pa"
+  Local "_8" "int **"
+  Local "_9" "int ***" "ppa"
+  Local "_10" "int ***"
+  Local "_11" "int *" "r"
+  Local "_12" "int **"
+  Local "_13" "int ****"
+  Local "_14" "int *" "s"
+  Local "_15" "int"
+  Block "bb0" entry
+    ArgumentsEvaluated a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:14 generated
+    Call a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:14 "malloc" "bb1"
+      Destination "_3"
+      Constant 4
+  Block "bb1"
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:10 written
+      Destination "_2"
+      Use
+        Copy "_3"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:14 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 written
+      Destination "_4"
+      Unary "Not"
+        Copy "_2"
+    Branch a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 "bb2" "bb3"
+      Copy "_4"
+  Block "bb2"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:33 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:40 generated
+    Return
+  Block "bb3"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:29 generated
+    Goto "bb4"
+  Block "bb4"
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:43 written
+      Destination "_2"
+        Deref
+      Use
+        Constant 1
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:43 written
+      Destination "_5"
+      Use
+        Copy "_2"
+          Deref
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:5:43 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:6:10 written
+      Destination "_6"
+      Use
+        Copy "_2"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:6:14 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:7:16 written
+      Destination "_8"
+      Address
+        Place "_6"
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:7:11 written
+      Destination "_7"
+      Use
+        Copy "_8"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:7:16 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:8:18 written
+      Destination "_10"
+      Address
+        Place "_7"
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:8:12 written
+      Destination "_9"
+      Use
+        Copy "_10"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:8:18 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:9:10 written
+      Destination "_11"
+      Use
+        Constant 0
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:9:14 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:10:11 written
+      Destination "_12"
+      Address
+        Place "_11"
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:10:15 written
+      Destination "_13"
+      Address
+        Place "_9"
+    ArgumentsEvaluated a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:10:5 generated
+    Call a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:10:5 "copy3" "bb5"
+      Copy "_12"
+      Copy "_13"
+  Block "bb5"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:10:5 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:11:10 written
+      Destination "_14"
+      Use
+        Copy "_11"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:11:14 generated
+    ArgumentsEvaluated a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:12:5 generated
+    Call a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:12:5 "free" "bb6"
+      Copy "_2"
+  Block "bb6"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:12:5 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:13:9 written
+      Destination "_15"
+      Unary "Not"
+        Copy "_14"
+    Branch a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:13:9 "bb7" "bb8"
+      Copy "_15"
+  Block "bb7"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:13:9 generated
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:13:13 written
+      Destination "_0"
+      Use
+        Constant 0
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:13:20 generated
+    Return
+  Block "bb8"
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:13:9 generated
+    Goto "bb9"
+  Block "bb9"
+    Operation a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:14:5 written
+      Destination "_0"
+      Use
+        Copy "_14"
+          Deref
+    Sequenced a_pointer_handed_through_three_levels_of_a_locals_address_is_doubted_after_its_free.c:14:12 generated
+    Return
