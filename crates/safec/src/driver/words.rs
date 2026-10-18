@@ -169,8 +169,9 @@ pub(super) enum Unordered {
     AcrossLengths,
 }
 
-/// Which of the three a finding is, given the span of every parameter length
-/// a definition in this unit evaluates on entry.
+/// Which of the three a finding is, from the free it names, `freed`, the
+/// caret, `at`, and the span of every parameter length a definition in this
+/// unit evaluates on entry.
 ///
 /// **The free's span alone says whether it is about the lengths.** A free in a
 /// length is ordered before the whole body by the marker after the lengths,
@@ -179,18 +180,22 @@ pub(super) enum Unordered {
 /// definitions never overlap, so no function has to be looked up. A free
 /// outside every length is [`Unordered::InTheBody`], which is also the answer
 /// for a finding that names no free, where none of the three is read.
-pub(super) fn unordered(finding: &memory::Finding, lengths: &[Span]) -> Unordered {
+///
+/// Spans rather than the finding, so the rule can be asked about two files,
+/// which no translation unit holds yet.
+pub(super) fn unordered(freed: Option<Span>, at: Span, lengths: &[Span]) -> Unordered {
     // The file as well as the offsets: a span names its own file, and two
-    // files' offsets say nothing about each other.
+    // files' offsets say nothing about each other. No unit spans two files
+    // until `#include` lands, which is why the guard is a unit test.
     let within = |outer: Span, inner: Span| {
         outer.file() == inner.file() && outer.start() <= inner.start() && inner.end() <= outer.end()
     };
-    let Some(freed) = finding.freed else {
+    let Some(freed) = freed else {
         return Unordered::InTheBody;
     };
     match lengths.iter().find(|length| within(**length, freed)) {
         None => Unordered::InTheBody,
-        Some(length) if within(*length, finding.at) => Unordered::InOneLength,
+        Some(length) if within(*length, at) => Unordered::InOneLength,
         Some(_) => Unordered::AcrossLengths,
     }
 }
@@ -253,7 +258,7 @@ pub(super) fn memory_finding(
     name: Option<&str>,
     lengths: &[Span],
 ) -> Option<Diagnostic> {
-    let unordered = unordered(finding, lengths);
+    let unordered = unordered(finding.freed, finding.at, lengths);
     // Nowhere in a declarator can a statement be written, whichever clause
     // left the two unordered there.
     let unsequenced_remedy = match unordered {

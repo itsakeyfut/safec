@@ -1716,3 +1716,39 @@ fn a_labelled_diagnostic_reaches_the_source_map_the_driver_loaded() {
     assert!(report.contains("int x = @;"), "{report}");
     assert!(report.contains("not part of any token"), "{report}");
 }
+
+/// A free is about a parameter's length only where the length's file is the
+/// free's: offsets in two files say nothing about each other, and one unit
+/// will hold several files once `#include` lands.
+///
+/// Mutation: drop the file comparison from `unordered`'s containment. The
+/// free in the second file is then read as inside the first file's length,
+/// and this fails.
+#[test]
+fn a_free_in_another_file_is_not_inside_a_parameter_s_length() {
+    use super::words::{Unordered, unordered};
+
+    let mut sources = SourceMap::new();
+    let first = sources.add_virtual("first.c", "int f(int a[(free(p), 1)]);\n");
+    let second = sources.add_virtual("second.c", "int g(int *p) { return *p + (free(p), 0); }\n");
+    let length = Span::new(first, 12, 25);
+
+    // The same offsets in the length's own file are inside it, so the
+    // assertion below is about the file and not about the offsets.
+    assert_eq!(
+        unordered(
+            Some(Span::new(first, 13, 20)),
+            Span::new(first, 0, 3),
+            &[length]
+        ),
+        Unordered::AcrossLengths,
+    );
+    assert_eq!(
+        unordered(
+            Some(Span::new(second, 13, 20)),
+            Span::new(second, 0, 3),
+            &[length]
+        ),
+        Unordered::InTheBody,
+    );
+}
