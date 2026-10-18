@@ -4313,6 +4313,16 @@ cases! {
         an_inner_variable_length_in_a_file_scope_function_pointer_builds: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_untyped_part_of_an_inner_length_in_a_file_scope_function_pointer_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         an_untyped_part_of_a_length_in_a_struct_member_s_prototype_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        // A length behind a pointer in a parameter, a prototype only the
+        // return type reaches, and one fault in a struct two declarators
+        // share, which is reported once. Mutation: have the length check stop
+        // at a pointer; the first builds. Mutation: have the walk not enter a
+        // function's return type; the second builds. Mutation: walk without
+        // the set of types already walked; the third reports twice. Found by
+        // review.
+        an_untyped_part_of_a_length_behind_a_pointer_in_a_prototype_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_prototype_a_return_type_holds_is_refused: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
+        an_untyped_part_of_a_length_in_a_struct_two_declarators_share_is_reported_once: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         edges_of_a_branch_and_a_loop: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         every_shape_the_artifact_spells: ["--emit", "safety-ir", "--target", "x86_64-pc-windows-msvc"],
         // `i` and `j`, declared by the `for`, begin their storage once before

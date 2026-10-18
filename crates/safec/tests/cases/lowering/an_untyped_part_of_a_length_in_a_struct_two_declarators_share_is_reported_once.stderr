@@ -1,0 +1,10 @@
+error[SC0304]: cannot compile a parameter declared as this array yet
+   ╭─[ an_untyped_part_of_a_length_in_a_struct_two_declarators_share_is_reported_once.c:1:49 ]
+   │
+ 1 │ struct S { int (*fp)(int *p, int *q, int n, int a[(*(p - q) = 0, n)]); } s1, s2;
+   │                                                 ┬  ──────┬─────  
+   │                                                 ╰──────────────── declared here
+   │                                                          │       
+   │                                                          ╰─────── nothing worked out what type this has
+───╯
+  = note: this is a gap in this compiler: whether this parameter is valid C is not checked

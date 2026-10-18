@@ -642,8 +642,12 @@ impl Lowering<'_> {
                     // names the tag without its members. So its specifiers are
                     // walked where there is no declarator to walk them through
                     // (#448). Found by review.
+                    // One set per declaration, because every declarator of
+                    // `struct S { ... } s1, s2;` shares the struct's node, and
+                    // walking it once per declarator reported one fault twice.
+                    let mut walked = HashSet::new();
                     if declarators.is_empty() {
-                        let _ = self.prototypes_lose_nothing(*specified, diagnostics);
+                        let _ = self.prototypes_lose_nothing(*specified, &mut walked, diagnostics);
                     }
                     for declarator in declarators {
                         // A declaration of an object rather than a function is
@@ -663,6 +667,19 @@ impl Lowering<'_> {
                         if let Some(name) = declaration.name {
                             let (ty, written) = (declaration.ty, declaration.nullability);
                             self.declare_one(name, ty, written, false, diagnostics);
+                        }
+                        // **Asked here because nothing else asks it.** An
+                        // object's type is lowered only where the object is
+                        // used, and an unused one is never, so a prototype it
+                        // holds went past the check a function's own prototype
+                        // gets (#448). A function's own prototype is
+                        // `signature`'s, so a function type is not walked.
+                        if !matches!(self.ast.ty(declaration.ty), Type::Function { .. }) {
+                            let _ = self.prototypes_lose_nothing(
+                                declaration.ty,
+                                &mut walked,
+                                diagnostics,
+                            );
                         }
                     }
                 }
@@ -716,12 +733,6 @@ impl Lowering<'_> {
                             ),
                     );
                 self.refused.insert(self.sources.snippet(name).to_owned());
-            } else {
-                // **Asked here because nothing else asks it.** An object's
-                // type is lowered only where the object is used, and an
-                // unused one is never, so a prototype it holds went past the
-                // check a function's own prototype gets (#448).
-                let _ = self.prototypes_lose_nothing(ty, diagnostics);
             }
             return;
         };
@@ -994,20 +1005,36 @@ impl Lowering<'_> {
     /// (C17 6.7.6.2 p2 and p5) and builds. What is left is #446's reason, a
     /// part nobody typed can hide a fault nothing will check, which holds at
     /// any depth since 6.7.6.2 p5 runs none of them. Found by review.
+    ///
+    /// **Through pointers as well as arrays**, since `int (*a)[*(p - q)]` is
+    /// the same length behind a pointer and 6.7.6.2 p5 runs it no more than
+    /// the other: asking only the array chain at the top left it to build.
+    /// Found by review. It stops at a function type, which
+    /// [`Self::prototypes_lose_nothing`] walks as a prototype of its own.
     fn lengths_typed_throughout(&self, written: TypeId) -> bool {
         let mut current = written;
-        while let Type::Array {
-            element, length, ..
-        } = self.ast.ty(current)
-        {
-            if let Some(length) = *length {
-                if self.types.value(length).is_none() && !self.typed_throughout(length) {
-                    return false;
+        loop {
+            match self.ast.ty(current) {
+                Type::Array {
+                    element, length, ..
+                } => {
+                    if let Some(length) = *length {
+                        if self.types.value(length).is_none() && !self.typed_throughout(length) {
+                            return false;
+                        }
+                    }
+                    current = *element;
+                }
+                Type::Pointer(pointee) => current = *pointee,
+                Type::Int
+                | Type::Char
+                | Type::Void
+                | Type::Function { .. }
+                | Type::Struct { .. } => {
+                    return true;
                 }
             }
-            current = *element;
         }
-        true
     }
 
     /// Every prototype a type holds, each parameter asked
@@ -1020,9 +1047,20 @@ impl Lowering<'_> {
     /// types and each parameter's written type, so a prototype nested
     /// anywhere in it is asked too. A worklist, as the other walks of a type
     /// here are.
-    fn prototypes_lose_nothing(&self, ty: TypeId, diagnostics: &mut DiagnosticSink) -> Option<()> {
+    ///
+    /// `walked` is every type this declaration has walked already, so a node
+    /// two declarators share is asked once.
+    fn prototypes_lose_nothing(
+        &self,
+        ty: TypeId,
+        walked: &mut HashSet<TypeId>,
+        diagnostics: &mut DiagnosticSink,
+    ) -> Option<()> {
         let mut work = vec![ty];
         while let Some(ty) = work.pop() {
+            if !walked.insert(ty) {
+                continue;
+            }
             match self.ast.ty(ty) {
                 Type::Pointer(pointee) => work.push(*pointee),
                 Type::Array { element, .. } => work.push(*element),
