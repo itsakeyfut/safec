@@ -332,6 +332,26 @@ pub fn dump_ir(sources: &SourceMap, unit: &TranslationUnit, out: &mut String) {
                         write!(out, " {}", origin.name()).expect("writing to a string cannot fail");
                         out.push('\n');
                     }
+                    // The local on the kind's line, as a storage marker has it,
+                    // and the two accesses below it, so a conflict found at
+                    // the wrong place is something a corpus case shows.
+                    Element::UnsequencedArguments {
+                        local,
+                        written,
+                        accessed,
+                        both_write,
+                        origin,
+                    } => {
+                        dump_node(sources, element.name(), origin.span(), 2, out);
+                        write!(out, " {} {:?}", origin.name(), name_of(*local))
+                            .expect("writing to a string cannot fail");
+                        out.push('\n');
+                        dump_node(sources, "Written", *written, 3, out);
+                        out.push('\n');
+                        let other = if *both_write { "WrittenAgain" } else { "Read" };
+                        dump_node(sources, other, *accessed, 3, out);
+                        out.push('\n');
+                    }
                     Element::StorageLive { local, origin }
                     | Element::StorageDead { local, origin } => {
                         // The local goes on the kind's own line, the way a

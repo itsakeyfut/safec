@@ -456,6 +456,15 @@ pub(crate) fn dereferenced_in_element(element: &Element) -> Option<(Span, Vec<&P
         // Neither marker, nor storage beginning or ending, reads anything
         // through anything.
         Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => None,
+        // Nor does a conflict between two arguments: it names a local the
+        // arguments' own elements and the call read.
+        Element::UnsequencedArguments {
+            local: _,
+            written: _,
+            accessed: _,
+            both_write: _,
+            origin: _,
+        } => None,
         Element::StorageLive {
             local: _,
             origin: _,

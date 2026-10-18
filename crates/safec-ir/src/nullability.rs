@@ -449,7 +449,14 @@ pub(crate) fn tested_against_null(
                 origin: _,
             }
             | Element::Sequenced { origin: _ }
-            | Element::ArgumentsEvaluated { origin: _ } => continue,
+            | Element::ArgumentsEvaluated { origin: _ }
+            | Element::UnsequencedArguments {
+                local: _,
+                written: _,
+                accessed: _,
+                both_write: _,
+                origin: _,
+            } => continue,
             // Storage ending takes the object the comparison read away and
             // storage beginning brings a different one, so either leaves
             // the local holding something the comparison never saw. That
@@ -560,7 +567,14 @@ fn copied_from(function: &Function, block: BlockId, local: LocalId) -> Vec<Local
                 origin: _,
             }
             | Element::Sequenced { origin: _ }
-            | Element::ArgumentsEvaluated { origin: _ } => continue,
+            | Element::ArgumentsEvaluated { origin: _ }
+            | Element::UnsequencedArguments {
+                local: _,
+                written: _,
+                accessed: _,
+                both_write: _,
+                origin: _,
+            } => continue,
             // Storage beginning or ending is a write like any other, and for
             // the local being followed it is the last one: what that local
             // held before is a different object's, so nothing above it is
@@ -784,6 +798,15 @@ impl Analysis for Nullability<'_> {
             // fact that waits for an order, so it has nothing for either of
             // them to bound.
             Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {}
+            // Nor does a conflict between two arguments, which the memory
+            // check reports. See ADR-0052.
+            Element::UnsequencedArguments {
+                local: _,
+                written: _,
+                accessed: _,
+                both_write: _,
+                origin: _,
+            } => {}
             // Storage beginning or ending leaves a local holding nothing this
             // check can name, and the same on both, because what is lost is
             // the same either way.
@@ -1041,9 +1064,12 @@ fn read_out_of_memory(place: &Place) -> bool {
 /// answers **and its gaps**, and this sentence used to claim only the first.
 /// The one review found: every argument is lowered before the call, so
 /// `g(q, q = &x)` asks about `q` after the second argument wrote it, and a null
-/// `q` is silent. C17 6.5 p2 makes that call undefined, and `h(*q, q = &x)` is
-/// silent on the dereference side for the same reason. ADR-0037 records it as
-/// a consequence, and #247 is the fix. An approximation is safe in one
+/// `q` is silent here. C17 6.5 p2 makes that call undefined whatever `q` holds,
+/// and `h(*q, q = &x)` is silent on the dereference side for the same reason,
+/// so what is reported is the conflict rather than the null: the lowering
+/// finds it and the memory check says it as `SC0409` (ADR-0052). Neither order
+/// is asked about here, because either would be an order C did not choose. An
+/// approximation is safe in one
 /// direction only, and its reader decides which, so a second reader has to
 /// check the first one's soundness rather than assume it.
 ///

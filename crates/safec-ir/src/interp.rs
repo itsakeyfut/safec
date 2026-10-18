@@ -302,6 +302,16 @@ pub fn run(unit: &TranslationUnit, entry: FuncId, arguments: &[Value]) -> Result
                 // What reads them is a check, not a run. Both markers, because
                 // both are a fact about an order and this runs exactly one.
                 Element::Sequenced { origin: _ } | Element::ArgumentsEvaluated { origin: _ } => {}
+                // A conflict between two arguments is a fact about every order,
+                // and this runs one of them, reading the argument where the
+                // call is. What reports it is the memory check. See ADR-0052.
+                Element::UnsequencedArguments {
+                    local: _,
+                    written: _,
+                    accessed: _,
+                    both_write: _,
+                    origin: _,
+                } => {}
                 // Storage, and nothing in it. Entering the block again is what
                 // C17 6.2.4 p6 makes a fresh lifetime, so this is a write and
                 // not a check: whatever the last iteration left is gone.
